@@ -37,8 +37,7 @@ internal static class BeamAssembly
                     foreach (BeamElement element in model.Elements)
                     {
                         // UDL endpoints are mesh nodes: each element is wholly inside or outside.
-                        if (element.Left.Position.Meters < distributed.StartPosition.Meters ||
-                            element.Right.Position.Meters > distributed.EndPosition.Meters)
+                        if (!element.IsCoveredBy(distributed))
                             continue;
                         Vector<double> local = EulerBernoulliElement.UniformLoad(
                             distributed.Intensity.NewtonsPerMeter, element.LengthMeters);

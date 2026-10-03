@@ -37,6 +37,6 @@ public sealed class EulerBernoulliBeamSolver
                 dofs.IsConstrained(w) ? Force.FromNewtons(reactions[w]) : null,
                 dofs.IsConstrained(theta) ? Moment.FromNewtonMeters(reactions[theta]) : null));
         }
-        return new BeamSolution(beam, results);
+        return new BeamSolution(beam, results, model);
     }
 }

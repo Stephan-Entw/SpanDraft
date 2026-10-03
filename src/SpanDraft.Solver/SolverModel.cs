@@ -14,6 +14,11 @@ internal sealed record BeamElement(BeamNode Left, BeamNode Right)
 {
     internal double LengthMeters => Right.Position.Meters - Left.Position.Meters;
 
+    // Every UDL boundary is a node, so coverage is always all-or-nothing.
+    internal bool IsCoveredBy(UniformDistributedLoad load) =>
+        Left.Position.Meters >= load.StartPosition.Meters &&
+        Right.Position.Meters <= load.EndPosition.Meters;
+
     // Local DOF order is [u1, w1, θ1, u2, w2, θ2]. Both axes point rightwards.
     internal int[] GlobalDofs =>
     [
