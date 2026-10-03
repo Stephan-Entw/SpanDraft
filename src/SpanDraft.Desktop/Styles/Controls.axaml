@@ -1,0 +1,254 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls">
+  <!-- One button template for all variants, including future ToggleButton tools.
+       Focus is a separate overlay: borders never move the content. -->
+  <Style Selector=":is(Button)">
+    <Setter Property="Height" Value="{DynamicResource StandardControl}" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="{DynamicResource ControlPadding}" />
+    <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="RenderTransform" Value="none" />
+    <Setter Property="Transitions" Value="{x:Null}" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <ContentPresenter Name="DraftContent" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"
+                            Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                            Foreground="{TemplateBinding Foreground}" RecognizesAccessKey="True"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          <Border Name="FocusRing" IsVisible="False" IsHitTestVisible="False"
+                  BorderBrush="{DynamicResource Accent}" BorderThickness="{DynamicResource FocusWidth}"
+                  CornerRadius="{TemplateBinding CornerRadius}" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector=":is(Button):pointerover:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+  </Style>
+  <Style Selector=":is(Button):pressed:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
+    <Setter Property="RenderTransform" Value="none" />
+  </Style>
+  <Style Selector=":is(Button).primary">
+    <Setter Property="Height" Value="{DynamicResource PrimaryAction}" />
+    <Setter Property="Background" Value="{DynamicResource Accent}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector=":is(Button).primary:pointerover:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource AccentHover}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector=":is(Button).primary:pressed:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource AccentPressed}" />
+  </Style>
+  <Style Selector=":is(Button).secondary">
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+  </Style>
+  <Style Selector=":is(Button).secondary:pointerover:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
+  </Style>
+  <Style Selector=":is(Button).secondary:pressed:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
+  </Style>
+  <Style Selector=":is(Button).ghost, :is(Button).toolbar, :is(Button).iconToolbar">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector=":is(Button).ghost">
+    <Setter Property="Height" Value="{DynamicResource CompactControl}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+  </Style>
+  <Style Selector=":is(Button).toolbar, :is(Button).iconToolbar">
+    <Setter Property="Height" Value="{DynamicResource ToolbarButton}" />
+    <Setter Property="FontSize" Value="{DynamicResource ToolbarSize}" />
+  </Style>
+  <Style Selector=":is(Button).iconToolbar">
+    <Setter Property="Width" Value="{DynamicResource ToolbarButton}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding4}" />
+  </Style>
+  <Style Selector=":is(Button).ghost:pointerover:not(:disabled), :is(Button).toolbar:pointerover:not(:disabled), :is(Button).iconToolbar:pointerover:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector=":is(Button).ghost:pressed:not(:disabled), :is(Button).toolbar:pressed:not(:disabled), :is(Button).iconToolbar:pressed:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
+  </Style>
+  <Style Selector=":is(Button).toolbar.selected, :is(Button).iconToolbar.selected, ToggleButton.toolbar:checked, ToggleButton.iconToolbar:checked">
+    <Setter Property="Background" Value="{DynamicResource AccentSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentPressed}" />
+  </Style>
+  <Style Selector=":is(Button):disabled">
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector=":is(Button).toolbar:disabled, :is(Button).iconToolbar:disabled, :is(Button).ghost:disabled">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
+  </Style>
+  <Style Selector=":is(Button):focus-visible /template/ Border#FocusRing">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector=":is(Button).primary /template/ Border#FocusRing">
+    <Setter Property="BorderBrush" Value="{DynamicResource TextOnAccent}" />
+    <Setter Property="Margin" Value="{DynamicResource Padding4}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXS}" />
+  </Style>
+  <Style Selector="Button.dimension">
+    <Setter Property="Height" Value="{DynamicResource CompactControl}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="Background" Value="{DynamicResource CanvasBackground}" />
+    <Setter Property="Cursor" Value="IBeam" />
+  </Style>
+  <Style Selector="Button.dimension:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
+  </Style>
+  <Style Selector="Button.dimension:pressed">
+    <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
+  </Style>
+
+  <!-- Keep Fluent input behavior; replace its chrome, including template states. -->
+  <Style Selector="TextBox, ComboBox">
+    <Setter Property="Height" Value="{DynamicResource StandardControl}" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+    <Setter Property="Padding" Value="{DynamicResource ControlPadding}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="ComboBox">
+    <Style.Resources>
+      <!-- Fluent's highlight has a local DynamicResource background; override
+           that resource instead of trying to replace it with a style setter. -->
+      <SolidColorBrush x:Key="ComboBoxBackgroundUnfocused" Color="Transparent" />
+    </Style.Resources>
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBox">
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource AccentSubtle}" />
+    <Setter Property="SelectionForegroundBrush" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="TextBox.inlineDimension">
+    <Setter Property="Height" Value="{DynamicResource CompactControl}" />
+    <Setter Property="Padding" Value="{DynamicResource InlinePadding}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="TextAlignment" Value="Right" />
+  </Style>
+  <Style Selector="TextBox:pointerover:not(:disabled) /template/ Border#PART_BorderElement, ComboBox:pointerover:not(:disabled) /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource TextMuted}" />
+  </Style>
+  <Style Selector="TextBox:focus /template/ Border#PART_BorderElement, ComboBox:focus-within /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource FocusWidth}" />
+  </Style>
+  <Style Selector="ComboBox:pressed:not(:disabled) /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
+  </Style>
+  <Style Selector="ComboBox /template/ Border#HighlightBackground, ComboBox:focus-visible /template/ Border#HighlightBackground">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource FocusWidth}" />
+  </Style>
+  <Style Selector="TextBox:pointerover, TextBox:focus">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="ComboBox:focus-visible /template/ ContentControl#ContentPresenter, ComboBox:focus:pressed /template/ ContentControl#ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="ComboBox /template/ PathIcon#DropDownGlyph, ComboBox:focus-visible /template/ PathIcon#DropDownGlyph, ComboBox:focus:pressed /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+  </Style>
+  <Style Selector="ComboBox /template/ Border#PopupBorder">
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding4}" />
+  </Style>
+  <Style Selector="ComboBoxItem">
+    <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+    <Setter Property="MinHeight" Value="{DynamicResource StandardControl}" />
+    <Setter Property="Padding" Value="{DynamicResource ControlPadding}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXS}" />
+  </Style>
+  <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
+  </Style>
+  <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentSubtle}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="TextBox:disabled, ComboBox:disabled /template/ ContentControl#ContentPresenter, ComboBox:disabled /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
+  </Style>
+  <Style Selector="TextBox:disabled /template/ Border#PART_BorderElement, ComboBox:disabled /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+  </Style>
+  <Style Selector="TextBox.error /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource ErrorSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Error}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource FocusWidth}" />
+  </Style>
+
+  <Style Selector="Border.selectionSurface">
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusM}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding24}" />
+  </Style>
+  <Style Selector="controls|EngineeringIcon">
+    <Setter Property="Width" Value="{DynamicResource IconSize}" />
+    <Setter Property="Height" Value="{DynamicResource IconSize}" />
+    <Setter Property="StrokeThickness" Value="{DynamicResource IconStroke}" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <Style Selector="controls|BeamCanvas">
+    <Setter Property="BeamBrush" Value="{DynamicResource BeamStroke}" />
+    <Setter Property="DimensionBrush" Value="{DynamicResource DimensionStroke}" />
+    <Setter Property="GuideBrush" Value="{DynamicResource BorderStrong}" />
+  </Style>
+  <Style Selector="Menu">
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+  </Style>
+  <Style Selector="MenuItem">
+    <Setter Property="Padding" Value="{DynamicResource ControlPadding}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="FocusAdorner">
+      <Template>
+        <Border BorderBrush="{DynamicResource Accent}" BorderThickness="{DynamicResource FocusWidth}"
+                CornerRadius="{DynamicResource RadiusXS}" />
+      </Template>
+    </Setter>
+  </Style>
+  <Style Selector="MenuItem:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
+  </Style>
+</Styles>

@@ -1,7 +1,41 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+        xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+        xmlns:views="clr-namespace:SpanDraft.Desktop.Views"
         x:Class="SpanDraft.Desktop.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
         Title="{x:Static resources:Strings.ApplicationTitle}"
-        Width="800"
-        Height="450" />
+        Width="1250" Height="800" MinWidth="1100" MinHeight="650">
+  <Window.DataTemplates>
+    <DataTemplate DataType="{x:Type vm:ProjectSetupViewModel}">
+      <views:ProjectSetupView />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:EditorViewModel}">
+      <views:EditorView />
+    </DataTemplate>
+  </Window.DataTemplates>
+  <Grid RowDefinitions="Auto,*">
+    <Menu>
+      <MenuItem Header="{x:Static resources:Strings.File}">
+        <MenuItem Header="{x:Static resources:Strings.NewProject}" IsEnabled="False" />
+        <MenuItem Header="{x:Static resources:Strings.Open}" IsEnabled="False" />
+        <MenuItem Header="{x:Static resources:Strings.Save}" IsEnabled="False" />
+      </MenuItem>
+      <MenuItem Header="{x:Static resources:Strings.Edit}">
+        <MenuItem Header="{x:Static resources:Strings.Undo}" IsEnabled="False" />
+        <MenuItem Header="{x:Static resources:Strings.Redo}" IsEnabled="False" />
+        <Separator />
+        <MenuItem Header="{x:Static resources:Strings.Settings}" IsEnabled="False" />
+      </MenuItem>
+      <MenuItem Header="{x:Static resources:Strings.View}">
+        <MenuItem Header="{x:Static resources:Strings.Zoom}" IsEnabled="False" />
+        <MenuItem Header="{x:Static resources:Strings.Results}" IsEnabled="False" />
+      </MenuItem>
+      <MenuItem Header="{x:Static resources:Strings.Help}">
+        <MenuItem Header="{x:Static resources:Strings.About}" IsEnabled="False" />
+      </MenuItem>
+    </Menu>
+    <ContentControl Grid.Row="1" Content="{Binding CurrentViewModel}" />
+  </Grid>
+</Window>

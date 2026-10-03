@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Controls.BeamEditorSurface"
+             x:DataType="vm:EditorViewModel" SizeChanged="SurfaceSizeChanged">
+  <Grid Background="{DynamicResource CanvasBackground}">
+    <controls:BeamCanvas LengthMeters="{Binding Document.Length.Meters}" />
+    <Canvas>
+      <StackPanel x:Name="DimensionOverlay" Width="560" Spacing="{StaticResource Space4}">
+        <Grid Height="{DynamicResource CompactControl}">
+          <Button x:Name="DimensionButton" Content="{Binding DimensionLength.DisplayText}" Click="BeginDimensionEdit"
+                  Classes="ghost dimension" IsVisible="{Binding DimensionLength.IsDisplay}" HorizontalAlignment="Center"
+                  AutomationProperties.Name="{Binding DimensionLength.DisplayText}"
+                  ToolTip.Tip="{x:Static resources:Strings.EditLength}" />
+          <Border IsVisible="{Binding DimensionLength.IsEditing}" Background="{DynamicResource CanvasBackground}"
+                  Padding="{DynamicResource DimensionMaskPadding}" HorizontalAlignment="Center" Height="{DynamicResource CompactControl}">
+            <controls:LengthInput x:Name="DimensionInput" DataContext="{Binding DimensionLength}" />
+          </Border>
+        </Grid>
+        <TextBlock Text="{Binding DimensionLength.ErrorText}" IsVisible="{Binding DimensionLength.HasError}"
+                   Width="360" HorizontalAlignment="Center" Classes="validationMessage" Background="{DynamicResource CanvasBackground}" TextAlignment="Center" />
+      </StackPanel>
+    </Canvas>
+  </Grid>
+</UserControl>

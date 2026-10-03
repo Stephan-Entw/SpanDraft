@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Controls.LengthInput"
+             x:DataType="vm:LengthInputViewModel" Focusable="True">
+  <Grid ColumnDefinitions="Auto,Auto">
+    <TextBox x:Name="InputBox" MinWidth="48" MaxWidth="360" Text="{Binding Text, Mode=TwoWay}" Classes="inlineDimension" Classes.error="{Binding HasError}"
+             GotFocus="InputGotFocus" LostFocus="InputLostFocus" KeyDown="InputKeyDown"
+             AutomationProperties.Name="{x:Static resources:Strings.BeamLength}" ToolTip.Tip="{Binding ErrorText}" />
+    <TextBlock Grid.Column="1" Text="mm" Margin="{DynamicResource UnitMargin}" VerticalAlignment="Center" Classes="body" />
+  </Grid>
+</UserControl>

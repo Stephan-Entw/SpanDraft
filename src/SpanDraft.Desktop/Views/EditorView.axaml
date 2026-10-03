@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Views.EditorView"
+             x:DataType="vm:EditorViewModel">
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <Border BorderThickness="{DynamicResource BottomBorder}" BorderBrush="{DynamicResource Border}"
+            Background="{DynamicResource Surface}" Padding="{DynamicResource ToolbarPadding}">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
+        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.PointForce}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <controls:EngineeringIcon Data="{StaticResource PointForce}" />
+            <TextBlock Text="{x:Static resources:Strings.PointForce}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.Moment}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <controls:EngineeringIcon Data="{StaticResource PointMoment}" />
+            <TextBlock Text="{x:Static resources:Strings.Moment}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.DistributedLoad}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <controls:EngineeringIcon Data="{StaticResource DistributedLoad}" />
+            <TextBlock Text="{x:Static resources:Strings.DistributedLoad}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
+        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.FixedSupport}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <controls:EngineeringIcon Data="{StaticResource FixedSupport}" />
+            <TextBlock Text="{x:Static resources:Strings.FixedSupport}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.PinnedSupport}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <controls:EngineeringIcon Data="{StaticResource PinnedSupport}" />
+            <TextBlock Text="{x:Static resources:Strings.PinnedSupport}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.RollerSupport}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <controls:EngineeringIcon Data="{StaticResource RollerSupport}" />
+            <TextBlock Text="{x:Static resources:Strings.RollerSupport}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </Border>
+    <Border Grid.Row="1" Padding="{DynamicResource ProjectInfoPadding}" BorderThickness="{DynamicResource NoBorder}" Background="{DynamicResource CanvasBackground}"
+            BorderBrush="{DynamicResource Border}">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+        <TextBlock Text="{Binding ProjectInfo}" VerticalAlignment="Center" Classes="bodyStrong" />
+        <Button Content="{x:Static resources:Strings.Change}" Command="{Binding ChangeProjectCommand}" Classes="ghost" />
+      </StackPanel>
+    </Border>
+    <controls:BeamEditorSurface Grid.Row="2" />
+    <Border Grid.Row="3" Padding="{DynamicResource StatusPadding}" BorderThickness="{DynamicResource TopBorder}"
+            BorderBrush="{DynamicResource Border}"
+            Background="{DynamicResource SurfaceSubtle}">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{Binding Presentation.StatusText}" IsVisible="{Binding !Presentation.IsSuccess}" VerticalAlignment="Center" />
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}" IsVisible="{Binding Presentation.IsSuccess}" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <TextBlock Text="{x:Static resources:Strings.DisplacementSymbol}" Classes="propertyLabel" />
+            <TextBlock Text="{Binding Presentation.Displacement}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <TextBlock Text="{x:Static resources:Strings.MomentSymbol}" Classes="propertyLabel" />
+            <TextBlock Text="{Binding Presentation.Moment}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <TextBlock Text="{x:Static resources:Strings.StressSymbol}" Classes="propertyLabel" />
+            <TextBlock Text="{Binding Presentation.Stress}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <TextBlock Text="{x:Static resources:Strings.SafetySymbol}" Classes="propertyLabel" />
+            <TextBlock Text="{Binding Presentation.SafetyFactor}" />
+          </StackPanel>
+        </StackPanel>
+        <Button Grid.Column="1" Content="{x:Static resources:Strings.Results}" IsEnabled="False"
+                ToolTip.Tip="{x:Static resources:Strings.ResultsPending}" Classes="secondary" />
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>
