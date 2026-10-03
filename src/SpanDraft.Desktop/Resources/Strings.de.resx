@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="ApplicationTitle" xml:space="preserve"><value>SpanDraft</value></data>
+  <data name="File" xml:space="preserve"><value>Datei</value></data>
+  <data name="Edit" xml:space="preserve"><value>Bearbeiten</value></data>
+  <data name="View" xml:space="preserve"><value>Ansicht</value></data>
+  <data name="Help" xml:space="preserve"><value>Hilfe</value></data>
+  <data name="Settings" xml:space="preserve"><value>Einstellungen…</value></data>
+  <data name="NewProject" xml:space="preserve"><value>Neues Projekt</value></data>
+  <data name="EditProject" xml:space="preserve"><value>Projekteigenschaften</value></data>
+  <data name="Section" xml:space="preserve"><value>Querschnitt</value></data>
+  <data name="Material" xml:space="preserve"><value>Werkstoff</value></data>
+  <data name="CreateProject" xml:space="preserve"><value>Projekt erstellen</value></data>
+  <data name="Apply" xml:space="preserve"><value>Übernehmen</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Abbrechen</value></data>
+  <data name="Change" xml:space="preserve"><value>Ändern</value></data>
+  <data name="BeamLength" xml:space="preserve"><value>Balkenlänge</value></data>
+  <data name="PointForce" xml:space="preserve"><value>Punktkraft</value></data>
+  <data name="Moment" xml:space="preserve"><value>Moment</value></data>
+  <data name="DistributedLoad" xml:space="preserve"><value>Streckenlast</value></data>
+  <data name="FixedSupport" xml:space="preserve"><value>Einspannung</value></data>
+  <data name="PinnedSupport" xml:space="preserve"><value>Festlager</value></data>
+  <data name="RollerSupport" xml:space="preserve"><value>Loslager</value></data>
+  <data name="Results" xml:space="preserve"><value>Ergebnisse</value></data>
+  <data name="CalculationUnavailable" xml:space="preserve"><value>Berechnung nicht verfügbar</value></data>
+  <data name="SupportsMissing" xml:space="preserve"><value>Lagerung fehlt</value></data>
+  <data name="InsufficientSupport" xml:space="preserve"><value>Lagerung nicht ausreichend</value></data>
+  <data name="IncompleteModel" xml:space="preserve"><value>Modell unvollständig</value></data>
+  <data name="CalculationNotPossible" xml:space="preserve"><value>Berechnung nicht möglich</value></data>
+  <data name="CalculationComplete" xml:space="preserve"><value>Berechnung abgeschlossen</value></data>
+  <data name="InvalidLength" xml:space="preserve"><value>Eine endliche Länge größer als null eingeben.</value></data>
+  <data name="SectionTemplateName" xml:space="preserve"><value>Vierkantrohr 100 × 100 × 5 mm</value></data>
+  <data name="SectionTemplateNote" xml:space="preserve"><value>Geometrische V1-Vorlage mit idealisierten scharfen Kanten; kein Norm- oder Herstellerprofil.</value></data>
+  <data name="MaterialTemplateNote" xml:space="preserve"><value>Vorläufige V1-Werkstoffvorlage; keine normative Werkstoffdatenbank.</value></data>
+  <data name="SetupDescription" xml:space="preserve"><value>Konstanten Querschnitt und Werkstoff für den Balken auswählen.</value></data>
+  <data name="EditLength" xml:space="preserve"><value>Balkenlänge bearbeiten</value></data>
+  <data name="Open" xml:space="preserve"><value>Öffnen…</value></data>
+  <data name="Save" xml:space="preserve"><value>Speichern</value></data>
+  <data name="Undo" xml:space="preserve"><value>Rückgängig</value></data>
+  <data name="Redo" xml:space="preserve"><value>Wiederholen</value></data>
+  <data name="Zoom" xml:space="preserve"><value>Zoom</value></data>
+  <data name="About" xml:space="preserve"><value>Über SpanDraft</value></data>
+  <data name="ResultsPending" xml:space="preserve"><value>Die Ergebnisansicht folgt in einem späteren Meilenstein.</value></data>
+  <data name="DisplacementSymbol" xml:space="preserve"><value>|w|max</value></data>
+  <data name="MomentSymbol" xml:space="preserve"><value>|M|max</value></data>
+  <data name="StressSymbol" xml:space="preserve"><value>σmax</value></data>
+  <data name="SafetySymbol" xml:space="preserve"><value>S</value></data>
+</root>

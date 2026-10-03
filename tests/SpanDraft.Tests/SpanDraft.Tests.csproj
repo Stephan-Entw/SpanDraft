@@ -5,6 +5,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../src/SpanDraft.Desktop/SpanDraft.Desktop.csproj" />
     <ProjectReference Include="../../src/SpanDraft.Core/SpanDraft.Core.csproj" />
     <ProjectReference Include="../../src/SpanDraft.Solver/SpanDraft.Solver.csproj" />
     <ProjectReference Include="../../src/SpanDraft.Engineering/SpanDraft.Engineering.csproj" />

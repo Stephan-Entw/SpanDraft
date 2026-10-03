@@ -1,12 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
-  <resheader name="resmimetype">
-    <value>text/microsoft-resx</value>
-  </resheader>
-  <resheader name="version">
-    <value>2.0</value>
-  </resheader>
-  <data name="ApplicationTitle" xml:space="preserve">
-    <value>SpanDraft</value>
-  </data>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="ApplicationTitle" xml:space="preserve"><value>SpanDraft</value></data>
+  <data name="File" xml:space="preserve"><value>File</value></data>
+  <data name="Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="View" xml:space="preserve"><value>View</value></data>
+  <data name="Help" xml:space="preserve"><value>Help</value></data>
+  <data name="Settings" xml:space="preserve"><value>Settings…</value></data>
+  <data name="NewProject" xml:space="preserve"><value>New Project</value></data>
+  <data name="EditProject" xml:space="preserve"><value>Project properties</value></data>
+  <data name="Section" xml:space="preserve"><value>Section</value></data>
+  <data name="Material" xml:space="preserve"><value>Material</value></data>
+  <data name="CreateProject" xml:space="preserve"><value>Create Project</value></data>
+  <data name="Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Change" xml:space="preserve"><value>Change</value></data>
+  <data name="BeamLength" xml:space="preserve"><value>Beam Length</value></data>
+  <data name="PointForce" xml:space="preserve"><value>Point Force</value></data>
+  <data name="Moment" xml:space="preserve"><value>Moment</value></data>
+  <data name="DistributedLoad" xml:space="preserve"><value>Distributed Load</value></data>
+  <data name="FixedSupport" xml:space="preserve"><value>Fixed Support</value></data>
+  <data name="PinnedSupport" xml:space="preserve"><value>Pinned Support</value></data>
+  <data name="RollerSupport" xml:space="preserve"><value>Roller Support</value></data>
+  <data name="Results" xml:space="preserve"><value>Results</value></data>
+  <data name="CalculationUnavailable" xml:space="preserve"><value>Calculation unavailable</value></data>
+  <data name="SupportsMissing" xml:space="preserve"><value>Supports missing</value></data>
+  <data name="InsufficientSupport" xml:space="preserve"><value>Insufficient support</value></data>
+  <data name="IncompleteModel" xml:space="preserve"><value>Incomplete model</value></data>
+  <data name="CalculationNotPossible" xml:space="preserve"><value>Calculation not possible</value></data>
+  <data name="CalculationComplete" xml:space="preserve"><value>Calculation complete</value></data>
+  <data name="InvalidLength" xml:space="preserve"><value>Enter a finite length greater than zero.</value></data>
+  <data name="SectionTemplateName" xml:space="preserve"><value>Square tube 100 × 100 × 5 mm</value></data>
+  <data name="SectionTemplateNote" xml:space="preserve"><value>Geometric V1 template with idealized sharp corners; no standard or manufacturer profile.</value></data>
+  <data name="MaterialTemplateNote" xml:space="preserve"><value>Provisional V1 material template; no normative material database.</value></data>
+  <data name="SetupDescription" xml:space="preserve"><value>Choose the constant section and material for your beam.</value></data>
+  <data name="EditLength" xml:space="preserve"><value>Edit beam length</value></data>
+  <data name="Open" xml:space="preserve"><value>Open…</value></data>
+  <data name="Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Undo" xml:space="preserve"><value>Undo</value></data>
+  <data name="Redo" xml:space="preserve"><value>Redo</value></data>
+  <data name="Zoom" xml:space="preserve"><value>Zoom</value></data>
+  <data name="About" xml:space="preserve"><value>About SpanDraft</value></data>
+  <data name="ResultsPending" xml:space="preserve"><value>Results view will follow in a later milestone.</value></data>
+  <data name="DisplacementSymbol" xml:space="preserve"><value>|w|max</value></data>
+  <data name="MomentSymbol" xml:space="preserve"><value>|M|max</value></data>
+  <data name="StressSymbol" xml:space="preserve"><value>σmax</value></data>
+  <data name="SafetySymbol" xml:space="preserve"><value>S</value></data>
 </root>
