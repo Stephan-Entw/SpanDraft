@@ -1,11 +1,13 @@
 # SpanDraft
 SpanDraft is an open-source desktop application for intuitive beam analysis. Draw and dimension beams, place supports and loads visually, and calculate reactions, shear forces, bending moments, deflection, stresses and safety factors.
 
-The repository contains the technical foundation and a tested beam domain model:
-explicit SI quantities, materials, sections, supports, loads and model validation.
-The desktop window is still empty. Beam analysis, editing and exports are not yet implemented.
+The repository contains a tested beam domain model and an Euler-Bernoulli solver:
+explicit SI quantities, materials, sections, supports, loads, model validation,
+nodal displacements and support reactions. The desktop window is still empty.
+Diagrams, stresses, interactive editing and exports are not yet implemented.
 Architecture and scope are defined in [the project concept](docs/KONZEPT.md).
 Local coordinates, signs and domain validation are documented in [the domain notes](docs/DOMAIN.md).
+The numerical formulation, solver API and current limits are documented in [the solver notes](docs/SOLVER.md).
 
 ## Development
 
@@ -33,13 +35,14 @@ command above, or run `dotnet run` from `src/SpanDraft.Desktop`.
 | Project | Purpose | Project references |
 | --- | --- | --- |
 | `src/SpanDraft.Core` | Beam domain model and validation | None |
-| `src/SpanDraft.Solver` | Future beam solver; Math.NET Numerics | Core |
+| `src/SpanDraft.Solver` | Euler-Bernoulli beam solver; Math.NET Numerics | Core |
 | `src/SpanDraft.Desktop` | Minimal Avalonia desktop application | Core, Solver |
 | `src/SpanDraft.Reporting` | Future PDF and XLSX exports | Core |
-| `tests/SpanDraft.Tests` | xUnit domain and dependency tests | Core |
+| `tests/SpanDraft.Tests` | xUnit domain, analytical solver and dependency tests | Core, Solver |
 
-The solver and reporting libraries contain no implementation yet. Core and its
-tests do not depend on Avalonia or Math.NET. The desktop application uses
+The reporting library contains no implementation yet. Core does not depend on
+Avalonia or Math.NET; Solver and its tests use Math.NET for linear algebra.
+The desktop application uses
 Avalonia's standard Fluent theme. UI strings
 are stored in `src/SpanDraft.Desktop/Resources/Strings.resx` and resolved using the
 current UI culture.
