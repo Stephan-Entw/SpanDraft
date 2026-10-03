@@ -318,9 +318,12 @@ Ergebnisvergleiche verwenden `absTol + 1e-9 · |Soll|`: absolut `1e-7 N`,
 `1e-7 Nm`, `1e-12 m` und `1e-12 rad`. Diese Testtoleranzen sind von den
 numerischen Abbruchschwellen getrennt.
 
-Spannungen, Sicherheitsfaktoren, Festigkeits-/Gebrauchstauglichkeitsnachweise,
-Schubverformung, geometrische Nichtlinearität und Eigengewicht sind nicht
-implementiert. Core hat derzeit keinen axialen Lasttyp; der axiale Gleichungsanteil
+Der Solver liefert keine Festigkeitsbewertung. Reine elastische Biegespannung
+und ein einfaches Verhältnis zur Streckgrenze werden als getrenntes Postprocessing
+in [SpanDraft.Engineering](ENGINEERING.md) ausgewertet. Normative
+Festigkeits-/Gebrauchstauglichkeitsnachweise, Schubverformung, geometrische
+Nichtlinearität und Eigengewicht sind nicht implementiert.
+Core hat derzeit keinen axialen Lasttyp; der axiale Gleichungsanteil
 wird einschließlich u(x) und N(x) separat intern getestet. Öffentliche
 Lastmodelle liefern normalerweise N = 0. Globale N-Extrema sind nicht Teil
 der API. Querschnitt und Material sind konstant; nichtkonstante Linienlasten,

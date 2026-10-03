@@ -362,8 +362,11 @@ SpanDraft
 │   ├── Assembly
 │   ├── BoundaryConditions
 │   ├── Reactions
-│   ├── InternalForces
-│   └── StressEvaluation
+│   └── InternalForces
+│
+├── SpanDraft.Engineering
+│   ├── AbsoluteExtrema
+│   └── ElasticBendingAssessment
 │
 ├── SpanDraft.Desktop
 │   └── Avalonia UI
@@ -385,19 +388,31 @@ Enthält die technische Mechanik und numerische Berechnung.
 
 Der Solver soll unabhängig von Avalonia verwendbar und vollständig automatisiert testbar sein.
 
-### 13.3 SpanDraft.Desktop
+### 13.3 SpanDraft.Engineering
+
+Enthält fachliches Postprocessing einer vorhandenen `BeamSolution`: betragsgrößte
+Durchbiegung und Biegemoment, reine elastische Biegespannung `|M|/W` und das
+dimensionslose Verhältnis zur Streckgrenze. Engineering referenziert Core und
+Solver, ohne UI- oder Reporting-Abhängigkeiten und ohne eigene Balkenberechnung.
+Der unabhängig validierte Core/Solver bleibt davon getrennt. Diese Auswertung
+ist kein normativer Festigkeitsnachweis; Details und Grenzen beschreibt
+[ENGINEERING.md](ENGINEERING.md).
+
+### 13.4 SpanDraft.Desktop
 
 Enthält ausschließlich Desktop-UI, Interaktionslogik und Darstellung.
 
 Die UI soll keine Berechnungsformeln enthalten.
 
-### 13.4 SpanDraft.Reporting
+### 13.5 SpanDraft.Reporting
 
 Erzeugt Reports und Exporte aus dem fachlichen Modell und den Solver-Ergebnissen.
 
-### 13.5 SpanDraft.Tests
+### 13.6 SpanDraft.Tests
 
 Enthält analytische Referenzfälle, Regressionstests und Validierung des Solvers.
+Die Engineering-Auswertung wird hier ebenfalls getestet; das Engineering-Projekt
+ist nicht Bestandteil der separaten unabhängigen Validation-Solution.
 
 ## 14. Qualität und Validierung
 
