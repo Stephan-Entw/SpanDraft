@@ -6,7 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/SpanDraft.Core/SpanDraft.Core.csproj" />
-    <ProjectReference Include="../../src/SpanDraft.Solver/SpanDraft.Solver.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.1" />

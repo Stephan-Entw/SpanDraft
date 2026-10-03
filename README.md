@@ -1,9 +1,11 @@
 # SpanDraft
 SpanDraft is an open-source desktop application for intuitive beam analysis. Draw and dimension beams, place supports and loads visually, and calculate reactions, shear forces, bending moments, deflection, stresses and safety factors.
 
-The repository currently contains only the technical foundation: an empty desktop
-window and a test smoke check. Beam analysis, editing and exports are not yet implemented.
+The repository contains the technical foundation and a tested beam domain model:
+explicit SI quantities, materials, sections, supports, loads and model validation.
+The desktop window is still empty. Beam analysis, editing and exports are not yet implemented.
 Architecture and scope are defined in [the project concept](docs/KONZEPT.md).
+Local coordinates, signs and domain validation are documented in [the domain notes](docs/DOMAIN.md).
 
 ## Development
 
@@ -30,14 +32,15 @@ command above, or run `dotnet run` from `src/SpanDraft.Desktop`.
 
 | Project | Purpose | Project references |
 | --- | --- | --- |
-| `src/SpanDraft.Core` | Future domain model | None |
+| `src/SpanDraft.Core` | Beam domain model and validation | None |
 | `src/SpanDraft.Solver` | Future beam solver; Math.NET Numerics | Core |
 | `src/SpanDraft.Desktop` | Minimal Avalonia desktop application | Core, Solver |
 | `src/SpanDraft.Reporting` | Future PDF and XLSX exports | Core |
-| `tests/SpanDraft.Tests` | xUnit smoke test | Core, Solver |
+| `tests/SpanDraft.Tests` | xUnit domain and dependency tests | Core |
 
-The class libraries intentionally contain no placeholder domain types or solver
-logic. The desktop application uses Avalonia's standard Fluent theme. UI strings
+The solver and reporting libraries contain no implementation yet. Core and its
+tests do not depend on Avalonia or Math.NET. The desktop application uses
+Avalonia's standard Fluent theme. UI strings
 are stored in `src/SpanDraft.Desktop/Resources/Strings.resx` and resolved using the
 current UI culture.
 
