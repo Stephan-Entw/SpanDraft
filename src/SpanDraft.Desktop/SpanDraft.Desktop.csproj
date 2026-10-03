@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../SpanDraft.Core/SpanDraft.Core.csproj" />
-    <ProjectReference Include="../SpanDraft.Solver/SpanDraft.Solver.csproj" />
+    <ProjectReference Include="../SpanDraft.Analysis/SpanDraft.Analysis.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.3" />

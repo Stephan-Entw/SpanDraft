@@ -1,6 +1,6 @@
 # SpanDraft – Konzept
 
-> Status: Initiales Projektkonzept  
+> Status: Core, unabhängig validierter Solver, Engineering und Analysis implementiert; Desktop-Editor folgt
 > Stand: 03.10.2026  
 > Dieses Dokument beschreibt den geplanten Scope, die technische Architektur und die Grundprinzipien von SpanDraft. Es ist bewusst als interne Entwicklungsgrundlage auf Deutsch gehalten und wird mit dem Projekt weiterentwickelt.
 
@@ -368,6 +368,11 @@ SpanDraft
 │   ├── AbsoluteExtrema
 │   └── ElasticBendingAssessment
 │
+├── SpanDraft.Analysis
+│   ├── BeamAnalysis
+│   ├── BeamAnalysisResult
+│   └── SuccessFailureContract
+│
 ├── SpanDraft.Desktop
 │   └── Avalonia UI
 │
@@ -398,21 +403,37 @@ Der unabhängig validierte Core/Solver bleibt davon getrennt. Diese Auswertung
 ist kein normativer Festigkeitsnachweis; Details und Grenzen beschreibt
 [ENGINEERING.md](ENGINEERING.md).
 
-### 13.4 SpanDraft.Desktop
+### 13.4 SpanDraft.Analysis
+
+Orchestriert die bestehenden Schritte Solver und Engineering über
+`BeamAnalysis.Analyze(BeamModel beam)`. Ein erfolgreicher Aufruf liefert die
+ursprüngliche Solution und deren Engineering-Ergebnis gemeinsam. Erwartbare
+Solverfehler werden strukturiert zurückgegeben; es gibt keine Partial Results.
+Engineering-Exceptions bleiben sichtbar. Analysis enthält keine eigene Mechanik,
+Validierung oder Ergebnisformeln und referenziert ausschließlich Core, Solver und
+Engineering. Der Rechenpfad lautet BeamModel → BeamAnalysis → Solver → BeamSolution
+→ Engineering → BeamAnalysisResult. Details stehen in [ANALYSIS.md](ANALYSIS.md).
+
+### 13.5 SpanDraft.Desktop
 
 Enthält ausschließlich Desktop-UI, Interaktionslogik und Darstellung.
 
 Die UI soll keine Berechnungsformeln enthalten.
+Desktop referenziert direkt Core und Analysis und startet Berechnungen künftig nur
+über BeamAnalysis. Solver und Engineering werden nicht direkt referenziert.
 
-### 13.5 SpanDraft.Reporting
+### 13.6 SpanDraft.Reporting
 
-Erzeugt Reports und Exporte aus dem fachlichen Modell und den Solver-Ergebnissen.
+Soll Reports und Exporte aus vollständigen Analysis-Ergebnissen erzeugen. Das
+Projekt enthält noch keine Implementierung. Eine Analysis-Projektreferenz wird
+erst bei Umsetzung von Reporting hinzugefügt.
 
-### 13.6 SpanDraft.Tests
+### 13.7 SpanDraft.Tests
 
 Enthält analytische Referenzfälle, Regressionstests und Validierung des Solvers.
-Die Engineering-Auswertung wird hier ebenfalls getestet; das Engineering-Projekt
-ist nicht Bestandteil der separaten unabhängigen Validation-Solution.
+Die Engineering-Auswertung und der Analysis-Vertrag werden hier ebenfalls
+getestet; Engineering und Analysis sind nicht Bestandteil der separaten
+unabhängigen Validation-Solution.
 
 ## 14. Qualität und Validierung
 
@@ -485,6 +506,11 @@ Projektname und Branding sind getrennt von der Code-Lizenz zu betrachten. Eine k
 - analytische Referenztests.
 
 ### Phase 2 – Interaktiver Editor
+
+Vor dem Editor ist der Analysis/API-Meilenstein umgesetzt: ein Anwendungseinstieg
+für Solver und Engineering, unveränderliche Success-/Failure-Ergebnisse und
+strukturierte Solverdiagnostik. Core, Euler-Bernoulli-Solver und Engineering sind
+bereits implementiert; Analysis erweitert weder Mechanik noch Engineering-Nachweise.
 
 - Balkendarstellung,
 - Auswahlmodell,

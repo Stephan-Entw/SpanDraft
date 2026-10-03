@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../SpanDraft.Core/SpanDraft.Core.csproj" />
+    <ProjectReference Include="../SpanDraft.Solver/SpanDraft.Solver.csproj" />
+    <ProjectReference Include="../SpanDraft.Engineering/SpanDraft.Engineering.csproj" />
+    <InternalsVisibleTo Include="SpanDraft.Tests" />
+  </ItemGroup>
+</Project>
