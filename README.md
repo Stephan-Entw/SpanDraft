@@ -1,4 +1,7 @@
 # SpanDraft
+
+[![CI](https://github.com/Stephan-Entw/SpanDraft/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Stephan-Entw/SpanDraft/actions/workflows/ci.yml)
+
 SpanDraft is an open-source desktop application for intuitive beam analysis. Start with one straight beam, edit its dimensions, and eventually place supports and loads visually to calculate reactions, shear forces, bending moments, deflection, stresses and safety factors.
 
 The repository contains a tested beam domain model, an independently validated
@@ -25,6 +28,10 @@ The implemented desktop and binding placement/flyout interaction rules are docum
 Install the .NET 10 SDK. Windows is the primary target; development on macOS and
 Linux remains possible. All projects target `net10.0` with nullable reference types
 and the latest stable C# language version supported by the selected SDK.
+
+GitHub Actions automatically runs the Product and Validation gates for pushes to
+main and pull requests targeting main. Normal CI requires neither Python nor
+external solver installations.
 
 After installing the SDK, reopen your terminal (and restart your IDE if its
 terminal cannot find `dotnet`). Verify the installation with `dotnet --version`.
