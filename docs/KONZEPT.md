@@ -1,6 +1,6 @@
 # SpanDraft – Konzept
 
-> Status: Core, unabhängig validierter Solver, Engineering und Analysis implementiert; Desktop-Editor folgt
+> Status: Core, unabhängig validierter Solver, Engineering, Analysis und erstes Desktop-UI-Fundament implementiert; Objektplatzierung folgt
 > Stand: 03.10.2026  
 > Dieses Dokument beschreibt den geplanten Scope, die technische Architektur und die Grundprinzipien von SpanDraft. Es ist bewusst als interne Entwicklungsgrundlage auf Deutsch gehalten und wird mit dem Projekt weiterentwickelt.
 
@@ -41,17 +41,21 @@ Die grafische Darstellung ist nicht nur eine Ergebnisgrafik, sondern der primär
 
 Der Anwender soll:
 
-- einen Balken grafisch anlegen,
+- mit einem vorhandenen geraden Balken beginnen,
 - seine Länge und relevante Abstände direkt bemaßen,
-- Lager per Drag & Drop platzieren und verschieben,
-- Lasten per Drag & Drop platzieren und verschieben,
+- Lager und Lasten über One-shot-Werkzeuge mit Vorschau platzieren,
 - Maßwerte und Positionen direkt numerisch editieren,
-- Elemente anklicken und deren Eigenschaften bearbeiten,
-- dieselben Daten zusätzlich in einer tabellarischen Ansicht sehen und bearbeiten.
+- Elemente anklicken und deren Eigenschaften transaktional in objektgebundenen Flyouts bearbeiten,
+- später dieselben Daten zusätzlich in einer tabellarischen Ansicht sehen und bearbeiten.
 
 Grafik und Tabelle stellen immer dasselbe Modell dar. Änderungen in einer Ansicht müssen unmittelbar in der anderen erscheinen.
 
 Die Bedienung soll sich eher wie eine kleine technische Skizzen-/CAD-Anwendung anfühlen als wie ein Formularrechner.
+
+Das erste UI-Fundament ist implementiert: Project Setup, technischer Balken mit
+1000 mm Startlänge, direkte Längenbearbeitung und Analysis-Status. Die verbindliche
+Oberfläche und die noch nicht implementierten Placement-/Flyout-Regeln stehen in
+[UI.md](UI.md).
 
 ## 4. Scope der ersten Version
 
@@ -223,24 +227,25 @@ Die Hauptansicht soll den Balken als technische Skizze darstellen.
 Wichtige Interaktionen:
 
 - Auswahl per Klick,
-- Drag & Drop für Lager und Lasten,
+- One-shot-Platzierung für Lager und Lasten mit temporärer Vorschau und Bestätigung,
 - direkte Bearbeitung von Bemaßungen,
 - numerische Eingabe für exakte Positionen,
 - Zoom und Pan bei langen Modellen,
-- unmittelbare Aktualisierung der Berechnung nach Änderungen,
+- Aktualisierung der Berechnung ausschließlich nach bestätigten Projektänderungen,
 - klare visuelle Rückmeldung bei ungültigen oder unvollständigen Modellen.
 
 ### 7.2 Eigenschaften
 
-Ausgewählte Objekte sollen über eine kompakte Eigenschaftenansicht bearbeitet werden können.
+Ausgewählte Objekte sollen über ein kleines objektgebundenes Flyout transaktional
+bearbeitet werden können. Es gibt keinen permanenten rechten Inspector.
 
 Beispiele:
 
 - Balken: Länge, Material, Querschnitt,
 - Lager: Typ, Position,
-- Kraft: Betrag, Richtung, Position,
-- Moment: Betrag, Position,
-- Streckenlast: Betrag und Bereich.
+- Kraft: signed Kraft und Position; Vorzeichen bestimmt Richtung,
+- Moment: signed Moment und Position; Vorzeichen bestimmt Drehrichtung,
+- Streckenlast: signed Intensität und Bereich.
 
 ### 7.3 Tabellenansicht
 
@@ -262,6 +267,10 @@ Geplant sind synchronisierte Diagramme für:
 - Durchbiegung.
 
 Zusätzlich sollen wichtige Maximalwerte und Lagerreaktionen kompakt dargestellt werden.
+
+Bereits umgesetzt ist die dauerhafte kompakte Ergebnis-/Statusleiste des Editors.
+Die spätere Ergebnisse-/Reportansicht bleibt innerhalb derselben MainWindow.
+Ihr Button ist bis zur Implementierung deaktiviert.
 
 ## 8. Reports und Export
 
@@ -417,9 +426,12 @@ Engineering. Der Rechenpfad lautet BeamModel → BeamAnalysis → Solver → Bea
 ### 13.5 SpanDraft.Desktop
 
 Enthält ausschließlich Desktop-UI, Interaktionslogik und Darstellung.
+MainWindow hostet Menü und Setup/Editor; eigene kleine ViewModels halten Navigation,
+temporäre Eingaben und ein einziges committed EditorDocument. BeamEditorSurface
+trennt editierbare Controls vom DrawingContext-Rendering des BeamCanvas.
 
 Die UI soll keine Berechnungsformeln enthalten.
-Desktop referenziert direkt Core und Analysis und startet Berechnungen künftig nur
+Desktop referenziert direkt Core und Analysis und startet Berechnungen ausschließlich
 über BeamAnalysis. Solver und Engineering werden nicht direkt referenziert.
 
 ### 13.6 SpanDraft.Reporting
@@ -512,14 +524,18 @@ für Solver und Engineering, unveränderliche Success-/Failure-Ergebnisse und
 strukturierte Solverdiagnostik. Core, Euler-Bernoulli-Solver und Engineering sind
 bereits implementiert; Analysis erweitert weder Mechanik noch Engineering-Nachweise.
 
-- Balkendarstellung,
-- Auswahlmodell,
-- Lager hinzufügen/verschieben,
-- Lasten hinzufügen/verschieben,
-- direkte Bemaßung,
-- Eigenschaftenansicht,
-- Tabellenansicht,
-- Undo/Redo frühzeitig berücksichtigen.
+Umgesetzt: Light-Fluent-Setup mit einer geometrischen Vierkantrohr-Vorlage
+100×100×5 mm und einer vorläufigen S235JR-Materialvorlage, Setup/Editor-Navigation,
+horizontale Toolbar, Projektinfo, Balkendarstellung, transaktionale direkte
+Längenbemaßung und Analysis-Presentation-State. Die Vorlagen sind keine Norm- oder
+Herstellerbibliothek; A/I/W stammen aus dem idealisierten Core-Modell.
+
+Nächste Schritte gemäß [UI.md](UI.md):
+
+- One-shot-Lager-/Lastplatzierung mit Preview und Millimetersnap,
+- Auswahlmodell und transaktionale objektgebundene Flyouts,
+- Löschen,
+- später Tabellenansicht und Undo/Redo.
 
 ### Phase 3 – Ergebnisse
 
