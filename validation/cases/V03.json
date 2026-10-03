@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V03",
+  "description": "Cantilever, full UDL",
+  "length": 3,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Fixed"
+    }
+  ],
+  "pointForces": [],
+  "pointMoments": [],
+  "udls": [
+    {
+      "start": 0,
+      "end": 3,
+      "value": -500
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 0.41100000000000003,
+      "side": "Right"
+    },
+    {
+      "position": 0.9990000000000001,
+      "side": "Right"
+    },
+    {
+      "position": 1.1099999999999999,
+      "side": "Right"
+    },
+    {
+      "position": 1.854,
+      "side": "Right"
+    },
+    {
+      "position": 1.8900000000000001,
+      "side": "Right"
+    },
+    {
+      "position": 2.6189999999999998,
+      "side": "Right"
+    },
+    {
+      "position": 3,
+      "side": "Left"
+    }
+  ]
+}

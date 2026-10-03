@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../../src/SpanDraft.Core/SpanDraft.Core.csproj" />
+    <ProjectReference Include="../../../src/SpanDraft.Solver/SpanDraft.Solver.csproj" />
+  </ItemGroup>
+</Project>

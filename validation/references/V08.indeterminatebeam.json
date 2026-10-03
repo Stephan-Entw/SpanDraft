@@ -1,0 +1,394 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V08",
+  "inputSha256": "ae5ee107e3e7f3fea6e7de854b2db3e38bbbd0c0655888ab665bba599e975eaf",
+  "solver": "indeterminatebeam",
+  "status": "PASS",
+  "provenance": {
+    "package": "indeterminatebeam",
+    "version": "2.4.0",
+    "python": "3.9.6",
+    "generatedAt": "2026-10-03T11:35:27.639884+00:00",
+    "theory": "Euler-Bernoulli; constant E, A, I; linear; small displacements",
+    "signMapping": "Inputs, Rx/Ry/Rm, w/theta, tension-positive N, V=dM/dx and sagging M: identity",
+    "options": {
+      "G": "infinity",
+      "units": {
+        "length": "m",
+        "force": "N",
+        "moment": "N.m",
+        "distributed": "N/m",
+        "stiffness": "N/m",
+        "A": "m2",
+        "G": "Pa",
+        "E": "Pa",
+        "I": "m4",
+        "deflection": "m"
+      },
+      "extraction": "generated piecewise expressions; exact interval branches"
+    },
+    "adapterVersion": "1",
+    "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
+    "adapterSourcesSha256": "6a414ce5425101f573b533bcbf1010f4190b345d319b2d161eb92340c8750427",
+    "source": "https://pypi.org/project/indeterminatebeam/2.4.0/"
+  },
+  "availability": {
+    "Rx": "supported",
+    "Ry": "supported",
+    "Rm": "supported",
+    "u": "notSupported",
+    "w": "supported",
+    "theta": "supported",
+    "N": "supported",
+    "V": "supported",
+    "M": "supported"
+  },
+  "reactions": [
+    {
+      "position": 1,
+      "values": {
+        "Ry": 428.5714285714,
+        "Rx": 0.0
+      }
+    },
+    {
+      "position": 4.5,
+      "values": {
+        "Ry": 2071.4285714286
+      }
+    }
+  ],
+  "samples": [
+    {
+      "position": 0,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 0.0,
+        "M": 0.0,
+        "w": -0.00011338975694444393,
+        "theta": 0.00011393229166666615
+      }
+    },
+    {
+      "position": 0.185,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 0.0,
+        "M": 0.0,
+        "w": -9.231228298611069e-05,
+        "theta": 0.00011393229166666615
+      }
+    },
+    {
+      "position": 0.315,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 0.0,
+        "M": 0.0,
+        "w": -7.750108506944409e-05,
+        "theta": 0.00011393229166666615
+      }
+    },
+    {
+      "position": 0.5,
+      "side": "Left",
+      "values": {
+        "N": 0.0,
+        "V": 0.0,
+        "M": 0.0,
+        "w": -5.642361111111085e-05,
+        "theta": 0.00011393229166666615
+      }
+    },
+    {
+      "position": 0.5,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 0.0,
+        "M": 0.0,
+        "w": -5.642361111111085e-05,
+        "theta": 0.00011393229166666615
+      }
+    },
+    {
+      "position": 0.685,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -64.75000000000001,
+        "M": -5.9893750000000034,
+        "w": -3.535630512695295e-05,
+        "theta": 0.00011371244357638837
+      }
+    },
+    {
+      "position": 0.815,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -110.24999999999999,
+        "M": -17.364374999999995,
+        "w": -2.0620404519314146e-05,
+        "theta": 0.00011284701822916615
+      }
+    },
+    {
+      "position": 0.8220000000000001,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -112.70000000000002,
+        "M": -18.144700000000007,
+        "w": -1.983073239458323e-05,
+        "theta": 0.00011277304694444394
+      }
+    },
+    {
+      "position": 1,
+      "side": "Left",
+      "values": {
+        "N": 0.0,
+        "V": -175.0,
+        "M": -43.75,
+        "w": 6.776263578034403e-21,
+        "theta": 0.00010959201388888837
+      }
+    },
+    {
+      "position": 1,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 253.5714285714289,
+        "M": -43.75,
+        "w": 3.705769144237564e-21,
+        "theta": 0.00010959201388888837
+      }
+    },
+    {
+      "position": 1.9980000000000002,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -95.72857142857117,
+        "M": 35.01358571428602,
+        "w": 0.00011279797059793321,
+        "theta": 0.00012425424347505627
+      }
+    },
+    {
+      "position": 2.295,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -199.6785714285711,
+        "M": -8.854374999999578,
+        "w": 0.00015030433940429628,
+        "theta": 0.0001270213585069441
+      }
+    },
+    {
+      "position": 3.205,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -518.1785714285711,
+        "M": -335.47937499999927,
+        "w": 0.0002428310776855461,
+        "theta": 4.6847131076388845e-05
+      }
+    },
+    {
+      "position": 3.708,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -694.2285714285712,
+        "M": -640.3997714285707,
+        "w": 0.00023403562884652987,
+        "theta": -9.703486443310647e-05
+      }
+    },
+    {
+      "position": 4.5,
+      "side": "Left",
+      "values": {
+        "N": 0.0,
+        "V": -971.4285714285711,
+        "M": -1299.9999999999989,
+        "w": -3.75764991225689e-19,
+        "theta": -0.0005457899305555547
+      }
+    },
+    {
+      "position": 4.5,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 1100.0,
+        "M": -1300.0,
+        "w": 0.0,
+        "theta": -0.000545789930555555
+      }
+    },
+    {
+      "position": 4.87,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 970.5,
+        "M": -916.9574999999999,
+        "w": -0.00024954461467013855,
+        "theta": -0.0007890397867063485
+      }
+    },
+    {
+      "position": 5.13,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 879.5,
+        "M": -676.4575000000001,
+        "w": -0.0004714907257812491,
+        "theta": -0.0009120346180555546
+      }
+    },
+    {
+      "position": 5.2379999999999995,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 841.7000000000002,
+        "M": -583.5127000000003,
+        "w": -0.0005722300070326772,
+        "theta": -0.0009525117901984115
+      }
+    },
+    {
+      "position": 5.5,
+      "side": "Left",
+      "values": {
+        "N": 0.0,
+        "V": 750.0,
+        "M": -375.0,
+        "w": -0.0008322482638888876,
+        "theta": -0.001026940724206348
+      }
+    },
+    {
+      "position": 5.5,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 750.0,
+        "M": -375.0,
+        "w": -0.000832248263888888,
+        "theta": -0.0010269407242063482
+      }
+    },
+    {
+      "position": 5.685,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 750.0,
+        "M": -236.25000000000028,
+        "w": -0.0010255809492807524,
+        "theta": -0.0010605958581349196
+      }
+    },
+    {
+      "position": 5.815,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 750.0,
+        "M": -138.74999999999972,
+        "w": -0.001164483224826388,
+        "theta": -0.0010751047867063484
+      }
+    },
+    {
+      "position": 6,
+      "side": "Left",
+      "values": {
+        "N": 0.0,
+        "V": 750.0,
+        "M": 0.0,
+        "w": -0.0013643198164682525,
+        "theta": -0.0010827442956349198
+      }
+    }
+  ],
+  "extrema": {
+    "wMin": {
+      "value": -0.0013643198164682525,
+      "locations": [
+        {
+          "position": 6.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "wMax": {
+      "value": 0.0002477819626246121,
+      "locations": [
+        {
+          "position": 3.406739857238388,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    },
+    "VMin": {
+      "value": -971.4285714285711,
+      "locations": [
+        {
+          "position": 4.5,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "VMax": {
+      "value": 1100.0,
+      "locations": [
+        {
+          "position": 4.5,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMin": {
+      "value": -1300.0,
+      "locations": [
+        {
+          "position": 4.5,
+          "side": "Left"
+        },
+        {
+          "position": 4.5,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMax": {
+      "value": 48.10495626822181,
+      "locations": [
+        {
+          "position": 1.7244897959183683,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    }
+  }
+}

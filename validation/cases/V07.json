@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V07",
+  "description": "Right overhang, tip point force",
+  "length": 5,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 3.5,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 5,
+      "value": -900
+    }
+  ],
+  "pointMoments": [],
+  "udls": [],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 0.685,
+      "side": "Right"
+    },
+    {
+      "position": 1.295,
+      "side": "Right"
+    },
+    {
+      "position": 1.665,
+      "side": "Right"
+    },
+    {
+      "position": 2.205,
+      "side": "Right"
+    },
+    {
+      "position": 3.09,
+      "side": "Right"
+    },
+    {
+      "position": 3.5,
+      "side": "Left"
+    },
+    {
+      "position": 3.5,
+      "side": "Right"
+    },
+    {
+      "position": 4.055,
+      "side": "Right"
+    },
+    {
+      "position": 4.365,
+      "side": "Right"
+    },
+    {
+      "position": 4.445,
+      "side": "Right"
+    },
+    {
+      "position": 5,
+      "side": "Left"
+    }
+  ]
+}

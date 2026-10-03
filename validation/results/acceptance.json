@@ -1,0 +1,2002 @@
+{
+  "generatedAt": "2026-10-03T14:07:38.0209810\u002B00:00",
+  "solverSourceSha256": "6f4a3bf5a3e283680d57c087491a623af715e164089e3219c6bed77b586c06df",
+  "cases": 18,
+  "analyticalCases": 9,
+  "externalComparisons": 2837,
+  "analyticalComparisons": 639,
+  "metamorphicTests": 96,
+  "physicalComparisons": 1163,
+  "totalComparisons": 13472,
+  "notApplicableComparisons": 6,
+  "validated": true,
+  "results": [
+    {
+      "caseId": "V01",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V01",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V01",
+          "referenceSolver": "pycba",
+          "comparisons": 62,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V01",
+          "referenceSolver": "analytical",
+          "comparisons": 87,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V01",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V01",
+        "referenceSolver": "physical fields",
+        "comparisons": 44,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V01",
+          "referenceSolver": "load2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V01",
+          "referenceSolver": "load-1",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V01",
+          "referenceSolver": "E2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V01",
+          "referenceSolver": "I2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V01",
+          "referenceSolver": "zeroNode",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V01",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V01",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V01",
+          "referenceSolver": "analytical equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V02",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V02",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 55,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V02",
+          "referenceSolver": "pycba",
+          "comparisons": 46,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V02",
+          "referenceSolver": "analytical",
+          "comparisons": 63,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V02",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V02",
+        "referenceSolver": "physical fields",
+        "comparisons": 24,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V02",
+          "referenceSolver": "load2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V02",
+          "referenceSolver": "load-1",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V02",
+          "referenceSolver": "E2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V02",
+          "referenceSolver": "I2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V02",
+          "referenceSolver": "zeroNode",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V02",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V02",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V02",
+          "referenceSolver": "analytical equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V03",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V03",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 55,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V03",
+          "referenceSolver": "pycba",
+          "comparisons": 46,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V03",
+          "referenceSolver": "analytical",
+          "comparisons": 63,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V03",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V03",
+        "referenceSolver": "physical fields",
+        "comparisons": 24,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V03",
+          "referenceSolver": "load2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V03",
+          "referenceSolver": "load-1",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V03",
+          "referenceSolver": "E2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V03",
+          "referenceSolver": "I2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V03",
+          "referenceSolver": "zeroNode",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V03",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V03",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V03",
+          "referenceSolver": "analytical equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V04",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V04",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 55,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04",
+          "referenceSolver": "pycba",
+          "comparisons": 46,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04",
+          "referenceSolver": "analytical",
+          "comparisons": 63,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V04",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V04",
+        "referenceSolver": "physical fields",
+        "comparisons": 24,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V04",
+          "referenceSolver": "load2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04",
+          "referenceSolver": "load-1",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04",
+          "referenceSolver": "E2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04",
+          "referenceSolver": "I2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04",
+          "referenceSolver": "zeroNode",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04",
+          "referenceSolver": "superposition",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V04",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04",
+          "referenceSolver": "analytical equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V05",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V05",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V05",
+          "referenceSolver": "pycba",
+          "comparisons": 62,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V05",
+          "referenceSolver": "analytical",
+          "comparisons": 87,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V05",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V05",
+        "referenceSolver": "physical fields",
+        "comparisons": 44,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V05",
+          "referenceSolver": "load2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V05",
+          "referenceSolver": "load-1",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V05",
+          "referenceSolver": "E2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V05",
+          "referenceSolver": "I2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V05",
+          "referenceSolver": "zeroNode",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V05",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V05",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V05",
+          "referenceSolver": "analytical equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V06",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V06",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V06",
+          "referenceSolver": "pycba",
+          "comparisons": 62,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V06",
+          "referenceSolver": "analytical",
+          "comparisons": 87,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V06",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V06",
+        "referenceSolver": "physical fields",
+        "comparisons": 44,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V06",
+          "referenceSolver": "load2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V06",
+          "referenceSolver": "load-1",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V06",
+          "referenceSolver": "E2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V06",
+          "referenceSolver": "I2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V06",
+          "referenceSolver": "zeroNode",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V06",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V06",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V06",
+          "referenceSolver": "analytical equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V07",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V07",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V07",
+          "referenceSolver": "pycba",
+          "comparisons": 62,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V07",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V07",
+        "referenceSolver": "physical fields",
+        "comparisons": 44,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V07",
+          "referenceSolver": "load2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V07",
+          "referenceSolver": "load-1",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V07",
+          "referenceSolver": "E2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V07",
+          "referenceSolver": "I2",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V07",
+          "referenceSolver": "zeroNode",
+          "comparisons": 75,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V07",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V07",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V08",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V08",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 135,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V08",
+          "referenceSolver": "pycba",
+          "comparisons": 110,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V08",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V08",
+        "referenceSolver": "physical fields",
+        "comparisons": 104,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V08",
+          "referenceSolver": "load2",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V08",
+          "referenceSolver": "load-1",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V08",
+          "referenceSolver": "E2",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V08",
+          "referenceSolver": "I2",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V08",
+          "referenceSolver": "zeroNode",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V08",
+          "referenceSolver": "superposition",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V08",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V08",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V09",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V09",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 96,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V09",
+          "referenceSolver": "pycba",
+          "comparisons": 79,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V09",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V09",
+        "referenceSolver": "physical fields",
+        "comparisons": 64,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V09",
+          "referenceSolver": "load2",
+          "comparisons": 100,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V09",
+          "referenceSolver": "load-1",
+          "comparisons": 100,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V09",
+          "referenceSolver": "E2",
+          "comparisons": 100,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V09",
+          "referenceSolver": "I2",
+          "comparisons": 100,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V09",
+          "referenceSolver": "zeroNode",
+          "comparisons": 100,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V09",
+          "referenceSolver": "superposition",
+          "comparisons": 100,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V09",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V09",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V10",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V10",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 76,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V10",
+          "referenceSolver": "pycba",
+          "comparisons": 63,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V10",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V10",
+        "referenceSolver": "physical fields",
+        "comparisons": 44,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V10",
+          "referenceSolver": "load2",
+          "comparisons": 76,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V10",
+          "referenceSolver": "load-1",
+          "comparisons": 76,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V10",
+          "referenceSolver": "E2",
+          "comparisons": 76,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V10",
+          "referenceSolver": "I2",
+          "comparisons": 76,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V10",
+          "referenceSolver": "zeroNode",
+          "comparisons": 76,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V10",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V10",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V11",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V11",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 157,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V11",
+          "referenceSolver": "pycba",
+          "comparisons": 128,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V11",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V11",
+        "referenceSolver": "physical fields",
+        "comparisons": 124,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V11",
+          "referenceSolver": "load2",
+          "comparisons": 173,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V11",
+          "referenceSolver": "load-1",
+          "comparisons": 173,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V11",
+          "referenceSolver": "E2",
+          "comparisons": 173,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V11",
+          "referenceSolver": "I2",
+          "comparisons": 173,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V11",
+          "referenceSolver": "zeroNode",
+          "comparisons": 173,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V11",
+          "referenceSolver": "superposition",
+          "comparisons": 173,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V11",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V11",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V12",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V12",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 58,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V12",
+          "referenceSolver": "pycba",
+          "comparisons": 48,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V12",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V12",
+        "referenceSolver": "physical fields",
+        "comparisons": 24,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V12",
+          "referenceSolver": "load2",
+          "comparisons": 54,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V12",
+          "referenceSolver": "load-1",
+          "comparisons": 54,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V12",
+          "referenceSolver": "E2",
+          "comparisons": 54,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V12",
+          "referenceSolver": "I2",
+          "comparisons": 54,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V12",
+          "referenceSolver": "zeroNode",
+          "comparisons": 54,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V12",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V12",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V13",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V13",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 135,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V13",
+          "referenceSolver": "pycba",
+          "comparisons": 110,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V13",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V13",
+        "referenceSolver": "physical fields",
+        "comparisons": 104,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V13",
+          "referenceSolver": "load2",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V13",
+          "referenceSolver": "load-1",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V13",
+          "referenceSolver": "E2",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V13",
+          "referenceSolver": "I2",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V13",
+          "referenceSolver": "zeroNode",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V13",
+          "referenceSolver": "superposition",
+          "comparisons": 147,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V13",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V13",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V14",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V14",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 70,
+          "failures": [],
+          "notApplicable": [
+            {
+              "quantity": "wMin.position",
+              "reason": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution. Native w/M are nonconstant roundoff polynomials; V has unequal nonzero constant branches. A physical zero-field extremum set cannot be derived. The extremum value remains a mandatory comparison.",
+              "status": "NOT APPLICABLE"
+            },
+            {
+              "quantity": "wMax.position",
+              "reason": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution. Native w/M are nonconstant roundoff polynomials; V has unequal nonzero constant branches. A physical zero-field extremum set cannot be derived. The extremum value remains a mandatory comparison.",
+              "status": "NOT APPLICABLE"
+            },
+            {
+              "quantity": "VMin.position",
+              "reason": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution. Native w/M are nonconstant roundoff polynomials; V has unequal nonzero constant branches. A physical zero-field extremum set cannot be derived. The extremum value remains a mandatory comparison.",
+              "status": "NOT APPLICABLE"
+            },
+            {
+              "quantity": "VMax.position",
+              "reason": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution. Native w/M are nonconstant roundoff polynomials; V has unequal nonzero constant branches. A physical zero-field extremum set cannot be derived. The extremum value remains a mandatory comparison.",
+              "status": "NOT APPLICABLE"
+            },
+            {
+              "quantity": "MMin.position",
+              "reason": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution. Native w/M are nonconstant roundoff polynomials; V has unequal nonzero constant branches. A physical zero-field extremum set cannot be derived. The extremum value remains a mandatory comparison.",
+              "status": "NOT APPLICABLE"
+            },
+            {
+              "quantity": "MMax.position",
+              "reason": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution. Native w/M are nonconstant roundoff polynomials; V has unequal nonzero constant branches. A physical zero-field extremum set cannot be derived. The extremum value remains a mandatory comparison.",
+              "status": "NOT APPLICABLE"
+            }
+          ],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V14",
+          "referenceSolver": "pycba",
+          "comparisons": 63,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V14",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V14",
+        "referenceSolver": "physical fields",
+        "comparisons": 44,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V14",
+          "referenceSolver": "load2",
+          "comparisons": 76,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V14",
+          "referenceSolver": "load-1",
+          "comparisons": 76,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V14",
+          "referenceSolver": "E2",
+          "comparisons": 76,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V14",
+          "referenceSolver": "I2",
+          "comparisons": 76,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V14",
+          "referenceSolver": "zeroNode",
+          "comparisons": 76,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V14",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V14",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V15",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V15",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 196,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V15",
+          "referenceSolver": "pycba",
+          "comparisons": 159,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V15",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V15",
+        "referenceSolver": "physical fields",
+        "comparisons": 164,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V15",
+          "referenceSolver": "load2",
+          "comparisons": 220,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V15",
+          "referenceSolver": "load-1",
+          "comparisons": 220,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V15",
+          "referenceSolver": "E2",
+          "comparisons": 220,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V15",
+          "referenceSolver": "I2",
+          "comparisons": 220,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V15",
+          "referenceSolver": "zeroNode",
+          "comparisons": 220,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V15",
+          "referenceSolver": "superposition",
+          "comparisons": 220,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V15",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V15",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V04-S01",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V04-S01",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 55,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S01",
+          "referenceSolver": "pycba",
+          "comparisons": 46,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S01",
+          "referenceSolver": "analytical",
+          "comparisons": 63,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V04-S01",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V04-S01",
+        "referenceSolver": "physical fields",
+        "comparisons": 24,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V04-S01",
+          "referenceSolver": "load2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S01",
+          "referenceSolver": "load-1",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S01",
+          "referenceSolver": "E2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S01",
+          "referenceSolver": "I2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S01",
+          "referenceSolver": "zeroNode",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V04-S01",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S01",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S01",
+          "referenceSolver": "analytical equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V04-S02",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V04-S02",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 55,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S02",
+          "referenceSolver": "pycba",
+          "comparisons": 46,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S02",
+          "referenceSolver": "analytical",
+          "comparisons": 63,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V04-S02",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V04-S02",
+        "referenceSolver": "physical fields",
+        "comparisons": 24,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V04-S02",
+          "referenceSolver": "load2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S02",
+          "referenceSolver": "load-1",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S02",
+          "referenceSolver": "E2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S02",
+          "referenceSolver": "I2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S02",
+          "referenceSolver": "zeroNode",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V04-S02",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S02",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S02",
+          "referenceSolver": "analytical equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "caseId": "V04-S03",
+      "status": "PASS",
+      "references": [
+        {
+          "caseId": "V04-S03",
+          "referenceSolver": "indeterminatebeam",
+          "comparisons": 55,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S03",
+          "referenceSolver": "pycba",
+          "comparisons": 46,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S03",
+          "referenceSolver": "analytical",
+          "comparisons": 63,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "equilibrium": {
+        "caseId": "V04-S03",
+        "referenceSolver": "SpanDraft equilibrium",
+        "comparisons": 3,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "physicalFields": {
+        "caseId": "V04-S03",
+        "referenceSolver": "physical fields",
+        "comparisons": 24,
+        "failures": [],
+        "notApplicable": [],
+        "status": "PASS"
+      },
+      "metamorphic": [
+        {
+          "caseId": "V04-S03",
+          "referenceSolver": "load2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S03",
+          "referenceSolver": "load-1",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S03",
+          "referenceSolver": "E2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S03",
+          "referenceSolver": "I2",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S03",
+          "referenceSolver": "zeroNode",
+          "comparisons": 51,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ],
+      "referenceEquilibria": [
+        {
+          "caseId": "V04-S03",
+          "referenceSolver": "indeterminatebeam equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S03",
+          "referenceSolver": "pycba equilibrium",
+          "comparisons": 2,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        },
+        {
+          "caseId": "V04-S03",
+          "referenceSolver": "analytical equilibrium",
+          "comparisons": 3,
+          "failures": [],
+          "notApplicable": [],
+          "status": "PASS"
+        }
+      ]
+    }
+  ]
+}

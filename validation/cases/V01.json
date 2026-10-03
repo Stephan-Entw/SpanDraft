@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V01",
+  "description": "Simply supported beam, midspan point force",
+  "length": 4,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 4,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 2,
+      "value": -1200
+    }
+  ],
+  "pointMoments": [],
+  "udls": [],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 0.548,
+      "side": "Right"
+    },
+    {
+      "position": 0.74,
+      "side": "Right"
+    },
+    {
+      "position": 1.26,
+      "side": "Right"
+    },
+    {
+      "position": 1.332,
+      "side": "Right"
+    },
+    {
+      "position": 2,
+      "side": "Left"
+    },
+    {
+      "position": 2,
+      "side": "Right"
+    },
+    {
+      "position": 2.472,
+      "side": "Right"
+    },
+    {
+      "position": 2.74,
+      "side": "Right"
+    },
+    {
+      "position": 3.26,
+      "side": "Right"
+    },
+    {
+      "position": 3.492,
+      "side": "Right"
+    },
+    {
+      "position": 4,
+      "side": "Left"
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V04",
+  "inputSha256": "ea7a7fe1a9eed850f913eaa573c3c37b60c43671d8d9bd229a6ba40f6306ef3e",
+  "solver": "analytical",
+  "status": "PASS",
+  "provenance": {
+    "package": "analytical",
+    "version": "1",
+    "python": "3.9.6",
+    "generatedAt": "2026-10-03T11:35:27.232064+00:00",
+    "theory": "Euler-Bernoulli; constant E, A, I; linear; small displacements",
+    "signMapping": "SI and SpanDraft conventions directly; no SpanDraft solver input",
+    "options": {
+      "method": "Exact rational statics, integrated moment-curvature closed forms",
+      "integrationConstant": -1600.0
+    },
+    "adapterVersion": "1",
+    "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
+    "adapterSourcesSha256": "6a414ce5425101f573b533bcbf1010f4190b345d319b2d161eb92340c8750427",
+    "source": "validation/python/analytical.py; derivation in docs/VALIDATION.md"
+  },
+  "availability": {
+    "Rx": "supported",
+    "Ry": "supported",
+    "Rm": "supported",
+    "u": "supported",
+    "w": "supported",
+    "theta": "supported",
+    "N": "supported",
+    "V": "supported",
+    "M": "supported"
+  },
+  "reactions": [
+    {
+      "position": 0,
+      "values": {
+        "Ry": 1200.0,
+        "Rx": 0.0
+      }
+    },
+    {
+      "position": 4.0,
+      "values": {
+        "Ry": 1200.0
+      }
+    }
+  ],
+  "samples": [
+    {
+      "position": 0,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": 0.0,
+        "theta": -0.0009523809523809524,
+        "N": 0.0,
+        "V": 1200.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 0.548,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -0.000503655502327619,
+        "theta": -0.0008549251542857143,
+        "N": 0.0,
+        "V": 871.2,
+        "M": 567.5088
+      }
+    },
+    {
+      "position": 1.332,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -0.0010340735097942857,
+        "theta": -0.00045940014095238084,
+        "N": 0.0,
+        "V": 400.79999999999995,
+        "M": 1066.1328
+      }
+    },
+    {
+      "position": 1.48,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -0.0010949928,
+        "theta": -0.0003630590476190476,
+        "N": 0.0,
+        "V": 312.0,
+        "M": 1118.8799999999999
+      }
+    },
+    {
+      "position": 2.472,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -0.0011116490581942857,
+        "theta": 0.00033088368761904755,
+        "N": 0.0,
+        "V": -283.20000000000005,
+        "M": 1133.1648
+      }
+    },
+    {
+      "position": 2.52,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -0.0010949928,
+        "theta": 0.0003630590476190476,
+        "N": 0.0,
+        "V": -312.0,
+        "M": 1118.88
+      }
+    },
+    {
+      "position": 3.492,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -0.0004691938233942861,
+        "theta": 0.0008680186019047621,
+        "N": 0.0,
+        "V": -895.1999999999998,
+        "M": 532.1808000000003
+      }
+    },
+    {
+      "position": 4,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "w": 0.0,
+        "theta": 0.0009523809523809524,
+        "N": 0.0,
+        "V": -1200.0,
+        "M": 0.0
+      }
+    }
+  ],
+  "extrema": {
+    "wMin": {
+      "value": -0.0011904761904761904,
+      "locations": [
+        {
+          "position": 1.9999999999999996,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    },
+    "wMax": {
+      "value": 0.0,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        },
+        {
+          "position": 4.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "VMin": {
+      "value": -1200.0,
+      "locations": [
+        {
+          "position": 4.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "VMax": {
+      "value": 1200.0,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMin": {
+      "value": 0.0,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        },
+        {
+          "position": 4.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMax": {
+      "value": 1200.0,
+      "locations": [
+        {
+          "position": 2.0,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    }
+  }
+}

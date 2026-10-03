@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V04-S03",
+  "description": "Scaled simply supported full UDL",
+  "length": 10,
+  "e": 210000000000.0,
+  "a": 0.03,
+  "i": 8e-05,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 10,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [],
+  "pointMoments": [],
+  "udls": [
+    {
+      "start": 0,
+      "end": 10,
+      "value": -600
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 1.37,
+      "side": "Right"
+    },
+    {
+      "position": 3.33,
+      "side": "Right"
+    },
+    {
+      "position": 3.7,
+      "side": "Right"
+    },
+    {
+      "position": 6.18,
+      "side": "Right"
+    },
+    {
+      "position": 6.3,
+      "side": "Right"
+    },
+    {
+      "position": 8.73,
+      "side": "Right"
+    },
+    {
+      "position": 10,
+      "side": "Left"
+    }
+  ]
+}

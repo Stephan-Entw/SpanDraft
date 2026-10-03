@@ -1,0 +1,316 @@
+{
+  "analyticalCalibration": [
+    {
+      "caseId": "V01",
+      "solver": "indeterminatebeam",
+      "comparisons": 69,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V01",
+      "solver": "pycba",
+      "comparisons": 56,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V02",
+      "solver": "indeterminatebeam",
+      "comparisons": 49,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V02",
+      "solver": "pycba",
+      "comparisons": 40,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V03",
+      "solver": "indeterminatebeam",
+      "comparisons": 49,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V03",
+      "solver": "pycba",
+      "comparisons": 40,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V04-S01",
+      "solver": "indeterminatebeam",
+      "comparisons": 49,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V04-S01",
+      "solver": "pycba",
+      "comparisons": 40,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V04-S02",
+      "solver": "indeterminatebeam",
+      "comparisons": 49,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V04-S02",
+      "solver": "pycba",
+      "comparisons": 40,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V04-S03",
+      "solver": "indeterminatebeam",
+      "comparisons": 49,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V04-S03",
+      "solver": "pycba",
+      "comparisons": 40,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V04",
+      "solver": "indeterminatebeam",
+      "comparisons": 49,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V04",
+      "solver": "pycba",
+      "comparisons": 40,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V05",
+      "solver": "indeterminatebeam",
+      "comparisons": 69,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V05",
+      "solver": "pycba",
+      "comparisons": 56,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V06",
+      "solver": "indeterminatebeam",
+      "comparisons": 69,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "caseId": "V06",
+      "solver": "pycba",
+      "comparisons": 56,
+      "status": "PASS",
+      "failures": []
+    }
+  ],
+  "calibrationComparisons": 909,
+  "reproducedFiles": [
+    {
+      "file": "V01.analytical.json",
+      "semanticSha256": "1125e24daaf2f78124179affa56a8c228f5cd9f2a52ab6428805aa3217d029c0"
+    },
+    {
+      "file": "V01.indeterminatebeam.json",
+      "semanticSha256": "7a5f563e41b4c2d09801d47df9a90a4a1928548c6833911bb68dd967f6351f13"
+    },
+    {
+      "file": "V01.pycba.json",
+      "semanticSha256": "2fd09ce47eccd7bb9dc7a05697cbab0ec50da383cd47b572ee06ecb1741f53d2"
+    },
+    {
+      "file": "V02.analytical.json",
+      "semanticSha256": "d7883d0ce4285b857ae515402cffa99c8d3d43318265e327e6841c83cdbbd5e7"
+    },
+    {
+      "file": "V02.indeterminatebeam.json",
+      "semanticSha256": "851ab08a32f06f64ec1c9b2c5eddb2067bbc7eb5876f1a621ae323c71a6cb0a9"
+    },
+    {
+      "file": "V02.pycba.json",
+      "semanticSha256": "eae6843367ca91a3bb1a582ff7c0191902383c62674d6a7ba95f2ed37a61a465"
+    },
+    {
+      "file": "V03.analytical.json",
+      "semanticSha256": "4a8f0305dbeeae5f0fce018be0fa0c9228ba918939be3629ce7a3be40840a6dc"
+    },
+    {
+      "file": "V03.indeterminatebeam.json",
+      "semanticSha256": "f2250cd55bd2385db9457647f58370820b40a4962b66e57886cc33f0252a5029"
+    },
+    {
+      "file": "V03.pycba.json",
+      "semanticSha256": "be14a31e726d17b4c00b419bf631dfb7baee5d7e9442b502e56b0993bd8a6668"
+    },
+    {
+      "file": "V04-S01.analytical.json",
+      "semanticSha256": "2dd8e4721a3b43b91dff8e8c047c54e7a0aa20744f296efc73f3b1f982e8309b"
+    },
+    {
+      "file": "V04-S01.indeterminatebeam.json",
+      "semanticSha256": "a04372840ba5506924e7c01c4bbdb432a13746f76c982fe9248961923e1f8c27"
+    },
+    {
+      "file": "V04-S01.pycba.json",
+      "semanticSha256": "57d3b5ab0badc6d55b3a193ca1fec68fbaaf3a8e785132f1a65f8770732eff0e"
+    },
+    {
+      "file": "V04-S02.analytical.json",
+      "semanticSha256": "a892653e6ab6e23382aec2b5631509a1b8142a778bac3f328c20b3916a6b9196"
+    },
+    {
+      "file": "V04-S02.indeterminatebeam.json",
+      "semanticSha256": "338aae006fd2551fe2f34e701395202e1b81a9faa51253e3daa07293c8d82bb1"
+    },
+    {
+      "file": "V04-S02.pycba.json",
+      "semanticSha256": "f2503759a8e206af8aec61570eb6ea38cc78959e161c9707423ff4584bd2780a"
+    },
+    {
+      "file": "V04-S03.analytical.json",
+      "semanticSha256": "28f0d870eb8e9f65e9c33076d1e6471de4e06bf4653d5abe33643664213a141e"
+    },
+    {
+      "file": "V04-S03.indeterminatebeam.json",
+      "semanticSha256": "2dee447dade4b38d8adcc2e49215fb775ae58106c68243813293e6167ae01776"
+    },
+    {
+      "file": "V04-S03.pycba.json",
+      "semanticSha256": "eaf78f98a1a54201fdadd1b39684e9384a3f0563aed94203fc915e17fceb6c09"
+    },
+    {
+      "file": "V04.analytical.json",
+      "semanticSha256": "695b4a7030daec1460ff2d8214f23d1ac03eedd3782e80b275acb3f8c2f00ea4"
+    },
+    {
+      "file": "V04.indeterminatebeam.json",
+      "semanticSha256": "51f4a4b1512f07316cf4d26d56cfe3417a07808106b06409fb5309def3083dd8"
+    },
+    {
+      "file": "V04.pycba.json",
+      "semanticSha256": "8f410618329bc0dc31fe322753ac1ced7b9aefc8b0c3cc2855ceedc329908c75"
+    },
+    {
+      "file": "V05.analytical.json",
+      "semanticSha256": "76c3080fdd35d01742cff8c34f6de0bfee23bcc78737fbff872cb6cf98537f0e"
+    },
+    {
+      "file": "V05.indeterminatebeam.json",
+      "semanticSha256": "3ef05a03a30bf09c19abac1b3f9961a41e5edc62887ee1d9f1a8f86371c5c41c"
+    },
+    {
+      "file": "V05.pycba.json",
+      "semanticSha256": "fc0f6284a61f78af538c4a0be8d6f69b5c7a01e3ea591f72d16e277771ebd4cf"
+    },
+    {
+      "file": "V06.analytical.json",
+      "semanticSha256": "4597fdd8a37c9851f8c8a8d8f904561ce172b014195e3f0fcbc8d8162a47e60b"
+    },
+    {
+      "file": "V06.indeterminatebeam.json",
+      "semanticSha256": "a41e965aa478567fe7a0e5723e5f135b5f8b8eafd955bfafaf2f637f42350c49"
+    },
+    {
+      "file": "V06.pycba.json",
+      "semanticSha256": "f74a693968126e6798f4982c324d0eb2c3e245bb863cabc448af9dca822d54cd"
+    },
+    {
+      "file": "V07.indeterminatebeam.json",
+      "semanticSha256": "8a1b84c53bf33169e0a32622c1b1f1b69b820f6ff6868413c75f315e9baac2d7"
+    },
+    {
+      "file": "V07.pycba.json",
+      "semanticSha256": "884eed62863f3ad11caf7b716ce502a8e7bdf182a06ecb8de57181f9c985c5c9"
+    },
+    {
+      "file": "V08.indeterminatebeam.json",
+      "semanticSha256": "b91b9511d3f9d5369d8dfcf1a7b93bb9a303b4962579f70da7df6edb080a5395"
+    },
+    {
+      "file": "V08.pycba.json",
+      "semanticSha256": "79ee9b13eac9f7645679af1673446b2f6c997aa008fe5d49d8515b4ef5d4c463"
+    },
+    {
+      "file": "V09.indeterminatebeam.json",
+      "semanticSha256": "b8b417be88ce76092d39fcae5c577df9eecdd607d7868774b098017e99911342"
+    },
+    {
+      "file": "V09.pycba.json",
+      "semanticSha256": "28bf149f05323e4ffb7eda437ed58b5d3bd6041aee6ced4ca08b6d54fdc52817"
+    },
+    {
+      "file": "V10.indeterminatebeam.json",
+      "semanticSha256": "713c01114c81d82a29a53f3deda8655542e2ebddf03786aa3f061e278fe975e6"
+    },
+    {
+      "file": "V10.pycba.json",
+      "semanticSha256": "a61da6d937abe6c8cdd8e4ea76e425198aea4b60463b880a33829eabcc442813"
+    },
+    {
+      "file": "V11.indeterminatebeam.json",
+      "semanticSha256": "7bf92a3c6aa1f4a44d89ca92d20e73fc9d60d268156100f09fca739b94572604"
+    },
+    {
+      "file": "V11.pycba.json",
+      "semanticSha256": "8b15d0cf1ee50cd5c4100c7406c0f68a74bd6c14b7f9cbb6f2e52a1df058379d"
+    },
+    {
+      "file": "V12.indeterminatebeam.json",
+      "semanticSha256": "e500a4b292e00f2b438153d69dcf536a0adf6733e0df920b48ef991eae47cf1b"
+    },
+    {
+      "file": "V12.pycba.json",
+      "semanticSha256": "79ac0a9f4cecd7fdae1af2f4ea79ccfd10c191bff156f4f9450ca2115cb6b54c"
+    },
+    {
+      "file": "V13.indeterminatebeam.json",
+      "semanticSha256": "404296e0f1a43729e7ee8b0fb92284b3d5ca12c69b269e344e188573378209ea"
+    },
+    {
+      "file": "V13.pycba.json",
+      "semanticSha256": "243a0383feda2f0269d5fb8513154fe063cc8bdaaf463564d26f73e0f912fdd4"
+    },
+    {
+      "file": "V14.indeterminatebeam.json",
+      "semanticSha256": "1450a08d9dd9e451e95bf2a5c7bcf255fc15f11dfd32028d3a988858e55ba86a"
+    },
+    {
+      "file": "V14.pycba.json",
+      "semanticSha256": "eb1afb5fb7b8e6d06407f9dd8ad5a6f0e4f5faa8302872f81908dcf8ebac33db"
+    },
+    {
+      "file": "V15.indeterminatebeam.json",
+      "semanticSha256": "a6271f47ef495e024278ac3729be382daa98cbb6b25b0ff11f6a2818ecd2e23c"
+    },
+    {
+      "file": "V15.pycba.json",
+      "semanticSha256": "63eacb172109e27d634f2f339dcd8b62828455b46201bd5d08ff210d4b1f678e"
+    }
+  ],
+  "differingFiles": [],
+  "status": "PASS",
+  "note": "This audit verifies calibration/reproduction, not the full V1 acceptance gate."
+}

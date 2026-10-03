@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V04-S01",
+  "inputSha256": "a78f30cefb3a0eb639fee1f03a2113044c10fe5c70b54258c3335c3e5d4aeb77",
+  "solver": "analytical",
+  "status": "PASS",
+  "provenance": {
+    "package": "analytical",
+    "version": "1",
+    "python": "3.9.6",
+    "generatedAt": "2026-10-03T11:35:26.717734+00:00",
+    "theory": "Euler-Bernoulli; constant E, A, I; linear; small displacements",
+    "signMapping": "SI and SpanDraft conventions directly; no SpanDraft solver input",
+    "options": {
+      "method": "Exact rational statics, integrated moment-curvature closed forms",
+      "integrationConstant": -0.00025
+    },
+    "adapterVersion": "1",
+    "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
+    "adapterSourcesSha256": "6a414ce5425101f573b533bcbf1010f4190b345d319b2d161eb92340c8750427",
+    "source": "validation/python/analytical.py; derivation in docs/VALIDATION.md"
+  },
+  "availability": {
+    "Rx": "supported",
+    "Ry": "supported",
+    "Rm": "supported",
+    "u": "supported",
+    "w": "supported",
+    "theta": "supported",
+    "N": "supported",
+    "V": "supported",
+    "M": "supported"
+  },
+  "reactions": [
+    {
+      "position": 0,
+      "values": {
+        "Ry": 0.3,
+        "Rx": 0.0
+      }
+    },
+    {
+      "position": 0.1,
+      "values": {
+        "Ry": 0.3
+      }
+    }
+  ],
+  "samples": [
+    {
+      "position": 0,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": 0.0,
+        "theta": -1.4880952380952381e-06,
+        "N": 0.0,
+        "V": 0.3,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 0.013700000000000002,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -1.9674043059672623e-08,
+        "theta": -1.3358205535714286e-06,
+        "N": 0.0,
+        "V": 0.21779999999999997,
+        "M": 0.00354693
+      }
+    },
+    {
+      "position": 0.0333,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -4.0393496476339284e-08,
+        "theta": -7.178127202380952e-07,
+        "N": 0.0,
+        "V": 0.10019999999999996,
+        "M": 0.006663329999999999
+      }
+    },
+    {
+      "position": 0.037,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -4.277315625e-08,
+        "theta": -5.672797619047621e-07,
+        "N": 0.0,
+        "V": 0.07799999999999999,
+        "M": 0.006992999999999999
+      }
+    },
+    {
+      "position": 0.0618,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -4.342379133571428e-08,
+        "theta": 5.170057619047622e-07,
+        "N": 0.0,
+        "V": -0.07080000000000009,
+        "M": 0.007082279999999996
+      }
+    },
+    {
+      "position": 0.063,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -4.277315624999999e-08,
+        "theta": 5.672797619047621e-07,
+        "N": 0.0,
+        "V": -0.07800000000000007,
+        "M": 0.0069929999999999975
+      }
+    },
+    {
+      "position": 0.0873,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "w": -1.8327883726339262e-08,
+        "theta": 1.3562790654761905e-06,
+        "N": 0.0,
+        "V": -0.22380000000000005,
+        "M": 0.003326129999999995
+      }
+    },
+    {
+      "position": 0.1,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "w": 5.293955920339377e-23,
+        "theta": 1.4880952380952377e-06,
+        "N": 0.0,
+        "V": -0.3000000000000001,
+        "M": -6.938893903907228e-18
+      }
+    }
+  ],
+  "extrema": {
+    "wMin": {
+      "value": -4.650297619047619e-08,
+      "locations": [
+        {
+          "position": 0.04999999999999997,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    },
+    "wMax": {
+      "value": 5.293955920339377e-23,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        },
+        {
+          "position": 0.1,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "VMin": {
+      "value": -0.3000000000000001,
+      "locations": [
+        {
+          "position": 0.1,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "VMax": {
+      "value": 0.3,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMin": {
+      "value": -6.938893903907228e-18,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        },
+        {
+          "position": 0.1,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMax": {
+      "value": 0.007499999999999998,
+      "locations": [
+        {
+          "position": 0.04999999999999999,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    }
+  }
+}

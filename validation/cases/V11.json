@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V11",
+  "description": "Four supports, multiple point forces and UDL",
+  "length": 8,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 2,
+      "type": "Roller"
+    },
+    {
+      "position": 5,
+      "type": "Roller"
+    },
+    {
+      "position": 8,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 1,
+      "value": -900
+    },
+    {
+      "position": 6.5,
+      "value": -700
+    }
+  ],
+  "pointMoments": [],
+  "udls": [
+    {
+      "start": 1,
+      "end": 7,
+      "value": -250
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 0.37,
+      "side": "Right"
+    },
+    {
+      "position": 0.63,
+      "side": "Right"
+    },
+    {
+      "position": 1,
+      "side": "Left"
+    },
+    {
+      "position": 1,
+      "side": "Right"
+    },
+    {
+      "position": 1.096,
+      "side": "Right"
+    },
+    {
+      "position": 1.37,
+      "side": "Right"
+    },
+    {
+      "position": 1.63,
+      "side": "Right"
+    },
+    {
+      "position": 2,
+      "side": "Left"
+    },
+    {
+      "position": 2,
+      "side": "Right"
+    },
+    {
+      "position": 2.664,
+      "side": "Right"
+    },
+    {
+      "position": 3.11,
+      "side": "Right"
+    },
+    {
+      "position": 3.89,
+      "side": "Right"
+    },
+    {
+      "position": 4.944,
+      "side": "Right"
+    },
+    {
+      "position": 5,
+      "side": "Left"
+    },
+    {
+      "position": 5,
+      "side": "Right"
+    },
+    {
+      "position": 5.555,
+      "side": "Right"
+    },
+    {
+      "position": 5.945,
+      "side": "Right"
+    },
+    {
+      "position": 6.5,
+      "side": "Left"
+    },
+    {
+      "position": 6.5,
+      "side": "Right"
+    },
+    {
+      "position": 6.685,
+      "side": "Right"
+    },
+    {
+      "position": 6.815,
+      "side": "Right"
+    },
+    {
+      "position": 6.984,
+      "side": "Right"
+    },
+    {
+      "position": 7,
+      "side": "Left"
+    },
+    {
+      "position": 7,
+      "side": "Right"
+    },
+    {
+      "position": 7.37,
+      "side": "Right"
+    },
+    {
+      "position": 7.63,
+      "side": "Right"
+    },
+    {
+      "position": 8,
+      "side": "Left"
+    }
+  ]
+}

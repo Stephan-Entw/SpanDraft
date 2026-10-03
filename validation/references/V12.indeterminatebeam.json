@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V12",
+  "inputSha256": "eb91a8f991f608fb7d740844b92dda7c677fcc3b4d44ab9e16016120f03517d9",
+  "solver": "indeterminatebeam",
+  "status": "PASS",
+  "provenance": {
+    "package": "indeterminatebeam",
+    "version": "2.4.0",
+    "python": "3.9.6",
+    "generatedAt": "2026-10-03T11:35:29.274437+00:00",
+    "theory": "Euler-Bernoulli; constant E, A, I; linear; small displacements",
+    "signMapping": "Inputs, Rx/Ry/Rm, w/theta, tension-positive N, V=dM/dx and sagging M: identity",
+    "options": {
+      "G": "infinity",
+      "units": {
+        "length": "m",
+        "force": "N",
+        "moment": "N.m",
+        "distributed": "N/m",
+        "stiffness": "N/m",
+        "A": "m2",
+        "G": "Pa",
+        "E": "Pa",
+        "I": "m4",
+        "deflection": "m"
+      },
+      "extraction": "generated piecewise expressions; exact interval branches"
+    },
+    "adapterVersion": "1",
+    "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
+    "adapterSourcesSha256": "6a414ce5425101f573b533bcbf1010f4190b345d319b2d161eb92340c8750427",
+    "source": "https://pypi.org/project/indeterminatebeam/2.4.0/"
+  },
+  "availability": {
+    "Rx": "supported",
+    "Ry": "supported",
+    "Rm": "supported",
+    "u": "notSupported",
+    "w": "supported",
+    "theta": "supported",
+    "N": "supported",
+    "V": "supported",
+    "M": "supported"
+  },
+  "reactions": [
+    {
+      "position": 0,
+      "values": {
+        "Ry": 1200.0,
+        "Rx": 0.0,
+        "Rm": 800.0
+      }
+    },
+    {
+      "position": 4,
+      "values": {
+        "Ry": 1200.0,
+        "Rx": 0.0,
+        "Rm": -800.0
+      }
+    }
+  ],
+  "samples": [
+    {
+      "position": 0,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 1200.0,
+        "M": -799.9999999999998,
+        "w": 0.0,
+        "theta": 0.0
+      }
+    },
+    {
+      "position": 0.548,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 871.2,
+        "M": -232.49119999999982,
+        "w": -5.32516928038095e-05,
+        "theta": -0.0001634965828571428
+      }
+    },
+    {
+      "position": 1.332,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 400.79999999999995,
+        "M": 266.1328000000003,
+        "w": -0.0001879363669371428,
+        "theta": -0.00014130490285714275
+      }
+    },
+    {
+      "position": 1.48,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 312.0,
+        "M": 318.8800000000001,
+        "w": -0.00020699279999999984,
+        "theta": -0.00011543999999999983
+      }
+    },
+    {
+      "position": 2.472,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -283.20000000000005,
+        "M": 333.16480000000024,
+        "w": -0.00021231191533714258,
+        "theta": 0.00010612178285714293
+      }
+    },
+    {
+      "position": 2.52,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -312.0,
+        "M": 318.88000000000034,
+        "w": -0.00020699279999999978,
+        "theta": 0.00011544000000000014
+      }
+    },
+    {
+      "position": 3.492,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -895.1999999999998,
+        "M": -267.81919999999946,
+        "w": -4.682810910857078e-05,
+        "theta": 0.00015754241142857187
+      }
+    },
+    {
+      "position": 4,
+      "side": "Left",
+      "values": {
+        "N": 0.0,
+        "V": -1200.0,
+        "M": -799.9999999999998,
+        "w": 8.673617379884035e-19,
+        "theta": 2.168404344971009e-19
+      }
+    }
+  ],
+  "extrema": {
+    "wMin": {
+      "value": -0.00023809523809523788,
+      "locations": [
+        {
+          "position": 1.9999999999999991,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    },
+    "wMax": {
+      "value": 8.673617379884035e-19,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        },
+        {
+          "position": 4.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "VMin": {
+      "value": -1200.0,
+      "locations": [
+        {
+          "position": 4.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "VMax": {
+      "value": 1200.0,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMin": {
+      "value": -799.9999999999998,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        },
+        {
+          "position": 4.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMax": {
+      "value": 400.0000000000002,
+      "locations": [
+        {
+          "position": 2.0,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    }
+  }
+}

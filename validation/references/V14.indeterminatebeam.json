@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V14",
+  "inputSha256": "7c0512a80cc6e2122db82f774e3fb59b87ebcc667a8e3579bdf31aaf02e46d48",
+  "solver": "indeterminatebeam",
+  "status": "PARTIAL",
+  "provenance": {
+    "package": "indeterminatebeam",
+    "version": "2.4.0",
+    "python": "3.9.6",
+    "generatedAt": "2026-10-03T11:35:29.641928+00:00",
+    "theory": "Euler-Bernoulli; constant E, A, I; linear; small displacements",
+    "signMapping": "Inputs, Rx/Ry/Rm, w/theta, tension-positive N, V=dM/dx and sagging M: identity",
+    "options": {
+      "G": "infinity",
+      "units": {
+        "length": "m",
+        "force": "N",
+        "moment": "N.m",
+        "distributed": "N/m",
+        "stiffness": "N/m",
+        "A": "m2",
+        "G": "Pa",
+        "E": "Pa",
+        "I": "m4",
+        "deflection": "m"
+      },
+      "extraction": "generated piecewise expressions; exact interval branches"
+    },
+    "adapterVersion": "1",
+    "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
+    "adapterSourcesSha256": "6a414ce5425101f573b533bcbf1010f4190b345d319b2d161eb92340c8750427",
+    "source": "https://pypi.org/project/indeterminatebeam/2.4.0/"
+  },
+  "availability": {
+    "Rx": "supported",
+    "Ry": "supported",
+    "Rm": "supported",
+    "u": "notSupported",
+    "w": "supported",
+    "theta": "supported",
+    "N": "supported",
+    "V": "supported",
+    "M": "supported"
+  },
+  "reactions": [
+    {
+      "position": 0,
+      "values": {
+        "Ry": -0.0,
+        "Rx": 0.0
+      }
+    },
+    {
+      "position": 2.5,
+      "values": {
+        "Ry": 1250.0
+      }
+    },
+    {
+      "position": 6,
+      "values": {
+        "Ry": -0.0
+      }
+    }
+  ],
+  "samples": [
+    {
+      "position": 0,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -3.3306690738754716e-13,
+        "M": 0.0,
+        "w": 0.0,
+        "theta": 2.065146995210486e-19
+      }
+    },
+    {
+      "position": 0.8220000000000001,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -3.3306690738754716e-13,
+        "M": -2.737809978725638e-13,
+        "w": 1.5140295604533714e-19,
+        "theta": 1.395361339700821e-19
+      }
+    },
+    {
+      "position": 0.925,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -3.3306690738754716e-13,
+        "M": -3.0808688933348114e-13,
+        "w": 1.6487462436987075e-19,
+        "theta": 1.2169911242775397e-19
+      }
+    },
+    {
+      "position": 1.575,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -3.3306690738754716e-13,
+        "M": -5.245803791353868e-13,
+        "w": 1.9616469906780245e-19,
+        "theta": -3.938235319866393e-20
+      }
+    },
+    {
+      "position": 1.9980000000000002,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": -3.3306690738754716e-13,
+        "M": -6.654676809603193e-13,
+        "w": 1.4906977795016632e-19,
+        "theta": -1.8920090362142708e-19
+      }
+    },
+    {
+      "position": 2.5,
+      "side": "Left",
+      "values": {
+        "N": 0.0,
+        "V": -3.3306690738754716e-13,
+        "M": -8.326672684688679e-13,
+        "w": 9.62964972193618e-35,
+        "theta": -4.130293990420971e-19
+      }
+    },
+    {
+      "position": 2.5,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 3.49054118942149e-13,
+        "M": -8.326672684688679e-13,
+        "w": 0.0,
+        "theta": -4.130293990420971e-19
+      }
+    },
+    {
+      "position": 3.708,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 3.49054118942149e-13,
+        "M": -4.110098927867519e-13,
+        "w": -7.75476001270624e-19,
+        "theta": -8.004284900231003e-19
+      }
+    },
+    {
+      "position": 3.795,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 3.49054118942149e-13,
+        "M": -3.80642184438785e-13,
+        "w": -8.4563309791520775e-19,
+        "theta": -8.120129524860601e-19
+      }
+    },
+    {
+      "position": 4.705,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 3.49054118942149e-13,
+        "M": -6.300293620142934e-14,
+        "w": -1.5981039144200456e-18,
+        "theta": -8.017943470103841e-19
+      }
+    },
+    {
+      "position": 5.2379999999999995,
+      "side": "Right",
+      "values": {
+        "N": 0.0,
+        "V": 3.49054118942149e-13,
+        "M": 1.2304290919473593e-13,
+        "w": -1.9978365058461008e-18,
+        "theta": -6.844265554025759e-19
+      }
+    },
+    {
+      "position": 6,
+      "side": "Left",
+      "values": {
+        "N": 0.0,
+        "V": 3.49054118942149e-13,
+        "M": 3.8902214782865354e-13,
+        "w": -2.4116722074224453e-18,
+        "theta": -3.737270702894971e-19
+      }
+    }
+  ],
+  "extrema": {
+    "wMin": {
+      "value": -2.4116722074224453e-18,
+      "locations": [
+        {
+          "position": 6.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": [],
+      "locationStatus": "notComparable",
+      "locationNote": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution."
+    },
+    "wMax": {
+      "value": 1.9871886226682015e-19,
+      "locations": [
+        {
+          "position": 1.4433756729740645,
+          "side": null
+        }
+      ],
+      "plateaus": [],
+      "locationStatus": "notComparable",
+      "locationNote": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution."
+    },
+    "VMin": {
+      "value": -3.3306690738754716e-13,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 0.0,
+          "end": 2.5
+        }
+      ],
+      "locationStatus": "notComparable",
+      "locationNote": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution."
+    },
+    "VMax": {
+      "value": 3.49054118942149e-13,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 2.5,
+          "end": 6
+        }
+      ],
+      "locationStatus": "notComparable",
+      "locationNote": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution."
+    },
+    "MMin": {
+      "value": -8.326672684688679e-13,
+      "locations": [
+        {
+          "position": 2.5,
+          "side": "Left"
+        },
+        {
+          "position": 2.5,
+          "side": "Right"
+        }
+      ],
+      "plateaus": [],
+      "locationStatus": "notComparable",
+      "locationNote": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution."
+    },
+    "MMax": {
+      "value": 3.8902214782865354e-13,
+      "locations": [
+        {
+          "position": 6.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": [],
+      "locationStatus": "notComparable",
+      "locationNote": "V14 native residual-only field: physical extremum location set is not established by IndeterminateBeam 2.4.0. Raw locations retained; no zero/plateau substitution."
+    }
+  }
+}

@@ -49,6 +49,11 @@ current UI culture.
 
 Tests use xUnit with Microsoft Testing Platform, selected in `global.json`.
 
+Independent solver acceptance lives in the separate
+[validation solution](validation/README.md); it is not included in `SpanDraft.sln`
+and adds no Python requirement to the product. Current evidence and the passing
+acceptance gate are documented in [VALIDATION.md](docs/VALIDATION.md).
+
 ## Deferred decisions
 
 As described in the concept, the model file format, supported UI languages and

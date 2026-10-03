@@ -1,0 +1,347 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V14",
+  "inputSha256": "7c0512a80cc6e2122db82f774e3fb59b87ebcc667a8e3579bdf31aaf02e46d48",
+  "solver": "pycba",
+  "status": "PASS",
+  "provenance": {
+    "package": "pycba",
+    "version": "1.0.2",
+    "python": "3.9.6",
+    "generatedAt": "2026-10-03T11:35:29.667589+00:00",
+    "theory": "Euler-Bernoulli; constant E, A, I; linear; small displacements",
+    "signMapping": "Input forces/UDLs negated; input CCW moments unchanged; Ry/Rm,w/theta,V,M identity",
+    "options": {
+      "GAv": null,
+      "kf": null,
+      "elementType": 1,
+      "checkStability": true,
+      "npts": 4096,
+      "extraction": "native vRes[1:-1], cubic interpolation; native R roots for w extrema; exact native nodal D at boundaries"
+    },
+    "adapterVersion": "1",
+    "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
+    "adapterSourcesSha256": "6a414ce5425101f573b533bcbf1010f4190b345d319b2d161eb92340c8750427",
+    "source": "https://pypi.org/project/PyCBA/1.0.2/"
+  },
+  "availability": {
+    "Rx": "notSupported",
+    "Ry": "supported",
+    "Rm": "supported",
+    "u": "notSupported",
+    "w": "supported",
+    "theta": "supported",
+    "N": "notSupported",
+    "V": "supported",
+    "M": "supported"
+  },
+  "reactions": [
+    {
+      "position": 0,
+      "values": {
+        "Ry": 0.0
+      }
+    },
+    {
+      "position": 2.5,
+      "values": {
+        "Ry": 1250.0
+      }
+    },
+    {
+      "position": 6,
+      "values": {
+        "Ry": 0.0
+      }
+    }
+  ],
+  "samples": [
+    {
+      "position": 0,
+      "side": "Right",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 0.8220000000000001,
+      "side": "Right",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 0.925,
+      "side": "Right",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 1.575,
+      "side": "Right",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 1.9980000000000002,
+      "side": "Right",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 2.5,
+      "side": "Left",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 2.5,
+      "side": "Right",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 3.708,
+      "side": "Right",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 3.795,
+      "side": "Right",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 4.705,
+      "side": "Right",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 5.2379999999999995,
+      "side": "Right",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    },
+    {
+      "position": 6,
+      "side": "Left",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0,
+        "V": 0.0,
+        "M": 0.0
+      }
+    }
+  ],
+  "extrema": {
+    "wMin": {
+      "value": 0.0,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 0.0,
+          "end": 2.5
+        },
+        {
+          "start": 2.5,
+          "end": 6
+        }
+      ]
+    },
+    "wMax": {
+      "value": 0.0,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 0.0,
+          "end": 2.5
+        },
+        {
+          "start": 2.5,
+          "end": 6
+        }
+      ]
+    },
+    "VMin": {
+      "value": 0.0,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 0.0,
+          "end": 2.5
+        },
+        {
+          "start": 2.5,
+          "end": 6
+        }
+      ]
+    },
+    "VMax": {
+      "value": 0.0,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 0.0,
+          "end": 2.5
+        },
+        {
+          "start": 2.5,
+          "end": 6
+        }
+      ]
+    },
+    "MMin": {
+      "value": 0.0,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 0.0,
+          "end": 2.5
+        },
+        {
+          "start": 2.5,
+          "end": 6
+        }
+      ]
+    },
+    "MMax": {
+      "value": 0.0,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 0.0,
+          "end": 2.5
+        },
+        {
+          "start": 2.5,
+          "end": 6
+        }
+      ]
+    }
+  },
+  "convergence": {
+    "converged": true,
+    "requiredConsecutiveRefinements": 2,
+    "fractionOfTolerance": 0.1,
+    "maxNpts": 131072,
+    "trace": [
+      {
+        "npts": 1024,
+        "topologyStable": true,
+        "maxRatioByKind": {},
+        "maxDeltaByKind": {},
+        "observedOrderByKind": {},
+        "nativeEndpointDrift": {
+          "w": 0.0,
+          "theta": 0.0
+        },
+        "nativeEndpointMaxRatio": 0.0
+      },
+      {
+        "npts": 2048,
+        "topologyStable": true,
+        "maxRatioByKind": {
+          "displacement": 0,
+          "rotation": 0,
+          "force": 0,
+          "moment": 0,
+          "position": 0
+        },
+        "maxDeltaByKind": {
+          "displacement": 0,
+          "rotation": 0,
+          "force": 0,
+          "moment": 0,
+          "position": 0
+        },
+        "observedOrderByKind": {
+          "displacement": null,
+          "rotation": null,
+          "force": null,
+          "moment": null,
+          "position": null
+        },
+        "nativeEndpointDrift": {
+          "w": 0.0,
+          "theta": 0.0
+        },
+        "nativeEndpointMaxRatio": 0.0
+      },
+      {
+        "npts": 4096,
+        "topologyStable": true,
+        "maxRatioByKind": {
+          "displacement": 0,
+          "rotation": 0,
+          "force": 0,
+          "moment": 0,
+          "position": 0
+        },
+        "maxDeltaByKind": {
+          "displacement": 0,
+          "rotation": 0,
+          "force": 0,
+          "moment": 0,
+          "position": 0
+        },
+        "observedOrderByKind": {
+          "displacement": null,
+          "rotation": null,
+          "force": null,
+          "moment": null,
+          "position": null
+        },
+        "nativeEndpointDrift": {
+          "w": 0.0,
+          "theta": 0.0
+        },
+        "nativeEndpointMaxRatio": 0.0
+      }
+    ]
+  }
+}

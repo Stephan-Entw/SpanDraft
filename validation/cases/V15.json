@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V15",
+  "description": "Asymmetric supports, force, moment and partial UDL",
+  "length": 7,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0.75,
+      "type": "Pinned"
+    },
+    {
+      "position": 3.25,
+      "type": "Roller"
+    },
+    {
+      "position": 6.25,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 2,
+      "value": -950
+    }
+  ],
+  "pointMoments": [
+    {
+      "position": 4.75,
+      "value": 420
+    }
+  ],
+  "udls": [
+    {
+      "start": 1.25,
+      "end": 5.75,
+      "value": -280
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 0.27749999999999997,
+      "side": "Right"
+    },
+    {
+      "position": 0.47250000000000003,
+      "side": "Right"
+    },
+    {
+      "position": 0.75,
+      "side": "Left"
+    },
+    {
+      "position": 0.75,
+      "side": "Right"
+    },
+    {
+      "position": 0.935,
+      "side": "Right"
+    },
+    {
+      "position": 0.9590000000000001,
+      "side": "Right"
+    },
+    {
+      "position": 1.065,
+      "side": "Right"
+    },
+    {
+      "position": 1.25,
+      "side": "Left"
+    },
+    {
+      "position": 1.25,
+      "side": "Right"
+    },
+    {
+      "position": 1.5274999999999999,
+      "side": "Right"
+    },
+    {
+      "position": 1.7225000000000001,
+      "side": "Right"
+    },
+    {
+      "position": 2,
+      "side": "Left"
+    },
+    {
+      "position": 2,
+      "side": "Right"
+    },
+    {
+      "position": 2.331,
+      "side": "Right"
+    },
+    {
+      "position": 2.4625,
+      "side": "Right"
+    },
+    {
+      "position": 2.7875,
+      "side": "Right"
+    },
+    {
+      "position": 3.25,
+      "side": "Left"
+    },
+    {
+      "position": 3.25,
+      "side": "Right"
+    },
+    {
+      "position": 3.8049999999999997,
+      "side": "Right"
+    },
+    {
+      "position": 4.195,
+      "side": "Right"
+    },
+    {
+      "position": 4.326,
+      "side": "Right"
+    },
+    {
+      "position": 4.75,
+      "side": "Left"
+    },
+    {
+      "position": 4.75,
+      "side": "Right"
+    },
+    {
+      "position": 5.12,
+      "side": "Right"
+    },
+    {
+      "position": 5.38,
+      "side": "Right"
+    },
+    {
+      "position": 5.75,
+      "side": "Left"
+    },
+    {
+      "position": 5.75,
+      "side": "Right"
+    },
+    {
+      "position": 5.935,
+      "side": "Right"
+    },
+    {
+      "position": 6.065,
+      "side": "Right"
+    },
+    {
+      "position": 6.111,
+      "side": "Right"
+    },
+    {
+      "position": 6.25,
+      "side": "Left"
+    },
+    {
+      "position": 6.25,
+      "side": "Right"
+    },
+    {
+      "position": 6.5275,
+      "side": "Right"
+    },
+    {
+      "position": 6.7225,
+      "side": "Right"
+    },
+    {
+      "position": 7,
+      "side": "Left"
+    }
+  ]
+}

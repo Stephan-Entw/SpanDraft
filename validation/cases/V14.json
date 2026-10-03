@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V14",
+  "description": "Point force exactly at internal support",
+  "length": 6,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 2.5,
+      "type": "Roller"
+    },
+    {
+      "position": 6,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 2.5,
+      "value": -1250
+    }
+  ],
+  "pointMoments": [],
+  "udls": [],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 0.8220000000000001,
+      "side": "Right"
+    },
+    {
+      "position": 0.925,
+      "side": "Right"
+    },
+    {
+      "position": 1.575,
+      "side": "Right"
+    },
+    {
+      "position": 1.9980000000000002,
+      "side": "Right"
+    },
+    {
+      "position": 2.5,
+      "side": "Left"
+    },
+    {
+      "position": 2.5,
+      "side": "Right"
+    },
+    {
+      "position": 3.708,
+      "side": "Right"
+    },
+    {
+      "position": 3.795,
+      "side": "Right"
+    },
+    {
+      "position": 4.705,
+      "side": "Right"
+    },
+    {
+      "position": 5.2379999999999995,
+      "side": "Right"
+    },
+    {
+      "position": 6,
+      "side": "Left"
+    }
+  ]
+}

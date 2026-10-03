@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V13",
+  "description": "Simply supported beam, partially overlapping UDLs",
+  "length": 4,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 4,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [],
+  "pointMoments": [],
+  "udls": [
+    {
+      "start": 0.5,
+      "end": 2.75,
+      "value": -300
+    },
+    {
+      "start": 1.5,
+      "end": 3.5,
+      "value": -450
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 0.185,
+      "side": "Right"
+    },
+    {
+      "position": 0.315,
+      "side": "Right"
+    },
+    {
+      "position": 0.5,
+      "side": "Left"
+    },
+    {
+      "position": 0.5,
+      "side": "Right"
+    },
+    {
+      "position": 0.548,
+      "side": "Right"
+    },
+    {
+      "position": 0.87,
+      "side": "Right"
+    },
+    {
+      "position": 1.13,
+      "side": "Right"
+    },
+    {
+      "position": 1.332,
+      "side": "Right"
+    },
+    {
+      "position": 1.5,
+      "side": "Left"
+    },
+    {
+      "position": 1.5,
+      "side": "Right"
+    },
+    {
+      "position": 1.9625,
+      "side": "Right"
+    },
+    {
+      "position": 2.2875,
+      "side": "Right"
+    },
+    {
+      "position": 2.472,
+      "side": "Right"
+    },
+    {
+      "position": 2.75,
+      "side": "Left"
+    },
+    {
+      "position": 2.75,
+      "side": "Right"
+    },
+    {
+      "position": 3.0275,
+      "side": "Right"
+    },
+    {
+      "position": 3.2225,
+      "side": "Right"
+    },
+    {
+      "position": 3.492,
+      "side": "Right"
+    },
+    {
+      "position": 3.5,
+      "side": "Left"
+    },
+    {
+      "position": 3.5,
+      "side": "Right"
+    },
+    {
+      "position": 3.685,
+      "side": "Right"
+    },
+    {
+      "position": 3.815,
+      "side": "Right"
+    },
+    {
+      "position": 4,
+      "side": "Left"
+    }
+  ]
+}
