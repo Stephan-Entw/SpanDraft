@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Stephan-Entw/SpanDraft/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Stephan-Entw/SpanDraft/actions/workflows/ci.yml)
 
-SpanDraft is an open-source desktop application for intuitive beam analysis. Start with one straight beam, edit its dimensions, and eventually place supports and loads visually to calculate reactions, shear forces, bending moments, deflection, stresses and safety factors.
+SpanDraft is an open-source desktop application for intuitive beam analysis. Start with one straight beam, edit its dimensions, place and edit supports visually, and later add loads to calculate reactions, shear forces, bending moments, deflection, stresses and safety factors.
 
 The repository contains a tested beam domain model, an independently validated
 Euler-Bernoulli solver, engineering assessment and an application analysis API:
@@ -13,8 +13,10 @@ and engineering assessment with structured solver failures. The light Fluent
 desktop starts with section/material setup and opens a technical beam editor with
 a horizontal toolbar, project information, editable length on the dimension
 line, and a compact calculation status bar. The initial 1000 mm beam
-has no supports or loads, so calculation is unavailable until support placement
-is implemented. Placement tools and the future results action are disabled.
+has no supports or loads. Fixed, pinned and roller supports can be placed with
+preview and millimeter/endpoint snapping, edited transactionally in object-bound
+flyouts, dragged to a new position, and deleted. Each confirmed change uses the
+existing analysis API. Load tools and the future results action remain disabled.
 Saving, diagrams and exports are not yet implemented.
 Architecture and scope are defined in [the project concept](docs/KONZEPT.md).
 Local coordinates, signs and domain validation are documented in [the domain notes](docs/DOMAIN.md).

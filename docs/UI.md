@@ -1,8 +1,8 @@
 # SpanDraft – verbindliche UI-Spezifikation
 
-Stand: 03.10.2026. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
-Die Abschnitte zum nächsten Meilenstein sind verbindliche Interaktionsregeln,
-aber noch keine implementierten Funktionen.
+Stand: 04.10.2026. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
+Support Placement & Editing einschließlich Drag ist implementiert. Die ausdrücklich
+als geplant markierten Lastwerkzeuge bleiben verbindliche nächste Schritte.
 
 ## 1. Design und aktueller Umfang
 
@@ -17,7 +17,8 @@ Hauptansicht. Die Toolbar bleibt auch bei der Mindestgröße in einer horizontal
 Zeile. Kein Routing- oder Navigationsframework.
 
 Implementiert: Setup, Setup/Editor-Wechsel, Menü, Toolbar, Projektinformation,
-Balkengrafik, Längeneingabe, Analysis-Anbindung und Ergebnis-/Statusleiste.
+Balkengrafik, Längeneingabe, Support Placement/Preview/Snap/Flyout/Editing/Drag/Delete,
+Analysis-Anbindung und Ergebnis-/Statusleiste.
 
 ## 2. Startseite und Setup-Modi
 
@@ -41,8 +42,8 @@ Edit-Modus: „Ändern“ verwendet dieselbe Setup-View mit aktueller Auswahl.
 „Übernehmen“ committed Section/Material gemeinsam, erhält die Länge, analysiert
 einmal und kehrt zum Editor zurück. „Abbrechen“ verwirft ausschließlich die
 temporäre Auswahl, erhält Dokument und Editor und löst keine Analysis aus.
-Künftig vorhandene Lager/Lasten müssen bei dieser Bearbeitung ebenfalls erhalten
-bleiben; deren Entwurfsarchitektur wird jetzt noch nicht eingeführt.
+Vorhandene Lager mit IDs, Positionen, Typen und Reihenfolge bleiben bei Übernehmen
+und Abbrechen erhalten. Navigation ins Setup verwirft temporäre Lagerinteraktionen.
 
 ## 3. Editorlayout und Menü
 
@@ -58,9 +59,9 @@ Toolbar-Reihenfolge:
 
 Punktkraft, Moment, Streckenlast | Einspannung, Festlager, Loslager
 
-Die Toolbar enthält kein Längenfeld. Alle sechs Platzierungswerkzeuge sind deaktiviert.
-Es gibt weder einen Auswahl- noch einen Entfernen-Button. Neutrale Interaktion
-wird künftig automatisch der Auswahlzustand.
+Die Toolbar enthält kein Längenfeld. Die drei Lagerwerkzeuge sind aktiviert und
+zeigen einen Checked-State; die drei Lastwerkzeuge bleiben deaktiviert. Es gibt
+weder einen Auswahl- noch einen Entfernen-Button. Neutral ist der Auswahlzustand.
 
 Menü-Platzhalter (einschließlich Neues Projekt, Öffnen, Speichern,
 Rückgängig/Wiederholen, Einstellungen, Zoom, Ergebnisse und Über SpanDraft)
@@ -74,16 +75,18 @@ Aktuell gibt es kein Settings-System und keine Persistenz.
 
 MainWindowViewModel hält den Modus ProjectSetup/Editor und die Navigation.
 ProjectSetupViewModel hält eine temporäre Auswahl. EditorViewModel besitzt
-das einzige committed EditorDocument mit Length, Material und Section.
+das einzige committed EditorDocument mit Length, Material, Section und Supports.
 Core-Objekte bleiben immutable. Kein zweites konkurrierendes Projektmodell.
 
 ObservableObject und ActionCommand bilden die kleine lokale ViewModel-Basis.
 Es gibt keine externe MVVM-Bibliothek, DI, Event Bus oder allgemeine Draft-Architektur.
-Code-behind steuert ausschließlich Fokus, Tastatur und visuelle Overlaypositionen.
+Code-behind steuert Pointer-/Tastaturereignisse, Capture, Fokus, visuelles Hit-Testing
+und Overlay-/Popup-Positionen. Dokumentregeln und Analysis verbleiben im ViewModel.
 
 BeamEditorSurface enthält BeamCanvas plus interaktive Overlay-Controls.
 BeamCanvas zeichnet über DrawingContext Balken, feinere Maßlinie, Pfeile und
-Hilfslinien. Die Maßzahl ist ein normales Avalonia-Control, kein gezeichneter
+Hilfslinien sowie committed Lager und temporäre Lagerpreviews. Die Maßzahl ist
+ein normales Avalonia-Control, kein gezeichneter
 Text mit eigenem Hit-Testing.
 
 Der physikalische Balken verläuft von x = 0 bis L und existiert immer.
@@ -98,8 +101,8 @@ beamX   = ((screenX − left) / (right − left)) × L
 
 Beam-x und L verwenden Meter, screenX verwendet DIPs. Seitliche Ränder sind
 normalerweise 72 DIPs. Resize berechnet die gemeinsame Zeichen-/Overlaygeometrie
-neu. Die Maßzahl bleibt über der Mitte des Balkens. Die Abbildung wird später
-für Hover, Snapping, Hit-Testing, Lager und Lasten wiederverwendet. Zoom/Pan fehlt
+neu. Die Maßzahl bleibt über der Mitte des Balkens. Hover, Snapping, Hit-Testing,
+Lager und Popup-Anker verwenden dieselbe Abbildung; spätere Lasten ebenfalls. Zoom/Pan fehlt
 bewusst.
 
 ## 5. Transaktionale Längenbearbeitung
@@ -117,7 +120,8 @@ Inline-Editor mit Zahl und statischer Einheit mm.
 | Enter, ungültig | Dokument erhalten, keine Analysis, Inline-Fehler; Korrektur/Escape möglich |
 | Escape | Eingabe verwerfen, committed Wert wiederherstellen, schließen |
 | Focus Loss, gültig | Commit wie Enter |
-| Focus Loss, ungültig | Letzten committed Wert wiederherstellen, ohne Analysis |
+| Focus Loss, Parsingfehler | Letzten committed Wert wiederherstellen, ohne Analysis |
+| Focus Loss, dokumentbezogene Ablehnung | Committed Wert wiederherstellen; Ablehnungsgrund bleibt sichtbar |
 | Unveränderte Länge | Keine erneute Analysis |
 
 Parsing-/Formattinglogik bleibt in UiNumbers. Nach Abschluss kann Focus Loss
@@ -128,6 +132,46 @@ Parsing verwendet CurrentUICulture und numerische Float-Eingabe ohne
 Tausenderseparatoren. Gültig sind endliche positive mm-Werte, die auch in SI
 positiv darstellbar bleiben. Null, negative Werte, NaN, Infinity, Überlauf und
 Unterlauf auf null werden abgewiesen.
+
+Eine Länge unterhalb einer vorhandenen Lagerposition wird über den dokumentbezogenen
+Commit-Contract abgelehnt: keine Dokumentänderung, kein automatisches Verschieben
+oder Löschen und keine Analysis. Enter erhält Input und Fokus zur Korrektur;
+Fokusverlust restauriert die committed Länge und erhält den lokalisierten Fehler.
+Escape oder erneute Bearbeitung löscht ihn. Ein Reentranzschutz verhindert
+weitere Commits durch Fokusereignisse während einer erfolgreichen Übernahme.
+
+Eine abgelehnte Verkürzung hält zusätzlich einen transienten ConstraintConflictState
+im EditorViewModel: angeforderte Länge und defensiv geschützte Entity-IDs aller
+Supports jenseits dieser Grenze. Diese Lager werden mit dem vorhandenen Error-Brush
+rot gezeichnet, auch bei Hover; unter der committed Länge bleiben sie fachlich gültig.
+Der State gehört nicht zum EditorDocument und löst keine Analysis aus. Fokusverlust
+erhält Highlight und Ablehnungsgrund trotz restaurierter Maßzahl. Korrektur auf eine
+zulässige Länge, Wiederherstellung des Originalwerts, Escape/Cancel oder erneuter
+Bearbeitungsbeginn entfernen ihn. Neue ungültige Eingabe entfernt ein überholtes
+Highlight. Support-Commits prüfen verbleibende Konflikte gegen die angeforderte Länge.
+
+Bei einem tatsächlichen Objektkonflikt zeigt die gültige angeforderte Länge zugleich
+ein transientes visuelles Balkenende: der massive Balken und die einzige Bemaßung
+enden dort, einschließlich rechtem Maßhilfsstrich und Maßpfeil. Display und Inline-
+Editor liegen gemeinsam über der Mitte dieser angeforderten Länge. Der Rest bis
+zum committed Ende erscheint als dünnes, dezentes gestricheltes Ghost-Segment.
+BeamViewport und Supportpositionen verwenden weiterhin ausschließlich die committed
+Länge; blockierende Lager bleiben an ihren tatsächlichen Positionen rot sichtbar.
+Ungültiger/nicht positiver Text erzeugt keine Geometrie-Preview. Korrektur oder
+Abbruch entfernt sie vollständig; bei abgelehntem Fokusverlust bleibt sie wie der
+Konflikt erhalten. Dokument und Analysis werden durch diese Darstellung nicht geändert.
+
+Der Length-Buffer bleibt roher Benutzertext. Das generische Input meldet nur Text-
+und Abbruchänderungen; bei einem bestehenden Konflikt prüft der Editor deren
+Auswirkung ohne Commit. Formatierung erfolgt erst nach Übernahme/Wiederherstellung.
+Die TextBox bleibt während der Session 88 DIPs breit und linksbündig, rund 40 %
+schmaler als zuvor. Einheit mm und Schriftgröße bleiben erhalten; außergewöhnlich
+langer Text scrollt horizontal innerhalb der Standard-TextBox. Zuvor
+verschob textabhängige Auto-Breite die zentrierte Eingabe samt Einheit beim Tippen;
+die native Prüfung zeigte dabei korrekte logische Caretpositionen. Vollauswahl
+erfolgt ausschließlich beim expliziten Einstieg, nicht bei gewöhnlichem Fokusgewinn.
+Textbearbeitung, Mausklick-Caret, Pfeiltasten und Backspace/Delete bleiben Avalonia-
+Standardverhalten; es gibt keine Caret-Korrektur pro Tastendruck.
 
 Deutsche Dezimalzahlen wie „1000,5“ sind gültig. Ganze mm erscheinen ohne
 angehängte Dezimalnullen. Manuelle Eingaben werden nicht auf ganze Millimeter
@@ -164,74 +208,144 @@ Dies verändert keine Ergebniswerte.
 Ergebnisansicht noch fehlt. Bei ihrer Einführung darf der Button ausschließlich
 mit vorhandenem erfolgreichem BeamAnalysisResult aktiviert werden.
 
-## 7. Nächster Meilenstein: verbindliche Placement-/Flyout-Interaktion
+## 7. Implementiert: Support Placement & Editing
 
-### 7.1 One-shot-Werkzeuge
+### 7.1 Committed Lager und stabile Identität
 
-Jedes Lager-/Lastwerkzeug endet nach einem bestätigten Objekt:
+EditorDocument.Supports ist eine defensiv kopierte, schreibgeschützte Sammlung
+immutable EditorSupports mit Guid Id, Length Position und Core-SupportType.
+Neue Dokumente starten leer. Hinzufügen erzeugt die ID erst beim Commit;
+Editieren und Drag erhalten sie. Die ID gehört ausschließlich zum Desktop.
+ToBeamModel() erzeugt normale Core-Supports mit exakten Positionen/Typen und
+Dokumentreihenfolge; Loads bleiben leer. Kein Preview gelangt ins BeamModel.
 
-1. Werkzeugbutton anklicken.
-2. Placement-Modus beginnen.
-3. Cursor über Balken bewegen.
-4. Halbtransparente Vorschau und aktuelle x-Koordinate anzeigen.
-5. Auf Balken klicken.
-6. Objektgebundenes Flyout öffnen; Werte prüfen/ändern.
-7. OK committed das Objekt und löst eine Analysis aus.
-8. Werkzeug endet; neutraler Auswahlzustand.
+### 7.2 One-shot-Werkzeuge und temporäre Zustände
 
-Es wird kein weiteres Objekt automatisch vorbereitet. Für ein zweites Festlager
-muss „Festlager“ erneut gewählt werden.
+Einspannung, Festlager und Loslager sind One-shot-Werkzeuge. Der konkrete
+SupportInteraction-Zustand unterscheidet Neutral, Placement, NewDraft, EditDraft
+und Drag. Es gibt höchstens ein aktives Werkzeug und einen Draft.
 
-### 7.2 Preview und Abbruch
+Werkzeug → gültiger Hover → Snap/Preview → Klick → objektgebundenes Flyout →
+OK → ein Commit/eine Analysis → neutral. Erneuter Werkzeugklick und Escape
+beenden Placement; Werkzeugwechsel verwirft dessen Preview. Pointer Leave
+entfernt nur die Hover-Preview. Nach Commit oder Flyout-Abbruch muss das
+Werkzeug für ein weiteres Lager erneut gewählt werden.
 
-Preview hat etwa 70–80 % Opazität, ist sichtbar uncommitted, gehört nicht zum
-EditorDocument und löst keine Analysis aus. OK committed; Abbrechen verwirft die
-Preview vollständig. Unbestätigte Flyout-Eingaben bleiben temporär.
+### 7.3 Snap, Koordinate und Positionsinvariante
 
-### 7.3 Koordinate und Snap
+SupportSnap ist eine reine Desktop-Hilfslogik ohne PointerEvent-Abhängigkeit.
+Placement gilt innerhalb ±18 DIPs um den Balken. Innerhalb 10 DIPs eines
+Endpunkts wird zuerst exakt 0 beziehungsweise L gewählt, auch bei L = 1000,5 mm.
+Überlappende Fangzonen wählen den näheren Endpunkt, bei Gleichstand den linken.
+Sonst: ScreenToBeam → ganze Millimeter mit MidpointRounding.AwayFromZero.
+Außerhalb liegende gerundete Positionen werden abgewiesen. Kein sichtbares Raster.
 
-Während Hover/Placement x in mm anzeigen. Mausposition auf den nächstgelegenen
-ganzen Millimeter snappen, ohne Nachkommastellen. Beispiel: 207,4 mm → 207 mm.
+Hover zeigt dezent „x = … mm“ mit CurrentUICulture. Pro exakt gleicher
+committed physikalischer Position ist unabhängig vom Typ nur ein Lager erlaubt.
+Eine belegte Position zeigt Error-Preview und lokale Rückmeldung; kein Draft,
+Commit oder Analysis, das Werkzeug bleibt aktiv. Beim Editieren wird die eigene
+ID aus der Kollisionsprüfung ausgeschlossen. Keine zusätzliche mm-Toleranz.
 
-Bei x = 0 und x = L gibt es eine größere magnetische Fangzone; nahe dem Ende
-exakt den Endpunkt bevorzugen. Kein sichtbares 1-mm-Raster. Manuelle
-Flyout-Eingaben dürfen Dezimalwerte wie 207,5 mm besitzen.
+### 7.4 Symbole, Hit-Testing und Resize
 
-### 7.4 Objektgebundene Flyouts
+BeamCanvas zeichnet technische Symbole in konstanter DIP-Größe: Festlagerdreieck
+mit fester Basis, Loslagerdreieck mit Rollen/Grundlinie und Einspannwand mit
+Schraffur. Committed: BeamStroke; Hover/Edit: Accent; ungültig: Error;
+Preview: 75 % Opazität. Brushes stammen aus dem zentralen Designsystem.
 
-Nach Platzierung oder Klick auf ein vorhandenes Objekt ein kleines gebundenes
-Flyout/Popover öffnen. Kein permanenter rechter Inspector und kein großes
-modales Dialogfenster.
+SupportSymbol definiert gemeinsame DIP-Ausdehnungen für Zeichnung und Hit-Zonen.
+Überlappende Hit-Zonen wählen das nächstgelegene Lager, bei Gleichstand das
+zuerst im Dokument enthaltene. Neutrales Hover hebt hervor; Klick öffnet Edit.
+Resize erhält alle physikalischen Werte und berechnet Zeichenpositionen,
+Koordinate und Popup-Anker über BeamViewport neu.
 
-Lager-Flyout: Typ (Einspannung/Festlager/Loslager), Position, Abbrechen, OK.
-Bestehende Lager dürfen Position und Typ gemeinsam ändern, beispielsweise
-Festlager bei 207 mm → Loslager bei 200 mm. Erst OK übernimmt beide Änderungen.
+### 7.5 Transaktionales Flyout
 
-### 7.5 Punktkraft und Punktmoment
+Das 320 DIPs breite, objektgebundene SupportFlyout verwendet vorhandene Surface-,
+Border-, Radius-, Typography-, Input- und Button-Tokens. Ohne separate Überschrift
+enthält es drei kompakte horizontale Zeilen: „Lagertyp“/„Support type“ mit Dropdown,
+„Position X“ mit Input und externer Einheit mm sowie links Löschen und rechts
+Abbrechen/OK. Padding 16 und Zeilenabstand 12 DIPs; keine künstliche MinHeight.
+Validierung erweitert bei Bedarf nur den Positionsbereich. OK trägt ein kleines
+Return-Vektoricon mit geerbtem Foreground als Enter-Hinweis. Typ enthält lokalisierte
+Einspannung/Festlager/Loslager. Position wird in mm eingegeben: 0 und L sowie
+Dezimalwerte sind gültig; TryParsePosition verwendet CurrentUICulture und Float
+ohne Tausenderseparatoren. Nicht endliche Werte, ungültiger Text, Werte außerhalb
+[0,L] und Positionskollisionen verhindern OK und Enter-Commit.
 
-Punktkraft: Werkzeug → Preview → x klicken → Flyout mit Position und signed Kraft.
-−2500 N zeigt einen Pfeil nach unten, +2500 N einen Pfeil nach oben.
-Kein separates Richtung-Dropdown; das Vorzeichen bestimmt die Richtung.
+Positionstext ist ein separater Commit-Buffer: seine validierte Eingabeposition
+bewegt weder Symbol noch Flyout-Anker. Die sichtbare physikalische Canvasposition
+stammt aus Placement, dem geöffneten Lager oder dem letzten erfolgreichen Drag.
+Auch bei schrittweiser Eingabe „7“, „70“, „700“ bleibt sie unverändert.
+Ungültiger Text markiert Input und Preview, ohne sie zu verschieben. Gültige
+Typwechsel erscheinen sofort an derselben Canvasposition. Beim Editieren ersetzt
+die Preview das Original nur in der Darstellung; Resize berechnet den Anker aus
+der sichtbaren Position neu.
+OK ersetzt Typ und Position gemeinsam bei gleicher ID. Unverändertes OK schließt
+ohne neues Dokument und ohne Analysis; unveränderte SI-Werte bleiben exakt.
+Abbrechen, Escape und Outside-Click
+verwerfen alles; das Original erscheint wieder. Nur bestehende Lager zeigen
+„Löschen“: ein Commit/eine Analysis, danach neutral, kein weiterer Dialog.
 
-Punktmoment: analog mit Position und signed Moment. Vorzeichen bestimmt die
-Drehrichtung in Preview und committed Grafik. Gemäß Core ist positiv gegen den
-Uhrzeigersinn.
+Das Popup öffnet nach dem vollständigen Platzierungsklick, damit dieser nicht
+selbst einen Abbruch auslöst. Typ-Dropdown und Support-Popup verwenden Overlay-
+Popups. Das Support-Popup lässt Canvas-Eingaben passieren; die Surface unterscheidet
+Flyout samt Dropdown und aktives Symbol vom Outside-Click. Die aktive Symbol-Hit-Zone
+folgt sichtbarer Draftposition und Previewtyp. Ein Klick darauf erhält Draft und
+Eingabetext, auch bei neuen Placement-Drafts. Freier Canvas oder ein anderes Lager
+bricht die Session ab und konsumiert den Klick; es öffnet dabei kein anderes Lager.
+Nach Typwahl kehrt der Fokus zum Dropdown zurück; Tab läuft durch Typ,
+Position und Aktionen. Escape bei Toolbar-Fokus beendet ebenfalls Placement.
 
-### 7.6 Streckenlast
+### 7.6 Drag-Verschieben
 
-Werkzeug → Startpunkt klicken → Preview zwischen Start und aktueller Mausposition
-→ Endpunkt klicken → Flyout mit Start, Ende und signed Intensität.
-Erst OK committed die Last. Das Vorzeichen bestimmt die Richtung.
+Neutraler Press auf ein Lager oder ein erneuter Press auf das aktive bestehende
+Draftlager bereitet eine Pointer-Geste vor. Ab 4 DIPs
+horizontaler Bewegung beginnt Drag; der ursprüngliche Greifversatz bleibt erhalten.
+Pointer-Capture sichert den Vorgang. Innerhalb der Surface ist Pointer-Y frei;
+die vertikale Outside-Surface-Prüfung bleibt bestehen. X berücksichtigt zuerst
+den Greifversatz, klemmt auf das sichtbare BeamViewport-Segment und nutzt dann
+dieselben Millimeter-/Endpoint-Snaps und die Kollisionsprüfung ohne eigene ID.
+Links außerhalb bleibt das Lager exakt bei 0, rechts exakt bei L, auch wenn L
+nicht ganzzahlig ist. Horizontale Surface-Grenzen beschränken Capture und Release
+nicht. Rückkehr in den Balkenbereich setzt die normale Bewegung sofort fort.
+Unbelegte geklemmte Ziele sind ohne Warnung gültig; belegte Endpunkte bleiben
+Kollisionen. Ausschließlich direkte Drag-Manipulation klemmt: manuelle Flyout-
+Positionen außerhalb [0,L] werden weiterhin strikt abgelehnt.
 
-### 7.7 Löschen und Analysis-Zeitpunkt
+Gültiges Loslassen aus Neutral öffnet Edit mit neuer Position, bisherigem Typ und
+gleicher ID. Innerhalb einer Edit-Session sind mehrere Drags möglich: derselbe Draft
+bleibt erhalten, das Flyout wird während der Geste verborgen und danach erneut
+geöffnet. Jede Geste beginnt an der letzten sichtbaren Draftposition. Erfolgreiches
+Release aktualisiert Canvasposition und Positionstext, überschreibt vorherige
+manuelle Eingabe und erhält den gewählten Typ. Confirm und Delete sind während
+der Geste gesperrt; vorübergehendes Popup-Schließen bricht die Session nicht ab.
 
-Kein permanenter Löschen-Button in der Toolbar. Später Löschen über Objekt-Flyout
-und/oder Delete-Taste bei Auswahl.
+Erst gültiges OK/Enter übernimmt die letzte Eingabeposition und den Typ gemeinsam;
+Abbrechen/Escape stellt das committed Original wieder her. Belegtes oder unzulässiges
+Ziel beziehungsweise Loslassen vertikal außerhalb der Surface verwirft einen Drag
+aus Neutral mit lokalisierter Rückmeldung. In einer bestehenden Edit-Session stellt
+es stattdessen den Zustand unmittelbar vor der Geste samt Positionstext und Typ
+wieder her; das Flyout bleibt mit sichtbarer Rückmeldung offen. Escape oder
+unerwarteter Capture-Verlust verwirft die gesamte unbestätigte Session.
+Auch nach mehreren Drags entsteht erst beim tatsächlichen Commit genau eine Analysis.
 
-Analysis ausschließlich nach committed Änderung: OK im Flyout, Löschen,
-gültige geänderte Balkenlänge oder Section/Material übernehmen.
-Keine Analysis bei Hover, Preview, unvollständiger Texteingabe oder
-unbestätigtem Flyout.
+### 7.7 Analysis-Zeitpunkte
+
+Analysis ausschließlich nach Hinzufügen + OK, tatsächlichem Edit + OK, Löschen,
+gültiger geänderter Länge oder Setup-Übernehmen. Keine Analysis bei Werkzeugwahl,
+Hover, Snap, Draft, Drag, Eingabe, Abbruch, Light-dismiss oder unverändertem OK.
+Die bestehende Analysis-Presentation entscheidet über MissingSupports, UnstableModel
+und Success. Stabile unbelastete Systeme zeigen 0 mm, 0 kNm, 0 MPa und ∞; keine
+künstliche Last und keine mechanische Sonderlogik im UI. „Ergebnisse“ bleibt disabled.
+
+### 7.8 Noch geplant: Lastwerkzeuge
+
+Punktkraft, Punktmoment und Streckenlast bleiben deaktiviert. Geplant sind eigene
+Previews, transaktionale Flyouts und One-shot-Commits nach denselben Grundprinzipien.
+Punktkraft und Punktmoment enthalten Position und signed Größe; das Vorzeichen
+bestimmt die Richtung gemäß Core. Streckenlast verwendet Start-/Endpunkt, signed
+Intensität und einen Bereichs-Preview. Keine Lastinteraktion ist hier implementiert.
 
 ## 8. Spätere Ergebnisse-/Reportansicht
 
@@ -243,8 +357,8 @@ nicht implementiert.
 
 ## 9. Bewusst offen
 
-Noch nicht implementiert: Placement-State-Machine, Lager-/Lastplatzierung,
-Preview, Snap-Engine, Objekt-Hit-Testing, Flyouts, Löschen, Undo/Redo, Zoom/Pan,
+Noch nicht implementiert: Lastplatzierung/-preview/-flyouts/-bearbeitung/-löschung,
+Delete-Taste, Undo/Redo, Zoom/Pan,
 Tabellen/Diagramme, Ergebnisse-/Reportseite, PDF/XLSX, Speichern/Laden, Auto-Save,
 Settings-Persistenz, Theme-Umschaltung, echte Profil-/Norm-/Herstellerbibliotheken,
 Profilimport, eigene Materialien und Querschnittseditor.
@@ -329,7 +443,7 @@ Layoutbegrenzungen sind bewusst keine allgemeinen Design-Tokens.
 | Error / ErrorSubtle | #B42318 / #FEF3F2 |
 | BeamStroke / DimensionStroke | #374151 / #697586 |
 
-Accent dient Primäraktion, Fokus und künftig aktiven Werkzeugen, nicht großen
+Accent dient Primäraktion, Fokus, aktiven Werkzeugen und Lagerpreviews, nicht großen
 Flächen oder Überschriften. TextPrimary auf Surface erreicht 15,18:1,
 TextSecondary auf SurfaceSubtle 5,38:1, TextMuted auf Surface 4,68:1 und
 TextOnAccent auf Accent 5,17:1. Disabled-Text auf Surface erreicht 4,12:1;
@@ -373,8 +487,8 @@ Borders: normal 1, Fokus/Fehler 2. Fokusrahmen verändern das Contentlayout nich
 Alle Varianten besitzen Hover-, Pressed-, Focused- und Disabled-Zustände.
 Der gemeinsame Button-Fokusrahmen ersetzt den Standard-Fokusindikator;
 Primärbuttons erhalten einen inneren hellen Fokusrahmen. Es gibt keine
-Pressed-Skalierung. `.selected` und `ToggleButton:checked` bereiten die
-Werkzeugauswahl visuell vor, ohne eine neue Interaktion zu implementieren.
+Pressed-Skalierung. `.selected` und `ToggleButton:checked` zeigen aktive
+Lagerwerkzeuge im gemeinsamen Designsystem an.
 Disabled hat Vorrang vor Hover/Pressed/Selected; Icons erben die Textfarbe.
 
 TextBox und ComboBox teilen Höhe, Schriftgröße, Border, Radius und Fokusfarbe.
@@ -396,8 +510,8 @@ rechts; Abbrechen ist im Edit-Modus eine sekundäre Aktion.
 
 Die Menüstruktur bleibt desktoptypisch. Die einzeilige Toolbar beginnt mit
 Punktkraft, Moment und Streckenlast; ein feiner Separator trennt die Lagergruppe.
-Alle sechs Werkzeuge bleiben deaktiviert und besitzen lokalisierte
-Accessibility-Namen. Bei 1100 DIPs Mindestbreite erfolgt kein Umbruch.
+Alle sechs Werkzeuge besitzen lokalisierte Accessibility-Namen. Lagerwerkzeuge
+sind aktivierbar, die drei Lastwerkzeuge bleiben deaktiviert. Bei 1100 DIPs Mindestbreite erfolgt kein Umbruch.
 Die Projektinfo ist eine Textzeile mit BodyStrong und Ghost-Aktion „Ändern“.
 
 Der Canvas verwendet CanvasBackground ohne Cardrahmen. BeamCanvas erhält
@@ -407,7 +521,8 @@ Abstand beträgt 40 DIPs. Die reversiblen x-Koordinatentransformationen bleiben
 unverändert. Die einzige Längenbearbeitung sitzt als Control-Overlay mittig an
 der Maßlinie. Anzeige und Inline-Eingabe teilen die vertikale Position;
 Hover, Tastaturfokus und Fehler sind sichtbar. Enter, Escape, Culture-Parsing,
-Fokusverlust und Analysis nur nach Commit bleiben unverändert.
+Fokusverlust und Analysis nur nach Commit verwenden den bestehenden Pfad; die
+dokumentbezogene Längenablehnung ist in Abschnitt 5 beschrieben.
 
 Die Ergebnis-/Statusleiste bleibt horizontal, mit SurfaceSubtle, feiner oberer
 Trennlinie, Status beziehungsweise vorhandenen Kennwerten links und deaktivierter
@@ -509,3 +624,83 @@ nicht anders angegeben):
 
 Der vorher vorhandene uncommittete UI-Arbeitsstand wurde weitergeführt.
 Keine Paketänderungen, kein Commit und kein Push.
+
+## 12. Abnahme: Support Placement & Editing einschließlich Drag (04.10.2026)
+
+Beide Solutions restauriert und im Release-Modus gebaut: **0 Warnungen, 0 Fehler**.
+Produkttests: **342 PASS** (285 bestehende + 57 neue Desktop-Lager-Testfälle).
+Validation: **195 PASS**, keine übersprungenen Tests. Der unveränderte Acceptance-
+Runner meldet **18 Fälle PASS** gegen die bestehenden Golden References.
+SolverSourceSha256 bleibt exakt:
+
+`6f4a3bf5a3e283680d57c087491a623af715e164089e3219c6bed77b586c06df`
+
+SHA-256-Vergleich aller **138 getrackten eingefrorenen Dateien** mit dem sauberen
+Ausgangsstand: keine Änderungen. Core, Solver, Engineering, Analysis, Reporting,
+Validation einschließlich Cases/Golden References, docs/VALIDATION.md und
+.github/workflows/ci.yml sind unverändert. Generierte Build-/Cache-Dateien sind
+kein Teil dieses Vergleichs. Keine Paketänderungen, Solver-/Tolerance-Änderungen,
+Referenzregeneration, Python-Ausführung, Commits oder Pushes.
+
+Neue Tests in DesktopSupportTests decken die 31 angeforderten Verhaltensfälle ab,
+zusätzlich defensive Collection-Kopien, Kollisionskorrektur, letzte Preview bei
+ungültigem Text, deterministisches Hit-Testing, Drag-Schwelle/Greifversatz,
+transaktionalen Drag-Abschluss, ungültige Ziele, wiederholte Abschlussaktionen,
+invaliden Typ, direkte Setup-Navigation, reentranten Fokusverlust und unveränderte
+SI-Positionen ohne Millimeter-Roundtrip.
+
+Echte native macOS-Abnahme mit temporärem Bundle des Release-Desktops:
+
+- Lagerbuttons aktiv/Checked; Lastbuttons und Ergebnisse disabled.
+- Festlager-Hover bei 207 mm mit Preview/x, Endpunktsnap, kompaktes New-Flyout,
+  Einspannung-Abbruch und Festlager-Commit bei exakt 200 mm; danach neutral.
+- Zweites Loslager am Balkenende; reale unbelastete Success-Leiste mit Nullwerten/∞.
+- Editieren, Typwechsel, deutsche Dezimalposition 200,5 mm, Live-Preview,
+  transaktionales Cancel und gemeinsames OK geprüft.
+- Escape bei Toolbar-Fokus und im Flyout, ungültiges Enter mit disabled OK,
+  Light-dismiss sowie Tab-Zyklus Typ → Position → Aktionen geprüft.
+- Drag 200 → 250 mm: Loslassen öffnet Draft; Escape restauriert 200 mm;
+  erneutes Ziehen mit OK übernimmt 250 mm. Drag auf belegtes Ziel stellt Original
+  wieder her und zeigt eine lokalisierte Rückmeldung.
+- Duplicate-Placement: Error-Preview/Rückmeldung, kein zweites Lager.
+- Löschen: Symbol entfernt und Analysis-Status aktualisiert.
+- Verkürzung unter Endlager abgelehnt; Input/Fokus bleiben bei Enter erhalten.
+  Fokusverlust restauriert 1000 mm und erhält den sichtbaren Fehler.
+- Setup-Abbrechen und -Übernehmen erhalten beide Lager.
+- Native Fenstervergrößerung und Rückkehr: 200,5-mm-Position bleibt erhalten;
+  geöffnetes Edit-Flyout und Preview folgen dem Viewport.
+
+In der GUI-Abnahme korrigiert: Popup erst nach vollständigem Platzierungsklick
+öffnen; Typ-Dropdown im Overlay halten und Fokus restaurieren; abgelehnten
+Längeninput vor der Validierung nicht ausblenden. Der endgültige Produkttestlauf
+besteht mit 342 Fällen.
+
+Screenshots unter `/private/tmp/spandraft-support-placement/`:
+
+| Datei | Zustand |
+| --- | --- |
+| 01-pinned-hover-preview.jpg | Festlager-Hover, 207 mm, Preview und Koordinate |
+| 02-new-support-flyout.jpg | Neues Einspannungs-Flyout am linken Endpunkt |
+| 03-two-committed-supports.jpg | Festlager und Loslager, neutral |
+| 04-existing-support-edit.jpg | Bestehendes Festlager bei 200,5 mm im Edit-Flyout |
+| 05-success-unloaded-beam.jpg | Success-Leiste mit 0 mm, 0 kNm, 0 MPa und ∞ |
+| 06-duplicate-placement.jpg | Belegte Position mit Error-Preview und Rückmeldung |
+| 07-length-rejection-focus-loss.jpg | Restaurierte Länge mit bleibendem Fehler |
+| 08-resized-supports.jpg | Lager nach nativer Fenstervergrößerung |
+
+Standardaufnahmen: 2500×1656 physische Pixel einschließlich nativer Titelleiste
+bei 1250×800 DIPs Inhalt; Resize-Aufnahme: 2940×1710 Pixel. Acceptance-Bericht:
+`acceptance.json`; eingefrorener Dateivergleich: `frozen-verification.json`;
+vollständiger Abschlussbericht mit Dateiübersicht: `implementation-report.md`.
+
+Prüfgrenzen: Windows/Linux, englisches Flyout-Layout und exakt 1100×650 DIPs
+wurden nicht visuell geprüft. Englisch/Deutsch und der fraktionale Endpunkt
+L = 1000,5 mm sind automatisiert geprüft. Unerwarteter Capture-Verlust und Escape
+während eines noch gehaltenen Drag wurden nicht separat nativ provoziert; der
+Cancel-State und ungültige Releases sind automatisiert abgedeckt.
+Keine bekannten Layoutfehler in den tatsächlich geprüften Ansichten.
+
+Nächster Meilenstein: Punktkraft, Punktmoment und Streckenlast mit eigenem
+Placement, Preview, transaktionalem Flyout und Editing/Delete. Kein allgemeines
+Tool-Framework vorweggenommen; Undo/Redo, Delete-Taste, Tabellen, Diagramme,
+Persistenz und Export bleiben offen.

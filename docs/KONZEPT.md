@@ -53,8 +53,10 @@ Grafik und Tabelle stellen immer dasselbe Modell dar. Änderungen in einer Ansic
 Die Bedienung soll sich eher wie eine kleine technische Skizzen-/CAD-Anwendung anfühlen als wie ein Formularrechner.
 
 Das erste UI-Fundament ist implementiert: Project Setup, technischer Balken mit
-1000 mm Startlänge, direkte Längenbearbeitung und Analysis-Status. Die verbindliche
-Oberfläche und die noch nicht implementierten Placement-/Flyout-Regeln stehen in
+1000 mm Startlänge, direkte Längenbearbeitung und Analysis-Status. Support Placement
+& Editing ist implementiert: One-shot-Lagerwerkzeuge mit Preview/Snap, transaktionale
+Flyouts, numerisches Verschieben und Drag mit anschließender Bestätigung, Typwechsel
+und Löschen. Die verbindliche Oberfläche und geplanten Lastwerkzeuge stehen in
 [UI.md](UI.md).
 
 ## 4. Scope der ersten Version
@@ -427,7 +429,9 @@ Engineering. Der Rechenpfad lautet BeamModel → BeamAnalysis → Solver → Bea
 
 Enthält ausschließlich Desktop-UI, Interaktionslogik und Darstellung.
 MainWindow hostet Menü und Setup/Editor; eigene kleine ViewModels halten Navigation,
-temporäre Eingaben und ein einziges committed EditorDocument. BeamEditorSurface
+temporäre Eingaben und ein einziges committed EditorDocument. Dessen immutable
+EditorSupports tragen stabile UI-IDs; Preview, Flyout und Drag bleiben temporär.
+BeamEditorSurface
 trennt editierbare Controls vom DrawingContext-Rendering des BeamCanvas.
 
 Die UI soll keine Berechnungsformeln enthalten.
@@ -527,14 +531,17 @@ bereits implementiert; Analysis erweitert weder Mechanik noch Engineering-Nachwe
 Umgesetzt: Light-Fluent-Setup mit einer geometrischen Vierkantrohr-Vorlage
 100×100×5 mm und einer vorläufigen S235JR-Materialvorlage, Setup/Editor-Navigation,
 horizontale Toolbar, Projektinfo, Balkendarstellung, transaktionale direkte
-Längenbemaßung und Analysis-Presentation-State. Die Vorlagen sind keine Norm- oder
+Längenbemaßung und Analysis-Presentation-State. Lagerplatzierung mit 1-mm-Snap und
+exaktem Endpoint-Snap, transaktionale Lager-Flyouts, Typ-/Positionsbearbeitung,
+bestätigtes Drag-Verschieben und Löschen sind ebenfalls implementiert. Vorhandene
+Lager bleiben bei Setup-Änderungen erhalten und verhindern eine Balkenverkürzung
+unter ihre Position. Die Vorlagen sind keine Norm- oder
 Herstellerbibliothek; A/I/W stammen aus dem idealisierten Core-Modell.
 
 Nächste Schritte gemäß [UI.md](UI.md):
 
-- One-shot-Lager-/Lastplatzierung mit Preview und Millimetersnap,
-- Auswahlmodell und transaktionale objektgebundene Flyouts,
-- Löschen,
+- One-shot-Lastplatzierung mit Preview und Millimetersnap,
+- transaktionale Last-Flyouts und Lastbearbeitung/-löschung,
 - später Tabellenansicht und Undo/Redo.
 
 ### Phase 3 – Ergebnisse
