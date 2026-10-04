@@ -4,9 +4,14 @@
              xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
              xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
              x:Class="SpanDraft.Desktop.Controls.BeamEditorSurface"
-             x:DataType="vm:EditorViewModel" SizeChanged="SurfaceSizeChanged">
+             x:DataType="vm:EditorViewModel" SizeChanged="SurfaceSizeChanged" Focusable="True"
+             PointerMoved="SurfacePointerMoved" PointerPressed="SurfacePointerPressed"
+             PointerReleased="SurfacePointerReleased" PointerExited="SurfacePointerExited"
+             PointerCaptureLost="SurfaceCaptureLost" KeyDown="SurfaceKeyDown">
   <Grid Background="{DynamicResource CanvasBackground}">
-    <controls:BeamCanvas LengthMeters="{Binding Document.Length.Meters}" />
+    <controls:BeamCanvas LengthMeters="{Binding Document.Length.Meters}"
+                         Supports="{Binding Document.Supports}" Preview="{Binding Preview}"
+                         HighlightedSupportId="{Binding HoveredSupportId}" HiddenSupportId="{Binding HiddenSupportId}" />
     <Canvas>
       <StackPanel x:Name="DimensionOverlay" Width="560" Spacing="{StaticResource Space4}">
         <Grid Height="{DynamicResource CompactControl}">
@@ -22,6 +27,17 @@
         <TextBlock Text="{Binding DimensionLength.ErrorText}" IsVisible="{Binding DimensionLength.HasError}"
                    Width="360" HorizontalAlignment="Center" Classes="validationMessage" Background="{DynamicResource CanvasBackground}" TextAlignment="Center" />
       </StackPanel>
+      <Border x:Name="SupportAnchor" Width="1" Height="1" IsHitTestVisible="False" />
+      <TextBlock x:Name="CoordinateOverlay" Text="{Binding CoordinateText}" IsVisible="{Binding HasCoordinate}"
+                 Classes="propertyLabel" Background="{DynamicResource CanvasBackground}" IsHitTestVisible="False" />
+      <TextBlock x:Name="FeedbackOverlay" Text="{Binding SupportFeedback}" IsVisible="{Binding HasSupportFeedback}"
+                 Classes="validationMessage" Width="360" TextWrapping="Wrap" IsHitTestVisible="False"
+                 Background="{DynamicResource CanvasBackground}" />
     </Canvas>
+    <Popup x:Name="SupportPopup" PlacementTarget="{Binding #SupportAnchor}" Placement="Bottom"
+           IsLightDismissEnabled="True" OverlayDismissEventPassThrough="False"
+           ShouldUseOverlayLayer="True" Closed="SupportPopupClosed">
+      <controls:SupportFlyout x:Name="SupportEditor" />
+    </Popup>
   </Grid>
 </UserControl>

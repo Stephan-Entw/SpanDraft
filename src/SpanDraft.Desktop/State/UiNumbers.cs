@@ -19,4 +19,15 @@ public static class UiNumbers
         length = Length.FromMillimeters(mm);
         return true;
     }
+
+    public static bool TryParsePosition(string? text, Length beamLength, out Length position)
+    {
+        position = default;
+        if (!double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentUICulture, out double mm)
+            || !double.IsFinite(mm) || mm < 0 || mm > beamLength.Millimeters) return false;
+        position = Length.FromMillimeters(mm);
+        // Inclusive endpoints retain the document's exact SI representation.
+        if (mm == beamLength.Millimeters) position = beamLength;
+        return position.Meters <= beamLength.Meters;
+    }
 }

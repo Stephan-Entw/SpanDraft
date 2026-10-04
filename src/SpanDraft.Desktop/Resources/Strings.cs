@@ -8,6 +8,17 @@ public static class Strings
     private static readonly ResourceManager ResourceManager =
         new("SpanDraft.Desktop.Resources.Strings", typeof(Strings).Assembly);
 
+    public static string Support => Get(nameof(Support));
+    public static string SupportTypeLabel => Get(nameof(SupportTypeLabel));
+    public static string Position => Get(nameof(Position));
+    public static string OK => Get(nameof(OK));
+    public static string Delete => Get(nameof(Delete));
+    public static string SupportAlreadyExists => Get(nameof(SupportAlreadyExists));
+    public static string PositionInsideBeam => Get(nameof(PositionInsideBeam));
+    public static string LengthExcludesSupports => Get(nameof(LengthExcludesSupports));
+    public static string InvalidSupportType => Get(nameof(InvalidSupportType));
+    public static string SupportCoordinate => Get(nameof(SupportCoordinate));
+
     private static string Get(string name) =>
         ResourceManager.GetString(name, CultureInfo.CurrentUICulture)
         ?? throw new MissingManifestResourceException(name);

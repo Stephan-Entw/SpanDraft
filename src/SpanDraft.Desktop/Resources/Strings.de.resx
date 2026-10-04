@@ -47,4 +47,14 @@
   <data name="MomentSymbol" xml:space="preserve"><value>|M|max</value></data>
   <data name="StressSymbol" xml:space="preserve"><value>σmax</value></data>
   <data name="SafetySymbol" xml:space="preserve"><value>S</value></data>
+  <data name="Support" xml:space="preserve"><value>Lager</value></data>
+  <data name="SupportTypeLabel" xml:space="preserve"><value>Typ</value></data>
+  <data name="Position" xml:space="preserve"><value>Position</value></data>
+  <data name="OK" xml:space="preserve"><value>OK</value></data>
+  <data name="Delete" xml:space="preserve"><value>Löschen</value></data>
+  <data name="SupportAlreadyExists" xml:space="preserve"><value>An dieser Position ist bereits ein Lager vorhanden.</value></data>
+  <data name="PositionInsideBeam" xml:space="preserve"><value>Die Position muss innerhalb des Balkens liegen (0 ≤ x ≤ L).</value></data>
+  <data name="LengthExcludesSupports" xml:space="preserve"><value>Balkenlänge darf vorhandene Lager nicht ausschließen.</value></data>
+  <data name="InvalidSupportType" xml:space="preserve"><value>Eine gültige Lagerart auswählen.</value></data>
+  <data name="SupportCoordinate" xml:space="preserve"><value>x = {0} mm</value></data>
 </root>

@@ -4,7 +4,7 @@
              xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
              xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
              x:Class="SpanDraft.Desktop.Views.EditorView"
-             x:DataType="vm:EditorViewModel">
+             x:DataType="vm:EditorViewModel" KeyDown="EditorKeyDown">
   <Grid RowDefinitions="Auto,Auto,*,Auto">
     <Border BorderThickness="{DynamicResource BottomBorder}" BorderBrush="{DynamicResource Border}"
             Background="{DynamicResource Surface}" Padding="{DynamicResource ToolbarPadding}">
@@ -28,24 +28,24 @@
           </StackPanel>
         </Button>
         <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
-        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.FixedSupport}">
+        <ToggleButton Classes="toolbar" IsChecked="{Binding IsFixedTool, Mode=OneWay}" Command="{Binding FixedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.FixedSupport}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
             <controls:EngineeringIcon Data="{StaticResource FixedSupport}" />
             <TextBlock Text="{x:Static resources:Strings.FixedSupport}" VerticalAlignment="Center" />
           </StackPanel>
-        </Button>
-        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.PinnedSupport}">
+        </ToggleButton>
+        <ToggleButton Classes="toolbar" IsChecked="{Binding IsPinnedTool, Mode=OneWay}" Command="{Binding PinnedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PinnedSupport}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
             <controls:EngineeringIcon Data="{StaticResource PinnedSupport}" />
             <TextBlock Text="{x:Static resources:Strings.PinnedSupport}" VerticalAlignment="Center" />
           </StackPanel>
-        </Button>
-        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.RollerSupport}">
+        </ToggleButton>
+        <ToggleButton Classes="toolbar" IsChecked="{Binding IsRollerTool, Mode=OneWay}" Command="{Binding RollerToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.RollerSupport}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
             <controls:EngineeringIcon Data="{StaticResource RollerSupport}" />
             <TextBlock Text="{x:Static resources:Strings.RollerSupport}" VerticalAlignment="Center" />
           </StackPanel>
-        </Button>
+        </ToggleButton>
       </StackPanel>
     </Border>
     <Border Grid.Row="1" Padding="{DynamicResource ProjectInfoPadding}" BorderThickness="{DynamicResource NoBorder}" Background="{DynamicResource CanvasBackground}"

@@ -190,6 +190,9 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
     <Setter Property="Padding" Value="{DynamicResource Padding4}" />
   </Style>
+  <Style Selector="controls|SupportFlyout ComboBox /template/ Popup#PART_Popup">
+    <Setter Property="ShouldUseOverlayLayer" Value="True" />
+  </Style>
   <Style Selector="ComboBoxItem">
     <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
     <Setter Property="MinHeight" Value="{DynamicResource StandardControl}" />
@@ -233,6 +236,8 @@
     <Setter Property="BeamBrush" Value="{DynamicResource BeamStroke}" />
     <Setter Property="DimensionBrush" Value="{DynamicResource DimensionStroke}" />
     <Setter Property="GuideBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="AccentBrush" Value="{DynamicResource Accent}" />
+    <Setter Property="ErrorBrush" Value="{DynamicResource Error}" />
   </Style>
   <Style Selector="Menu">
     <Setter Property="Background" Value="{DynamicResource Surface}" />
@@ -250,5 +255,15 @@
   </Style>
   <Style Selector="MenuItem:disabled">
     <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
+  </Style>
+  <Style Selector="Border.supportFlyout">
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusM}" />
+    <Setter Property="Padding" Value="{DynamicResource Padding16}" />
+  </Style>
+  <Style Selector="Button.dangerGhost, Button.dangerGhost:pointerover, Button.dangerGhost:pressed">
+    <Setter Property="Foreground" Value="{DynamicResource Error}" />
   </Style>
 </Styles>
