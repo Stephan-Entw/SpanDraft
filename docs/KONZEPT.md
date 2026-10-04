@@ -1,7 +1,7 @@
 # SpanDraft – Konzept
 
-> Status: Core, unabhängig validierter Solver, Engineering, Analysis und erstes Desktop-UI-Fundament implementiert; Objektplatzierung folgt
-> Stand: 03.10.2026  
+> Status: Core, unabhängig validierter Solver, Engineering, Analysis und Desktop mit Support Placement & Editing einschließlich Drag implementiert; nächster Editor-Meilenstein: Lasten
+> Stand: 04.10.2026
 > Dieses Dokument beschreibt den geplanten Scope, die technische Architektur und die Grundprinzipien von SpanDraft. Es ist bewusst als interne Entwicklungsgrundlage auf Deutsch gehalten und wird mit dem Projekt weiterentwickelt.
 
 ## 1. Projektidee
@@ -58,6 +58,12 @@ Das erste UI-Fundament ist implementiert: Project Setup, technischer Balken mit
 Flyouts, numerisches Verschieben und Drag mit anschließender Bestätigung, Typwechsel
 und Löschen. Die verbindliche Oberfläche und geplanten Lastwerkzeuge stehen in
 [UI.md](UI.md).
+
+Aktueller Regressionstand: 396 Produkttests, 195 Validation-Tests und 18
+Acceptance-Fälle bestanden. Lagerpositionen erfüllen zentral 0 ≤ x ≤ L.
+Bei einer blockierten Verkürzung erhält Enter die aktive Längeneingabe samt Fehler und Konfliktvorschau;
+abgelehnter Fokusverlust verwirft sie vollständig und restauriert die committed
+Darstellung ohne Analysis.
 
 ## 4. Scope der ersten Version
 

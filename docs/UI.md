@@ -1,6 +1,6 @@
 # SpanDraft – verbindliche UI-Spezifikation
 
-Stand: 04.10.2026. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
+Stand: 04.10.2026, Cleanup vor dem Lasten-Meilenstein. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
 Support Placement & Editing einschließlich Drag ist implementiert. Die ausdrücklich
 als geplant markierten Lastwerkzeuge bleiben verbindliche nächste Schritte.
 
@@ -121,7 +121,7 @@ Inline-Editor mit Zahl und statischer Einheit mm.
 | Escape | Eingabe verwerfen, committed Wert wiederherstellen, schließen |
 | Focus Loss, gültig | Commit wie Enter |
 | Focus Loss, Parsingfehler | Letzten committed Wert wiederherstellen, ohne Analysis |
-| Focus Loss, dokumentbezogene Ablehnung | Committed Wert wiederherstellen; Ablehnungsgrund bleibt sichtbar |
+| Focus Loss, dokumentbezogene Ablehnung | Committed Wert wiederherstellen; Konflikt, Geometrie-Preview, Highlights und Fehler entfernen; keine Analysis |
 | Unveränderte Länge | Keine erneute Analysis |
 
 Parsing-/Formattinglogik bleibt in UiNumbers. Nach Abschluss kann Focus Loss
@@ -136,7 +136,8 @@ Unterlauf auf null werden abgewiesen.
 Eine Länge unterhalb einer vorhandenen Lagerposition wird über den dokumentbezogenen
 Commit-Contract abgelehnt: keine Dokumentänderung, kein automatisches Verschieben
 oder Löschen und keine Analysis. Enter erhält Input und Fokus zur Korrektur;
-Fokusverlust restauriert die committed Länge und erhält den lokalisierten Fehler.
+Fokusverlust restauriert die committed Länge und entfernt Konflikt, Preview,
+Highlights und Fehler vollständig, ohne Analysis.
 Escape oder erneute Bearbeitung löscht ihn. Ein Reentranzschutz verhindert
 weitere Commits durch Fokusereignisse während einer erfolgreichen Übernahme.
 
@@ -144,8 +145,9 @@ Eine abgelehnte Verkürzung hält zusätzlich einen transienten ConstraintConfli
 im EditorViewModel: angeforderte Länge und defensiv geschützte Entity-IDs aller
 Supports jenseits dieser Grenze. Diese Lager werden mit dem vorhandenen Error-Brush
 rot gezeichnet, auch bei Hover; unter der committed Länge bleiben sie fachlich gültig.
-Der State gehört nicht zum EditorDocument und löst keine Analysis aus. Fokusverlust
-erhält Highlight und Ablehnungsgrund trotz restaurierter Maßzahl. Korrektur auf eine
+Der State gehört nicht zum EditorDocument und löst keine Analysis aus. Er bleibt
+während der aktiven abgelehnten Eingabe einschließlich Enter erhalten. Fokusverlust
+verwirft die Anfrage samt Highlight und Ablehnungsgrund. Korrektur auf eine
 zulässige Länge, Wiederherstellung des Originalwerts, Escape/Cancel oder erneuter
 Bearbeitungsbeginn entfernen ihn. Neue ungültige Eingabe entfernt ein überholtes
 Highlight. Support-Commits prüfen verbleibende Konflikte gegen die angeforderte Länge.
@@ -158,8 +160,8 @@ zum committed Ende erscheint als dünnes, dezentes gestricheltes Ghost-Segment.
 BeamViewport und Supportpositionen verwenden weiterhin ausschließlich die committed
 Länge; blockierende Lager bleiben an ihren tatsächlichen Positionen rot sichtbar.
 Ungültiger/nicht positiver Text erzeugt keine Geometrie-Preview. Korrektur oder
-Abbruch entfernt sie vollständig; bei abgelehntem Fokusverlust bleibt sie wie der
-Konflikt erhalten. Dokument und Analysis werden durch diese Darstellung nicht geändert.
+Abbruch oder abgelehnter Fokusverlust entfernt sie vollständig. Dokument und Analysis
+werden durch diese Darstellung nicht geändert.
 
 Der Length-Buffer bleibt roher Benutzertext. Das generische Input meldet nur Text-
 und Abbruchänderungen; bei einem bestehenden Konflikt prüft der Editor deren
@@ -245,6 +247,8 @@ committed physikalischer Position ist unabhängig vom Typ nur ein Lager erlaubt.
 Eine belegte Position zeigt Error-Preview und lokale Rückmeldung; kein Draft,
 Commit oder Analysis, das Werkzeug bleibt aktiv. Beim Editieren wird die eigene
 ID aus der Kollisionsprüfung ausgeschlossen. Keine zusätzliche mm-Toleranz.
+Die zentrale Positionsprüfung verlangt ausdrücklich 0 ≤ x ≤ L; beide Endpunkte
+bleiben inklusive. Parsing und Snap ergänzen diese Regel, ersetzen sie aber nicht.
 
 ### 7.4 Symbole, Hit-Testing und Resize
 
@@ -375,6 +379,11 @@ Das Regression-Gate umfasst Restore/Build/Tests beider Solutions, unveränderte
 eingefrorene Bereiche und den bestehenden SolverSourceSha256. GUI-Smoke-Checks
 und deren tatsächliche Grenzen werden im Abschlussbericht separat dokumentiert.
 
+Aktueller Stand (04.10.2026): **396 Produkttests PASS**, **195 Validation-Tests
+PASS**, **18 Acceptance-Fälle PASS**; Release-Builds mit null Warnungen/Fehlern.
+Die folgenden Abnahmen dokumentieren ausdrücklich frühere Entwicklungsstände;
+maßgeblich für die heutige Interaktion sind die Abschnitte 5 und 7.
+
 ### Historische Abnahme des funktionalen UI-Fundaments (03.10.2026)
 
 - Beide Solutions restauriert und mit null Warnungen/Fehlern gebaut.
@@ -386,7 +395,7 @@ und deren tatsächliche Grenzen werden im Abschlussbericht separat dokumentiert.
   `6f4a3bf5a3e283680d57c087491a623af715e164089e3219c6bed77b586c06df`.
 
 Eine echte macOS-GUI wurde über ein temporäres App-Bundle des gebauten Desktops
-in /private/tmp geprüft. Die 24 angeforderten Smoke-Check-Punkte wurden überprüft:
+geprüft. Die 24 angeforderten Smoke-Check-Punkte wurden überprüft:
 Start und Light-Theme, Setup samt vorausgewählten Vorlagen, Erstellung und
 Editorlayout, einzeilige Toolbar, Projektinfo, Balken/Maßlinie/1000-mm-Anzeige,
 beide Längenzugänge und deren Synchronisation, Resize durch native
@@ -399,7 +408,7 @@ Nicht visuell geprüft: Windows-spezifische Darstellung, exakte Mindestfenstergr
 1100×650 und englisches Layout. Diese Prüfungen bleiben auf dem Zielsystem offen.
 Die Culture-/Ressourcenlogik für Englisch und Deutsch ist automatisiert geprüft;
 die Mindestgröße ist im Fenster festgelegt. Erfolgreiche Ergebnisdarstellung
-wurde über reale Analysis-Ergebnisse in State-Tests geprüft, da das aktuelle
+wurde über reale Analysis-Ergebnisse in State-Tests geprüft, da das damalige
 Editorprojekt ohne Lager keinen Success erzeugt.
 
 
@@ -548,7 +557,7 @@ Foreground des Controls; es gibt keine Füllflächen, Rasterbilder oder Unicodei
 SectionProfile ist ein zusätzliches zentrales Querschnittspiktogramm.
 Generische Aktionen bleiben textbasiert. Kein zusätzliches Icon-Package.
 
-### Abnahme Visual Design Foundation (03.10.2026)
+### Historische Abnahme Visual Design Foundation (03.10.2026)
 
 Restore, Build und Tests beider Solutions wurden ausgeführt. Beide Builds:
 0 Warnungen, 0 Fehler. Produkttests: **285 PASS**, Validation-Tests:
@@ -591,21 +600,8 @@ Hover-/Pressed-Zustände fehlen; die Styles sind zentral implementiert. Die sech
 Toolbuttons wurden dafür bewusst nicht aktiviert. Keine bekannten offenen
 Layoutfehler in den tatsächlich geprüften Ansichten.
 
-Screenshots unter `/private/tmp/spandraft-visual-design-foundation/`:
-
-| Datei | Ansicht |
-| --- | --- |
-| 01-project-setup-de.jpg | Neues Projekt, Deutsch |
-| 02-editor-de.jpg | Editor direkt nach Erstellung, Deutsch |
-| 03-inline-edit-de.jpg | Kompakte Inline-Längenbearbeitung |
-| 04-editor-focus-de.jpg | Fokus auf Ändern; deaktivierte Toolbar sichtbar |
-| 05-combobox-focus-de.jpg | Auswahlfeld mit Fokusrahmen |
-| 06-editor-resized-de.jpg | Editor nach nativer Fenstervergrößerung |
-| 07-project-setup-en.jpg | Neues Projekt, Englisch |
-| 08-editor-en.jpg | Editor, Englisch |
-| 09-inline-error-en.jpg | Englischer Inline-Fehlerzustand |
-
-Der maschinenlesbare Dateivergleich liegt daneben in `frozen-verification.json`.
+Screenshots und maschinenlesbarer Dateivergleich wurden als temporäre lokale
+Abnahmeartefakte erstellt; sie sind keine dauerhaften Projektressourcen.
 Die Standardaufnahmen enthalten zusätzlich die native Titelleiste und haben bei
 2×-Skalierung 2500×1656 physische Pixel. Die native Titelleiste und der sichtbare
 Automationszeiger gehören nicht zum SpanDraft-Design-System.
@@ -625,7 +621,12 @@ nicht anders angegeben):
 Der vorher vorhandene uncommittete UI-Arbeitsstand wurde weitergeführt.
 Keine Paketänderungen, kein Commit und kein Push.
 
-## 12. Abnahme: Support Placement & Editing einschließlich Drag (04.10.2026)
+## 12. Historische Erstabnahme: Support Placement & Editing einschließlich Drag (04.10.2026)
+
+Dieser Abschnitt beschreibt den damaligen Stand vor den Support-/Length-
+Refinements. Der aktuelle Gesamtstand umfasst 396 Produkttests (Abschnitt 10).
+Spätere Änderungen an Positionstext, Edit-Drags und Focus Loss sind in den
+Abschnitten 5 und 7 verbindlich beschrieben.
 
 Beide Solutions restauriert und im Release-Modus gebaut: **0 Warnungen, 0 Fehler**.
 Produkttests: **342 PASS** (285 bestehende + 57 neue Desktop-Lager-Testfälle).
@@ -665,33 +666,21 @@ Echte native macOS-Abnahme mit temporärem Bundle des Release-Desktops:
 - Duplicate-Placement: Error-Preview/Rückmeldung, kein zweites Lager.
 - Löschen: Symbol entfernt und Analysis-Status aktualisiert.
 - Verkürzung unter Endlager abgelehnt; Input/Fokus bleiben bei Enter erhalten.
-  Fokusverlust restauriert 1000 mm und erhält den sichtbaren Fehler.
+  Damals restaurierte Fokusverlust 1000 mm mit sichtbarem Fehler; heute verwirft
+  er Konflikt und Fehler vollständig (Abschnitt 5).
 - Setup-Abbrechen und -Übernehmen erhalten beide Lager.
 - Native Fenstervergrößerung und Rückkehr: 200,5-mm-Position bleibt erhalten;
   geöffnetes Edit-Flyout und Preview folgen dem Viewport.
 
 In der GUI-Abnahme korrigiert: Popup erst nach vollständigem Platzierungsklick
 öffnen; Typ-Dropdown im Overlay halten und Fokus restaurieren; abgelehnten
-Längeninput vor der Validierung nicht ausblenden. Der endgültige Produkttestlauf
-besteht mit 342 Fällen.
+Längeninput vor der Validierung nicht ausblenden. Der damalige Produkttestlauf
+bestand mit 342 Fällen.
 
-Screenshots unter `/private/tmp/spandraft-support-placement/`:
-
-| Datei | Zustand |
-| --- | --- |
-| 01-pinned-hover-preview.jpg | Festlager-Hover, 207 mm, Preview und Koordinate |
-| 02-new-support-flyout.jpg | Neues Einspannungs-Flyout am linken Endpunkt |
-| 03-two-committed-supports.jpg | Festlager und Loslager, neutral |
-| 04-existing-support-edit.jpg | Bestehendes Festlager bei 200,5 mm im Edit-Flyout |
-| 05-success-unloaded-beam.jpg | Success-Leiste mit 0 mm, 0 kNm, 0 MPa und ∞ |
-| 06-duplicate-placement.jpg | Belegte Position mit Error-Preview und Rückmeldung |
-| 07-length-rejection-focus-loss.jpg | Restaurierte Länge mit bleibendem Fehler |
-| 08-resized-supports.jpg | Lager nach nativer Fenstervergrößerung |
-
+Screenshots und Berichte dieser Erstabnahme waren temporäre lokale Artefakte.
 Standardaufnahmen: 2500×1656 physische Pixel einschließlich nativer Titelleiste
-bei 1250×800 DIPs Inhalt; Resize-Aufnahme: 2940×1710 Pixel. Acceptance-Bericht:
-`acceptance.json`; eingefrorener Dateivergleich: `frozen-verification.json`;
-vollständiger Abschlussbericht mit Dateiübersicht: `implementation-report.md`.
+bei 1250×800 DIPs Inhalt; Resize-Aufnahme: 2940×1710 Pixel. Lokale Artefaktpfade
+werden nicht als dauerhafte Projektdokumentation geführt.
 
 Prüfgrenzen: Windows/Linux, englisches Flyout-Layout und exakt 1100×650 DIPs
 wurden nicht visuell geprüft. Englisch/Deutsch und der fraktionale Endpunkt

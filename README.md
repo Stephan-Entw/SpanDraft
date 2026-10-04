@@ -18,6 +18,9 @@ preview and millimeter/endpoint snapping, edited transactionally in object-bound
 flyouts, dragged to a new position, and deleted. Each confirmed change uses the
 existing analysis API. Load tools and the future results action remain disabled.
 Saving, diagrams and exports are not yet implemented.
+Current status (2026-10-04): Support Placement & Editing is implemented;
+the next editor milestone is load placement and editing. The regression baseline
+is 396 passing product tests, 195 validation tests and 18 acceptance cases.
 Architecture and scope are defined in [the project concept](docs/KONZEPT.md).
 Local coordinates, signs and domain validation are documented in [the domain notes](docs/DOMAIN.md).
 The numerical formulation, solver API and current limits are documented in [the solver notes](docs/SOLVER.md).
@@ -72,6 +75,9 @@ German UI strings are stored in `Resources/Strings.resx` and
 `Resources/Strings.de.resx` inside the Desktop project. Text, length parsing and
 formatting use the current UI culture. Inline length editing is transactional:
 Enter commits, Escape cancels, and invalid input never changes the project.
+Rejected Enter keeps the editor and error open for correction, including a
+length-conflict preview for blocked shortening. Rejected focus loss restores the committed length and clears the
+conflict, preview, highlights and error without analysis.
 
 The initial square tube is an idealized sharp-cornered geometric Core template,
 not a normative or manufacturer profile. S235JR (E = 210 GPa, Re = 235 MPa)
@@ -88,6 +94,6 @@ acceptance gate are documented in [VALIDATION.md](docs/VALIDATION.md).
 ## Deferred decisions
 
 As described in the concept, the model file format, additional UI languages and
-concrete PDF/XLSX libraries remain open. One-shot placement with transactional
-object flyouts is specified for the next editor milestone. Settings, persistence,
+concrete PDF/XLSX libraries remain open. One-shot load placement with transactional
+load flyouts is the next editor milestone. Settings, persistence,
 theme switching and profile libraries remain deferred. No reporting libraries are installed.
