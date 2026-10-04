@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SpanDraft.Core.Units;
@@ -15,6 +16,8 @@ public partial class BeamEditorSurface : UserControl
 {
     private EditorViewModel? _editor;
     private SupportDraftViewModel? _shownDraft;
+    private int _popupFocusVersion;
+    private TopLevel? _topLevel;
     private SupportDragGesture? _gesture;
     private Length? _placementClick;
     private IPointer? _pointer;
@@ -30,6 +33,7 @@ public partial class BeamEditorSurface : UserControl
         AttachedToVisualTree += (_, _) => ObserveEditor();
         DetachedFromVisualTree += (_, _) =>
         {
+            ObserveTopLevel(null);
             ReleaseGesture();
             if (_editor is not null)
             {
@@ -46,6 +50,7 @@ public partial class BeamEditorSurface : UserControl
 
     private void ObserveEditor()
     {
+        ObserveTopLevel(TopLevel.GetTopLevel(this));
         if (_editor == DataContext) return;
         if (_editor is not null) _editor.PropertyChanged -= EditorChanged;
         _editor = DataContext as EditorViewModel;
@@ -53,10 +58,50 @@ public partial class BeamEditorSurface : UserControl
         SynchronizeVisuals();
     }
 
+    private void ObserveTopLevel(TopLevel? topLevel)
+    {
+        if (_topLevel == topLevel) return;
+        if (_topLevel is not null)
+        {
+            _topLevel.RemoveHandler(PointerPressedEvent, SupportOutsidePointerPressed);
+            if (_topLevel is Window window) window.Deactivated -= SupportWindowDeactivated;
+        }
+        _topLevel = topLevel;
+        if (_topLevel is not null)
+        {
+            _topLevel.AddHandler(PointerPressedEvent, SupportOutsidePointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+            if (_topLevel is Window window) window.Deactivated += SupportWindowDeactivated;
+        }
+    }
+
+    private void SupportWindowDeactivated(object? sender, EventArgs e)
+    {
+        if (_editor?.SupportDraft is not null)
+        {
+            ReleaseGesture();
+            _editor.CancelSupportInteraction();
+        }
+    }
+
+    private void SupportOutsidePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_editor?.IsSupportFlyoutVisible != true) return;
+        if (OverSupportFlyout(e.Source)) return;
+        // Overlay-hosted popup content and its type dropdown belong to this session.
+        if (SupportPopup.IsOpen && new Rect(SupportEditor.Bounds.Size).Contains(e.GetPosition(SupportEditor))) return;
+        var point = e.GetPosition(this);
+        if (new Rect(Bounds.Size).Contains(point) && _editor.Preview is { } preview
+            && SupportSymbol.Contains(preview, Viewport, point.X, point.Y)) return;
+        ReleaseGesture();
+        _editor.CancelSupportInteraction();
+        e.Handled = true;
+    }
+
     private void EditorChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(EditorViewModel.Document) or nameof(EditorViewModel.SupportDraft)
-            or nameof(EditorViewModel.Preview) or nameof(EditorViewModel.HoveredSupportId)) SynchronizeVisuals();
+            or nameof(EditorViewModel.IsSupportFlyoutVisible) or nameof(EditorViewModel.Preview)
+            or nameof(EditorViewModel.HoveredSupportId) or nameof(EditorViewModel.HasSupportFeedback)) SynchronizeVisuals();
     }
 
     private void SynchronizeVisuals()
@@ -78,13 +123,23 @@ public partial class BeamEditorSurface : UserControl
             _ => _editor?.HoveredSupportId is not null ? EditCursor : Cursor.Default
         };
         var draft = _editor?.SupportDraft;
-        if (_shownDraft == draft) return;
+        bool show = _editor?.IsSupportFlyoutVisible == true;
+        FeedbackOverlay.IsVisible = !show && _editor?.HasSupportFeedback == true;
+        if (_shownDraft == draft && SupportPopup.IsOpen == show) return;
         _shownDraft = draft;
-        SupportPopup.IsOpen = draft is not null;
-        if (draft is not null)
-            Dispatcher.UIThread.Post(() => { if (_shownDraft == draft) SupportEditor.FocusPosition(); }, DispatcherPriority.Input);
-        else if (TopLevel.GetTopLevel(this) is not null)
-            Dispatcher.UIThread.Post(() => { if (_shownDraft is null && TopLevel.GetTopLevel(this) is not null) Focus(); }, DispatcherPriority.Input);
+        int version = ++_popupFocusVersion;
+        SupportPopup.IsOpen = show;
+        if (show)
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_popupFocusVersion == version && _shownDraft == draft && SupportPopup.IsOpen
+                    && _editor?.IsSupportFlyoutVisible == true) SupportEditor.FocusPosition();
+            }, DispatcherPriority.Input);
+        else if (draft is null && TopLevel.GetTopLevel(this) is not null)
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_popupFocusVersion == version && _shownDraft is null && TopLevel.GetTopLevel(this) is not null) Focus();
+            }, DispatcherPriority.Input);
     }
 
     private void SurfaceSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -106,6 +161,9 @@ public partial class BeamEditorSurface : UserControl
     private bool OverOverlay(object? source) => source is Control control
         && (control == DimensionOverlay || control.GetVisualAncestors().Any(a => a == DimensionOverlay));
 
+    private bool OverSupportFlyout(object? source) => source is Control control && (control == SupportEditor
+        || control.GetVisualAncestors().Contains(SupportEditor) || control.GetLogicalAncestors().Contains(SupportEditor));
+
     private void SurfacePointerMoved(object? sender, PointerEventArgs e)
     {
         if (_editor is null) return;
@@ -122,10 +180,26 @@ public partial class BeamEditorSurface : UserControl
 
     private void SurfacePointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_editor is null || OverOverlay(e.Source) || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        if (_editor is null || OverOverlay(e.Source) || OverSupportFlyout(e.Source)
+            || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         var point = e.GetPosition(this);
         _lastPointer = point;
-        if (_editor.Interaction == SupportInteraction.Placement)
+        if (_editor.IsSupportFlyoutVisible)
+        {
+            if (_editor.Preview is { } preview && SupportSymbol.Contains(preview, Viewport, point.X, point.Y))
+            {
+                if (_editor.SupportDraft?.OriginalId is { } id)
+                {
+                    _gesture = new(id, preview.Position, point.X);
+                    _pointer = e.Pointer;
+                    e.Pointer.Capture(this);
+                }
+            }
+            else _editor.CancelSupportInteraction();
+            // The active symbol belongs to the flyout; other canvas clicks only dismiss.
+            e.Handled = true;
+        }
+        else if (_editor.Interaction == SupportInteraction.Placement)
         {
             Focus();
             _editor.HoverPlacement(SupportSnap.Placement(Viewport, point.X, point.Y));
@@ -154,7 +228,11 @@ public partial class BeamEditorSurface : UserControl
         if (_gesture is null || _editor is null) return;
         var position = _gesture.Update(Viewport, point.X, point.Y, Bounds.Width, Bounds.Height);
         if (!_gesture.IsDragging) return;
-        if (_editor.Interaction == SupportInteraction.Neutral) _editor.BeginSupportDrag(_gesture.SupportId);
+        if (_editor.Interaction != SupportInteraction.Drag)
+        {
+            Focus();
+            if (!_editor.BeginSupportDrag(_gesture.SupportId)) { ReleaseGesture(); return; }
+        }
         _editor.UpdateSupportDrag(position);
     }
 
@@ -219,6 +297,6 @@ public partial class BeamEditorSurface : UserControl
 
     private void SupportPopupClosed(object? sender, EventArgs e)
     {
-        if (!SupportPopup.IsOpen && _editor?.SupportDraft is not null) _editor.CancelSupportInteraction();
+        if (!SupportPopup.IsOpen && _editor?.IsSupportFlyoutVisible == true) _editor.CancelSupportInteraction();
     }
 }

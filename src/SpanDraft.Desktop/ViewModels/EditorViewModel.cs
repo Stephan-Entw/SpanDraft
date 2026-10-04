@@ -67,6 +67,7 @@ public sealed class EditorViewModel : ObservableObject
     public bool IsPinnedTool => PlacementTool == SupportType.Pinned;
     public bool IsRollerTool => PlacementTool == SupportType.Roller;
     public SupportDraftViewModel? SupportDraft => _draft;
+    public bool IsSupportFlyoutVisible => _draft is not null && Interaction is SupportInteraction.NewDraft or SupportInteraction.EditDraft;
     public SupportPreview? Preview => _preview;
     public Guid? HoveredSupportId => _hoveredSupportId;
     public Guid? HiddenSupportId => _draft?.OriginalId ?? _dragSupport?.Id;
@@ -114,6 +115,7 @@ public sealed class EditorViewModel : ObservableObject
 
     public bool EditSupport(Guid id)
     {
+        if (Interaction == SupportInteraction.EditDraft && _draft?.OriginalId == id) return true;
         if (Interaction != SupportInteraction.Neutral) return false;
         var support = Document.Supports.FirstOrDefault(s => s.Id == id);
         if (support is null) return false;
@@ -123,9 +125,11 @@ public sealed class EditorViewModel : ObservableObject
 
     public bool BeginSupportDrag(Guid id)
     {
-        if (Interaction != SupportInteraction.Neutral) return false;
+        bool editing = Interaction == SupportInteraction.EditDraft && _draft?.OriginalId == id;
+        if (Interaction != SupportInteraction.Neutral && !editing) return false;
         var support = Document.Supports.FirstOrDefault(s => s.Id == id);
         if (support is null) return false;
+        if (editing) support = support with { Position = _draft!.CanvasPosition, Type = _draft.Preview.Type };
         _dragSupport = support;
         _interaction = SupportInteraction.Drag;
         _hoveredSupportId = null;
@@ -149,7 +153,14 @@ public sealed class EditorViewModel : ObservableObject
         if (!_dragValid)
         {
             var feedback = _supportFeedback;
-            CancelSupportInteraction();
+            if (_draft is not null)
+            {
+                _dragSupport = null;
+                _dragValid = false;
+                _interaction = SupportInteraction.EditDraft;
+                _preview = _draft.Preview;
+            }
+            else CancelSupportInteraction();
             _supportFeedback = feedback;
             NotifySupportState();
             return false;
@@ -157,14 +168,22 @@ public sealed class EditorViewModel : ObservableObject
         var support = _dragSupport;
         var position = Preview!.Position;
         _dragSupport = null;
-        OpenDraft(support.Id, support.Type, position);
+        _dragValid = false;
+        if (_draft is not null)
+        {
+            _interaction = SupportInteraction.EditDraft;
+            _draft.ApplyDragPosition(position);
+            _supportFeedback = null;
+            NotifySupportState();
+        }
+        else OpenDraft(support.Id, support.Type, position);
         return true;
     }
 
     public bool ConfirmSupport()
     {
         var draft = _draft;
-        if (draft is null || !draft.TryGetValue(out var position)) return false;
+        if (!IsSupportFlyoutVisible || draft is null || !draft.TryGetValue(out var position)) return false;
         var supports = Document.Supports.ToArray();
         if (draft.OriginalId is { } id)
         {
@@ -187,7 +206,8 @@ public sealed class EditorViewModel : ObservableObject
 
     public void DeleteSupport()
     {
-        if (_draft?.OriginalId is not { } id || !Document.Supports.Any(s => s.Id == id)) return;
+        if (Interaction != SupportInteraction.EditDraft || _draft?.OriginalId is not { } id
+            || !Document.Supports.Any(s => s.Id == id)) return;
         var document = Document.WithSupports(Document.Supports.Where(s => s.Id != id));
         CancelSupportInteraction();
         Commit(document);
@@ -227,15 +247,16 @@ public sealed class EditorViewModel : ObservableObject
 
     private void DraftChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(SupportDraftViewModel.Preview) || _draft is null) return;
+        if (e.PropertyName != nameof(SupportDraftViewModel.Preview) || _draft is null || Interaction == SupportInteraction.Drag) return;
         _preview = _draft.Preview;
+        _supportFeedback = null;
         NotifySupportState();
     }
 
     private void NotifySupportState()
     {
         foreach (string name in new[] { nameof(Interaction), nameof(PlacementTool), nameof(IsFixedTool),
-            nameof(IsPinnedTool), nameof(IsRollerTool), nameof(SupportDraft), nameof(Preview),
+            nameof(IsPinnedTool), nameof(IsRollerTool), nameof(SupportDraft), nameof(IsSupportFlyoutVisible), nameof(Preview),
             nameof(HoveredSupportId), nameof(HiddenSupportId), nameof(SupportFeedback),
             nameof(HasSupportFeedback), nameof(HasCoordinate), nameof(CoordinateText) }) Notify(name);
     }

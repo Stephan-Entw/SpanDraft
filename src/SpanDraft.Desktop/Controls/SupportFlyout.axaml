@@ -27,6 +27,8 @@
         </Grid>
         <TextBlock Text="{Binding SupportDraft.ErrorText}" IsVisible="{Binding SupportDraft.HasError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding SupportFeedback}" IsVisible="{Binding HasSupportFeedback}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource Space8}">
         <Button Content="{x:Static resources:Strings.Delete}" Classes="ghost dangerGhost"

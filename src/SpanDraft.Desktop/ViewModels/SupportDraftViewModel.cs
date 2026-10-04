@@ -20,8 +20,9 @@ public sealed record SupportTypeOption(SupportType Type)
 public sealed class SupportDraftViewModel : ObservableObject
 {
     private readonly Func<EditorDocument> _read;
-    private readonly Length _initialPosition;
-    private readonly string _initialPositionText;
+    private Length _bufferReferencePosition;
+    private string _bufferReferenceText;
+    private Length _inputPosition;
     private string _positionText;
     private SupportType _type;
     private string? _errorText;
@@ -32,9 +33,9 @@ public sealed class SupportDraftViewModel : ObservableObject
         _read = read;
         OriginalId = originalId;
         _type = type;
-        _initialPosition = position;
-        _initialPositionText = UiNumbers.Format(position.Millimeters);
-        _positionText = _initialPositionText;
+        _bufferReferencePosition = position;
+        _bufferReferenceText = UiNumbers.Format(position.Millimeters);
+        _positionText = _bufferReferenceText;
         _preview = new(position, type);
         Validate();
     }
@@ -64,12 +65,23 @@ public sealed class SupportDraftViewModel : ObservableObject
     public bool HasError => _errorText is not null;
     public bool IsValid => !HasError;
     public SupportPreview Preview => _preview;
+    public Length CanvasPosition => Preview.Position;
 
     public bool TryGetValue(out Length position)
     {
         Validate();
-        position = _preview.Position;
+        position = _inputPosition;
         return IsValid;
+    }
+
+    internal void ApplyDragPosition(Length position)
+    {
+        _bufferReferencePosition = position;
+        _bufferReferenceText = UiNumbers.Format(position.Millimeters);
+        _preview = _preview with { Position = position };
+        Set(ref _positionText, _bufferReferenceText, nameof(PositionText));
+        Validate();
+        Notify(nameof(CanvasPosition));
     }
 
     private void Validate()
@@ -82,13 +94,15 @@ public sealed class SupportDraftViewModel : ObservableObject
         else
         {
             // Preserve exact SI coordinates when the displayed text is untouched (or restored).
-            if (PositionText == _initialPositionText) position = _initialPosition;
+            if (PositionText == _bufferReferenceText) position = _bufferReferencePosition;
             if (document.Supports.Any(s => s.Id != OriginalId && s.Position == position))
                 error = Strings.SupportAlreadyExists;
-            _preview = new(position, Type, error is not null);
+            _inputPosition = position;
         }
         _errorText = error;
-        _preview = _preview with { IsInvalid = error is not null };
+        // Text is a commit buffer, never a movement control. Only pointer interaction
+        // can move this preview; a valid type may still be visualized immediately.
+        _preview = _preview with { Type = Enum.IsDefined(Type) ? Type : _preview.Type, IsInvalid = error is not null };
         Notify(nameof(ErrorText));
         Notify(nameof(HasError));
         Notify(nameof(IsValid));

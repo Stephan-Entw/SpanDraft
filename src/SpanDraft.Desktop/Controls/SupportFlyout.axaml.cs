@@ -13,7 +13,7 @@ public partial class SupportFlyout : UserControl
     private void TypeDropDownClosed(object? sender, EventArgs e) =>
         Dispatcher.UIThread.Post(() =>
         {
-            if (DataContext is EditorViewModel { SupportDraft: not null }) TypeInput.Focus();
+            if (DataContext is EditorViewModel { IsSupportFlyoutVisible: true }) TypeInput.Focus();
         }, DispatcherPriority.Input);
 
     private void FlyoutKeyDown(object? sender, KeyEventArgs e)

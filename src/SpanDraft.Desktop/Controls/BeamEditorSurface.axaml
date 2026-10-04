@@ -31,12 +31,12 @@
       <Border x:Name="SupportAnchor" Width="1" Height="1" IsHitTestVisible="False" />
       <TextBlock x:Name="CoordinateOverlay" Text="{Binding CoordinateText}" IsVisible="{Binding HasCoordinate}"
                  Classes="propertyLabel" Background="{DynamicResource CanvasBackground}" IsHitTestVisible="False" />
-      <TextBlock x:Name="FeedbackOverlay" Text="{Binding SupportFeedback}" IsVisible="{Binding HasSupportFeedback}"
+      <TextBlock x:Name="FeedbackOverlay" Text="{Binding SupportFeedback}" IsVisible="False"
                  Classes="validationMessage" Width="360" TextWrapping="Wrap" IsHitTestVisible="False"
                  Background="{DynamicResource CanvasBackground}" />
     </Canvas>
     <Popup x:Name="SupportPopup" PlacementTarget="{Binding #SupportAnchor}" Placement="Bottom"
-           IsLightDismissEnabled="True" OverlayDismissEventPassThrough="False"
+           IsLightDismissEnabled="False"
            ShouldUseOverlayLayer="True" Closed="SupportPopupClosed">
       <controls:SupportFlyout x:Name="SupportEditor" />
     </Popup>

@@ -91,7 +91,7 @@ public sealed class DesktopSupportTests
         var draft = s.Editor.SupportDraft!;
         Assert.False(draft.IsExisting);
         draft.PositionText = "200";
-        Assert.Equal(Mm(200), s.Editor.Preview!.Position);
+        Assert.Equal(Mm(207), s.Editor.Preview!.Position);
         Assert.Same(document, s.Editor.Document);
         Assert.Equal(1, s.Calls);
         Assert.True(s.Editor.ConfirmSupport());
@@ -165,7 +165,7 @@ public sealed class DesktopSupportTests
         s.Editor.SupportDraft!.Type = SupportType.Roller;
         s.Editor.SupportDraft.PositionText = "200";
         Assert.Equal(SupportType.Roller, s.Editor.Preview!.Type);
-        Assert.Equal(Mm(200), s.Editor.Preview.Position);
+        Assert.Equal(Mm(207), s.Editor.Preview.Position);
         Assert.Same(document, s.Editor.Document);
         Assert.Equal(2, s.Calls);
         if (apply) Assert.True(s.Editor.ConfirmSupport());
@@ -258,7 +258,7 @@ public sealed class DesktopSupportTests
     }
 
     [Fact]
-    public void EditCollisionExcludesSelfAndKeepsLastPreviewForInvalidText()
+    public void EditCollisionExcludesSelfAndKeepsCanvasPositionWhileTyping()
     {
         using var culture = new CultureScope("en-US");
         var s = new Session();
@@ -272,7 +272,7 @@ public sealed class DesktopSupportTests
         Assert.False(s.Editor.ConfirmSupport());
         s.Editor.SupportDraft.PositionText = "250.5";
         s.Editor.SupportDraft.PositionText = "invalid";
-        Assert.Equal(Mm(250.5), s.Editor.Preview!.Position);
+        Assert.Equal(Mm(200), s.Editor.Preview!.Position);
         Assert.True(s.Editor.Preview.IsInvalid);
         Assert.False(s.Editor.ConfirmSupport());
         s.Editor.CancelSupportInteraction();
