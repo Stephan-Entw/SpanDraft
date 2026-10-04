@@ -18,7 +18,19 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
     private string? _commitError;
     private bool _isConfirming;
 
-    public string Text { get => _text; set { if (Set(ref _text, value)) ClearError(); } }
+    public event Action<string>? BufferChanged;
+    public event Action? EditCancelled;
+
+    public string Text
+    {
+        get => _text;
+        set
+        {
+            if (!Set(ref _text, value)) return;
+            ClearError();
+            if (IsEditing) BufferChanged?.Invoke(value);
+        }
+    }
     public bool IsEditing { get => _isEditing; private set { if (Set(ref _isEditing, value)) Notify(nameof(IsDisplay)); } }
     public bool IsDisplay => !IsEditing;
     public bool HasError { get => _hasError; private set => Set(ref _hasError, value); }
@@ -31,6 +43,7 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
         Text = UiNumbers.Format(read().Millimeters);
         ClearError();
         IsEditing = true;
+        BufferChanged?.Invoke(Text);
     }
 
     public bool Confirm()
@@ -64,6 +77,12 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
 
     public void Cancel()
     {
+        Restore();
+        EditCancelled?.Invoke();
+    }
+
+    private void Restore()
+    {
         IsEditing = false;
         Refresh();
     }
@@ -72,7 +91,9 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
     {
         if (_isConfirming || !IsEditing || Confirm()) return;
         string? rejection = _commitError;
-        Cancel();
+        // A rejected focus loss restores the display, but keeps the request's feedback.
+        Restore();
+        if (rejection is null) EditCancelled?.Invoke();
         if (rejection is not null)
         {
             _commitError = rejection;
@@ -81,10 +102,10 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
         }
     }
 
-    public void Refresh()
+    public void Refresh(bool preserveError = false)
     {
         if (!IsEditing) Text = UiNumbers.Format(read().Millimeters);
-        ClearError();
+        if (!preserveError) ClearError();
         Notify(nameof(DisplayText));
     }
 

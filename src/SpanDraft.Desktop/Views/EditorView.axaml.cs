@@ -12,7 +12,8 @@ public partial class EditorView : UserControl
     {
         if (e.Key != Key.Escape || DataContext is not EditorViewModel editor) return;
         editor.CancelSupportInteraction();
-        if (editor.DimensionLength.HasError) editor.DimensionLength.Cancel();
+        if (editor.DimensionLength.IsEditing || editor.DimensionLength.HasError || editor.ConstraintConflict is not null)
+            editor.DimensionLength.Cancel();
         e.Handled = true;
     }
 }

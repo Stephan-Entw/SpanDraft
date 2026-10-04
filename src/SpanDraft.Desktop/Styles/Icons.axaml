@@ -8,4 +8,5 @@
   <StreamGeometry x:Key="PinnedSupport">M12,5 L5,15 H19 Z M3,21 H21 M6,21 L9,17 M12,21 L15,17 M18,21 L21,17</StreamGeometry>
   <StreamGeometry x:Key="RollerSupport">M12,5 L5,15 H19 Z M10,18 A2,2 0 1 1 6,18 A2,2 0 1 1 10,18 M18,18 A2,2 0 1 1 14,18 A2,2 0 1 1 18,18 M3,22 H21</StreamGeometry>
   <StreamGeometry x:Key="SectionProfile">M3,3 H21 V21 H3 Z M6,6 V18 H18 V6 Z</StreamGeometry>
+  <StreamGeometry x:Key="Return">M20,5 V15 H4 M9,10 L4,15 L9,20</StreamGeometry>
 </ResourceDictionary>

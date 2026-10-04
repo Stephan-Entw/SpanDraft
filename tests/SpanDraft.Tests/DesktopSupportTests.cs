@@ -487,7 +487,7 @@ public sealed class DesktopSupportTests
         Assert.True(gesture.IsDragging);
         Assert.Equal(Mm(240), gesture.Update(v, 250, 400, 1000, 500));
         Assert.Null(gesture.Update(v, 250, 501, 1000, 500));
-        Assert.Null(gesture.Update(v, -20, 220, 1000, 500));
+        Assert.Equal(Mm(0), gesture.Update(v, -20, 220, 1000, 500));
     }
 
     [Theory]

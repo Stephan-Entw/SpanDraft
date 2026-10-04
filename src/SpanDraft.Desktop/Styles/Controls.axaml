@@ -263,6 +263,9 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusM}" />
     <Setter Property="Padding" Value="{DynamicResource Padding16}" />
   </Style>
+  <Style Selector="Button.compactSupportAction">
+    <Setter Property="Height" Value="{DynamicResource CompactControl}" />
+  </Style>
   <Style Selector="Button.dangerGhost, Button.dangerGhost:pointerover, Button.dangerGhost:pressed">
     <Setter Property="Foreground" Value="{DynamicResource Error}" />
   </Style>

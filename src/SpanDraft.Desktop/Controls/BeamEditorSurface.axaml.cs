@@ -212,7 +212,8 @@ public partial class BeamEditorSurface : UserControl
         if (e.Key != Key.Escape) return;
         ReleaseGesture();
         _editor?.CancelSupportInteraction();
-        if (_editor?.DimensionLength.HasError == true) _editor.DimensionLength.Cancel();
+        if (_editor is { } editor && (editor.DimensionLength.IsEditing || editor.DimensionLength.HasError
+            || editor.ConstraintConflict is not null)) editor.DimensionLength.Cancel();
         e.Handled = true;
     }
 

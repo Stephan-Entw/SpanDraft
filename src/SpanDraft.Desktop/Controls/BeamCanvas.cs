@@ -17,6 +17,8 @@ public sealed class BeamCanvas : Control
         AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HighlightedSupportId));
     public static readonly StyledProperty<Guid?> HiddenSupportIdProperty =
         AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HiddenSupportId));
+    public static readonly StyledProperty<IReadOnlyList<Guid>?> ConflictEntityIdsProperty =
+        AvaloniaProperty.Register<BeamCanvas, IReadOnlyList<Guid>?>(nameof(ConflictEntityIds));
     public static readonly StyledProperty<IBrush?> AccentBrushProperty =
         AvaloniaProperty.Register<BeamCanvas, IBrush?>(nameof(AccentBrush));
     public static readonly StyledProperty<IBrush?> ErrorBrushProperty =
@@ -25,6 +27,7 @@ public sealed class BeamCanvas : Control
     public SupportPreview? Preview { get => GetValue(PreviewProperty); set => SetValue(PreviewProperty, value); }
     public Guid? HighlightedSupportId { get => GetValue(HighlightedSupportIdProperty); set => SetValue(HighlightedSupportIdProperty, value); }
     public Guid? HiddenSupportId { get => GetValue(HiddenSupportIdProperty); set => SetValue(HiddenSupportIdProperty, value); }
+    public IReadOnlyList<Guid>? ConflictEntityIds { get => GetValue(ConflictEntityIdsProperty); set => SetValue(ConflictEntityIdsProperty, value); }
     public IBrush? AccentBrush { get => GetValue(AccentBrushProperty); set => SetValue(AccentBrushProperty, value); }
     public IBrush? ErrorBrush { get => GetValue(ErrorBrushProperty); set => SetValue(ErrorBrushProperty, value); }
     public static readonly StyledProperty<double> LengthMetersProperty =
@@ -39,7 +42,7 @@ public sealed class BeamCanvas : Control
 
     static BeamCanvas() => AffectsRender<BeamCanvas>(LengthMetersProperty, BoundsProperty,
         BeamBrushProperty, DimensionBrushProperty, GuideBrushProperty, SupportsProperty, PreviewProperty,
-        HighlightedSupportIdProperty, HiddenSupportIdProperty, AccentBrushProperty, ErrorBrushProperty);
+        HighlightedSupportIdProperty, HiddenSupportIdProperty, ConflictEntityIdsProperty, AccentBrushProperty, ErrorBrushProperty);
 
     public IBrush? BeamBrush { get => GetValue(BeamBrushProperty); set => SetValue(BeamBrushProperty, value); }
     public IBrush? DimensionBrush { get => GetValue(DimensionBrushProperty); set => SetValue(DimensionBrushProperty, value); }
@@ -70,11 +73,13 @@ public sealed class BeamCanvas : Control
         foreach (var support in Supports ?? [])
             if (support.Id != HiddenSupportId)
                 DrawSupport(context, v, support.Position.Meters, support.Type,
-                    support.Id == HighlightedSupportId ? AccentBrush : BeamBrush);
+                    ConflictEntityIds?.Contains(support.Id) == true ? ErrorBrush
+                        : support.Id == HighlightedSupportId ? AccentBrush : BeamBrush);
         if (Preview is { } preview)
             using (context.PushOpacity(0.75))
                 DrawSupport(context, v, preview.Position.Meters, preview.Type,
-                    preview.IsInvalid ? ErrorBrush : AccentBrush);
+                    preview.IsInvalid || HiddenSupportId is { } id && ConflictEntityIds?.Contains(id) == true
+                        ? ErrorBrush : AccentBrush);
     }
 
     private static void DrawSupport(DrawingContext context, BeamViewport viewport, double position, SupportType type, IBrush? brush)

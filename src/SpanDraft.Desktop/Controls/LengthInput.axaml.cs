@@ -19,7 +19,6 @@ public partial class LengthInput : UserControl
     private void InputGotFocus(object? sender, RoutedEventArgs e)
     {
         Model?.Begin();
-        InputBox.SelectAll();
     }
 
     private void InputLostFocus(object? sender, RoutedEventArgs e) => Model?.LoseFocus();

@@ -48,8 +48,8 @@
   <data name="StressSymbol" xml:space="preserve"><value>σmax</value></data>
   <data name="SafetySymbol" xml:space="preserve"><value>S</value></data>
   <data name="Support" xml:space="preserve"><value>Lager</value></data>
-  <data name="SupportTypeLabel" xml:space="preserve"><value>Typ</value></data>
-  <data name="Position" xml:space="preserve"><value>Position</value></data>
+  <data name="SupportTypeLabel" xml:space="preserve"><value>Lagertyp</value></data>
+  <data name="Position" xml:space="preserve"><value>Position X</value></data>
   <data name="OK" xml:space="preserve"><value>OK</value></data>
   <data name="Delete" xml:space="preserve"><value>Löschen</value></data>
   <data name="SupportAlreadyExists" xml:space="preserve"><value>An dieser Position ist bereits ein Lager vorhanden.</value></data>

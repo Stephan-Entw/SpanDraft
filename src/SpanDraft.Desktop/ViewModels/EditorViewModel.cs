@@ -24,6 +24,7 @@ public sealed class EditorViewModel : ObservableObject
     private EditorSupport? _dragSupport;
     private bool _dragValid;
     private string? _supportFeedback;
+    private ConstraintConflictState? _constraintConflict;
 
     public EditorViewModel(EditorDocument document, Action changeProject,
         Func<BeamModel, BeamAnalysisOutcome>? analyze = null)
@@ -32,6 +33,12 @@ public sealed class EditorViewModel : ObservableObject
         _analyze = analyze ?? BeamAnalysis.Analyze;
         _presentation = AnalysisPresentationState.FromOutcome(_analyze(document.ToBeamModel()));
         DimensionLength = new(() => Document.Length, ChangeLength);
+        DimensionLength.BufferChanged += text =>
+        {
+            if (ConstraintConflict is not null)
+                UpdateConstraintConflict(UiNumbers.TryParseLength(text, out var length) ? length : null);
+        };
+        DimensionLength.EditCancelled += () => UpdateConstraintConflict(null);
         ChangeProjectCommand = new(() => { CancelSupportInteraction(); changeProject(); });
         FixedToolCommand = new(() => ToggleSupportTool(SupportType.Fixed));
         PinnedToolCommand = new(() => ToggleSupportTool(SupportType.Pinned));
@@ -45,6 +52,8 @@ public sealed class EditorViewModel : ObservableObject
     public AnalysisPresentationState Presentation => _presentation;
     public string ProjectInfo => Strings.SectionTemplateName + " · " + Document.Material.Name;
     public LengthInputViewModel DimensionLength { get; }
+    public ConstraintConflictState? ConstraintConflict => _constraintConflict;
+    public IReadOnlyList<Guid> ConflictEntityIds => ConstraintConflict?.BlockingEntityIds ?? Array.Empty<Guid>();
     public ActionCommand ChangeProjectCommand { get; }
     public ActionCommand FixedToolCommand { get; }
     public ActionCommand PinnedToolCommand { get; }
@@ -234,9 +243,22 @@ public sealed class EditorViewModel : ObservableObject
     private LengthCommitResult ChangeLength(Length length)
     {
         if (Document.Supports.Any(s => s.Position.Meters > length.Meters))
+        {
+            UpdateConstraintConflict(length);
             return new(false, Strings.LengthExcludesSupports);
+        }
+        UpdateConstraintConflict(null);
         if (length != Document.Length) Commit(Document with { Length = length });
         return LengthCommitResult.Success;
+    }
+
+    private void UpdateConstraintConflict(Length? requested)
+    {
+        var ids = requested is { } length
+            ? Document.Supports.Where(s => s.Position.Meters > length.Meters).Select(s => s.Id).ToArray() : [];
+        _constraintConflict = requested is { } value && ids.Length > 0 ? new(value, ids) : null;
+        Notify(nameof(ConstraintConflict));
+        Notify(nameof(ConflictEntityIds));
     }
 
     public void ApplySetup(Section section, Material material) =>
@@ -245,8 +267,9 @@ public sealed class EditorViewModel : ObservableObject
     private void Commit(EditorDocument document)
     {
         _document = document;
+        if (ConstraintConflict is { } conflict) UpdateConstraintConflict(conflict.RequestedLength);
         _presentation = AnalysisPresentationState.FromOutcome(_analyze(document.ToBeamModel()));
-        DimensionLength.Refresh();
+        DimensionLength.Refresh(preserveError: ConstraintConflict is not null);
         Notify(nameof(Document));
         Notify(nameof(Presentation));
         Notify(nameof(ProjectInfo));
