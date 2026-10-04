@@ -19,6 +19,8 @@ public sealed class BeamCanvas : Control
         AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HiddenSupportId));
     public static readonly StyledProperty<IReadOnlyList<Guid>?> ConflictEntityIdsProperty =
         AvaloniaProperty.Register<BeamCanvas, IReadOnlyList<Guid>?>(nameof(ConflictEntityIds));
+    public static readonly StyledProperty<ConstraintConflictState?> ConstraintConflictProperty =
+        AvaloniaProperty.Register<BeamCanvas, ConstraintConflictState?>(nameof(ConstraintConflict));
     public static readonly StyledProperty<IBrush?> AccentBrushProperty =
         AvaloniaProperty.Register<BeamCanvas, IBrush?>(nameof(AccentBrush));
     public static readonly StyledProperty<IBrush?> ErrorBrushProperty =
@@ -28,6 +30,7 @@ public sealed class BeamCanvas : Control
     public Guid? HighlightedSupportId { get => GetValue(HighlightedSupportIdProperty); set => SetValue(HighlightedSupportIdProperty, value); }
     public Guid? HiddenSupportId { get => GetValue(HiddenSupportIdProperty); set => SetValue(HiddenSupportIdProperty, value); }
     public IReadOnlyList<Guid>? ConflictEntityIds { get => GetValue(ConflictEntityIdsProperty); set => SetValue(ConflictEntityIdsProperty, value); }
+    public ConstraintConflictState? ConstraintConflict { get => GetValue(ConstraintConflictProperty); set => SetValue(ConstraintConflictProperty, value); }
     public IBrush? AccentBrush { get => GetValue(AccentBrushProperty); set => SetValue(AccentBrushProperty, value); }
     public IBrush? ErrorBrush { get => GetValue(ErrorBrushProperty); set => SetValue(ErrorBrushProperty, value); }
     public static readonly StyledProperty<double> LengthMetersProperty =
@@ -42,7 +45,8 @@ public sealed class BeamCanvas : Control
 
     static BeamCanvas() => AffectsRender<BeamCanvas>(LengthMetersProperty, BoundsProperty,
         BeamBrushProperty, DimensionBrushProperty, GuideBrushProperty, SupportsProperty, PreviewProperty,
-        HighlightedSupportIdProperty, HiddenSupportIdProperty, ConflictEntityIdsProperty, AccentBrushProperty, ErrorBrushProperty);
+        HighlightedSupportIdProperty, HiddenSupportIdProperty, ConflictEntityIdsProperty, ConstraintConflictProperty,
+        AccentBrushProperty, ErrorBrushProperty);
 
     public IBrush? BeamBrush { get => GetValue(BeamBrushProperty); set => SetValue(BeamBrushProperty, value); }
     public IBrush? DimensionBrush { get => GetValue(DimensionBrushProperty); set => SetValue(DimensionBrushProperty, value); }
@@ -59,17 +63,22 @@ public sealed class BeamCanvas : Control
         base.Render(context);
         if (Bounds.Width <= 0 || Bounds.Height <= 0 || LengthMeters <= 0) return;
         var v = BeamViewport.Fit(Bounds.Width, Bounds.Height, LengthMeters);
+        var length = BeamLengthGeometry.Create(v, ConstraintConflict);
         var beam = new Pen(BeamBrush, 5);
         var dimension = new Pen(DimensionBrush, 1);
         var guide = new Pen(GuideBrush, 1);
-        context.DrawLine(beam, new(v.Left, v.BeamY), new(v.Right, v.BeamY));
-        foreach (double x in new[] { v.Left, v.Right })
+        context.DrawLine(beam, new(v.Left, v.BeamY), new(length.EndX, v.BeamY));
+        if (length.HasGhost)
+            using (context.PushOpacity(0.5))
+                context.DrawLine(new Pen(DimensionBrush, 1, dashStyle: DashStyle.Dash),
+                    new(length.EndX, v.BeamY), new(v.Right, v.BeamY));
+        foreach (double x in new[] { v.Left, length.EndX })
             context.DrawLine(guide, new(x, v.DimensionY - 8), new(x, v.BeamY + 12));
-        context.DrawLine(dimension, new(v.Left, v.DimensionY), new(v.Right, v.DimensionY));
+        context.DrawLine(dimension, new(v.Left, v.DimensionY), new(length.EndX, v.DimensionY));
         context.DrawLine(dimension, new(v.Left, v.DimensionY), new(v.Left + 9, v.DimensionY - 4));
         context.DrawLine(dimension, new(v.Left, v.DimensionY), new(v.Left + 9, v.DimensionY + 4));
-        context.DrawLine(dimension, new(v.Right, v.DimensionY), new(v.Right - 9, v.DimensionY - 4));
-        context.DrawLine(dimension, new(v.Right, v.DimensionY), new(v.Right - 9, v.DimensionY + 4));
+        context.DrawLine(dimension, new(length.EndX, v.DimensionY), new(length.EndX - 9, v.DimensionY - 4));
+        context.DrawLine(dimension, new(length.EndX, v.DimensionY), new(length.EndX - 9, v.DimensionY + 4));
         foreach (var support in Supports ?? [])
             if (support.Id != HiddenSupportId)
                 DrawSupport(context, v, support.Position.Meters, support.Type,

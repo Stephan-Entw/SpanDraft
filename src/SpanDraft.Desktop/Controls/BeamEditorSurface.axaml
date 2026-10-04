@@ -12,6 +12,7 @@
     <controls:BeamCanvas LengthMeters="{Binding Document.Length.Meters}"
                          Supports="{Binding Document.Supports}" Preview="{Binding Preview}"
                          ConflictEntityIds="{Binding ConflictEntityIds}"
+                         ConstraintConflict="{Binding ConstraintConflict}"
                          HighlightedSupportId="{Binding HoveredSupportId}" HiddenSupportId="{Binding HiddenSupportId}" />
     <Canvas>
       <StackPanel x:Name="DimensionOverlay" Width="560" Spacing="{StaticResource Space4}">

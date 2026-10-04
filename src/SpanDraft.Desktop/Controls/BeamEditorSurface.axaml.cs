@@ -101,13 +101,15 @@ public partial class BeamEditorSurface : UserControl
     {
         if (e.PropertyName is nameof(EditorViewModel.Document) or nameof(EditorViewModel.SupportDraft)
             or nameof(EditorViewModel.IsSupportFlyoutVisible) or nameof(EditorViewModel.Preview)
-            or nameof(EditorViewModel.HoveredSupportId) or nameof(EditorViewModel.HasSupportFeedback)) SynchronizeVisuals();
+            or nameof(EditorViewModel.HoveredSupportId) or nameof(EditorViewModel.HasSupportFeedback)
+            or nameof(EditorViewModel.ConstraintConflict)) SynchronizeVisuals();
     }
 
     private void SynchronizeVisuals()
     {
         var geometry = Viewport;
-        Canvas.SetLeft(DimensionOverlay, geometry.Midpoint - DimensionOverlay.Width / 2);
+        var length = BeamLengthGeometry.Create(geometry, _editor?.ConstraintConflict);
+        Canvas.SetLeft(DimensionOverlay, length.DimensionMidpoint - DimensionOverlay.Width / 2);
         Canvas.SetTop(DimensionOverlay, geometry.DimensionY - DimensionButton.Height / 2);
         double x = _editor?.Preview is { } preview ? geometry.BeamToScreen(preview.Position.Meters) : geometry.Midpoint;
         Canvas.SetLeft(CoordinateOverlay, Math.Clamp(x + 12, 8, Math.Max(8, Bounds.Width - 170)));

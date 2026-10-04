@@ -5,7 +5,7 @@
              x:Class="SpanDraft.Desktop.Controls.LengthInput"
              x:DataType="vm:LengthInputViewModel" Focusable="True">
   <Grid ColumnDefinitions="Auto,Auto">
-    <TextBox x:Name="InputBox" Width="144" TextAlignment="Left" Text="{Binding Text, Mode=TwoWay}" Classes="inlineDimension" Classes.error="{Binding HasError}"
+    <TextBox x:Name="InputBox" Width="88" TextAlignment="Left" Text="{Binding Text, Mode=TwoWay}" Classes="inlineDimension" Classes.error="{Binding HasError}"
              GotFocus="InputGotFocus" LostFocus="InputLostFocus" KeyDown="InputKeyDown"
              AutomationProperties.Name="{x:Static resources:Strings.BeamLength}" ToolTip.Tip="{Binding ErrorText}" />
     <TextBlock Grid.Column="1" Text="mm" Margin="{DynamicResource UnitMargin}" VerticalAlignment="Center" Classes="body" />
