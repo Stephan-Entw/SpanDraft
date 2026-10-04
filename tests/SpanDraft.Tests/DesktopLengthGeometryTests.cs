@@ -69,12 +69,25 @@ public sealed class DesktopLengthGeometryTests
         var s = new Session();
         var document = s.Editor.Document;
         s.Reject();
+        Assert.True(s.Geometry.HasGhost);
+        Assert.Equal(s.Viewport.BeamToScreen(0.7), s.Geometry.EndX);
+        Assert.Equal(s.Viewport.BeamToScreen(0.35), s.Geometry.DimensionMidpoint);
+        Assert.True(s.Editor.DimensionLength.IsEditing);
+        Assert.True(s.Editor.DimensionLength.HasError);
+        Assert.Single(s.Editor.ConflictEntityIds);
         if (loseFocus)
         {
             s.Editor.DimensionLength.LoseFocus();
-            Assert.True(s.Geometry.HasGhost);
-            Assert.Equal(s.Viewport.BeamToScreen(0.7), s.Geometry.EndX);
-            Assert.True(s.Editor.DimensionLength.HasError);
+            Assert.False(s.Geometry.HasGhost);
+            Assert.Equal(s.Viewport.Right, s.Geometry.EndX);
+            Assert.Equal(s.Viewport.Midpoint, s.Geometry.DimensionMidpoint);
+            Assert.Equal("1000", s.Editor.DimensionLength.Text);
+            Assert.False(s.Editor.DimensionLength.IsEditing);
+            Assert.False(s.Editor.DimensionLength.HasError);
+            Assert.Empty(s.Editor.ConflictEntityIds);
+            Assert.Null(s.Editor.ConstraintConflict);
+            Assert.Same(document, s.Editor.Document);
+            Assert.Equal(1, s.Analyses);
         }
         s.Editor.DimensionLength.Cancel();
         Assert.Equal(s.Viewport.Right, s.Geometry.EndX);

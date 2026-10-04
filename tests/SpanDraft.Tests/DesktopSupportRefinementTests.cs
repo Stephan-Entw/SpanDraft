@@ -104,9 +104,9 @@ public sealed class DesktopSupportRefinementTests
             s.Editor.DimensionLength.LoseFocus();
             Assert.False(s.Editor.DimensionLength.IsEditing);
             Assert.Equal("1000", s.Editor.DimensionLength.Text);
-            Assert.True(s.Editor.DimensionLength.HasError);
-            Assert.Equal(Strings.LengthExcludesSupports, s.Editor.DimensionLength.ErrorText);
-            Assert.NotNull(s.Editor.ConstraintConflict);
+            Assert.False(s.Editor.DimensionLength.HasError);
+            Assert.Null(s.Editor.ConstraintConflict);
+            Assert.Empty(s.Editor.ConflictEntityIds);
         }
         s.Editor.DimensionLength.Cancel();
         Assert.Null(s.Editor.ConstraintConflict);
@@ -116,11 +116,12 @@ public sealed class DesktopSupportRefinementTests
     }
 
     [Fact]
-    public void NewEditSessionClearsPersistedConflict()
+    public void NewEditSessionStartsWithoutDismissedConflict()
     {
         var s = new Session(850);
         s.Reject();
         s.Editor.DimensionLength.LoseFocus();
+        Assert.Null(s.Editor.ConstraintConflict);
         s.Editor.DimensionLength.Begin();
         Assert.Null(s.Editor.ConstraintConflict);
         Assert.False(s.Editor.DimensionLength.HasError);
@@ -132,7 +133,6 @@ public sealed class DesktopSupportRefinementTests
     {
         var s = new Session(800, 850);
         s.Reject();
-        s.Editor.DimensionLength.LoseFocus();
         s.Editor.EditSupport(s.Editor.Document.Supports[0].Id);
         s.Editor.SupportDraft!.PositionText = "600";
         Assert.True(s.Editor.ConfirmSupport());

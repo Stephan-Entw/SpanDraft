@@ -325,10 +325,19 @@ public sealed class DesktopSupportTests
     [Theory]
     [InlineData(0)]
     [InlineData(1000)]
-    public void EndpointsCanBeCommitted(double mm)
+    public void CentralPositionBoundsRejectNegativeAndAllowEndpoints(double mm)
     {
         var s = new Session();
-        Assert.Equal(Mm(mm), s.Add(mm).Position);
+        var document = s.Editor.Document;
+        Assert.False(s.Editor.CanPosition(-0.0001));
+        Assert.False(s.Editor.CanPosition(1.0001));
+        Assert.True(s.Editor.CanPosition(mm / 1000));
+        Assert.Same(document, s.Editor.Document);
+        Assert.Equal(1, s.Calls);
+        var support = s.Add(mm);
+        Assert.Equal(Mm(mm), support.Position);
+        Assert.False(s.Editor.CanPosition(mm / 1000));
+        Assert.True(s.Editor.CanPosition(mm / 1000, support.Id));
         Assert.Equal(2, s.Calls);
     }
 
@@ -423,7 +432,7 @@ public sealed class DesktopSupportTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ShorteningCannotExcludeSupportsAndFocusLossRetainsRejection(bool loseFocus)
+    public void RejectedEnterKeepsConflictButFocusLossDiscardsIt(bool loseFocus)
     {
         var s = new Session();
         s.Add(900);
@@ -433,14 +442,19 @@ public sealed class DesktopSupportTests
         input.Text = "800";
         Assert.False(input.Confirm());
         Assert.True(input.IsEditing);
+        Assert.True(input.HasError);
+        Assert.NotNull(s.Editor.ConstraintConflict);
+        Assert.Single(s.Editor.ConflictEntityIds);
         Assert.Equal(Strings.LengthExcludesSupports, input.ErrorText);
         if (loseFocus)
         {
             input.LoseFocus();
             Assert.False(input.IsEditing);
             Assert.Equal("1000", input.Text);
+            Assert.Null(s.Editor.ConstraintConflict);
+            Assert.Empty(s.Editor.ConflictEntityIds);
         }
-        Assert.True(input.HasError);
+        Assert.Equal(!loseFocus, input.HasError);
         Assert.Same(document, s.Editor.Document);
         Assert.Equal(2, s.Calls);
         input.Cancel();

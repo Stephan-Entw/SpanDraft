@@ -228,7 +228,12 @@ public sealed class EditorViewModel : ObservableObject
     }
 
     private bool CanPosition(Length position, Guid? exclude = null) =>
-        position.Meters <= Document.Length.Meters && !Document.Supports.Any(s => s.Id != exclude && s.Position == position);
+        CanPosition(position.Meters, exclude);
+
+    /// <summary>Checks the inclusive SI range and exact committed-position collisions.</summary>
+    public bool CanPosition(double positionMeters, Guid? exclude = null) =>
+        positionMeters >= 0 && positionMeters <= Document.Length.Meters
+        && !Document.Supports.Any(s => s.Id != exclude && s.Position.Meters == positionMeters);
 
     private string PositionError(Length position, Guid? exclude = null) => position.Meters > Document.Length.Meters
         ? Strings.PositionInsideBeam : Document.Supports.Any(s => s.Id != exclude && s.Position == position)

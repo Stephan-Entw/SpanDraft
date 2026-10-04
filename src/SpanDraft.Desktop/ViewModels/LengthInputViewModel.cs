@@ -90,16 +90,8 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
     public void LoseFocus()
     {
         if (_isConfirming || !IsEditing || Confirm()) return;
-        string? rejection = _commitError;
-        // A rejected focus loss restores the display, but keeps the request's feedback.
-        Restore();
-        if (rejection is null) EditCancelled?.Invoke();
-        if (rejection is not null)
-        {
-            _commitError = rejection;
-            HasError = true;
-            Notify(nameof(ErrorText));
-        }
+        // Leaving a rejected edit discards its request, conflict and feedback together.
+        Cancel();
     }
 
     public void Refresh(bool preserveError = false)
