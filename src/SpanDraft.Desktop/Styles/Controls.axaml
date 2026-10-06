@@ -112,18 +112,12 @@
     <Setter Property="Margin" Value="{DynamicResource Padding4}" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXS}" />
   </Style>
-  <Style Selector="Button.dimension">
-    <Setter Property="Height" Value="{DynamicResource CompactControl}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  <Style Selector="Button.axisLength">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Background" Value="{DynamicResource CanvasBackground}" />
     <Setter Property="Cursor" Value="IBeam" />
-  </Style>
-  <Style Selector="Button.dimension:pointerover">
-    <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
-  </Style>
-  <Style Selector="Button.dimension:pressed">
-    <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
   </Style>
 
   <!-- Keep Fluent input behavior; replace its chrome, including template states. -->
@@ -235,10 +229,15 @@
   <Style Selector="controls|BeamCanvas">
     <Setter Property="LabelFontSize" Value="{DynamicResource BodySize}" />
     <Setter Property="BeamBrush" Value="{DynamicResource BeamStroke}" />
-    <Setter Property="DimensionBrush" Value="{DynamicResource DimensionStroke}" />
-    <Setter Property="GuideBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="GhostBrush" Value="{DynamicResource AxisStroke}" />
     <Setter Property="AccentBrush" Value="{DynamicResource Accent}" />
     <Setter Property="ErrorBrush" Value="{DynamicResource Error}" />
+  </Style>
+  <Style Selector="controls|CoordinateAxisPane">
+    <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+  </Style>
+  <Style Selector="controls|CoordinateAxisCanvas">
+    <Setter Property="AxisBrush" Value="{DynamicResource AxisStroke}" />
   </Style>
   <Style Selector="Menu">
     <Setter Property="Background" Value="{DynamicResource Surface}" />

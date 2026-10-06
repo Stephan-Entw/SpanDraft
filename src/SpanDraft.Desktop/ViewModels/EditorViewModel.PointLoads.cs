@@ -27,6 +27,9 @@ public sealed partial class EditorViewModel
     public bool IsMomentTool => LoadTool == PointLoadKind.Moment;
     public PointLoadDraftViewModel? LoadDraft => _loadDraft;
     public PointLoadPreview? LoadPreview => _loadPreview;
+    public string LoadPreviewName => _loadDraft?.NameText ?? _dragLoad?.Name
+        ?? (LoadTool is { } kind ? EntityNaming.Peek(Document,
+            kind == PointLoadKind.Force ? AutoNameKind.Force : AutoNameKind.Moment).Name : "");
     public Guid? HoveredLoadId => _hoveredLoadId;
     public Guid? HiddenLoadId => _loadDraft?.OriginalId ?? _dragLoad?.Id;
     public bool IsLoadFlyoutVisible => _loadDraft is not null && LoadState is LoadInteraction.NewDraft or LoadInteraction.EditDraft;
@@ -214,6 +217,6 @@ public sealed partial class EditorViewModel
     {
         foreach (string name in new[] { nameof(LoadState), nameof(LoadTool), nameof(IsForceTool), nameof(IsMomentTool),
             nameof(LoadDraft), nameof(LoadPreview), nameof(HoveredLoadId), nameof(HiddenLoadId),
-            nameof(IsLoadFlyoutVisible), nameof(LoadFeedback), nameof(HasLoadFeedback), nameof(HasCoordinate), nameof(CoordinateText) }) Notify(name);
+            nameof(LoadPreviewName), nameof(IsLoadFlyoutVisible), nameof(LoadFeedback), nameof(HasLoadFeedback), nameof(HasCoordinate), nameof(CoordinateText) }) Notify(name);
     }
 }

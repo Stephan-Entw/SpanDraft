@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Controls.CoordinateAxisPane" x:DataType="vm:EditorViewModel">
+  <Grid Background="{DynamicResource CanvasBackground}">
+    <controls:CoordinateAxisCanvas x:Name="AxisCanvas" />
+    <Canvas>
+      <Grid x:Name="EndValue">
+        <Button x:Name="LengthButton" Classes="ghost axisLength" Click="BeginLengthEdit"
+                IsVisible="{Binding DimensionLength.IsDisplay}" ToolTip.Tip="{x:Static resources:Strings.EditLength}"
+                AutomationProperties.Name="{x:Static resources:Strings.BeamLength}" />
+        <controls:LengthInput x:Name="AxisLengthInput" DataContext="{Binding DimensionLength}"
+                              IsVisible="{Binding IsEditing}" />
+      </Grid>
+      <TextBlock x:Name="LengthError" Text="{Binding DimensionLength.ErrorText}"
+                 IsVisible="{Binding DimensionLength.HasError}" Classes="validationMessage"
+                 Width="360" TextWrapping="Wrap" IsHitTestVisible="False" />
+      <TextBlock x:Name="DistortionHint" Text="{x:Static resources:Strings.SchematicDrawing}"
+                 Classes="caption" IsHitTestVisible="False" />
+    </Canvas>
+  </Grid>
+</UserControl>

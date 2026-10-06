@@ -347,8 +347,8 @@ public sealed class DesktopSupportTests
     [InlineData(207.6, 208)]
     public void MouseSnapRoundsWholeMillimetersAwayFromZero(double x, double expected)
     {
-        var v = new BeamViewport(0, 1000, 200, 160, 1);
-        Assert.Equal(Mm(expected), SupportSnap.Placement(v, x, 200));
+        var v = DesktopLayoutFixture.Linear(0, 1000, 200, 1);
+        Assert.Equal(Mm(expected), SupportSnap.Placement(v.Layout.Transform, v.Viewport.BeamY, x, 200));
     }
 
     [Theory]
@@ -358,22 +358,22 @@ public sealed class DesktopSupportTests
     [InlineData(1008, 1000.5)]
     public void EndpointSnapPrecedesRoundingAndPreservesFractionalLength(double x, double expected)
     {
-        var v = new BeamViewport(0, 1000, 200, 160, Mm(1000.5).Meters);
-        Assert.Equal(Mm(expected), SupportSnap.AtX(v, x));
+        var v = DesktopLayoutFixture.Linear(0, 1000, 200, Mm(1000.5).Meters);
+        Assert.Equal(Mm(expected), SupportSnap.AtX(v.Layout.Transform, x));
     }
 
     [Fact]
     public void NoBeamHitOutsideDipBandOrHorizontalRange()
     {
-        var v = new BeamViewport(0, 1000, 200, 160, 1);
-        Assert.Null(SupportSnap.Placement(v, 200, 219));
-        Assert.Null(SupportSnap.Placement(v, -11, 200));
-        Assert.Null(SupportSnap.Placement(v, 1011, 200));
-        Assert.Null(SupportSnap.AtX(v, double.NaN));
-        Assert.Null(SupportSnap.AtX(v, double.PositiveInfinity));
-        Assert.Null(SupportSnap.AtX(v with { LengthMeters = 0 }, 200));
-        var fractional = v with { LengthMeters = Mm(1000.6).Meters };
-        Assert.Null(SupportSnap.AtX(fractional, fractional.BeamToScreen(Mm(1000.55).Meters), 0));
+        var v = DesktopLayoutFixture.Linear(0, 1000, 200, 1);
+        Assert.Null(SupportSnap.Placement(v.Layout.Transform, v.Viewport.BeamY, 200, 219));
+        Assert.Null(SupportSnap.Placement(v.Layout.Transform, v.Viewport.BeamY, -11, 200));
+        Assert.Null(SupportSnap.Placement(v.Layout.Transform, v.Viewport.BeamY, 1011, 200));
+        Assert.Null(SupportSnap.AtX(v.Layout.Transform, double.NaN));
+        Assert.Null(SupportSnap.AtX(v.Layout.Transform, double.PositiveInfinity));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DesktopLayoutFixture.Fit(1000, 400, 0));
+        var fractional = DesktopLayoutFixture.Linear(0, 1000, 200, Mm(1000.6).Meters);
+        Assert.Null(SupportSnap.AtX(fractional.Layout.Transform, fractional.Layout.Transform.PhysicalToScreen(Mm(1000.55).Meters), 0));
     }
 
     [Fact]
@@ -384,10 +384,10 @@ public sealed class DesktopSupportTests
         var document = s.Editor.Document;
         foreach (var width in new[] { 1100.0, 1250.0, 1600.0 })
         {
-            var viewport = BeamViewport.Fit(width, 650, document.Length.Meters);
-            double x = viewport.BeamToScreen(support.Position.Meters);
-            NumericAssert.Close(support.Position.Meters, viewport.ScreenToBeam(x));
-            Assert.Equal(support.Id, SupportSymbol.HitTest(document.Supports, viewport, x, viewport.BeamY));
+            var viewport = DesktopLayoutFixture.Fit(width, 650, document.Length.Meters);
+            double x = viewport.Layout.Transform.PhysicalToScreen(support.Position.Meters);
+            NumericAssert.Close(support.Position.Meters, viewport.Layout.Transform.ScreenToPhysical(x));
+            Assert.Equal(support.Id, SupportSymbol.HitTest(document.Supports, viewport.Layout.Transform, viewport.Viewport.BeamY, x, viewport.Viewport.BeamY));
         }
         Assert.Same(document, s.Editor.Document);
         Assert.Equal(2, s.Calls);
@@ -396,12 +396,12 @@ public sealed class DesktopSupportTests
     [Fact]
     public void HitTestSelectsNearestThenDocumentOrderWithinDipExtents()
     {
-        var v = new BeamViewport(0, 1000, 200, 160, 1);
+        var v = DesktopLayoutFixture.Linear(0, 1000, 200, 1);
         EditorSupport[] supports = [new(Guid.NewGuid(), Mm(200), SupportType.Pinned, "A"), new(Guid.NewGuid(), Mm(220), SupportType.Roller, "B")];
-        Assert.Equal(supports[0].Id, SupportSymbol.HitTest(supports, v, 210, 210));
-        Assert.Equal(supports[1].Id, SupportSymbol.HitTest(supports, v, 215, 210));
-        Assert.Null(SupportSymbol.HitTest(supports, v, 200, 250));
-        Assert.Null(SupportSymbol.HitTest(supports, v, 200, 190));
+        Assert.Equal(supports[0].Id, SupportSymbol.HitTest(supports, v.Layout.Transform, v.Viewport.BeamY, 210, 210));
+        Assert.Equal(supports[1].Id, SupportSymbol.HitTest(supports, v.Layout.Transform, v.Viewport.BeamY, 215, 210));
+        Assert.Null(SupportSymbol.HitTest(supports, v.Layout.Transform, v.Viewport.BeamY, 200, 250));
+        Assert.Null(SupportSymbol.HitTest(supports, v.Layout.Transform, v.Viewport.BeamY, 200, 190));
     }
 
     [Theory]
@@ -493,15 +493,15 @@ public sealed class DesktopSupportTests
     [Fact]
     public void GestureDistinguishesClickFromDragAndPreservesGrabOffset()
     {
-        var v = new BeamViewport(0, 1000, 200, 160, 1);
-        var gesture = new SupportDragGesture(Guid.NewGuid(), Mm(200), 210);
-        Assert.Null(gesture.Update(v, 213, 220, 1000, 500));
+        var v = DesktopLayoutFixture.Linear(0, 1000, 200, 1);
+        var gesture = new SupportDragGesture(Guid.NewGuid(), Mm(200), 210, v.Layout.Transform);
+        Assert.Null(gesture.Update(213, 220, 500));
         Assert.False(gesture.IsDragging);
-        Assert.Equal(Mm(204), gesture.Update(v, 214, 250, 1000, 500));
+        Assert.Equal(Mm(204), gesture.Update(214, 250, 500));
         Assert.True(gesture.IsDragging);
-        Assert.Equal(Mm(240), gesture.Update(v, 250, 400, 1000, 500));
-        Assert.Null(gesture.Update(v, 250, 501, 1000, 500));
-        Assert.Equal(Mm(0), gesture.Update(v, -20, 220, 1000, 500));
+        Assert.Equal(Mm(240), gesture.Update(250, 400, 500));
+        Assert.Null(gesture.Update(250, 501, 500));
+        Assert.Equal(Mm(0), gesture.Update(-20, 220, 500));
     }
 
     [Theory]

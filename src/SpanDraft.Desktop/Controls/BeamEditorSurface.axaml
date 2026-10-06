@@ -8,37 +8,23 @@
              PointerMoved="SurfacePointerMoved" PointerPressed="SurfacePointerPressed"
              PointerReleased="SurfacePointerReleased" PointerExited="SurfacePointerExited"
              PointerCaptureLost="SurfaceCaptureLost" KeyDown="SurfaceKeyDown">
-  <Grid Background="{DynamicResource CanvasBackground}">
-    <controls:BeamCanvas LengthMeters="{Binding Document.Length.Meters}"
-                         Loads="{Binding Document.Loads}" LoadPreview="{Binding LoadPreview}"
-                         HighlightedLoadId="{Binding HoveredLoadId}" HiddenLoadId="{Binding HiddenLoadId}"
-                         Supports="{Binding Document.Supports}" Preview="{Binding Preview}"
-                         ConflictEntityIds="{Binding ConflictEntityIds}"
-                         ConstraintConflict="{Binding ConstraintConflict}"
-                         HighlightedSupportId="{Binding HoveredSupportId}" HiddenSupportId="{Binding HiddenSupportId}" />
-    <Canvas>
-      <StackPanel x:Name="DimensionOverlay" Width="560" Spacing="{StaticResource Space4}">
-        <Grid Height="{DynamicResource CompactControl}">
-          <Button x:Name="DimensionButton" Content="{Binding DimensionLength.DisplayText}" Click="BeginDimensionEdit"
-                  Classes="ghost dimension" IsVisible="{Binding DimensionLength.IsDisplay}" HorizontalAlignment="Center"
-                  AutomationProperties.Name="{Binding DimensionLength.DisplayText}"
-                  ToolTip.Tip="{x:Static resources:Strings.EditLength}" />
-          <Border IsVisible="{Binding DimensionLength.IsEditing}" Background="{DynamicResource CanvasBackground}"
-                  Padding="{DynamicResource DimensionMaskPadding}" HorizontalAlignment="Center" Height="{DynamicResource CompactControl}">
-            <controls:LengthInput x:Name="DimensionInput" DataContext="{Binding DimensionLength}" />
-          </Border>
-        </Grid>
-        <TextBlock Text="{Binding DimensionLength.ErrorText}" IsVisible="{Binding DimensionLength.HasError}"
-                   Width="360" HorizontalAlignment="Center" Classes="validationMessage" Background="{DynamicResource CanvasBackground}" TextAlignment="Center" />
-      </StackPanel>
-      <Border x:Name="LoadAnchor" Width="1" Height="1" IsHitTestVisible="False" />
-      <Border x:Name="SupportAnchor" Width="1" Height="1" IsHitTestVisible="False" />
-      <TextBlock x:Name="CoordinateOverlay" Text="{Binding CoordinateText}" IsVisible="{Binding HasCoordinate}"
-                 Classes="propertyLabel" Background="{DynamicResource CanvasBackground}" IsHitTestVisible="False" />
-      <TextBlock x:Name="FeedbackOverlay" Text="{Binding SupportFeedback}" IsVisible="False"
-                 Classes="validationMessage" Width="360" TextWrapping="Wrap" IsHitTestVisible="False"
-                 Background="{DynamicResource CanvasBackground}" />
-    </Canvas>
+  <Grid RowDefinitions="*,Auto" Background="{DynamicResource CanvasBackground}">
+    <Grid x:Name="BeamPane" SizeChanged="SurfaceSizeChanged">
+      <controls:BeamCanvas x:Name="TechnicalCanvas"
+                           HighlightedLoadId="{Binding HoveredLoadId}" HighlightedSupportId="{Binding HoveredSupportId}"
+                           ConflictEntityIds="{Binding ConflictEntityIds}" ConstraintConflict="{Binding ConstraintConflict}" />
+      <Canvas>
+        <Border x:Name="LoadAnchor" Width="1" Height="1" IsHitTestVisible="False" />
+        <Border x:Name="SupportAnchor" Width="1" Height="1" IsHitTestVisible="False" />
+        <Border x:Name="SelectionAnchor" Width="1" Height="1" IsHitTestVisible="False" />
+        <TextBlock x:Name="CoordinateOverlay" Text="{Binding CoordinateText}" IsVisible="{Binding HasCoordinate}"
+                   Classes="propertyLabel" Background="{DynamicResource CanvasBackground}" IsHitTestVisible="False" />
+        <TextBlock x:Name="FeedbackOverlay" Text="{Binding SupportFeedback}" IsVisible="False"
+                   Classes="validationMessage" Width="360" TextWrapping="Wrap" IsHitTestVisible="False"
+                   Background="{DynamicResource CanvasBackground}" />
+      </Canvas>
+    </Grid>
+    <controls:CoordinateAxisPane x:Name="CoordinateAxis" Grid.Row="1" />
     <Popup x:Name="SupportPopup" PlacementTarget="{Binding #SupportAnchor}" Placement="Bottom"
            IsLightDismissEnabled="False"
            ShouldUseOverlayLayer="True" Closed="SupportPopupClosed">
@@ -47,6 +33,12 @@
     <Popup x:Name="LoadPopup" PlacementTarget="{Binding #LoadAnchor}" Placement="Bottom"
            IsLightDismissEnabled="False" ShouldUseOverlayLayer="True" Closed="LoadPopupClosed">
       <controls:PointLoadFlyout x:Name="LoadEditor" />
+    </Popup>
+    <Popup x:Name="SelectionPopup" PlacementTarget="{Binding #SelectionAnchor}" Placement="Bottom"
+           IsLightDismissEnabled="True" ShouldUseOverlayLayer="True">
+      <Border Classes="supportFlyout">
+        <StackPanel x:Name="SelectionEntries" Spacing="{StaticResource Space4}" />
+      </Border>
     </Popup>
   </Grid>
 </UserControl>

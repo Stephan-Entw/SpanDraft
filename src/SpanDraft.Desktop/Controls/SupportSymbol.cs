@@ -13,22 +13,22 @@ public static class SupportSymbol
     public const double WallHalfHeight = SchematicMetrics.SupportWallHalfHeight;
     public const double HitPadding = 5;
 
-    public static bool Contains(SupportPreview preview, BeamViewport viewport, double x, double y) =>
-        Contains(preview.Type, x - viewport.BeamToScreen(preview.Position.Meters), y - viewport.BeamY);
+    public static bool Contains(SupportPreview preview, StationTransform transform, double beamY, double x, double y) =>
+        Contains(preview.Type, x - transform.PhysicalToScreen(preview.Position.Meters), y - beamY);
 
     private static bool Contains(SupportType type, double dx, double dy) => type == SupportType.Fixed
         ? dx >= -HalfWidth - HitPadding && dx <= HitPadding && Math.Abs(dy) <= WallHalfHeight + HitPadding
         : Math.Abs(dx) <= HalfWidth + HitPadding && dy >= -HitPadding && dy <= GroundY + HitPadding;
 
-    public static Guid? HitTest(IReadOnlyList<EditorSupport> supports, BeamViewport viewport, double x, double y)
+    public static Guid? HitTest(IReadOnlyList<EditorSupport> supports, StationTransform transform, double beamY, double x, double y)
     {
         Guid? hit = null;
         double nearest = double.PositiveInfinity;
         foreach (var support in supports)
         {
-            double sx = viewport.BeamToScreen(support.Position.Meters);
+            double sx = transform.PhysicalToScreen(support.Position.Meters);
             double dx = x - sx;
-            double dy = y - viewport.BeamY;
+            double dy = y - beamY;
             bool inside = Contains(support.Type, dx, dy);
             double distance = dx * dx + dy * dy;
             if (inside && distance < nearest) { hit = support.Id; nearest = distance; }

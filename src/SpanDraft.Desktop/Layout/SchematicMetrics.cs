@@ -15,6 +15,12 @@ public static class SchematicMetrics
     public const double PinnedHatchRightExtent = 20;
     public const double PointLoadHalfSize = 18;
     public const double MomentRadius = 15;
+    public const double MomentArrowHalfWidth = 3;
+    public const double ForceHeight = 36;
+    public const double EntityLabelPadding = 8;
+    public const double MinimumBeamPaneHeight = 220;
+    public const double LengthInputWidth = 88;
+    public const double LengthInputHeight = 30;
     public const double BaseSideMargin = 72;
     public const double OuterPadding = 8;
     public const double AxisLabelPadding = 8;

@@ -1,6 +1,6 @@
 # SpanDraft – verbindliche UI-Spezifikation
 
-Stand: 06.10.2026, Stage 1 des Schematic-Layout-Fundaments. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
+Stand: 06.10.2026, Stage 2 des produktiven Schematic Layouts. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
 Support-, Punktkraft- und Punktmoment-Placement & Editing einschließlich Drag sind
 implementiert. Streckenlast bleibt der verbindliche nächste Editor-Schritt.
 
@@ -81,9 +81,9 @@ ProjectSetupViewModel hält eine temporäre Auswahl. EditorViewModel besitzt
 das einzige committed EditorDocument mit Length, Material, Section, Supports und Loads.
 Core-Objekte bleiben immutable. Kein zweites konkurrierendes Projektmodell.
 
-Stage 1 gemäß [SCHEMATIC_LAYOUT.md](SCHEMATIC_LAYOUT.md) ergänzt stabile
+Das Schematic Layout gemäß [SCHEMATIC_LAYOUT.md](SCHEMATIC_LAYOUT.md) verwendet stabile
 Entity-Namen und einen monotonen NamingState im EditorDocument. Die bestehenden
-Support-/Load-Drafts halten Namen transaktional, ohne sichtbare Naming-Felder.
+Support-/Load-Drafts halten Namen transaktional; Canvas und Flyouts zeigen sie an.
 EditorPresentationState hält relative AnnotationOffsets getrennt vom Dokument.
 Er gehört zur geöffneten Projekt-Session und überlebt Setup-Navigation und
 View-/Control-Wechsel; Abbruch einer Pointer-/Draft-Interaktion setzt ihn nicht zurück.
@@ -91,44 +91,57 @@ Namen, Zähler und Offsets gelangen nicht ins BeamModel.
 
 StationLayout/StationTransform und AxisLabelPacker sind reine Desktop-Bausteine
 ohne Avalonia-/Entity-Abhängigkeiten. Ein separater Adapter liefert die Union
-technischer Symbol-Extents; Text und Hit-Padding zählen nicht dazu. Stage 1 bindet
-das neue Layout noch nicht an Rendering, Achse oder Pointer-Gesten an.
+technischer Symbol-Extents; Text und Hit-Padding zählen nicht dazu. BeamLayoutState
+in der Surface erzeugt das committed Layout ausschließlich über
+StationRequirementBuilder.FromDocument(), StationOuterMargins und StationLayout.
+Dokumentidentität und Pane-Breite bestimmen den Cache. BeamCanvas und
+CoordinateAxisPane erhalten dieselbe StationLayoutResult-Instanz.
 
 ObservableObject und ActionCommand bilden die kleine lokale ViewModel-Basis.
 Es gibt keine externe MVVM-Bibliothek, DI, Event Bus oder allgemeine Draft-Architektur.
 Code-behind steuert Pointer-/Tastaturereignisse, Capture, Fokus, visuelles Hit-Testing
 und Overlay-/Popup-Positionen. Dokumentregeln und Analysis verbleiben im ViewModel.
 
-BeamEditorSurface enthält BeamCanvas plus interaktive Overlay-Controls.
-BeamCanvas zeichnet über DrawingContext Balken, feinere Maßlinie, Pfeile und
-Hilfslinien sowie committed Lager/Punktlasten und temporäre Previews. Die Maßzahl ist
-ein normales Avalonia-Control, kein gezeichneter
-Text mit eigenem Hit-Testing.
+BeamEditorSurface enthält eine flexible Interactive Beam Pane mit BeamCanvas und
+eine untere Auto-Row mit eigener CoordinateAxisPane. BeamCanvas zeichnet über
+DrawingContext Balken, technische Lager-/Stationsglyphs, individuelle Objektlabels
+und temporäre Previews. Die Achse zeichnet Ticks für 0, L und jede innere eindeutige
+committed Station, ohne regelmäßige Zwischenticks oder Raster. Sie zeigt `x [mm]`;
+nur IsDistorted aktiviert den dezenten Hinweis „Schematische Darstellung“.
+IsOverconstrained verwendet den deterministischen Stage-1-Fallback ohne weitere Warn-UX.
+
+UiNumbers formatiert die Koordinaten, Avalonia misst die tatsächlichen Textbounds,
+AxisLabelPacker bestimmt Bounds, minimale Lanes und dynamische Pane-Höhe. Die
+Einheitenangabe ist außerhalb des Packers. Der rechte Endwert ist ein normales
+Avalonia-Control mit der vorhandenen LengthInput-Funktion. CoordinateOverlay
+bleibt davon getrenntes, temporäres Hover-/Placement-Feedback.
 
 Der physikalische Balken verläuft von x = 0 bis L und existiert immer.
 Es gibt kein Balkenzeichenwerkzeug. Die Pixellänge passt sich an den Viewport an.
 
-BeamViewport definiert eine gemeinsame reversible Abbildung:
+StationTransform ist die einzige horizontale Abbildung für Rendering, Preview,
+Hit-Testing, Snap und Popup-Anker. Die strikt monotone, reversible, stückweise lineare
+Abbildung verwendet Meter und DIPs. BeamViewport hält ausschließlich Pane-Abmessungen
+und BeamY. Seitliche Ränder berücksichtigen die Endstations-Extents, normalerweise
+mindestens 72 DIPs; technische Symbolgrößen bleiben konstant.
 
-```text
-screenX = left + (beamX / L) × (right − left)
-beamX   = ((screenX − left) / (right − left)) × L
-```
-
-Beam-x und L verwenden Meter, screenX verwendet DIPs. Seitliche Ränder sind
-normalerweise 72 DIPs. Resize berechnet die gemeinsame Zeichen-/Overlaygeometrie
-neu. Die Maßzahl bleibt über der Mitte des Balkens. Hover, Snapping, Hit-Testing,
-Lager, Punktlasten und Popup-Anker verwenden dieselbe Abbildung. Zoom/Pan fehlt
-bewusst.
+Support-/Load-Placement friert beim Werkzeugstart den sichtbaren Layoutzustand ein;
+Support-/Load-Drag beim Press vor der Drag-Schwelle. Während der Pointer-Geste
+verwenden Darstellung, Preview und ScreenToPhysical denselben Snapshot, auch bei
+Resize. Release verarbeitet die letzte Position noch damit und verwirft ihn danach.
+Im normalen New-/Edit-Draft darf Resize das committed Layout neu berechnen; die
+physikalische Canvasposition und Textbuffer bleiben erhalten. Wiederholter Drag
+beginnt mit einem neuen Snapshot. Cancel, Escape, Capture-Verlust, Werkzeugwechsel
+und Detach bereinigen ihn. Preview-Entities verändern keine committed Stationen.
 
 ## 5. Transaktionale Längenbearbeitung
 
-Die klickbare Maßzahl ist die einzige sichtbare Längeneingabe im Editor und liest
+Der klickbare rechte Axis-Endwert ist die einzige sichtbare Längeneingabe im Editor und liest
 die committed Länge. DimensionLength hält den einzigen temporären Eingabepuffer. Unvollständiger Text wie „1,“ darf während
 der Eingabe bestehen und erzeugt weder Core-Objekte noch Analysis-Aufrufe.
 
-Die Maßzahl zeigt normal beispielsweise „1000 mm“. Ein Klick öffnet einen
-Inline-Editor mit Zahl und statischer Einheit mm.
+Der Axis-Endwert zeigt normal beispielsweise „1000“, die Achse trägt `x [mm]`.
+Ein Klick öffnet einen Inline-Editor mit Zahl und statischer Einheit mm.
 
 | Aktion | Verhalten |
 | --- | --- |
@@ -142,7 +155,7 @@ Inline-Editor mit Zahl und statischer Einheit mm.
 
 Parsing-/Formattinglogik bleibt in UiNumbers. Nach Abschluss kann Focus Loss
 nicht nochmals committen. Fehler erscheinen als markiertes Feld mit lokalisiertem
-Hilfetext; die Maßzahl zeigt zusätzlich einen Inline-Fehlertext.
+Hilfetext; am Axis-Endwert erscheint zusätzlich ein Inline-Fehlertext.
 
 Parsing verwendet CurrentUICulture und numerische Float-Eingabe ohne
 Tausenderseparatoren. Gültig sind endliche positive mm-Werte, die auch in SI
@@ -169,12 +182,11 @@ Bearbeitungsbeginn entfernen ihn. Neue ungültige Eingabe entfernt ein überholt
 Highlight. Support- und Punktlast-Commits prüfen verbleibende Konflikte gegen die angeforderte Länge.
 
 Bei einem tatsächlichen Objektkonflikt zeigt die gültige angeforderte Länge zugleich
-ein transientes visuelles Balkenende: der massive Balken und die einzige Bemaßung
-enden dort, einschließlich rechtem Maßhilfsstrich und Maßpfeil. Display und Inline-
-Editor liegen gemeinsam über der Mitte dieser angeforderten Länge. Der Rest bis
-zum committed Ende erscheint als dünnes, dezentes gestricheltes Ghost-Segment.
-BeamViewport und Supportpositionen verwenden weiterhin ausschließlich die committed
-Länge; blockierende Entities bleiben an ihren tatsächlichen Positionen rot sichtbar.
+ein transientes visuelles Balkenende: RequestedLength wird über den committed
+StationTransform abgebildet. Der massive Balken endet dort mit einem Error-Endmarker;
+der Rest bis zum committed Ende erscheint als dünnes, dezentes gestricheltes
+Ghost-Segment. Axis-Ticks, Endwert-Editor, Transform und Entitypositionen bleiben
+am committed Layout; blockierende Entities sind an ihren tatsächlichen Positionen rot sichtbar.
 Ungültiger/nicht positiver Text erzeugt keine Geometrie-Preview. Korrektur oder
 Abbruch oder abgelehnter Fokusverlust entfernt sie vollständig. Dokument und Analysis
 werden durch diese Darstellung nicht geändert.
@@ -184,9 +196,9 @@ und Abbruchänderungen; bei einem bestehenden Konflikt prüft der Editor deren
 Auswirkung ohne Commit. Formatierung erfolgt erst nach Übernahme/Wiederherstellung.
 Die TextBox bleibt während der Session 88 DIPs breit und linksbündig, rund 40 %
 schmaler als zuvor. Einheit mm und Schriftgröße bleiben erhalten; außergewöhnlich
-langer Text scrollt horizontal innerhalb der Standard-TextBox. Zuvor
-verschob textabhängige Auto-Breite die zentrierte Eingabe samt Einheit beim Tippen;
-die native Prüfung zeigte dabei korrekte logische Caretpositionen. Vollauswahl
+langer Text scrollt horizontal innerhalb der Standard-TextBox. Beim Einstieg wird
+die erforderliche Axis-Breite und Zeilenhöhe einmal reserviert; Bufferänderungen
+lösen kein Axis-Packing oder Stations-Reflow aus. Vollauswahl
 erfolgt ausschließlich beim expliziten Einstieg, nicht bei gewöhnlichem Fokusgewinn.
 Textbearbeitung, Mausklick-Caret, Pfeiltasten und Backspace/Delete bleiben Avalonia-
 Standardverhalten; es gibt keine Caret-Korrektur pro Tastendruck.
@@ -258,7 +270,7 @@ SupportSnap ist eine reine Desktop-Hilfslogik ohne PointerEvent-Abhängigkeit.
 Placement gilt innerhalb ±18 DIPs um den Balken. Innerhalb 10 DIPs eines
 Endpunkts wird zuerst exakt 0 beziehungsweise L gewählt, auch bei L = 1000,5 mm.
 Überlappende Fangzonen wählen den näheren Endpunkt, bei Gleichstand den linken.
-Sonst: ScreenToBeam → ganze Millimeter mit MidpointRounding.AwayFromZero.
+Sonst: StationTransform.ScreenToPhysical → ganze Millimeter mit MidpointRounding.AwayFromZero.
 Außerhalb liegende gerundete Positionen werden abgewiesen. Kein sichtbares Raster.
 
 Hover zeigt dezent „x = … mm“ mit CurrentUICulture. Pro exakt gleicher
@@ -279,17 +291,21 @@ Preview: 75 % Opazität. Brushes stammen aus dem zentralen Designsystem.
 SupportSymbol definiert gemeinsame DIP-Ausdehnungen für Zeichnung und Hit-Zonen.
 Überlappende Hit-Zonen wählen das nächstgelegene Lager, bei Gleichstand das
 zuerst im Dokument enthaltene. Neutrales Hover hebt hervor; Klick öffnet Edit.
-Resize erhält alle physikalischen Werte und berechnet Zeichenpositionen,
-Koordinate und Popup-Anker über BeamViewport neu.
+Supports zeigen ihre bestehenden Namen unter dem technischen Symbol. Individuelle
+Labels öffnen eindeutig das zugehörige Entity, ohne Positions-/Label-Drag.
+Resize außerhalb einer Pointer-Geste erhält alle physikalischen Werte und
+berechnet Zeichenpositionen, Koordinate und Popup-Anker über StationTransform neu.
 
 ### 7.5 Transaktionales Flyout
 
 Das 320 DIPs breite, objektgebundene SupportFlyout verwendet vorhandene Surface-,
 Border-, Radius-, Typography-, Input- und Button-Tokens. Ohne separate Überschrift
-enthält es drei kompakte horizontale Zeilen: „Lagertyp“/„Support type“ mit Dropdown,
+enthält es zuerst „Bezeichnung“/„Name“ mit TwoWay-NameText und bestehender
+Namensvalidierung, anschließend „Lagertyp“/„Support type“ mit Dropdown,
 „Position X“ mit Input und externer Einheit mm sowie links Löschen und rechts
 Abbrechen/OK. Padding 16 und Zeilenabstand 12 DIPs; keine künstliche MinHeight.
-Validierung erweitert bei Bedarf nur den Positionsbereich. OK trägt ein kleines
+Validierung erweitert bei Bedarf den jeweiligen Eingabebereich. Position bleibt
+beim Öffnen initial fokussiert. OK trägt ein kleines
 Return-Vektoricon mit geerbtem Foreground als Enter-Hinweis. Typ enthält lokalisierte
 Einspannung/Festlager/Loslager. Position wird in mm eingegeben: 0 und L sowie
 Dezimalwerte sind gültig; TryParsePosition verwendet CurrentUICulture und Float
@@ -304,7 +320,8 @@ Ungültiger Text markiert Input und Preview, ohne sie zu verschieben. Gültige
 Typwechsel erscheinen sofort an derselben Canvasposition. Beim Editieren ersetzt
 die Preview das Original nur in der Darstellung; Resize berechnet den Anker aus
 der sichtbaren Position neu.
-OK ersetzt Typ und Position gemeinsam bei gleicher ID. Unverändertes OK schließt
+OK ersetzt Name, Typ und Position gemeinsam bei gleicher ID. Rename-only erhält
+das Analysis-Ergebnis. Unverändertes OK schließt
 ohne neues Dokument und ohne Analysis; unveränderte SI-Werte bleiben exakt.
 Abbrechen, Escape und Outside-Click
 verwerfen alles; das Original erscheint wieder. Nur bestehende Lager zeigen
@@ -317,17 +334,17 @@ Flyout samt Dropdown und aktives Symbol vom Outside-Click. Die aktive Symbol-Hit
 folgt sichtbarer Draftposition und Previewtyp. Ein Klick darauf erhält Draft und
 Eingabetext, auch bei neuen Placement-Drafts. Freier Canvas oder ein anderes Lager
 bricht die Session ab und konsumiert den Klick; es öffnet dabei kein anderes Lager.
-Nach Typwahl kehrt der Fokus zum Dropdown zurück; Tab läuft durch Typ,
-Position und Aktionen. Escape bei Toolbar-Fokus beendet ebenfalls Placement.
+Nach Typwahl kehrt der Fokus zum Dropdown zurück; Tab läuft durch Bezeichnung,
+Typ, Position und Aktionen. Escape bei Toolbar-Fokus beendet ebenfalls Placement.
 
 ### 7.6 Drag-Verschieben
 
 Neutraler Press auf ein Lager oder ein erneuter Press auf das aktive bestehende
 Draftlager bereitet eine Pointer-Geste vor. Ab 4 DIPs
 horizontaler Bewegung beginnt Drag; der ursprüngliche Greifversatz bleibt erhalten.
-Pointer-Capture sichert den Vorgang. Innerhalb der Surface ist Pointer-Y frei;
-die vertikale Outside-Surface-Prüfung bleibt bestehen. X berücksichtigt zuerst
-den Greifversatz, klemmt auf das sichtbare BeamViewport-Segment und nutzt dann
+Pointer-Capture sichert den Vorgang. Innerhalb der Beam Pane ist Pointer-Y frei;
+die vertikale Outside-Pane-Prüfung bleibt bestehen. X berücksichtigt zuerst
+den Greifversatz, klemmt auf den sichtbaren Snapshot-Balkenbereich und nutzt dann
 dieselben Millimeter-/Endpoint-Snaps und die Kollisionsprüfung ohne eigene ID.
 Links außerhalb bleibt das Lager exakt bei 0, rechts exakt bei L, auch wenn L
 nicht ganzzahlig ist. Horizontale Surface-Grenzen beschränken Capture und Release
@@ -346,7 +363,7 @@ der Geste gesperrt; vorübergehendes Popup-Schließen bricht die Session nicht a
 
 Erst gültiges OK/Enter übernimmt die letzte Eingabeposition und den Typ gemeinsam;
 Abbrechen/Escape stellt das committed Original wieder her. Belegtes oder unzulässiges
-Ziel beziehungsweise Loslassen vertikal außerhalb der Surface verwirft einen Drag
+Ziel beziehungsweise Loslassen vertikal außerhalb der Beam Pane verwirft einen Drag
 aus Neutral mit lokalisierter Rückmeldung. In einer bestehenden Edit-Session stellt
 es stattdessen den Zustand unmittelbar vor der Geste samt Positionstext und Typ
 wieder her; das Flyout bleibt mit sichtbarer Rückmeldung offen. Escape oder
@@ -377,7 +394,8 @@ Interaktion. Placement verwendet unverändert SupportSnap einschließlich 1-mm-
 Rundung, ±18-DIP-Balkenhit und exaktem Endpoint-Snap. Klick öffnet nach Release
 das objektgebundene Flyout. OK oder Abbruch führt zurück nach neutral.
 
-Das 320-DIP-Flyout übernimmt die Support-Tokens und enthält Position X/mm,
+Das 320-DIP-Flyout übernimmt die Support-Tokens und enthält zuerst Bezeichnung/Name
+mit bestehendem NameText und Namensvalidierung, anschließend Position X/mm,
 Kraft F/N beziehungsweise Moment M/Nm sowie Löschen, Abbrechen und OK ↵.
 Nur bestehende Loads zeigen Löschen. Position und Wert sind separate transaktionale
 Textbuffer. Gültige Werttexte aktualisieren Richtung und Label der temporären
@@ -388,7 +406,8 @@ Tausenderseparatoren gelten für beide Felder; Werte müssen endlich sein, null
 ist zulässig. Manuelle Positionen außerhalb [0,L] werden abgewiesen, nicht geklemmt.
 Unberührte Eingaben erhalten die exakten SI-Werte.
 
-OK/Enter validiert und committed Position und Wert gemeinsam. Ungültiges Enter
+OK/Enter validiert und committed Name, Position und Wert gemeinsam. Rename-only
+erhält das Analysis-Ergebnis. Ungültiges Enter
 hält das Flyout offen. Unverändertes OK schließt ohne Dokumentänderung oder
 Analysis. Escape, Abbrechen und Outside-Click verwerfen den Draft; ein Klick auf
 das aktive Symbol erhält ihn. Freier Canvas oder ein anderes Objekt verwirft die
@@ -404,24 +423,32 @@ bestehenden Draft dessen Zustand vor der Geste samt Rohtexten; aus Neutral wird 
 Geste verworfen. Confirm/Delete sind während Drag gesperrt. Escape und unerwarteter
 Capture-Verlust verwerfen die gesamte unbestätigte Session.
 
-PointLoadSymbol definiert gemeinsame Darstellung und Hit-Zonen. Kraft ist ein
-vertikaler technischer Pfeil: positiv nach oben, negativ nach unten. Moment ist
-ein Kreisbogenpfeil: positiv gegen Uhrzeigersinn, negativ im Uhrzeigersinn.
-Null zeigt eine Linie beziehungsweise einen Kreis ohne Pfeilspitze. Symbolgrößen
-bleiben konstant in DIPs; Labels verwenden CurrentUICulture und N/Nm ohne
-Einheitenumschaltung. Committed verwendet BeamStroke, Hover/Draft Accent,
-Constraint-Konflikt oder ungültige Eingabe Error; Konflikt hat Vorrang.
+PointLoadSymbol definiert gemeinsame Darstellung und Hit-Zonen je exakter Station
+und Load-Art. Kräfte greifen direkt am Balken an; der konstante Schaft liegt
+oberhalb von BeamY. Positive Kräfte zeigen nach oben, negative nach unten.
+Gleichgerichtete Kräfte teilen einen Glyph; beide Vorzeichen ergeben einen
+Doppelpfeil. Zero zeigt keine Richtungsspitze. Momente sind exakt auf BeamY
+zentriert: ein 3/4-Kreis mit positiver Spitze bei 6 Uhr und negativer bei 3 Uhr,
+bei beiden Vorzeichen mit beiden Spitzen. Zero hat keine Richtungsspitze.
+Es gibt keine Leader-Lines oder per-load Symbol-Lanes. Entities, Werte und Labels
+bleiben getrennt; es wird keine Resultierende gebildet.
 
-Mehrere Kräfte, mehrere Momente, Kraft/Moment und Load/Support am selben x sind
-zulässig. Loads bleiben fachlich getrennt. Gleichpositionierte Loads werden in
-Dokumentreihenfolge mit 50-DIP-Abstand oberhalb der Maßlinie gestaffelt und über
-Hilfslinien am selben physikalischen x verankert. Hit-Testing wählt das nächste
-Symbol, bei Gleichstand die Dokumentreihenfolge; die aktive Draft-Hit-Zone hat
-Vorrang. Wert-/Positions-Texteingabe verändert die Staffelung nicht. Die Canvas-
-Mindesthöhe wächst bei vielen gleichpositionierten Loads. Während einer aktiven
-Load-Interaktion wird eine zusätzliche Zeile bereits vor Hover reserviert, damit
-Preview/Pointer-Leave den Balken nicht unter dem Pointer verschieben. Ein vertikaler ScrollViewer
-hält alle Symbole erreichbar, ohne Zoom/Pan oder Änderung der physikalischen Werte.
+Labels zeigen „F1 = 1000 N“ beziehungsweise „M1 = -50 Nm“ mit CurrentUICulture,
+positive Werte ohne Plus. BeamRenderState misst Textbounds und ordnet individuelle
+Labels deterministisch in kompakten Reihen oberhalb der Loads und unterhalb der
+Supports an. Rendering und Hit-Testing verwenden diesen gemeinsamen State.
+Committed verwendet BeamStroke, Hover/Draft Accent, Constraint-Konflikt oder
+ungültige Eingabe Error; Konflikt hat Vorrang. Individuelle Labels öffnen ihr
+Entity eindeutig und starten keinen Drag. Einzelglyphs öffnen/ziehen direkt;
+Shared Glyphs verwenden das bereits eindeutig editierte Entity. Sonst öffnet ein
+kleines Surface-lokales Standard-Popup mit Entity-Buttons den bestehenden EditLoad-Pfad,
+ohne willkürliche Auswahl oder allgemeines Selection-Framework.
+
+Die Canvas-Mindesthöhe folgt committed Objektlabels mit einer reservierten
+Preview-Zeile. Hover/Pointer-Leave verändern weder Stationslayout noch Beam-Lage.
+Ein vertikaler ScrollViewer hält umfangreiche Beschriftungen erreichbar, ohne
+Zoom/Pan oder Änderung der physikalischen Werte. Manuelle AnnotationOffsets und
+Label-Drag bleiben für Stage 4 vorbereitet.
 
 Analysis erfolgt ausschließlich nach neuer Load + OK, tatsächlichem Edit + OK
 oder Delete. Alle Transienten einschließlich Drag und unverändertem OK bleiben
@@ -454,7 +481,11 @@ Keine neuen Solverfunktionen oder Engineering-Nachweise.
 ## 10. Prüfung
 
 Reine Desktop-State-/ViewModel-Tests laufen im vorhandenen Produkttestprojekt
-ohne GUI-Initialisierung, Headless oder neue Testpakete. Der Analysis-Delegate
+ohne GUI-Initialisierung, Headless oder neue Testpakete. Textmessungs-Integrationstests
+initialisieren vorhandenes Avalonia/Skia/HarfBuzz ohne Fenster und prüfen
+Formatierung → reale Messung → Packer sowie endliche Bounds. Konkrete Lane-Zahlen
+verwenden weiterhin deterministisch gemessene Bounds in reinen Tests, keine
+plattformabhängigen Pixelbreiten. Der Analysis-Delegate
 ermöglicht das Zählen und Prüfen der übergebenen BeamModels; produktiv ist allein
 BeamAnalysis.Analyze angeschlossen.
 
@@ -462,10 +493,34 @@ Das Regression-Gate umfasst Restore/Build/Tests beider Solutions, unveränderte
 eingefrorene Bereiche und den bestehenden SolverSourceSha256. GUI-Smoke-Checks
 und deren tatsächliche Grenzen werden im Abschlussbericht separat dokumentiert.
 
-Aktueller Stand (06.10.2026): **595 Produkttests PASS**, **195 Validation-Tests
+Aktueller Stand (06.10.2026): **641 Produkttests PASS**, **195 Validation-Tests
 PASS**, **18 Acceptance-Fälle PASS**; Release-Builds mit null Warnungen/Fehlern.
 Die folgenden Abnahmen dokumentieren ausdrücklich frühere Entwicklungsstände;
-maßgeblich für die heutige Interaktion sind die Abschnitte 5 und 7.
+maßgeblich für die heutige Interaktion sind die Abschnitte 4, 5 und 7.
+
+### Abnahme Stage 2: Produktives Schematic Layout (06.10.2026)
+
+- Product Restore/Release Build: 0 Warnungen, 0 Fehler; 641 Tests PASS,
+  einschließlich 46 neuer Rendering-, Axis-, Glyph-, Snapshot-, Naming- und
+  Textmessungsfälle. Stage-1-Layout-/Packer-/Naming-Tests bleiben erhalten.
+- Validation Restore/Release Build: 0 Warnungen, 0 Fehler; 195 Tests PASS;
+  Acceptance 18/18 PASS. Keine übersprungenen Tests.
+- SolverSourceSha256 unverändert:
+  `6f4a3bf5a3e283680d57c087491a623af715e164089e3219c6bed77b586c06df`.
+- Gemeinsamer committed Layoutpfad und temporäre Pointer-Snapshots sind produktiv.
+  Lineares BeamViewport-Mapping, DimensionY, Maßlinien/Guides und DimensionOverlay
+  wurden entfernt. CoordinateAxisPane ersetzt die klassische Bemaßung.
+- Überholte Tests für Maßlinien-Mittelpunkte und 50-DIP-Symbol-Lanes wurden auf
+  Axis-/Conflict-Geometrie, Shared Glyphs und individuelle Label-Hits umgestellt;
+  fachliche Positionen, Werte, Commit- und Analysis-Assertions bleiben erhalten.
+- Native macOS-Prüfung im temporären Release-App-Bundle begonnen; anschließend
+  bestätigt der Nutzer nach ausführlicher Interface-Prüfung: in Ordnung,
+  keine Auffälligkeiten. Keine zusätzliche Screenshot-Schleife.
+- Core, Solver, Engineering, Analysis, Reporting, Validation und Packages
+  unverändert. Kein Commit und kein Push.
+- Stage 3/4 übernehmen die weiteren Schematic-Interaktionen und manuelle
+  Label-Offsets/Label-Drag; keine allgemeine Selection-/Annotation-Architektur
+  oder Persistenz vorweggenommen.
 
 ### Abnahme Stage 1: Schematic-Layout-Fundament (06.10.2026)
 
@@ -572,7 +627,7 @@ Layoutbegrenzungen sind bewusst keine allgemeinen Design-Tokens.
 | Accent / AccentHover / AccentPressed | #2563EB / #1D4ED8 / #1E40AF |
 | AccentSubtle / TextOnAccent | #EFF6FF / #FFFFFF |
 | Error / ErrorSubtle | #B42318 / #FEF3F2 |
-| BeamStroke / DimensionStroke | #374151 / #697586 |
+| BeamStroke / AxisStroke | #374151 / #697586 |
 
 Accent dient Primäraktion, Fokus, aktiven Werkzeugen und Lagerpreviews, nicht großen
 Flächen oder Überschriften. TextPrimary auf Surface erreicht 15,18:1,
@@ -625,8 +680,8 @@ Disabled hat Vorrang vor Hover/Pressed/Selected; Icons erben die Textfarbe.
 TextBox und ComboBox teilen Höhe, Schriftgröße, Border, Radius und Fokusfarbe.
 Fluent übernimmt weiterhin Textbearbeitung, Auswahl und Dropdown-Verhalten.
 Die ComboBox erhält beim Fokus keine gefüllte blaue Fläche. `inlineDimension`
-ist 30 DIPs hoch, rechtsbündig und Semibold; ihre Breite wächst mit dem Text bis
-zur begrenzten Maximalbreite. Sehr lange Eingaben bleiben im Textfeld horizontal
+ist 30 DIPs hoch, linksbündig und Semibold; ihre Breite ist während der Session
+auf 88 DIPs festgelegt. Sehr lange Eingaben bleiben im Textfeld horizontal
 zugänglich. Die Einheit mm steht separat. Fehler verwenden Error/ErrorSubtle,
 einen 2-DIP-Rahmen und eine lokalisierte Meldung.
 
@@ -642,15 +697,16 @@ rechts; Abbrechen ist im Edit-Modus eine sekundäre Aktion.
 Die Menüstruktur bleibt desktoptypisch. Die einzeilige Toolbar beginnt mit
 Punktkraft, Moment und Streckenlast; ein feiner Separator trennt die Lagergruppe.
 Alle sechs Werkzeuge besitzen lokalisierte Accessibility-Namen. Lagerwerkzeuge
-sind aktivierbar, die drei Lastwerkzeuge bleiben deaktiviert. Bei 1100 DIPs Mindestbreite erfolgt kein Umbruch.
+sowie Punktkraft/Moment sind aktivierbar, Streckenlast bleibt deaktiviert.
+Bei 1100 DIPs Mindestbreite erfolgt kein Umbruch.
 Die Projektinfo ist eine Textzeile mit BodyStrong und Ghost-Aktion „Ändern“.
 
 Der Canvas verwendet CanvasBackground ohne Cardrahmen. BeamCanvas erhält
-BeamBrush, DimensionBrush und GuideBrush als render-invalidierende
-StyledProperties. Der Balken ist 5 DIPs stark, die Maßlinie 1 DIP, der vertikale
-Abstand beträgt 40 DIPs. Die reversiblen x-Koordinatentransformationen bleiben
-unverändert. Die einzige Längenbearbeitung sitzt als Control-Overlay mittig an
-der Maßlinie. Anzeige und Inline-Eingabe teilen die vertikale Position;
+BeamBrush, GhostBrush, AccentBrush und ErrorBrush als render-invalidierende
+StyledProperties; die separate CoordinateAxisPane verwendet AxisStroke. Der Balken
+ist 5 DIPs stark, die Achse 1 DIP. Die reversible x-Abbildung übernimmt allein
+StationTransform. Die einzige Längenbearbeitung sitzt am rechten Axis-Endwert.
+Anzeige und Inline-Eingabe verwenden die gepackten Endpoint-Bounds;
 Hover, Tastaturfokus und Fehler sind sichtbar. Enter, Escape, Culture-Parsing,
 Fokusverlust und Analysis nur nach Commit verwenden den bestehenden Pfad; die
 dokumentbezogene Längenablehnung ist in Abschnitt 5 beschrieben.

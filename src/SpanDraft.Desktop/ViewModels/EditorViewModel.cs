@@ -78,6 +78,8 @@ public sealed partial class EditorViewModel : ObservableObject
     public SupportDraftViewModel? SupportDraft => _draft;
     public bool IsSupportFlyoutVisible => _draft is not null && Interaction is SupportInteraction.NewDraft or SupportInteraction.EditDraft;
     public SupportPreview? Preview => _preview;
+    public string SupportPreviewName => _draft?.NameText ?? _dragSupport?.Name
+        ?? (PlacementTool is not null ? EntityNaming.Peek(Document, AutoNameKind.Support).Name : "");
     public Guid? HoveredSupportId => _hoveredSupportId;
     public Guid? HiddenSupportId => _draft?.OriginalId ?? _dragSupport?.Id;
     public string? SupportFeedback => _supportFeedback;
@@ -271,7 +273,7 @@ public sealed partial class EditorViewModel : ObservableObject
         foreach (string name in new[] { nameof(Interaction), nameof(PlacementTool), nameof(IsFixedTool),
             nameof(IsPinnedTool), nameof(IsRollerTool), nameof(SupportDraft), nameof(IsSupportFlyoutVisible), nameof(Preview),
             nameof(HoveredSupportId), nameof(HiddenSupportId), nameof(SupportFeedback),
-            nameof(HasSupportFeedback), nameof(HasCoordinate), nameof(CoordinateText) }) Notify(name);
+            nameof(HasSupportFeedback), nameof(HasCoordinate), nameof(CoordinateText), nameof(SupportPreviewName) }) Notify(name);
     }
 
     private LengthCommitResult ChangeLength(Length length)

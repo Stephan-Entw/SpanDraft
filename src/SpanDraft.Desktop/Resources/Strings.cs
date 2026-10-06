@@ -5,6 +5,8 @@ namespace SpanDraft.Desktop.Resources;
 
 public static class Strings
 {
+    public static string EntityNameLabel => Get(nameof(EntityNameLabel));
+    public static string SchematicDrawing => Get(nameof(SchematicDrawing));
     public static string EmptyEntityName => Get(nameof(EmptyEntityName));
     public static string DuplicateEntityName => Get(nameof(DuplicateEntityName));
     private static readonly ResourceManager ResourceManager =

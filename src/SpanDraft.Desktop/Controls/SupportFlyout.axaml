@@ -7,6 +7,15 @@
              x:DataType="vm:EditorViewModel" KeyDown="FlyoutKeyDown" KeyboardNavigation.TabNavigation="Cycle">
   <Border Classes="supportFlyout" Width="320">
     <StackPanel Spacing="{StaticResource Space12}">
+      <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="88,*" ColumnSpacing="{StaticResource Space12}">
+          <TextBlock Text="{x:Static resources:Strings.EntityNameLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Grid.Column="1" Text="{Binding SupportDraft.NameText, Mode=TwoWay}" Classes.error="{Binding SupportDraft.HasNameError}"
+                   AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
+        </Grid>
+        <TextBlock Text="{Binding SupportDraft.NameError}" IsVisible="{Binding SupportDraft.HasNameError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
       <Grid ColumnDefinitions="88,*" ColumnSpacing="{StaticResource Space12}">
         <TextBlock Text="{x:Static resources:Strings.SupportTypeLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
         <ComboBox Grid.Column="1" x:Name="TypeInput" DropDownClosed="TypeDropDownClosed" ItemsSource="{x:Static vm:SupportDraftViewModel.Types}"

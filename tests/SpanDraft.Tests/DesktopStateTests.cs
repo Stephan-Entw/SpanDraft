@@ -356,11 +356,11 @@ public class DesktopStateTests
     public void ViewportMapsEndpointsAndRoundTripsInteriorWithoutMillimeterPixelCoupling(
         double width, double height, double length)
     {
-        var viewport = BeamViewport.Fit(width, height, length);
-        Assert.Equal(viewport.Left, viewport.BeamToScreen(0));
-        Assert.Equal(viewport.Right, viewport.BeamToScreen(length));
-        NumericAssert.Close(length * 0.25, viewport.ScreenToBeam(viewport.BeamToScreen(length * 0.25)));
-        Assert.True(viewport.Right > viewport.Left);
-        Assert.Equal(height * 0.5 - 40, viewport.DimensionY);
+        var viewport = DesktopLayoutFixture.Fit(width, height, length);
+        Assert.Equal(viewport.Layout.Stations[0].ScreenX, viewport.Layout.Transform.PhysicalToScreen(0));
+        Assert.Equal(viewport.Layout.Stations[^1].ScreenX, viewport.Layout.Transform.PhysicalToScreen(length));
+        NumericAssert.Close(length * 0.25, viewport.Layout.Transform.ScreenToPhysical(viewport.Layout.Transform.PhysicalToScreen(length * 0.25)));
+        Assert.True(viewport.Layout.Stations[^1].ScreenX > viewport.Layout.Stations[0].ScreenX);
+        Assert.Equal(height * 0.5, viewport.Viewport.BeamY);
     }
 }

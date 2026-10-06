@@ -271,20 +271,20 @@ public sealed class DesktopSupportEditSessionTests
         var s = new Session(300);
         var editor = s.Editor;
         var id = editor.Document.Supports[0].Id;
-        var viewport = new BeamViewport(0, 1000, 200, 160, 1);
+        var viewport = DesktopLayoutFixture.Linear(0, 1000, 200, 1);
         editor.EditSupport(id);
         editor.BeginSupportDrag(id);
         editor.UpdateSupportDrag(Mm(500));
         editor.EndSupportDrag();
         editor.SupportDraft!.PositionText = "700";
-        Assert.True(SupportSymbol.Contains(editor.Preview!, viewport, 500, 225));
-        Assert.False(SupportSymbol.Contains(editor.Preview!, viewport, 300, 225));
-        Assert.False(SupportSymbol.Contains(editor.Preview!, viewport, 700, 225));
+        Assert.True(SupportSymbol.Contains(editor.Preview!, viewport.Layout.Transform, viewport.Viewport.BeamY, 500, 225));
+        Assert.False(SupportSymbol.Contains(editor.Preview!, viewport.Layout.Transform, viewport.Viewport.BeamY, 300, 225));
+        Assert.False(SupportSymbol.Contains(editor.Preview!, viewport.Layout.Transform, viewport.Viewport.BeamY, 700, 225));
         editor.SupportDraft.Type = SupportType.Fixed;
-        Assert.True(SupportSymbol.Contains(editor.Preview!, viewport, 495, 180));
-        Assert.False(SupportSymbol.Contains(editor.Preview!, viewport, 515, 225));
-        var resized = BeamViewport.Fit(1600, 800, 1);
-        Assert.True(SupportSymbol.Contains(editor.Preview!, resized, resized.BeamToScreen(0.5), resized.BeamY));
+        Assert.True(SupportSymbol.Contains(editor.Preview!, viewport.Layout.Transform, viewport.Viewport.BeamY, 495, 180));
+        Assert.False(SupportSymbol.Contains(editor.Preview!, viewport.Layout.Transform, viewport.Viewport.BeamY, 515, 225));
+        var resized = DesktopLayoutFixture.Fit(1600, 800, 1);
+        Assert.True(SupportSymbol.Contains(editor.Preview!, resized.Layout.Transform, resized.Viewport.BeamY, resized.Layout.Transform.PhysicalToScreen(0.5), resized.Viewport.BeamY));
     }
 
     [Fact]

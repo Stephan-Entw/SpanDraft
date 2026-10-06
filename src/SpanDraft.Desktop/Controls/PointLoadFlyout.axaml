@@ -8,6 +8,15 @@
   <Border Classes="supportFlyout" Width="320">
     <StackPanel Spacing="{StaticResource Space12}">
       <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="88,*" ColumnSpacing="{StaticResource Space12}">
+          <TextBlock Text="{x:Static resources:Strings.EntityNameLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Grid.Column="1" Text="{Binding LoadDraft.NameText, Mode=TwoWay}" Classes.error="{Binding LoadDraft.HasNameError}"
+                   AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
+        </Grid>
+        <TextBlock Text="{Binding LoadDraft.NameError}" IsVisible="{Binding LoadDraft.HasNameError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
+      <StackPanel Spacing="{StaticResource Space4}">
         <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
           <TextBlock Text="{x:Static resources:Strings.Position}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Grid.Column="1" x:Name="PositionInput" Text="{Binding LoadDraft.PositionText, Mode=TwoWay}"

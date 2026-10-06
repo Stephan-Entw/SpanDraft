@@ -16,8 +16,7 @@ public partial class BeamEditorSurface
     private int _loadPopupFocusVersion;
     private PointLoadDragGesture? _loadGesture;
 
-    private IReadOnlyList<PointLoadVisual> LoadVisuals => PointLoadSymbol.Layout(
-        _editor?.Document.Loads ?? [], Viewport, _editor?.LoadPreview, _editor?.HiddenLoadId);
+    private IReadOnlyList<PointLoadVisual> LoadVisuals => _scene?.Loads ?? [];
     private PointLoadVisual? ActiveLoadVisual => LoadVisuals.FirstOrDefault(v => v.IsPreview);
 
     private static bool OverToolbar(object? source) => source is Control control
@@ -56,7 +55,7 @@ public partial class BeamEditorSurface
 
     private bool HandleLoadPress(Point point, PointerPressedEventArgs e)
     {
-        if (_editor is null) return false;
+        if (_editor is null || Frame is null) return false;
         if (_editor.IsLoadFlyoutVisible)
         {
             if (ActiveLoadVisual is { } active && PointLoadSymbol.Contains(active, point.X, point.Y))
@@ -70,7 +69,7 @@ public partial class BeamEditorSurface
         if (_editor.LoadState == LoadInteraction.Placement)
         {
             Focus();
-            _editor.HoverLoadPlacement(SupportSnap.Placement(Viewport, point.X, point.Y));
+            _editor.HoverLoadPlacement(SnapPlacement(point));
             if (_editor.LoadPreview is { IsInvalid: false } preview)
             {
                 _placementClick = preview.Position;
@@ -89,12 +88,36 @@ public partial class BeamEditorSurface
             e.Handled = true;
             return true;
         }
+        if (_editor.Interaction == SupportInteraction.Neutral && _scene is { } scene
+            && PointLoadSymbol.HitTestGlyph(scene.Glyphs, point.X, point.Y) is { } shared)
+        {
+            ShowSharedSelection(shared, point);
+            e.Handled = true;
+            return true;
+        }
         return false;
+    }
+
+    private void ShowSharedSelection(PointLoadGlyph glyph, Point point)
+    {
+        SelectionEntries.Children.Clear();
+        foreach (var entity in glyph.Entities)
+        {
+            if (entity.Id is not { } id) continue;
+            var button = new Button { Content = PointLoadSymbol.Label(entity.Preview, entity.Name) };
+            button.Classes.Add("ghost");
+            button.Click += (_, _) => { SelectionPopup.IsOpen = false; _editor?.EditLoad(id); };
+            SelectionEntries.Children.Add(button);
+        }
+        Canvas.SetLeft(SelectionAnchor, point.X);
+        Canvas.SetTop(SelectionAnchor, point.Y);
+        SelectionPopup.IsOpen = SelectionEntries.Children.Count > 1;
     }
 
     private void CaptureLoad(Guid id, PointLoadVisual visual, Point point, PointerPressedEventArgs e)
     {
-        _loadGesture = new(id, visual.Preview.Position, point.X);
+        _layout.BeginInteraction(BeamPointerInteraction.LoadDrag);
+        _loadGesture = new(id, visual.Preview.Position, point.X, Frame!.Layout.Transform);
         _pointer = e.Pointer;
         e.Pointer.Capture(this);
     }
@@ -102,7 +125,7 @@ public partial class BeamEditorSurface
     private void UpdateLoadGesture(Point point)
     {
         if (_loadGesture is null || _editor is null) return;
-        var position = _loadGesture.Update(Viewport, point.X, point.Y, Bounds.Width, Bounds.Height);
+        var position = _loadGesture.Update(point.X, point.Y, BeamPane.Bounds.Height);
         if (!_loadGesture.IsDragging) return;
         if (_editor.LoadState != LoadInteraction.Drag)
         {

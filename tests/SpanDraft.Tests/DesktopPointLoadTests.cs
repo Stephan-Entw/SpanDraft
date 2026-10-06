@@ -143,7 +143,7 @@ public sealed class DesktopPointLoadTests
         var document = s.Editor.Document;
         s.Editor.EditLoad(load.Id);
         var draft = s.Editor.LoadDraft!;
-        var viewport = BeamViewport.Fit(1250, 600, 1);
+        var viewport = DesktopLayoutFixture.Fit(1250, 600, 1);
         var before = PointLoadSymbol.Layout(document.Loads, viewport, s.Editor.LoadPreview, load.Id).Single();
         draft.PositionText = "700";
         draft.ValueText = UiNumbers.Format(-123.5);
@@ -213,7 +213,7 @@ public sealed class DesktopPointLoadTests
             var draft = s.Editor.LoadDraft!;
             draft.PositionText = position;
             draft.ValueText = value;
-            Assert.Equal(value + " " + draft.Unit, PointLoadSymbol.Label(draft.Preview));
+            Assert.Equal(draft.NameText + " = " + value + " " + draft.Unit, PointLoadSymbol.Label(draft.Preview, draft.NameText));
             Assert.True(s.Editor.ConfirmLoad());
             Assert.Equal(Mm(700.5), s.Editor.Document.Loads[0].Position);
             Assert.Equal(kind == PointLoadKind.Force ? -12.5 : 12.5, s.Editor.Document.Loads[0].Value);

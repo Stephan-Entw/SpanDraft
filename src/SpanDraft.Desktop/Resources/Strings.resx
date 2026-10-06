@@ -63,4 +63,6 @@
   <data name="LengthExcludesEntities" xml:space="preserve"><value>The requested length excludes supports or point loads.</value></data>
   <data name="EmptyEntityName" xml:space="preserve"><value>Enter a non-empty name.</value></data>
   <data name="DuplicateEntityName" xml:space="preserve"><value>This name is already used in the project.</value></data>
+  <data name="EntityNameLabel" xml:space="preserve"><value>Name</value></data>
+  <data name="SchematicDrawing" xml:space="preserve"><value>Schematic drawing</value></data>
 </root>

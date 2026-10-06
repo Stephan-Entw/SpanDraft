@@ -157,9 +157,9 @@ public sealed class DesktopSupportRefinementTests
         Assert.True(s.Editor.DimensionLength.Confirm());
         var document = s.Editor.Document;
         var support = document.Supports[0];
-        var v = new BeamViewport(72, 1178, 200, 160, document.Length.Meters);
-        var gesture = new SupportDragGesture(support.Id, support.Position, v.BeamToScreen(support.Position.Meters) + 8);
-        var snapped = gesture.Update(v, pointer, 200, 1250, 500);
+        var v = DesktopLayoutFixture.Linear(72, 1178, 200, document.Length.Meters);
+        var gesture = new SupportDragGesture(support.Id, support.Position, v.Layout.Transform.PhysicalToScreen(support.Position.Meters) + 8, v.Layout.Transform);
+        var snapped = gesture.Update(pointer, 200, 500);
         Assert.Equal(Mm(expected), snapped);
         Assert.True(s.Editor.BeginSupportDrag(support.Id));
         s.Editor.UpdateSupportDrag(snapped);
@@ -178,14 +178,14 @@ public sealed class DesktopSupportRefinementTests
     [Fact]
     public void DragReturnsImmediatelyToNormalSnapWithGrabOffset()
     {
-        var v = new BeamViewport(0, 1000, 200, 160, 1);
-        var gesture = new SupportDragGesture(Guid.NewGuid(), Mm(200), 208);
-        Assert.Equal(Mm(1000), gesture.Update(v, 10000, 200, 1000, 500));
-        Assert.Equal(Mm(207), gesture.Update(v, 215.4, 200, 1000, 500));
-        Assert.Equal(Mm(208), gesture.Update(v, 215.5, 200, 1000, 500));
-        Assert.Equal(Mm(0), gesture.Update(v, -10000, 200, 1000, 500));
-        Assert.Equal(Mm(400), gesture.Update(v, 408, 200, 1000, 500));
-        Assert.Null(gesture.Update(v, 408, 501, 1000, 500));
+        var v = DesktopLayoutFixture.Linear(0, 1000, 200, 1);
+        var gesture = new SupportDragGesture(Guid.NewGuid(), Mm(200), 208, v.Layout.Transform);
+        Assert.Equal(Mm(1000), gesture.Update(10000, 200, 500));
+        Assert.Equal(Mm(207), gesture.Update(215.4, 200, 500));
+        Assert.Equal(Mm(208), gesture.Update(215.5, 200, 500));
+        Assert.Equal(Mm(0), gesture.Update(-10000, 200, 500));
+        Assert.Equal(Mm(400), gesture.Update(408, 200, 500));
+        Assert.Null(gesture.Update(408, 501, 500));
     }
 
     [Fact]
@@ -194,10 +194,10 @@ public sealed class DesktopSupportRefinementTests
         var s = new Session(200, 1000);
         var document = s.Editor.Document;
         var support = document.Supports[0];
-        var v = new BeamViewport(0, 1000, 200, 160, 1);
-        var gesture = new SupportDragGesture(support.Id, support.Position, 200);
+        var v = DesktopLayoutFixture.Linear(0, 1000, 200, 1);
+        var gesture = new SupportDragGesture(support.Id, support.Position, 200, v.Layout.Transform);
         s.Editor.BeginSupportDrag(support.Id);
-        s.Editor.UpdateSupportDrag(gesture.Update(v, 5000, 200, 1000, 500));
+        s.Editor.UpdateSupportDrag(gesture.Update(5000, 200, 500));
         Assert.True(s.Editor.Preview!.IsInvalid);
         Assert.Equal(Strings.SupportAlreadyExists, s.Editor.SupportFeedback);
         Assert.False(s.Editor.EndSupportDrag());

@@ -138,21 +138,21 @@ public sealed class DesktopPointLoadDragAndConflictTests
     public void CapturedGestureClampsBeyondSurfaceAndResumesWithGrabOffset(PointLoadKind kind, double pointerX, double expected)
     {
         var s = new Session(kind);
-        var v = new BeamViewport(72, 1178, 200, 160, 1.0005);
-        double press = v.BeamToScreen(0.3) + 8;
-        var gesture = new PointLoadDragGesture(s.LoadId, Mm(300), press);
-        Assert.Null(gesture.Update(v, press + 3, 100, 1250, 500));
+        var v = DesktopLayoutFixture.Linear(72, 1178, 200, 1.0005);
+        double press = v.Layout.Transform.PhysicalToScreen(0.3) + 8;
+        var gesture = new PointLoadDragGesture(s.LoadId, Mm(300), press, v.Layout.Transform);
+        Assert.Null(gesture.Update(press + 3, 100, 500));
         Assert.False(gesture.IsDragging);
-        var clamped = gesture.Update(v, pointerX, 100, 1250, 500);
+        var clamped = gesture.Update(pointerX, 100, 500);
         Assert.Equal(Mm(expected), clamped);
         s.Editor.BeginLoadDrag(s.LoadId);
         s.Editor.UpdateLoadDrag(clamped);
         Assert.True(s.Editor.EndLoadDrag());
         Assert.Equal(Mm(expected), s.Editor.LoadPreview!.Position);
-        var returned = gesture.Update(v, v.BeamToScreen(0.65) + 8, 100, 1250, 500);
+        var returned = gesture.Update(v.Layout.Transform.PhysicalToScreen(0.65) + 8, 100, 500);
         Assert.Equal(Mm(650), returned);
-        Assert.Null(gesture.Update(v, 500, -1, 1250, 500));
-        Assert.Null(gesture.Update(v, 500, 501, 1250, 500));
+        Assert.Null(gesture.Update(500, -1, 500));
+        Assert.Null(gesture.Update(500, 501, 500));
         Assert.Equal(1, s.Calls);
     }
 
@@ -162,18 +162,18 @@ public sealed class DesktopPointLoadDragAndConflictTests
     public void EndpointPlacementAndDragUseExactFractionalLengthAndMillimeterSnap(PointLoadKind kind)
     {
         var s = new Session(kind);
-        var v = new BeamViewport(72, 1178, 200, 160, 1.0005);
+        var v = DesktopLayoutFixture.Linear(72, 1178, 200, 1.0005);
         s.Editor.ToggleLoadTool(kind);
-        s.Editor.HoverLoadPlacement(SupportSnap.Placement(v, v.Right - 2, 200));
+        s.Editor.HoverLoadPlacement(SupportSnap.Placement(v.Layout.Transform, v.Viewport.BeamY, v.Layout.Stations[^1].ScreenX - 2, 200));
         Assert.Equal(s.Editor.Document.Length, s.Editor.LoadPreview!.Position);
         Assert.True(s.Editor.PlaceLoad());
         Assert.True(s.Editor.ConfirmLoad());
         Assert.Equal(s.Editor.Document.Length, s.Editor.Document.Loads[1].Position);
-        var gesture = new PointLoadDragGesture(s.LoadId, Mm(300), v.BeamToScreen(0.3));
-        Assert.Equal(Mm(456), gesture.Update(v, v.BeamToScreen(0.4564), 200, 1250, 500));
-        Assert.Equal(s.Editor.Document.Length, gesture.Update(v, v.Right - 2, 200, 1250, 500));
-        Assert.Null(SupportSnap.Placement(v, 600, 219));
-        Assert.Null(SupportSnap.Placement(v, -100, 200));
+        var gesture = new PointLoadDragGesture(s.LoadId, Mm(300), v.Layout.Transform.PhysicalToScreen(0.3), v.Layout.Transform);
+        Assert.Equal(Mm(456), gesture.Update(v.Layout.Transform.PhysicalToScreen(0.4564), 200, 500));
+        Assert.Equal(s.Editor.Document.Length, gesture.Update(v.Layout.Stations[^1].ScreenX - 2, 200, 500));
+        Assert.Null(SupportSnap.Placement(v.Layout.Transform, v.Viewport.BeamY, 600, 219));
+        Assert.Null(SupportSnap.Placement(v.Layout.Transform, v.Viewport.BeamY, -100, 200));
     }
 
     [Fact]
@@ -213,17 +213,17 @@ public sealed class DesktopPointLoadDragAndConflictTests
         Assert.Same(document, editor.Document);
         Assert.Same(presentation, editor.Presentation);
         Assert.Equal(1, calls);
-        var viewport = BeamViewport.Fit(1250, 600, 1);
-        var geometry = BeamLengthGeometry.Create(viewport, editor.ConstraintConflict);
+        var viewport = DesktopLayoutFixture.Fit(1250, 600, 1);
+        var geometry = BeamConflictGeometry.Create(viewport.Layout.Transform, editor.ConstraintConflict);
         Assert.True(geometry.HasGhost);
-        Assert.Equal(viewport.BeamToScreen(0.7), geometry.EndX);
+        Assert.Equal(viewport.Layout.Transform.PhysicalToScreen(0.7), geometry.EndX);
         if (loseFocus) editor.DimensionLength.LoseFocus();
         else editor.DimensionLength.Cancel();
         Assert.False(editor.DimensionLength.IsEditing);
         Assert.False(editor.DimensionLength.HasError);
         Assert.Null(editor.ConstraintConflict);
         Assert.Empty(editor.ConflictEntityIds);
-        Assert.False(BeamLengthGeometry.Create(viewport, editor.ConstraintConflict).HasGhost);
+        Assert.False(BeamConflictGeometry.Create(viewport.Layout.Transform, editor.ConstraintConflict).HasGhost);
         Assert.Equal("1000", editor.DimensionLength.Text);
         Assert.Same(document, editor.Document);
         Assert.Equal(1, calls);
@@ -274,47 +274,51 @@ public sealed class DesktopPointLoadDragAndConflictTests
     }
 
     [Fact]
-    public void StackedSymbolsAreIndividuallySelectableAndStableDuringValueAndPositionTyping()
+    public void SharedStationLabelsAreIndividuallySelectableAndGlyphsStayStableDuringTyping()
     {
         EditorPointLoad[] loads = [EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Force, -1000, "F1"),
             EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Moment, 100, "M1"),
             EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Force, 0, "F2")];
-        var viewport = BeamViewport.Fit(1250, 600, 1);
-        var visuals = PointLoadSymbol.Layout(loads, viewport);
-        for (int i = 0; i < visuals.Count; i++)
+        var document = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section, loads: loads);
+        var frame = new BeamLayoutState().Update(document, 1250, 600)!;
+        var scene = BeamRenderState.Create(document, frame, DesktopLayoutFixture.Measure);
+        Assert.Equal(2, scene.Glyphs.Count);
+        for (int i = 0; i < scene.Loads.Count; i++)
         {
-            Assert.Equal(loads[i].Id, PointLoadSymbol.HitTest(visuals, visuals[i].X, visuals[i].Y));
-            Assert.Equal(viewport.BeamToScreen(0.3), visuals[i].X);
-            if (i > 0) Assert.Equal(PointLoadSymbol.LaneSpacing, visuals[i - 1].Y - visuals[i].Y);
+            var label = scene.Annotations.Single(a => a.Id == loads[i].Id);
+            Assert.Equal(loads[i].Id, scene.HitTestLabel(label.Bounds.Center.X, label.Bounds.Center.Y)!.Id);
+            Assert.Equal(frame.Layout.Transform.PhysicalToScreen(0.3), scene.Loads[i].X);
+            Assert.Equal(frame.Viewport.BeamY, scene.Loads[i].Y);
         }
-        var editor = new EditorViewModel(new(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section, loads: loads), () => { });
+        var editor = new EditorViewModel(document, () => { });
         editor.EditLoad(loads[1].Id);
         editor.LoadDraft!.PositionText = "700";
         editor.LoadDraft.ValueText = "-200";
-        var changed = PointLoadSymbol.Layout(loads, viewport, editor.LoadPreview, loads[1].Id);
-        Assert.Equal(visuals[1].X, changed[1].X);
-        Assert.Equal(visuals[1].Y, changed[1].Y);
+        var changed = PointLoadSymbol.Layout(loads, frame, editor.LoadPreview, loads[1].Id);
+        Assert.Equal(scene.Loads[1].X, changed[1].X);
+        Assert.Equal(scene.Loads[1].Y, changed[1].Y);
         Assert.True(changed[1].IsPreview);
         Assert.Equal(-200, changed[1].Preview.Value);
-        var resized = PointLoadSymbol.Layout(loads, BeamViewport.Fit(1600, 800, 1));
-        Assert.Equal(loads[2].Id, PointLoadSymbol.HitTest(resized, resized[2].X, resized[2].Y));
-        Assert.Equal(Mm(300), resized[2].Preview.Position);
+        var resized = BeamRenderState.Create(document, new BeamLayoutState().Update(document, 1600, 800)!, DesktopLayoutFixture.Measure);
+        var resizedLabel = resized.Annotations.Single(a => a.Id == loads[2].Id);
+        Assert.Equal(loads[2].Id, resized.HitTestLabel(resizedLabel.Bounds.Center.X, resizedLabel.Bounds.Center.Y)!.Id);
+        Assert.Equal(Mm(300), resized.Loads[2].Preview.Position);
     }
 
     [Fact]
-    public void HitTestingUsesNearestThenDocumentOrderAndSignGeometryUsesCoreConvention()
+    public void HitTestingUsesStationGlyphBoundsAndSignGeometryUsesCoreConvention()
     {
         var first = EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Force, -1000, "F1");
         var second = EditorPointLoad.Create(Guid.NewGuid(), Mm(320), PointLoadKind.Moment, 100, "M1");
-        var viewport = new BeamViewport(0, 1000, 200, 160, 1);
-        var visuals = PointLoadSymbol.Layout([first, second], viewport);
-        Assert.Equal(first.Id, PointLoadSymbol.HitTest(visuals, 310, visuals[0].Y));
-        Assert.Equal(second.Id, PointLoadSymbol.HitTest(visuals, 315, visuals[0].Y));
-        Assert.Null(PointLoadSymbol.HitTest(visuals, 310, viewport.BeamY));
+        var frame = DesktopLayoutFixture.Linear(0, 1000, 200, 1);
+        var visuals = PointLoadSymbol.Layout([first, second], frame);
+        Assert.Equal(first.Id, PointLoadSymbol.HitTest(visuals, 300, 180));
+        Assert.Equal(second.Id, PointLoadSymbol.HitTest(visuals, 320, 200));
+        Assert.Null(PointLoadSymbol.HitTest(visuals, 310, frame.Viewport.BeamY + 30));
         Assert.True(PointLoadSymbol.ForceTip(100).Y < 0);
-        Assert.True(PointLoadSymbol.ForceTip(-100).Y > 0);
+        Assert.Equal(0, PointLoadSymbol.ForceTip(-100).Y);
         Assert.Equal(PointLoadSymbol.ForceTip(-1), PointLoadSymbol.ForceTip(-1000000));
-        Assert.True(PointLoadSymbol.MomentSweep(100) > 0); // Mathematical positive angle, screen Y is inverted.
+        Assert.True(PointLoadSymbol.MomentSweep(100) > 0);
         Assert.True(PointLoadSymbol.MomentSweep(-100) < 0);
         Assert.Equal(0, PointLoadSymbol.MomentSweep(0));
         Assert.Equal(PointLoadSymbol.MomentSweep(1), PointLoadSymbol.MomentSweep(1000000));
@@ -324,35 +328,41 @@ public sealed class DesktopPointLoadDragAndConflictTests
     [InlineData(1)]
     [InlineData(4)]
     [InlineData(10)]
-    public void CanvasMinimumHeightKeepsEveryCoincidentSymbolAndHitZoneVisible(int count)
+    public void CanvasMinimumHeightKeepsEveryCoincidentLabelAndSharedGlyphVisible(int count)
     {
         var loads = Enumerable.Range(0, count).Select(i => EditorPointLoad.Create(Guid.NewGuid(), Mm(500),
             i % 2 == 0 ? PointLoadKind.Force : PointLoadKind.Moment, 100, "Load " + i)).ToArray();
-        double height = PointLoadSymbol.MinimumHeight(loads);
-        var visuals = PointLoadSymbol.Layout(loads, BeamViewport.Fit(1100, height, 1));
-        Assert.All(visuals, v =>
+        var document = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section, loads: loads);
+        var state = new BeamLayoutState();
+        var initial = BeamRenderState.Create(document, state.Update(document, 1100, 220)!, DesktopLayoutFixture.Measure);
+        var frame = state.Update(document, 1100, initial.MinimumPaneHeight)!;
+        var scene = BeamRenderState.Create(document, frame, DesktopLayoutFixture.Measure);
+        Assert.All(scene.Annotations, label =>
         {
-            Assert.True(v.Y - PointLoadSymbol.HalfSize - PointLoadSymbol.HitPadding >= 0);
-            Assert.Equal(v.Id, PointLoadSymbol.HitTest(visuals, v.X, v.Y));
+            Assert.True(label.Bounds.Top >= 0);
+            Assert.Equal(label.Id, scene.HitTestLabel(label.Bounds.Center.X, label.Bounds.Center.Y)!.Id);
         });
+        Assert.All(scene.Glyphs, glyph => Assert.True(glyph.Bounds.Top >= 0));
+        Assert.Equal(Math.Min(2, count), scene.Glyphs.Count);
         var preview = new PointLoadPreview(Mm(500), PointLoadKind.Moment, -100);
-        Assert.Equal(height + 2 * PointLoadSymbol.LaneSpacing, PointLoadSymbol.MinimumHeight(loads, preview));
-        Assert.Equal(height, PointLoadSymbol.MinimumHeight(loads, preview, loads[0].Id));
-        Assert.Equal(0, PointLoadSymbol.MinimumHeight([]));
+        var withPreview = BeamRenderState.Create(document, frame, DesktopLayoutFixture.Measure, loadPreview: preview, loadName: "M2");
+        Assert.All(withPreview.Annotations, label => Assert.True(label.Bounds.Top >= 0));
+        Assert.Same(frame.Layout.Transform, withPreview.Frame.Layout.Transform);
+        Assert.Equal(count, document.Loads.Count);
     }
 
     [Fact]
-    public void ActiveToolReservesCanvasSpaceBeforeHoverAndRetainsItOnHoverLeave()
+    public void CommittedLabelSpaceRemainsStableAcrossToolHoverLeaveAndNewDraft()
     {
         var loads = Enumerable.Range(0, 4).Select(i => EditorPointLoad.Create(Guid.NewGuid(), Mm(500),
             PointLoadKind.Force, -1000, "Load " + i)).ToArray();
         var editor = new EditorViewModel(new(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section, loads: loads), () => { });
-        double Height() => PointLoadSymbol.MinimumHeight(editor.Document.Loads,
-            reserveAdditionalLane: editor.LoadState != LoadInteraction.Neutral);
+        var frame = new BeamLayoutState().Update(editor.Document, 1100, 600)!;
+        double Height() => BeamRenderState.Create(editor.Document, frame, DesktopLayoutFixture.Measure).MinimumPaneHeight;
         double neutral = Height();
         editor.ToggleLoadTool(PointLoadKind.Moment);
         double reserved = Height();
-        Assert.Equal(neutral + 2 * PointLoadSymbol.LaneSpacing, reserved);
+        Assert.Equal(neutral, reserved);
         editor.HoverLoadPlacement(Mm(500));
         Assert.Equal(reserved, Height());
         editor.HoverLoadPlacement(null);

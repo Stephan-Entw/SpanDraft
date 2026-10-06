@@ -1,4 +1,3 @@
-using System.Globalization;
 using Avalonia;
 using Avalonia.Media;
 using SpanDraft.Desktop.State;
@@ -6,121 +5,106 @@ using SpanDraft.Desktop.Layout;
 
 namespace SpanDraft.Desktop.Controls;
 
-public sealed record PointLoadVisual(Guid? Id, PointLoadPreview Preview, double X, double Y, bool IsPreview);
+public sealed record PointLoadVisual(Guid? Id, PointLoadPreview Preview, string Name, double X, double Y, bool IsPreview);
+public sealed record PointLoadGlyph(PointLoadKind Kind, double X, double Y, IReadOnlyList<PointLoadVisual> Entities)
+{
+    public bool Positive => Entities.Any(e => e.Preview.Value > 0);
+    public bool Negative => Entities.Any(e => e.Preview.Value < 0);
+    public bool IsPreview => Entities.Any(e => e.IsPreview);
+    public Rect Bounds => Kind == PointLoadKind.Force
+        ? new(X - PointLoadSymbol.HitPadding - SchematicMetrics.ForceArrowHalfWidth,
+            Y - SchematicMetrics.ForceHeight - PointLoadSymbol.HitPadding,
+            2 * (PointLoadSymbol.HitPadding + SchematicMetrics.ForceArrowHalfWidth),
+            SchematicMetrics.ForceHeight + 2 * PointLoadSymbol.HitPadding)
+        : new(X - PointLoadSymbol.HalfSize - PointLoadSymbol.HitPadding,
+            Y - PointLoadSymbol.HalfSize - PointLoadSymbol.HitPadding,
+            2 * (PointLoadSymbol.HalfSize + PointLoadSymbol.HitPadding),
+            2 * (PointLoadSymbol.HalfSize + PointLoadSymbol.HitPadding));
+}
 
-/// <summary>Shared fixed-DIP layout, drawing and hit zones; never changes physical positions.</summary>
+/// <summary>Station-based technical glyph geometry; labels and physical values stay per entity.</summary>
 public static class PointLoadSymbol
 {
     public const double HalfSize = SchematicMetrics.PointLoadHalfSize;
-    public const double LaneSpacing = 50;
     public const double HitPadding = 5;
 
-    public static double MinimumHeight(IReadOnlyList<EditorPointLoad> loads,
-        PointLoadPreview? preview = null, Guid? hiddenId = null, bool reserveAdditionalLane = false)
-    {
-        var positions = loads.Select(l => l.Id == hiddenId && preview is not null ? preview.Position : l.Position).ToList();
-        if (preview is not null && !loads.Any(l => l.Id == hiddenId)) positions.Add(preview.Position);
-        int lanes = positions.GroupBy(p => p).Select(g => g.Count()).DefaultIfEmpty(0).Max();
-        if (reserveAdditionalLane) lanes++;
-        // BeamViewport centers the beam and places the dimension 40 DIPs above it.
-        // Add enough top space for every lane, including its symbol and hit padding.
-        return lanes == 0 ? 0 : 2 * (40 + 46 + (lanes - 1) * LaneSpacing + HalfSize + HitPadding + 8);
-    }
-
-    public static IReadOnlyList<PointLoadVisual> Layout(IReadOnlyList<EditorPointLoad> loads, BeamViewport viewport,
-        PointLoadPreview? preview = null, Guid? hiddenId = null)
+    public static IReadOnlyList<PointLoadVisual> Layout(IReadOnlyList<EditorPointLoad> loads, BeamLayoutFrame frame,
+        PointLoadPreview? preview = null, Guid? hiddenId = null, string? previewName = null)
     {
         var visuals = new List<PointLoadVisual>();
-        // Reserve the original document slot while editing. Value text therefore
-        // cannot change either the symbol lane or the flyout anchor.
         foreach (var load in loads)
         {
-            var p = load.Id == hiddenId && preview is not null
-                ? preview : new PointLoadPreview(load.Position, load.Kind, load.Value);
-            Add(load.Id, p, load.Id == hiddenId);
+            bool draft = load.Id == hiddenId && preview is not null;
+            Add(load.Id, draft ? preview! : new(load.Position, load.Kind, load.Value),
+                draft ? previewName ?? load.Name : load.Name, draft);
         }
-        if (preview is not null && !loads.Any(l => l.Id == hiddenId)) Add(null, preview, true);
+        if (preview is not null && !loads.Any(l => l.Id == hiddenId)) Add(null, preview, previewName ?? "", true);
         return visuals.AsReadOnly();
-
-        void Add(Guid? id, PointLoadPreview p, bool draft)
-        {
-            int lane = visuals.Count(v => v.Preview.Position == p.Position);
-            visuals.Add(new(id, p, viewport.BeamToScreen(p.Position.Meters),
-                viewport.DimensionY - 46 - lane * LaneSpacing, draft));
-        }
+        void Add(Guid? id, PointLoadPreview p, string name, bool draft) =>
+            visuals.Add(new(id, p, name, frame.Layout.Transform.PhysicalToScreen(p.Position.Meters), frame.Viewport.BeamY, draft));
     }
+
+    public static IReadOnlyList<PointLoadGlyph> Group(IReadOnlyList<PointLoadVisual> visuals) =>
+        Array.AsReadOnly(visuals.GroupBy(v => (v.Preview.Position, v.Preview.Kind))
+            .OrderBy(g => g.Key.Position.Meters).ThenByDescending(g => g.Key.Kind)
+            .Select(g => new PointLoadGlyph(g.Key.Kind, g.First().X, g.First().Y, Array.AsReadOnly(g.ToArray()))).ToArray());
 
     public static bool Contains(PointLoadVisual visual, double x, double y) =>
-        Math.Abs(x - visual.X) <= HalfSize + HitPadding && Math.Abs(y - visual.Y) <= HalfSize + HitPadding;
+        new PointLoadGlyph(visual.Preview.Kind, visual.X, visual.Y, [visual]).Bounds.Contains(new Point(x, y));
 
-    public static Guid? HitTest(IReadOnlyList<PointLoadVisual> visuals, double x, double y)
-    {
-        Guid? hit = null;
-        double nearest = double.PositiveInfinity;
-        foreach (var visual in visuals)
-        {
-            double dx = x - visual.X, dy = y - visual.Y;
-            double distance = dx * dx + dy * dy;
-            if (visual.Id is { } id && Contains(visual, x, y) && distance < nearest)
-            {
-                hit = id;
-                nearest = distance;
-            }
-        }
-        return hit;
-    }
+    public static PointLoadGlyph? HitTestGlyph(IReadOnlyList<PointLoadGlyph> glyphs, double x, double y) =>
+        glyphs.Where(g => g.Bounds.Contains(new Point(x, y)))
+            .OrderBy(g => (g.X - x) * (g.X - x) + (g.Y - y) * (g.Y - y)).ThenBy(g => g.Kind).FirstOrDefault();
 
-    public static string Label(PointLoadPreview preview) =>
+    public static Guid? ResolveEntity(PointLoadGlyph glyph, Guid? editedId = null) =>
+        editedId is { } id && glyph.Entities.Any(e => e.Id == id) ? id
+            : glyph.Entities.Count == 1 ? glyph.Entities[0].Id : null;
+
+    public static Guid? HitTest(IReadOnlyList<PointLoadVisual> visuals, double x, double y, Guid? editedId = null) =>
+        HitTestGlyph(Group(visuals), x, y) is { } glyph ? ResolveEntity(glyph, editedId) : null;
+
+    public static string Label(PointLoadPreview preview, string name) => name.Trim() + " = " +
         UiNumbers.Format(preview.Value) + (preview.Kind == PointLoadKind.Force ? " N" : " Nm");
 
-    public static Point ForceTip(double value) => new(0, value > 0 ? -HalfSize : HalfSize);
+    public static Point ForceTip(double value) => new(0, value > 0 ? -SchematicMetrics.ForceHeight : 0);
     public static double MomentSweep(double value) => Math.Sign(value) * Math.PI * 1.5;
+    public static Point MomentTip(bool positive) => positive ? new(0, SchematicMetrics.MomentRadius) : new(SchematicMetrics.MomentRadius, 0);
 
-    public static void Draw(DrawingContext context, PointLoadVisual visual, BeamViewport viewport,
-        IBrush? brush, IBrush? guideBrush, Typeface typeface, double fontSize)
+    public static void Draw(DrawingContext context, PointLoadGlyph glyph, IBrush? brush)
     {
         var pen = new Pen(brush, SchematicMetrics.SymbolStrokeWidth, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
-        Point At(Point point) => new(visual.X + point.X, visual.Y + point.Y);
+        Point At(Point point) => new(glyph.X + point.X, glyph.Y + point.Y);
         void Line(Point start, Point end) => context.DrawLine(pen, At(start), At(end));
-        void Arrow(Point tip, Vector direction)
+        void Arrow(Point tip, Vector direction, double halfWidth)
         {
             var normal = new Vector(-direction.Y, direction.X);
-            Line(tip - direction * SchematicMetrics.ArrowHeadLength + normal * SchematicMetrics.ForceArrowHalfWidth, tip);
-            Line(tip - direction * SchematicMetrics.ArrowHeadLength - normal * SchematicMetrics.ForceArrowHalfWidth, tip);
+            Line(tip - direction * SchematicMetrics.ArrowHeadLength + normal * halfWidth, tip);
+            Line(tip - direction * SchematicMetrics.ArrowHeadLength - normal * halfWidth, tip);
         }
-
-        using (context.PushOpacity(0.5))
-            context.DrawLine(new Pen(guideBrush, 1, dashStyle: DashStyle.Dash),
-                new(visual.X, visual.Y + HalfSize + 5), new(visual.X, viewport.BeamY));
-        double value = visual.Preview.Value;
-        if (visual.Preview.Kind == PointLoadKind.Force)
+        if (glyph.Kind == PointLoadKind.Force)
         {
-            Line(new(0, -HalfSize), new(0, HalfSize));
-            if (value != 0) Arrow(ForceTip(value), new(0, value > 0 ? -1 : 1));
+            Line(new(0, -SchematicMetrics.ForceHeight), new(0, 0));
+            if (glyph.Positive) Arrow(ForceTip(1), new(0, -1), SchematicMetrics.ForceArrowHalfWidth);
+            if (glyph.Negative) Arrow(ForceTip(-1), new(0, 1), SchematicMetrics.ForceArrowHalfWidth);
         }
-        else if (value == 0)
-            context.DrawEllipse(null, pen, new(visual.X, visual.Y), SchematicMetrics.MomentRadius, SchematicMetrics.MomentRadius);
         else
         {
-            double sweep = MomentSweep(value);
-            Point Circle(double angle) => new(SchematicMetrics.MomentRadius * Math.Cos(angle), -SchematicMetrics.MomentRadius * Math.Sin(angle));
-            double start = Math.PI / 4;
+            // One upper/left 3/4-circle from 3 o'clock to 6 o'clock. Both signs
+            // use this same arc, with opposite terminal tangents.
             var geometry = new StreamGeometry();
             using (var path = geometry.Open())
             {
-                path.BeginFigure(At(Circle(start)), false);
-                for (int i = 1; i <= 48; i++) path.LineTo(At(Circle(start + sweep * i / 48)));
+                path.BeginFigure(At(new(SchematicMetrics.MomentRadius, 0)), false);
+                for (int i = 1; i <= 48; i++)
+                {
+                    double angle = 1.5 * Math.PI * i / 48;
+                    path.LineTo(At(new(SchematicMetrics.MomentRadius * Math.Cos(angle), -SchematicMetrics.MomentRadius * Math.Sin(angle))));
+                }
                 path.EndFigure(false);
             }
             context.DrawGeometry(null, pen, geometry);
-            double end = start + sweep;
-            Arrow(Circle(end), new(-Math.Sin(end) * Math.Sign(value), -Math.Cos(end) * Math.Sign(value)));
+            if (glyph.Positive) Arrow(MomentTip(true), new(1, 0), SchematicMetrics.MomentArrowHalfWidth);
+            if (glyph.Negative) Arrow(MomentTip(false), new(0, 1), SchematicMetrics.MomentArrowHalfWidth);
         }
-        var text = new FormattedText(Label(visual.Preview), CultureInfo.CurrentUICulture,
-            FlowDirection.LeftToRight, typeface, fontSize, brush);
-        // Keep endpoint labels inside the canvas without changing the symbol or hit zone.
-        double labelX = visual.X + 28;
-        if (labelX + text.Width > viewport.Right + 60) labelX = visual.X - 28 - text.Width;
-        context.DrawText(text, new(labelX, visual.Y - text.Height / 2));
     }
 }

@@ -1,4 +1,5 @@
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Layout;
 
 namespace SpanDraft.Desktop.Controls;
 
@@ -8,24 +9,23 @@ public static class SupportSnap
     public const double BeamHitRadius = 18;
     public const double EndpointRadius = 10;
 
-    public static Length? Placement(BeamViewport viewport, double screenX, double screenY) =>
-        double.IsFinite(screenY) && Math.Abs(screenY - viewport.BeamY) <= BeamHitRadius
-            ? AtX(viewport, screenX) : null;
+    public static Length? Placement(StationTransform transform, double beamY, double screenX, double screenY) =>
+        double.IsFinite(screenY) && Math.Abs(screenY - beamY) <= BeamHitRadius
+            ? AtX(transform, screenX) : null;
 
-    public static Length? AtX(BeamViewport viewport, double screenX, double endpointRadius = EndpointRadius)
+    public static Length? AtX(StationTransform transform, double screenX, double endpointRadius = EndpointRadius)
     {
-        if (!double.IsFinite(screenX) || !double.IsFinite(viewport.LengthMeters)
-            || viewport.LengthMeters <= 0 || !double.IsFinite(viewport.Left)
-            || !double.IsFinite(viewport.Right) || viewport.Right <= viewport.Left
-            || !double.IsFinite(endpointRadius) || endpointRadius < 0) return null;
-        double leftDistance = Math.Abs(screenX - viewport.Left);
-        double rightDistance = Math.Abs(screenX - viewport.Right);
+        double left = transform.Stations[0].ScreenX, right = transform.Stations[^1].ScreenX;
+        double length = transform.Stations[^1].PhysicalX;
+        if (!double.IsFinite(screenX) || !double.IsFinite(endpointRadius) || endpointRadius < 0) return null;
+        double leftDistance = Math.Abs(screenX - left);
+        double rightDistance = Math.Abs(screenX - right);
         if (Math.Min(leftDistance, rightDistance) <= endpointRadius)
-            return Length.FromMeters(leftDistance <= rightDistance ? 0 : viewport.LengthMeters);
-        if (screenX < viewport.Left || screenX > viewport.Right) return null;
-        double mm = Math.Round(viewport.ScreenToBeam(screenX) * 1000, MidpointRounding.AwayFromZero);
+            return Length.FromMeters(leftDistance <= rightDistance ? 0 : length);
+        if (screenX < left || screenX > right) return null;
+        double mm = Math.Round(transform.ScreenToPhysical(screenX) * 1000, MidpointRounding.AwayFromZero);
         if (!double.IsFinite(mm)) return null;
         var position = Length.FromMillimeters(mm);
-        return position.Meters <= viewport.LengthMeters ? position : null;
+        return position.Meters <= length ? position : null;
     }
 }

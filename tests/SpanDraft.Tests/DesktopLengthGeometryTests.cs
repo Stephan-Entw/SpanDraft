@@ -18,8 +18,9 @@ public sealed class DesktopLengthGeometryTests
             ProjectTemplates.Material, ProjectTemplates.Section,
             [new(Guid.NewGuid(), Length.FromMillimeters(850), SupportType.Pinned, "A")]), () => { },
             beam => { Analyses++; return BeamAnalysis.Analyze(beam); });
-        public BeamViewport Viewport => BeamViewport.Fit(1250, 600, Editor.Document.Length.Meters);
-        public BeamLengthGeometry Geometry => BeamLengthGeometry.Create(Viewport, Editor.ConstraintConflict);
+        private readonly BeamLayoutState _layout = new();
+        public BeamLayoutFrame Viewport => _layout.Update(Editor.Document, 1250, 600)!;
+        public BeamConflictGeometry Geometry => BeamConflictGeometry.Create(Viewport.Layout.Transform, Editor.ConstraintConflict);
         public void Reject()
         {
             Editor.DimensionLength.Begin();
@@ -29,20 +30,19 @@ public sealed class DesktopLengthGeometryTests
     }
 
     [Fact]
-    public void RejectedShorteningMovesBeamAndDimensionOnlyWithinCommittedViewport()
+    public void RejectedShorteningMovesBeamOnlyWithinCommittedTransform()
     {
         var s = new Session();
         var document = s.Editor.Document;
         var viewport = s.Viewport;
-        double supportX = viewport.BeamToScreen(0.85);
+        double supportX = viewport.Layout.Transform.PhysicalToScreen(0.85);
         s.Reject();
         Assert.Equal(viewport, s.Viewport);
-        Assert.Equal(1.0, s.Viewport.LengthMeters);
-        Assert.Equal(viewport.BeamToScreen(0.7), s.Geometry.EndX);
-        Assert.Equal(viewport.BeamToScreen(0.7 / 2), s.Geometry.DimensionMidpoint);
+        Assert.Equal(1.0, s.Viewport.Layout.Stations[^1].PhysicalX);
+        Assert.Equal(viewport.Layout.Transform.PhysicalToScreen(0.7), s.Geometry.EndX);
         Assert.True(s.Geometry.HasGhost);
-        Assert.True(s.Geometry.EndX < supportX && supportX < viewport.Right);
-        Assert.Equal(supportX, s.Viewport.BeamToScreen(document.Supports[0].Position.Meters));
+        Assert.True(s.Geometry.EndX < supportX && supportX < viewport.Layout.Stations[^1].ScreenX);
+        Assert.Equal(supportX, s.Viewport.Layout.Transform.PhysicalToScreen(document.Supports[0].Position.Meters));
         Assert.Equal(document.Supports[0].Id, Assert.Single(s.Editor.ConflictEntityIds));
         Assert.Same(document, s.Editor.Document);
         Assert.Equal(1, s.Analyses);
@@ -51,13 +51,12 @@ public sealed class DesktopLengthGeometryTests
     [Fact]
     public void FractionalRequestedLengthRemainsExactWithoutSnapOrNewTransform()
     {
-        var viewport = BeamViewport.Fit(1250, 600, 1.0);
+        var viewport = DesktopLayoutFixture.Fit(1250, 600, 1.0);
         var requested = Length.FromMeters(0.7005000000000001);
         var conflict = new ConstraintConflictState(requested, [Guid.NewGuid()]);
-        var geometry = BeamLengthGeometry.Create(viewport, conflict);
-        Assert.Equal(viewport.BeamToScreen(requested.Meters), geometry.EndX);
-        Assert.Equal(viewport.BeamToScreen(requested.Meters / 2), geometry.DimensionMidpoint);
-        Assert.NotEqual(viewport.BeamToScreen(0.701), geometry.EndX);
+        var geometry = BeamConflictGeometry.Create(viewport.Layout.Transform, conflict);
+        Assert.Equal(viewport.Layout.Transform.PhysicalToScreen(requested.Meters), geometry.EndX);
+        Assert.NotEqual(viewport.Layout.Transform.PhysicalToScreen(0.701), geometry.EndX);
         Assert.Equal(requested, conflict.RequestedLength);
     }
 
@@ -70,8 +69,7 @@ public sealed class DesktopLengthGeometryTests
         var document = s.Editor.Document;
         s.Reject();
         Assert.True(s.Geometry.HasGhost);
-        Assert.Equal(s.Viewport.BeamToScreen(0.7), s.Geometry.EndX);
-        Assert.Equal(s.Viewport.BeamToScreen(0.35), s.Geometry.DimensionMidpoint);
+        Assert.Equal(s.Viewport.Layout.Transform.PhysicalToScreen(0.7), s.Geometry.EndX);
         Assert.True(s.Editor.DimensionLength.IsEditing);
         Assert.True(s.Editor.DimensionLength.HasError);
         Assert.Single(s.Editor.ConflictEntityIds);
@@ -79,8 +77,7 @@ public sealed class DesktopLengthGeometryTests
         {
             s.Editor.DimensionLength.LoseFocus();
             Assert.False(s.Geometry.HasGhost);
-            Assert.Equal(s.Viewport.Right, s.Geometry.EndX);
-            Assert.Equal(s.Viewport.Midpoint, s.Geometry.DimensionMidpoint);
+            Assert.Equal(s.Viewport.Layout.Stations[^1].ScreenX, s.Geometry.EndX);
             Assert.Equal("1000", s.Editor.DimensionLength.Text);
             Assert.False(s.Editor.DimensionLength.IsEditing);
             Assert.False(s.Editor.DimensionLength.HasError);
@@ -90,8 +87,7 @@ public sealed class DesktopLengthGeometryTests
             Assert.Equal(1, s.Analyses);
         }
         s.Editor.DimensionLength.Cancel();
-        Assert.Equal(s.Viewport.Right, s.Geometry.EndX);
-        Assert.Equal(s.Viewport.Midpoint, s.Geometry.DimensionMidpoint);
+        Assert.Equal(s.Viewport.Layout.Stations[^1].ScreenX, s.Geometry.EndX);
         Assert.False(s.Geometry.HasGhost);
         Assert.Null(s.Editor.ConstraintConflict);
         Assert.Same(document, s.Editor.Document);
@@ -109,13 +105,11 @@ public sealed class DesktopLengthGeometryTests
         s.Reject();
         s.Editor.DimensionLength.Text = text;
         Assert.False(s.Geometry.HasGhost);
-        Assert.Equal(viewport.Right, s.Geometry.EndX);
-        Assert.Equal(viewport.Midpoint, s.Geometry.DimensionMidpoint);
+        Assert.Equal(viewport.Layout.Stations[^1].ScreenX, s.Geometry.EndX);
         Assert.Same(document, s.Editor.Document);
         Assert.Equal(1, s.Analyses);
         Assert.True(s.Editor.DimensionLength.Confirm());
-        Assert.Equal(s.Viewport.Right, s.Geometry.EndX);
-        Assert.Equal(s.Viewport.Midpoint, s.Geometry.DimensionMidpoint);
+        Assert.Equal(s.Viewport.Layout.Stations[^1].ScreenX, s.Geometry.EndX);
         Assert.False(s.Geometry.HasGhost);
         Assert.Equal(finalAnalyses, s.Analyses);
     }
@@ -135,8 +129,7 @@ public sealed class DesktopLengthGeometryTests
         Assert.False(s.Editor.DimensionLength.Confirm());
         Assert.Null(s.Editor.ConstraintConflict);
         Assert.False(s.Geometry.HasGhost);
-        Assert.Equal(s.Viewport.Right, s.Geometry.EndX);
-        Assert.Equal(s.Viewport.Midpoint, s.Geometry.DimensionMidpoint);
+        Assert.Equal(s.Viewport.Layout.Stations[^1].ScreenX, s.Geometry.EndX);
         Assert.Same(document, s.Editor.Document);
         Assert.Equal(1, s.Analyses);
     }
@@ -144,11 +137,9 @@ public sealed class DesktopLengthGeometryTests
     [Fact]
     public void RequestedLengthWithoutBlockingObjectsDoesNotPreviewGeometry()
     {
-        var viewport = BeamViewport.Fit(1250, 600, 1.0);
-        var geometry = BeamLengthGeometry.Create(viewport,
-            new ConstraintConflictState(Length.FromMillimeters(700), []));
-        Assert.Equal(viewport.Right, geometry.EndX);
-        Assert.Equal(viewport.Midpoint, geometry.DimensionMidpoint);
+        var viewport = DesktopLayoutFixture.Fit(1250, 600, 1.0);
+        var geometry = BeamConflictGeometry.Create(viewport.Layout.Transform, new ConstraintConflictState(Length.FromMillimeters(700), []));
+        Assert.Equal(viewport.Layout.Stations[^1].ScreenX, geometry.EndX);
         Assert.False(geometry.HasGhost);
     }
 }
