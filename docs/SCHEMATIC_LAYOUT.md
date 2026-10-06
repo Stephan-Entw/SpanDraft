@@ -934,7 +934,24 @@ Nullmomente die Vereinigung der vorhandenen Richtungen nicht.
 
 ## 16. Lagerdarstellung
 
-Die vorhandenen technischen Support-Glyphs bleiben erhalten.
+Fest- und Loslager behalten ihre vorhandenen technischen Support-Glyphs.
+
+Die Einspannung besitzt eine 48 DIP hohe, 2 DIP breite Vertikale und fünf
+Schraffurstriche mit jeweils 9 × 9 DIP bei 45° und der gemeinsamen Symbolstrichstärke
+von 1,5 DIP. Ihre Ansatzpunkte liegen relativ zur Balkenachse bei −24, −14,25,
+−4,5, 5,25 und 15 DIP. Der unterste Strich endet bei +24 DIP auf Höhe des Wandendes.
+
+Bei exakt `x = L` wird die Einspannung horizontal gespiegelt: Die Schraffur liegt
+rechts außerhalb des Balkens. Bei `x = 0` und im Balkeninneren liegt sie links.
+Die Entscheidung verwendet die exakte physikalische Position ohne zusätzliche
+Toleranz und gilt auch für Placement-, Bearbeitungs- und Drag-Vorschauen.
+Eine Längenänderung bestimmt die Orientierung erneut anhand der committed Länge;
+eine blockierte Längenänderung verändert die Orientierung nicht.
+
+Layout und Außenränder verwenden die orientierten Symbolausdehnungen inklusive
+Strichstärken: regulär links 9,75 / rechts 1 DIP, gespiegelt links 1 / rechts 9,75 DIP.
+Der großzügige Symbol-Hitbereich wird ebenfalls horizontal gespiegelt.
+Support-Bezeichnungen und ihre AnnotationOffsets werden nicht gespiegelt.
 
 Jedes committed Lager zeigt zusätzlich seine stabile Bezeichnung:
 

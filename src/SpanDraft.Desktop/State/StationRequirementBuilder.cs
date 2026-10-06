@@ -12,9 +12,14 @@ public static class StationRequirementBuilder
         var requirements = new List<StationRequirement> { new(0, 0, 0), new(document.Length.Meters, 0, 0) };
         foreach (var support in document.Supports)
         {
+            if (support.Type == SupportType.Fixed)
+            {
+                var geometry = FixedSupportGeometry.AtPosition(support.Position.Meters, document.Length.Meters);
+                requirements.Add(new(support.Position.Meters, geometry.LeftExtent, geometry.RightExtent));
+                continue;
+            }
             var extents = support.Type switch
             {
-                SupportType.Fixed => (SchematicMetrics.FixedHatchWidth, 0d),
                 SupportType.Pinned => (SchematicMetrics.SupportHalfWidth, SchematicMetrics.PinnedHatchRightExtent),
                 SupportType.Roller => (SchematicMetrics.SupportHalfWidth, SchematicMetrics.SupportHalfWidth),
                 _ => throw new ArgumentOutOfRangeException(nameof(document))

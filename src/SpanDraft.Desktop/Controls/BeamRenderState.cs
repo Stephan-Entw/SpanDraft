@@ -1,10 +1,11 @@
 using Avalonia;
+using SpanDraft.Core.Supports;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.State;
 
 namespace SpanDraft.Desktop.Controls;
 
-public sealed record SupportVisual(Guid? Id, SupportPreview Preview, string Name, double X, bool IsPreview);
+public sealed record SupportVisual(Guid? Id, SupportPreview Preview, string Name, double X, bool IsPreview, bool IsMirrored);
 /// <summary>AutoBounds is the offset-independent reference; Bounds is the final visible rectangle.</summary>
 public sealed record EntityAnnotation(Guid? Id, bool IsSupport, string Text, Rect AutoBounds, Rect Bounds,
     bool IsPreview, bool IsInvalid, bool IsManual = false);
@@ -29,7 +30,8 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         if (supportPreview is not null && !document.Supports.Any(s => s.Id == hiddenSupportId))
             AddSupport(null, supportPreview, supportName ?? "", true);
         void AddSupport(Guid? id, SupportPreview preview, string name, bool draft) => supports.Add(
-            new(id, preview, name.Trim(), frame.Layout.Transform.PhysicalToScreen(preview.Position.Meters), draft));
+            new(id, preview, name.Trim(), frame.Layout.Transform.PhysicalToScreen(preview.Position.Meters), draft,
+                preview.Type == SupportType.Fixed && FixedSupportGeometry.AtPosition(preview.Position.Meters, document.Length.Meters).IsMirrored));
         var loads = PointLoadSymbol.Layout(document.Loads, frame, loadPreview, hiddenLoadId, loadName);
         var annotations = new List<EntityAnnotation>();
         double above = Place(loads.Select((v, i) => (v.Id, v.Name, Text: PointLoadSymbol.Label(v.Preview, v.Name),

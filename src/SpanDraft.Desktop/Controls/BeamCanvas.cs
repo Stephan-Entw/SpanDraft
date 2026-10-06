@@ -50,7 +50,7 @@ public sealed class BeamCanvas : Control
         }
         foreach (var support in scene.Supports)
             using (context.PushOpacity(support.IsPreview ? 0.75 : 1))
-                DrawSupport(context, support.X, y, support.Preview.Type,
+                DrawSupport(context, support.X, y, support.Preview.Type, support.IsMirrored,
                     Brush(support.Id, true, support.IsPreview, support.Preview.IsInvalid));
         foreach (var glyph in scene.Glyphs)
         {
@@ -68,15 +68,19 @@ public sealed class BeamCanvas : Control
     private IBrush? Brush(Guid? id, bool support, bool preview, bool invalid) => invalid || Conflict(id) ? ErrorBrush
         : preview || id is not null && id == (support ? HighlightedSupportId : HighlightedLoadId) ? AccentBrush : BeamBrush;
 
-    private static void DrawSupport(DrawingContext context, double x, double y, SupportType type, IBrush? brush)
+    private static void DrawSupport(DrawingContext context, double x, double y, SupportType type, bool isMirrored, IBrush? brush)
     {
         var pen = new Pen(brush, SchematicMetrics.SymbolStrokeWidth, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
         void Line(double x1, double y1, double x2, double y2) =>
             context.DrawLine(pen, new(x + x1, y + y1), new(x + x2, y + y2));
         if (type == SupportType.Fixed)
         {
-            Line(0, -SupportSymbol.WallHalfHeight, 0, SupportSymbol.WallHalfHeight);
-            for (int offset = -20; offset <= 16; offset += 9) Line(0, offset, -SchematicMetrics.FixedHatchWidth, offset + 8);
+            var geometry = new FixedSupportGeometry(isMirrored);
+            var wallPen = new Pen(brush, SchematicMetrics.FixedWallStrokeWidth, lineCap: PenLineCap.Round);
+            var wall = geometry.Wall;
+            context.DrawLine(wallPen, new(x + wall.StartX, y + wall.StartY), new(x + wall.EndX, y + wall.EndY));
+            foreach (var hatch in geometry.Hatches)
+                Line(hatch.StartX, hatch.StartY, hatch.EndX, hatch.EndY);
             return;
         }
         Line(0, 0, -14, SupportSymbol.TriangleHeight);

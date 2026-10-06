@@ -12,7 +12,9 @@ public static class SchematicMetrics
     public const double SupportTriangleHeight = 20;
     public const double SupportGroundY = 32;
     public const double SupportWallHalfHeight = 24;
-    public const double FixedHatchWidth = 12;
+    public const double FixedHatchWidth = 9;
+    public const int FixedHatchCount = 5;
+    public const double FixedWallStrokeWidth = 2;
     public const double PinnedHatchRightExtent = 20;
     public const double PointLoadHalfSize = MomentRadius + MomentArrowHalfWidth;
     public const double MomentRadius = 15;
