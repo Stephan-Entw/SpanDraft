@@ -18,7 +18,7 @@ public sealed class DesktopSupportEditSessionTests
         public EditorViewModel Editor { get; }
         public Session(params double[] positions) => Editor = new(
             new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section,
-                positions.Select(p => new EditorSupport(Guid.NewGuid(), Mm(p), SupportType.Pinned))), () => { },
+                positions.Select((p, i) => new EditorSupport(Guid.NewGuid(), Mm(p), SupportType.Pinned, "Fixture support " + i))), () => { },
             beam => { Analyses++; return BeamAnalysis.Analyze(beam); });
     }
 

@@ -16,7 +16,7 @@ public sealed class DesktopLengthGeometryTests
         public EditorViewModel Editor { get; }
         public Session() => Editor = new(new EditorDocument(Length.FromMillimeters(1000),
             ProjectTemplates.Material, ProjectTemplates.Section,
-            [new(Guid.NewGuid(), Length.FromMillimeters(850), SupportType.Pinned)]), () => { },
+            [new(Guid.NewGuid(), Length.FromMillimeters(850), SupportType.Pinned, "A")]), () => { },
             beam => { Analyses++; return BeamAnalysis.Analyze(beam); });
         public BeamViewport Viewport => BeamViewport.Fit(1250, 600, Editor.Document.Length.Meters);
         public BeamLengthGeometry Geometry => BeamLengthGeometry.Create(Viewport, Editor.ConstraintConflict);

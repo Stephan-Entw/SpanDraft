@@ -24,6 +24,8 @@ public sealed class SupportDraftViewModel : ObservableObject
     private string _bufferReferenceText;
     private Length _inputPosition;
     private string _positionText;
+    private string _nameText;
+    private string? _nameError;
     private SupportType _type;
     private string? _errorText;
     private SupportPreview _preview;
@@ -32,6 +34,9 @@ public sealed class SupportDraftViewModel : ObservableObject
     {
         _read = read;
         OriginalId = originalId;
+        var document = read();
+        AutoCandidate = originalId is null ? EntityNaming.Peek(document, AutoNameKind.Support) : null;
+        _nameText = AutoCandidate?.Name ?? document.Supports.First(s => s.Id == originalId).Name;
         _type = type;
         _bufferReferencePosition = position;
         _bufferReferenceText = UiNumbers.Format(position.Millimeters);
@@ -46,6 +51,14 @@ public sealed class SupportDraftViewModel : ObservableObject
     });
     public Guid? OriginalId { get; }
     public bool IsExisting => OriginalId.HasValue;
+    public AutoNameCandidate? AutoCandidate { get; }
+    public string NameText
+    {
+        get => _nameText;
+        set { if (Set(ref _nameText, value)) Validate(); }
+    }
+    public string? NameError => _nameError;
+    public bool HasNameError => NameError is not null;
     public string PositionText
     {
         get => _positionText;
@@ -63,7 +76,7 @@ public sealed class SupportDraftViewModel : ObservableObject
     }
     public string? ErrorText => _errorText;
     public bool HasError => _errorText is not null;
-    public bool IsValid => !HasError;
+    public bool IsValid => !HasError && !HasNameError;
     public SupportPreview Preview => _preview;
     public Length CanvasPosition => Preview.Position;
 
@@ -87,6 +100,13 @@ public sealed class SupportDraftViewModel : ObservableObject
     private void Validate()
     {
         var document = _read();
+        EntityNaming.TryNormalize(document, NameText, OriginalId, out _, out var nameError);
+        _nameError = nameError switch
+        {
+            NameValidationError.Empty => Strings.EmptyEntityName,
+            NameValidationError.Duplicate => Strings.DuplicateEntityName,
+            _ => null
+        };
         string? error = null;
         if (!Enum.IsDefined(Type)) error = Strings.InvalidSupportType;
         else if (!UiNumbers.TryParsePosition(PositionText, document.Length, out var position))
@@ -102,7 +122,9 @@ public sealed class SupportDraftViewModel : ObservableObject
         _errorText = error;
         // Text is a commit buffer, never a movement control. Only pointer interaction
         // can move this preview; a valid type may still be visualized immediately.
-        _preview = _preview with { Type = Enum.IsDefined(Type) ? Type : _preview.Type, IsInvalid = error is not null };
+        _preview = _preview with { Type = Enum.IsDefined(Type) ? Type : _preview.Type, IsInvalid = !IsValid };
+        Notify(nameof(NameError));
+        Notify(nameof(HasNameError));
         Notify(nameof(ErrorText));
         Notify(nameof(HasError));
         Notify(nameof(IsValid));

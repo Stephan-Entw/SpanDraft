@@ -5,6 +5,8 @@ namespace SpanDraft.Desktop.Resources;
 
 public static class Strings
 {
+    public static string EmptyEntityName => Get(nameof(EmptyEntityName));
+    public static string DuplicateEntityName => Get(nameof(DuplicateEntityName));
     private static readonly ResourceManager ResourceManager =
         new("SpanDraft.Desktop.Resources.Strings", typeof(Strings).Assembly);
 

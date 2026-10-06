@@ -93,7 +93,7 @@ public sealed partial class EditorViewModel
         if (Interaction != SupportInteraction.Neutral || (LoadState != LoadInteraction.Neutral && !editing)) return false;
         var load = Document.Loads.FirstOrDefault(l => l.Id == id);
         if (load is null) return false;
-        if (editing) load = EditorPointLoad.Create(id, LoadDraft!.CanvasPosition, load.Kind, LoadDraft.Preview.Value);
+        if (editing) load = EditorPointLoad.Create(id, LoadDraft!.CanvasPosition, load.Kind, LoadDraft.Preview.Value, load.Name);
         _dragLoad = load;
         _loadState = LoadInteraction.Drag;
         _hoveredLoadId = null;
@@ -150,19 +150,19 @@ public sealed partial class EditorViewModel
         if (!IsLoadFlyoutVisible || draft is null || !draft.TryGetValues(out var position, out double value)
             || !CanLoadPosition(position.Meters)) return false;
         var loads = Document.Loads.ToArray();
+        var naming = Document.NamingState;
         if (draft.OriginalId is { } id)
         {
             int index = Array.FindIndex(loads, l => l.Id == id);
             if (index < 0) { CancelLoadInteraction(); return false; }
-            if (loads[index].Position == position && loads[index].Value == value)
-            {
-                CancelLoadInteraction();
-                return true;
-            }
-            loads[index] = EditorPointLoad.Create(id, position, draft.Kind, value);
+            loads[index] = EditorPointLoad.Create(id, position, draft.Kind, value, draft.NameText);
         }
-        else loads = [.. loads, EditorPointLoad.Create(Guid.NewGuid(), position, draft.Kind, value)];
-        var document = Document.WithLoads(loads);
+        else
+        {
+            loads = [.. loads, EditorPointLoad.Create(Guid.NewGuid(), position, draft.Kind, value, draft.NameText)];
+            naming = naming.Consume(draft.AutoCandidate!.Value);
+        }
+        var document = Document.WithLoads(loads, naming);
         CancelLoadInteraction();
         Commit(document);
         return true;

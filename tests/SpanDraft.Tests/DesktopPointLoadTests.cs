@@ -42,9 +42,9 @@ public sealed class DesktopPointLoadTests
     {
         var empty = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section);
         Assert.Empty(empty.Loads);
-        EditorPointLoad[] source = [new EditorPointMoment(Guid.NewGuid(), Mm(0), Moment.FromNewtonMeters(12)),
-            new EditorPointForce(Guid.NewGuid(), Mm(1000), Force.FromNewtons(-20)),
-            new EditorPointMoment(Guid.NewGuid(), Mm(300), Moment.FromNewtonMeters(-30))];
+        EditorPointLoad[] source = [new EditorPointMoment(Guid.NewGuid(), Mm(0), Moment.FromNewtonMeters(12), "M1"),
+            new EditorPointForce(Guid.NewGuid(), Mm(1000), Force.FromNewtons(-20), "F1"),
+            new EditorPointMoment(Guid.NewGuid(), Mm(300), Moment.FromNewtonMeters(-30), "M2")];
         var document = empty.WithLoads(source);
         source[0] = source[1];
         Assert.Throws<NotSupportedException>(() => ((IList<EditorPointLoad>)document.Loads).Clear());
@@ -54,7 +54,7 @@ public sealed class DesktopPointLoadTests
         Assert.Equal(-20, Assert.IsType<PointForce>(beam.Loads[1]).Force.Newtons);
         Assert.Equal(Mm(1000), Assert.IsType<PointForce>(beam.Loads[1]).Position);
         Assert.Equal(-30, Assert.IsType<PointMoment>(beam.Loads[2]).Moment.NewtonMeters);
-        var support = new EditorSupport(Guid.NewGuid(), Mm(0), SupportType.Fixed);
+        var support = new EditorSupport(Guid.NewGuid(), Mm(0), SupportType.Fixed, "A");
         var withSupport = document.WithSupports([support]);
         Assert.Equal(document.Loads, withSupport.Loads);
         Assert.Equal(withSupport.Supports, withSupport.WithLoads([]).Supports);
@@ -181,7 +181,7 @@ public sealed class DesktopPointLoadTests
     {
         var exactPosition = Length.FromMeters(0.027387593197926163);
         var exactValue = 123.45678901234567;
-        var load = EditorPointLoad.Create(Guid.NewGuid(), exactPosition, kind, exactValue);
+        var load = EditorPointLoad.Create(Guid.NewGuid(), exactPosition, kind, exactValue, "Load");
         var document = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section, loads: [load]);
         int calls = 0;
         var editor = new EditorViewModel(document, () => { }, b => { calls++; return BeamAnalysis.Analyze(b); });
@@ -368,7 +368,12 @@ public sealed class DesktopPointLoadTests
         s.Main.EditProject();
         Assert.Null(s.Editor.LoadDraft);
         Assert.Null(s.Editor.LoadPreview);
-        if (apply) s.Main.Setup.ApplyCommand.Execute(null);
+        if (apply)
+        {
+            // The Apply branch exercises a real mechanical setup change; an unchanged Apply is a no-op.
+            s.Main.Setup.SelectedMaterial = new("Alternative", Pressure.FromPascals(200e9), Pressure.FromMegapascals(355));
+            s.Main.Setup.ApplyCommand.Execute(null);
+        }
         else s.Main.Setup.CancelCommand.Execute(null);
         Assert.Equal(new[] { first, second }, s.Editor.Document.Loads);
         Assert.Equal(document.Supports, s.Editor.Document.Supports);

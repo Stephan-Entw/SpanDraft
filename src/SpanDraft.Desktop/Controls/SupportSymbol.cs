@@ -1,15 +1,16 @@
 using SpanDraft.Core.Supports;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Layout;
 
 namespace SpanDraft.Desktop.Controls;
 
 /// <summary>Shared fixed-DIP drawing extents and visual hit testing.</summary>
 public static class SupportSymbol
 {
-    public const double HalfWidth = 18;
-    public const double TriangleHeight = 20;
-    public const double GroundY = 32;
-    public const double WallHalfHeight = 24;
+    public const double HalfWidth = SchematicMetrics.SupportHalfWidth;
+    public const double TriangleHeight = SchematicMetrics.SupportTriangleHeight;
+    public const double GroundY = SchematicMetrics.SupportGroundY;
+    public const double WallHalfHeight = SchematicMetrics.SupportWallHalfHeight;
     public const double HitPadding = 5;
 
     public static bool Contains(SupportPreview preview, BeamViewport viewport, double x, double y) =>

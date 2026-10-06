@@ -49,7 +49,7 @@ public sealed class DesktopSupportTests
     {
         var empty = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section);
         Assert.Empty(empty.Supports);
-        var original = new EditorSupport(Guid.NewGuid(), Mm(200), SupportType.Fixed);
+        var original = new EditorSupport(Guid.NewGuid(), Mm(200), SupportType.Fixed, "A");
         EditorSupport[] source = [original];
         var document = empty.WithSupports(source);
         source[0] = original with { Position = Mm(300) };
@@ -64,8 +64,8 @@ public sealed class DesktopSupportTests
     [Fact]
     public void MappingPreservesDocumentOrderAndExactValues()
     {
-        EditorSupport[] supports = [new(Guid.NewGuid(), Mm(1000.5), SupportType.Roller),
-            new(Guid.NewGuid(), Mm(0), SupportType.Fixed), new(Guid.NewGuid(), Mm(207.5), SupportType.Pinned)];
+        EditorSupport[] supports = [new(Guid.NewGuid(), Mm(1000.5), SupportType.Roller, "A"),
+            new(Guid.NewGuid(), Mm(0), SupportType.Fixed, "B"), new(Guid.NewGuid(), Mm(207.5), SupportType.Pinned, "C")];
         var document = new EditorDocument(Mm(1000.5), ProjectTemplates.Material, ProjectTemplates.Section, supports);
         var beam = document.ToBeamModel();
         Assert.Equal(supports.Select(s => s.Position), beam.Supports.Select(s => s.Position));
@@ -199,7 +199,7 @@ public sealed class DesktopSupportTests
     {
         var position = Length.FromMeters(0.027387593197926163);
         Assert.NotEqual(position, Mm(position.Millimeters));
-        var support = new EditorSupport(Guid.NewGuid(), position, SupportType.Fixed);
+        var support = new EditorSupport(Guid.NewGuid(), position, SupportType.Fixed, "A");
         var document = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section, [support]);
         int calls = 0;
         var editor = new EditorViewModel(document, () => { }, beam => { calls++; return BeamAnalysis.Analyze(beam); });
@@ -397,7 +397,7 @@ public sealed class DesktopSupportTests
     public void HitTestSelectsNearestThenDocumentOrderWithinDipExtents()
     {
         var v = new BeamViewport(0, 1000, 200, 160, 1);
-        EditorSupport[] supports = [new(Guid.NewGuid(), Mm(200), SupportType.Pinned), new(Guid.NewGuid(), Mm(220), SupportType.Roller)];
+        EditorSupport[] supports = [new(Guid.NewGuid(), Mm(200), SupportType.Pinned, "A"), new(Guid.NewGuid(), Mm(220), SupportType.Roller, "B")];
         Assert.Equal(supports[0].Id, SupportSymbol.HitTest(supports, v, 210, 210));
         Assert.Equal(supports[1].Id, SupportSymbol.HitTest(supports, v, 215, 210));
         Assert.Null(SupportSymbol.HitTest(supports, v, 200, 250));

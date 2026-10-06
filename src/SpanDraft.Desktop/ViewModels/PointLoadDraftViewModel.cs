@@ -14,6 +14,8 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     private readonly string _referenceValueText;
     private string _positionText;
     private string _valueText;
+    private string _nameText;
+    private string? _nameError;
     private Length _inputPosition;
     private double _inputValue;
     private string? _positionError;
@@ -28,6 +30,10 @@ public sealed class PointLoadDraftViewModel : ObservableObject
         _read = read;
         OriginalId = originalId;
         Kind = kind;
+        var document = read();
+        AutoCandidate = originalId is null ? EntityNaming.Peek(document,
+            kind == PointLoadKind.Force ? AutoNameKind.Force : AutoNameKind.Moment) : null;
+        _nameText = AutoCandidate?.Name ?? document.Loads.First(l => l.Id == originalId).Name;
         _referencePosition = position;
         _positionText = _referencePositionText = UiNumbers.Format(position.Millimeters);
         _referenceValue = value;
@@ -38,6 +44,14 @@ public sealed class PointLoadDraftViewModel : ObservableObject
 
     public Guid? OriginalId { get; }
     public bool IsExisting => OriginalId.HasValue;
+    public AutoNameCandidate? AutoCandidate { get; }
+    public string NameText
+    {
+        get => _nameText;
+        set { if (Set(ref _nameText, value)) Validate(); }
+    }
+    public string? NameError => _nameError;
+    public bool HasNameError => NameError is not null;
     public PointLoadKind Kind { get; }
     public string ValueLabel => Kind == PointLoadKind.Force ? Strings.ForceValueLabel : Strings.MomentValueLabel;
     public string Unit => Kind == PointLoadKind.Force ? "N" : "Nm";
@@ -55,7 +69,7 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     public string? ValueError => _valueError;
     public bool HasPositionError => PositionError is not null;
     public bool HasValueError => ValueError is not null;
-    public bool IsValid => !HasPositionError && !HasValueError;
+    public bool IsValid => !HasPositionError && !HasValueError && !HasNameError;
     public PointLoadPreview Preview => _preview;
     public Length CanvasPosition => Preview.Position;
 
@@ -79,7 +93,15 @@ public sealed class PointLoadDraftViewModel : ObservableObject
 
     private void Validate()
     {
-        _positionError = UiNumbers.TryParsePosition(PositionText, _read().Length, out var position)
+        var document = _read();
+        EntityNaming.TryNormalize(document, NameText, OriginalId, out _, out var nameError);
+        _nameError = nameError switch
+        {
+            NameValidationError.Empty => Strings.EmptyEntityName,
+            NameValidationError.Duplicate => Strings.DuplicateEntityName,
+            _ => null
+        };
+        _positionError = UiNumbers.TryParsePosition(PositionText, document.Length, out var position)
             ? null : Strings.PositionInsideBeam;
         if (_positionError is null)
             _inputPosition = PositionText == _referencePositionText ? _referencePosition : position;
@@ -91,6 +113,6 @@ public sealed class PointLoadDraftViewModel : ObservableObject
         }
         _preview = _preview with { IsInvalid = !IsValid };
         foreach (string name in new[] { nameof(PositionError), nameof(ValueError), nameof(HasPositionError),
-            nameof(HasValueError), nameof(IsValid), nameof(Preview) }) Notify(name);
+            nameof(HasValueError), nameof(NameError), nameof(HasNameError), nameof(IsValid), nameof(Preview) }) Notify(name);
     }
 }

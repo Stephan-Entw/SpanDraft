@@ -234,13 +234,15 @@ public class DesktopStateTests
     }
 
     [Fact]
-    public void ApplyUnchangedSetupStillAnalyzesExactlyOnce()
+    public void ApplyUnchangedSetupPreservesDocumentAndDoesNotAnalyzeAgain()
     {
         var s = new Session();
         s.Create();
+        var document = s.Editor.Document;
         s.Main.EditProject();
         s.Main.Setup.ApplyCommand.Execute(null);
-        Assert.Equal(2, s.Calls);
+        Assert.Equal(1, s.Calls);
+        Assert.Same(document, s.Editor.Document);
     }
 
     [Theory]

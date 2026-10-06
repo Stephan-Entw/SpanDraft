@@ -16,6 +16,9 @@ public sealed partial class EditorViewModel : ObservableObject
     private readonly Func<BeamModel, BeamAnalysisOutcome> _analyze;
     private EditorDocument _document;
     private AnalysisPresentationState _presentation;
+    // This VM is retained by MainWindowViewModel for the whole open project session,
+    // including setup navigation and replacement/detachment of editor views.
+    private EditorPresentationState _editorPresentation = new();
     private SupportInteraction _interaction;
     private SupportType? _placementTool;
     private SupportDraftViewModel? _draft;
@@ -55,6 +58,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public EditorDocument Document => _document;
     public AnalysisPresentationState Presentation => _presentation;
+    public EditorPresentationState EditorPresentation => _editorPresentation;
     public string ProjectInfo => Strings.SectionTemplateName + " · " + Document.Material.Name;
     public LengthInputViewModel DimensionLength { get; }
     public ConstraintConflictState? ConstraintConflict => _constraintConflict;
@@ -190,20 +194,19 @@ public sealed partial class EditorViewModel : ObservableObject
         var draft = _draft;
         if (!IsSupportFlyoutVisible || draft is null || !draft.TryGetValue(out var position)) return false;
         var supports = Document.Supports.ToArray();
+        var naming = Document.NamingState;
         if (draft.OriginalId is { } id)
         {
             int index = Array.FindIndex(supports, s => s.Id == id);
             if (index < 0) { CancelSupportInteraction(); return false; }
-            if (supports[index].Position == position && supports[index].Type == draft.Type)
-            {
-                CancelSupportInteraction();
-                return true;
-            }
-            supports[index] = supports[index] with { Position = position, Type = draft.Type };
+            supports[index] = supports[index] with { Position = position, Type = draft.Type, Name = draft.NameText };
         }
         else
-            supports = [.. supports, new(Guid.NewGuid(), position, draft.Type)];
-        var document = Document.WithSupports(supports);
+        {
+            supports = [.. supports, new(Guid.NewGuid(), position, draft.Type, draft.NameText)];
+            naming = naming.Consume(draft.AutoCandidate!.Value);
+        }
+        var document = Document.WithSupports(supports, naming);
         CancelSupportInteraction();
         Commit(document);
         return true;
@@ -281,7 +284,7 @@ public sealed partial class EditorViewModel : ObservableObject
                 ? Strings.LengthExcludesEntities : Strings.LengthExcludesSupports);
         }
         UpdateConstraintConflict(null);
-        if (length != Document.Length) Commit(Document with { Length = length });
+        Commit(Document with { Length = length });
         return LengthCommitResult.Success;
     }
 
@@ -298,14 +301,30 @@ public sealed partial class EditorViewModel : ObservableObject
     public void ApplySetup(Section section, Material material) =>
         Commit(Document with { Section = section, Material = material });
 
-    private void Commit(EditorDocument document)
+    public bool SetAnnotationOffset(Guid id, AnnotationOffset? offset)
     {
+        if (!Document.NamedEntities.Any(e => e.Id == id)) return false;
+        Commit(Document, EditorPresentation.WithOffset(id, offset));
+        return true;
+    }
+
+    private void Commit(EditorDocument document, EditorPresentationState? presentation = null)
+    {
+        var nextPresentation = (presentation ?? EditorPresentation).RetainEntities(document);
+        var change = EditorChangeClassifier.Classify(Document, document, EditorPresentation, nextPresentation);
+        if (change == EditorChangeKind.None) return;
+        bool documentChanged = !ReferenceEquals(Document, document);
+        bool presentationChanged = !EditorPresentation.ContentEquals(nextPresentation);
         _document = document;
-        if (ConstraintConflict is { } conflict) UpdateConstraintConflict(conflict.RequestedLength);
-        _presentation = AnalysisPresentationState.FromOutcome(_analyze(document.ToBeamModel()));
-        DimensionLength.Refresh(preserveError: ConstraintConflict is not null);
-        Notify(nameof(Document));
-        Notify(nameof(Presentation));
-        Notify(nameof(ProjectInfo));
+        _editorPresentation = nextPresentation;
+        if (change == EditorChangeKind.Mechanical)
+        {
+            if (ConstraintConflict is { } conflict) UpdateConstraintConflict(conflict.RequestedLength);
+            _presentation = AnalysisPresentationState.FromOutcome(_analyze(document.ToBeamModel()));
+            DimensionLength.Refresh(preserveError: ConstraintConflict is not null);
+            Notify(nameof(Presentation));
+        }
+        if (documentChanged) { Notify(nameof(Document)); Notify(nameof(ProjectInfo)); }
+        if (presentationChanged) Notify(nameof(EditorPresentation));
     }
 }

@@ -19,7 +19,7 @@ public sealed class DesktopPointLoadDragAndConflictTests
         public Session(PointLoadKind kind, double position = 300)
         {
             Editor = new(new EditorDocument(Mm(1000.5), ProjectTemplates.Material, ProjectTemplates.Section,
-                loads: [EditorPointLoad.Create(Guid.NewGuid(), Mm(position), kind, -50)]), () => { },
+                loads: [EditorPointLoad.Create(Guid.NewGuid(), Mm(position), kind, -50, "Load")]), () => { },
                 b => { Calls++; return BeamAnalysis.Analyze(b); });
         }
     }
@@ -180,9 +180,9 @@ public sealed class DesktopPointLoadDragAndConflictTests
     public void OtherObjectsCannotReplaceOrDragDuringActiveLoadSession()
     {
         var s = new Session(PointLoadKind.Force);
-        var other = EditorPointLoad.Create(Guid.NewGuid(), Mm(700), PointLoadKind.Moment, 100);
+        var other = EditorPointLoad.Create(Guid.NewGuid(), Mm(700), PointLoadKind.Moment, 100, "Other moment");
         var editor = new EditorViewModel(s.Editor.Document.WithLoads([s.Editor.Document.Loads[0], other])
-            .WithSupports([new(Guid.NewGuid(), Mm(0), SupportType.Fixed)]), () => { });
+            .WithSupports([new(Guid.NewGuid(), Mm(0), SupportType.Fixed, "A")]), () => { });
         editor.EditLoad(s.LoadId);
         var draft = editor.LoadDraft;
         Assert.False(editor.EditLoad(other.Id));
@@ -197,10 +197,10 @@ public sealed class DesktopPointLoadDragAndConflictTests
     [InlineData(true)]
     public void MixedLengthConflictIncludesEveryBlockingEntityAndFocusLossFullyRestores(bool loseFocus)
     {
-        EditorSupport[] supports = [new(Guid.NewGuid(), Mm(800), SupportType.Roller), new(Guid.NewGuid(), Mm(0), SupportType.Fixed)];
-        EditorPointLoad[] loads = [EditorPointLoad.Create(Guid.NewGuid(), Mm(850), PointLoadKind.Force, -1000),
-            EditorPointLoad.Create(Guid.NewGuid(), Mm(900), PointLoadKind.Moment, 100),
-            EditorPointLoad.Create(Guid.NewGuid(), Mm(600), PointLoadKind.Force, 0)];
+        EditorSupport[] supports = [new(Guid.NewGuid(), Mm(800), SupportType.Roller, "A"), new(Guid.NewGuid(), Mm(0), SupportType.Fixed, "B")];
+        EditorPointLoad[] loads = [EditorPointLoad.Create(Guid.NewGuid(), Mm(850), PointLoadKind.Force, -1000, "F1"),
+            EditorPointLoad.Create(Guid.NewGuid(), Mm(900), PointLoadKind.Moment, 100, "M1"),
+            EditorPointLoad.Create(Guid.NewGuid(), Mm(600), PointLoadKind.Force, 0, "F2")];
         var document = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section, supports, loads);
         int calls = 0;
         var editor = new EditorViewModel(document, () => { }, b => { calls++; return BeamAnalysis.Analyze(b); });
@@ -276,9 +276,9 @@ public sealed class DesktopPointLoadDragAndConflictTests
     [Fact]
     public void StackedSymbolsAreIndividuallySelectableAndStableDuringValueAndPositionTyping()
     {
-        EditorPointLoad[] loads = [EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Force, -1000),
-            EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Moment, 100),
-            EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Force, 0)];
+        EditorPointLoad[] loads = [EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Force, -1000, "F1"),
+            EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Moment, 100, "M1"),
+            EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Force, 0, "F2")];
         var viewport = BeamViewport.Fit(1250, 600, 1);
         var visuals = PointLoadSymbol.Layout(loads, viewport);
         for (int i = 0; i < visuals.Count; i++)
@@ -304,8 +304,8 @@ public sealed class DesktopPointLoadDragAndConflictTests
     [Fact]
     public void HitTestingUsesNearestThenDocumentOrderAndSignGeometryUsesCoreConvention()
     {
-        var first = EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Force, -1000);
-        var second = EditorPointLoad.Create(Guid.NewGuid(), Mm(320), PointLoadKind.Moment, 100);
+        var first = EditorPointLoad.Create(Guid.NewGuid(), Mm(300), PointLoadKind.Force, -1000, "F1");
+        var second = EditorPointLoad.Create(Guid.NewGuid(), Mm(320), PointLoadKind.Moment, 100, "M1");
         var viewport = new BeamViewport(0, 1000, 200, 160, 1);
         var visuals = PointLoadSymbol.Layout([first, second], viewport);
         Assert.Equal(first.Id, PointLoadSymbol.HitTest(visuals, 310, visuals[0].Y));
@@ -327,7 +327,7 @@ public sealed class DesktopPointLoadDragAndConflictTests
     public void CanvasMinimumHeightKeepsEveryCoincidentSymbolAndHitZoneVisible(int count)
     {
         var loads = Enumerable.Range(0, count).Select(i => EditorPointLoad.Create(Guid.NewGuid(), Mm(500),
-            i % 2 == 0 ? PointLoadKind.Force : PointLoadKind.Moment, 100)).ToArray();
+            i % 2 == 0 ? PointLoadKind.Force : PointLoadKind.Moment, 100, "Load " + i)).ToArray();
         double height = PointLoadSymbol.MinimumHeight(loads);
         var visuals = PointLoadSymbol.Layout(loads, BeamViewport.Fit(1100, height, 1));
         Assert.All(visuals, v =>
@@ -344,8 +344,8 @@ public sealed class DesktopPointLoadDragAndConflictTests
     [Fact]
     public void ActiveToolReservesCanvasSpaceBeforeHoverAndRetainsItOnHoverLeave()
     {
-        var loads = Enumerable.Range(0, 4).Select(_ => EditorPointLoad.Create(Guid.NewGuid(), Mm(500),
-            PointLoadKind.Force, -1000)).ToArray();
+        var loads = Enumerable.Range(0, 4).Select(i => EditorPointLoad.Create(Guid.NewGuid(), Mm(500),
+            PointLoadKind.Force, -1000, "Load " + i)).ToArray();
         var editor = new EditorViewModel(new(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section, loads: loads), () => { });
         double Height() => PointLoadSymbol.MinimumHeight(editor.Document.Loads,
             reserveAdditionalLane: editor.LoadState != LoadInteraction.Neutral);

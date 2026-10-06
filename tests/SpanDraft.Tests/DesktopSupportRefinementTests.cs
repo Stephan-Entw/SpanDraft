@@ -21,7 +21,7 @@ public sealed class DesktopSupportRefinementTests
         public Session(params double[] positions)
         {
             Editor = new(new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section,
-                positions.Select(p => new EditorSupport(Guid.NewGuid(), Mm(p), SupportType.Fixed))), () => { },
+                positions.Select((p, i) => new EditorSupport(Guid.NewGuid(), Mm(p), SupportType.Fixed, "Fixture support " + i))), () => { },
                 beam => { Calls++; return BeamAnalysis.Analyze(beam); });
         }
         public void Reject(string text = "700")

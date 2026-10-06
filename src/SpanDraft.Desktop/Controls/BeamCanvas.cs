@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using SpanDraft.Core.Supports;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Layout;
 
 namespace SpanDraft.Desktop.Controls;
 
@@ -118,14 +119,14 @@ public sealed class BeamCanvas : Control
 
     private static void DrawSupport(DrawingContext context, BeamViewport viewport, double position, SupportType type, IBrush? brush)
     {
-        var pen = new Pen(brush, 1.5, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
+        var pen = new Pen(brush, SchematicMetrics.SymbolStrokeWidth, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
         double x = viewport.BeamToScreen(position), y = viewport.BeamY;
         void Line(double x1, double y1, double x2, double y2) =>
             context.DrawLine(pen, new(x + x1, y + y1), new(x + x2, y + y2));
         if (type == SupportType.Fixed)
         {
             Line(0, -SupportSymbol.WallHalfHeight, 0, SupportSymbol.WallHalfHeight);
-            for (int offset = -20; offset <= 16; offset += 9) Line(0, offset, -12, offset + 8);
+            for (int offset = -20; offset <= 16; offset += 9) Line(0, offset, -SchematicMetrics.FixedHatchWidth, offset + 8);
             return;
         }
         Line(0, 0, -14, SupportSymbol.TriangleHeight);

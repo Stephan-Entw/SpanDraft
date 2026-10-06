@@ -1,6 +1,6 @@
 # SpanDraft – verbindliche UI-Spezifikation
 
-Stand: 04.10.2026, Punktkraft-/Punktmoment-Meilenstein. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
+Stand: 06.10.2026, Stage 1 des Schematic-Layout-Fundaments. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
 Support-, Punktkraft- und Punktmoment-Placement & Editing einschließlich Drag sind
 implementiert. Streckenlast bleibt der verbindliche nächste Editor-Schritt.
 
@@ -40,7 +40,9 @@ ein Analysis-Aufruf und der Wechsel zum Editor.
 
 Edit-Modus: „Ändern“ verwendet dieselbe Setup-View mit aktueller Auswahl.
 „Übernehmen“ committed Section/Material gemeinsam, erhält die Länge, analysiert
-einmal und kehrt zum Editor zurück. „Abbrechen“ verwirft ausschließlich die
+bei tatsächlicher Änderung der analysis-relevanten Werte einmal und kehrt zum Editor
+zurück. Unverändertes Übernehmen erhält die Dokumentidentität und analysiert nicht.
+„Abbrechen“ verwirft ausschließlich die
 temporäre Auswahl, erhält Dokument und Editor und löst keine Analysis aus.
 Vorhandene Lager und Punktlasten mit IDs, Positionen, Typen/Werten und Reihenfolge
 bleiben bei Übernehmen und Abbrechen erhalten. Navigation ins Setup verwirft
@@ -78,6 +80,19 @@ MainWindowViewModel hält den Modus ProjectSetup/Editor und die Navigation.
 ProjectSetupViewModel hält eine temporäre Auswahl. EditorViewModel besitzt
 das einzige committed EditorDocument mit Length, Material, Section, Supports und Loads.
 Core-Objekte bleiben immutable. Kein zweites konkurrierendes Projektmodell.
+
+Stage 1 gemäß [SCHEMATIC_LAYOUT.md](SCHEMATIC_LAYOUT.md) ergänzt stabile
+Entity-Namen und einen monotonen NamingState im EditorDocument. Die bestehenden
+Support-/Load-Drafts halten Namen transaktional, ohne sichtbare Naming-Felder.
+EditorPresentationState hält relative AnnotationOffsets getrennt vom Dokument.
+Er gehört zur geöffneten Projekt-Session und überlebt Setup-Navigation und
+View-/Control-Wechsel; Abbruch einer Pointer-/Draft-Interaktion setzt ihn nicht zurück.
+Namen, Zähler und Offsets gelangen nicht ins BeamModel.
+
+StationLayout/StationTransform und AxisLabelPacker sind reine Desktop-Bausteine
+ohne Avalonia-/Entity-Abhängigkeiten. Ein separater Adapter liefert die Union
+technischer Symbol-Extents; Text und Hit-Padding zählen nicht dazu. Stage 1 bindet
+das neue Layout noch nicht an Rendering, Achse oder Pointer-Gesten an.
 
 ObservableObject und ActionCommand bilden die kleine lokale ViewModel-Basis.
 Es gibt keine externe MVVM-Bibliothek, DI, Event Bus oder allgemeine Draft-Architektur.
@@ -183,8 +198,11 @@ Deutsch über Strings.de.resx; keine Laufzeit-Sprachumschaltung.
 
 ## 6. Analysis und Ergebnisleiste
 
-Nach jeder committed Änderung wird ein neues immutable BeamModel erzeugt und
-ausschließlich BeamAnalysis.Analyze(beam) aufgerufen. Desktop referenziert direkt
+Nach jeder tatsächlich analysis-relevanten committed Änderung wird ein neues
+immutable BeamModel analysiert und ausschließlich BeamAnalysis.Analyze(beam)
+aufgerufen. Der zentrale Desktop-Commit-Pfad unterscheidet None, MetadataOnly und
+Mechanical anhand einer expliziten BeamModel-Semantik. Rename und reine
+Darstellungsänderungen erhalten das bisherige Analysis-Ergebnis. Desktop referenziert direkt
 nur Core und Analysis. Es gibt keine eigenen Engineering-Formeln.
 
 AnalysisPresentationState hält die UI-Klassifikation und gegebenenfalls das
@@ -216,7 +234,7 @@ mit vorhandenem erfolgreichem BeamAnalysisResult aktiviert werden.
 ### 7.1 Committed Lager und stabile Identität
 
 EditorDocument.Supports ist eine defensiv kopierte, schreibgeschützte Sammlung
-immutable EditorSupports mit Guid Id, Length Position und Core-SupportType.
+immutable EditorSupports mit Guid Id, Length Position, Core-SupportType und Name.
 Neue Dokumente starten leer. Hinzufügen erzeugt die ID erst beim Commit;
 Editieren und Drag erhalten sie. Die ID gehört ausschließlich zum Desktop.
 ToBeamModel() erzeugt normale Core-Supports mit exakten Positionen/Typen und
@@ -337,8 +355,8 @@ Auch nach mehreren Drags entsteht erst beim tatsächlichen Commit genau eine Ana
 
 ### 7.7 Analysis-Zeitpunkte
 
-Analysis ausschließlich nach Hinzufügen + OK, tatsächlichem Edit + OK, Löschen,
-gültiger geänderter Länge oder Setup-Übernehmen. Keine Analysis bei Werkzeugwahl,
+Analysis ausschließlich nach Hinzufügen + OK, tatsächlichem mechanischen Edit + OK, Löschen,
+gültiger geänderter Länge oder analysis-relevantem Setup-Übernehmen. Keine Analysis bei Werkzeugwahl,
 Hover, Snap, Draft, Drag, Eingabe, Abbruch, Light-dismiss oder unverändertem OK.
 Die bestehende Analysis-Presentation entscheidet über MissingSupports, UnstableModel
 und Success. Stabile unbelastete Systeme zeigen 0 mm, 0 kNm, 0 MPa und ∞; keine
@@ -348,7 +366,7 @@ künstliche Last und keine mechanische Sonderlogik im UI. „Ergebnisse“ bleib
 
 EditorDocument.Loads ist eine defensiv kopierte, schreibgeschützte gemeinsame
 Sammlung immutable EditorPointLoads. EditorPointForce enthält Guid Id, Length
-Position und Force; EditorPointMoment enthält Id, Position und Moment. IDs entstehen
+Position, Force und Name; EditorPointMoment enthält Id, Position, Moment und Name. IDs entstehen
 erst beim Hinzufügen-Commit und bleiben bei Edit/Drag erhalten. ToBeamModel bildet
 auf die bestehenden Core-Loads ohne IDs ab und erhält die gemischte Reihenfolge.
 WithSupports, WithLoads, Längen- und Setup-Änderungen erhalten die übrigen Entities.
@@ -444,10 +462,30 @@ Das Regression-Gate umfasst Restore/Build/Tests beider Solutions, unveränderte
 eingefrorene Bereiche und den bestehenden SolverSourceSha256. GUI-Smoke-Checks
 und deren tatsächliche Grenzen werden im Abschlussbericht separat dokumentiert.
 
-Aktueller Stand (04.10.2026): **470 Produkttests PASS**, **195 Validation-Tests
+Aktueller Stand (06.10.2026): **595 Produkttests PASS**, **195 Validation-Tests
 PASS**, **18 Acceptance-Fälle PASS**; Release-Builds mit null Warnungen/Fehlern.
 Die folgenden Abnahmen dokumentieren ausdrücklich frühere Entwicklungsstände;
 maßgeblich für die heutige Interaktion sind die Abschnitte 5 und 7.
+
+### Abnahme Stage 1: Schematic-Layout-Fundament (06.10.2026)
+
+- Product Restore/Release Build: 0 Warnungen, 0 Fehler; 595 Tests PASS,
+  davon 125 neue Layout-, Transform-, Packer-, Naming-, Commit- und Session-Fälle.
+- Validation Restore/Release Build: 0 Warnungen, 0 Fehler; 195 Tests PASS;
+  Acceptance 18/18 PASS. Keine übersprungenen Tests.
+- SolverSourceSha256 unverändert:
+  `6f4a3bf5a3e283680d57c087491a623af715e164089e3219c6bed77b586c06df`.
+- Die Analysis-Semantik wird explizit zentral gepflegt, ohne Reflection-Schema.
+  Unbekannte Domain-Varianten sind konservativ analysis-relevant. Zusätzliche
+  Material-/Querschnittsmetadaten sind nicht zusätzlich analysis-relevant,
+  soweit ihre aktuelle Wirkung durch E/Re beziehungsweise A/I/W erfasst ist.
+- Unverändertes Setup ist nun ein No-op. Der ausdrücklich freigegebene Test
+  wurde auf diesen Vertrag umgestellt; ein bestehender Entity-Erhaltungstest
+  verwendet beim Apply eine echte Materialänderung und behält seine Assertions.
+- Core, Solver, Engineering, Analysis, Reporting und Validation unverändert;
+  keine Packages ergänzt. Keine native GUI-/Screenshot-Abnahme, kein Commit/Push.
+- Stage 2 übernimmt die produktive Layout-/Achsen-Anbindung. Rendering,
+  sichtbare Namen, Label-Drag und Interaktions-Snapshots bleiben vorbereitet.
 
 ### Abnahme Punktkraft/Punktmoment (04.10.2026)
 

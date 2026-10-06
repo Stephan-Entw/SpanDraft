@@ -2,6 +2,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Media;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Layout;
 
 namespace SpanDraft.Desktop.Controls;
 
@@ -10,7 +11,7 @@ public sealed record PointLoadVisual(Guid? Id, PointLoadPreview Preview, double 
 /// <summary>Shared fixed-DIP layout, drawing and hit zones; never changes physical positions.</summary>
 public static class PointLoadSymbol
 {
-    public const double HalfSize = 18;
+    public const double HalfSize = SchematicMetrics.PointLoadHalfSize;
     public const double LaneSpacing = 50;
     public const double HitPadding = 5;
 
@@ -78,14 +79,14 @@ public static class PointLoadSymbol
     public static void Draw(DrawingContext context, PointLoadVisual visual, BeamViewport viewport,
         IBrush? brush, IBrush? guideBrush, Typeface typeface, double fontSize)
     {
-        var pen = new Pen(brush, 1.5, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
+        var pen = new Pen(brush, SchematicMetrics.SymbolStrokeWidth, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
         Point At(Point point) => new(visual.X + point.X, visual.Y + point.Y);
         void Line(Point start, Point end) => context.DrawLine(pen, At(start), At(end));
         void Arrow(Point tip, Vector direction)
         {
             var normal = new Vector(-direction.Y, direction.X);
-            Line(tip - direction * 8 + normal * 4, tip);
-            Line(tip - direction * 8 - normal * 4, tip);
+            Line(tip - direction * SchematicMetrics.ArrowHeadLength + normal * SchematicMetrics.ForceArrowHalfWidth, tip);
+            Line(tip - direction * SchematicMetrics.ArrowHeadLength - normal * SchematicMetrics.ForceArrowHalfWidth, tip);
         }
 
         using (context.PushOpacity(0.5))
@@ -98,11 +99,11 @@ public static class PointLoadSymbol
             if (value != 0) Arrow(ForceTip(value), new(0, value > 0 ? -1 : 1));
         }
         else if (value == 0)
-            context.DrawEllipse(null, pen, new(visual.X, visual.Y), 15, 15);
+            context.DrawEllipse(null, pen, new(visual.X, visual.Y), SchematicMetrics.MomentRadius, SchematicMetrics.MomentRadius);
         else
         {
             double sweep = MomentSweep(value);
-            Point Circle(double angle) => new(15 * Math.Cos(angle), -15 * Math.Sin(angle));
+            Point Circle(double angle) => new(SchematicMetrics.MomentRadius * Math.Cos(angle), -SchematicMetrics.MomentRadius * Math.Sin(angle));
             double start = Math.PI / 4;
             var geometry = new StreamGeometry();
             using (var path = geometry.Open())
