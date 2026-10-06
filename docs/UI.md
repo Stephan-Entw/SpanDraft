@@ -1,6 +1,6 @@
 # SpanDraft – verbindliche UI-Spezifikation
 
-Stand: 06.10.2026, Stage 2 des produktiven Schematic Layouts. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
+Stand: 06.10.2026, Stage 3 – Annotation Interaction & Hardening. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
 Support-, Punktkraft- und Punktmoment-Placement & Editing einschließlich Drag sind
 implementiert. Streckenlast bleibt der verbindliche nächste Editor-Schritt.
 
@@ -85,7 +85,7 @@ Das Schematic Layout gemäß [SCHEMATIC_LAYOUT.md](SCHEMATIC_LAYOUT.md) verwende
 Entity-Namen und einen monotonen NamingState im EditorDocument. Die bestehenden
 Support-/Load-Drafts halten Namen transaktional; Canvas und Flyouts zeigen sie an.
 EditorPresentationState hält relative AnnotationOffsets getrennt vom Dokument.
-Er gehört zur geöffneten Projekt-Session und überlebt Setup-Navigation und
+Er wird produktiv an BeamRenderState übergeben, gehört zur geöffneten Projekt-Session und überlebt Setup-Navigation und
 View-/Control-Wechsel; Abbruch einer Pointer-/Draft-Interaktion setzt ihn nicht zurück.
 Namen, Zähler und Offsets gelangen nicht ins BeamModel.
 
@@ -292,7 +292,8 @@ SupportSymbol definiert gemeinsame DIP-Ausdehnungen für Zeichnung und Hit-Zonen
 Überlappende Hit-Zonen wählen das nächstgelegene Lager, bei Gleichstand das
 zuerst im Dokument enthaltene. Neutrales Hover hebt hervor; Klick öffnet Edit.
 Supports zeigen ihre bestehenden Namen unter dem technischen Symbol. Individuelle
-Labels öffnen eindeutig das zugehörige Entity, ohne Positions-/Label-Drag.
+Labels öffnen bei Click eindeutig das zugehörige Entity; Drag verschiebt
+ausschließlich die Annotation (Abschnitt 7.9).
 Resize außerhalb einer Pointer-Geste erhält alle physikalischen Werte und
 berechnet Zeichenpositionen, Koordinate und Popup-Anker über StationTransform neu.
 
@@ -439,7 +440,7 @@ Labels deterministisch in kompakten Reihen oberhalb der Loads und unterhalb der
 Supports an. Rendering und Hit-Testing verwenden diesen gemeinsamen State.
 Committed verwendet BeamStroke, Hover/Draft Accent, Constraint-Konflikt oder
 ungültige Eingabe Error; Konflikt hat Vorrang. Individuelle Labels öffnen ihr
-Entity eindeutig und starten keinen Drag. Einzelglyphs öffnen/ziehen direkt;
+Entity eindeutig; Drag verschiebt nur dessen Annotation. Einzelglyphs öffnen/ziehen direkt;
 Shared Glyphs verwenden das bereits eindeutig editierte Entity. Sonst öffnet ein
 kleines Surface-lokales Standard-Popup mit Entity-Buttons den bestehenden EditLoad-Pfad,
 ohne willkürliche Auswahl oder allgemeines Selection-Framework.
@@ -448,7 +449,7 @@ Die Canvas-Mindesthöhe folgt committed Objektlabels mit einer reservierten
 Preview-Zeile. Hover/Pointer-Leave verändern weder Stationslayout noch Beam-Lage.
 Ein vertikaler ScrollViewer hält umfangreiche Beschriftungen erreichbar, ohne
 Zoom/Pan oder Änderung der physikalischen Werte. Manuelle AnnotationOffsets und
-Label-Drag bleiben für Stage 4 vorbereitet.
+Label-Drag sind produktiv angebunden; die Axis bleibt davon unabhängig.
 
 Analysis erfolgt ausschließlich nach neuer Load + OK, tatsächlichem Edit + OK
 oder Delete. Alle Transienten einschließlich Drag und unverändertem OK bleiben
@@ -456,7 +457,54 @@ analysisfrei. Längenkonflikte nutzen den bestehenden ConstraintConflictState un
 Ghost-Balken gemeinsam für Supports und beide Punktlasttypen. Abgelehnter
 Fokusverlust entfernt weiterhin Anfrage, Preview, Highlights und Fehler vollständig.
 
-### 7.9 Nächster Schritt: Streckenlast
+### 7.9 Entity-Annotationen: Auto und ManualOffset
+
+BeamRenderState erhält den immutable EditorPresentationState der geöffneten
+Projekt-Session. Fehlender Offset bedeutet Auto; ein Eintrag bedeutet
+ManualOffset(dx, dy) in DIPs. AutoBounds ist der offset-unabhängig berechnete
+automatische Referenzanker. Sichtbare manuelle Bounds sind exakt AutoBounds plus
+Offset; absolute Canvas-Koordinaten werden nicht gespeichert.
+
+Zuerst entstehen die gemessenen automatischen Referenzpositionen. Danach werden
+manuelle Offsets angewendet und ausschließlich Auto-Labels um diese festen
+Hindernisse herum in kompakte Reihen gelegt. Das gilt auch zwischen Support- und
+Load-Bereich. Zwei manuelle Labels dürfen sich bewusst überlappen. Bei identischem
+Hit gewinnt das zuletzt gezeichnete Label. Entity-Labels haben vor Glyphs Vorrang;
+Shared-Glyph-Auswahl und Positionsgesten behalten ihre bestehenden Regeln.
+
+PointerDown auf ein committed Entity-Label merkt Entity-ID, Pointerstart,
+AutoBounds, sichtbare Startposition und ursprünglichen nullable Offset und
+nimmt Capture. Unterhalb von 4 DIPs räumlicher Bewegung bleibt es ein Click:
+Release öffnet das Entity über den bestehenden Edit-Pfad. Oberhalb der Schwelle
+ändert die Geste ausschließlich SetAnnotationOffset(), niemals Position, Typ,
+Kraft/Moment, Dokument oder Analysis. Der Offset ergibt sich aus sichtbarer
+Startposition minus Auto-Referenzanker plus Pointerbewegung. Dadurch springt ein
+durch Auto-Collision-Layout verdrängtes Label beim Wechsel zu Manual nicht.
+Normales Release behält den Offset und öffnet kein zusätzliches Flyout.
+
+Label-Cancel wird vor generischem Surface-/Flyout-Cancel behandelt, einschließlich
+Escape im Tunnel vor dem Flyout-Tastaturhandling. Escape und CaptureLost
+restaurieren ausschließlich den ursprünglichen Offset und beenden die Geste.
+Ursprüngliches Auto wird wieder durch einen fehlenden Eintrag dargestellt. Ein
+offener Support-/Load-Draft und seine Rohtextbuffer bleiben erhalten. Capture
+wird erst nach Bereinigung der aktiven Geste gelöst, damit normales Release keinen
+nachträglichen Rollback auslöst. Detach und Session-Wechsel bereinigen unfertige
+Gesten; eine später abgebrochene Entity-Draft-Session entfernt keinen bereits
+abgeschlossenen Label-Offset.
+
+Während der Label-Geste bleiben Layout-Frame, Pane-Höhe und BeamY eingefroren.
+Nach Release darf die benötigte Höhe anhand final sichtbarer Annotation-Bounds
+wachsen; der vorhandene vertikale Scrollbereich hält diese erreichbar. Resize,
+schematische Entzerrung, mechanischer Commit und geänderte Textbreiten berechnen
+AutoBounds neu; gespeicherte Offsets bleiben numerisch gleich. Offsets werden
+nicht geklemmt oder durch Auto-Layout verändert. Delete bereinigt verwaiste
+Einträge; eine neue Projekt-Session startet leer.
+
+Neue Draft-Labels ohne committed ID sind nicht draggable. Coordinate-Axis-Labels
+bleiben read-only, ausgenommen der bestehende L-Endwert; sie besitzen keine
+AnnotationOffsets. Ein sichtbarer Reset-Befehl wird nicht vorgezogen.
+
+### 7.10 Nächster Schritt: Streckenlast
 
 Streckenlast bleibt deaktiviert. Geplant sind Start-/Endpunkt, signed Intensität,
 Bereichs-Preview und transaktionales Flyout nach denselben Grundprinzipien.
@@ -493,10 +541,35 @@ Das Regression-Gate umfasst Restore/Build/Tests beider Solutions, unveränderte
 eingefrorene Bereiche und den bestehenden SolverSourceSha256. GUI-Smoke-Checks
 und deren tatsächliche Grenzen werden im Abschlussbericht separat dokumentiert.
 
-Aktueller Stand (06.10.2026): **641 Produkttests PASS**, **195 Validation-Tests
+Aktueller Stand (06.10.2026): **678 Produkttests PASS**, **195 Validation-Tests
 PASS**, **18 Acceptance-Fälle PASS**; Release-Builds mit null Warnungen/Fehlern.
 Die folgenden Abnahmen dokumentieren ausdrücklich frühere Entwicklungsstände;
 maßgeblich für die heutige Interaktion sind die Abschnitte 4, 5 und 7.
+
+### Abnahme Stage 3: Annotation Interaction & Hardening (06.10.2026)
+
+- Product Restore/Release Build: 0 Warnungen, 0 Fehler; 678 Tests PASS,
+  einschließlich 37 neuer Annotation-Layout-, Gesture- und ViewModel-Integrationsfälle.
+  Alle 641 bestehenden Tests und deren Assertions bleiben erhalten.
+- Validation Restore/Release Build: 0 Warnungen, 0 Fehler; 195 Tests PASS;
+  Acceptance 18/18 PASS. Keine übersprungenen Tests.
+- SolverSourceSha256 unverändert:
+  `6f4a3bf5a3e283680d57c087491a623af715e164089e3219c6bed77b586c06df`.
+- AutoBounds und sichtbare Bounds sind getrennt. ManualOffsets sind produktive
+  Session-Metadaten, bleiben relativ bei Reflow und lösen keine Analysis aus.
+  Die Tests prüfen gemeinsame Hindernisse, bewusste Überlappung, Click/Drag,
+  Rollback mit offenen Draft-/Rohtextbuffern, Height-/Transform-Stabilität,
+  Delete, neue Session und bestehende Glyph-/Axis-Verträge.
+- Reine und ViewModel-Integrationstests benötigen keine native GUI und keine
+  plattformabhängigen Fontmetriken. Die vorhandene echte Textmessung bleibt erhalten.
+  Geroutete Surface-Events erfordern eine Cursor-/Windowing-Plattform; zusätzliche
+  Testpakete oder eine eigene Test-Plattform wurden nicht eingeführt.
+- Native UI-Abnahme vom Nutzer bestätigt: Oberfläche geprüft, alles in Ordnung.
+  Nach dem nicht freigegebenen Computer-Use-Aufruf wurde die Prüfung vom Nutzer
+  selbst übernommen; kein erfolgreicher eigener Computer-Use-Prüflauf behauptet.
+- Alle 138 getrackten Frozen Files und Packages unverändert. Stage 3 ist abgenommen;
+  UDL bleibt der nächste Editor-Meilenstein. Persistenz, Undo/Redo, Zoom/Pan und
+  allgemeine Manager bleiben außerhalb des Scopes.
 
 ### Abnahme Stage 2: Produktives Schematic Layout (06.10.2026)
 

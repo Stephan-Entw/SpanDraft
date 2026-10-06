@@ -33,6 +33,9 @@ public partial class BeamEditorSurface : UserControl
     public BeamEditorSurface()
     {
         InitializeComponent();
+        AddHandler(KeyDownEvent, LabelGestureKeyDown, RoutingStrategies.Tunnel);
+        SupportEditor.AddHandler(KeyDownEvent, LabelGestureKeyDown, RoutingStrategies.Tunnel);
+        LoadEditor.AddHandler(KeyDownEvent, LabelGestureKeyDown, RoutingStrategies.Tunnel);
         BeamPane.MinHeight = SpanDraft.Desktop.Layout.SchematicMetrics.MinimumBeamPaneHeight;
         CoordinateAxis.LengthEditStarting += () => { ReleaseGesture(); _editor?.CancelEditorInteraction(); };
         DataContextChanged += (_, _) => ObserveEditor();
@@ -60,6 +63,7 @@ public partial class BeamEditorSurface : UserControl
     {
         ObserveTopLevel(TopLevel.GetTopLevel(this));
         if (_editor == DataContext) return;
+        CancelLabelGesture();
         if (_editor is not null) _editor.PropertyChanged -= EditorChanged;
         _editor = DataContext as EditorViewModel;
         if (_editor is not null) _editor.PropertyChanged += EditorChanged;
@@ -72,18 +76,21 @@ public partial class BeamEditorSurface : UserControl
         if (_topLevel is not null)
         {
             _topLevel.RemoveHandler(PointerPressedEvent, SupportOutsidePointerPressed);
+            _topLevel.RemoveHandler(KeyDownEvent, LabelGestureKeyDown);
             if (_topLevel is Window window) window.Deactivated -= SupportWindowDeactivated;
         }
         _topLevel = topLevel;
         if (_topLevel is not null)
         {
             _topLevel.AddHandler(PointerPressedEvent, SupportOutsidePointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+            _topLevel.AddHandler(KeyDownEvent, LabelGestureKeyDown, RoutingStrategies.Tunnel);
             if (_topLevel is Window window) window.Deactivated += SupportWindowDeactivated;
         }
     }
 
     private void SupportWindowDeactivated(object? sender, EventArgs e)
     {
+        if (CancelLabelGesture()) return;
         if (_editor?.SupportDraft is not null || _editor?.LoadDraft is not null)
         {
             ReleaseGesture();
@@ -112,7 +119,12 @@ public partial class BeamEditorSurface : UserControl
 
     private void EditorChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(EditorViewModel.Document) or nameof(EditorViewModel.SupportDraft)
+        if (_labelGesture is { } label && (e.PropertyName == nameof(EditorViewModel.Document)
+            && !_editor!.Document.NamedEntities.Any(entity => entity.Id == label.EntityId)
+            || e.PropertyName == nameof(EditorViewModel.IsSupportFlyoutVisible) && _editor!.Interaction == SupportInteraction.Placement
+            || e.PropertyName == nameof(EditorViewModel.IsLoadFlyoutVisible) && _editor!.LoadState == LoadInteraction.Placement))
+            CancelLabelGesture();
+        if (e.PropertyName is nameof(EditorViewModel.Document) or nameof(EditorViewModel.EditorPresentation) or nameof(EditorViewModel.SupportDraft)
             or nameof(EditorViewModel.IsSupportFlyoutVisible) or nameof(EditorViewModel.Preview)
             or nameof(EditorViewModel.HoveredSupportId) or nameof(EditorViewModel.HasSupportFeedback)
             or nameof(EditorViewModel.ConstraintConflict) or nameof(EditorViewModel.LoadPreview)
@@ -127,7 +139,7 @@ public partial class BeamEditorSurface : UserControl
         try
         {
             bool placement = _editor.Interaction == SupportInteraction.Placement || _editor.LoadState == LoadInteraction.Placement;
-            if (!placement && _gesture is null && _loadGesture is null && _placementClick is null) _layout.EndInteraction();
+            if (!placement && _gesture is null && _loadGesture is null && _placementClick is null && _labelGesture is null) _layout.EndInteraction();
             var frame = _layout.Update(_editor.Document, BeamPane.Bounds.Width, BeamPane.Bounds.Height);
             if (frame is null) return;
             if (placement && _layout.Snapshot is null)
@@ -136,11 +148,11 @@ public partial class BeamEditorSurface : UserControl
             System.Func<string, Size> measure = text => SchematicText.Measure(text, Typeface.Default, TechnicalCanvas.LabelFontSize);
             // Reserve from committed labels, including a spare preview row. Neither
             // hover nor transient text changes the pane's requested height.
-            var committed = BeamRenderState.Create(_editor.Document, frame, measure);
-            BeamPane.MinHeight = committed.MinimumPaneHeight;
+            var committed = BeamRenderState.Create(_editor.Document, frame, measure, presentation: _editor.EditorPresentation);
+            if (_labelGesture is null) BeamPane.MinHeight = committed.MinimumPaneHeight;
             _scene = BeamRenderState.Create(_editor.Document, frame, measure,
                 _editor.Preview, _editor.HiddenSupportId, _editor.SupportPreviewName,
-                _editor.LoadPreview, _editor.HiddenLoadId, _editor.LoadPreviewName);
+                _editor.LoadPreview, _editor.HiddenLoadId, _editor.LoadPreviewName, _editor.EditorPresentation);
             TechnicalCanvas.Scene = _scene;
             CoordinateAxis.SetStationLayout(frame.Layout, frame.Viewport.Width);
             double x = (_editor.Preview?.Position ?? _editor.LoadPreview?.Position) is { } position
@@ -152,7 +164,7 @@ public partial class BeamEditorSurface : UserControl
             Canvas.SetTop(FeedbackOverlay, frame.Viewport.BeamY + 64);
             Canvas.SetLeft(SupportAnchor, x);
             Canvas.SetTop(SupportAnchor, frame.Viewport.BeamY + 56);
-            Cursor = placement ? PlacementCursor : _editor.Interaction == SupportInteraction.Drag || _editor.LoadState == LoadInteraction.Drag
+            Cursor = _labelGesture?.IsDragging == true ? LabelDragCursor : placement ? PlacementCursor : _editor.Interaction == SupportInteraction.Drag || _editor.LoadState == LoadInteraction.Drag
                 ? DragCursor : _editor.HoveredSupportId is not null || _editor.HoveredLoadId is not null ? EditCursor : Cursor.Default;
             SynchronizeLoadVisuals();
             var draft = _editor.SupportDraft;
@@ -192,6 +204,7 @@ public partial class BeamEditorSurface : UserControl
     {
         if (_editor is null) return;
         var point = e.GetPosition(BeamPane);
+        if (_labelGesture is not null) { UpdateLabelGesture(point); e.Handled = true; return; }
         if (_gesture is not null || _loadGesture is not null) { UpdateGesture(point); return; }
         if (_placementClick is not null) return;
         if (OverOverlay(e.Source)) { _editor.HoverPlacement(null); _editor.HoverSupport(null); _editor.HoverLoadPlacement(null); _editor.HoverLoad(null); return; }
@@ -204,9 +217,10 @@ public partial class BeamEditorSurface : UserControl
             _editor.HoverPlacement(SnapPlacement(point));
         else if (_editor.Interaction == SupportInteraction.Neutral && _editor.LoadState == LoadInteraction.Neutral)
         {
-            var loadId = PointLoadSymbol.HitTest(LoadVisuals, point.X, point.Y);
+            var annotation = _scene?.HitTestLabel(point.X, point.Y);
+            var loadId = annotation is not null ? annotation.IsSupport ? null : annotation.Id : PointLoadSymbol.HitTest(LoadVisuals, point.X, point.Y);
             _editor.HoverLoad(loadId);
-            _editor.HoverSupport(loadId is null ? HitSupport(point) : null);
+            _editor.HoverSupport(annotation is not null ? annotation.IsSupport ? annotation.Id : null : loadId is null ? HitSupport(point) : null);
         }
     }
 
@@ -215,11 +229,18 @@ public partial class BeamEditorSurface : UserControl
         if (_editor is null || OverOverlay(e.Source) || OverSupportFlyout(e.Source) || OverLoadFlyout(e.Source)
             || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         var point = e.GetPosition(BeamPane);
-        if (_scene?.HitTestLabel(point.X, point.Y) is { Id: { } labelId } label)
+        if (_scene?.HitTestLabel(point.X, point.Y) is { } label)
         {
-            if (_editor.SupportDraft is null && _editor.LoadDraft is null)
+            if (label.Id is { } labelId && Frame is not null
+                && (_editor.Interaction == SupportInteraction.Neutral && _editor.LoadState == LoadInteraction.Neutral
+                    || labelId == _editor.SupportDraft?.OriginalId || labelId == _editor.LoadDraft?.OriginalId))
             {
-                if (label.IsSupport) _editor.EditSupport(labelId); else _editor.EditLoad(labelId);
+                Focus();
+                _layout.BeginInteraction(BeamPointerInteraction.LabelDrag);
+                _labelGesture = new(label, point, _editor.EditorPresentation.AnnotationOffsets.TryGetValue(labelId, out var offset) ? offset : null);
+                FreezeLabelPane();
+                _pointer = e.Pointer;
+                e.Pointer.Capture(this);
             }
             e.Handled = true;
             return;
@@ -282,6 +303,12 @@ public partial class BeamEditorSurface : UserControl
 
     private void SurfacePointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        if (_labelGesture is not null && e.InitialPressMouseButton == MouseButton.Left)
+        {
+            FinishLabelGesture(e.GetPosition(BeamPane));
+            e.Handled = true;
+            return;
+        }
         if (_placementClick is { } position && _editor is not null && e.InitialPressMouseButton == MouseButton.Left)
         {
             var point = e.GetPosition(BeamPane);
@@ -328,7 +355,7 @@ public partial class BeamEditorSurface : UserControl
 
     private void SurfacePointerExited(object? sender, PointerEventArgs e)
     {
-        if (_gesture is not null || _loadGesture is not null) return;
+        if (_gesture is not null || _loadGesture is not null || _labelGesture is not null) return;
         _editor?.HoverPlacement(null);
         _editor?.HoverSupport(null);
         _editor?.HoverLoadPlacement(null);
@@ -337,6 +364,7 @@ public partial class BeamEditorSurface : UserControl
 
     private void SurfaceCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
+        if (CancelLabelGesture()) return;
         if (_gesture is null && _loadGesture is null && _placementClick is null) return;
         ReleaseGesture();
         _editor?.CancelEditorInteraction();
@@ -344,6 +372,7 @@ public partial class BeamEditorSurface : UserControl
 
     private void ReleaseGesture()
     {
+        CancelLabelGesture();
         _gesture = null;
         _loadGesture = null;
         _placementClick = null;
@@ -359,6 +388,7 @@ public partial class BeamEditorSurface : UserControl
     private void SurfaceKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Escape) return;
+        if (CancelLabelGesture()) { e.Handled = true; return; }
         ReleaseGesture();
         _editor?.CancelEditorInteraction();
         if (_editor is { } editor && (editor.DimensionLength.IsEditing || editor.DimensionLength.HasError
