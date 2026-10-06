@@ -12,19 +12,19 @@ public readonly record struct FixedSupportGeometry(bool IsMirrored)
     {
         get
         {
-            double spacing = (2 * SchematicMetrics.SupportWallHalfHeight - SchematicMetrics.FixedHatchWidth)
+            double spacing = (2 * SchematicMetrics.SupportWallHalfHeight - SchematicMetrics.SupportHatchSize)
                 / (SchematicMetrics.FixedHatchCount - 1);
-            double endX = IsMirrored ? SchematicMetrics.FixedHatchWidth : -SchematicMetrics.FixedHatchWidth;
+            double endX = IsMirrored ? SchematicMetrics.SupportHatchSize : -SchematicMetrics.SupportHatchSize;
             for (int i = 0; i < SchematicMetrics.FixedHatchCount; i++)
             {
                 double y = -SchematicMetrics.SupportWallHalfHeight + i * spacing;
-                yield return (0, y, endX, y + SchematicMetrics.FixedHatchWidth);
+                yield return (0, y, endX, y + SchematicMetrics.SupportHatchSize);
             }
         }
     }
 
     private static double HatchExtent => Math.Max(SchematicMetrics.FixedWallStrokeWidth / 2,
-        SchematicMetrics.FixedHatchWidth + SchematicMetrics.SymbolStrokeWidth / 2);
+        SchematicMetrics.SupportHatchSize + SchematicMetrics.SymbolStrokeWidth / 2);
     public double LeftExtent => IsMirrored ? SchematicMetrics.FixedWallStrokeWidth / 2 : HatchExtent;
     public double RightExtent => IsMirrored ? HatchExtent : SchematicMetrics.FixedWallStrokeWidth / 2;
 
@@ -32,7 +32,7 @@ public readonly record struct FixedSupportGeometry(bool IsMirrored)
     public bool Contains(double dx, double dy, double padding)
     {
         double localX = IsMirrored ? -dx : dx;
-        return localX >= -SchematicMetrics.SupportHalfWidth - padding && localX <= padding
+        return localX >= -SchematicMetrics.FixedHitHalfWidth - padding && localX <= padding
             && Math.Abs(dy) <= SchematicMetrics.SupportWallHalfHeight + padding;
     }
 }

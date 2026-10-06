@@ -73,7 +73,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
                 Rect candidate;
                 do
                 {
-                    double y = support ? frame.Viewport.BeamY + SchematicMetrics.SupportGroundY + 8 + lane * line
+                    double y = support ? frame.Viewport.BeamY + SchematicMetrics.SupportLabelTopOffset + lane * line
                         : frame.Viewport.BeamY - SchematicMetrics.ForceTopOffset - 8 - label.AutoBounds.Height - lane * line;
                     candidate = new(label.AutoBounds.X, y, label.AutoBounds.Width, label.AutoBounds.Height);
                     lane++;
@@ -96,13 +96,13 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
                 int lane = ends.FindIndex(end => left - end >= SchematicMetrics.EntityLabelPadding);
                 if (lane < 0) { lane = ends.Count; ends.Add(left + item.Size.Width); }
                 else ends[lane] = left + item.Size.Width;
-                double y = support ? frame.Viewport.BeamY + SchematicMetrics.SupportGroundY + 8 + lane * line
+                double y = support ? frame.Viewport.BeamY + SchematicMetrics.SupportLabelTopOffset + lane * line
                     : frame.Viewport.BeamY - SchematicMetrics.ForceTopOffset - 8 - item.Size.Height - lane * line;
                 var bounds = new Rect(left, y, item.Size.Width, item.Size.Height);
                 annotations.Add(new(item.Value.Id, support, item.Value.Text, bounds, bounds, item.Value.IsPreview, item.Value.IsInvalid));
             }
             // Always reserve a preview row. Hover/leave cannot change the beam height.
-            return (support ? SchematicMetrics.SupportGroundY : SchematicMetrics.ForceTopOffset) + 16 +
+            return (support ? SchematicMetrics.SupportLabelTopOffset + SchematicMetrics.EntityLabelPadding : SchematicMetrics.ForceTopOffset + 16) +
                 (ends.Count + (support ? 0 : 1)) * line;
         }
         double Left(double x, double width) => Math.Clamp(x - width / 2, 8, Math.Max(8, frame.Viewport.Width - width - 8));

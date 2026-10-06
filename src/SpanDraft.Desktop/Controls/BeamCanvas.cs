@@ -83,16 +83,15 @@ public sealed class BeamCanvas : Control
                 Line(hatch.StartX, hatch.StartY, hatch.EndX, hatch.EndY);
             return;
         }
-        Line(0, 0, -14, SupportSymbol.TriangleHeight);
-        Line(-14, SupportSymbol.TriangleHeight, 14, SupportSymbol.TriangleHeight);
-        Line(14, SupportSymbol.TriangleHeight, 0, 0);
-        Line(-SupportSymbol.HalfWidth, SupportSymbol.GroundY, SupportSymbol.HalfWidth, SupportSymbol.GroundY);
-        if (type == SupportType.Roller)
-        {
-            context.DrawEllipse(null, pen, new Point(x - 8, y + 26), 3, 3);
-            context.DrawEllipse(null, pen, new Point(x + 8, y + 26), 3, 3);
-        }
-        else
-            for (int offset = -14; offset <= 14; offset += 7) Line(offset, 32, offset + 6, 24);
+        var hinged = new HingedSupportGeometry(type == SupportType.Roller);
+        foreach (var line in hinged.TriangleLines)
+            Line(line.StartX, line.StartY, line.EndX, line.EndY);
+        var ground = hinged.Ground;
+        var groundPen = new Pen(brush, SchematicMetrics.SupportGroundStrokeWidth, lineCap: PenLineCap.Round);
+        context.DrawLine(groundPen, new(x + ground.StartX, y + ground.StartY), new(x + ground.EndX, y + ground.EndY));
+        foreach (var hatch in hinged.Hatches)
+            Line(hatch.StartX, hatch.StartY, hatch.EndX, hatch.EndY);
+        var joint = hinged.Joint;
+        context.DrawEllipse(Brushes.White, pen, new Point(x + joint.X, y + joint.Y), joint.Radius, joint.Radius);
     }
 }

@@ -18,13 +18,13 @@ public static class StationRequirementBuilder
                 requirements.Add(new(support.Position.Meters, geometry.LeftExtent, geometry.RightExtent));
                 continue;
             }
-            var extents = support.Type switch
+            var hinged = support.Type switch
             {
-                SupportType.Pinned => (SchematicMetrics.SupportHalfWidth, SchematicMetrics.PinnedHatchRightExtent),
-                SupportType.Roller => (SchematicMetrics.SupportHalfWidth, SchematicMetrics.SupportHalfWidth),
+                SupportType.Pinned => new HingedSupportGeometry(false),
+                SupportType.Roller => new HingedSupportGeometry(true),
                 _ => throw new ArgumentOutOfRangeException(nameof(document))
             };
-            requirements.Add(new(support.Position.Meters, extents.Item1 + stroke, extents.Item2 + stroke));
+            requirements.Add(new(support.Position.Meters, hinged.LeftExtent, hinged.RightExtent));
         }
         foreach (var load in document.Loads)
         {

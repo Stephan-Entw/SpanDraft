@@ -934,7 +934,32 @@ Nullmomente die Vereinigung der vorhandenen Richtungen nicht.
 
 ## 16. Lagerdarstellung
 
-Fest- und Loslager behalten ihre vorhandenen technischen Support-Glyphs.
+Fest- und Loslager teilen dieselbe Bodenlinie: 40 DIP lang, 2 DIP stark und
+20 DIP unter der Balkenachse. Vier gleichmäßig verteilte Schraffurstriche mit
+jeweils 9 × 9 DIP bei 45° verlaufen von dieser Linie nach links unten. Die
+Schraffurgröße wird mit der Einspannung geteilt; ihre Strichanzahlen bleiben getrennt.
+
+Beide Lager besitzen einen weiß gefüllten Gelenkkreis mit Radius 3 DIP direkt
+auf der Balkenachse. Er wird zuletzt gezeichnet, damit die Balkenlinie und die
+Dreiecksspitze seine weiße Fläche nicht durchziehen. Kreis, Dreiecksseiten,
+Loslager-Basislinie und Schraffur verwenden 1,5 DIP Strichstärke.
+
+Beim Festlager liegen die Dreiecksbasispunkte bei x = ±14 DIP und y = 20 DIP;
+die Bodenlinie schließt das Dreieck. Beim Loslager ist das Dreieck auf 80 %
+verkleinert: Basispunkte bei x = ±11,2 DIP und y = 16 DIP. Seine separate,
+36 DIP lange Basislinie liegt ebenfalls bei y = 16 DIP, mit 4 DIP Abstand zur
+Bodenlinie. Es werden keine zusätzlichen unteren Rollenkreise gezeichnet.
+
+Eine gemeinsame, reine Desktop-Geometrie bestimmt Zeichnung, Symbolausdehnungen
+und Hitbereiche für committed Lager sowie Placement-, Bearbeitungs- und
+Drag-Vorschauen. Beide Lager reservieren inklusive Strichstärken 21 DIP je Seite.
+Die sichtbaren vertikalen Grenzen liegen bei −3,75 und +29,75 DIP; mit dem
+bestehenden Hit-Padding von 5 DIP gilt x = ±26 DIP und y = −8,75 bis +34,75 DIP.
+Diese Lager werden an den Balkenenden nicht gespiegelt.
+
+Die erste automatische Beschriftungszeile beginnt unverändert 40 DIP unter
+der Balkenachse. Dieser Annotation-Anker ist unabhängig von der Bodenlinie;
+manuelle AnnotationOffsets und die Pane-Höhenreservierung bleiben erhalten.
 
 Die Einspannung besitzt eine 48 DIP hohe, 2 DIP breite Vertikale und fünf
 Schraffurstriche mit jeweils 9 × 9 DIP bei 45° und der gemeinsamen Symbolstrichstärke

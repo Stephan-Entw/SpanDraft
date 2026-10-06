@@ -241,8 +241,8 @@ public sealed class DesktopStationLayoutTests
         var document = new EditorDocument(Length.FromMeters(1), ProjectTemplates.Material, ProjectTemplates.Section, [support], loads);
         var requirements = StationRequirementBuilder.FromDocument(document);
         Assert.Equal(3, requirements.Count);
-        Assert.Equal(19.75, requirements[1].LeftExtent);
-        Assert.Equal(20.75, requirements[1].RightExtent);
+        Assert.Equal(21, requirements[1].LeftExtent);
+        Assert.Equal(21, requirements[1].RightExtent);
         Assert.Equal(requirements, StationRequirementBuilder.FromDocument(document.WithSupports([support with { Name = "An arbitrarily long name" }])));
         Assert.Equal(new StationRequirement(0, 0, 0), requirements[0]);
         Assert.Equal(new StationRequirement(1, 0, 0), requirements[^1]);

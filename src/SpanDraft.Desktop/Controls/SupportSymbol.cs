@@ -7,18 +7,17 @@ namespace SpanDraft.Desktop.Controls;
 /// <summary>Shared fixed-DIP drawing extents and visual hit testing.</summary>
 public static class SupportSymbol
 {
-    public const double HalfWidth = SchematicMetrics.SupportHalfWidth;
-    public const double TriangleHeight = SchematicMetrics.SupportTriangleHeight;
-    public const double GroundY = SchematicMetrics.SupportGroundY;
-    public const double WallHalfHeight = SchematicMetrics.SupportWallHalfHeight;
     public const double HitPadding = 5;
 
     public static bool Contains(SupportPreview preview, StationTransform transform, double beamY, double x, double y) =>
         Contains(preview.Type, preview.Position.Meters, transform, x - transform.PhysicalToScreen(preview.Position.Meters), y - beamY);
 
-    private static bool Contains(SupportType type, double positionMeters, StationTransform transform, double dx, double dy) => type == SupportType.Fixed
-        ? FixedSupportGeometry.AtPosition(positionMeters, transform.Stations[^1].PhysicalX).Contains(dx, dy, HitPadding)
-        : Math.Abs(dx) <= HalfWidth + HitPadding && dy >= -HitPadding && dy <= GroundY + HitPadding;
+    private static bool Contains(SupportType type, double positionMeters, StationTransform transform, double dx, double dy) => type switch
+    {
+        SupportType.Fixed => FixedSupportGeometry.AtPosition(positionMeters, transform.Stations[^1].PhysicalX).Contains(dx, dy, HitPadding),
+        SupportType.Pinned or SupportType.Roller => new HingedSupportGeometry(type == SupportType.Roller).Contains(dx, dy, HitPadding),
+        _ => false
+    };
 
     public static Guid? HitTest(IReadOnlyList<EditorSupport> supports, StationTransform transform, double beamY, double x, double y)
     {
