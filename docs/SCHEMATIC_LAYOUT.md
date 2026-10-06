@@ -742,7 +742,12 @@ Alle Punktkraftsymbole befinden sich im Lastbereich oberhalb des Balkens.
 
 Keine Punktkraft wird zur Kollisionsbehandlung unter den Balken verschoben.
 
-Die Kraft greift direkt an ihrer Station an. Die bisherige gestrichelte Verbindung zwischen Symbol und Balken entfällt.
+Die Kraft greift an ihrer Station an. Das Symbol bezieht sich vertikal auf den oberen
+Balkenrand und bleibt mit seiner gezeichneten Kontur 1 DIP darüber. Bei einer negativen
+Kraft ist dies die Pfeilspitze, bei einer positiven Kraft das untere Schaftende.
+Die Balkendicke ist zentral in `SchematicMetrics.BeamStrokeWidth` definiert (aktuell 3 DIP);
+Pfeilposition, Hitbereich und Beschriftungsbereich berücksichtigen sie automatisch.
+Die bisherige gestrichelte Verbindung zwischen Symbol und Balken entfällt.
 
 ### 13.2 Vorzeichen
 
@@ -758,7 +763,8 @@ Positive Kraft:
 ```text
       ↑
       │
-──────┼────────
+
+───────────────
 ```
 
 Negative Kraft:
@@ -766,10 +772,13 @@ Negative Kraft:
 ```text
       │
       ↓
-──────┼────────
+
+───────────────
 ```
 
 Die Pfeillänge ist eine konstante Darstellung und nicht proportional zum Kraftbetrag.
+Kraftpfeilspitzen sind gefüllte Dreiecke mit 1,5-DIP-Kontur und derselben Größe
+wie die Momentpfeilspitzen.
 
 ### 13.3 Label
 
@@ -814,7 +823,8 @@ F2 = 500 N
 
       ↑
       │
-──────┼────────
+
+───────────────
 ```
 
 Es wird ein gemeinsamer Up-Glyph gezeichnet.
@@ -834,7 +844,8 @@ F2 = -500 N
       ↑
       │
       ↓
-──────┼────────
+
+───────────────
 ```
 
 Es entsteht ein gemeinsamer Doppelpfeil.
@@ -855,7 +866,15 @@ Das Moment wird nicht über eine Hilfslinie oberhalb des Balkens „aufgehängt�
 
 ### 15.2 Grundsymbol
 
-Das bestehende Momentzeichen bleibt ein technischer 3/4-Kreis.
+Das Momentzeichen ist ein technischer Kreisbogen über 280°.
+
+Winkelkonvention: 12 Uhr = 0°, 3 Uhr = 90°, 6 Uhr = 180°, 9 Uhr = 270°.
+Die positive Grundform beginnt bei 110° und verläuft gegen den Uhrzeigersinn über 280° bis 190°.
+Das negative Moment ist die vollständige Spiegelung dieser Grundform an der senkrechten
+Achse durch das Momentzentrum (`x → −x`). Sein Bogen verläuft im Uhrzeigersinn von 250° bis 170°.
+Die gefüllte Pfeilspitze mit 1,5-DIP-Kontur wird ebenfalls gespiegelt; ihre Neigung zur
+Bogentangente beträgt bei beiden Vorzeichen 16°. Kraft- und Momentpfeilspitzen verwenden
+dieselbe Größe und denselben Öffnungswinkel.
 
 Vorzeichenkonvention gemäß Core:
 
@@ -868,10 +887,10 @@ Darstellung:
 
 ```text
 negativ / clockwise:
-Pfeilspitze bei 3 Uhr
+Pfeilspitze bei 170°
 
 positiv / counterclockwise:
-Pfeilspitze bei 6 Uhr
+Pfeilspitze bei 190°
 ```
 
 Der Bogen darf den Balken kreuzen.
@@ -880,16 +899,19 @@ Der Bogen darf den Balken kreuzen.
 
 Nur positive Momente:
 
-- gemeinsamer 3/4-Kreis mit Pfeilspitze bei 6 Uhr.
+- gemeinsamer 280°-Kreisbogen mit Pfeilspitze bei 190°.
 
 Nur negative Momente:
 
-- gemeinsamer 3/4-Kreis mit Pfeilspitze bei 3 Uhr.
+- gemeinsamer gespiegelter 280°-Kreisbogen mit Pfeilspitze bei 170°.
 
 Beide Drehrichtungen vorhanden:
 
-- ein gemeinsamer 3/4-Kreis,
-- Pfeilspitzen gleichzeitig bei 3 Uhr und 6 Uhr.
+- Vereinigung beider Bögen zu einem einzigen 340°-Kreisbogen,
+- Pfeilspitzen gleichzeitig bei 170° und 190°,
+- überlappende Bogenstücke werden nur einmal gezeichnet.
+
+Einzelrichtungen verwenden 48 Liniensegmente; der gemeinsame 340°-Bogen verwendet 59.
 
 Die einzelnen Momente bleiben separate Entities und separate Labels.
 
@@ -904,7 +926,9 @@ Positive Werte ohne `+`.
 
 ### 15.5 Nullmoment
 
-Ein Nullmoment behält Station und Label, erzeugt aber keinen irreführenden Richtungs-Pfeilkopf.
+Ein Nullmoment behält Station, Label und den neutralen 280°-Bogen der positiven Grundform,
+erzeugt aber keinen irreführenden Richtungs-Pfeilkopf. An einer gemeinsamen Station beeinflussen
+Nullmomente die Vereinigung der vorhandenen Richtungen nicht.
 
 ---
 
@@ -1262,9 +1286,12 @@ Abdecken:
 - positive + negative an gleicher Station → Double,
 - mehrere gleichgerichtete Forces → gemeinsamer Glyph,
 - Nullkraft beeinflusst Richtungsglyph nicht,
-- positives Moment → ArrowHead 6 Uhr,
-- negatives Moment → ArrowHead 3 Uhr,
-- beide Momentvorzeichen → beide ArrowHeads,
+- Kraftkontur hält 1 DIP Abstand zum oberen Balkenrand; Schaftlänge bleibt konstant,
+- Kraft-Hitbereiche und automatische Labels berücksichtigen den Randabstand,
+- Kraft- und Momentpfeilspitzen bleiben gefüllt und behalten die gemeinsame Strichstärke,
+- positives Moment → ArrowHead 190°,
+- negatives Moment → gespiegelter Bogen und ArrowHead 170°,
+- beide Momentvorzeichen → gemeinsamer 340°-Bogen und beide ArrowHeads,
 - Nullmoment beeinflusst Richtungsglyph nicht.
 
 Die Tests sollen nach Möglichkeit Rendering-State/Geometry prüfen, nicht Pixel-Screenshots.

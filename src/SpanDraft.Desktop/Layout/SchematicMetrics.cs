@@ -3,6 +3,7 @@ namespace SpanDraft.Desktop.Layout;
 /// <summary>Technical DIP geometry shared by glyphs and neutral layout requirements.</summary>
 public static class SchematicMetrics
 {
+    public const double BeamStrokeWidth = 3;
     public const double SymbolStrokeWidth = 1.5;
     public const double ForceArrowHalfWidth = 4;
     public const double ArrowHeadLength = 8;
@@ -13,10 +14,14 @@ public static class SchematicMetrics
     public const double SupportWallHalfHeight = 24;
     public const double FixedHatchWidth = 12;
     public const double PinnedHatchRightExtent = 20;
-    public const double PointLoadHalfSize = 18;
+    public const double PointLoadHalfSize = MomentRadius + MomentArrowHalfWidth;
     public const double MomentRadius = 15;
-    public const double MomentArrowHalfWidth = 3;
+    public const double MomentArrowHalfWidth = ForceArrowHalfWidth;
     public const double ForceHeight = 36;
+    public const double ForceBeamGap = 1;
+    // Include both stroke radii so the painted force symbol clears the beam.
+    public const double ForceBeamOffset = (BeamStrokeWidth + SymbolStrokeWidth) / 2 + ForceBeamGap;
+    public const double ForceTopOffset = ForceBeamOffset + ForceHeight;
     public const double EntityLabelPadding = 8;
     public const double MinimumBeamPaneHeight = 220;
     public const double LengthInputWidth = 88;

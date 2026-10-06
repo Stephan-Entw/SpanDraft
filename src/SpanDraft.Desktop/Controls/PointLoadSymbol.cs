@@ -13,7 +13,7 @@ public sealed record PointLoadGlyph(PointLoadKind Kind, double X, double Y, IRea
     public bool IsPreview => Entities.Any(e => e.IsPreview);
     public Rect Bounds => Kind == PointLoadKind.Force
         ? new(X - PointLoadSymbol.HitPadding - SchematicMetrics.ForceArrowHalfWidth,
-            Y - SchematicMetrics.ForceHeight - PointLoadSymbol.HitPadding,
+            Y - SchematicMetrics.ForceTopOffset - PointLoadSymbol.HitPadding,
             2 * (PointLoadSymbol.HitPadding + SchematicMetrics.ForceArrowHalfWidth),
             SchematicMetrics.ForceHeight + 2 * PointLoadSymbol.HitPadding)
         : new(X - PointLoadSymbol.HalfSize - PointLoadSymbol.HitPadding,
@@ -27,6 +27,13 @@ public static class PointLoadSymbol
 {
     public const double HalfSize = SchematicMetrics.PointLoadHalfSize;
     public const double HitPadding = 5;
+    // Clock angles in degrees: 12 o'clock = 0, increasing clockwise.
+    private const double MomentStartDegrees = 110;
+    private const double MomentEndDegrees = 190;
+    private const double MomentArrowTiltDegrees = 16;
+    private const double MomentArcSweepDegrees = 360 - (MomentEndDegrees - MomentStartDegrees);
+    private const int MomentArcSegments = 48;
+    private const int CombinedMomentArcSegments = 59;
 
     public static IReadOnlyList<PointLoadVisual> Layout(IReadOnlyList<EditorPointLoad> loads, BeamLayoutFrame frame,
         PointLoadPreview? preview = null, Guid? hiddenId = null, string? previewName = null)
@@ -66,9 +73,50 @@ public static class PointLoadSymbol
     public static string Label(PointLoadPreview preview, string name) => name.Trim() + " = " +
         UiNumbers.Format(preview.Value) + (preview.Kind == PointLoadKind.Force ? " N" : " Nm");
 
-    public static Point ForceTip(double value) => new(0, value > 0 ? -SchematicMetrics.ForceHeight : 0);
-    public static double MomentSweep(double value) => Math.Sign(value) * Math.PI * 1.5;
-    public static Point MomentTip(bool positive) => positive ? new(0, SchematicMetrics.MomentRadius) : new(SchematicMetrics.MomentRadius, 0);
+    public static Point ForceTip(double value) => new(0,
+        value > 0 ? -SchematicMetrics.ForceTopOffset : -SchematicMetrics.ForceBeamOffset);
+    public static double MomentSweep(double value) => Math.Sign(value) * Radians(MomentArcSweepDegrees);
+    public static Point MomentTip(bool positive) => MirrorMomentPoint(MomentPoint(MomentEndDegrees), !positive);
+
+    private static double Radians(double degrees) => degrees * Math.PI / 180;
+    private static Point MirrorMomentPoint(Point point, bool mirror) => mirror ? new(-point.X, point.Y) : point;
+    private static Point MomentPoint(double degrees)
+    {
+        double angle = Radians(degrees);
+        return new(SchematicMetrics.MomentRadius * Math.Sin(angle), -SchematicMetrics.MomentRadius * Math.Cos(angle));
+    }
+
+    private static Vector MomentArrowDirection(bool positive)
+    {
+        double angle = Radians(MomentEndDegrees + MomentArrowTiltDegrees);
+        var direction = MirrorMomentPoint(new(-Math.Cos(angle), -Math.Sin(angle)), !positive);
+        return new(direction.X, direction.Y);
+    }
+
+    private static StreamGeometry CreateMomentArc(Point origin, bool positive, bool negative)
+    {
+        bool combined = positive && negative;
+        bool mirror = negative && !positive;
+        // The union runs from the mirrored arrow tip to the positive arrow tip,
+        // counterclockwise over 340 degrees, without drawing overlaps twice.
+        double start = combined ? 360 - MomentEndDegrees : MomentStartDegrees;
+        double sweep = combined ? 360 - (MomentEndDegrees - start) : MomentArcSweepDegrees;
+        int segments = combined ? CombinedMomentArcSegments : MomentArcSegments;
+        Point At(double degrees)
+        {
+            var point = MirrorMomentPoint(MomentPoint(degrees), mirror);
+            return new(origin.X + point.X, origin.Y + point.Y);
+        }
+        var geometry = new StreamGeometry();
+        using (var path = geometry.Open())
+        {
+            path.BeginFigure(At(start), false);
+            for (int i = 1; i <= segments; i++)
+                path.LineTo(At(start - sweep * i / segments));
+            path.EndFigure(false);
+        }
+        return geometry;
+    }
 
     public static void Draw(DrawingContext context, PointLoadGlyph glyph, IBrush? brush)
     {
@@ -78,33 +126,27 @@ public static class PointLoadSymbol
         void Arrow(Point tip, Vector direction, double halfWidth)
         {
             var normal = new Vector(-direction.Y, direction.X);
-            Line(tip - direction * SchematicMetrics.ArrowHeadLength + normal * halfWidth, tip);
-            Line(tip - direction * SchematicMetrics.ArrowHeadLength - normal * halfWidth, tip);
+            var geometry = new StreamGeometry();
+            using (var path = geometry.Open())
+            {
+                path.BeginFigure(At(tip), true);
+                path.LineTo(At(tip - direction * SchematicMetrics.ArrowHeadLength + normal * halfWidth));
+                path.LineTo(At(tip - direction * SchematicMetrics.ArrowHeadLength - normal * halfWidth));
+                path.EndFigure(true);
+            }
+            context.DrawGeometry(brush, pen, geometry);
         }
         if (glyph.Kind == PointLoadKind.Force)
         {
-            Line(new(0, -SchematicMetrics.ForceHeight), new(0, 0));
+            Line(ForceTip(1), ForceTip(-1));
             if (glyph.Positive) Arrow(ForceTip(1), new(0, -1), SchematicMetrics.ForceArrowHalfWidth);
             if (glyph.Negative) Arrow(ForceTip(-1), new(0, 1), SchematicMetrics.ForceArrowHalfWidth);
         }
         else
         {
-            // One upper/left 3/4-circle from 3 o'clock to 6 o'clock. Both signs
-            // use this same arc, with opposite terminal tangents.
-            var geometry = new StreamGeometry();
-            using (var path = geometry.Open())
-            {
-                path.BeginFigure(At(new(SchematicMetrics.MomentRadius, 0)), false);
-                for (int i = 1; i <= 48; i++)
-                {
-                    double angle = 1.5 * Math.PI * i / 48;
-                    path.LineTo(At(new(SchematicMetrics.MomentRadius * Math.Cos(angle), -SchematicMetrics.MomentRadius * Math.Sin(angle))));
-                }
-                path.EndFigure(false);
-            }
-            context.DrawGeometry(null, pen, geometry);
-            if (glyph.Positive) Arrow(MomentTip(true), new(1, 0), SchematicMetrics.MomentArrowHalfWidth);
-            if (glyph.Negative) Arrow(MomentTip(false), new(0, 1), SchematicMetrics.MomentArrowHalfWidth);
+            context.DrawGeometry(null, pen, CreateMomentArc(new(glyph.X, glyph.Y), glyph.Positive, glyph.Negative));
+            if (glyph.Positive) Arrow(MomentTip(true), MomentArrowDirection(true), SchematicMetrics.MomentArrowHalfWidth);
+            if (glyph.Negative) Arrow(MomentTip(false), MomentArrowDirection(false), SchematicMetrics.MomentArrowHalfWidth);
         }
     }
 }

@@ -425,12 +425,19 @@ Geste verworfen. Confirm/Delete sind während Drag gesperrt. Escape und unerwart
 Capture-Verlust verwerfen die gesamte unbestätigte Session.
 
 PointLoadSymbol definiert gemeinsame Darstellung und Hit-Zonen je exakter Station
-und Load-Art. Kräfte greifen direkt am Balken an; der konstante Schaft liegt
-oberhalb von BeamY. Positive Kräfte zeigen nach oben, negative nach unten.
+und Load-Art. Kräfte liegen an ihrer Station mit 1 DIP Abstand zwischen gezeichneter
+Kontur und oberem Balkenrand; der konstante Schaft liegt oberhalb von BeamY.
+Der Abstand berücksichtigt die zentral definierte Balkendicke und die Symbolkontur.
+Positive Kräfte zeigen nach oben, negative nach unten.
 Gleichgerichtete Kräfte teilen einen Glyph; beide Vorzeichen ergeben einen
 Doppelpfeil. Zero zeigt keine Richtungsspitze. Momente sind exakt auf BeamY
-zentriert: ein 3/4-Kreis mit positiver Spitze bei 6 Uhr und negativer bei 3 Uhr,
-bei beiden Vorzeichen mit beiden Spitzen. Zero hat keine Richtungsspitze.
+zentriert: Die positive Grundform verläuft von 110° gegen den Uhrzeigersinn über
+280° bis zur Spitze bei 190°. Die negative Form ist an der senkrechten Achse
+gespiegelt und verläuft von 250° im Uhrzeigersinn bis zur Spitze bei 170°.
+Dabei gilt 12 Uhr = 0°, im Uhrzeigersinn zunehmend. Beide Vorzeichen ergeben
+einen gemeinsamen 340°-Bogen mit beiden Spitzen; überlappende Bogenstücke werden
+nur einmal gezeichnet. Zero hat einen neutralen 280°-Bogen ohne Richtungsspitze.
+Kraft- und Momentpfeilspitzen sind gleich große gefüllte Dreiecke mit 1,5-DIP-Kontur.
 Es gibt keine Leader-Lines oder per-load Symbol-Lanes. Entities, Werte und Labels
 bleiben getrennt; es wird keine Resultierende gebildet.
 
@@ -777,7 +784,8 @@ Die Projektinfo ist eine Textzeile mit BodyStrong und Ghost-Aktion „Ändern“
 Der Canvas verwendet CanvasBackground ohne Cardrahmen. BeamCanvas erhält
 BeamBrush, GhostBrush, AccentBrush und ErrorBrush als render-invalidierende
 StyledProperties; die separate CoordinateAxisPane verwendet AxisStroke. Der Balken
-ist 5 DIPs stark, die Achse 1 DIP. Die reversible x-Abbildung übernimmt allein
+ist aktuell 3 DIPs stark (`SchematicMetrics.BeamStrokeWidth`), die Achse 1 DIP.
+Die reversible x-Abbildung übernimmt allein
 StationTransform. Die einzige Längenbearbeitung sitzt am rechten Axis-Endwert.
 Anzeige und Inline-Eingabe verwenden die gepackten Endpoint-Bounds;
 Hover, Tastaturfokus und Fehler sind sichtbar. Enter, Escape, Culture-Parsing,

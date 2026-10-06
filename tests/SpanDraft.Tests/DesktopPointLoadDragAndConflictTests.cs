@@ -316,10 +316,10 @@ public sealed class DesktopPointLoadDragAndConflictTests
         Assert.Equal(second.Id, PointLoadSymbol.HitTest(visuals, 320, 200));
         Assert.Null(PointLoadSymbol.HitTest(visuals, 310, frame.Viewport.BeamY + 30));
         Assert.True(PointLoadSymbol.ForceTip(100).Y < 0);
-        Assert.Equal(0, PointLoadSymbol.ForceTip(-100).Y);
+        Assert.True(PointLoadSymbol.ForceTip(-100).Y < 0);
         Assert.Equal(PointLoadSymbol.ForceTip(-1), PointLoadSymbol.ForceTip(-1000000));
-        Assert.True(PointLoadSymbol.MomentSweep(100) > 0);
-        Assert.True(PointLoadSymbol.MomentSweep(-100) < 0);
+        Assert.Equal(280 * Math.PI / 180, PointLoadSymbol.MomentSweep(100), 12);
+        Assert.Equal(-280 * Math.PI / 180, PointLoadSymbol.MomentSweep(-100), 12);
         Assert.Equal(0, PointLoadSymbol.MomentSweep(0));
         Assert.Equal(PointLoadSymbol.MomentSweep(1), PointLoadSymbol.MomentSweep(1000000));
     }

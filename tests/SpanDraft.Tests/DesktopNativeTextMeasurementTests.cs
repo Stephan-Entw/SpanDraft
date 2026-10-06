@@ -10,16 +10,20 @@ using Xunit;
 namespace SpanDraft.Tests;
 
 [CollectionDefinition("Schematic text", DisableParallelization = true)]
-public sealed class SchematicTextCollection;
+public sealed class SchematicTextCollection : ICollectionFixture<SchematicRenderingFixture>;
+
+public sealed class SchematicRenderingFixture
+{
+    public SchematicRenderingFixture() => AppBuilder.Configure<Application>()
+        // Initialize runtime services and the real Skia text/geometry backend
+        // shared by measurement and recorded drawing tests, without windows.
+        .UseWindowingSubsystem(() => { }, "Schematic rendering tests")
+        .UseStandardRuntimePlatformSubsystem().UseSkia().UseHarfBuzz().SetupWithoutStarting();
+}
 
 [Collection("Schematic text")]
 public sealed class DesktopNativeTextMeasurementTests
 {
-    static DesktopNativeTextMeasurementTests() => AppBuilder.Configure<Application>()
-        // No native windows or synthetic font metrics: initialize only runtime
-        // services and the already referenced real Skia text backend.
-        .UseWindowingSubsystem(() => { }, "Text measurement only")
-        .UseStandardRuntimePlatformSubsystem().UseSkia().UseHarfBuzz().SetupWithoutStarting();
 
     [Theory]
     [InlineData("de-DE")]

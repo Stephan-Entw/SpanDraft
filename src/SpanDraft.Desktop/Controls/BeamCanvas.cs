@@ -41,7 +41,7 @@ public sealed class BeamCanvas : Control
         var frame = scene.Frame;
         double y = frame.Viewport.BeamY;
         var length = BeamConflictGeometry.Create(frame.Layout.Transform, ConstraintConflict);
-        context.DrawLine(new Pen(BeamBrush, 5), new(frame.Layout.Stations[0].ScreenX, y), new(length.EndX, y));
+        context.DrawLine(new Pen(BeamBrush, SchematicMetrics.BeamStrokeWidth), new(frame.Layout.Stations[0].ScreenX, y), new(length.EndX, y));
         if (length.HasGhost)
         {
             using (context.PushOpacity(0.5))

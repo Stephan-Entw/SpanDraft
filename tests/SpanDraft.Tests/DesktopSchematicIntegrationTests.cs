@@ -226,7 +226,15 @@ public sealed class DesktopSchematicIntegrationTests
         Assert.Equal(negative, glyph.Negative); Assert.Equal(positive, glyph.Positive);
         Assert.Equal(scene.Frame.Viewport.BeamY, glyph.Y);
         Assert.True(glyph.Bounds.Top < glyph.Y);
-        Assert.Equal("F7 = " + UiNumbers.Format(value) + " N", Assert.Single(scene.Annotations).Text);
+        var top = new Point(glyph.X, glyph.Y + PointLoadSymbol.ForceTip(1).Y);
+        var bottom = new Point(glyph.X, glyph.Y + PointLoadSymbol.ForceTip(-1).Y);
+        Assert.True(glyph.Bounds.Contains(top));
+        Assert.True(glyph.Bounds.Contains(bottom));
+        Assert.Equal(document.Loads[0].Id, PointLoadSymbol.HitTest(scene.Loads, top.X, top.Y));
+        Assert.Equal(document.Loads[0].Id, PointLoadSymbol.HitTest(scene.Loads, bottom.X, bottom.Y));
+        var label = Assert.Single(scene.Annotations);
+        Assert.True(label.Bounds.Bottom < top.Y - SchematicMetrics.SymbolStrokeWidth / 2);
+        Assert.Equal("F7 = " + UiNumbers.Format(value) + " N", label.Text);
         Assert.Equal(document.Loads[0].Id, PointLoadSymbol.ResolveEntity(glyph));
         Assert.True(SchematicMetrics.ForceHeight > 0);
     }
@@ -255,7 +263,10 @@ public sealed class DesktopSchematicIntegrationTests
     [Theory]
     [InlineData(100, 0, false, true)]
     [InlineData(-100, 0, true, false)]
+    [InlineData(100, 200, false, true)]
+    [InlineData(-100, -200, true, false)]
     [InlineData(100, -100, true, true)]
+    [InlineData(0, -100, true, false)]
     [InlineData(0, 0, false, false)]
     public void MomentCenterAndTerminalArrowheadsFollowCoreSigns(double first, double second, bool negative, bool positive)
     {
@@ -264,10 +275,15 @@ public sealed class DesktopSchematicIntegrationTests
         var glyph = Assert.Single(scene.Glyphs);
         Assert.Equal(negative, glyph.Negative); Assert.Equal(positive, glyph.Positive);
         Assert.Equal(scene.Frame.Viewport.BeamY, glyph.Y);
-        Assert.Equal(new Point(0, SchematicMetrics.MomentRadius), PointLoadSymbol.MomentTip(true));
-        Assert.Equal(new Point(SchematicMetrics.MomentRadius, 0), PointLoadSymbol.MomentTip(false));
+        Assert.Equal(-2.6047226650, PointLoadSymbol.MomentTip(true).X, 10);
+        Assert.Equal(14.7721162952, PointLoadSymbol.MomentTip(true).Y, 10);
+        Assert.Equal(-PointLoadSymbol.MomentTip(true).X, PointLoadSymbol.MomentTip(false).X);
+        Assert.Equal(PointLoadSymbol.MomentTip(true).Y, PointLoadSymbol.MomentTip(false).Y);
         Assert.Equal("M1 = " + UiNumbers.Format(first) + " Nm", scene.Annotations.Single(a => a.Id == document.Loads[0].Id).Text);
         Assert.Equal(2, document.ToBeamModel().Loads.Count);
+        Assert.Equal(2, glyph.Entities.Count);
+        Assert.Equal(2, scene.Annotations.Count);
+        Assert.Null(PointLoadSymbol.ResolveEntity(glyph));
         Assert.True(SchematicMetrics.MomentRadius + SchematicMetrics.MomentArrowHalfWidth <= SchematicMetrics.PointLoadHalfSize);
     }
 

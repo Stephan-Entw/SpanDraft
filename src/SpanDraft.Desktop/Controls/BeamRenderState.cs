@@ -72,7 +72,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
                 do
                 {
                     double y = support ? frame.Viewport.BeamY + SchematicMetrics.SupportGroundY + 8 + lane * line
-                        : frame.Viewport.BeamY - SchematicMetrics.ForceHeight - 8 - label.AutoBounds.Height - lane * line;
+                        : frame.Viewport.BeamY - SchematicMetrics.ForceTopOffset - 8 - label.AutoBounds.Height - lane * line;
                     candidate = new(label.AutoBounds.X, y, label.AutoBounds.Width, label.AutoBounds.Height);
                     lane++;
                 }
@@ -95,12 +95,12 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
                 if (lane < 0) { lane = ends.Count; ends.Add(left + item.Size.Width); }
                 else ends[lane] = left + item.Size.Width;
                 double y = support ? frame.Viewport.BeamY + SchematicMetrics.SupportGroundY + 8 + lane * line
-                    : frame.Viewport.BeamY - SchematicMetrics.ForceHeight - 8 - item.Size.Height - lane * line;
+                    : frame.Viewport.BeamY - SchematicMetrics.ForceTopOffset - 8 - item.Size.Height - lane * line;
                 var bounds = new Rect(left, y, item.Size.Width, item.Size.Height);
                 annotations.Add(new(item.Value.Id, support, item.Value.Text, bounds, bounds, item.Value.IsPreview, item.Value.IsInvalid));
             }
             // Always reserve a preview row. Hover/leave cannot change the beam height.
-            return (support ? SchematicMetrics.SupportGroundY : SchematicMetrics.ForceHeight) + 16 +
+            return (support ? SchematicMetrics.SupportGroundY : SchematicMetrics.ForceTopOffset) + 16 +
                 (ends.Count + (support ? 0 : 1)) * line;
         }
         double Left(double x, double width) => Math.Clamp(x - width / 2, 8, Math.Max(8, frame.Viewport.Width - width - 8));
