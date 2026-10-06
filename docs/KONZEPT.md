@@ -1,7 +1,7 @@
 # SpanDraft – Konzept
 
 > Status: Core, unabhängig validierter Solver, Engineering, Analysis und Desktop mit Support-, Punktkraft- und Punktmoment-Interaktionen einschließlich Drag implementiert; nächster Editor-Meilenstein: Streckenlast
-> Stand: 04.10.2026
+> Stand: 06.10.2026
 > Dieses Dokument beschreibt den geplanten Scope, die technische Architektur und die Grundprinzipien von SpanDraft. Es ist bewusst als interne Entwicklungsgrundlage auf Deutsch gehalten und wird mit dem Projekt weiterentwickelt.
 
 ## 1. Projektidee
@@ -60,7 +60,7 @@ und Löschen. Punktkraft und Punktmoment sind mit denselben Interaktionen, signe
 Werten und eigener Vorschau implementiert; Streckenlast folgt. Die verbindliche Oberfläche steht in
 [UI.md](UI.md).
 
-Aktueller Regressionstand: 470 Produkttests, 195 Validation-Tests und 18
+Aktueller Regressionstand: 717 Produkttests, 195 Validation-Tests und 18
 Acceptance-Fälle bestanden. Lager- und Punktlastpositionen erfüllen zentral 0 ≤ x ≤ L.
 Bei einer blockierten Verkürzung erhält Enter die aktive Längeneingabe samt Fehler und Konfliktvorschau;
 abgelehnter Fokusverlust verwirft sie vollständig und restauriert die committed

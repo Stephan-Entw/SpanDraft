@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls">
+        xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+        xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Svg.Controls.Skia.Avalonia">
   <!-- One button template for all variants, including future ToggleButton tools.
        Focus is a separate overlay: borders never move the content. -->
   <Style Selector=":is(Button)">
@@ -76,6 +77,9 @@
   <Style Selector=":is(Button).toolbar, :is(Button).iconToolbar">
     <Setter Property="Height" Value="{DynamicResource ToolbarButton}" />
     <Setter Property="FontSize" Value="{DynamicResource ToolbarSize}" />
+  </Style>
+  <Style Selector=":is(Button).toolbar">
+    <Setter Property="Padding" Value="{DynamicResource ToolbarButtonPadding}" />
   </Style>
   <Style Selector=":is(Button).iconToolbar">
     <Setter Property="Width" Value="{DynamicResource ToolbarButton}" />
@@ -219,6 +223,15 @@
     <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusM}" />
     <Setter Property="Padding" Value="{DynamicResource Padding24}" />
+  </Style>
+  <Style Selector="svg|Svg.toolbarIcon">
+    <Setter Property="Width" Value="{DynamicResource IconSize}" />
+    <Setter Property="Height" Value="{DynamicResource IconSize}" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <Style Selector=":is(Button).toolbar:disabled svg|Svg.toolbarIcon">
+    <Setter Property="Opacity" Value="0.45" />
   </Style>
   <Style Selector="controls|EngineeringIcon">
     <Setter Property="Width" Value="{DynamicResource IconSize}" />

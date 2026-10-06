@@ -2,47 +2,50 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
              xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Svg.Controls.Skia.Avalonia"
              xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
              x:Class="SpanDraft.Desktop.Views.EditorView"
              x:DataType="vm:EditorViewModel" KeyDown="EditorKeyDown">
   <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <!-- The compositor needs full opacity handling on the SVGs' ancestor. -->
     <Border BorderThickness="{DynamicResource BottomBorder}" BorderBrush="{DynamicResource Border}"
-            Background="{DynamicResource Surface}" Padding="{DynamicResource ToolbarPadding}">
+            Background="{DynamicResource Surface}" Padding="{DynamicResource ToolbarPadding}"
+            RenderOptions.RequiresFullOpacityHandling="True">
       <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
         <ToggleButton Classes="toolbar" IsChecked="{Binding IsForceTool, Mode=OneWay}" Command="{Binding ForceToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PointForce}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <controls:EngineeringIcon Data="{StaticResource PointForce}" />
+            <svg:Svg Classes="toolbarIcon" Path="avares://SpanDraft.Desktop/Assets/Icons/Toolbar/point-load.svg" Stretch="Uniform" />
             <TextBlock Text="{x:Static resources:Strings.PointForce}" VerticalAlignment="Center" />
           </StackPanel>
         </ToggleButton>
         <ToggleButton Classes="toolbar" IsChecked="{Binding IsMomentTool, Mode=OneWay}" Command="{Binding MomentToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.Moment}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <controls:EngineeringIcon Data="{StaticResource PointMoment}" />
+            <svg:Svg Classes="toolbarIcon" Path="avares://SpanDraft.Desktop/Assets/Icons/Toolbar/point-moment.svg" Stretch="Uniform" />
             <TextBlock Text="{x:Static resources:Strings.Moment}" VerticalAlignment="Center" />
           </StackPanel>
         </ToggleButton>
         <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.DistributedLoad}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <controls:EngineeringIcon Data="{StaticResource DistributedLoad}" />
+            <svg:Svg Classes="toolbarIcon" Path="avares://SpanDraft.Desktop/Assets/Icons/Toolbar/distributed-load.svg" Stretch="Uniform" />
             <TextBlock Text="{x:Static resources:Strings.DistributedLoad}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
         <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
         <ToggleButton Classes="toolbar" IsChecked="{Binding IsFixedTool, Mode=OneWay}" Command="{Binding FixedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.FixedSupport}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <controls:EngineeringIcon Data="{StaticResource FixedSupport}" />
+            <svg:Svg Classes="toolbarIcon" Path="avares://SpanDraft.Desktop/Assets/Icons/Toolbar/fixed-support.svg" Stretch="Uniform" />
             <TextBlock Text="{x:Static resources:Strings.FixedSupport}" VerticalAlignment="Center" />
           </StackPanel>
         </ToggleButton>
         <ToggleButton Classes="toolbar" IsChecked="{Binding IsPinnedTool, Mode=OneWay}" Command="{Binding PinnedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PinnedSupport}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <controls:EngineeringIcon Data="{StaticResource PinnedSupport}" />
+            <svg:Svg Classes="toolbarIcon" Path="avares://SpanDraft.Desktop/Assets/Icons/Toolbar/pinned-support.svg" Stretch="Uniform" />
             <TextBlock Text="{x:Static resources:Strings.PinnedSupport}" VerticalAlignment="Center" />
           </StackPanel>
         </ToggleButton>
         <ToggleButton Classes="toolbar" IsChecked="{Binding IsRollerTool, Mode=OneWay}" Command="{Binding RollerToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.RollerSupport}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <controls:EngineeringIcon Data="{StaticResource RollerSupport}" />
+            <svg:Svg Classes="toolbarIcon" Path="avares://SpanDraft.Desktop/Assets/Icons/Toolbar/roller-support.svg" Stretch="Uniform" />
             <TextBlock Text="{x:Static resources:Strings.RollerSupport}" VerticalAlignment="Center" />
           </StackPanel>
         </ToggleButton>

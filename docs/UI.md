@@ -1,6 +1,6 @@
 # SpanDraft – verbindliche UI-Spezifikation
 
-Stand: 06.10.2026, Stage 3 – Annotation Interaction & Hardening. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
+Stand: 06.10.2026, Stage 3 – Annotation Interaction & Hardening und Toolbar-SVGs. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
 Support-, Punktkraft- und Punktmoment-Placement & Editing einschließlich Drag sind
 implementiert. Streckenlast bleibt der verbindliche nächste Editor-Schritt.
 
@@ -676,7 +676,10 @@ Editorprojekt ohne Lager keinen Success erzeugt.
 SpanDraft ist ein ruhiges, präzises, kompaktes Engineering-Desktopwerkzeug:
 Windows-first, hohe Informationsdichte und eine große technische Arbeitsfläche.
 Kein Dashboard, Ribbon, dekoratives Raster, Gradient oder Schatten. Light bleibt
-das einzige Theme; keine externe Schrift, UI-, Icon- oder MVVM-Bibliothek.
+das einzige Theme; keine externe Schrift, zusätzliche UI-Control- oder
+MVVM-Bibliothek. Die Toolbar nutzt vorhandene SVG-Assets mit
+`Svg.Controls.Skia.Avalonia` 12.0.0.13, passend zu Avalonia 12.1.3 und dem
+bestehenden SkiaSharp-3-Renderer.
 
 Vier Dateien unter `src/SpanDraft.Desktop/Styles/` bilden das gemeinsame System:
 
@@ -685,7 +688,11 @@ Vier Dateien unter `src/SpanDraft.Desktop/Styles/` bilden das gemeinsame System:
 - `Typography.axaml`: benannte Textklassen; die System-UI-Schrift wird geerbt.
 - `Controls.axaml`: gemeinsames Button-Template, Varianten, Input-/Menüstile,
   Selection Surfaces und Verbindung der Canvas-/Icon-Controls zu den Tokens.
-- `Icons.axaml`: ausschließlich zentrale skalierbare Vektorgeometrien.
+- `Icons.axaml`: zentrale skalierbare Vektorgeometrien für SectionProfile und Return.
+
+Die sechs Toolbar-SVGs liegen unter `Assets/Icons/Toolbar/` und sind als
+AvaloniaResource eingebettet. Ihre eigenen Farben bleiben unverändert; sie werden
+nicht in StreamGeometry oder C#-Zeichengeometrie umgewandelt.
 
 App.axaml bindet Ressourcen und Styles nach dem bestehenden FluentTheme ein.
 Statische Abstände verwenden StaticResource, semantische Brushes und
@@ -742,20 +749,33 @@ Borders: normal 1, Fokus/Fehler 2. Fokusrahmen verändern das Contentlayout nich
 | PrimaryAction | 38 |
 | ToolbarButton | 36 |
 
+`IconSize` beträgt 28 DIPs und steuert Breite und Höhe der Toolbar-SVGs sowie
+EngineeringIcon-Controls ohne lokale Größenüberschreibung.
+
 ### Buttons, Inputs und Zustände
 
 - `primary`: Accent-Fläche, heller Semibold-Text, 38 DIPs hoch.
 - `secondary`: weiße Fläche und dezente Kontur, 34 DIPs hoch.
 - `ghost`: sekundäre Aktion ohne dauerhafte Fläche, 30 DIPs hoch.
-- `toolbar`: flaches Icon plus Label, 36 DIPs hoch.
+- `toolbar`: flaches Icon plus Label, 36 DIPs hoch; `ToolbarButtonPadding`
+  ist links/oben/rechts/unten 2/4/8/4 DIPs. Zwischen Icon und Label liegen 8 DIPs.
 - `iconToolbar`: quadratische Variante gleicher Höhe, für spätere Nutzung.
 
 Alle Varianten besitzen Hover-, Pressed-, Focused- und Disabled-Zustände.
 Der gemeinsame Button-Fokusrahmen ersetzt den Standard-Fokusindikator;
 Primärbuttons erhalten einen inneren hellen Fokusrahmen. Es gibt keine
 Pressed-Skalierung. `.selected` und `ToggleButton:checked` zeigen aktive
-Lagerwerkzeuge im gemeinsamen Designsystem an.
-Disabled hat Vorrang vor Hover/Pressed/Selected; Icons erben die Textfarbe.
+Lager- und Punktlastwerkzeuge im gemeinsamen Designsystem an. Ausgewählte Labels
+verwenden AccentPressed; die SVG-Farben bleiben unabhängig vom Foreground.
+Disabled hat Vorrang vor Hover/Pressed/Selected. EngineeringIcon erbt die
+Textfarbe; die mehrfarbigen Toolbar-SVGs werden stattdessen vollständig auf
+Opacity 0,45 abgeschwächt. Der Selector
+`:is(Button).toolbar:disabled svg|Svg.toolbarIcon` umfasst Button und ToggleButton.
+Der umgebende Toolbar-Border setzt `RenderOptions.RequiresFullOpacityHandling`
+auf True: Der Fenster-Compositor benötigt diese Option auf einem Vorfahren,
+damit die nachfolgende SVG-Opacity für den gesamten Custom-Skia-Zeichenaufruf gilt.
+Beim erneuten Aktivieren gilt wieder volle Deckkraft. SVGs sind weder fokussierbar
+noch Trefferziele; Commands, Bindings und AutomationProperties bleiben am Button.
 
 TextBox und ComboBox teilen Höhe, Schriftgröße, Border, Radius und Fokusfarbe.
 Fluent übernimmt weiterhin Textbearbeitung, Auswahl und Dropdown-Verhalten.
@@ -796,25 +816,40 @@ Die Ergebnis-/Statusleiste bleibt horizontal, mit SurfaceSubtle, feiner oberer
 Trennlinie, Status beziehungsweise vorhandenen Kennwerten links und deaktivierter
 Ergebnisaktion rechts. Keine Ergebnis-Karten oder neue Ergebnisseite.
 
-### Engineering-Icon-Grammatik
+### Toolbar-SVGs und EngineeringIcon
 
-EngineeringIcon zeichnet zentrale StreamGeometry-Ressourcen über DrawingContext.
-Alle Symbole teilen ein festes 24×24-Artboard, 1,5-DIP-Striche, runde Linienenden
-und Linienverbindungen. Größenänderungen skalieren das ganze Artboard; die
-individuellen Geometriegrenzen werden nicht separat aufgezogen. Die Farbe folgt
-Foreground des Controls; es gibt keine Füllflächen, Rasterbilder oder Unicodeicons.
+Die Toolbar verwendet direkt `Avalonia.Svg.Skia.Svg` mit `Stretch="Uniform"`
+und vollständigen `avares://SpanDraft.Desktop/Assets/Icons/Toolbar/…`-Pfaden.
+Die bestehenden 48×48-SVG-Artboards werden proportional auf IconSize skaliert.
+Es gibt keine Foreground- oder CSS-Farbanpassung.
 
-| Ressource | Technische Darstellung |
+| SVG-Asset | Werkzeug |
 | --- | --- |
-| PointForce | Vertikaler Kraftpfeil mit offener Spitze |
-| PointMoment | Einzelner Kreisbogenpfeil mit markiertem Drehzentrum |
-| DistributedLoad | Obere Bezugslinie mit drei gleichen parallelen Kraftpfeilen |
-| FixedSupport | Anschlusslinie an eine vertikale schraffierte Wand |
-| PinnedSupport | Dreieck mit schraffierter fester Basis |
-| RollerSupport | Dasselbe Dreieck mit zwei Rollen und Grundlinie |
+| point-load.svg | Punktkraft |
+| point-moment.svg | Punktmoment |
+| distributed-load.svg | Streckenlast (weiterhin deaktiviert) |
+| fixed-support.svg | Einspannung |
+| pinned-support.svg | Festlager |
+| roller-support.svg | Loslager |
 
-SectionProfile ist ein zusätzliches zentrales Querschnittspiktogramm.
-Generische Aktionen bleiben textbasiert. Kein zusätzliches Icon-Package.
+EngineeringIcon bleibt außerhalb der Toolbar erhalten: Es zeichnet SectionProfile
+und Return aus `Icons.axaml` über DrawingContext, mit einem festen 24×24-Artboard,
+standardmäßig 1,5-DIP-Strichen und runden Linienenden/-verbindungen. Größenänderungen
+skalieren das ganze Artboard; die Farbe folgt Foreground. Die sechs alten
+Toolbar-Geometrien sind entfernt. BeamCanvas und dessen dynamische Last-/Lagersymbole
+verwenden weiterhin ihre bestehenden Zeichen- und Layoutpfade gemäß
+[SCHEMATIC_LAYOUT.md](SCHEMATIC_LAYOUT.md).
+
+### Abnahme Toolbar-SVGs (06.10.2026)
+
+- Product- und Validation-Build: jeweils 0 Warnungen, 0 Fehler.
+- Product: 717 Tests PASS; Validation: 195 Tests PASS; Acceptance: 18/18 PASS,
+  keine übersprungenen Tests.
+- SVG-Originalfarben und Disabled-Abschwächung im laufenden macOS-Fenster geprüft;
+  eine reine RenderTargetBitmap-Prüfung reicht für den Fenster-Compositor nicht aus.
+- Die vorhandenen automatisierten Produkttests sichern Fachlogik, Desktop-State
+  und schematisches Rendering ab; die Toolbar-Compositor-Prüfung ist eine separate
+  native GUI-Prüfung. Windows/Linux wurden dafür nicht visuell geprüft.
 
 ### Historische Abnahme Visual Design Foundation (03.10.2026)
 

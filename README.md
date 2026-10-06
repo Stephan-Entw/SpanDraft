@@ -21,9 +21,9 @@ placement, transactional flyout, repeated drag and delete workflow. Signed value
 define direction; coincident loads remain separate and are stacked visually.
 Distributed loads and the future results action remain disabled.
 Saving, diagrams and exports are not yet implemented.
-Current status (2026-10-04): Support, point force and point moment placement and
+Current status (2026-10-06): Support, point force and point moment placement and
 editing are implemented; distributed loads are the next editor milestone.
-The regression baseline is 470 passing product tests, 195 validation tests and
+The regression baseline is 717 passing product tests, 195 validation tests and
 18 acceptance cases.
 Architecture and scope are defined in [the project concept](docs/KONZEPT.md).
 Local coordinates, signs and domain validation are documented in [the domain notes](docs/DOMAIN.md).
