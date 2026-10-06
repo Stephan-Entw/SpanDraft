@@ -11,7 +11,7 @@ public partial class EditorView : UserControl
     private void EditorKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Escape || DataContext is not EditorViewModel editor) return;
-        editor.CancelSupportInteraction();
+        editor.CancelEditorInteraction();
         if (editor.DimensionLength.IsEditing || editor.DimensionLength.HasError || editor.ConstraintConflict is not null)
             editor.DimensionLength.Cancel();
         e.Handled = true;

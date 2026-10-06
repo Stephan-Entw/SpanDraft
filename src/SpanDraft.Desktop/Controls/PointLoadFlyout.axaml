@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Controls.PointLoadFlyout"
+             x:DataType="vm:EditorViewModel" KeyDown="FlyoutKeyDown" KeyboardNavigation.TabNavigation="Cycle">
+  <Border Classes="supportFlyout" Width="320">
+    <StackPanel Spacing="{StaticResource Space12}">
+      <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
+          <TextBlock Text="{x:Static resources:Strings.Position}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Grid.Column="1" x:Name="PositionInput" Text="{Binding LoadDraft.PositionText, Mode=TwoWay}"
+                   Classes.error="{Binding LoadDraft.HasPositionError}" AutomationProperties.Name="{x:Static resources:Strings.Position}" />
+          <TextBlock Grid.Column="2" Text="mm" VerticalAlignment="Center" />
+        </Grid>
+        <TextBlock Text="{Binding LoadDraft.PositionError}" IsVisible="{Binding LoadDraft.HasPositionError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
+      <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
+          <TextBlock Text="{Binding LoadDraft.ValueLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Grid.Column="1" Text="{Binding LoadDraft.ValueText, Mode=TwoWay}"
+                   Classes.error="{Binding LoadDraft.HasValueError}" AutomationProperties.Name="{Binding LoadDraft.ValueLabel}" />
+          <TextBlock Grid.Column="2" Text="{Binding LoadDraft.Unit}" VerticalAlignment="Center" />
+        </Grid>
+        <TextBlock Text="{Binding LoadDraft.ValueError}" IsVisible="{Binding LoadDraft.HasValueError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding LoadFeedback}" IsVisible="{Binding HasLoadFeedback}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource Space8}">
+        <Button Content="{x:Static resources:Strings.Delete}" Classes="ghost dangerGhost"
+                IsVisible="{Binding LoadDraft.IsExisting}" Command="{Binding DeleteLoadCommand}" />
+        <Button Grid.Column="2" Content="{x:Static resources:Strings.Cancel}" Classes="ghost" Command="{Binding CancelLoadCommand}" />
+        <Button Grid.Column="3" Classes="primary compactSupportAction" AutomationProperties.Name="{x:Static resources:Strings.OK}"
+                IsEnabled="{Binding LoadDraft.IsValid}" Command="{Binding ConfirmLoadCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <TextBlock Text="{x:Static resources:Strings.OK}" VerticalAlignment="Center" />
+            <controls:EngineeringIcon Data="{StaticResource Return}" Width="16" Height="16" StrokeThickness="2.25"
+                                      VerticalAlignment="Center" IsHitTestVisible="False" />
+          </StackPanel>
+        </Button>
+      </Grid>
+    </StackPanel>
+  </Border>
+</UserControl>

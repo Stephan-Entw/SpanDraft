@@ -9,18 +9,18 @@
     <Border BorderThickness="{DynamicResource BottomBorder}" BorderBrush="{DynamicResource Border}"
             Background="{DynamicResource Surface}" Padding="{DynamicResource ToolbarPadding}">
       <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
-        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.PointForce}">
+        <ToggleButton Classes="toolbar" IsChecked="{Binding IsForceTool, Mode=OneWay}" Command="{Binding ForceToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PointForce}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
             <controls:EngineeringIcon Data="{StaticResource PointForce}" />
             <TextBlock Text="{x:Static resources:Strings.PointForce}" VerticalAlignment="Center" />
           </StackPanel>
-        </Button>
-        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.Moment}">
+        </ToggleButton>
+        <ToggleButton Classes="toolbar" IsChecked="{Binding IsMomentTool, Mode=OneWay}" Command="{Binding MomentToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.Moment}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
             <controls:EngineeringIcon Data="{StaticResource PointMoment}" />
             <TextBlock Text="{x:Static resources:Strings.Moment}" VerticalAlignment="Center" />
           </StackPanel>
-        </Button>
+        </ToggleButton>
         <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.DistributedLoad}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
             <controls:EngineeringIcon Data="{StaticResource DistributedLoad}" />
@@ -55,7 +55,9 @@
         <Button Content="{x:Static resources:Strings.Change}" Command="{Binding ChangeProjectCommand}" Classes="ghost" />
       </StackPanel>
     </Border>
-    <controls:BeamEditorSurface Grid.Row="2" />
+    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <controls:BeamEditorSurface />
+    </ScrollViewer>
     <Border Grid.Row="3" Padding="{DynamicResource StatusPadding}" BorderThickness="{DynamicResource TopBorder}"
             BorderBrush="{DynamicResource Border}"
             Background="{DynamicResource SurfaceSubtle}">

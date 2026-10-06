@@ -233,6 +233,7 @@
     <Setter Property="IsHitTestVisible" Value="False" />
   </Style>
   <Style Selector="controls|BeamCanvas">
+    <Setter Property="LabelFontSize" Value="{DynamicResource BodySize}" />
     <Setter Property="BeamBrush" Value="{DynamicResource BeamStroke}" />
     <Setter Property="DimensionBrush" Value="{DynamicResource DimensionStroke}" />
     <Setter Property="GuideBrush" Value="{DynamicResource BorderStrong}" />

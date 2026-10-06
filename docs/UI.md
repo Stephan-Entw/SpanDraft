@@ -1,8 +1,8 @@
 # SpanDraft – verbindliche UI-Spezifikation
 
-Stand: 04.10.2026, Cleanup vor dem Lasten-Meilenstein. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
-Support Placement & Editing einschließlich Drag ist implementiert. Die ausdrücklich
-als geplant markierten Lastwerkzeuge bleiben verbindliche nächste Schritte.
+Stand: 04.10.2026, Punktkraft-/Punktmoment-Meilenstein. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
+Support-, Punktkraft- und Punktmoment-Placement & Editing einschließlich Drag sind
+implementiert. Streckenlast bleibt der verbindliche nächste Editor-Schritt.
 
 ## 1. Design und aktueller Umfang
 
@@ -17,7 +17,7 @@ Hauptansicht. Die Toolbar bleibt auch bei der Mindestgröße in einer horizontal
 Zeile. Kein Routing- oder Navigationsframework.
 
 Implementiert: Setup, Setup/Editor-Wechsel, Menü, Toolbar, Projektinformation,
-Balkengrafik, Längeneingabe, Support Placement/Preview/Snap/Flyout/Editing/Drag/Delete,
+Balkengrafik, Längeneingabe, Support- und Punktlast-Placement/Preview/Snap/Flyout/Editing/Drag/Delete,
 Analysis-Anbindung und Ergebnis-/Statusleiste.
 
 ## 2. Startseite und Setup-Modi
@@ -42,8 +42,9 @@ Edit-Modus: „Ändern“ verwendet dieselbe Setup-View mit aktueller Auswahl.
 „Übernehmen“ committed Section/Material gemeinsam, erhält die Länge, analysiert
 einmal und kehrt zum Editor zurück. „Abbrechen“ verwirft ausschließlich die
 temporäre Auswahl, erhält Dokument und Editor und löst keine Analysis aus.
-Vorhandene Lager mit IDs, Positionen, Typen und Reihenfolge bleiben bei Übernehmen
-und Abbrechen erhalten. Navigation ins Setup verwirft temporäre Lagerinteraktionen.
+Vorhandene Lager und Punktlasten mit IDs, Positionen, Typen/Werten und Reihenfolge
+bleiben bei Übernehmen und Abbrechen erhalten. Navigation ins Setup verwirft
+temporäre Lager- und Lastinteraktionen.
 
 ## 3. Editorlayout und Menü
 
@@ -59,8 +60,8 @@ Toolbar-Reihenfolge:
 
 Punktkraft, Moment, Streckenlast | Einspannung, Festlager, Loslager
 
-Die Toolbar enthält kein Längenfeld. Die drei Lagerwerkzeuge sind aktiviert und
-zeigen einen Checked-State; die drei Lastwerkzeuge bleiben deaktiviert. Es gibt
+Die Toolbar enthält kein Längenfeld. Die drei Lagerwerkzeuge sowie Punktkraft und
+Moment sind aktiviert und zeigen einen Checked-State; Streckenlast bleibt deaktiviert. Es gibt
 weder einen Auswahl- noch einen Entfernen-Button. Neutral ist der Auswahlzustand.
 
 Menü-Platzhalter (einschließlich Neues Projekt, Öffnen, Speichern,
@@ -75,7 +76,7 @@ Aktuell gibt es kein Settings-System und keine Persistenz.
 
 MainWindowViewModel hält den Modus ProjectSetup/Editor und die Navigation.
 ProjectSetupViewModel hält eine temporäre Auswahl. EditorViewModel besitzt
-das einzige committed EditorDocument mit Length, Material, Section und Supports.
+das einzige committed EditorDocument mit Length, Material, Section, Supports und Loads.
 Core-Objekte bleiben immutable. Kein zweites konkurrierendes Projektmodell.
 
 ObservableObject und ActionCommand bilden die kleine lokale ViewModel-Basis.
@@ -85,7 +86,7 @@ und Overlay-/Popup-Positionen. Dokumentregeln und Analysis verbleiben im ViewMod
 
 BeamEditorSurface enthält BeamCanvas plus interaktive Overlay-Controls.
 BeamCanvas zeichnet über DrawingContext Balken, feinere Maßlinie, Pfeile und
-Hilfslinien sowie committed Lager und temporäre Lagerpreviews. Die Maßzahl ist
+Hilfslinien sowie committed Lager/Punktlasten und temporäre Previews. Die Maßzahl ist
 ein normales Avalonia-Control, kein gezeichneter
 Text mit eigenem Hit-Testing.
 
@@ -102,7 +103,7 @@ beamX   = ((screenX − left) / (right − left)) × L
 Beam-x und L verwenden Meter, screenX verwendet DIPs. Seitliche Ränder sind
 normalerweise 72 DIPs. Resize berechnet die gemeinsame Zeichen-/Overlaygeometrie
 neu. Die Maßzahl bleibt über der Mitte des Balkens. Hover, Snapping, Hit-Testing,
-Lager und Popup-Anker verwenden dieselbe Abbildung; spätere Lasten ebenfalls. Zoom/Pan fehlt
+Lager, Punktlasten und Popup-Anker verwenden dieselbe Abbildung. Zoom/Pan fehlt
 bewusst.
 
 ## 5. Transaktionale Längenbearbeitung
@@ -133,7 +134,7 @@ Tausenderseparatoren. Gültig sind endliche positive mm-Werte, die auch in SI
 positiv darstellbar bleiben. Null, negative Werte, NaN, Infinity, Überlauf und
 Unterlauf auf null werden abgewiesen.
 
-Eine Länge unterhalb einer vorhandenen Lagerposition wird über den dokumentbezogenen
+Eine Länge unterhalb einer vorhandenen Lager- oder Punktlastposition wird über den dokumentbezogenen
 Commit-Contract abgelehnt: keine Dokumentänderung, kein automatisches Verschieben
 oder Löschen und keine Analysis. Enter erhält Input und Fokus zur Korrektur;
 Fokusverlust restauriert die committed Länge und entfernt Konflikt, Preview,
@@ -143,14 +144,14 @@ weitere Commits durch Fokusereignisse während einer erfolgreichen Übernahme.
 
 Eine abgelehnte Verkürzung hält zusätzlich einen transienten ConstraintConflictState
 im EditorViewModel: angeforderte Länge und defensiv geschützte Entity-IDs aller
-Supports jenseits dieser Grenze. Diese Lager werden mit dem vorhandenen Error-Brush
+Supports und Punktlasten jenseits dieser Grenze. Diese Entities werden mit dem vorhandenen Error-Brush
 rot gezeichnet, auch bei Hover; unter der committed Länge bleiben sie fachlich gültig.
 Der State gehört nicht zum EditorDocument und löst keine Analysis aus. Er bleibt
 während der aktiven abgelehnten Eingabe einschließlich Enter erhalten. Fokusverlust
 verwirft die Anfrage samt Highlight und Ablehnungsgrund. Korrektur auf eine
 zulässige Länge, Wiederherstellung des Originalwerts, Escape/Cancel oder erneuter
 Bearbeitungsbeginn entfernen ihn. Neue ungültige Eingabe entfernt ein überholtes
-Highlight. Support-Commits prüfen verbleibende Konflikte gegen die angeforderte Länge.
+Highlight. Support- und Punktlast-Commits prüfen verbleibende Konflikte gegen die angeforderte Länge.
 
 Bei einem tatsächlichen Objektkonflikt zeigt die gültige angeforderte Länge zugleich
 ein transientes visuelles Balkenende: der massive Balken und die einzige Bemaßung
@@ -158,7 +159,7 @@ enden dort, einschließlich rechtem Maßhilfsstrich und Maßpfeil. Display und I
 Editor liegen gemeinsam über der Mitte dieser angeforderten Länge. Der Rest bis
 zum committed Ende erscheint als dünnes, dezentes gestricheltes Ghost-Segment.
 BeamViewport und Supportpositionen verwenden weiterhin ausschließlich die committed
-Länge; blockierende Lager bleiben an ihren tatsächlichen Positionen rot sichtbar.
+Länge; blockierende Entities bleiben an ihren tatsächlichen Positionen rot sichtbar.
 Ungültiger/nicht positiver Text erzeugt keine Geometrie-Preview. Korrektur oder
 Abbruch oder abgelehnter Fokusverlust entfernt sie vollständig. Dokument und Analysis
 werden durch diese Darstellung nicht geändert.
@@ -219,7 +220,7 @@ immutable EditorSupports mit Guid Id, Length Position und Core-SupportType.
 Neue Dokumente starten leer. Hinzufügen erzeugt die ID erst beim Commit;
 Editieren und Drag erhalten sie. Die ID gehört ausschließlich zum Desktop.
 ToBeamModel() erzeugt normale Core-Supports mit exakten Positionen/Typen und
-Dokumentreihenfolge; Loads bleiben leer. Kein Preview gelangt ins BeamModel.
+Dokumentreihenfolge; die geordnete Loads-Sammlung wird ebenfalls gemappt. Kein Preview gelangt ins BeamModel.
 
 ### 7.2 One-shot-Werkzeuge und temporäre Zustände
 
@@ -343,13 +344,77 @@ Die bestehende Analysis-Presentation entscheidet über MissingSupports, Unstable
 und Success. Stabile unbelastete Systeme zeigen 0 mm, 0 kNm, 0 MPa und ∞; keine
 künstliche Last und keine mechanische Sonderlogik im UI. „Ergebnisse“ bleibt disabled.
 
-### 7.8 Noch geplant: Lastwerkzeuge
+### 7.8 Implementiert: Punktkraft und Punktmoment
 
-Punktkraft, Punktmoment und Streckenlast bleiben deaktiviert. Geplant sind eigene
-Previews, transaktionale Flyouts und One-shot-Commits nach denselben Grundprinzipien.
-Punktkraft und Punktmoment enthalten Position und signed Größe; das Vorzeichen
-bestimmt die Richtung gemäß Core. Streckenlast verwendet Start-/Endpunkt, signed
-Intensität und einen Bereichs-Preview. Keine Lastinteraktion ist hier implementiert.
+EditorDocument.Loads ist eine defensiv kopierte, schreibgeschützte gemeinsame
+Sammlung immutable EditorPointLoads. EditorPointForce enthält Guid Id, Length
+Position und Force; EditorPointMoment enthält Id, Position und Moment. IDs entstehen
+erst beim Hinzufügen-Commit und bleiben bei Edit/Drag erhalten. ToBeamModel bildet
+auf die bestehenden Core-Loads ohne IDs ab und erhält die gemischte Reihenfolge.
+WithSupports, WithLoads, Längen- und Setup-Änderungen erhalten die übrigen Entities.
+
+Punktkraft und Moment sind One-shot-Werkzeuge mit Default −1000 N beziehungsweise
++100 Nm. Support- und Load-Werkzeuge lösen einander ab; es gibt höchstens eine aktive
+Interaktion. Placement verwendet unverändert SupportSnap einschließlich 1-mm-
+Rundung, ±18-DIP-Balkenhit und exaktem Endpoint-Snap. Klick öffnet nach Release
+das objektgebundene Flyout. OK oder Abbruch führt zurück nach neutral.
+
+Das 320-DIP-Flyout übernimmt die Support-Tokens und enthält Position X/mm,
+Kraft F/N beziehungsweise Moment M/Nm sowie Löschen, Abbrechen und OK ↵.
+Nur bestehende Loads zeigen Löschen. Position und Wert sind separate transaktionale
+Textbuffer. Gültige Werttexte aktualisieren Richtung und Label der temporären
+Vorschau; Positionstext bewegt weder Symbol noch Flyout. Ungültiger Text markiert
+Feld und Vorschau, erhält aber deren letzte gültige Geometrie und Wertdarstellung.
+Der Anker bleibt beim Tippen stabil. CurrentUICulture und Float-Parsing ohne
+Tausenderseparatoren gelten für beide Felder; Werte müssen endlich sein, null
+ist zulässig. Manuelle Positionen außerhalb [0,L] werden abgewiesen, nicht geklemmt.
+Unberührte Eingaben erhalten die exakten SI-Werte.
+
+OK/Enter validiert und committed Position und Wert gemeinsam. Ungültiges Enter
+hält das Flyout offen. Unverändertes OK schließt ohne Dokumentänderung oder
+Analysis. Escape, Abbrechen und Outside-Click verwerfen den Draft; ein Klick auf
+das aktive Symbol erhält ihn. Freier Canvas oder ein anderes Objekt verwirft die
+Session und konsumiert den Klick. Toolbar-Werkzeugwechsel aktiviert nach dem
+Verwerfen unmittelbar das gewählte Werkzeug.
+
+Die bestehende Drag-Geometrie wird für Punktlasten wiederverwendet: 4-DIP-Schwelle,
+Greifversatz, Pointer-Capture, horizontales Clamp auf 0/L und normaler Snap nach
+Rückkehr. Das Flyout ist während Drag verborgen. Mehrere Drags erhalten dieselbe
+Draft-Session und ID. Gültiges Release ersetzt den Positionsbuffer, erhält den
+Wertbuffer und öffnet das Flyout wieder. Ungültiges Release restauriert bei einem
+bestehenden Draft dessen Zustand vor der Geste samt Rohtexten; aus Neutral wird die
+Geste verworfen. Confirm/Delete sind während Drag gesperrt. Escape und unerwarteter
+Capture-Verlust verwerfen die gesamte unbestätigte Session.
+
+PointLoadSymbol definiert gemeinsame Darstellung und Hit-Zonen. Kraft ist ein
+vertikaler technischer Pfeil: positiv nach oben, negativ nach unten. Moment ist
+ein Kreisbogenpfeil: positiv gegen Uhrzeigersinn, negativ im Uhrzeigersinn.
+Null zeigt eine Linie beziehungsweise einen Kreis ohne Pfeilspitze. Symbolgrößen
+bleiben konstant in DIPs; Labels verwenden CurrentUICulture und N/Nm ohne
+Einheitenumschaltung. Committed verwendet BeamStroke, Hover/Draft Accent,
+Constraint-Konflikt oder ungültige Eingabe Error; Konflikt hat Vorrang.
+
+Mehrere Kräfte, mehrere Momente, Kraft/Moment und Load/Support am selben x sind
+zulässig. Loads bleiben fachlich getrennt. Gleichpositionierte Loads werden in
+Dokumentreihenfolge mit 50-DIP-Abstand oberhalb der Maßlinie gestaffelt und über
+Hilfslinien am selben physikalischen x verankert. Hit-Testing wählt das nächste
+Symbol, bei Gleichstand die Dokumentreihenfolge; die aktive Draft-Hit-Zone hat
+Vorrang. Wert-/Positions-Texteingabe verändert die Staffelung nicht. Die Canvas-
+Mindesthöhe wächst bei vielen gleichpositionierten Loads. Während einer aktiven
+Load-Interaktion wird eine zusätzliche Zeile bereits vor Hover reserviert, damit
+Preview/Pointer-Leave den Balken nicht unter dem Pointer verschieben. Ein vertikaler ScrollViewer
+hält alle Symbole erreichbar, ohne Zoom/Pan oder Änderung der physikalischen Werte.
+
+Analysis erfolgt ausschließlich nach neuer Load + OK, tatsächlichem Edit + OK
+oder Delete. Alle Transienten einschließlich Drag und unverändertem OK bleiben
+analysisfrei. Längenkonflikte nutzen den bestehenden ConstraintConflictState und
+Ghost-Balken gemeinsam für Supports und beide Punktlasttypen. Abgelehnter
+Fokusverlust entfernt weiterhin Anfrage, Preview, Highlights und Fehler vollständig.
+
+### 7.9 Nächster Schritt: Streckenlast
+
+Streckenlast bleibt deaktiviert. Geplant sind Start-/Endpunkt, signed Intensität,
+Bereichs-Preview und transaktionales Flyout nach denselben Grundprinzipien.
 
 ## 8. Spätere Ergebnisse-/Reportansicht
 
@@ -361,7 +426,7 @@ nicht implementiert.
 
 ## 9. Bewusst offen
 
-Noch nicht implementiert: Lastplatzierung/-preview/-flyouts/-bearbeitung/-löschung,
+Noch nicht implementiert: Streckenlastplatzierung/-preview/-flyout/-bearbeitung/-löschung,
 Delete-Taste, Undo/Redo, Zoom/Pan,
 Tabellen/Diagramme, Ergebnisse-/Reportseite, PDF/XLSX, Speichern/Laden, Auto-Save,
 Settings-Persistenz, Theme-Umschaltung, echte Profil-/Norm-/Herstellerbibliotheken,
@@ -379,10 +444,29 @@ Das Regression-Gate umfasst Restore/Build/Tests beider Solutions, unveränderte
 eingefrorene Bereiche und den bestehenden SolverSourceSha256. GUI-Smoke-Checks
 und deren tatsächliche Grenzen werden im Abschlussbericht separat dokumentiert.
 
-Aktueller Stand (04.10.2026): **396 Produkttests PASS**, **195 Validation-Tests
+Aktueller Stand (04.10.2026): **470 Produkttests PASS**, **195 Validation-Tests
 PASS**, **18 Acceptance-Fälle PASS**; Release-Builds mit null Warnungen/Fehlern.
 Die folgenden Abnahmen dokumentieren ausdrücklich frühere Entwicklungsstände;
 maßgeblich für die heutige Interaktion sind die Abschnitte 5 und 7.
+
+### Abnahme Punktkraft/Punktmoment (04.10.2026)
+
+- Product: 470 Tests PASS (396 bestehende + 74 neue), keine übersprungenen Tests.
+- Validation: 195 Tests PASS; Acceptance 18/18 PASS. Beide Release-Builds mit
+  null Warnungen/Fehlern; SolverSourceSha256 unverändert.
+- Core, Solver, Engineering, Analysis, Validation-Code und Goldens unverändert;
+  keine Packages hinzugefügt.
+- Ein abschließender nativer macOS-Abnahmelauf über ein temporäres Release-App-Bundle:
+  Punktkraft-/Moment-Placement, N-/Nm-Flyouts, signed Texte, One-shot-Abschluss,
+  mehrere gestaffelte Kräfte und Momentvorschau geprüft. Support-OK erzeugte
+  außerdem eine erfolgreiche Analysis mit aktualisierter Ergebnisleiste.
+- Flyout-Textfelder wurden über ihre Accessibility-Setter gesteuert; geometrische
+  AX-Klicks waren uneindeutig und wurden anhand einer Diagnoseaufnahme geprüft.
+  Die abschließende Aufnahme liegt lokal unter
+  `.artifacts/point-loads/native-point-loads.png` (2500×1656 physische Pixel).
+- Wiederholtes Drag, Capture-Abbruch, Clamp/Rückkehr, große Stapel und gemischte
+  Längenkonflikte sind durch Desktop-State-/Geometrietests abgesichert; keine
+  zusätzliche native Drag-/Resize-Testserie durchgeführt.
 
 ### Historische Abnahme des funktionalen UI-Fundaments (03.10.2026)
 
@@ -624,7 +708,8 @@ Keine Paketänderungen, kein Commit und kein Push.
 ## 12. Historische Erstabnahme: Support Placement & Editing einschließlich Drag (04.10.2026)
 
 Dieser Abschnitt beschreibt den damaligen Stand vor den Support-/Length-
-Refinements. Der aktuelle Gesamtstand umfasst 396 Produkttests (Abschnitt 10).
+Refinements. Der damalige Gesamtstand umfasste 396 Produkttests; der aktuelle
+Stand steht in Abschnitt 10.
 Spätere Änderungen an Positionstext, Edit-Drags und Focus Loss sind in den
 Abschnitten 5 und 7 verbindlich beschrieben.
 

@@ -57,4 +57,8 @@
   <data name="LengthExcludesSupports" xml:space="preserve"><value>Balkenlänge darf vorhandene Lager nicht ausschließen.</value></data>
   <data name="InvalidSupportType" xml:space="preserve"><value>Eine gültige Lagerart auswählen.</value></data>
   <data name="SupportCoordinate" xml:space="preserve"><value>x = {0} mm</value></data>
+  <data name="ForceValueLabel" xml:space="preserve"><value>Kraft F</value></data>
+  <data name="MomentValueLabel" xml:space="preserve"><value>Moment M</value></data>
+  <data name="InvalidLoadValue" xml:space="preserve"><value>Eine endliche Zahl eingeben.</value></data>
+  <data name="LengthExcludesEntities" xml:space="preserve"><value>Die gewünschte Länge schließt Lager oder Punktlasten aus.</value></data>
 </root>

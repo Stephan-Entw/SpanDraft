@@ -9,6 +9,21 @@ namespace SpanDraft.Desktop.Controls;
 /// <summary>Technical graphics only; editing is performed by controls on BeamEditorSurface.</summary>
 public sealed class BeamCanvas : Control
 {
+    public static readonly StyledProperty<IReadOnlyList<EditorPointLoad>?> LoadsProperty =
+        AvaloniaProperty.Register<BeamCanvas, IReadOnlyList<EditorPointLoad>?>(nameof(Loads));
+    public static readonly StyledProperty<PointLoadPreview?> LoadPreviewProperty =
+        AvaloniaProperty.Register<BeamCanvas, PointLoadPreview?>(nameof(LoadPreview));
+    public static readonly StyledProperty<Guid?> HighlightedLoadIdProperty =
+        AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HighlightedLoadId));
+    public static readonly StyledProperty<Guid?> HiddenLoadIdProperty =
+        AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HiddenLoadId));
+    public static readonly StyledProperty<double> LabelFontSizeProperty =
+        AvaloniaProperty.Register<BeamCanvas, double>(nameof(LabelFontSize), 13);
+    public IReadOnlyList<EditorPointLoad>? Loads { get => GetValue(LoadsProperty); set => SetValue(LoadsProperty, value); }
+    public PointLoadPreview? LoadPreview { get => GetValue(LoadPreviewProperty); set => SetValue(LoadPreviewProperty, value); }
+    public Guid? HighlightedLoadId { get => GetValue(HighlightedLoadIdProperty); set => SetValue(HighlightedLoadIdProperty, value); }
+    public Guid? HiddenLoadId { get => GetValue(HiddenLoadIdProperty); set => SetValue(HiddenLoadIdProperty, value); }
+    public double LabelFontSize { get => GetValue(LabelFontSizeProperty); set => SetValue(LabelFontSizeProperty, value); }
     public static readonly StyledProperty<IReadOnlyList<EditorSupport>?> SupportsProperty =
         AvaloniaProperty.Register<BeamCanvas, IReadOnlyList<EditorSupport>?>(nameof(Supports));
     public static readonly StyledProperty<SupportPreview?> PreviewProperty =
@@ -46,7 +61,8 @@ public sealed class BeamCanvas : Control
     static BeamCanvas() => AffectsRender<BeamCanvas>(LengthMetersProperty, BoundsProperty,
         BeamBrushProperty, DimensionBrushProperty, GuideBrushProperty, SupportsProperty, PreviewProperty,
         HighlightedSupportIdProperty, HiddenSupportIdProperty, ConflictEntityIdsProperty, ConstraintConflictProperty,
-        AccentBrushProperty, ErrorBrushProperty);
+        AccentBrushProperty, ErrorBrushProperty, LoadsProperty, LoadPreviewProperty,
+        HighlightedLoadIdProperty, HiddenLoadIdProperty, LabelFontSizeProperty);
 
     public IBrush? BeamBrush { get => GetValue(BeamBrushProperty); set => SetValue(BeamBrushProperty, value); }
     public IBrush? DimensionBrush { get => GetValue(DimensionBrushProperty); set => SetValue(DimensionBrushProperty, value); }
@@ -89,6 +105,15 @@ public sealed class BeamCanvas : Control
                 DrawSupport(context, v, preview.Position.Meters, preview.Type,
                     preview.IsInvalid || HiddenSupportId is { } id && ConflictEntityIds?.Contains(id) == true
                         ? ErrorBrush : AccentBrush);
+        foreach (var visual in PointLoadSymbol.Layout(Loads ?? [], v, LoadPreview, HiddenLoadId))
+        {
+            bool conflict = visual.Id is { } loadId && ConflictEntityIds?.Contains(loadId) == true;
+            var brush = conflict || visual.Preview.IsInvalid ? ErrorBrush
+                : visual.IsPreview || visual.Id == HighlightedLoadId ? AccentBrush : BeamBrush;
+            using (context.PushOpacity(visual.IsPreview ? 0.75 : 1))
+                PointLoadSymbol.Draw(context, visual, v, brush, conflict ? ErrorBrush : GuideBrush,
+                    Typeface.Default, LabelFontSize);
+        }
     }
 
     private static void DrawSupport(DrawingContext context, BeamViewport viewport, double position, SupportType type, IBrush? brush)

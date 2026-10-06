@@ -8,6 +8,10 @@ public static class Strings
     private static readonly ResourceManager ResourceManager =
         new("SpanDraft.Desktop.Resources.Strings", typeof(Strings).Assembly);
 
+    public static string ForceValueLabel => Get(nameof(ForceValueLabel));
+    public static string MomentValueLabel => Get(nameof(MomentValueLabel));
+    public static string InvalidLoadValue => Get(nameof(InvalidLoadValue));
+    public static string LengthExcludesEntities => Get(nameof(LengthExcludesEntities));
     public static string Support => Get(nameof(Support));
     public static string SupportTypeLabel => Get(nameof(SupportTypeLabel));
     public static string Position => Get(nameof(Position));

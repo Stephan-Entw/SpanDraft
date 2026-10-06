@@ -30,7 +30,7 @@ public sealed class MainWindowViewModel : ObservableObject
     public void EditProject()
     {
         if (Editor is null) return;
-        Editor.CancelSupportInteraction();
+        Editor.CancelEditorInteraction();
         _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.Material,
             ApplySetup, CancelSetup);
         Navigate(MainViewMode.ProjectSetup);

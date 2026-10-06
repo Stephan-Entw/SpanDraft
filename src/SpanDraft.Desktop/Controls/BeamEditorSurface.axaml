@@ -10,6 +10,8 @@
              PointerCaptureLost="SurfaceCaptureLost" KeyDown="SurfaceKeyDown">
   <Grid Background="{DynamicResource CanvasBackground}">
     <controls:BeamCanvas LengthMeters="{Binding Document.Length.Meters}"
+                         Loads="{Binding Document.Loads}" LoadPreview="{Binding LoadPreview}"
+                         HighlightedLoadId="{Binding HoveredLoadId}" HiddenLoadId="{Binding HiddenLoadId}"
                          Supports="{Binding Document.Supports}" Preview="{Binding Preview}"
                          ConflictEntityIds="{Binding ConflictEntityIds}"
                          ConstraintConflict="{Binding ConstraintConflict}"
@@ -29,6 +31,7 @@
         <TextBlock Text="{Binding DimensionLength.ErrorText}" IsVisible="{Binding DimensionLength.HasError}"
                    Width="360" HorizontalAlignment="Center" Classes="validationMessage" Background="{DynamicResource CanvasBackground}" TextAlignment="Center" />
       </StackPanel>
+      <Border x:Name="LoadAnchor" Width="1" Height="1" IsHitTestVisible="False" />
       <Border x:Name="SupportAnchor" Width="1" Height="1" IsHitTestVisible="False" />
       <TextBlock x:Name="CoordinateOverlay" Text="{Binding CoordinateText}" IsVisible="{Binding HasCoordinate}"
                  Classes="propertyLabel" Background="{DynamicResource CanvasBackground}" IsHitTestVisible="False" />
@@ -40,6 +43,10 @@
            IsLightDismissEnabled="False"
            ShouldUseOverlayLayer="True" Closed="SupportPopupClosed">
       <controls:SupportFlyout x:Name="SupportEditor" />
+    </Popup>
+    <Popup x:Name="LoadPopup" PlacementTarget="{Binding #LoadAnchor}" Placement="Bottom"
+           IsLightDismissEnabled="False" ShouldUseOverlayLayer="True" Closed="LoadPopupClosed">
+      <controls:PointLoadFlyout x:Name="LoadEditor" />
     </Popup>
   </Grid>
 </UserControl>

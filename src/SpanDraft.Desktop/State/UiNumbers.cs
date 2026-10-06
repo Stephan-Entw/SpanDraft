@@ -5,6 +5,10 @@ namespace SpanDraft.Desktop.State;
 
 public static class UiNumbers
 {
+    public static bool TryParseSignedValue(string? text, out double value) =>
+        double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentUICulture, out value)
+        && double.IsFinite(value);
+
     public static string Format(double value) => double.IsPositiveInfinity(value)
         ? "∞" : value.ToString("G", CultureInfo.CurrentUICulture);
 

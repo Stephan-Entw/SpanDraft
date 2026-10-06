@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Stephan-Entw/SpanDraft/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Stephan-Entw/SpanDraft/actions/workflows/ci.yml)
 
-SpanDraft is an open-source desktop application for intuitive beam analysis. Start with one straight beam, edit its dimensions, place and edit supports visually, and later add loads to calculate reactions, shear forces, bending moments, deflection, stresses and safety factors.
+SpanDraft is an open-source desktop application for intuitive beam analysis. Start with one straight beam, edit its dimensions, place and edit supports and point loads visually to calculate reactions, shear forces, bending moments, deflection, stresses and safety factors.
 
 The repository contains a tested beam domain model, an independently validated
 Euler-Bernoulli solver, engineering assessment and an application analysis API:
@@ -16,11 +16,15 @@ line, and a compact calculation status bar. The initial 1000 mm beam
 has no supports or loads. Fixed, pinned and roller supports can be placed with
 preview and millimeter/endpoint snapping, edited transactionally in object-bound
 flyouts, dragged to a new position, and deleted. Each confirmed change uses the
-existing analysis API. Load tools and the future results action remain disabled.
+existing analysis API. Point forces and point moments use the same one-shot
+placement, transactional flyout, repeated drag and delete workflow. Signed values
+define direction; coincident loads remain separate and are stacked visually.
+Distributed loads and the future results action remain disabled.
 Saving, diagrams and exports are not yet implemented.
-Current status (2026-10-04): Support Placement & Editing is implemented;
-the next editor milestone is load placement and editing. The regression baseline
-is 396 passing product tests, 195 validation tests and 18 acceptance cases.
+Current status (2026-10-04): Support, point force and point moment placement and
+editing are implemented; distributed loads are the next editor milestone.
+The regression baseline is 470 passing product tests, 195 validation tests and
+18 acceptance cases.
 Architecture and scope are defined in [the project concept](docs/KONZEPT.md).
 Local coordinates, signs and domain validation are documented in [the domain notes](docs/DOMAIN.md).
 The numerical formulation, solver API and current limits are documented in [the solver notes](docs/SOLVER.md).
@@ -72,7 +76,7 @@ Avalonia or Math.NET; Solver and its tests use Math.NET for linear algebra.
 The desktop application uses
 Avalonia's standard Fluent theme, explicitly set to Light. English default and
 German UI strings are stored in `Resources/Strings.resx` and
-`Resources/Strings.de.resx` inside the Desktop project. Text, length parsing and
+`Resources/Strings.de.resx` inside the Desktop project. Text, length/load parsing and
 formatting use the current UI culture. Inline length editing is transactional:
 Enter commits, Escape cancels, and invalid input never changes the project.
 Rejected Enter keeps the editor and error open for correction, including a
@@ -94,6 +98,6 @@ acceptance gate are documented in [VALIDATION.md](docs/VALIDATION.md).
 ## Deferred decisions
 
 As described in the concept, the model file format, additional UI languages and
-concrete PDF/XLSX libraries remain open. One-shot load placement with transactional
-load flyouts is the next editor milestone. Settings, persistence,
+concrete PDF/XLSX libraries remain open. Distributed load placement and editing
+is the next editor milestone. Settings, persistence,
 theme switching and profile libraries remain deferred. No reporting libraries are installed.

@@ -11,7 +11,7 @@ using SpanDraft.Desktop.State;
 
 namespace SpanDraft.Desktop.ViewModels;
 
-public sealed class EditorViewModel : ObservableObject
+public sealed partial class EditorViewModel : ObservableObject
 {
     private readonly Func<BeamModel, BeamAnalysisOutcome> _analyze;
     private EditorDocument _document;
@@ -39,7 +39,12 @@ public sealed class EditorViewModel : ObservableObject
                 UpdateConstraintConflict(UiNumbers.TryParseLength(text, out var length) ? length : null);
         };
         DimensionLength.EditCancelled += () => UpdateConstraintConflict(null);
-        ChangeProjectCommand = new(() => { CancelSupportInteraction(); changeProject(); });
+        ChangeProjectCommand = new(() => { CancelEditorInteraction(); changeProject(); });
+        ForceToolCommand = new(() => ToggleLoadTool(PointLoadKind.Force));
+        MomentToolCommand = new(() => ToggleLoadTool(PointLoadKind.Moment));
+        ConfirmLoadCommand = new(() => ConfirmLoad());
+        CancelLoadCommand = new(CancelLoadInteraction);
+        DeleteLoadCommand = new(DeleteLoad);
         FixedToolCommand = new(() => ToggleSupportTool(SupportType.Fixed));
         PinnedToolCommand = new(() => ToggleSupportTool(SupportType.Pinned));
         RollerToolCommand = new(() => ToggleSupportTool(SupportType.Roller));
@@ -73,15 +78,15 @@ public sealed class EditorViewModel : ObservableObject
     public Guid? HiddenSupportId => _draft?.OriginalId ?? _dragSupport?.Id;
     public string? SupportFeedback => _supportFeedback;
     public bool HasSupportFeedback => !string.IsNullOrEmpty(SupportFeedback);
-    public bool HasCoordinate => Preview is not null;
-    public string CoordinateText => Preview is { } p
-        ? string.Format(CultureInfo.CurrentUICulture, Strings.SupportCoordinate, UiNumbers.Format(p.Position.Millimeters)) : "";
+    public bool HasCoordinate => Preview is not null || LoadPreview is not null;
+    public string CoordinateText => (Preview?.Position ?? LoadPreview?.Position) is { } position
+        ? string.Format(CultureInfo.CurrentUICulture, Strings.SupportCoordinate, UiNumbers.Format(position.Millimeters)) : "";
 
     public void ToggleSupportTool(SupportType type)
     {
         if (!Enum.IsDefined(type)) throw new ArgumentOutOfRangeException(nameof(type));
         bool deactivate = PlacementTool == type;
-        CancelSupportInteraction();
+        CancelEditorInteraction();
         if (deactivate) return;
         _placementTool = type;
         _interaction = SupportInteraction.Placement;
@@ -106,7 +111,7 @@ public sealed class EditorViewModel : ObservableObject
 
     public void HoverSupport(Guid? id)
     {
-        if (Interaction != SupportInteraction.Neutral) return;
+        if (Interaction != SupportInteraction.Neutral || LoadState != LoadInteraction.Neutral) return;
         if (_hoveredSupportId == id) return;
         _hoveredSupportId = id;
         _supportFeedback = null;
@@ -116,7 +121,7 @@ public sealed class EditorViewModel : ObservableObject
     public bool EditSupport(Guid id)
     {
         if (Interaction == SupportInteraction.EditDraft && _draft?.OriginalId == id) return true;
-        if (Interaction != SupportInteraction.Neutral) return false;
+        if (Interaction != SupportInteraction.Neutral || LoadState != LoadInteraction.Neutral) return false;
         var support = Document.Supports.FirstOrDefault(s => s.Id == id);
         if (support is null) return false;
         OpenDraft(support.Id, support.Type, support.Position);
@@ -126,7 +131,7 @@ public sealed class EditorViewModel : ObservableObject
     public bool BeginSupportDrag(Guid id)
     {
         bool editing = Interaction == SupportInteraction.EditDraft && _draft?.OriginalId == id;
-        if (Interaction != SupportInteraction.Neutral && !editing) return false;
+        if ((Interaction != SupportInteraction.Neutral && !editing) || LoadState != LoadInteraction.Neutral) return false;
         var support = Document.Supports.FirstOrDefault(s => s.Id == id);
         if (support is null) return false;
         if (editing) support = support with { Position = _draft!.CanvasPosition, Type = _draft.Preview.Type };
@@ -268,10 +273,12 @@ public sealed class EditorViewModel : ObservableObject
 
     private LengthCommitResult ChangeLength(Length length)
     {
-        if (Document.Supports.Any(s => s.Position.Meters > length.Meters))
+        if (Document.Supports.Any(s => s.Position.Meters > length.Meters)
+            || Document.Loads.Any(l => l.Position.Meters > length.Meters))
         {
             UpdateConstraintConflict(length);
-            return new(false, Strings.LengthExcludesSupports);
+            return new(false, Document.Loads.Any(l => l.Position.Meters > length.Meters)
+                ? Strings.LengthExcludesEntities : Strings.LengthExcludesSupports);
         }
         UpdateConstraintConflict(null);
         if (length != Document.Length) Commit(Document with { Length = length });
@@ -281,7 +288,8 @@ public sealed class EditorViewModel : ObservableObject
     private void UpdateConstraintConflict(Length? requested)
     {
         var ids = requested is { } length
-            ? Document.Supports.Where(s => s.Position.Meters > length.Meters).Select(s => s.Id).ToArray() : [];
+            ? Document.Supports.Where(s => s.Position.Meters > length.Meters).Select(s => s.Id)
+                .Concat(Document.Loads.Where(l => l.Position.Meters > length.Meters).Select(l => l.Id)).ToArray() : [];
         _constraintConflict = requested is { } value && ids.Length > 0 ? new(value, ids) : null;
         Notify(nameof(ConstraintConflict));
         Notify(nameof(ConflictEntityIds));

@@ -57,4 +57,8 @@
   <data name="LengthExcludesSupports" xml:space="preserve"><value>Beam length cannot exclude existing supports.</value></data>
   <data name="InvalidSupportType" xml:space="preserve"><value>Select a valid support type.</value></data>
   <data name="SupportCoordinate" xml:space="preserve"><value>x = {0} mm</value></data>
+  <data name="ForceValueLabel" xml:space="preserve"><value>Force F</value></data>
+  <data name="MomentValueLabel" xml:space="preserve"><value>Moment M</value></data>
+  <data name="InvalidLoadValue" xml:space="preserve"><value>Enter a finite number.</value></data>
+  <data name="LengthExcludesEntities" xml:space="preserve"><value>The requested length excludes supports or point loads.</value></data>
 </root>
