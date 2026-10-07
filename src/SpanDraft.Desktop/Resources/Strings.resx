@@ -37,6 +37,7 @@
   <data name="SetupDescription" xml:space="preserve"><value>Choose the constant section and material for your beam.</value></data>
   <data name="EditLength" xml:space="preserve"><value>Edit beam length</value></data>
   <data name="Open" xml:space="preserve"><value>Open…</value></data>
+  <data name="Quit" xml:space="preserve"><value>Quit</value></data>
   <data name="Save" xml:space="preserve"><value>Save</value></data>
   <data name="Undo" xml:space="preserve"><value>Undo</value></data>
   <data name="Redo" xml:space="preserve"><value>Redo</value></data>
@@ -69,4 +70,24 @@
   <data name="DistributedEndLabel" xml:space="preserve"><value>End X</value></data>
   <data name="DistributedIntensityLabel" xml:space="preserve"><value>Line load q</value></data>
   <data name="InvalidDistributedRange" xml:space="preserve"><value>The range must satisfy 0 ≤ Start X &lt; End X ≤ beam length.</value></data>
+  <data name="SaveAs" xml:space="preserve"><value>Save As…</value></data>
+  <data name="Untitled" xml:space="preserve"><value>Untitled</value></data>
+  <data name="ProjectFileFilter" xml:space="preserve"><value>SpanDraft Project (*.spandraft)</value></data>
+  <data name="ProjectFileError" xml:space="preserve"><value>The project operation could not be completed.</value></data>
+  <data name="ProjectFileMissing" xml:space="preserve"><value>The project file no longer exists.</value></data>
+  <data name="ProjectBusy" xml:space="preserve"><value>A project file operation is in progress.</value></data>
+  <data name="LocalFilesOnly" xml:space="preserve"><value>Please choose a local project file.</value></data>
+  <data name="LeaveQuestion" xml:space="preserve"><value>Save changes to “{0}” before leaving?</value></data>
+  <data name="DontSave" xml:space="preserve"><value>Don’t Save</value></data>
+  <data name="RecoveryQuestion" xml:space="preserve"><value>An unsaved project from {0} is available. Restore it?</value></data>
+  <data name="RecoveryDamaged" xml:space="preserve"><value>The recovery file could not be read. The application can continue.</value></data>
+  <data name="RecoveryDiscardQuestion" xml:space="preserve"><value>Discard the unreadable recovery file?</value></data>
+  <data name="RecoveryError" xml:space="preserve"><value>Recovery could not be updated. Your project remains available in this window.</value></data>
+  <data name="Restore" xml:space="preserve"><value>Restore</value></data>
+  <data name="Discard" xml:space="preserve"><value>Discard</value></data>
+  <data name="RectangleSectionName" xml:space="preserve"><value>Rectangle {0} × {1} mm</value></data>
+  <data name="RectangularHollowSectionName" xml:space="preserve"><value>Rectangular tube {0} × {1} × {2} mm</value></data>
+  <data name="CircleSectionName" xml:space="preserve"><value>Circle Ø{0} mm</value></data>
+  <data name="CircularHollowSectionName" xml:space="preserve"><value>Circular tube Ø{0} × {1} mm</value></data>
+  <data name="CustomSectionName" xml:space="preserve"><value>Custom section</value></data>
 </root>

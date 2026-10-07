@@ -10,7 +10,8 @@ public readonly record struct LengthCommitResult(bool Accepted, string? ErrorTex
 }
 
 /// <summary>Transient input session for the single inline dimension editor.</summary>
-public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthCommitResult> commit) : ObservableObject
+public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthCommitResult> commit,
+    Func<bool>? preserveBuffer = null) : ObservableObject
 {
     private string _text = UiNumbers.Format(read().Millimeters);
     private bool _isEditing;
@@ -89,7 +90,7 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
 
     public void LoseFocus()
     {
-        if (_isConfirming || !IsEditing || Confirm()) return;
+        if (preserveBuffer?.Invoke() == true || _isConfirming || !IsEditing || Confirm()) return;
         // Leaving a rejected edit discards its request, conflict and feedback together.
         Cancel();
     }

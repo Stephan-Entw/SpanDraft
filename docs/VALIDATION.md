@@ -15,7 +15,7 @@ Toleranzen und alle 45 Golden References sind unverändert.
 
 Die Ausgangsbasis bilden [KONZEPT.md](KONZEPT.md), [DOMAIN.md](DOMAIN.md),
 [SOLVER.md](SOLVER.md), README und die bestehende Implementierung samt ihren
-200 Tests. Diese Validierung ergänzt Entwicklungsnachweise; sie erweitert keine
+damals 200 Tests. Diese Validierung ergänzt Entwicklungsnachweise; sie erweitert keine
 Produktfunktion. Die .NET-Prüfungen verwenden ausschließlich öffentliche
 Domain-/Solver-APIs. Kein interner Assembly-Schritt, keine Solvermatrix und keine
 interne Ableitungsfunktion wird für den unabhängigen Nachweis wiederverwendet.
@@ -42,7 +42,7 @@ Steifigkeiten, elastische Lager und Gelenkfreigaben sind nicht Gegenstand.
 enthält die Validierungsbibliothek, CLI und xUnit-Tests sowie Referenzen auf
 Core/Solver. Die Abhängigkeit verläuft nur von Validation zum Produkt. Beide
 Solutions lassen sich ohne Python separat restaurieren und bauen. Ein normaler
-Haupt-Testlauf prüft die bisherigen 200 Tests; das vollständige Acceptance-Gate
+Haupt-Testlauf prüft alle Produkttests (aktueller Stand im README); das vollständige Acceptance-Gate
 erfordert zusätzlich die getrennte Validation-Solution.
 
 [`validation/cases/`](../validation/cases/) enthält 18 neutrale JSON-Eingaben mit
@@ -398,7 +398,7 @@ obiger Tabelle. V14 besitzt zusätzlich genau sechs ausdrücklich begründete
 N/A-Positionsvergleiche gegen IB; alle anwendbaren Pflichtvergleiche bestehen.
 `SpanDraft tests` umfasst die separaten Gleichgewichts-, Feld-
 und Metamorphieprüfungen des Falles; die Referenzabnahme steht in den
-Referenzspalten. Die bestehenden 200 Produkttests bestehen insgesamt.
+Referenzspalten. Die damaligen 200 Produkttests bestanden insgesamt.
 
 | Case | Analytical | IndeterminateBeam | PyCBA | Equilibrium | SpanDraft tests | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |

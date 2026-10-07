@@ -28,7 +28,7 @@ Current acceptance is **PASS**: all 18 cases pass. Only V14's six
 IndeterminateBeam extremum-position comparisons are **NOT APPLICABLE**, because
 its native roundoff fields cannot establish the physical zero-field location
 set. All six extremum values remain mandatory and pass. Both solutions build;
-200 main tests and 195 validation tests pass (395 total, none skipped).
+969 product tests and 195 validation tests pass (1164 total, none skipped).
 The acceptance runner performs 13,472 applicable comparisons; six N/A positions
 are reported separately. No product source, tolerance or golden file changed.
 

@@ -21,10 +21,11 @@ placement, transactional flyout, repeated drag and delete workflow. Signed value
 define direction; coincident loads remain separate and are stacked visually.
 Constant distributed loads support two-click range placement, transactional flyouts,
 endpoint drags and deletion. The future results action remains disabled.
-Saving, diagrams and exports are not yet implemented.
+Project sessions support `.spandraft` files, transactional open/save, snapshot undo/redo,
+savepoints and private crash recovery. Diagrams and exports are not yet implemented.
 Current status (2026-10-07): Support, point force, point moment and constant
 distributed load placement and editing are implemented.
-The regression baseline is 817 passing product tests, 195 validation tests and
+The regression baseline is 969 passing product tests, 195 validation tests and
 18 acceptance cases.
 Architecture and scope are defined in [the project concept](docs/KONZEPT.md).
 Local coordinates, signs and domain validation are documented in [the domain notes](docs/DOMAIN.md).
@@ -32,6 +33,7 @@ The numerical formulation, solver API and current limits are documented in [the 
 The implemented assessment and its limits are documented in [the engineering notes](docs/ENGINEERING.md).
 The application entry point and success/failure contract are documented in [the analysis notes](docs/ANALYSIS.md).
 The implemented desktop and binding placement/flyout interaction rules are documented in [the UI specification](docs/UI.md).
+Project files and compatibility rules are documented in [the project format](docs/PROJECT_FORMAT.md).
 
 ## Development
 
@@ -114,6 +116,6 @@ acceptance gate are documented in [VALIDATION.md](docs/VALIDATION.md).
 
 ## Deferred decisions
 
-As described in the concept, the model file format, additional UI languages and
-concrete PDF/XLSX libraries remain open. Settings, persistence,
+As described in the concept, additional UI languages and
+concrete PDF/XLSX libraries remain open. Settings,
 theme switching and profile libraries remain deferred. No reporting libraries are installed.

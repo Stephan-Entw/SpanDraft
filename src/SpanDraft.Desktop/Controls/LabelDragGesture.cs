@@ -13,6 +13,7 @@ public sealed class LabelDragGesture(EntityAnnotation label, Point press, Annota
     public Rect AutoBounds { get; } = label.AutoBounds;
     public Rect StartBounds { get; } = label.Bounds;
     public bool IsDragging { get; private set; }
+    private AnnotationOffset? _pendingOffset;
 
     public AnnotationOffset? Update(Point pointer)
     {
@@ -26,12 +27,27 @@ public sealed class LabelDragGesture(EntityAnnotation label, Point press, Annota
 
     public void Apply(EditorViewModel editor, Point pointer)
     {
-        if (Update(pointer) is { } offset) editor.SetAnnotationOffset(EntityId, offset);
+        if (Update(pointer) is { } offset)
+        {
+            _pendingOffset = offset;
+            editor.PreviewAnnotationOffset(EntityId, offset);
+        }
     }
 
     public bool OpenOnClick(EditorViewModel editor) => !IsDragging
         && (IsSupport ? editor.EditSupport(EntityId) : editor.Document.DistributedLoads.Any(l => l.Id == EntityId)
             ? editor.EditDistributedLoad(EntityId) : editor.EditLoad(EntityId));
 
-    public void Cancel(EditorViewModel editor) => editor.SetAnnotationOffset(EntityId, OriginalOffset);
+    public void Complete(EditorViewModel editor)
+    {
+        editor.ClearAnnotationPreview();
+        if (_pendingOffset is { } offset) editor.SetAnnotationOffset(EntityId, offset);
+        _pendingOffset = null;
+    }
+
+    public void Cancel(EditorViewModel editor)
+    {
+        _pendingOffset = null;
+        editor.ClearAnnotationPreview();
+    }
 }

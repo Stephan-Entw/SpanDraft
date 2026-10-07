@@ -168,7 +168,9 @@ public sealed class DesktopDistributedLoadLayoutTests
         var gesture = new LabelDragGesture(label, label.Bounds.Position, null);
         gesture.Apply(editor, label.Bounds.Position + new Vector(20, -30));
         Assert.Same(doc, editor.Document);
-        Assert.Equal(new AnnotationOffset(20, -30), editor.EditorPresentation.AnnotationOffsets[a.Id]);
+        Assert.Empty(editor.EditorPresentation.AnnotationOffsets);
+        Assert.Empty(editor.Session.UndoHistory);
+        Assert.Equal(new AnnotationOffset(20, -30), editor.RenderPresentation.AnnotationOffsets[a.Id]);
         Assert.False(gesture.OpenOnClick(editor));
         var click = new LabelDragGesture(label, label.Bounds.Position, null);
         Assert.True(click.OpenOnClick(editor));
@@ -180,6 +182,7 @@ public sealed class DesktopDistributedLoadLayoutTests
         Assert.Equal("unfinished", draft.StartText);
         Assert.Equal("0", draft.IntensityText);
         Assert.DoesNotContain(a.Id, editor.EditorPresentation.AnnotationOffsets.Keys);
+        Assert.Empty(editor.Session.UndoHistory);
         var other = scene.Annotations.Single(l => l.Id == b.Id);
         var offset = new AnnotationOffset(label.Bounds.X - other.AutoBounds.X, label.Bounds.Y - other.AutoBounds.Y);
         var overlapping = BeamRenderState.Create(doc, scene.Frame, DesktopLayoutFixture.Measure,

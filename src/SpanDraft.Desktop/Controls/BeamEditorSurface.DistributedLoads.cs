@@ -27,7 +27,7 @@ public partial class BeamEditorSurface
             Canvas.SetTop(DistributedLoadAnchor, visual.BeamY + 28);
         }
         var draft = _editor?.DistributedLoadDraft;
-        bool show = _editor?.IsDistributedLoadFlyoutVisible == true;
+        bool show = _editor?.IsDistributedLoadFlyoutVisible == true && !_editor.IsBusy;
         if (_shownDistributedDraft == draft && DistributedLoadPopup.IsOpen == show) return;
         _shownDistributedDraft = draft;
         int version = ++_distributedPopupFocusVersion;
@@ -148,6 +148,6 @@ public partial class BeamEditorSurface
 
     private void DistributedLoadPopupClosed(object? sender, EventArgs e)
     {
-        if (!DistributedLoadPopup.IsOpen && _editor?.IsDistributedLoadFlyoutVisible == true) _editor.CancelDistributedLoadInteraction();
+        if (!DistributedLoadPopup.IsOpen && _editor?.PreserveDrafts != true && _editor?.IsDistributedLoadFlyoutVisible == true) _editor.CancelDistributedLoadInteraction();
     }
 }

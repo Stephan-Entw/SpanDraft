@@ -31,6 +31,29 @@ public static class Strings
     public static string InvalidSupportType => Get(nameof(InvalidSupportType));
     public static string SupportCoordinate => Get(nameof(SupportCoordinate));
 
+    public static string SaveAs => Get(nameof(SaveAs));
+    public static string Quit => Get(nameof(Quit));
+    public static string Untitled => Get(nameof(Untitled));
+    public static string ProjectFileFilter => Get(nameof(ProjectFileFilter));
+    public static string ProjectFileError => Get(nameof(ProjectFileError));
+    public static string ProjectFileMissing => Get(nameof(ProjectFileMissing));
+    public static string ProjectBusy => Get(nameof(ProjectBusy));
+    public static string LocalFilesOnly => Get(nameof(LocalFilesOnly));
+    public static string LeaveQuestion => Get(nameof(LeaveQuestion));
+    public static string DontSave => Get(nameof(DontSave));
+    public static string RecoveryQuestion => Get(nameof(RecoveryQuestion));
+    public static string RecoveryDamaged => Get(nameof(RecoveryDamaged));
+    public static string RecoveryDiscardQuestion => Get(nameof(RecoveryDiscardQuestion));
+    public static string RecoveryError => Get(nameof(RecoveryError));
+    public static string Restore => Get(nameof(Restore));
+    public static string Discard => Get(nameof(Discard));
+
+    public static string RectangleSectionName => Get(nameof(RectangleSectionName));
+    public static string RectangularHollowSectionName => Get(nameof(RectangularHollowSectionName));
+    public static string CircleSectionName => Get(nameof(CircleSectionName));
+    public static string CircularHollowSectionName => Get(nameof(CircularHollowSectionName));
+    public static string CustomSectionName => Get(nameof(CustomSectionName));
+
     private static string Get(string name) =>
         ResourceManager.GetString(name, CultureInfo.CurrentUICulture)
         ?? throw new MissingManifestResourceException(name);

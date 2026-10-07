@@ -34,7 +34,7 @@ public partial class BeamEditorSurface
             Canvas.SetTop(LoadAnchor, visual.Y + PointLoadSymbol.HalfSize + 8);
         }
         var draft = _editor?.LoadDraft;
-        bool show = _editor?.IsLoadFlyoutVisible == true;
+        bool show = _editor?.IsLoadFlyoutVisible == true && !_editor.IsBusy;
         if (_shownLoadDraft == draft && LoadPopup.IsOpen == show) return;
         _shownLoadDraft = draft;
         int version = ++_loadPopupFocusVersion;
@@ -126,6 +126,6 @@ public partial class BeamEditorSurface
 
     private void LoadPopupClosed(object? sender, EventArgs e)
     {
-        if (!LoadPopup.IsOpen && _editor?.IsLoadFlyoutVisible == true) _editor.CancelLoadInteraction();
+        if (!LoadPopup.IsOpen && _editor?.PreserveDrafts != true && _editor?.IsLoadFlyoutVisible == true) _editor.CancelLoadInteraction();
     }
 }

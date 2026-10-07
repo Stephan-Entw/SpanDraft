@@ -49,6 +49,7 @@ public partial class BeamEditorSurface : UserControl
             {
                 _editor.CancelEditorInteraction();
                 _editor.PropertyChanged -= EditorChanged;
+                _editor.InteractionsCancelling -= CancelSurfaceInteractions;
             }
             _layout.EndInteraction();
             SelectionPopup.IsOpen = false;
@@ -67,9 +68,17 @@ public partial class BeamEditorSurface : UserControl
         ObserveTopLevel(TopLevel.GetTopLevel(this));
         if (_editor == DataContext) return;
         CancelLabelGesture();
-        if (_editor is not null) _editor.PropertyChanged -= EditorChanged;
+        if (_editor is not null)
+        {
+            _editor.PropertyChanged -= EditorChanged;
+            _editor.InteractionsCancelling -= CancelSurfaceInteractions;
+        }
         _editor = DataContext as EditorViewModel;
-        if (_editor is not null) _editor.PropertyChanged += EditorChanged;
+        if (_editor is not null)
+        {
+            _editor.PropertyChanged += EditorChanged;
+            _editor.InteractionsCancelling += CancelSurfaceInteractions;
+        }
         SynchronizeVisuals();
     }
 
@@ -93,6 +102,7 @@ public partial class BeamEditorSurface : UserControl
 
     private void SupportWindowDeactivated(object? sender, EventArgs e)
     {
+        if (_editor?.PreserveDrafts == true) return;
         if (CancelLabelGesture()) return;
         if (_editor?.SupportDraft is not null || _editor?.LoadDraft is not null || _editor?.DistributedLoadDraft is not null)
         {
@@ -103,7 +113,7 @@ public partial class BeamEditorSurface : UserControl
 
     private void SupportOutsidePointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_editor is null || (!_editor.IsSupportFlyoutVisible && !_editor.IsLoadFlyoutVisible && !_editor.IsDistributedLoadFlyoutVisible)) return;
+        if (_editor is null || _editor.PreserveDrafts || OverMenu(e.Source) || (!_editor.IsSupportFlyoutVisible && !_editor.IsLoadFlyoutVisible && !_editor.IsDistributedLoadFlyoutVisible)) return;
         if (OverSupportFlyout(e.Source) || OverLoadFlyout(e.Source) || OverDistributedFlyout(e.Source)) return;
         if (DistributedLoadPopup.IsOpen && new Rect(DistributedLoadEditor.Bounds.Size).Contains(e.GetPosition(DistributedLoadEditor))) return;
         if (LoadPopup.IsOpen && new Rect(LoadEditor.Bounds.Size).Contains(e.GetPosition(LoadEditor))) return;
@@ -124,15 +134,31 @@ public partial class BeamEditorSurface : UserControl
         e.Handled = !OverToolbar(e.Source);
     }
 
+    private static bool OverMenu(object? source) => source is Control c
+        && (c is MenuItem or Menu || c.GetVisualAncestors().Any(a => a is MenuItem or Menu)
+            || c.GetLogicalAncestors().Any(a => a is MenuItem or Menu));
+
+    private void CancelSurfaceInteractions()
+    {
+        ReleaseGesture();
+        SelectionPopup.IsOpen = false;
+        _layout.EndInteraction();
+    }
+
     private void EditorChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(EditorViewModel.IsBusy) && _editor!.IsBusy)
+        {
+            ReleaseGesture();
+            _editor.CancelPointerDrag();
+        }
         if (_labelGesture is { } label && (e.PropertyName == nameof(EditorViewModel.Document)
             && !_editor!.Document.NamedEntities.Any(entity => entity.Id == label.EntityId)
             || e.PropertyName == nameof(EditorViewModel.IsSupportFlyoutVisible) && _editor!.Interaction == SupportInteraction.Placement
             || e.PropertyName == nameof(EditorViewModel.IsLoadFlyoutVisible) && _editor!.LoadState == LoadInteraction.Placement
             || e.PropertyName == nameof(EditorViewModel.IsDistributedLoadFlyoutVisible) && _editor!.DistributedLoadState == DistributedLoadInteraction.Placement))
             CancelLabelGesture();
-        if (e.PropertyName is nameof(EditorViewModel.Document) or nameof(EditorViewModel.EditorPresentation) or nameof(EditorViewModel.SupportDraft)
+        if (e.PropertyName is nameof(EditorViewModel.IsBusy) or nameof(EditorViewModel.Document) or nameof(EditorViewModel.EditorPresentation) or nameof(EditorViewModel.RenderPresentation) or nameof(EditorViewModel.SupportDraft)
             or nameof(EditorViewModel.IsSupportFlyoutVisible) or nameof(EditorViewModel.Preview)
             or nameof(EditorViewModel.HoveredSupportId) or nameof(EditorViewModel.HasSupportFeedback)
             or nameof(EditorViewModel.ConstraintConflict) or nameof(EditorViewModel.LoadPreview)
@@ -166,7 +192,7 @@ public partial class BeamEditorSurface : UserControl
             if (_labelGesture is null) BeamPane.MinHeight = committed.MinimumPaneHeight;
             _scene = BeamRenderState.Create(_editor.Document, frame, measure,
                 _editor.Preview, _editor.HiddenSupportId, _editor.SupportPreviewName,
-                _editor.LoadPreview, _editor.HiddenLoadId, _editor.LoadPreviewName, _editor.EditorPresentation,
+                _editor.LoadPreview, _editor.HiddenLoadId, _editor.LoadPreviewName, _editor.RenderPresentation,
                 _editor.DistributedLoadPreview, _editor.HiddenDistributedLoadId, _editor.DistributedLoadPreviewName);
             TechnicalCanvas.Scene = _scene;
             CoordinateAxis.SetStationLayout(frame.Layout, frame.Viewport.Width);
@@ -186,7 +212,7 @@ public partial class BeamEditorSurface : UserControl
             SynchronizeLoadVisuals();
             SynchronizeDistributedVisuals();
             var draft = _editor.SupportDraft;
-            bool show = _editor.IsSupportFlyoutVisible;
+            bool show = _editor.IsSupportFlyoutVisible && !_editor.IsBusy;
             FeedbackOverlay.Text = _editor.DistributedLoadFeedback ?? _editor.LoadFeedback ?? _editor.SupportFeedback;
             FeedbackOverlay.IsVisible = !show && !_editor.IsLoadFlyoutVisible && !_editor.IsDistributedLoadFlyoutVisible
                 && (_editor.HasSupportFeedback || _editor.HasLoadFeedback || _editor.HasDistributedLoadFeedback);
@@ -221,7 +247,7 @@ public partial class BeamEditorSurface : UserControl
 
     private void SurfacePointerMoved(object? sender, PointerEventArgs e)
     {
-        if (_editor is null) return;
+        if (_editor is null || _editor.IsBusy) return;
         var point = e.GetPosition(BeamPane);
         if (_labelGesture is not null) { UpdateLabelGesture(point); e.Handled = true; return; }
         if (_gesture is not null || _loadGesture is not null || _distributedGesture is not null) { UpdateGesture(point); return; }
@@ -252,7 +278,7 @@ public partial class BeamEditorSurface : UserControl
 
     private void SurfacePointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_editor is null || OverOverlay(e.Source) || OverSupportFlyout(e.Source) || OverLoadFlyout(e.Source) || OverDistributedFlyout(e.Source)
+        if (_editor is null || _editor.IsBusy || OverOverlay(e.Source) || OverSupportFlyout(e.Source) || OverLoadFlyout(e.Source) || OverDistributedFlyout(e.Source)
             || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         var point = e.GetPosition(BeamPane);
         if (_editor.IsEditorNeutral && _scene?.HitTestLabels(point.X, point.Y).Count > 1)
@@ -338,6 +364,7 @@ public partial class BeamEditorSurface : UserControl
 
     private void SurfacePointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        if (_editor?.IsBusy == true) return;
         if (_labelGesture is not null && e.InitialPressMouseButton == MouseButton.Left)
         {
             FinishLabelGesture(e.GetPosition(BeamPane));
@@ -423,7 +450,8 @@ public partial class BeamEditorSurface : UserControl
         if (CancelLabelGesture()) return;
         if (_gesture is null && _loadGesture is null && _distributedGesture is null && _placementClick is null) return;
         ReleaseGesture();
-        _editor?.CancelEditorInteraction();
+        if (_editor?.PreserveDrafts == true) _editor.CancelPointerDrag();
+        else _editor?.CancelEditorInteraction();
     }
 
     private void ReleaseGesture(bool keepDistributedPlacement = false)
@@ -455,6 +483,6 @@ public partial class BeamEditorSurface : UserControl
 
     private void SupportPopupClosed(object? sender, EventArgs e)
     {
-        if (!SupportPopup.IsOpen && _editor?.IsSupportFlyoutVisible == true) _editor.CancelEditorInteraction();
+        if (!SupportPopup.IsOpen && _editor?.PreserveDrafts != true && _editor?.IsSupportFlyoutVisible == true) _editor.CancelEditorInteraction();
     }
 }

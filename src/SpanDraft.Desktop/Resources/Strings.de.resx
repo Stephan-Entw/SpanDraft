@@ -37,6 +37,7 @@
   <data name="SetupDescription" xml:space="preserve"><value>Konstanten Querschnitt und Werkstoff für den Balken auswählen.</value></data>
   <data name="EditLength" xml:space="preserve"><value>Balkenlänge bearbeiten</value></data>
   <data name="Open" xml:space="preserve"><value>Öffnen…</value></data>
+  <data name="Quit" xml:space="preserve"><value>Beenden</value></data>
   <data name="Save" xml:space="preserve"><value>Speichern</value></data>
   <data name="Undo" xml:space="preserve"><value>Rückgängig</value></data>
   <data name="Redo" xml:space="preserve"><value>Wiederholen</value></data>
@@ -69,4 +70,24 @@
   <data name="DistributedEndLabel" xml:space="preserve"><value>Ende X</value></data>
   <data name="DistributedIntensityLabel" xml:space="preserve"><value>Streckenlast q</value></data>
   <data name="InvalidDistributedRange" xml:space="preserve"><value>Der Bereich muss 0 ≤ Start X &lt; Ende X ≤ Balkenlänge erfüllen.</value></data>
+  <data name="SaveAs" xml:space="preserve"><value>Speichern unter…</value></data>
+  <data name="Untitled" xml:space="preserve"><value>Unbenannt</value></data>
+  <data name="ProjectFileFilter" xml:space="preserve"><value>SpanDraft-Projekt (*.spandraft)</value></data>
+  <data name="ProjectFileError" xml:space="preserve"><value>Die Projektaktion konnte nicht abgeschlossen werden.</value></data>
+  <data name="ProjectFileMissing" xml:space="preserve"><value>Die Projektdatei ist nicht mehr vorhanden.</value></data>
+  <data name="ProjectBusy" xml:space="preserve"><value>Eine Projektdateiaktion läuft bereits.</value></data>
+  <data name="LocalFilesOnly" xml:space="preserve"><value>Bitte eine lokale Projektdatei auswählen.</value></data>
+  <data name="LeaveQuestion" xml:space="preserve"><value>Änderungen an „{0}“ vor dem Verlassen speichern?</value></data>
+  <data name="DontSave" xml:space="preserve"><value>Nicht speichern</value></data>
+  <data name="RecoveryQuestion" xml:space="preserve"><value>Ein ungespeichertes Projekt vom {0} ist verfügbar. Wiederherstellen?</value></data>
+  <data name="RecoveryDamaged" xml:space="preserve"><value>Die Wiederherstellungsdatei konnte nicht gelesen werden. Die Anwendung kann weiter verwendet werden.</value></data>
+  <data name="RecoveryDiscardQuestion" xml:space="preserve"><value>Die nicht lesbare Wiederherstellungsdatei verwerfen?</value></data>
+  <data name="RecoveryError" xml:space="preserve"><value>Die Wiederherstellung konnte nicht aktualisiert werden. Ihr Projekt bleibt in diesem Fenster erhalten.</value></data>
+  <data name="Restore" xml:space="preserve"><value>Wiederherstellen</value></data>
+  <data name="Discard" xml:space="preserve"><value>Verwerfen</value></data>
+  <data name="RectangleSectionName" xml:space="preserve"><value>Rechteck {0} × {1} mm</value></data>
+  <data name="RectangularHollowSectionName" xml:space="preserve"><value>Rechteckrohr {0} × {1} × {2} mm</value></data>
+  <data name="CircleSectionName" xml:space="preserve"><value>Rundmaterial Ø{0} mm</value></data>
+  <data name="CircularHollowSectionName" xml:space="preserve"><value>Rundrohr Ø{0} × {1} mm</value></data>
+  <data name="CustomSectionName" xml:space="preserve"><value>Benutzerquerschnitt</value></data>
 </root>

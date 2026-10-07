@@ -38,9 +38,58 @@ public sealed partial class EditorViewModel
 
     public void CancelEditorInteraction()
     {
+        InteractionsCancelling?.Invoke();
+        ClearAnnotationPreview();
+        DimensionLength.Cancel();
         CancelSupportInteraction();
         CancelLoadInteraction();
         CancelDistributedLoadInteraction();
+    }
+
+    /// <summary>Native dialogs may take pointer capture. Restore a gesture's draft without discarding its buffers.</summary>
+    public void CancelPointerDrag()
+    {
+        ClearAnnotationPreview();
+        if (Interaction == SupportInteraction.Drag)
+        {
+            if (_draft is null) CancelSupportInteraction();
+            else
+            {
+                _dragSupport = null;
+                _dragValid = false;
+                _interaction = SupportInteraction.EditDraft;
+                _preview = _draft.Preview;
+                _supportFeedback = null;
+                NotifySupportState();
+            }
+        }
+        if (LoadState == LoadInteraction.Drag)
+        {
+            if (_loadDraft is null) CancelLoadInteraction();
+            else
+            {
+                _dragLoad = null;
+                _loadDragValid = false;
+                _loadState = LoadInteraction.EditDraft;
+                _loadPreview = _loadDraft.Preview;
+                _loadFeedback = null;
+                NotifyLoadState();
+            }
+        }
+        if (DistributedLoadState == DistributedLoadInteraction.Drag)
+        {
+            if (_distributedDragFromNeutral) CancelDistributedLoadInteraction();
+            else
+            {
+                _distributedLoadState = _distributedLoadDraft!.IsExisting
+                    ? DistributedLoadInteraction.EditDraft : DistributedLoadInteraction.NewDraft;
+                _distributedLoadPreview = _distributedLoadDraft.Preview;
+                _distributedDragPosition = null;
+                _distributedDragValid = _distributedDragFromNeutral = false;
+                _distributedLoadFeedback = null;
+                NotifyDistributedLoadState();
+            }
+        }
     }
 
     public void ToggleLoadTool(PointLoadKind kind)
@@ -151,6 +200,7 @@ public sealed partial class EditorViewModel
 
     public bool ConfirmLoad()
     {
+        if (IsBusy) return false;
         var draft = LoadDraft;
         if (!IsLoadFlyoutVisible || draft is null || !draft.TryGetValues(out var position, out double value)
             || !CanLoadPosition(position.Meters)) return false;
@@ -175,7 +225,7 @@ public sealed partial class EditorViewModel
 
     public void DeleteLoad()
     {
-        if (LoadState != LoadInteraction.EditDraft || LoadDraft?.OriginalId is not { } id
+        if (IsBusy || LoadState != LoadInteraction.EditDraft || LoadDraft?.OriginalId is not { } id
             || !Document.Loads.Any(l => l.Id == id)) return;
         var document = Document.WithLoads(Document.Loads.Where(l => l.Id != id));
         CancelLoadInteraction();

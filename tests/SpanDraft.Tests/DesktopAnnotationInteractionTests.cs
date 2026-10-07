@@ -63,7 +63,14 @@ public sealed class DesktopAnnotationInteractionTests
     public void CompletedDragUpdatesOnlyAnnotationAndNeverOpensDraft(int kind)
     {
         var s = new Session(kind); var document = s.Editor.Document; var analysis = s.Editor.Presentation;
+        s.Gesture.Apply(s.Editor, s.Label.Bounds.Center + new Vector(10, -10));
+        s.Gesture.Apply(s.Editor, s.Label.Bounds.Center + new Vector(20, -40));
         s.Gesture.Apply(s.Editor, s.Label.Bounds.Center + new Vector(30, -650));
+        Assert.Empty(s.Editor.EditorPresentation.AnnotationOffsets);
+        Assert.Empty(s.Editor.Session.UndoHistory);
+        Assert.Equal(new AnnotationOffset(30, -650), s.Editor.RenderPresentation.AnnotationOffsets[s.EntityId]);
+        s.Gesture.Complete(s.Editor);
+        Assert.Single(s.Editor.Session.UndoHistory);
         Assert.Equal(new AnnotationOffset(30, -650), s.Editor.EditorPresentation.AnnotationOffsets[s.EntityId]);
         Assert.False(s.Gesture.OpenOnClick(s.Editor));
         Assert.Null(s.Editor.SupportDraft); Assert.Null(s.Editor.LoadDraft);
@@ -86,7 +93,7 @@ public sealed class DesktopAnnotationInteractionTests
         var supportDraft = s.Editor.SupportDraft; var loadDraft = s.Editor.LoadDraft;
         var document = s.Editor.Document; var analysis = s.Editor.Presentation;
         s.Gesture.Apply(s.Editor, s.Label.Bounds.Center + new Vector(30, -20));
-        Assert.True(s.Editor.EditorPresentation.AnnotationOffsets.ContainsKey(s.EntityId));
+        Assert.True(s.Editor.RenderPresentation.AnnotationOffsets.ContainsKey(s.EntityId));
         s.Gesture.Cancel(s.Editor);
         Assert.Same(supportDraft, s.Editor.SupportDraft); Assert.Same(loadDraft, s.Editor.LoadDraft);
         Assert.Equal("7,", kind == 0 ? s.Editor.SupportDraft!.PositionText : s.Editor.LoadDraft!.PositionText);

@@ -1,6 +1,6 @@
 # SpanDraft – Konzept
 
-> Status: Core, unabhängig validierter Solver, Engineering, Analysis und Desktop mit Support-, Punktkraft-, Punktmoment- und Streckenlast-Interaktionen einschließlich transaktionaler Drags implementiert
+> Status: Core, unabhängig validierter Solver, Engineering, Analysis und Desktop mit Support-, Punktkraft-, Punktmoment- und Streckenlast-Interaktionen einschließlich transaktionaler Drags sowie Projekt-Sessions, Undo/Redo, Save/Load und Recovery implementiert
 > Stand: 07.10.2026
 > Dieses Dokument beschreibt den geplanten Scope, die technische Architektur und die Grundprinzipien von SpanDraft. Es ist bewusst als interne Entwicklungsgrundlage auf Deutsch gehalten und wird mit dem Projekt weiterentwickelt.
 
@@ -61,7 +61,7 @@ Werten und eigener Vorschau implementiert. Konstante Streckenlasten bieten Berei
 transaktionale Flyouts, Endpunkt-Drags und Löschen. Die verbindliche Oberfläche steht in
 [UI.md](UI.md).
 
-Aktueller Regressionstand: 788 Produkttests, 195 Validation-Tests und 18
+Aktueller Regressionstand: 969 Produkttests, 195 Validation-Tests und 18
 Acceptance-Fälle bestanden. Lager- und Punktlastpositionen erfüllen zentral 0 ≤ x ≤ L.
 Bei einer blockierten Verkürzung erhält Enter die aktive Längeneingabe samt Fehler und Konfliktvorschau;
 abgelehnter Fokusverlust verwirft sie vollständig und restauriert die committed
@@ -316,12 +316,10 @@ Als mögliche Bibliothek ist ClosedXML vorgesehen. Auch diese Abhängigkeit wird
 
 SpanDraft soll Modelle lokal speichern und wieder öffnen können.
 
-Das Dateiformat ist noch nicht endgültig festgelegt. Anforderungen:
-
-- versionierbar,
-- robust gegenüber zukünftigen Erweiterungen,
-- möglichst gut nachvollziehbar,
-- keine Abhängigkeit von Cloud-Diensten.
+Implementiert sind lokale `.spandraft`-Projektdateien mit versioniertem UTF-8-JSON
+und ausschließlich SI-Werten, Snapshot-Undo/Redo, Savepoints, transaktionales Öffnen
+und private lokale Crash-Recovery. Der dauerhafte Dateivertrag steht in
+[PROJECT_FORMAT.md](PROJECT_FORMAT.md).
 
 ## 10. Internationalisierung
 
@@ -437,7 +435,9 @@ Engineering. Der Rechenpfad lautet BeamModel → BeamAnalysis → Solver → Bea
 
 Enthält ausschließlich Desktop-UI, Interaktionslogik und Darstellung.
 MainWindow hostet Menü und Setup/Editor; eigene kleine ViewModels halten Navigation,
-temporäre Eingaben und ein einziges committed EditorDocument. Dessen immutable
+temporäre Eingaben und eine ProjectSession als einzige committed Zustandsquelle.
+ProjectState enthält EditorDocument und EditorPresentationState; History, Savepoint
+und Dateipfad gehören zur Session, nicht zum Dateiformat. Dessen immutable
 EditorSupports, EditorPointLoads und EditorUniformDistributedLoads tragen stabile UI-IDs; Preview, Flyout und Drag bleiben temporär.
 BeamEditorSurface
 trennt editierbare Controls vom DrawingContext-Rendering des BeamCanvas.
@@ -551,7 +551,7 @@ Herstellerbibliothek; A/I/W stammen aus dem idealisierten Core-Modell.
 
 Nächste Schritte gemäß [UI.md](UI.md):
 
-- Tabellenansicht und Undo/Redo.
+- Tabellenansicht. Undo/Redo und Projekt-Sessions sind implementiert.
 
 ### Phase 3 – Ergebnisse
 
@@ -564,7 +564,7 @@ Nächste Schritte gemäß [UI.md](UI.md):
 
 ### Phase 4 – Persistenz und Ausgabe
 
-- Projekt speichern/laden,
+- Projekt speichern/laden und lokale Recovery (implementiert),
 - PDF-Report,
 - XLSX-Export,
 - Druckworkflow für Reports.

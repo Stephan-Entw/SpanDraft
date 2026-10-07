@@ -5,7 +5,7 @@
         xmlns:views="clr-namespace:SpanDraft.Desktop.Views"
         x:Class="SpanDraft.Desktop.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="{x:Static resources:Strings.ApplicationTitle}"
+        Title="{Binding WindowTitle}"
         Icon="avares://SpanDraft.Desktop/Assets/AppIcon/SpanDraft.ico"
         Width="1250" Height="800" MinWidth="1100" MinHeight="650">
   <Window.DataTemplates>
@@ -17,15 +17,19 @@
     </DataTemplate>
   </Window.DataTemplates>
   <Grid RowDefinitions="Auto,*">
-    <Menu>
+    <Menu x:Name="ProjectMenu">
       <MenuItem Header="{x:Static resources:Strings.File}">
-        <MenuItem Header="{x:Static resources:Strings.NewProject}" IsEnabled="False" />
-        <MenuItem Header="{x:Static resources:Strings.Open}" IsEnabled="False" />
-        <MenuItem Header="{x:Static resources:Strings.Save}" IsEnabled="False" />
+        <MenuItem x:Name="NewMenuItem" Header="{x:Static resources:Strings.NewProject}" Command="{Binding NewCommand}" />
+        <MenuItem x:Name="OpenMenuItem" Header="{x:Static resources:Strings.Open}" Command="{Binding OpenCommand}" />
+        <Separator />
+        <MenuItem x:Name="SaveMenuItem" Header="{x:Static resources:Strings.Save}" Command="{Binding SaveCommand}" />
+        <MenuItem x:Name="SaveAsMenuItem" Header="{x:Static resources:Strings.SaveAs}" Command="{Binding SaveAsCommand}" />
+        <Separator />
+        <MenuItem x:Name="QuitMenuItem" Header="{x:Static resources:Strings.Quit}" IsEnabled="{Binding !IsBusy}" />
       </MenuItem>
       <MenuItem Header="{x:Static resources:Strings.Edit}">
-        <MenuItem Header="{x:Static resources:Strings.Undo}" IsEnabled="False" />
-        <MenuItem Header="{x:Static resources:Strings.Redo}" IsEnabled="False" />
+        <MenuItem x:Name="UndoMenuItem" Header="{x:Static resources:Strings.Undo}" Command="{Binding UndoCommand}" />
+        <MenuItem x:Name="RedoMenuItem" Header="{x:Static resources:Strings.Redo}" Command="{Binding RedoCommand}" />
         <Separator />
         <MenuItem Header="{x:Static resources:Strings.Settings}" IsEnabled="False" />
       </MenuItem>
@@ -37,6 +41,6 @@
         <MenuItem Header="{x:Static resources:Strings.About}" IsEnabled="False" />
       </MenuItem>
     </Menu>
-    <ContentControl Grid.Row="1" Content="{Binding CurrentViewModel}" />
+    <ContentControl Grid.Row="1" Content="{Binding CurrentViewModel}" IsEnabled="{Binding !IsBusy}" />
   </Grid>
 </Window>

@@ -1,6 +1,6 @@
 # SpanDraft – verbindliche UI-Spezifikation
 
-Stand: 07.10.2026, konstante Streckenlast im Desktop. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
+Stand: 07.10.2026, Projekt-Sessions, Undo/Redo, Speichern/Öffnen und Recovery. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
 Support-, Punktkraft-, Punktmoment- und Streckenlast-Placement & Editing einschließlich
 transaktionaler Drags sind implementiert.
 
@@ -22,7 +22,8 @@ Streckenlast-Bereichsplacement/-flyout/-endpunktdrag, Analysis-Anbindung und Erg
 
 ## 2. Startseite und Setup-Modi
 
-Jeder App-Start zeigt ProjectSetupView, ohne Projekt und ohne Analysis-Aufruf.
+Ohne verfügbare Recovery zeigt der App-Start das Projekt-Setup, ohne Projekt und ohne Analysis-Aufruf.
+Recovery beim Start ist in Abschnitt 3 beschrieben.
 Zwei kompakte Auswahlbereiche zeigen Querschnitt mit A/I/W und Werkstoff mit E/Re.
 
 Initial ausgewählt:
@@ -65,20 +66,54 @@ Punktkraft, Moment, Streckenlast | Einspannung, Festlager, Loslager
 Die Toolbar enthält kein Längenfeld. Alle sechs Werkzeuge sind aktiviert und zeigen einen Checked-State. Es gibt
 weder einen Auswahl- noch einen Entfernen-Button. Neutral ist der Auswahlzustand.
 
-Menü-Platzhalter (einschließlich Neues Projekt, Öffnen, Speichern,
-Rückgängig/Wiederholen, Einstellungen, Zoom, Ergebnisse und Über SpanDraft)
-sind deaktiviert. Keine anklickbaren No-op-Aktionen.
+Datei bietet Neues Projekt, Öffnen…, Speichern, Speichern unter… und Beenden;
+Trennlinien gruppieren Projektwechsel, Speichern und Beenden. Beenden verwendet
+denselben Leave-Guard wie das Schließen des Fensters. Bearbeiten bietet
+Rückgängig/Wiederholen; deren Verfügbarkeit folgt der Projekt-History. Einstellungen,
+Zoom, Ergebnisse und Über SpanDraft bleiben deaktiviert.
+
+Neue Projekte entstehen erst durch „Projekt erstellen“ und sind zunächst ungespeichert.
+Öffnen aktiviert ausschließlich vollständig validierte `.spandraft`-Dateien. Geöffnete
+Projekte starten clean und ohne History. Speichern setzt den Savepoint und erhält die
+History. Undo exakt zum Savepoint macht das Projekt clean; Redo davon weg wieder dirty.
+Die Titelleiste zeigt nur den Dateinamen, bei Änderungen mit `*`, beziehungsweise
+„Unbenannt* — SpanDraft“ / „Untitled* — SpanDraft“.
+
+Ein bestätigter Edit einschließlich Rename und AnnotationOffset ist ein Undo-Schritt.
+Hover, Vorschauen, Rohtext und Abbruch erzeugen keine History. Undo/Redo verwirft zuerst
+aktive Editorinteraktionen und temporäre Setup-Auswahl. Die letzten 200 Änderungen
+bleiben rückgängig machbar; ein neuer Edit nach Undo verwirft Wiederholen.
+
+Standardkürzel sind Ctrl+N/O/S/Q, Ctrl+Shift+S, Ctrl+Z und Ctrl+Shift+Z; auf macOS
+jeweils Cmd statt Ctrl. Windows/Linux unterstützen zusätzlich Ctrl+Y für Wiederholen.
+Diese Aktionen beziehen sich auf committed Projektänderungen.
+
+Neu, Projektwechsel durch Öffnen und Fensterschließen verwenden dieselbe Nachfrage
+bei ungespeicherten Änderungen: Speichern / Nicht speichern / Abbrechen. Ein
+abgebrochener Dialog oder fehlgeschlagenes Speichern erhält das aktuelle Projekt.
+Ein ungültiges Zielprojekt wird vor der Nachfrage abgewiesen. Speichern übernimmt
+oder verwirft keinen offenen Draft. Während Dateiaktionen sind Projektänderungen
+und weitere Dateiaktionen gesperrt.
+
+Dirty-Projekte erhalten nach etwa einer Sekunde ohne weiteren Commit eine lokale
+private Recovery. Sie überschreibt niemals automatisch eine Benutzerdatei. Save,
+Undo zum Savepoint und erfolgreiches Verlassen löschen die Recovery; abgebrochenes
+Schließen erhält sie. Beim Start bietet eine gültige Recovery Wiederherstellen /
+Verwerfen. Wiederherstellen startet mit leerer History und dirty; eine Recovery,
+deren Projektinhalt bereits der Originaldatei entspricht, wird ohne Nachfrage
+entfernt. Beschädigte Recovery blockiert den App-Start nicht und kann verworfen werden.
+Dateifehler werden verständlich angezeigt. Das dauerhafte Dateiformat steht in
+[PROJECT_FORMAT.md](PROJECT_FORMAT.md).
 
 Einheiten gehören später in „Bearbeiten → Einstellungen…“ (mm/m, N/kN, Nm/kNm,
 N/m/kN/m, Pa/MPa, Dezimaldarstellung), nicht prominent in den Editor.
-Aktuell gibt es kein Settings-System und keine Persistenz.
+Aktuell gibt es kein Settings-System.
 
 ## 4. Desktop-Zustand und Rendering
 
-MainWindowViewModel hält den Modus ProjectSetup/Editor und die Navigation.
-ProjectSetupViewModel hält eine temporäre Auswahl. EditorViewModel besitzt
-das einzige committed EditorDocument mit Length, Material, Section, Supports, Loads und DistributedLoads.
-Core-Objekte bleiben immutable. Kein zweites konkurrierendes Projektmodell.
+Das Projekt hat einen einzigen committed Zustand aus fachlichen Daten und manuellen
+Annotationspositionen. Setup-Auswahl, Textbuffer, Vorschauen und Analysis bleiben
+getrennt davon. Navigation zwischen Setup und Editor erhält die geöffnete Session.
 
 Das Schematic Layout gemäß [SCHEMATIC_LAYOUT.md](SCHEMATIC_LAYOUT.md) verwendet stabile
 Entity-Namen und einen monotonen NamingState im EditorDocument. Die bestehenden
@@ -482,11 +517,11 @@ PointerDown auf ein committed Entity-Label merkt Entity-ID, Pointerstart,
 AutoBounds, sichtbare Startposition und ursprünglichen nullable Offset und
 nimmt Capture. Unterhalb von 4 DIPs räumlicher Bewegung bleibt es ein Click:
 Release öffnet das Entity über den bestehenden Edit-Pfad. Oberhalb der Schwelle
-ändert die Geste ausschließlich SetAnnotationOffset(), niemals Position, Typ,
+ändert die Geste ausschließlich die transiente Annotationsvorschau, niemals Position, Typ,
 Kraft/Moment, Dokument oder Analysis. Der Offset ergibt sich aus sichtbarer
 Startposition minus Auto-Referenzanker plus Pointerbewegung. Dadurch springt ein
 durch Auto-Collision-Layout verdrängtes Label beim Wechsel zu Manual nicht.
-Normales Release behält den Offset und öffnet kein zusätzliches Flyout.
+Normales Release übernimmt den Offset als einen Undo-Schritt und öffnet kein zusätzliches Flyout.
 
 Label-Cancel wird vor generischem Surface-/Flyout-Cancel behandelt, einschließlich
 Escape im Tunnel vor dem Flyout-Tastaturhandling. Escape und CaptureLost
@@ -575,8 +610,8 @@ nicht implementiert.
 
 ## 9. Bewusst offen
 
-Noch nicht implementiert: Delete-Taste, Undo/Redo, Zoom/Pan,
-Tabellen/Diagramme, Ergebnisse-/Reportseite, PDF/XLSX, Speichern/Laden, Auto-Save,
+Noch nicht implementiert: Delete-Taste, Zoom/Pan,
+Tabellen/Diagramme, Ergebnisse-/Reportseite, PDF/XLSX, Auto-Save der Benutzerdatei,
 Settings-Persistenz, Theme-Umschaltung, echte Profil-/Norm-/Herstellerbibliotheken,
 Profilimport, eigene Materialien und Querschnittseditor.
 Keine neuen Solverfunktionen oder Engineering-Nachweise.
@@ -596,7 +631,7 @@ Das Regression-Gate umfasst Restore/Build/Tests beider Solutions, unveränderte
 eingefrorene Bereiche und den bestehenden SolverSourceSha256. GUI-Smoke-Checks
 und deren tatsächliche Grenzen werden im Abschlussbericht separat dokumentiert.
 
-Aktueller Stand (06.10.2026): **678 Produkttests PASS**, **195 Validation-Tests
+Aktueller Stand (07.10.2026): **969 Produkttests PASS**, **195 Validation-Tests
 PASS**, **18 Acceptance-Fälle PASS**; Release-Builds mit null Warnungen/Fehlern.
 Die folgenden Abnahmen dokumentieren ausdrücklich frühere Entwicklungsstände;
 maßgeblich für die heutige Interaktion sind die Abschnitte 4, 5 und 7.
@@ -1037,5 +1072,5 @@ Keine bekannten Layoutfehler in den tatsächlich geprüften Ansichten.
 
 Nächster Meilenstein: Punktkraft, Punktmoment und Streckenlast mit eigenem
 Placement, Preview, transaktionalem Flyout und Editing/Delete. Kein allgemeines
-Tool-Framework vorweggenommen; Undo/Redo, Delete-Taste, Tabellen, Diagramme,
-Persistenz und Export bleiben offen.
+Tool-Framework vorweggenommen. Diese historische Abnahme wird durch die folgenden
+Meilensteine ergänzt; Delete-Taste, Tabellen, Diagramme und Export bleiben offen.

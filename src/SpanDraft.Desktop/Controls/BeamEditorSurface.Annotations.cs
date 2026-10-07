@@ -40,7 +40,7 @@ public partial class BeamEditorSurface
         _labelGesture = null;
         RestoreLabelPane();
         ReleaseGesture();
-        if (_editor is { } editor) gesture.OpenOnClick(editor);
+        if (_editor is { } editor) { gesture.Complete(editor); gesture.OpenOnClick(editor); }
         SynchronizeVisuals();
     }
 

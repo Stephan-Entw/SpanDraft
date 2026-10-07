@@ -12,10 +12,7 @@ public static class EditorChangeClassifier
             return EditorChangeKind.Mechanical;
         // Selected Core objects retain their profile/template metadata. Their analysis equivalence
         // is defined only above; desktop records also retain IDs, names and creation order.
-        return previous.Material == next.Material && previous.Section == next.Section
-            && previous.Supports.SequenceEqual(next.Supports) && previous.Loads.SequenceEqual(next.Loads)
-            && previous.DistributedLoads.SequenceEqual(next.DistributedLoads)
-            && previous.NamingState == next.NamingState && previousPresentation.ContentEquals(nextPresentation)
+        return ProjectState.DocumentContentEquals(previous, next) && previousPresentation.ContentEquals(nextPresentation)
                 ? EditorChangeKind.None : EditorChangeKind.MetadataOnly;
     }
 }

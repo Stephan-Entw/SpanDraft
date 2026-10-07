@@ -19,11 +19,8 @@
             <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
               <controls:EngineeringIcon Data="{StaticResource SectionProfile}" Margin="{DynamicResource SectionIconMargin}"
                                         VerticalAlignment="Center" />
-              <ComboBox Grid.Column="1" ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}"
+              <ComboBox x:Name="SectionPicker" Grid.Column="1" ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}"
                         HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.Section}">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate><TextBlock Text="{x:Static resources:Strings.SectionTemplateName}" /></DataTemplate>
-                </ComboBox.ItemTemplate>
               </ComboBox>
             </Grid>
             <Grid Grid.Row="2" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="{StaticResource Space12}">

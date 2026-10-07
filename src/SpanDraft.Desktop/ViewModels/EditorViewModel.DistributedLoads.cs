@@ -148,6 +148,7 @@ public sealed partial class EditorViewModel
 
     public bool ConfirmDistributedLoad()
     {
+        if (IsBusy) return false;
         var draft = DistributedLoadDraft;
         if (!IsDistributedLoadFlyoutVisible || draft is null || !draft.TryGetValues(out var start, out var end, out double intensity)
             || !CanDistributedLoadRange(start.Meters, end.Meters)) return false;
@@ -173,7 +174,7 @@ public sealed partial class EditorViewModel
 
     public void DeleteDistributedLoad()
     {
-        if (DistributedLoadState != DistributedLoadInteraction.EditDraft || DistributedLoadDraft?.OriginalId is not { } id
+        if (IsBusy || DistributedLoadState != DistributedLoadInteraction.EditDraft || DistributedLoadDraft?.OriginalId is not { } id
             || !Document.DistributedLoads.Any(l => l.Id == id)) return;
         var document = Document.WithDistributedLoads(Document.DistributedLoads.Where(l => l.Id != id));
         CancelDistributedLoadInteraction();

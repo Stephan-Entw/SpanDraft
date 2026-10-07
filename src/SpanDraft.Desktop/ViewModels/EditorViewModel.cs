@@ -14,11 +14,8 @@ namespace SpanDraft.Desktop.ViewModels;
 public sealed partial class EditorViewModel : ObservableObject
 {
     private readonly Func<BeamModel, BeamAnalysisOutcome> _analyze;
-    private EditorDocument _document;
     private AnalysisPresentationState _presentation;
-    // This VM is retained by MainWindowViewModel for the whole open project session,
-    // including setup navigation and replacement/detachment of editor views.
-    private EditorPresentationState _editorPresentation = new();
+    private KeyValuePair<Guid, AnnotationOffset>? _annotationPreview;
     private SupportInteraction _interaction;
     private SupportType? _placementTool;
     private SupportDraftViewModel? _draft;
@@ -31,11 +28,20 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public EditorViewModel(EditorDocument document, Action changeProject,
         Func<BeamModel, BeamAnalysisOutcome>? analyze = null)
+        : this(changeProject, ProjectSession.Create(new(document, new())), analyze) { }
+
+    public static EditorViewModel ForSession(ProjectSession session, Action changeProject,
+        Func<BeamModel, BeamAnalysisOutcome>? analyze = null) => new(changeProject, session, analyze);
+
+    private EditorViewModel(Action changeProject, ProjectSession session,
+        Func<BeamModel, BeamAnalysisOutcome>? analyze)
     {
-        _document = document;
+        Session = session;
         _analyze = analyze ?? BeamAnalysis.Analyze;
-        _presentation = AnalysisPresentationState.FromOutcome(_analyze(document.ToBeamModel()));
-        DimensionLength = new(() => Document.Length, ChangeLength);
+        _presentation = AnalysisPresentationState.FromOutcome(_analyze(Document.ToBeamModel()));
+        DimensionLength = new(() => Document.Length, ChangeLength, () => PreserveDrafts);
+        Session.StateApplied += ApplyState;
+        Session.Changed += () => Notify(nameof(IsBusy));
         DimensionLength.BufferChanged += text =>
         {
             if (ConstraintConflict is not null)
@@ -60,10 +66,17 @@ public sealed partial class EditorViewModel : ObservableObject
         DeleteSupportCommand = new(DeleteSupport);
     }
 
-    public EditorDocument Document => _document;
+    public ProjectSession Session { get; }
+    public bool IsBusy => Session.IsBusy;
+    public bool IsFileMenuOpen { get; set; }
+    public bool PreserveDrafts => IsBusy || IsFileMenuOpen;
+    public event Action? InteractionsCancelling;
+    public EditorDocument Document => Session.CurrentRevision.State.Document;
     public AnalysisPresentationState Presentation => _presentation;
-    public EditorPresentationState EditorPresentation => _editorPresentation;
-    public string ProjectInfo => Strings.SectionTemplateName + " · " + Document.Material.Name;
+    public EditorPresentationState EditorPresentation => Session.CurrentRevision.State.Presentation;
+    public EditorPresentationState RenderPresentation => _annotationPreview is { } p
+        ? EditorPresentation.WithOffset(p.Key, p.Value) : EditorPresentation;
+    public string ProjectInfo => SectionDisplay.Name(Document.Section) + " · " + Document.Material.Name;
     public LengthInputViewModel DimensionLength { get; }
     public ConstraintConflictState? ConstraintConflict => _constraintConflict;
     public IReadOnlyList<Guid> ConflictEntityIds => ConstraintConflict?.BlockingEntityIds ?? Array.Empty<Guid>();
@@ -200,6 +213,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public bool ConfirmSupport()
     {
+        if (IsBusy) return false;
         var draft = _draft;
         if (!IsSupportFlyoutVisible || draft is null || !draft.TryGetValue(out var position)) return false;
         var supports = Document.Supports.ToArray();
@@ -223,7 +237,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public void DeleteSupport()
     {
-        if (Interaction != SupportInteraction.EditDraft || _draft?.OriginalId is not { } id
+        if (IsBusy || Interaction != SupportInteraction.EditDraft || _draft?.OriginalId is not { } id
             || !Document.Supports.Any(s => s.Id == id)) return;
         var document = Document.WithSupports(Document.Supports.Where(s => s.Id != id));
         CancelSupportInteraction();
@@ -285,6 +299,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     private LengthCommitResult ChangeLength(Length length)
     {
+        if (IsBusy) return new(false, Strings.ProjectBusy);
         if (Document.Supports.Any(s => s.Position.Meters > length.Meters)
             || Document.Loads.Any(l => l.Position.Meters > length.Meters)
             || Document.DistributedLoads.Any(l => l.EndPosition.Meters > length.Meters))
@@ -315,28 +330,54 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public bool SetAnnotationOffset(Guid id, AnnotationOffset? offset)
     {
-        if (!Document.NamedEntities.Any(e => e.Id == id)) return false;
+        if (IsBusy || !Document.NamedEntities.Any(e => e.Id == id)) return false;
         Commit(Document, EditorPresentation.WithOffset(id, offset));
         return true;
     }
 
-    private void Commit(EditorDocument document, EditorPresentationState? presentation = null)
+    public void PreviewAnnotationOffset(Guid id, AnnotationOffset offset)
     {
-        var nextPresentation = (presentation ?? EditorPresentation).RetainEntities(document);
-        var change = EditorChangeClassifier.Classify(Document, document, EditorPresentation, nextPresentation);
-        if (change == EditorChangeKind.None) return;
-        bool documentChanged = !ReferenceEquals(Document, document);
-        bool presentationChanged = !EditorPresentation.ContentEquals(nextPresentation);
-        _document = document;
-        _editorPresentation = nextPresentation;
+        if (IsBusy || !Document.NamedEntities.Any(e => e.Id == id)) return;
+        _annotationPreview = new(id, offset);
+        Notify(nameof(RenderPresentation));
+    }
+
+    public void ClearAnnotationPreview()
+    {
+        if (_annotationPreview is null) return;
+        _annotationPreview = null;
+        Notify(nameof(RenderPresentation));
+    }
+
+    public bool Undo()
+    {
+        if (IsBusy) return false;
+        CancelEditorInteraction();
+        return Session.Undo();
+    }
+
+    public bool Redo()
+    {
+        if (IsBusy) return false;
+        CancelEditorInteraction();
+        return Session.Redo();
+    }
+
+    private void Commit(EditorDocument document, EditorPresentationState? presentation = null) =>
+        Session.Commit(new(document, (presentation ?? EditorPresentation).RetainEntities(document)));
+
+    private void ApplyState(ProjectState previous, ProjectState next, EditorChangeKind change)
+    {
+        bool documentChanged = !ReferenceEquals(previous.Document, next.Document);
+        bool presentationChanged = !previous.Presentation.ContentEquals(next.Presentation);
         if (change == EditorChangeKind.Mechanical)
         {
             if (ConstraintConflict is { } conflict) UpdateConstraintConflict(conflict.RequestedLength);
-            _presentation = AnalysisPresentationState.FromOutcome(_analyze(document.ToBeamModel()));
+            _presentation = AnalysisPresentationState.FromOutcome(_analyze(next.Document.ToBeamModel()));
             DimensionLength.Refresh(preserveError: ConstraintConflict is not null);
             Notify(nameof(Presentation));
         }
         if (documentChanged) { Notify(nameof(Document)); Notify(nameof(ProjectInfo)); }
-        if (presentationChanged) Notify(nameof(EditorPresentation));
+        if (presentationChanged) { Notify(nameof(EditorPresentation)); Notify(nameof(RenderPresentation)); }
     }
 }
