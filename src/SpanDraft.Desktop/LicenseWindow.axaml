@@ -3,11 +3,11 @@
         xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
         x:Class="SpanDraft.Desktop.LicenseWindow"
         Title="{x:Static resources:ApplicationMetadata.License}"
-        Width="720" Height="560" MinWidth="480" MinHeight="320"
+        Width="640" Height="560" MinWidth="480" MinHeight="320"
         ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
-  <ScrollViewer Margin="{DynamicResource Padding24}"
-                HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-    <SelectableTextBlock x:Name="LicenseContent" TextWrapping="Wrap" Focusable="True"
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <SelectableTextBlock x:Name="LicenseContent" Margin="{DynamicResource Padding24}"
+                         TextWrapping="Wrap" Focusable="True"
                          FontFamily="Menlo, Consolas, DejaVu Sans Mono, Liberation Mono, Courier New"
                          FontSize="{DynamicResource BodySize}"
                          SelectionBrush="{DynamicResource Accent}"

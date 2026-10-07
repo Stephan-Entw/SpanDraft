@@ -1,0 +1,82 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Retain Fluent's track, input handling and full-size hit targets.
+       Only the painted thumb and line-button glyphs are narrower.
+       Expanded-state selectors override Fluent's state setters and template bindings. -->
+  <Style Selector="ScrollViewer">
+    <Setter Property="AllowAutoHide" Value="False" />
+  </Style>
+  <Style Selector="ScrollBar">
+    <Setter Property="AllowAutoHide" Value="False" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ScrollBar[IsExpanded=true] /template/ Grid#Root">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
+  </Style>
+  <Style Selector="ScrollBar[IsExpanded=true] /template/ Rectangle#TrackRect">
+    <Setter Property="Fill" Value="Transparent" />
+    <Setter Property="Stroke" Value="Transparent" />
+  </Style>
+  <Style Selector="ScrollBar[IsExpanded=true] /template/ Thumb">
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Background" Value="{DynamicResource TextMuted}" />
+  </Style>
+  <Style Selector="ScrollBar:vertical /template/ Thumb /template/ Border">
+    <Setter Property="Margin" Value="4,0" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal /template/ Thumb /template/ Border">
+    <Setter Property="Margin" Value="0,4" />
+  </Style>
+  <Style Selector="ScrollBar[IsExpanded=true] /template/ Thumb:pointerover /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource TextSecondary}" />
+  </Style>
+  <Style Selector="ScrollBar[IsExpanded=true] /template/ Thumb:pressed /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="ScrollBar[IsExpanded=true] /template/ Thumb:disabled /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource TextDisabled}" />
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+
+  <Style Selector="ScrollBar[IsExpanded=true] /template/ RepeatButton#PART_LineUpButton, ScrollBar[IsExpanded=true] /template/ RepeatButton#PART_LineDownButton">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="Transparent">
+          <Path Name="Arrow" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ScrollBar[IsExpanded=true] /template/ RepeatButton /template/ Path#Arrow">
+    <Setter Property="Fill" Value="{DynamicResource TextMuted}" />
+  </Style>
+  <Style Selector="ScrollBar[IsExpanded=true] /template/ RepeatButton:pointerover /template/ Path#Arrow">
+    <Setter Property="Fill" Value="{DynamicResource TextSecondary}" />
+  </Style>
+  <Style Selector="ScrollBar[IsExpanded=true] /template/ RepeatButton:pressed /template/ Path#Arrow">
+    <Setter Property="Fill" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="ScrollBar[IsExpanded=true] /template/ RepeatButton:disabled /template/ Path#Arrow">
+    <Setter Property="Fill" Value="{DynamicResource TextDisabled}" />
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+  <Style Selector="ScrollBar:vertical /template/ RepeatButton /template/ Path#Arrow">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="4" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal /template/ RepeatButton /template/ Path#Arrow">
+    <Setter Property="Width" Value="4" />
+    <Setter Property="Height" Value="8" />
+  </Style>
+  <Style Selector="ScrollBar:vertical /template/ RepeatButton#PART_LineUpButton /template/ Path#Arrow">
+    <Setter Property="Data" Value="M 0,4 L 4,0 L 8,4 Z" />
+  </Style>
+  <Style Selector="ScrollBar:vertical /template/ RepeatButton#PART_LineDownButton /template/ Path#Arrow">
+    <Setter Property="Data" Value="M 0,0 L 8,0 L 4,4 Z" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal /template/ RepeatButton#PART_LineUpButton /template/ Path#Arrow">
+    <Setter Property="Data" Value="M 4,0 L 0,4 L 4,8 Z" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal /template/ RepeatButton#PART_LineDownButton /template/ Path#Arrow">
+    <Setter Property="Data" Value="M 0,0 L 4,4 L 0,8 Z" />
+  </Style>
+</Styles>

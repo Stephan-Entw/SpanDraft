@@ -1,9 +1,10 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
         xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Svg.Controls.Skia.Avalonia">
+  <!-- RepeatButton is used internally by Fluent scrollbars; keep its theme intact. -->
   <!-- One button template for all variants, including future ToggleButton tools.
        Focus is a separate overlay: borders never move the content. -->
-  <Style Selector=":is(Button)">
+  <Style Selector=":is(Button):not(:is(RepeatButton))">
     <Setter Property="Height" Value="{DynamicResource StandardControl}" />
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Padding" Value="{DynamicResource ControlPadding}" />
@@ -35,83 +36,83 @@
       </ControlTemplate>
     </Setter>
   </Style>
-  <Style Selector=":is(Button):pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
   </Style>
-  <Style Selector=":is(Button):pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
     <Setter Property="RenderTransform" Value="none" />
   </Style>
-  <Style Selector=":is(Button).primary">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).primary">
     <Setter Property="Height" Value="{DynamicResource PrimaryAction}" />
     <Setter Property="Background" Value="{DynamicResource Accent}" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
-  <Style Selector=":is(Button).primary:pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).primary:pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource AccentHover}" />
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-  <Style Selector=":is(Button).primary:pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).primary:pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource AccentPressed}" />
   </Style>
-  <Style Selector=":is(Button).secondary">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).secondary">
     <Setter Property="Background" Value="{DynamicResource Surface}" />
   </Style>
-  <Style Selector=":is(Button).secondary:pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).secondary:pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
   </Style>
-  <Style Selector=":is(Button).secondary:pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).secondary:pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
   </Style>
-  <Style Selector=":is(Button).ghost, :is(Button).toolbar, :is(Button).iconToolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).ghost, :is(Button):not(:is(RepeatButton)).toolbar, :is(Button):not(:is(RepeatButton)).iconToolbar">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-  <Style Selector=":is(Button).ghost">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).ghost">
     <Setter Property="Height" Value="{DynamicResource CompactControl}" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
   </Style>
-  <Style Selector=":is(Button).toolbar, :is(Button).iconToolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).toolbar, :is(Button):not(:is(RepeatButton)).iconToolbar">
     <Setter Property="Height" Value="{DynamicResource ToolbarButton}" />
     <Setter Property="FontSize" Value="{DynamicResource ToolbarSize}" />
   </Style>
-  <Style Selector=":is(Button).toolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).toolbar">
     <Setter Property="Padding" Value="{DynamicResource ToolbarButtonPadding}" />
   </Style>
-  <Style Selector=":is(Button).iconToolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).iconToolbar">
     <Setter Property="Width" Value="{DynamicResource ToolbarButton}" />
     <Setter Property="Padding" Value="{DynamicResource Padding4}" />
   </Style>
-  <Style Selector=":is(Button).ghost:pointerover:not(:disabled), :is(Button).toolbar:pointerover:not(:disabled), :is(Button).iconToolbar:pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).ghost:pointerover:not(:disabled), :is(Button):not(:is(RepeatButton)).toolbar:pointerover:not(:disabled), :is(Button):not(:is(RepeatButton)).iconToolbar:pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-  <Style Selector=":is(Button).ghost:pressed:not(:disabled), :is(Button).toolbar:pressed:not(:disabled), :is(Button).iconToolbar:pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).ghost:pressed:not(:disabled), :is(Button):not(:is(RepeatButton)).toolbar:pressed:not(:disabled), :is(Button):not(:is(RepeatButton)).iconToolbar:pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
   </Style>
-  <Style Selector=":is(Button).toolbar.selected, :is(Button).iconToolbar.selected, ToggleButton.toolbar:checked, ToggleButton.iconToolbar:checked">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).toolbar.selected, :is(Button):not(:is(RepeatButton)).iconToolbar.selected, ToggleButton.toolbar:checked, ToggleButton.iconToolbar:checked">
     <Setter Property="Background" Value="{DynamicResource AccentSubtle}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
     <Setter Property="Foreground" Value="{DynamicResource AccentPressed}" />
   </Style>
-  <Style Selector=":is(Button):disabled">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):disabled">
     <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
     <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
     <Setter Property="Opacity" Value="1" />
   </Style>
-  <Style Selector=":is(Button).toolbar:disabled, :is(Button).iconToolbar:disabled, :is(Button).ghost:disabled">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).toolbar:disabled, :is(Button):not(:is(RepeatButton)).iconToolbar:disabled, :is(Button):not(:is(RepeatButton)).ghost:disabled">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
   </Style>
-  <Style Selector=":is(Button):focus-visible /template/ Border#FocusRing">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):focus-visible /template/ Border#FocusRing">
     <Setter Property="IsVisible" Value="True" />
   </Style>
-  <Style Selector=":is(Button).primary /template/ Border#FocusRing">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).primary /template/ Border#FocusRing">
     <Setter Property="BorderBrush" Value="{DynamicResource TextOnAccent}" />
     <Setter Property="Margin" Value="{DynamicResource Padding4}" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXS}" />
@@ -230,7 +231,7 @@
     <Setter Property="Focusable" Value="False" />
     <Setter Property="IsHitTestVisible" Value="False" />
   </Style>
-  <Style Selector=":is(Button).toolbar:disabled svg|Svg.toolbarIcon">
+  <Style Selector=":is(Button):not(:is(RepeatButton)).toolbar:disabled svg|Svg.toolbarIcon">
     <Setter Property="Opacity" Value="0.45" />
   </Style>
   <Style Selector="controls|EngineeringIcon">

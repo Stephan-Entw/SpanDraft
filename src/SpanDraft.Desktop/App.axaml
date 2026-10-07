@@ -14,5 +14,6 @@
     <FluentTheme />
     <StyleInclude Source="/Styles/Typography.axaml" />
     <StyleInclude Source="/Styles/Controls.axaml" />
+    <StyleInclude Source="/Styles/ScrollBars.axaml" />
   </Application.Styles>
 </Application>
