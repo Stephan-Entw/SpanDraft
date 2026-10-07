@@ -17,6 +17,7 @@ public sealed class BeamCanvas : Control
     public static readonly StyledProperty<ConstraintConflictState?> ConstraintConflictProperty = AvaloniaProperty.Register<BeamCanvas, ConstraintConflictState?>(nameof(ConstraintConflict));
     public static readonly StyledProperty<double> LabelFontSizeProperty = AvaloniaProperty.Register<BeamCanvas, double>(nameof(LabelFontSize), 13);
     public static readonly StyledProperty<IBrush?> BeamBrushProperty = AvaloniaProperty.Register<BeamCanvas, IBrush?>(nameof(BeamBrush));
+    public static readonly StyledProperty<IBrush?> CanvasBackgroundBrushProperty = AvaloniaProperty.Register<BeamCanvas, IBrush?>(nameof(CanvasBackgroundBrush));
     public static readonly StyledProperty<IBrush?> GhostBrushProperty = AvaloniaProperty.Register<BeamCanvas, IBrush?>(nameof(GhostBrush));
     public static readonly StyledProperty<IBrush?> AccentBrushProperty = AvaloniaProperty.Register<BeamCanvas, IBrush?>(nameof(AccentBrush));
     public static readonly StyledProperty<IBrush?> ErrorBrushProperty = AvaloniaProperty.Register<BeamCanvas, IBrush?>(nameof(ErrorBrush));
@@ -27,10 +28,11 @@ public sealed class BeamCanvas : Control
     public ConstraintConflictState? ConstraintConflict { get => GetValue(ConstraintConflictProperty); set => SetValue(ConstraintConflictProperty, value); }
     public double LabelFontSize { get => GetValue(LabelFontSizeProperty); set => SetValue(LabelFontSizeProperty, value); }
     public IBrush? BeamBrush { get => GetValue(BeamBrushProperty); set => SetValue(BeamBrushProperty, value); }
+    public IBrush? CanvasBackgroundBrush { get => GetValue(CanvasBackgroundBrushProperty); set => SetValue(CanvasBackgroundBrushProperty, value); }
     public IBrush? GhostBrush { get => GetValue(GhostBrushProperty); set => SetValue(GhostBrushProperty, value); }
     public IBrush? AccentBrush { get => GetValue(AccentBrushProperty); set => SetValue(AccentBrushProperty, value); }
     public IBrush? ErrorBrush { get => GetValue(ErrorBrushProperty); set => SetValue(ErrorBrushProperty, value); }
-    static BeamCanvas() => AffectsRender<BeamCanvas>(SceneProperty, BeamBrushProperty, GhostBrushProperty,
+    static BeamCanvas() => AffectsRender<BeamCanvas>(SceneProperty, BeamBrushProperty, CanvasBackgroundBrushProperty, GhostBrushProperty,
         AccentBrushProperty, ErrorBrushProperty, HighlightedLoadIdProperty, HighlightedSupportIdProperty,
         ConflictEntityIdsProperty, ConstraintConflictProperty, LabelFontSizeProperty);
 
@@ -51,7 +53,7 @@ public sealed class BeamCanvas : Control
         foreach (var support in scene.Supports)
             using (context.PushOpacity(support.IsPreview ? 0.75 : 1))
                 DrawSupport(context, support.X, y, support.Preview.Type, support.IsMirrored,
-                    Brush(support.Id, true, support.IsPreview, support.Preview.IsInvalid));
+                    Brush(support.Id, true, support.IsPreview, support.Preview.IsInvalid), CanvasBackgroundBrush);
         foreach (var glyph in scene.Glyphs)
         {
             bool error = glyph.Entities.Any(e => e.Preview.IsInvalid || Conflict(e.Id));
@@ -68,7 +70,7 @@ public sealed class BeamCanvas : Control
     private IBrush? Brush(Guid? id, bool support, bool preview, bool invalid) => invalid || Conflict(id) ? ErrorBrush
         : preview || id is not null && id == (support ? HighlightedSupportId : HighlightedLoadId) ? AccentBrush : BeamBrush;
 
-    private static void DrawSupport(DrawingContext context, double x, double y, SupportType type, bool isMirrored, IBrush? brush)
+    private static void DrawSupport(DrawingContext context, double x, double y, SupportType type, bool isMirrored, IBrush? brush, IBrush? backgroundBrush)
     {
         var pen = new Pen(brush, SchematicMetrics.SymbolStrokeWidth, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
         void Line(double x1, double y1, double x2, double y2) =>
@@ -92,6 +94,6 @@ public sealed class BeamCanvas : Control
         foreach (var hatch in hinged.Hatches)
             Line(hatch.StartX, hatch.StartY, hatch.EndX, hatch.EndY);
         var joint = hinged.Joint;
-        context.DrawEllipse(Brushes.White, pen, new Point(x + joint.X, y + joint.Y), joint.Radius, joint.Radius);
+        context.DrawEllipse(backgroundBrush, pen, new Point(x + joint.X, y + joint.Y), joint.Radius, joint.Radius);
     }
 }

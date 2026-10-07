@@ -749,8 +749,9 @@ Borders: normal 1, Fokus/Fehler 2. Fokusrahmen verändern das Contentlayout nich
 | PrimaryAction | 38 |
 | ToolbarButton | 36 |
 
-`IconSize` beträgt 28 DIPs und steuert Breite und Höhe der Toolbar-SVGs sowie
-EngineeringIcon-Controls ohne lokale Größenüberschreibung.
+`IconSize` beträgt 24 DIPs und steuert Breite und Höhe der EngineeringIcon-Controls
+ohne lokale Größenüberschreibung. `ToolbarIconSize` beträgt separat 28 DIPs und
+steuert ausschließlich die Toolbar-SVGs. Return-Icons behalten ihre lokalen 16 DIPs.
 
 ### Buttons, Inputs und Zustände
 
@@ -802,8 +803,10 @@ Bei 1100 DIPs Mindestbreite erfolgt kein Umbruch.
 Die Projektinfo ist eine Textzeile mit BodyStrong und Ghost-Aktion „Ändern“.
 
 Der Canvas verwendet CanvasBackground ohne Cardrahmen. BeamCanvas erhält
-BeamBrush, GhostBrush, AccentBrush und ErrorBrush als render-invalidierende
-StyledProperties; die separate CoordinateAxisPane verwendet AxisStroke. Der Balken
+BeamBrush, CanvasBackgroundBrush, GhostBrush, AccentBrush und ErrorBrush als
+render-invalidierende StyledProperties. CanvasBackgroundBrush verwendet denselben
+CanvasBackground-Resource wie BeamEditorSurface und füllt die Gelenkkreise von
+Fest-/Loslager; die separate CoordinateAxisPane verwendet AxisStroke. Der Balken
 ist aktuell 3 DIPs stark (`SchematicMetrics.BeamStrokeWidth`), die Achse 1 DIP.
 Die reversible x-Abbildung übernimmt allein
 StationTransform. Die einzige Längenbearbeitung sitzt am rechten Axis-Endwert.
@@ -820,7 +823,7 @@ Ergebnisaktion rechts. Keine Ergebnis-Karten oder neue Ergebnisseite.
 
 Die Toolbar verwendet direkt `Avalonia.Svg.Skia.Svg` mit `Stretch="Uniform"`
 und vollständigen `avares://SpanDraft.Desktop/Assets/Icons/Toolbar/…`-Pfaden.
-Die bestehenden 48×48-SVG-Artboards werden proportional auf IconSize skaliert.
+Die bestehenden 48×48-SVG-Artboards werden proportional auf ToolbarIconSize skaliert.
 Es gibt keine Foreground- oder CSS-Farbanpassung.
 
 | SVG-Asset | Werkzeug |

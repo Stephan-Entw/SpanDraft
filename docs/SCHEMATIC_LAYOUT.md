@@ -939,10 +939,12 @@ Fest- und Loslager teilen dieselbe Bodenlinie: 40 DIP lang, 2 DIP stark und
 jeweils 9 × 9 DIP bei 45° verlaufen von dieser Linie nach links unten. Die
 Schraffurgröße wird mit der Einspannung geteilt; ihre Strichanzahlen bleiben getrennt.
 
-Beide Lager besitzen einen weiß gefüllten Gelenkkreis mit Radius 3 DIP direkt
-auf der Balkenachse. Er wird zuletzt gezeichnet, damit die Balkenlinie und die
-Dreiecksspitze seine weiße Fläche nicht durchziehen. Kreis, Dreiecksseiten,
-Loslager-Basislinie und Schraffur verwenden 1,5 DIP Strichstärke.
+Beide Lager besitzen einen mit CanvasBackground (aktuell #FEFEFF) gefüllten
+Gelenkkreis mit Radius 3 DIP direkt auf der Balkenachse. BeamCanvas verwendet dafür
+CanvasBackgroundBrush aus derselben Ressource wie BeamEditorSurface. Der Kreis wird
+zuletzt gezeichnet, damit die Balkenlinie und die Dreiecksspitze seine Füllfläche
+nicht durchziehen. Kreis, Dreiecksseiten, Loslager-Basislinie und Schraffur verwenden
+1,5 DIP Strichstärke.
 
 Beim Festlager liegen die Dreiecksbasispunkte bei x = ±14 DIP und y = 20 DIP;
 die Bodenlinie schließt das Dreieck. Beim Loslager ist das Dreieck auf 80 %

@@ -225,8 +225,8 @@
     <Setter Property="Padding" Value="{DynamicResource Padding24}" />
   </Style>
   <Style Selector="svg|Svg.toolbarIcon">
-    <Setter Property="Width" Value="{DynamicResource IconSize}" />
-    <Setter Property="Height" Value="{DynamicResource IconSize}" />
+    <Setter Property="Width" Value="{DynamicResource ToolbarIconSize}" />
+    <Setter Property="Height" Value="{DynamicResource ToolbarIconSize}" />
     <Setter Property="Focusable" Value="False" />
     <Setter Property="IsHitTestVisible" Value="False" />
   </Style>
@@ -242,6 +242,7 @@
   <Style Selector="controls|BeamCanvas">
     <Setter Property="LabelFontSize" Value="{DynamicResource BodySize}" />
     <Setter Property="BeamBrush" Value="{DynamicResource BeamStroke}" />
+    <Setter Property="CanvasBackgroundBrush" Value="{DynamicResource CanvasBackground}" />
     <Setter Property="GhostBrush" Value="{DynamicResource AxisStroke}" />
     <Setter Property="AccentBrush" Value="{DynamicResource Accent}" />
     <Setter Property="ErrorBrush" Value="{DynamicResource Error}" />
