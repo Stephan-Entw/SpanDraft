@@ -24,12 +24,12 @@
             <TextBlock Text="{x:Static resources:Strings.Moment}" VerticalAlignment="Center" />
           </StackPanel>
         </ToggleButton>
-        <Button Classes="toolbar" IsEnabled="False" AutomationProperties.Name="{x:Static resources:Strings.DistributedLoad}">
+        <ToggleButton Classes="toolbar" IsChecked="{Binding IsDistributedLoadTool, Mode=OneWay}" Command="{Binding DistributedLoadToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.DistributedLoad}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
             <svg:Svg Classes="toolbarIcon" Path="avares://SpanDraft.Desktop/Assets/Icons/Toolbar/distributed-load.svg" Stretch="Uniform" />
             <TextBlock Text="{x:Static resources:Strings.DistributedLoad}" VerticalAlignment="Center" />
           </StackPanel>
-        </Button>
+        </ToggleButton>
         <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
         <ToggleButton Classes="toolbar" IsChecked="{Binding IsFixedTool, Mode=OneWay}" Command="{Binding FixedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.FixedSupport}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">

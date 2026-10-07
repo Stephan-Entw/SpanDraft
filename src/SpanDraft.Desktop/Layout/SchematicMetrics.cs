@@ -31,6 +31,15 @@ public static class SchematicMetrics
     // Include both stroke radii so the painted force symbol clears the beam.
     public const double ForceBeamOffset = (BeamStrokeWidth + SymbolStrokeWidth) / 2 + ForceBeamGap;
     public const double ForceTopOffset = ForceBeamOffset + ForceHeight;
+    public const double DistributedArrowHeight = 28;
+    public const double DistributedArrowHeadLength = 7;
+    public const double DistributedArrowHeadHalfWidth = 3.5;
+    public const double DistributedMinimumWidth = 24;
+    public const double DistributedTargetSpacing = 32;
+    public const double DistributedFillOpacity = 0.06;
+    public const double DistributedOverlapFillOpacity = 0.26;
+    public const double DistributedMaximumFillOpacity = 0.75;
+    public const double DistributedTopOffset = ForceBeamOffset + DistributedArrowHeight;
     public const double EntityLabelPadding = 8;
     public const double MinimumBeamPaneHeight = 220;
     public const double LengthInputWidth = 88;
@@ -41,6 +50,18 @@ public static class SchematicMetrics
     public const double AxisBaseHeight = 24;
     public const double AxisLabelLineHeight = 16;
     public const double AxisVerticalPadding = 8;
+
+    /// <summary>Total neutral fill opacity for the number of UDLs covering a screen interval.</summary>
+    public static double DistributedFillOpacityForCount(int count)
+    {
+        if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+        if (count == 0) return 0;
+        if (count == 1) return DistributedFillOpacity;
+        if (count == 2) return DistributedOverlapFillOpacity;
+        double remaining = (1 - DistributedOverlapFillOpacity) / (1 - DistributedFillOpacity);
+        return Math.Min(DistributedMaximumFillOpacity,
+            1 - (1 - DistributedFillOpacity) * Math.Pow(remaining, count - 1));
+    }
 }
 
 internal static class LayoutNumbers

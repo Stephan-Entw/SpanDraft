@@ -12,9 +12,11 @@
     <Grid x:Name="BeamPane" SizeChanged="SurfaceSizeChanged">
       <controls:BeamCanvas x:Name="TechnicalCanvas"
                            HighlightedLoadId="{Binding HoveredLoadId}" HighlightedSupportId="{Binding HoveredSupportId}"
+                           HighlightedDistributedLoadId="{Binding HoveredDistributedLoadId}"
                            ConflictEntityIds="{Binding ConflictEntityIds}" ConstraintConflict="{Binding ConstraintConflict}" />
       <Canvas>
         <Border x:Name="LoadAnchor" Width="1" Height="1" IsHitTestVisible="False" />
+        <Border x:Name="DistributedLoadAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="SupportAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="SelectionAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <TextBlock x:Name="CoordinateOverlay" Text="{Binding CoordinateText}" IsVisible="{Binding HasCoordinate}"
@@ -39,6 +41,10 @@
       <Border Classes="supportFlyout">
         <StackPanel x:Name="SelectionEntries" Spacing="{StaticResource Space4}" />
       </Border>
+    </Popup>
+    <Popup x:Name="DistributedLoadPopup" PlacementTarget="{Binding #DistributedLoadAnchor}" Placement="Bottom"
+           IsLightDismissEnabled="False" ShouldUseOverlayLayer="True" Closed="DistributedLoadPopupClosed">
+      <controls:DistributedLoadFlyout x:Name="DistributedLoadEditor" />
     </Popup>
   </Grid>
 </UserControl>

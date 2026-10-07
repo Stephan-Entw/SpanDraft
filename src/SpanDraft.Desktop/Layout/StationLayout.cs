@@ -2,7 +2,7 @@ namespace SpanDraft.Desktop.Layout;
 
 public readonly record struct StationRequirement(double PhysicalX, double LeftExtent, double RightExtent);
 
-/// <summary>Extension point only; interval constraints are not processed in Stage 1.</summary>
+/// <summary>A minimum visible distance between two physical station anchors.</summary>
 public readonly record struct SpanRequirement(double StartPhysicalX, double EndPhysicalX, double MinimumScreenWidth);
 
 public readonly record struct LayoutStation(double PhysicalX, double ScreenX, double LeftExtent, double RightExtent);
@@ -28,7 +28,8 @@ public static class StationLayout
     public const double DistortionRelativeTolerance = 1e-10;
 
     public static StationLayoutResult Compute(double lengthMeters, double screenLeft, double screenRight,
-        IEnumerable<StationRequirement> requirements, double clearance = SchematicMetrics.Clearance)
+        IEnumerable<StationRequirement> requirements, double clearance = SchematicMetrics.Clearance,
+        IEnumerable<SpanRequirement>? spanRequirements = null)
     {
         LayoutNumbers.Positive(lengthMeters, nameof(lengthMeters));
         LayoutNumbers.Finite(screenLeft, nameof(screenLeft));
@@ -37,6 +38,15 @@ public static class StationLayout
         LayoutNumbers.Positive(clearance, nameof(clearance));
         ArgumentNullException.ThrowIfNull(requirements);
         var source = requirements.ToArray();
+        var spans = (spanRequirements ?? []).ToArray();
+        foreach (var span in spans)
+        {
+            LayoutNumbers.NonNegative(span.StartPhysicalX, nameof(spanRequirements));
+            LayoutNumbers.Finite(span.EndPhysicalX, nameof(spanRequirements));
+            if (span.StartPhysicalX >= span.EndPhysicalX || span.EndPhysicalX > lengthMeters)
+                throw new ArgumentOutOfRangeException(nameof(spanRequirements));
+            LayoutNumbers.NonNegative(span.MinimumScreenWidth, nameof(spanRequirements));
+        }
         foreach (var r in source)
         {
             LayoutNumbers.NonNegative(r.PhysicalX, nameof(requirements));
@@ -44,7 +54,9 @@ public static class StationLayout
             LayoutNumbers.NonNegative(r.LeftExtent, nameof(requirements));
             LayoutNumbers.NonNegative(r.RightExtent, nameof(requirements));
         }
-        var stations = source.Concat([new(0, 0, 0), new(lengthMeters, 0, 0)])
+        var stations = source.Concat(spans.SelectMany(s => new[]
+            { new StationRequirement(s.StartPhysicalX, 0, 0), new StationRequirement(s.EndPhysicalX, 0, 0) }))
+            .Concat([new(0, 0, 0), new(lengthMeters, 0, 0)])
             .GroupBy(r => r.PhysicalX).OrderBy(g => g.Key)
             .Select(g => new StationRequirement(g.Key, g.Max(r => r.LeftExtent), g.Max(r => r.RightExtent)))
             .ToArray();
@@ -66,6 +78,17 @@ public static class StationLayout
             gaps = minimumWeights.Select(m => width * (m / minimumSum)).ToArray();
         else
             gaps = Distribute(width, physicalWeights, minimumWeights.Select(m => scale * m).ToArray());
+
+        if (spans.Length > 0)
+        {
+            var offsets = new double[stations.Length];
+            for (int i = 0; i < count; i++) offsets[i + 1] = offsets[i] + gaps[i];
+            var indices = stations.Select((s, i) => (s.PhysicalX, i)).ToDictionary(s => s.PhysicalX, s => s.i);
+            var intervals = spans.Select(s => (Start: indices[s.StartPhysicalX], End: indices[s.EndPhysicalX],
+                Minimum: s.MinimumScreenWidth)).ToArray();
+            if (intervals.Any(s => offsets[s.End] - offsets[s.Start] < s.Minimum))
+                (gaps, overconstrained) = DistributeSpans(width, physicalWeights, stations, clearance, intervals);
+        }
 
         var result = new LayoutStation[stations.Length];
         double offset = 0;
@@ -107,6 +130,50 @@ public static class StationLayout
             if (!changed) return gaps;
             if (active.All(a => a)) return minimum;
         }
+    }
+
+    // All constraints point forward through the station sequence. A longest-path
+    // pass is enough; there is no general constraint solver or Entity dependency.
+    private static (double[] Gaps, bool Overconstrained) DistributeSpans(double width, double[] weights,
+        StationRequirement[] stations, double clearance, (int Start, int End, double Minimum)[] spans)
+    {
+        double scale = Math.Max(clearance, Math.Max(stations.Max(s => Math.Max(s.LeftExtent, s.RightExtent)), spans.Max(s => s.Minimum)));
+        double available = width / scale;
+        var minima = Enumerable.Range(0, weights.Length).Select(i =>
+            stations[i].RightExtent / scale + clearance / scale + stations[i + 1].LeftExtent / scale).ToArray();
+        var ending = Enumerable.Range(0, stations.Length).Select(i => spans.Where(s => s.End == i)
+            .Select(s => (s.Start, Minimum: s.Minimum / scale)).ToArray()).ToArray();
+        double[] Place(double factor)
+        {
+            var positions = new double[stations.Length];
+            for (int i = 1; i < positions.Length; i++)
+            {
+                double position = positions[i - 1] + Math.Max(minima[i - 1], factor * weights[i - 1]);
+                foreach (var span in ending[i]) position = Math.Max(position, positions[span.Start] + span.Minimum);
+                positions[i] = position;
+            }
+            return positions;
+        }
+        var minimum = Place(0);
+        bool overconstrained = minimum[^1] > available;
+        double[] selected;
+        if (overconstrained || minimum[^1] == available) selected = minimum;
+        else
+        {
+            double low = 0, high = available;
+            for (int iteration = 0; iteration < 96; iteration++)
+            {
+                double middle = low + (high - low) / 2;
+                if (middle == low || middle == high) break;
+                if (Place(middle)[^1] <= available) low = middle; else high = middle;
+            }
+            selected = Place(low);
+        }
+        var gaps = new double[weights.Length];
+        for (int i = 0; i < gaps.Length; i++)
+            gaps[i] = overconstrained ? width * ((selected[i + 1] - selected[i]) / selected[^1])
+                : scale * (selected[i + 1] - selected[i]);
+        return (gaps, overconstrained);
     }
 }
 

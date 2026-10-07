@@ -1,7 +1,7 @@
 # SpanDraft – Konzept
 
-> Status: Core, unabhängig validierter Solver, Engineering, Analysis und Desktop mit Support-, Punktkraft- und Punktmoment-Interaktionen einschließlich Drag implementiert; nächster Editor-Meilenstein: Streckenlast
-> Stand: 06.10.2026
+> Status: Core, unabhängig validierter Solver, Engineering, Analysis und Desktop mit Support-, Punktkraft-, Punktmoment- und Streckenlast-Interaktionen einschließlich transaktionaler Drags implementiert
+> Stand: 07.10.2026
 > Dieses Dokument beschreibt den geplanten Scope, die technische Architektur und die Grundprinzipien von SpanDraft. Es ist bewusst als interne Entwicklungsgrundlage auf Deutsch gehalten und wird mit dem Projekt weiterentwickelt.
 
 ## 1. Projektidee
@@ -57,10 +57,11 @@ Das erste UI-Fundament ist implementiert: Project Setup, technischer Balken mit
 & Editing ist implementiert: One-shot-Lagerwerkzeuge mit Preview/Snap, transaktionale
 Flyouts, numerisches Verschieben und Drag mit anschließender Bestätigung, Typwechsel
 und Löschen. Punktkraft und Punktmoment sind mit denselben Interaktionen, signed
-Werten und eigener Vorschau implementiert; Streckenlast folgt. Die verbindliche Oberfläche steht in
+Werten und eigener Vorschau implementiert. Konstante Streckenlasten bieten Bereichsplacement,
+transaktionale Flyouts, Endpunkt-Drags und Löschen. Die verbindliche Oberfläche steht in
 [UI.md](UI.md).
 
-Aktueller Regressionstand: 717 Produkttests, 195 Validation-Tests und 18
+Aktueller Regressionstand: 788 Produkttests, 195 Validation-Tests und 18
 Acceptance-Fälle bestanden. Lager- und Punktlastpositionen erfüllen zentral 0 ≤ x ≤ L.
 Bei einer blockierten Verkürzung erhält Enter die aktive Längeneingabe samt Fehler und Konfliktvorschau;
 abgelehnter Fokusverlust verwirft sie vollständig und restauriert die committed
@@ -437,7 +438,7 @@ Engineering. Der Rechenpfad lautet BeamModel → BeamAnalysis → Solver → Bea
 Enthält ausschließlich Desktop-UI, Interaktionslogik und Darstellung.
 MainWindow hostet Menü und Setup/Editor; eigene kleine ViewModels halten Navigation,
 temporäre Eingaben und ein einziges committed EditorDocument. Dessen immutable
-EditorSupports und EditorPointLoads tragen stabile UI-IDs; Preview, Flyout und Drag bleiben temporär.
+EditorSupports, EditorPointLoads und EditorUniformDistributedLoads tragen stabile UI-IDs; Preview, Flyout und Drag bleiben temporär.
 BeamEditorSurface
 trennt editierbare Controls vom DrawingContext-Rendering des BeamCanvas.
 
@@ -541,8 +542,8 @@ horizontale Toolbar, Projektinfo, Balkendarstellung, transaktionale direkte
 Längenbemaßung und Analysis-Presentation-State. Lagerplatzierung mit 1-mm-Snap und
 exaktem Endpoint-Snap, transaktionale Lager-Flyouts, Typ-/Positionsbearbeitung,
 bestätigtes Drag-Verschieben und Löschen sind ebenfalls implementiert. Vorhandene
-Lager und Punktlasten bleiben bei Setup-Änderungen erhalten und verhindern eine
-Balkenverkürzung unter ihre Position. Punktkräfte und Punktmomente verwenden
+Lager, Punktlasten und Streckenlasten bleiben bei Setup-Änderungen erhalten und verhindern eine
+Balkenverkürzung unter ihre Position beziehungsweise ihr Bereichsende. Punktkräfte und Punktmomente verwenden
 One-shot-Placement, transaktionale Position-/Wert-Flyouts, wiederholtes Drag und
 Löschen. Mehrere Punktlasten am selben x sind zulässig und werden einzeln gestaffelt
 dargestellt; Analysis erfolgt erst nach tatsächlichen Commits. Die Vorlagen sind keine Norm- oder
@@ -550,9 +551,7 @@ Herstellerbibliothek; A/I/W stammen aus dem idealisierten Core-Modell.
 
 Nächste Schritte gemäß [UI.md](UI.md):
 
-- Streckenlastplatzierung mit Bereichs-Preview und Millimetersnap,
-- transaktionales Streckenlast-Flyout und Bearbeitung/-löschung,
-- später Tabellenansicht und Undo/Redo.
+- Tabellenansicht und Undo/Redo.
 
 ### Phase 3 – Ergebnisse
 

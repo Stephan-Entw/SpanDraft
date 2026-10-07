@@ -3,7 +3,7 @@ using SpanDraft.Desktop.State;
 
 namespace SpanDraft.Desktop.Controls;
 
-public enum BeamPointerInteraction { SupportPlacement, LoadPlacement, SupportDrag, LoadDrag, LabelDrag }
+public enum BeamPointerInteraction { SupportPlacement, LoadPlacement, SupportDrag, LoadDrag, LabelDrag, DistributedLoadPlacement, DistributedLoadDrag }
 public sealed record BeamLayoutFrame(StationLayoutResult Layout, BeamViewport Viewport);
 
 /// <summary>Surface-owned transient layout cache, never a second committed document.</summary>
@@ -28,7 +28,8 @@ public sealed class BeamLayoutState
             // handles density through its existing proportional best-effort fallback.
             double factor = Math.Min(1, Math.Max(0, width - Math.Min(1, width / 2)) / (margins.Left + margins.Right));
             double left = margins.Left * factor, right = width - margins.Right * factor;
-            var layout = StationLayout.Compute(document.Length.Meters, left, right, requirements);
+            var layout = StationLayout.Compute(document.Length.Meters, left, right, requirements,
+                spanRequirements: StationRequirementBuilder.SpansFromDocument(document));
             _committed = new(layout, BeamViewport.Fit(width, height));
             _document = document;
             _width = width;

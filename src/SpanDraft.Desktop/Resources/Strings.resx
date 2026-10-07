@@ -65,4 +65,8 @@
   <data name="DuplicateEntityName" xml:space="preserve"><value>This name is already used in the project.</value></data>
   <data name="EntityNameLabel" xml:space="preserve"><value>Name</value></data>
   <data name="SchematicDrawing" xml:space="preserve"><value>Schematic drawing</value></data>
+  <data name="DistributedStartLabel" xml:space="preserve"><value>Start X</value></data>
+  <data name="DistributedEndLabel" xml:space="preserve"><value>End X</value></data>
+  <data name="DistributedIntensityLabel" xml:space="preserve"><value>Line load q</value></data>
+  <data name="InvalidDistributedRange" xml:space="preserve"><value>The range must satisfy 0 ≤ Start X &lt; End X ≤ beam length.</value></data>
 </root>

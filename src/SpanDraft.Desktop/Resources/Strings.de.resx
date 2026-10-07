@@ -65,4 +65,8 @@
   <data name="DuplicateEntityName" xml:space="preserve"><value>Diese Bezeichnung wird im Projekt bereits verwendet.</value></data>
   <data name="EntityNameLabel" xml:space="preserve"><value>Bezeichnung</value></data>
   <data name="SchematicDrawing" xml:space="preserve"><value>Schematische Darstellung</value></data>
+  <data name="DistributedStartLabel" xml:space="preserve"><value>Start X</value></data>
+  <data name="DistributedEndLabel" xml:space="preserve"><value>Ende X</value></data>
+  <data name="DistributedIntensityLabel" xml:space="preserve"><value>Streckenlast q</value></data>
+  <data name="InvalidDistributedRange" xml:space="preserve"><value>Der Bereich muss 0 ≤ Start X &lt; Ende X ≤ Balkenlänge erfüllen.</value></data>
 </root>

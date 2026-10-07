@@ -12,6 +12,7 @@ public sealed class BeamCanvas : Control
 {
     public static readonly StyledProperty<BeamRenderState?> SceneProperty = AvaloniaProperty.Register<BeamCanvas, BeamRenderState?>(nameof(Scene));
     public static readonly StyledProperty<Guid?> HighlightedLoadIdProperty = AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HighlightedLoadId));
+    public static readonly StyledProperty<Guid?> HighlightedDistributedLoadIdProperty = AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HighlightedDistributedLoadId));
     public static readonly StyledProperty<Guid?> HighlightedSupportIdProperty = AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HighlightedSupportId));
     public static readonly StyledProperty<IReadOnlyList<Guid>?> ConflictEntityIdsProperty = AvaloniaProperty.Register<BeamCanvas, IReadOnlyList<Guid>?>(nameof(ConflictEntityIds));
     public static readonly StyledProperty<ConstraintConflictState?> ConstraintConflictProperty = AvaloniaProperty.Register<BeamCanvas, ConstraintConflictState?>(nameof(ConstraintConflict));
@@ -23,6 +24,7 @@ public sealed class BeamCanvas : Control
     public static readonly StyledProperty<IBrush?> ErrorBrushProperty = AvaloniaProperty.Register<BeamCanvas, IBrush?>(nameof(ErrorBrush));
     public BeamRenderState? Scene { get => GetValue(SceneProperty); set => SetValue(SceneProperty, value); }
     public Guid? HighlightedLoadId { get => GetValue(HighlightedLoadIdProperty); set => SetValue(HighlightedLoadIdProperty, value); }
+    public Guid? HighlightedDistributedLoadId { get => GetValue(HighlightedDistributedLoadIdProperty); set => SetValue(HighlightedDistributedLoadIdProperty, value); }
     public Guid? HighlightedSupportId { get => GetValue(HighlightedSupportIdProperty); set => SetValue(HighlightedSupportIdProperty, value); }
     public IReadOnlyList<Guid>? ConflictEntityIds { get => GetValue(ConflictEntityIdsProperty); set => SetValue(ConflictEntityIdsProperty, value); }
     public ConstraintConflictState? ConstraintConflict { get => GetValue(ConstraintConflictProperty); set => SetValue(ConstraintConflictProperty, value); }
@@ -34,7 +36,7 @@ public sealed class BeamCanvas : Control
     public IBrush? ErrorBrush { get => GetValue(ErrorBrushProperty); set => SetValue(ErrorBrushProperty, value); }
     static BeamCanvas() => AffectsRender<BeamCanvas>(SceneProperty, BeamBrushProperty, CanvasBackgroundBrushProperty, GhostBrushProperty,
         AccentBrushProperty, ErrorBrushProperty, HighlightedLoadIdProperty, HighlightedSupportIdProperty,
-        ConflictEntityIdsProperty, ConstraintConflictProperty, LabelFontSizeProperty);
+        ConflictEntityIdsProperty, ConstraintConflictProperty, LabelFontSizeProperty, HighlightedDistributedLoadIdProperty);
 
     public override void Render(DrawingContext context)
     {
@@ -42,6 +44,7 @@ public sealed class BeamCanvas : Control
         if (Scene is not { } scene) return;
         var frame = scene.Frame;
         double y = frame.Viewport.BeamY;
+        DistributedLoadSymbol.DrawFills(context, scene.DistributedLoads, BeamBrush);
         var length = BeamConflictGeometry.Create(frame.Layout.Transform, ConstraintConflict);
         context.DrawLine(new Pen(BeamBrush, SchematicMetrics.BeamStrokeWidth), new(frame.Layout.Stations[0].ScreenX, y), new(length.EndX, y));
         if (length.HasGhost)
@@ -54,6 +57,17 @@ public sealed class BeamCanvas : Control
             using (context.PushOpacity(support.IsPreview ? 0.75 : 1))
                 DrawSupport(context, support.X, y, support.Preview.Type, support.IsMirrored,
                     Brush(support.Id, true, support.IsPreview, support.Preview.IsInvalid), CanvasBackgroundBrush);
+        foreach (var glyph in DistributedLoadSymbol.InnerGlyphs(scene.DistributedLoads))
+        {
+            bool error = glyph.Entities.Any(e => e.Preview.IsInvalid || Conflict(e.Id));
+            bool accent = glyph.IsPreview || glyph.Entities.Any(e => e.Id is not null &&
+                (e.Id == HighlightedDistributedLoadId || e.Id == HighlightedLoadId));
+            using (context.PushOpacity(glyph.IsPreview ? 0.75 : 1))
+                DistributedLoadSymbol.DrawInner(context, glyph, error ? ErrorBrush : accent ? AccentBrush : BeamBrush);
+        }
+        foreach (var load in scene.DistributedLoads)
+            using (context.PushOpacity(load.IsPreview ? 0.75 : 1))
+                DistributedLoadSymbol.DrawEndpoints(context, load, Brush(load.Id, false, load.IsPreview, load.Preview.IsInvalid));
         foreach (var glyph in scene.Glyphs)
         {
             bool error = glyph.Entities.Any(e => e.Preview.IsInvalid || Conflict(e.Id));
@@ -68,7 +82,8 @@ public sealed class BeamCanvas : Control
 
     private bool Conflict(Guid? id) => id is { } entity && ConflictEntityIds?.Contains(entity) == true;
     private IBrush? Brush(Guid? id, bool support, bool preview, bool invalid) => invalid || Conflict(id) ? ErrorBrush
-        : preview || id is not null && id == (support ? HighlightedSupportId : HighlightedLoadId) ? AccentBrush : BeamBrush;
+        : preview || id is not null && (id == (support ? HighlightedSupportId : HighlightedLoadId)
+            || !support && id == HighlightedDistributedLoadId) ? AccentBrush : BeamBrush;
 
     private static void DrawSupport(DrawingContext context, double x, double y, SupportType type, bool isMirrored, IBrush? brush, IBrush? backgroundBrush)
     {

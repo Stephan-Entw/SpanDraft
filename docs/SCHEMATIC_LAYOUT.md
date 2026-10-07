@@ -1,7 +1,7 @@
 # SpanDraft – Schematische Balkendarstellung und Stationslayout
 
-> Status: verbindliche Desktop-Spezifikation für die nächste UI-Ausbaustufe  
-> Stand: 06.10.2026  
+> Status: verbindliche Desktop-Spezifikation einschließlich konstanter Streckenlast\
+> Stand: 07.10.2026\
 > Geltungsbereich: `SpanDraft.Desktop`  
 > Fachliche Vorzeichen und physikalische Größen bleiben durch `docs/DOMAIN.md` und das Core-Modell definiert.  
 > Bei Widersprüchen zu älteren Rendering-/Bemaßungsregeln in `docs/UI.md` hat dieses Dokument für Balkendarstellung, Stationslayout, Koordinatenachse und Annotationen Vorrang.
@@ -16,7 +16,7 @@ Das Konzept verfolgt fünf Ziele:
 2. Koordinaten bleiben die maßgebende geometrische Information,
 3. Punktkräfte und Momente werden nach üblicher technischer Diagrammkonvention direkt am Balken dargestellt,
 4. automatische Darstellung bleibt für normale Maschinenbau-Modelle kompakt und robust,
-5. spätere Streckenlasten und Querschnittsgrenzen können ohne neue grundlegende Layoutarchitektur ergänzt werden.
+5. konstante Streckenlasten nutzen dasselbe Stationslayout; spätere Querschnittsgrenzen können daran anschließen.
 
 Die mechanische Berechnung bleibt vollständig unabhängig von dieser Darstellung. Solver, Core und Analysis erhalten ausschließlich die realen physikalischen Werte.
 
@@ -31,7 +31,7 @@ Diese Spezifikation beschreibt:
 - Mindestabstände zwischen Stationen,
 - eine separate Koordinatenachse,
 - automatische Koordinaten-Label-Verteilung,
-- Darstellung von Lagerungen, Punktkräften und Punktmomenten,
+- Darstellung von Lagerungen, Punktkräften, Punktmomenten und konstanten Streckenlasten,
 - stabile technische Bezeichnungen,
 - automatisch und manuell positionierte Objektbeschriftungen,
 - Interaktionsregeln für Placement, Drag und Editing,
@@ -40,7 +40,6 @@ Diese Spezifikation beschreibt:
 
 Nicht Bestandteil dieses Meilensteins:
 
-- Streckenlast-Implementierung,
 - Zoom/Pan,
 - Einheiten-Einstellungen,
 - Speichern/Laden,
@@ -70,11 +69,11 @@ Aktuelle Quellen:
 - Balkenende `x = L`,
 - Lager,
 - Punktkräfte,
-- Punktmomente.
+- Punktmomente,
+- Anfang und Ende einer Streckenlast.
 
 Später können unter anderem hinzukommen:
 
-- Anfang und Ende einer Streckenlast,
 - Querschnittsgrenzen,
 - Materialgrenzen.
 
@@ -178,6 +177,7 @@ Mechanische Änderung:
 - SupportType,
 - Kraftwert,
 - Momentwert,
+- Streckenlastbereich und Intensität,
 - Balkenlänge,
 - Material/Querschnitt.
 
@@ -219,7 +219,7 @@ PointMoments:
 M1, M2, M3, ...
 ```
 
-Für eine spätere Streckenlast ist vorgesehen:
+Konstante Streckenlasten:
 
 ```text
 q1, q2, q3, ...
@@ -252,7 +252,7 @@ Das Projekt hält separate monotone Zähler, sinngemäß:
 NextSupportOrdinal
 NextForceNumber
 NextMomentNumber
-später NextDistributedLoadNumber
+NextDistributedLoadNumber
 ```
 
 Diese Zustände gehören langfristig zum persistierbaren Projektzustand.
@@ -318,9 +318,9 @@ Mehrere Entities an exakt derselben Position werden vor dem Layout zu einer Stat
 
 Textlabels sind kein Bestandteil dieser Extents.
 
-### 6.1 Zukunftserweiterung für Intervallobjekte
+### 6.1 Intervallanforderungen
 
-Die Layoutgrenze soll eine optionale neutrale Intervallanforderung zulassen:
+Die Layoutgrenze verwendet die optionale neutrale Intervallanforderung:
 
 ```text
 SpanRequirement
@@ -329,11 +329,13 @@ SpanRequirement
 - MinimumScreenWidth
 ```
 
-Die aktuelle PointForce-/PointMoment-/Support-Implementierung benötigt keine `SpanRequirement`.
-
-Sie wird als Erweiterungspunkt vorgesehen, damit eine spätere sehr kurze Streckenlast eine minimale sichtbare Breite verlangen kann, ohne dass `StationLayout` den Typ `UniformDistributedLoad` kennen muss.
-
-Die konkrete Verarbeitung nichtleerer SpanRequirements wird erst mit dem Streckenlast-Meilenstein verbindlich implementiert, sofern sie vorher nicht benötigt wird.
+Jede committed UDL verlangt über `SpanRequirement` mindestens 24 DIP zwischen ihren
+Endstationsankern, sofern die Anforderungen in den verfügbaren Platz passen.
+Benachbarte Stationsminima bleiben gleichzeitig verbindlich; überlappende und
+verschachtelte Intervalle werden gemeinsam erfüllt und nicht pauschal addiert.
+Ohne wirksame Intervallanforderung bleibt die bisherige Verteilung erhalten.
+Bei Überbelegung werden die erforderlichen Mindestabstände deterministisch
+proportional skaliert; Reihenfolge, Endanker und reversible Abbildung bleiben erhalten.
 
 ---
 
@@ -422,6 +424,7 @@ Wenn:
 Σ m_i > W
 ```
 
+oder wenn die zusätzlichen Intervallanforderungen nicht gemeinsam in W passen,
 ist das Layout `IsOverconstrained = true`.
 
 Dann:
@@ -1009,11 +1012,12 @@ Die x-Koordinate wird nicht künstlich getrennt.
 
 Empfohlene deterministische Render-Reihenfolge:
 
-1. Balken,
-2. Support-Glyphs,
-3. Moment-Glyphs,
-4. Force-Glyphs,
-5. Entity-Annotationen und Selection-/Hover-Zustände.
+1. UDL-Abschnittsfüllungen mit anzahlabhängiger Gesamtdeckkraft,
+2. Balken,
+3. Support-Glyphs, gemeinsame innere UDL-Glyphs, individuelle UDL-Endpfeile/-Linien,
+4. Moment-Glyphs,
+5. Force-Glyphs,
+6. Entity-Annotationen und Selection-/Hover-Zustände.
 
 Damit bleiben Lastpfeile und Momentpfeilspitzen gegenüber dem Balken eindeutig sichtbar.
 
@@ -1104,7 +1108,7 @@ Repräsentiert ein Glyph mehrere Entities derselben Station, darf kein Entity wi
 Regel:
 
 - ist bereits genau eines der repräsentierten Entities selektiert, darf der gemeinsame Glyph dieses Entity ziehen,
-- ohne eindeutige Auswahl öffnet der Glyph eine kleine, objektbezogene Auswahl der Entities an dieser Station,
+- ohne eindeutige Auswahl öffnet jeder mehrdeutige Treffer eine kleine, objektbezogene Auswahl aller getroffenen Entities; auch gemischte Punktlast-/UDL-Treffer sind gleichberechtigt,
 - die Auswahl verwendet stabile Labels und Creation-/ID-Reihenfolge,
 - kein allgemeiner Inspector wird eingeführt.
 
@@ -1220,26 +1224,62 @@ Gleiche Dokumentdaten und gleiche Viewportgröße müssen dasselbe Layout erzeug
 
 ---
 
-## 24. Spätere Streckenlast
+## 24. Konstante Streckenlast
 
-Diese Spezifikation implementiert noch keine Streckenlast.
+Start und Ende sind echte committed Stationen. Alle horizontalen Zeichenpositionen
+verwenden ausschließlich den gemeinsamen StationTransform; physikalische Werte
+bleiben auch bei einer 24-DIP-Spananforderung unverändert.
 
-Sie legt jedoch die Architektur so fest, dass der nächste Meilenstein ohne erneuten Grundumbau anschließen kann.
+UDLs liegen vollständig oberhalb des Balkens. Die Verbindungslinie hat eine feste,
+vom Betrag und Vorzeichen unabhängige Höhe. Pfeilhöhe: 28 DIP; ArrowHeadLength:
+7 DIP; ArrowHeadHalfWidth: 3,5 DIP; Kontur: vorhandene SymbolStrokeWidth. Die
+untere Pfeilkontur hält denselben 1-DIP-Abstand zum oberen Balkenrand wie Punktkräfte.
 
-Eine spätere UDL besitzt:
+Verbindungslinie, Start- und Endpfeil jeder UDL werden individuell gezeichnet.
+Endpfeile bleiben exakt bei Start/Ende, werden weder zusammengeführt noch versetzt
+und dürfen untereinander näher als 24 DIP liegen. Bei identischen Positionen können
+sich ihre Konturen decken; Entities und Hit-Zonen bleiben getrennt.
 
-```text
-q1
-StartPosition
-EndPosition
-signed Intensity
-```
+Alle unterschiedlichen Screen-Endpunkte teilen die Fläche in Abschnitte. Pro
+belegtem Abschnitt der Breite W wird n ≥ 1 mit W/n ≥ 24 DIP und minimalem
+|W/n − 32 DIP| gewählt; Gleichstand nimmt das kleinere n. Unterhalb 24 DIP gilt n = 1.
+Nur die n−1 inneren Rasterpositionen erhalten gemeinsame Glyphs aller dort aktiven
+UDLs. Somit gilt mindestens 24 DIP Abstand zwischen inneren Pfeilen und zu jedem
+individuellen Endpfeil. Kurze Abschnitte erhalten keine inneren Glyphs.
+Eine einzelne UDL behält ihre bisherige Verteilung; bei Überlappung dürfen sich auch
+innere Positionen angrenzender Einzelbereiche ändern. Die Berechnung erzeugt keine
+Stationen und verändert weder Stationsreihenfolge noch Transform.
 
-Start und Ende werden normale Stationen.
+q < 0 zeigt zum Balken, q > 0 zur oberen Verbindungslinie. q = 0 behält neutrale
+Schäfte und Linie ohne Spitzen. Der Betrag kodiert keine Größe. Jede Last bleibt
+separat und trägt ein Label wie `q1 = -500 N/m`; dessen Auto-Anker liegt in der
+Screen-Mitte ihres Bereichs und verwendet das gemeinsame Load-Label-Packing.
 
-Eine sehr kurze UDL kann über die neutrale `SpanRequirement` eine minimale sichtbare Breite verlangen.
+Ein gemeinsamer innerer Glyph hat genau einen Schaft: bei nur negativen Werten eine
+Spitze unten, bei nur positiven eine oben, bei beiden Vorzeichen beide Spitzen
+(Doppelpfeil wie bei überlagerten Punktkräften). Nullwerte beeinflussen die Richtung
+nicht; ausschließlich null ergibt einen Schaft ohne Spitzen. Beträge werden nicht
+addiert. Gemeinsame Glyphs werden vor den individuellen Endpfeilen gezeichnet.
+Ihr Styling berücksichtigt alle beteiligten Entities: Error vor Preview/Highlight
+vor neutral; eine beteiligte Preview verwendet die bestehende Symboldeckkraft 0,75.
+Endpoint-Glyphs behalten das individuelle Styling.
 
-Die sichtbare Anzahl der UDL-Pfeile ist rein grafisch. Sie darf nicht als Integration oder resultierende Kraft interpretiert werden.
+Zwischen Verbindungslinie und oberem Balkenrand wird jeder belegte Abschnitt genau
+einmal mit dem vorhandenen neutralen BeamStroke-Brush gefüllt. Seine Gesamtdeckkraft
+für k überlagerte UDLs ist zentral in SchematicMetrics definiert: k = 0 ungefüllt,
+k = 1 exakt 0,06, k = 2 exakt 0,26; für k ≥ 3 gilt
+`α(k) = min(0,75; 1 − 0,94 × (0,74 / 0,94)^(k−1))`.
+Drei ≈ 0,42, vier ≈ 0,54, fünf ≈ 0,64, sechs ≈ 0,72, ab sieben exakt 0,75.
+Auch Null-UDLs zählen zur Belegung. Anzahl, nicht Betrag oder Vorzeichen, bestimmt
+die Deckkraft; die Zeichenreihenfolge hat keinen Einfluss. Alle Füllungen liegen
+hinter Linien/Pfeilen. Lastdaten und Labels bleiben separat; keine Resultierende.
+Die Pfeilanzahl ist rein grafisch.
+
+Eindeutige Entity-Labels haben Vorrang. Mehrdeutige Label- oder Symboltreffer öffnen
+die lokale Auswahl aller betroffenen Entities. Innerhalb einer eindeutig gewählten
+UDL dienen nur die Hit-Zonen des ersten/letzten Pfeils als Endpoint-Handles; keine
+zusätzlichen sichtbaren Handles und kein Whole-span-Drag. Bei überlappenden
+Endpunktzonen derselben UDL entscheidet die Nähe, bei Gleichstand der Startpunkt.
 
 ---
 
@@ -1419,6 +1459,6 @@ Verbindlich sind insbesondere:
 - Pointer-Gesten verwenden immutable Layout-Snapshots,
 - gemeinsame Stationsglyphs dürfen keine zufällige Entity-Auswahl verursachen,
 - extreme Dichte wird erkannt, aber Zoom/Pan wird nicht vorgezogen,
-- zukünftige UDL-/Querschnittsgrenzen können die gleiche Stationsarchitektur nutzen.
+- UDL-Grenzen nutzen die gleiche Stationsarchitektur; spätere Querschnittsgrenzen können daran anschließen.
 
 Diese Regeln bilden die verbindliche grafische Grundlage für die nächsten SpanDraft-Desktop-Meilensteine.

@@ -1,8 +1,8 @@
 # SpanDraft – verbindliche UI-Spezifikation
 
-Stand: 06.10.2026, Stage 3 – Annotation Interaction & Hardening und Toolbar-SVGs. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
-Support-, Punktkraft- und Punktmoment-Placement & Editing einschließlich Drag sind
-implementiert. Streckenlast bleibt der verbindliche nächste Editor-Schritt.
+Stand: 07.10.2026, konstante Streckenlast im Desktop. Diese Spezifikation ergänzt [KONZEPT.md](KONZEPT.md).
+Support-, Punktkraft-, Punktmoment- und Streckenlast-Placement & Editing einschließlich
+transaktionaler Drags sind implementiert.
 
 ## 1. Design und aktueller Umfang
 
@@ -18,7 +18,7 @@ Zeile. Kein Routing- oder Navigationsframework.
 
 Implementiert: Setup, Setup/Editor-Wechsel, Menü, Toolbar, Projektinformation,
 Balkengrafik, Längeneingabe, Support- und Punktlast-Placement/Preview/Snap/Flyout/Editing/Drag/Delete,
-Analysis-Anbindung und Ergebnis-/Statusleiste.
+Streckenlast-Bereichsplacement/-flyout/-endpunktdrag, Analysis-Anbindung und Ergebnis-/Statusleiste.
 
 ## 2. Startseite und Setup-Modi
 
@@ -44,7 +44,7 @@ bei tatsächlicher Änderung der analysis-relevanten Werte einmal und kehrt zum 
 zurück. Unverändertes Übernehmen erhält die Dokumentidentität und analysiert nicht.
 „Abbrechen“ verwirft ausschließlich die
 temporäre Auswahl, erhält Dokument und Editor und löst keine Analysis aus.
-Vorhandene Lager und Punktlasten mit IDs, Positionen, Typen/Werten und Reihenfolge
+Vorhandene Lager und Lasten mit IDs, Positionen/Bereichen, Typen/Werten und Reihenfolge
 bleiben bei Übernehmen und Abbrechen erhalten. Navigation ins Setup verwirft
 temporäre Lager- und Lastinteraktionen.
 
@@ -62,8 +62,7 @@ Toolbar-Reihenfolge:
 
 Punktkraft, Moment, Streckenlast | Einspannung, Festlager, Loslager
 
-Die Toolbar enthält kein Längenfeld. Die drei Lagerwerkzeuge sowie Punktkraft und
-Moment sind aktiviert und zeigen einen Checked-State; Streckenlast bleibt deaktiviert. Es gibt
+Die Toolbar enthält kein Längenfeld. Alle sechs Werkzeuge sind aktiviert und zeigen einen Checked-State. Es gibt
 weder einen Auswahl- noch einen Entfernen-Button. Neutral ist der Auswahlzustand.
 
 Menü-Platzhalter (einschließlich Neues Projekt, Öffnen, Speichern,
@@ -78,7 +77,7 @@ Aktuell gibt es kein Settings-System und keine Persistenz.
 
 MainWindowViewModel hält den Modus ProjectSetup/Editor und die Navigation.
 ProjectSetupViewModel hält eine temporäre Auswahl. EditorViewModel besitzt
-das einzige committed EditorDocument mit Length, Material, Section, Supports und Loads.
+das einzige committed EditorDocument mit Length, Material, Section, Supports, Loads und DistributedLoads.
 Core-Objekte bleiben immutable. Kein zweites konkurrierendes Projektmodell.
 
 Das Schematic Layout gemäß [SCHEMATIC_LAYOUT.md](SCHEMATIC_LAYOUT.md) verwendet stabile
@@ -162,7 +161,7 @@ Tausenderseparatoren. Gültig sind endliche positive mm-Werte, die auch in SI
 positiv darstellbar bleiben. Null, negative Werte, NaN, Infinity, Überlauf und
 Unterlauf auf null werden abgewiesen.
 
-Eine Länge unterhalb einer vorhandenen Lager- oder Punktlastposition wird über den dokumentbezogenen
+Eine Länge unterhalb einer vorhandenen Lager-/Punktlastposition oder eines Streckenlastendes wird über den dokumentbezogenen
 Commit-Contract abgelehnt: keine Dokumentänderung, kein automatisches Verschieben
 oder Löschen und keine Analysis. Enter erhält Input und Fokus zur Korrektur;
 Fokusverlust restauriert die committed Länge und entfernt Konflikt, Preview,
@@ -172,14 +171,14 @@ weitere Commits durch Fokusereignisse während einer erfolgreichen Übernahme.
 
 Eine abgelehnte Verkürzung hält zusätzlich einen transienten ConstraintConflictState
 im EditorViewModel: angeforderte Länge und defensiv geschützte Entity-IDs aller
-Supports und Punktlasten jenseits dieser Grenze. Diese Entities werden mit dem vorhandenen Error-Brush
+Supports, Punktlasten und Streckenlasten, deren Ende jenseits dieser Grenze liegt. Diese Entities werden mit dem vorhandenen Error-Brush
 rot gezeichnet, auch bei Hover; unter der committed Länge bleiben sie fachlich gültig.
 Der State gehört nicht zum EditorDocument und löst keine Analysis aus. Er bleibt
 während der aktiven abgelehnten Eingabe einschließlich Enter erhalten. Fokusverlust
 verwirft die Anfrage samt Highlight und Ablehnungsgrund. Korrektur auf eine
 zulässige Länge, Wiederherstellung des Originalwerts, Escape/Cancel oder erneuter
 Bearbeitungsbeginn entfernen ihn. Neue ungültige Eingabe entfernt ein überholtes
-Highlight. Support- und Punktlast-Commits prüfen verbleibende Konflikte gegen die angeforderte Länge.
+Highlight. Support- und Last-Commits prüfen verbleibende Konflikte gegen die angeforderte Länge.
 
 Bei einem tatsächlichen Objektkonflikt zeigt die gültige angeforderte Länge zugleich
 ein transientes visuelles Balkenende: RequestedLength wird über den committed
@@ -475,8 +474,8 @@ Offset; absolute Canvas-Koordinaten werden nicht gespeichert.
 Zuerst entstehen die gemessenen automatischen Referenzpositionen. Danach werden
 manuelle Offsets angewendet und ausschließlich Auto-Labels um diese festen
 Hindernisse herum in kompakte Reihen gelegt. Das gilt auch zwischen Support- und
-Load-Bereich. Zwei manuelle Labels dürfen sich bewusst überlappen. Bei identischem
-Hit gewinnt das zuletzt gezeichnete Label. Entity-Labels haben vor Glyphs Vorrang;
+Load-Bereich. Zwei manuelle Labels dürfen sich bewusst überlappen. Mehrdeutige
+Labeltreffer öffnen die lokale Entity-Auswahl. Entity-Labels haben vor Glyphs Vorrang;
 Shared-Glyph-Auswahl und Positionsgesten behalten ihre bestehenden Regeln.
 
 PointerDown auf ein committed Entity-Label merkt Entity-ID, Pointerstart,
@@ -511,10 +510,60 @@ Neue Draft-Labels ohne committed ID sind nicht draggable. Coordinate-Axis-Labels
 bleiben read-only, ausgenommen der bestehende L-Endwert; sie besitzen keine
 AnnotationOffsets. Ein sichtbarer Reset-Befehl wird nicht vorgezogen.
 
-### 7.10 Nächster Schritt: Streckenlast
+### 7.10 Konstante Streckenlast
 
-Streckenlast bleibt deaktiviert. Geplant sind Start-/Endpunkt, signed Intensität,
-Bereichs-Preview und transaktionales Flyout nach denselben Grundprinzipien.
+Streckenlast ist ein One-shot-Werkzeug mit Default −500 N/m. Der erste Klick
+setzt einen Endpunkt, die Pointerbewegung zeigt den Bereich und der zweite Klick
+öffnet das Flyout. Rechts→links wird als geordneter Bereich übernommen. Identische
+Endpunkte sind ungültig. Millimeter-/Endpoint-Snap und ein gemeinsamer eingefrorener
+Transform gelten während der gesamten Bereichswahl; Preview erzeugt keine Stationen
+und keine Analysis.
+
+Das Flyout enthält Bezeichnung, Start X/mm, Ende X/mm und Streckenlast q/N/m.
+Gültig ist 0 ≤ Start < Ende ≤ L mit endlichem signed q einschließlich null.
+Positionsbuffer bewegen die Grafik erst bei OK/Enter; gültiger q-Text aktualisiert
+Richtung und Label der Vorschau. Ungültiger Text hält die letzte gültige Geometrie.
+Cancel, Escape und Outside-Click verwerfen die Session wie bei Punktlasten.
+Automatische Namen q1, q2, … besitzen einen eigenen monotonen Counter und werden
+erst bei erfolgreicher Neuanlage verbraucht. Namen sind projektweit eindeutig.
+
+Nur erster und letzter Pfeil sind direkt draggable, auch im neuen Draft. Jede Geste
+ändert ausschließlich ihren Endpunkt; Kreuzung und Zusammenfallen werden abgewiesen.
+Während Drag ist das Flyout verborgen. Gültiges Release ersetzt nur den betroffenen
+Positionsbuffer und öffnet dasselbe Flyout wieder; der endgültige Commit erfolgt mit
+OK. Ungültiges Release restauriert den Zustand vor der Geste, aus Neutral verwirft es
+die Geste. Bereichsklick öffnet die Last ohne Verschieben des gesamten Bereichs.
+Label-Drag verändert nur AnnotationOffsets.
+
+Aus Neutral haben eindeutige Entity-Labels Vorrang. Mehrere Label- oder Symboltreffer
+öffnen das vorhandene lokale Auswahlpopup mit allen betroffenen Entities; Lager,
+Punktlasten und Streckenlasten sind gleichberechtigt. Nach eindeutiger UDL-Auswahl
+dürfen deren Endpunkte bei offenem Flyout direkt gezogen werden, auch bei Überlappung.
+
+Committed Streckenlasten behalten stabile IDs und exakte SI-Werte. Start und Ende
+erscheinen auf der Coordinate Axis; Resize und schematische Entzerrung verändern keine
+physikalischen Daten. Verkürzung unter ein UDL-Ende wird mit dem bestehenden
+Längenkonflikt abgelehnt. Mechanisches Create/Edit/Delete analysiert genau einmal;
+Rename, Annotationen, No-op und alle unbestätigten Interaktionen analysieren nicht.
+
+Bei Überlagerung bleiben Verbindungslinie sowie Start-/Endpfeile jeder einzelnen
+UDL an ihren exakten Positionen erhalten. Nur innere Pfeile werden gemeinsam
+gezeichnet: Alle UDL-Endpunkte begrenzen Abschnitte mit der bisherigen
+24-DIP-Mindestabstands-/32-DIP-Zielabstandsregel. Innere Pfeile halten auch zu jedem
+Endpfeil mindestens 24 DIP Abstand; Endpfeile untereinander dürfen näher liegen.
+Innere Positionen können sich dadurch auch in angrenzenden Einzelbereichen ändern.
+Gleiche Richtung ergibt einen gemeinsamen Pfeil; positive und negative UDLs ergeben
+einen Doppelpfeil mit einem Schaft und Spitzen oben/unten. Nullwerte ergänzen keine
+Spitze. Labels, Auswahl und Endpoint-Drags bleiben pro Entity erhalten.
+
+Die neutrale Schattierung verwendet verbindlich 0,06 Gesamtdeckkraft bei einer UDL,
+0,26 bei zwei und maximal 0,75. Für n ≥ 1 überlagerte UDLs gilt
+`α(n) = min(0,75; 1 − 0,94 × (0,74 / 0,94)^(n−1))`:
+drei ≈ 0,42, vier ≈ 0,54, fünf ≈ 0,64, sechs ≈ 0,72, ab sieben 0,75.
+Jeder belegte Abschnitt wird einmal gefüllt; unbelegte Lücken bleiben frei.
+Die Gesamtdeckkraft hängt ausschließlich von der Anzahl ab, nicht von Vorzeichen,
+Betrag oder Zeichenreihenfolge. Alle Füllungen liegen hinter Linien und Symbolen.
+Die Darstellung ist in SCHEMATIC_LAYOUT.md verbindlich definiert.
 
 ## 8. Spätere Ergebnisse-/Reportansicht
 
@@ -526,8 +575,7 @@ nicht implementiert.
 
 ## 9. Bewusst offen
 
-Noch nicht implementiert: Streckenlastplatzierung/-preview/-flyout/-bearbeitung/-löschung,
-Delete-Taste, Undo/Redo, Zoom/Pan,
+Noch nicht implementiert: Delete-Taste, Undo/Redo, Zoom/Pan,
 Tabellen/Diagramme, Ergebnisse-/Reportseite, PDF/XLSX, Speichern/Laden, Auto-Save,
 Settings-Persistenz, Theme-Umschaltung, echte Profil-/Norm-/Herstellerbibliotheken,
 Profilimport, eigene Materialien und Querschnittseditor.
@@ -798,7 +846,7 @@ rechts; Abbrechen ist im Edit-Modus eine sekundäre Aktion.
 Die Menüstruktur bleibt desktoptypisch. Die einzeilige Toolbar beginnt mit
 Punktkraft, Moment und Streckenlast; ein feiner Separator trennt die Lagergruppe.
 Alle sechs Werkzeuge besitzen lokalisierte Accessibility-Namen. Lagerwerkzeuge
-sowie Punktkraft/Moment sind aktivierbar, Streckenlast bleibt deaktiviert.
+sowie Punktkraft, Moment und Streckenlast sind aktivierbar.
 Bei 1100 DIPs Mindestbreite erfolgt kein Umbruch.
 Die Projektinfo ist eine Textzeile mit BodyStrong und Ghost-Aktion „Ändern“.
 
@@ -830,7 +878,7 @@ Es gibt keine Foreground- oder CSS-Farbanpassung.
 | --- | --- |
 | point-load.svg | Punktkraft |
 | point-moment.svg | Punktmoment |
-| distributed-load.svg | Streckenlast (weiterhin deaktiviert) |
+| distributed-load.svg | Streckenlast |
 | fixed-support.svg | Einspannung |
 | pinned-support.svg | Festlager |
 | roller-support.svg | Loslager |

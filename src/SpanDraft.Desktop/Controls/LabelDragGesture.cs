@@ -30,7 +30,8 @@ public sealed class LabelDragGesture(EntityAnnotation label, Point press, Annota
     }
 
     public bool OpenOnClick(EditorViewModel editor) => !IsDragging
-        && (IsSupport ? editor.EditSupport(EntityId) : editor.EditLoad(EntityId));
+        && (IsSupport ? editor.EditSupport(EntityId) : editor.Document.DistributedLoads.Any(l => l.Id == EntityId)
+            ? editor.EditDistributedLoad(EntityId) : editor.EditLoad(EntityId));
 
     public void Cancel(EditorViewModel editor) => editor.SetAnnotationOffset(EntityId, OriginalOffset);
 }

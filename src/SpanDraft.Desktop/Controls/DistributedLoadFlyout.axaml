@@ -1,0 +1,66 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Controls.DistributedLoadFlyout"
+             x:DataType="vm:EditorViewModel" KeyDown="FlyoutKeyDown" KeyboardNavigation.TabNavigation="Cycle">
+  <Border Classes="supportFlyout" Width="320">
+    <StackPanel Spacing="{StaticResource Space12}">
+      <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="88,*" ColumnSpacing="{StaticResource Space12}">
+          <TextBlock Text="{x:Static resources:Strings.EntityNameLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Grid.Column="1" Text="{Binding DistributedLoadDraft.NameText, Mode=TwoWay}" Classes.error="{Binding DistributedLoadDraft.HasNameError}"
+                   AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
+        </Grid>
+        <TextBlock Text="{Binding DistributedLoadDraft.NameError}" IsVisible="{Binding DistributedLoadDraft.HasNameError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
+      <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
+          <TextBlock Text="{x:Static resources:Strings.DistributedStartLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Grid.Column="1" x:Name="StartInput" Text="{Binding DistributedLoadDraft.StartText, Mode=TwoWay}"
+                   Classes.error="{Binding DistributedLoadDraft.HasStartError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedStartLabel}" />
+          <TextBlock Grid.Column="2" Text="mm" VerticalAlignment="Center" />
+        </Grid>
+        <TextBlock Text="{Binding DistributedLoadDraft.StartError}" IsVisible="{Binding DistributedLoadDraft.HasStartError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
+      <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
+          <TextBlock Text="{x:Static resources:Strings.DistributedEndLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Grid.Column="1" x:Name="EndInput" Text="{Binding DistributedLoadDraft.EndText, Mode=TwoWay}"
+                   Classes.error="{Binding DistributedLoadDraft.HasEndError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedEndLabel}" />
+          <TextBlock Grid.Column="2" Text="mm" VerticalAlignment="Center" />
+        </Grid>
+        <TextBlock Text="{Binding DistributedLoadDraft.EndError}" IsVisible="{Binding DistributedLoadDraft.HasEndError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
+      <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
+          <TextBlock Text="{x:Static resources:Strings.DistributedIntensityLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Grid.Column="1" Text="{Binding DistributedLoadDraft.IntensityText, Mode=TwoWay}"
+                   Classes.error="{Binding DistributedLoadDraft.HasIntensityError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedIntensityLabel}" />
+          <TextBlock Grid.Column="2" Text="N/m" VerticalAlignment="Center" />
+        </Grid>
+        <TextBlock Text="{Binding DistributedLoadDraft.IntensityError}" IsVisible="{Binding DistributedLoadDraft.HasIntensityError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding DistributedLoadFeedback}" IsVisible="{Binding HasDistributedLoadFeedback}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource Space8}">
+        <Button Content="{x:Static resources:Strings.Delete}" Classes="ghost dangerGhost"
+                IsVisible="{Binding DistributedLoadDraft.IsExisting}" Command="{Binding DeleteDistributedLoadCommand}" />
+        <Button Grid.Column="2" Content="{x:Static resources:Strings.Cancel}" Classes="ghost" Command="{Binding CancelDistributedLoadCommand}" />
+        <Button Grid.Column="3" Classes="primary compactSupportAction" AutomationProperties.Name="{x:Static resources:Strings.OK}"
+                IsEnabled="{Binding DistributedLoadDraft.IsValid}" Command="{Binding ConfirmDistributedLoadCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <TextBlock Text="{x:Static resources:Strings.OK}" VerticalAlignment="Center" />
+            <controls:EngineeringIcon Data="{StaticResource Return}" Width="16" Height="16" StrokeThickness="2.25"
+                                      VerticalAlignment="Center" IsHitTestVisible="False" />
+          </StackPanel>
+        </Button>
+      </Grid>
+    </StackPanel>
+  </Border>
+</UserControl>

@@ -48,7 +48,7 @@ public partial class BeamEditorSurface
         else if (draft is null && TopLevel.GetTopLevel(this) is not null)
             Dispatcher.UIThread.Post(() =>
             {
-                if (_loadPopupFocusVersion == version && _shownLoadDraft is null && _editor?.SupportDraft is null
+                if (_loadPopupFocusVersion == version && _shownLoadDraft is null && _editor?.SupportDraft is null && _editor?.DistributedLoadDraft is null
                     && TopLevel.GetTopLevel(this) is not null) Focus();
             }, DispatcherPriority.Input);
     }
@@ -100,18 +100,7 @@ public partial class BeamEditorSurface
 
     private void ShowSharedSelection(PointLoadGlyph glyph, Point point)
     {
-        SelectionEntries.Children.Clear();
-        foreach (var entity in glyph.Entities)
-        {
-            if (entity.Id is not { } id) continue;
-            var button = new Button { Content = PointLoadSymbol.Label(entity.Preview, entity.Name) };
-            button.Classes.Add("ghost");
-            button.Click += (_, _) => { SelectionPopup.IsOpen = false; _editor?.EditLoad(id); };
-            SelectionEntries.Children.Add(button);
-        }
-        Canvas.SetLeft(SelectionAnchor, point.X);
-        Canvas.SetTop(SelectionAnchor, point.Y);
-        SelectionPopup.IsOpen = SelectionEntries.Children.Count > 1;
+        ShowEntitySelection(glyph.Entities.Where(e => e.Id is not null).Select(e => e.Id!.Value).Distinct().ToArray(), point);
     }
 
     private void CaptureLoad(Guid id, PointLoadVisual visual, Point point, PointerPressedEventArgs e)

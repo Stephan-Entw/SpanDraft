@@ -40,6 +40,7 @@ public sealed partial class EditorViewModel
     {
         CancelSupportInteraction();
         CancelLoadInteraction();
+        CancelDistributedLoadInteraction();
     }
 
     public void ToggleLoadTool(PointLoadKind kind)
@@ -74,7 +75,7 @@ public sealed partial class EditorViewModel
 
     public void HoverLoad(Guid? id)
     {
-        if (Interaction != SupportInteraction.Neutral || LoadState != LoadInteraction.Neutral || _hoveredLoadId == id) return;
+        if (!IsEditorNeutral || _hoveredLoadId == id) return;
         _hoveredLoadId = id;
         _loadFeedback = null;
         NotifyLoadState();
@@ -83,7 +84,7 @@ public sealed partial class EditorViewModel
     public bool EditLoad(Guid id)
     {
         if (LoadState == LoadInteraction.EditDraft && LoadDraft?.OriginalId == id) return true;
-        if (Interaction != SupportInteraction.Neutral || LoadState != LoadInteraction.Neutral) return false;
+        if (!IsEditorNeutral) return false;
         var load = Document.Loads.FirstOrDefault(l => l.Id == id);
         if (load is null) return false;
         OpenLoadDraft(id, load.Kind, load.Position, load.Value);
@@ -93,7 +94,8 @@ public sealed partial class EditorViewModel
     public bool BeginLoadDrag(Guid id)
     {
         bool editing = LoadState == LoadInteraction.EditDraft && LoadDraft?.OriginalId == id;
-        if (Interaction != SupportInteraction.Neutral || (LoadState != LoadInteraction.Neutral && !editing)) return false;
+        if (Interaction != SupportInteraction.Neutral || (LoadState != LoadInteraction.Neutral && !editing)
+            || DistributedLoadState != DistributedLoadInteraction.Neutral) return false;
         var load = Document.Loads.FirstOrDefault(l => l.Id == id);
         if (load is null) return false;
         if (editing) load = EditorPointLoad.Create(id, LoadDraft!.CanvasPosition, load.Kind, LoadDraft.Preview.Value, load.Name);

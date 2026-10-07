@@ -5,6 +5,10 @@ namespace SpanDraft.Desktop.Resources;
 
 public static class Strings
 {
+    public static string DistributedStartLabel => Get(nameof(DistributedStartLabel));
+    public static string DistributedEndLabel => Get(nameof(DistributedEndLabel));
+    public static string DistributedIntensityLabel => Get(nameof(DistributedIntensityLabel));
+    public static string InvalidDistributedRange => Get(nameof(InvalidDistributedRange));
     public static string EntityNameLabel => Get(nameof(EntityNameLabel));
     public static string SchematicDrawing => Get(nameof(SchematicDrawing));
     public static string EmptyEntityName => Get(nameof(EmptyEntityName));

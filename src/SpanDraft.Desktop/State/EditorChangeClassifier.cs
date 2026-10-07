@@ -14,6 +14,7 @@ public static class EditorChangeClassifier
         // is defined only above; desktop records also retain IDs, names and creation order.
         return previous.Material == next.Material && previous.Section == next.Section
             && previous.Supports.SequenceEqual(next.Supports) && previous.Loads.SequenceEqual(next.Loads)
+            && previous.DistributedLoads.SequenceEqual(next.DistributedLoads)
             && previous.NamingState == next.NamingState && previousPresentation.ContentEquals(nextPresentation)
                 ? EditorChangeKind.None : EditorChangeKind.MetadataOnly;
     }

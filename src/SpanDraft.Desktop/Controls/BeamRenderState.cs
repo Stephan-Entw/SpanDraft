@@ -15,10 +15,13 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
     IReadOnlyList<PointLoadVisual> Loads, IReadOnlyList<PointLoadGlyph> Glyphs,
     IReadOnlyList<EntityAnnotation> Annotations, double MinimumPaneHeight)
 {
+    public IReadOnlyList<DistributedLoadVisual> DistributedLoads { get; init; } = [];
+
     public static BeamRenderState Create(EditorDocument document, BeamLayoutFrame frame, Func<string, Size> measure,
         SupportPreview? supportPreview = null, Guid? hiddenSupportId = null, string? supportName = null,
         PointLoadPreview? loadPreview = null, Guid? hiddenLoadId = null, string? loadName = null,
-        EditorPresentationState? presentation = null)
+        EditorPresentationState? presentation = null, DistributedLoadPreview? distributedPreview = null,
+        Guid? hiddenDistributedId = null, string? distributedName = null)
     {
         var supports = new List<SupportVisual>();
         foreach (var support in document.Supports)
@@ -33,9 +36,12 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             new(id, preview, name.Trim(), frame.Layout.Transform.PhysicalToScreen(preview.Position.Meters), draft,
                 preview.Type == SupportType.Fixed && FixedSupportGeometry.AtPosition(preview.Position.Meters, document.Length.Meters).IsMirrored));
         var loads = PointLoadSymbol.Layout(document.Loads, frame, loadPreview, hiddenLoadId, loadName);
+        var distributed = DistributedLoadSymbol.Layout(document.DistributedLoads, frame, distributedPreview, hiddenDistributedId, distributedName);
         var annotations = new List<EntityAnnotation>();
         double above = Place(loads.Select((v, i) => (v.Id, v.Name, Text: PointLoadSymbol.Label(v.Preview, v.Name),
-            v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)), false);
+            v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)).Concat(distributed.Select((v, i) =>
+            (v.Id, v.Name, Text: DistributedLoadSymbol.Label(v.Preview, v.Name), X: v.CenterX,
+                v.IsPreview, v.Preview.IsInvalid, Order: loads.Count + i))), false);
         double below = Place(supports.Select((v, i) => (v.Id, v.Name, Text: v.Name,
             v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)), true);
         // Establish every reference anchor before considering any offsets. A manual
@@ -58,7 +64,8 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         // numerically extreme cases, never a label's position or stored offset.
         double visibleHeight = 2 * Math.Min(double.MaxValue / 2, extent);
         return new(frame, supports.AsReadOnly(), loads, PointLoadSymbol.Group(loads), annotations.AsReadOnly(),
-            Math.Max(visibleHeight, Math.Max(SchematicMetrics.MinimumBeamPaneHeight, 2 * Math.Max(above, below))));
+            Math.Max(visibleHeight, Math.Max(SchematicMetrics.MinimumBeamPaneHeight, 2 * Math.Max(above, below))))
+            { DistributedLoads = distributed };
 
         void AvoidManual(bool support)
         {
@@ -110,4 +117,19 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
 
     public EntityAnnotation? HitTestLabel(double x, double y) =>
         Annotations.LastOrDefault(a => a.Bounds.Contains(new Point(x, y)));
+
+    public IReadOnlyList<EntityAnnotation> HitTestLabels(double x, double y) =>
+        Annotations.Where(a => a.Id is not null && a.Bounds.Contains(new Point(x, y))).ToArray();
+
+    /// <summary>Local scene hits only. Labels take precedence; all different symbol entities are equal candidates.</summary>
+    public IReadOnlyList<Guid> HitTestEntities(double x, double y)
+    {
+        var labels = HitTestLabels(x, y);
+        if (labels.Count > 0) return labels.Select(a => a.Id!.Value).Distinct().ToArray();
+        return Supports.Where(s => s.Id is not null && SupportSymbol.Contains(s.Preview, Frame.Layout.Transform, Frame.Viewport.BeamY, x, y))
+            .Select(s => s.Id!.Value)
+            .Concat(Loads.Where(l => l.Id is not null && PointLoadSymbol.Contains(l, x, y)).Select(l => l.Id!.Value))
+            .Concat(DistributedLoads.Where(l => l.Id is not null && DistributedLoadSymbol.Contains(l, x, y)).Select(l => l.Id!.Value))
+            .Distinct().ToArray();
+    }
 }
