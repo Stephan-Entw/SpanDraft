@@ -98,6 +98,11 @@ public static class Strings
     public static string Redo => Get(nameof(Redo));
     public static string Zoom => Get(nameof(Zoom));
     public static string About => Get(nameof(About));
+    public static string AboutDescription => Get(nameof(AboutDescription));
+    public static string VersionLabel => Get(nameof(VersionLabel));
+    public static string GitHubLink => Get(nameof(GitHubLink));
+    public static string LinkOpenError => Get(nameof(LinkOpenError));
+    public static string LicenseOpenError => Get(nameof(LicenseOpenError));
     public static string ResultsPending => Get(nameof(ResultsPending));
     public static string DisplacementSymbol => Get(nameof(DisplacementSymbol));
     public static string MomentSymbol => Get(nameof(MomentSymbol));

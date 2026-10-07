@@ -15,6 +15,7 @@ public partial class MainWindow : Window
     private readonly KeyModifiers _primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
     private bool _closing;
     private bool _closeApproved;
+    private AboutWindow? _aboutWindow;
 
     public MainWindow()
     {
@@ -46,6 +47,15 @@ public partial class MainWindow : Window
         };
         Opened += async (_, _) => await _model.InitializeRecoveryAsync();
         Closing += WindowClosing;
+    }
+
+    private async void ShowAbout(object? sender, RoutedEventArgs e)
+    {
+        if (_model.IsBusy || _closing || _aboutWindow is not null) return;
+        var dialog = new AboutWindow { Icon = Icon };
+        _aboutWindow = dialog;
+        try { await dialog.ShowDialog(this); }
+        finally { _aboutWindow = null; }
     }
 
     private void ProjectKeyDown(object? sender, KeyEventArgs e)

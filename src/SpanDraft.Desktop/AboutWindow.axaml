@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+        x:Class="SpanDraft.Desktop.AboutWindow"
+        Title="{x:Static resources:Strings.About}"
+        Width="380" SizeToContent="Height" Focusable="True"
+        CanResize="False" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+  <Window.Styles>
+    <Style Selector="Button.aboutLink">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+      <Setter Property="Padding" Value="{DynamicResource Padding4}" />
+    </Style>
+    <Style Selector="Button.aboutLink:pointerover:not(:disabled)">
+      <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+    </Style>
+    <Style Selector="Button.aboutLink:pressed:not(:disabled)">
+      <Setter Property="Foreground" Value="{DynamicResource AccentPressed}" />
+    </Style>
+  </Window.Styles>
+  <StackPanel Margin="{DynamicResource Padding24}" Spacing="{DynamicResource Space16}">
+    <Image Source="avares://SpanDraft.Desktop/Assets/AppIcon/app-icon-1024.png"
+           Width="96" Height="96" Stretch="Uniform" HorizontalAlignment="Center" />
+    <StackPanel Spacing="{DynamicResource Space4}">
+      <TextBlock Classes="pageTitle" Text="{x:Static resources:ApplicationMetadata.Product}" TextAlignment="Center" />
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="{DynamicResource Space4}">
+        <TextBlock Classes="body" Foreground="{DynamicResource TextSecondary}" Text="{x:Static resources:Strings.VersionLabel}" />
+        <TextBlock Classes="body" Foreground="{DynamicResource TextSecondary}" Text="{x:Static resources:ApplicationMetadata.Version}" />
+      </StackPanel>
+    </StackPanel>
+    <StackPanel Spacing="{DynamicResource Space8}">
+      <TextBlock Classes="body" Text="{x:Static resources:Strings.AboutDescription}" TextWrapping="Wrap" TextAlignment="Center" />
+      <TextBlock Classes="body" Foreground="{DynamicResource TextSecondary}"
+                 Text="{x:Static resources:ApplicationMetadata.Copyright}" TextWrapping="Wrap" TextAlignment="Center" />
+    </StackPanel>
+    <TextBlock x:Name="LinkError" Classes="body" Foreground="{DynamicResource Error}" IsVisible="False"
+               Text="{x:Static resources:Strings.LinkOpenError}" TextWrapping="Wrap" TextAlignment="Center" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="{DynamicResource Space8}">
+      <Button Classes="ghost aboutLink" Click="OpenLicense"
+              ToolTip.Tip="{x:Static resources:ApplicationMetadata.License}">
+        <TextBlock Text="{x:Static resources:ApplicationMetadata.LicenseShortName}" TextDecorations="Underline" />
+      </Button>
+      <Button Classes="ghost aboutLink" Click="OpenLink" Tag="{x:Static resources:ApplicationMetadata.RepositoryUrl}">
+        <TextBlock Text="{x:Static resources:Strings.GitHubLink}" TextDecorations="Underline" />
+      </Button>
+    </StackPanel>
+  </StackPanel>
+</Window>

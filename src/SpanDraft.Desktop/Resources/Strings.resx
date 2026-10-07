@@ -43,6 +43,11 @@
   <data name="Redo" xml:space="preserve"><value>Redo</value></data>
   <data name="Zoom" xml:space="preserve"><value>Zoom</value></data>
   <data name="About" xml:space="preserve"><value>About SpanDraft</value></data>
+  <data name="AboutDescription" xml:space="preserve"><value>Open-source tool for beam analysis</value></data>
+  <data name="VersionLabel" xml:space="preserve"><value>Version</value></data>
+  <data name="GitHubLink" xml:space="preserve"><value>GitHub</value></data>
+  <data name="LinkOpenError" xml:space="preserve"><value>The link could not be opened in your browser.</value></data>
+  <data name="LicenseOpenError" xml:space="preserve"><value>The bundled license text could not be opened.</value></data>
   <data name="ResultsPending" xml:space="preserve"><value>Results view will follow in a later milestone.</value></data>
   <data name="DisplacementSymbol" xml:space="preserve"><value>|w|max</value></data>
   <data name="MomentSymbol" xml:space="preserve"><value>|M|max</value></data>

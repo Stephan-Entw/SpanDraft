@@ -70,7 +70,35 @@ Datei bietet Neues Projekt, Öffnen…, Speichern, Speichern unter… und Beende
 Trennlinien gruppieren Projektwechsel, Speichern und Beenden. Beenden verwendet
 denselben Leave-Guard wie das Schließen des Fensters. Bearbeiten bietet
 Rückgängig/Wiederholen; deren Verfügbarkeit folgt der Projekt-History. Einstellungen,
-Zoom, Ergebnisse und Über SpanDraft bleiben deaktiviert.
+Zoom und Ergebnisse bleiben deaktiviert. Hilfe bietet „Über SpanDraft“.
+
+„Über SpanDraft“ öffnet ein modales, über dem Hauptfenster zentriertes Fenster mit
+nativer Titelleiste, 380 DIPs Breite und inhaltsabhängiger Höhe. Es ist nicht
+vergrößerbar und erscheint nicht als eigener Taskleisten-Eintrag. Das einspaltige,
+zentrierte Layout zeigt nacheinander ein 96-DIP-App-Icon, Programmname, dynamische
+Version, kurze Open-Source-Beschreibung und Copyright. Ganz unten stehen die dezenten
+Links „GPL v3“ (mitgelieferter Lizenztext) und „GitHub“ (Repository).
+Die Darstellung verwendet die bestehenden Design-Tokens und Typografie; außer der
+vorhandenen Titelgröße gilt durchgehend die Body-Größe. Rohe URLs, Trennlinie und
+Schließen-Button entfallen.
+Produktname, Version, Copyright, Lizenz und Repository-URL stammen aus den
+Desktop-Assembly-Metadaten; die angezeigte Version erhält Vorabversionskennzeichnungen,
+entfernt aber den Build-Metadatenanteil ab `+`. „GitHub“ öffnet den Standardbrowser.
+„GPL v3“ öffnet ein separates, modales Lizenzfenster über dem About-Fenster mit
+nativer Titelleiste, initial 720 × 560 DIPs und veränderbarer Größe (mindestens
+480 × 320 DIPs). Der vollständige Lizenztext ist scrollbar, auswählbar und kopierbar;
+Zeilenumbrüche und Inhalt der bestehenden Root-`LICENSE` bleiben erhalten.
+Der Lizenztext verwendet eine lokal installierte Monospace-Schrift mit der
+Fallback-Reihenfolge Menlo, Consolas, DejaVu Sans Mono, Liberation Mono, Courier New,
+damit die ursprünglichen Einrückungen sauber ausgerichtet sind.
+Die Datei wird beim Build direkt als Ressource in die Desktop-Assembly eingebettet,
+ohne zweite Quelldatei, hart codierten Lizenztext oder benötigten Netzwerkzugriff.
+Escape und die native Fenstersteuerung schließen das Lizenzfenster und kehren zum
+About-Fenster zurück. Bei Fehlern erscheint dort eine lokalisierte Rückmeldung.
+Escape und native Fenstersteuerung schließen den Dialog. Escape funktioniert
+auch bei fokussierten Links. Während Dateiaktionen oder laufendem
+Fensterschließen wird kein About-Fenster geöffnet. Der Dialog ist aus Setup und
+Editor verfügbar und verändert weder Projektinhalt noch Dirty-Status oder History.
 
 Neue Projekte entstehen erst durch „Projekt erstellen“ und sind zunächst ungespeichert.
 Öffnen aktiviert ausschließlich vollständig validierte `.spandraft`-Dateien. Geöffnete
@@ -820,7 +848,8 @@ Alle Angaben sind logische DIPs, unabhängig von Bildschirm-Skalierung.
 | secondary / caption | 12 / Normal |
 | Toolbar | 13 / Normal |
 
-Es gibt keine feste FontFamily und keine eingebettete Fontdatei. Die Spacing-Skala
+Die allgemeine Oberfläche erbt die System-UI-Schrift; nur der Lizenztext verwendet
+eine Monospace-FontFamily. Es gibt keine eingebettete Fontdatei. Die Spacing-Skala
 lautet 4, 8, 12, 16, 24, 32. Wiederkehrende Padding-/Margin-Kombinationen werden
 zentral benannt. Radien: XS 4, S 6, M 8; normale Controls verwenden S.
 Borders: normal 1, Fokus/Fehler 2. Fokusrahmen verändern das Contentlayout nicht.

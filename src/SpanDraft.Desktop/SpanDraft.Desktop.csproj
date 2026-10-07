@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <Product>SpanDraft</Product>
+    <Copyright>© 2026 Stephan Antipin</Copyright>
+    <LicenseDisplayName>GNU General Public License v3</LicenseDisplayName>
+    <LicenseShortName>GPL v3</LicenseShortName>
+    <RepositoryUrl>https://github.com/Stephan-Entw/SpanDraft</RepositoryUrl>
     <ApplicationIcon>Assets/AppIcon/SpanDraft.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
@@ -24,8 +29,12 @@
     <PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.13" />
   </ItemGroup>
   <ItemGroup>
+    <AssemblyMetadata Include="LicenseDisplayName" Value="$(LicenseDisplayName)" />
+    <AssemblyMetadata Include="LicenseShortName" Value="$(LicenseShortName)" />
+    <EmbeddedResource Include="../../LICENSE" LogicalName="SpanDraft.Desktop.LICENSE" />
     <AvaloniaResource Include="Assets/Icons/Toolbar/*.svg" />
     <AvaloniaResource Include="Assets/AppIcon/SpanDraft.ico" />
+    <AvaloniaResource Include="Assets/AppIcon/app-icon-1024.png" />
   </ItemGroup>
   <Target Name="CreateMacOSDevelopmentBundle" AfterTargets="CopyFilesToOutputDirectory"
           Condition="'$(_MacOSDevelopmentBundle)' == 'true' and '$(DesignTimeBuild)' != 'true'">

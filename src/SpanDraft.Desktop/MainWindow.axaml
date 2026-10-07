@@ -38,7 +38,7 @@
         <MenuItem Header="{x:Static resources:Strings.Results}" IsEnabled="False" />
       </MenuItem>
       <MenuItem Header="{x:Static resources:Strings.Help}">
-        <MenuItem Header="{x:Static resources:Strings.About}" IsEnabled="False" />
+        <MenuItem Header="{x:Static resources:Strings.About}" IsEnabled="{Binding !IsBusy}" Click="ShowAbout" />
       </MenuItem>
     </Menu>
     <ContentControl Grid.Row="1" Content="{Binding CurrentViewModel}" IsEnabled="{Binding !IsBusy}" />
