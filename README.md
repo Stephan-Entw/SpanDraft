@@ -58,6 +58,22 @@ The repository root contains a solution, not an executable project. A bare
 `dotnet run` there reports that no runnable project was found. Use the `--project`
 command above, or run `dotnet run` from `src/SpanDraft.Desktop`.
 
+On macOS, local Desktop builds create a development app bundle at
+`src/SpanDraft.Desktop/bin/Debug/net10.0/SpanDraft.app` (or `Release` for that
+configuration). An explicit `osx-*` runtime identifier adds its own directory
+before `SpanDraft.app`. The existing `dotnet run` command starts the executable
+inside the bundle, with the SpanDraft application name and Dock icon. You can
+also open the generated bundle in Finder or run:
+
+```sh
+open src/SpanDraft.Desktop/bin/Debug/net10.0/SpanDraft.app
+```
+
+The development bundle uses the locally installed .NET 10 runtime. Remove the
+generated bundle with `dotnet clean src/SpanDraft.Desktop/SpanDraft.Desktop.csproj`.
+There are no additional signing, notarization or DMG steps. Windows and Linux
+build outputs, including Windows cross-builds on macOS, keep their existing layout.
+
 ## Projects
 
 | Project | Purpose | Project references |

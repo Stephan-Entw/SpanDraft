@@ -6,6 +6,7 @@
         x:Class="SpanDraft.Desktop.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{x:Static resources:Strings.ApplicationTitle}"
+        Icon="avares://SpanDraft.Desktop/Assets/AppIcon/SpanDraft.ico"
         Width="1250" Height="800" MinWidth="1100" MinHeight="650">
   <Window.DataTemplates>
     <DataTemplate DataType="{x:Type vm:ProjectSetupViewModel}">

@@ -1,7 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <ApplicationIcon>Assets/AppIcon/SpanDraft.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) and ('$(RuntimeIdentifier)' == '' or $(RuntimeIdentifier.StartsWith('osx-')))">
+    <_MacOSDevelopmentBundle>true</_MacOSDevelopmentBundle>
+    <_MacOSDevelopmentRuntimePath Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)/</_MacOSDevelopmentRuntimePath>
+    <_MacOSDevelopmentBundleRoot>$(MSBuildProjectDirectory)/bin/$(Configuration)/$(TargetFramework)/$(_MacOSDevelopmentRuntimePath)SpanDraft.app/</_MacOSDevelopmentBundleRoot>
+    <OutputPath>$(_MacOSDevelopmentBundleRoot)Contents/MacOS/</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <UseAppHost>true</UseAppHost>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../SpanDraft.Core/SpanDraft.Core.csproj" />
@@ -15,5 +25,21 @@
   </ItemGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets/Icons/Toolbar/*.svg" />
+    <AvaloniaResource Include="Assets/AppIcon/SpanDraft.ico" />
   </ItemGroup>
+  <Target Name="CreateMacOSDevelopmentBundle" AfterTargets="CopyFilesToOutputDirectory"
+          Condition="'$(_MacOSDevelopmentBundle)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    <MakeDir Directories="$(_MacOSDevelopmentBundleRoot)Contents/Resources" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/Platforms/macOS/Info.plist"
+          DestinationFiles="$(_MacOSDevelopmentBundleRoot)Contents/Info.plist" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/Assets/AppIcon/SpanDraft.icns"
+          DestinationFiles="$(_MacOSDevelopmentBundleRoot)Contents/Resources/SpanDraft.icns" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <FileWrites Include="$(_MacOSDevelopmentBundleRoot)Contents/Info.plist;$(_MacOSDevelopmentBundleRoot)Contents/Resources/SpanDraft.icns" />
+    </ItemGroup>
+  </Target>
+  <Target Name="CleanMacOSDevelopmentBundle" AfterTargets="Clean"
+          Condition="'$(_MacOSDevelopmentBundle)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    <RemoveDir Directories="$(_MacOSDevelopmentBundleRoot)" />
+  </Target>
 </Project>
