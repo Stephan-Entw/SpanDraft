@@ -1,597 +1,258 @@
 # SpanDraft – Konzept
 
-> Status: Core, unabhängig validierter Solver, Engineering, Analysis und Desktop mit Support-, Punktkraft-, Punktmoment- und Streckenlast-Interaktionen einschließlich transaktionaler Drags sowie Projekt-Sessions, Undo/Redo, Save/Load und Recovery implementiert
-> Stand: 07.10.2026
-> Dieses Dokument beschreibt den geplanten Scope, die technische Architektur und die Grundprinzipien von SpanDraft. Es ist bewusst als interne Entwicklungsgrundlage auf Deutsch gehalten und wird mit dem Projekt weiterentwickelt.
+Stand: 07.10.2026
 
-## 1. Projektidee
+Dieses Dokument legt Produktvision, Scope, Architekturgrundsätze und Roadmap
+von SpanDraft fest. Verbindliche Fach-, API- und Dateiverträge stehen in
+den jeweils spezialisierten Dokumenten; Implementierungsdetails in Code und Tests.
 
-SpanDraft ist eine Open-Source-Desktopanwendung zur intuitiven Berechnung gerader Balken und Träger im Maschinenbau.
+## 1. Produktidee
 
-Das Programm soll die Lücke zwischen klassischer Hand-/Excel-Rechnung und umfangreichen FEM-Systemen schließen. Der Anwender soll einen Balken ähnlich einer technischen Skizze aufbauen, Lager und Lasten direkt am Modell platzieren, Maße numerisch bearbeiten und die mechanischen Ergebnisse unmittelbar sehen.
+SpanDraft ist eine Open-Source-Desktopanwendung für intuitive Balkenberechnungen
+im Maschinenbau.
 
-Der Schwerpunkt liegt nicht auf möglichst allgemeiner FEM-Funktionalität, sondern auf einem schnellen, transparenten und gut nachvollziehbaren Workflow für typische Maschinenbauaufgaben.
+Das Programm soll die Lücke zwischen klassischer Hand-/Excel-Rechnung und
+umfangreichen FEM-Systemen schließen. Der Anwender baut einen Balken wie eine
+technische Skizze auf, positioniert Lager und Lasten direkt am Modell und erhält
+die mechanischen Ergebnisse ohne einen allgemeinen FEM-Workflow aufsetzen zu
+müssen.
 
-## 2. Zielbild
+Die Kernziele sind:
 
-Typischer Anwendungsfall:
+- schneller Modellaufbau
+- direkte grafische Bearbeitung
+- exakte numerische Eingabe
+- transparente mechanische Berechnung
+- nachvollziehbare Ergebnisse
+- geringer Bedienaufwand
 
-- gerader Balken oder Träger,
-- bekannte Länge,
-- definierter Werkstoff,
-- Standard- oder Benutzerquerschnitt,
-- mehrere frei positionierbare Lager bzw. Fixierungen,
-- mehrere frei positionierbare Lasten,
-- direkte Berechnung der Lagerreaktionen, Schnittgrößen, Durchbiegung, Spannungen und eines einfachen Sicherheitsfaktors,
-- nachvollziehbare grafische Darstellung,
-- exportierbarer Berechnungsreport.
+SpanDraft soll eher wie ein kleines technisches Konstruktionswerkzeug wirken
+als wie ein Formularrechner.
 
-Beispiele für typische Bauteile:
+## 2. Produktprinzip: Sketch-first
 
-- Rechteck- und Vierkantrohre,
-- Vollprofile,
-- Rundrohre,
-- einfache Maschinentraversen,
-- einzelne Rahmenträger,
-- Aluminium-Systemprofile, z. B. ITEM-artige Profile mit hinterlegten Herstellerkennwerten.
-
-## 3. Produktprinzip: Sketch-first
-
-Die grafische Darstellung ist nicht nur eine Ergebnisgrafik, sondern der primäre Editor des Modells.
+Die grafische Balkendarstellung ist der primäre Editor.
 
 Der Anwender soll:
 
-- mit einem vorhandenen geraden Balken beginnen,
-- seine Länge und relevante Abstände direkt bemaßen,
-- Lager und Lasten über One-shot-Werkzeuge mit Vorschau platzieren,
-- Maßwerte und Positionen direkt numerisch editieren,
-- Elemente anklicken und deren Eigenschaften transaktional in objektgebundenen Flyouts bearbeiten,
-- später dieselben Daten zusätzlich in einer tabellarischen Ansicht sehen und bearbeiten.
+- mit einem vorhandenen geraden Balken beginnen
+- Länge, Werkstoff und Querschnitt festlegen
+- Lager und Lasten direkt platzieren
+- Positionen und Werte exakt numerisch bearbeiten
+- Objekte anklicken, ziehen und transaktional bearbeiten
+- Ergebnisse unmittelbar nach bestätigten Änderungen sehen
 
-Grafik und Tabelle stellen immer dasselbe Modell dar. Änderungen in einer Ansicht müssen unmittelbar in der anderen erscheinen.
+Eine spätere Tabellenansicht darf denselben Projektzustand ergänzend darstellen,
+aber nicht als zweites Modell führen.
 
-Die Bedienung soll sich eher wie eine kleine technische Skizzen-/CAD-Anwendung anfühlen als wie ein Formularrechner.
+Direkte Manipulation und numerische Eingabe folgen demselben Grundsatz:
+Vorschau und Rohtext sind transient; erst eine bestätigte Änderung verändert
+das Projekt und startet gegebenenfalls eine neue Berechnung.
 
-Das erste UI-Fundament ist implementiert: Project Setup, technischer Balken mit
-1000 mm Startlänge, direkte Längenbearbeitung und Analysis-Status. Support Placement
-& Editing ist implementiert: One-shot-Lagerwerkzeuge mit Preview/Snap, transaktionale
-Flyouts, numerisches Verschieben und Drag mit anschließender Bestätigung, Typwechsel
-und Löschen. Punktkraft und Punktmoment sind mit denselben Interaktionen, signed
-Werten und eigener Vorschau implementiert. Konstante Streckenlasten bieten Bereichsplacement,
-transaktionale Flyouts, Endpunkt-Drags und Löschen. Die verbindliche Oberfläche steht in
-[UI.md](UI.md).
+## 3. Aktueller fachlicher Scope
 
-Aktueller Regressionstand: 969 Produkttests, 195 Validation-Tests und 18
-Acceptance-Fälle bestanden. Lager- und Punktlastpositionen erfüllen zentral 0 ≤ x ≤ L.
-Bei einer blockierten Verkürzung erhält Enter die aktive Längeneingabe samt Fehler und Konfliktvorschau;
-abgelehnter Fokusverlust verwirft sie vollständig und restauriert die committed
-Darstellung ohne Analysis.
+SpanDraft betrachtet derzeit einen einzelnen geraden Balken mit konstantem
+Werkstoff und konstantem Querschnitt.
 
-## 4. Scope der ersten Version
+Fachmodell und Rechenkern unterstützen:
 
-### 4.1 Geometrie
+- frei definierbare Balkenlänge
+- Einspannung, Festlager und Loslager
+- beliebig positionierte Lager einschließlich Überhängen
+- Punktkräfte
+- Punktmomente
+- konstante Streckenlasten
+- Rechteck
+- Rechteck-/Vierkantrohr
+- Kreis
+- Rundrohr
+- benutzerdefinierte Querschnittskennwerte A/I/W
+- Werkstoff mit E-Modul und Streckgrenze
 
-V1 betrachtet einen einzelnen geraden Balken entlang einer Achse.
+Diese fachlichen Möglichkeiten sind nicht alle im Desktop frei konfigurierbar.
+Das aktuelle Project Setup bietet eine geometrische Vierkantrohr-Vorlage und
+eine vorläufige S235JR-Materialvorlage. Eigene Material- und Querschnittseditoren
+sowie Profilbibliotheken sind noch geplant.
 
-Geplant sind:
+Der Solver verwendet drei Freiheitsgrade je Knoten:
 
-- frei definierbare Balkenlänge,
-- beliebig positionierbare Lager innerhalb des Balkens,
-- Überhänge vor bzw. hinter Lagern,
-- automatisch erzeugte Rechenknoten an relevanten Positionen,
-- zunächst konstanter Querschnitt und Werkstoff über die gesamte Balkenlänge.
+- axiale Verschiebung u
+- transversale Verschiebung w
+- Rotation θ
 
-### 4.2 Lagerungen
+Der öffentliche V1-Lastumfang enthält derzeit keine Axiallasten.
 
-Mindestens folgende Lagerarten:
+## 4. Ergebnisse
 
-- Einspannung,
-- Festlager,
-- Loslager.
+Der Rechenkern liefert unter anderem:
 
-Der Solver soll drei Freiheitsgrade pro Knoten vorsehen:
+- Lagerreaktionen
+- axiale Verschiebung und Normalkraft
+- transversale Verschiebung
+- Rotation
+- Querkraft
+- Biegemoment
+- analytische globale Extremwerte
 
-- axiale Verschiebung (u),
-- transversale Verschiebung (w),
-- Rotation (	heta).
+Die Engineering-Auswertung ergänzt:
 
-Damit lassen sich die Lager physikalisch sauber unterscheiden:
+- maximale Durchbiegung
+- maßgebendes Biegemoment
+- maximale elastische Biegespannung
+- Sicherheitsfaktor gegenüber der hinterlegten Streckgrenze
 
-- Einspannung: (u = 0,; w = 0,; 	heta = 0)
-- Festlager: (u = 0,; w = 0)
-- Loslager: (w = 0)
+Der Sicherheitsfaktor ist eine einfache elastische Bewertung und kein
+normativer Festigkeitsnachweis.
 
-Diese Modellierung hält die Architektur außerdem für spätere axiale Lastfälle offen, ohne bereits einen allgemeinen 2D-Rahmensolver zu bauen.
-
-### 4.3 Lasten
-
-Für V1 vorgesehen:
-
-- Einzelkraft,
-- Einzelmoment,
-- konstante Streckenlast,
-- frei editierbare Positionen,
-- mehrere Lasten gleichzeitig.
-
-Später mögliche Erweiterungen:
-
-- linear veränderliche bzw. trapezförmige Streckenlast,
-- Eigengewicht,
-- Lastgruppen bzw. Lastfälle,
-- weitere Lasttypen bei tatsächlichem Bedarf.
-
-### 4.4 Querschnitte
-
-Für V1 sinnvoll:
-
-- Rechteck,
-- Vollquadrat,
-- Rechteckrohr / Vierkantrohr,
-- Rundmaterial,
-- Rohr,
-- benutzerdefinierte Querschnittswerte.
-
-Für komplexe Maschinenbauprofile, insbesondere Aluminium-Systemprofile, sollen reale Herstellerkennwerte wie Flächenträgheitsmoment und Widerstandsmoment hinterlegt werden können. Solche Profile sollen nicht aus einer vereinfachten Außenkontur angenähert werden.
-
-### 4.5 Werkstoffe
-
-Ein Werkstoff enthält mindestens:
-
-- Name,
-- Elastizitätsmodul (E),
-- Streckgrenze bzw. zulässige Vergleichsgröße für die einfache Sicherheitsbewertung.
-
-Weitere Materialkennwerte können später ergänzt werden, wenn sie für zusätzliche Berechnungsmodelle benötigt werden.
-
-### 4.6 Ergebnisse
-
-V1 soll mindestens liefern:
-
-- Lager- bzw. Reaktionskräfte,
-- Querkraftverlauf,
-- Biegemomentverlauf,
-- Verformungs-/Durchbiegungslinie,
-- maximale Durchbiegung,
-- maximale Biegespannung,
-- Sicherheitsfaktor bezogen auf die hinterlegte Streckgrenze.
-
-Der Sicherheitsfaktor der ersten Version ist eine einfache elastische Festigkeitsbewertung. Er ist kein vollständiger normativer Festigkeitsnachweis.
+Im Desktop werden bereits kompakte Ergebniskennwerte dargestellt.
+Eine vollständige grafische Ergebnisansicht mit Reaktionen sowie w/V/M-Diagrammen
+ist noch ausstehend.
 
 ## 5. Rechenmodell
 
-SpanDraft verwendet einen eigenen, kleinen und transparenten Solver für die 1D-Balkenmechanik.
+SpanDraft verwendet einen eigenen transparenten Euler-Bernoulli-Balkensolver.
 
-### 5.1 Grundansatz
+Relevante Positionen wie Balkenenden, Lager, Punktlasten und Grenzen von
+Streckenlasten erzeugen automatisch Rechenknoten. Die Lösung erfolgt mit dem
+direkten Steifigkeitsverfahren.
 
-Für die erste Version ist die Euler-Bernoulli-Balkentheorie vorgesehen.
+Math.NET Numerics übernimmt ausschließlich generische lineare Algebra.
+Mechanisches Modell, Elementformulierung, Lasten, Randbedingungen und
+Ergebnisinterpretation bleiben Bestandteil von SpanDraft.
 
-Der Balken wird intern automatisch in Elemente unterteilt. Relevante Positionen wie:
+Details und numerische Verträge stehen in [SOLVER.md](SOLVER.md).
 
-- Balkenenden,
-- Lager,
-- Einzelkräfte,
-- Einzelmomente,
-- Grenzen von Streckenlasten
+Der Solver ist für den aktuellen V1-Scope unabhängig gegen analytische Lösungen,
+IndeterminateBeam und PyCBA validiert. Details stehen in
+[VALIDATION.md](VALIDATION.md).
 
-erzeugen Rechenknoten.
+## 6. Desktop und Projektmodell
 
-Die Berechnung erfolgt über das Steifigkeitsverfahren / eine kleine Finite-Elemente-Formulierung.
+Der Desktop verwendet Avalonia und ist Windows-first ausgelegt. Entwicklung
+unter macOS und Linux bleibt möglich; offizielle Builds für diese Plattformen
+sind für die erste Veröffentlichung nicht erforderlich.
 
-Grundgleichung:
+Der Editor besitzt einen einzigen committed Projektzustand. Dazu gehören die
+fachlichen Eingaben sowie persistierbare Darstellungsdaten wie manuelle
+Annotation-Offsets.
 
-[
-K cdot q = F
-]
+Temporäre Eingaben, Hover, Vorschauen und berechnete Ergebnisse gehören nicht
+zum gespeicherten Projektzustand.
 
-Dabei werden Elementsteifigkeitsmatrizen zu einer globalen Steifigkeitsmatrix assembliert, Randbedingungen angewendet und anschließend Verschiebungen sowie Reaktionen bestimmt.
+Implementiert sind:
 
-### 5.2 Warum ein eigener Solver?
+- Project Setup für Werkstoff und Querschnitt
+- direkter Balkeneditor
+- Platzieren und Bearbeiten aller aktuellen Lager- und Lasttypen
+- Undo/Redo
+- `.spandraft`-Projektdateien
+- Savepoints und Dirty-State
+- private Crash-Recovery
 
-Der Solver ist klein genug, um ihn projektintern verständlich, testbar und vollständig nachvollziehbar zu halten.
+UI-Texte werden über lokalisierbare Ressourcen verwaltet. Aktuell sind Englisch
+als Default und Deutsch vorhanden; Eingabe und Formatierung folgen der aktuellen
+UI-Kultur. Eine Laufzeit-Sprachumschaltung ist noch nicht implementiert. Öffentliche
+Dokumentation bleibt englisch, interne Fachdokumentation zunächst deutsch.
 
-SpanDraft soll deshalb nicht nur eine grafische Oberfläche um eine allgemeine FEM-Bibliothek sein.
-
-Externe Bibliotheken werden dort eingesetzt, wo sie generische Numerik lösen, nicht dort, wo die eigentliche technische Mechanik des Programms definiert wird.
-
-### 5.3 Numerische Basis
-
-Für Matrix- und Vektoroperationen sowie lineare Gleichungssysteme ist Math.NET Numerics vorgesehen.
-
-Aufgabentrennung:
-
-- SpanDraft: mechanisches Modell, Elemente, Lasten, Lager, Assembly, Ergebnisinterpretation,
-- Math.NET Numerics: numerische lineare Algebra.
-
-### 5.4 Spätere Erweiterung: Timoshenko
-
-Timoshenko-Balkentheorie ist nicht für V1 vorgesehen.
-
-Die Architektur soll jedoch so gestaltet werden, dass später ein alternatives Balkenelement ergänzt werden kann. Das ist insbesondere für kurze bzw. hohe Träger interessant, bei denen Schubverformungen nicht mehr vernachlässigbar sind.
-
-## 6. Bewusste Nicht-Ziele
-
-SpanDraft soll in absehbarer Zeit kein allgemeines FEM-System werden.
-
-Nicht Teil von V1:
-
-- 3D-FEM,
-- Flächen- oder Volumenelemente,
-- allgemeine 2D-Rahmen aus mehreren frei verbundenen Stäben,
-- Kontaktprobleme,
-- nichtlineare Materialmodelle,
-- plastische FEM,
-- dynamische Berechnung,
-- Knicken und Stabilitätsnachweise,
-- Ermüdungsnachweise,
-- vollständige normbasierte Bemessung,
-- automatische Optimierung von Profilen.
-
-Diese Punkte können nur dann später aufgenommen werden, wenn sie zur Produktidee passen und den einfachen Workflow nicht zerstören.
-
-## 7. Benutzeroberfläche
-
-### 7.1 Hauptarbeitsbereich
-
-Die Hauptansicht soll den Balken als technische Skizze darstellen.
-
-Wichtige Interaktionen:
-
-- Auswahl per Klick,
-- One-shot-Platzierung für Lager und Lasten mit temporärer Vorschau und Bestätigung,
-- direkte Bearbeitung von Bemaßungen,
-- numerische Eingabe für exakte Positionen,
-- Zoom und Pan bei langen Modellen,
-- Aktualisierung der Berechnung ausschließlich nach bestätigten Projektänderungen,
-- klare visuelle Rückmeldung bei ungültigen oder unvollständigen Modellen.
-
-### 7.2 Eigenschaften
-
-Ausgewählte Objekte sollen über ein kleines objektgebundenes Flyout transaktional
-bearbeitet werden können. Es gibt keinen permanenten rechten Inspector.
-
-Beispiele:
-
-- Balken: Länge, Material, Querschnitt,
-- Lager: Typ, Position,
-- Kraft: signed Kraft und Position; Vorzeichen bestimmt Richtung,
-- Moment: signed Moment und Position; Vorzeichen bestimmt Drehrichtung,
-- Streckenlast: signed Intensität und Bereich.
-
-### 7.3 Tabellenansicht
-
-Die Tabelle ist eine ergänzende Ansicht, nicht der primäre Workflow.
-
-Sie soll:
-
-- alle Lager und Lasten übersichtlich auflisten,
-- Werte direkt editierbar machen,
-- mit der grafischen Auswahl synchronisiert sein,
-- bei komplexeren Modellen schnelle numerische Änderungen ermöglichen.
-
-### 7.4 Ergebnisdarstellung
-
-Geplant sind synchronisierte Diagramme für:
-
-- Querkraft,
-- Biegemoment,
-- Durchbiegung.
-
-Zusätzlich sollen wichtige Maximalwerte und Lagerreaktionen kompakt dargestellt werden.
-
-Bereits umgesetzt ist die dauerhafte kompakte Ergebnis-/Statusleiste des Editors.
-Die spätere Ergebnisse-/Reportansicht bleibt innerhalb derselben MainWindow.
-Ihr Button ist bis zur Implementierung deaktiviert.
-
-## 8. Reports und Export
-
-### 8.1 PDF
-
-SpanDraft soll einen PDF-Berechnungsreport erzeugen können.
-
-Der Report soll mindestens enthalten:
-
-- Projektdaten,
-- grafische Darstellung des Balkens,
-- Werkstoff und Querschnitt,
-- Lager und Lasten,
-- relevante Reaktionskräfte,
-- Ergebnisdiagramme,
-- Maximalwerte,
-- Spannungs- und Sicherheitsbewertung,
-- verwendete Berechnungsannahmen.
-
-Der PDF-Report soll druckbar sein.
-
-Als mögliche .NET-Bibliothek ist PDFsharp/MigraDoc vorgesehen. Die konkrete Reporting-Bibliothek wird erst bei Umsetzung des Reporting-Moduls endgültig festgelegt.
-
-### 8.2 Excel
-
-Berechnungs- und Ergebnisdaten sollen als XLSX exportiert werden können.
-
-Excel selbst muss nicht automatisiert oder über COM gesteuert werden.
-
-Als mögliche Bibliothek ist ClosedXML vorgesehen. Auch diese Abhängigkeit wird erst bei Umsetzung des Exportmoduls endgültig festgelegt.
-
-## 9. Projektdateien
-
-SpanDraft soll Modelle lokal speichern und wieder öffnen können.
-
-Implementiert sind lokale `.spandraft`-Projektdateien mit versioniertem UTF-8-JSON
-und ausschließlich SI-Werten, Snapshot-Undo/Redo, Savepoints, transaktionales Öffnen
-und private lokale Crash-Recovery. Der dauerhafte Dateivertrag steht in
+Hintergründe zum Editorzustand stehen in [UI.md](UI.md), der Projektdateivertrag in
 [PROJECT_FORMAT.md](PROJECT_FORMAT.md).
 
-## 10. Internationalisierung
+## 7. Architektur
 
-SpanDraft soll langfristig eine internationale Oberfläche unterstützen.
+Die Schichten bleiben klein und getrennt. Direkte Projektreferenzen:
 
-Daher sollen UI-Texte von Beginn an nicht fest im Code verteilt werden, sondern über eine geeignete Ressourcen-/Lokalisierungsstruktur verwaltet werden.
+| Schicht | Referenziert |
+| --- | --- |
+| Core | keine andere Schicht |
+| Solver | Core |
+| Engineering | Core, Solver |
+| Analysis | Core, Solver, Engineering |
+| Desktop | Core, Analysis |
+| Reporting | derzeit Core; Analysis erst bei Implementierung |
 
-Die konkrete Liste der unterstützten Sprachen ist noch nicht festgelegt.
+Analysis orchestriert Solver und Engineering. Desktop nutzt diesen
+Anwendungseinstieg für Berechnungen.
 
-Interne Konzept- und Entwicklungsdokumente können zunächst auf Deutsch geführt werden. README und öffentliche Anwenderdokumentation sollen später primär auf Englisch verfügbar sein.
+Verantwortlichkeiten:
 
-## 11. Plattformstrategie
+- **`SpanDraft.Core`:** Fachmodell, Einheiten, Werkstoffe, Querschnitte, Lager, Lasten und
+  Modellvalidierung. Unabhängig von UI, Numerikbibliotheken, Persistenz und Reporting.
 
-SpanDraft wird Windows-first entwickelt.
+- **`SpanDraft.Solver`:** Mechanik und numerische Lösung. Keine Desktop-Abhängigkeit.
 
-Ziel der ersten veröffentlichten Version ist Windows.
+- **`SpanDraft.Engineering`:** Fachliches Postprocessing einer vorhandenen BeamSolution.
 
-Die Architektur soll macOS und Linux jedoch nicht unnötig blockieren. Insbesondere soll der Entwicklungsworkflow auf macOS möglich bleiben.
+- **`SpanDraft.Analysis`:** Anwendungseinstieg, der Solver und Engineering zu einem strukturierten
+  Success-/Failure-Ergebnis verbindet.
 
-Daraus folgt die Wahl eines plattformübergreifenden .NET-UI-Stacks anstelle einer ausschließlich Windows-spezifischen UI-Technologie.
+- **`SpanDraft.Desktop`:** UI, Interaktion, Projektzustand, Persistenz und Darstellung. Keine eigenen
+  mechanischen Formeln.
 
-Eine offizielle macOS- oder Linux-Version ist für V1 nicht erforderlich.
+- **`SpanDraft.Reporting`:** reserviert für spätere Reports und Exporte.
 
-## 12. Technologiestack
+## 8. Bewusste Nicht-Ziele
 
-Geplanter Stack:
+SpanDraft soll kein allgemeines FEM-System werden.
 
-- Sprache: C#
-- Runtime/Framework: .NET 10
-- Desktop-UI: Avalonia
-- Numerik: Math.NET Numerics
-- Tests: .NET-Testframework, konkrete Auswahl bei Projektsetup
-- PDF: voraussichtlich PDFsharp/MigraDoc
-- XLSX: voraussichtlich ClosedXML
-- Versionsverwaltung: Git / GitHub
+Nicht zum aktuellen Produktziel gehören:
 
-## 13. Architektur
+- allgemeine 2D-Rahmenmodelle
+- 3D-FEM
+- Flächen- oder Volumenelemente
+- Kontakt
+- nichtlineare Materialmodelle
+- plastische FEM
+- Dynamik
+- Knicken und Beulen
+- Ermüdungsnachweise
+- vollständige normbasierte Bemessung
+- automatische Profiloptimierung
 
-Die Fachlogik soll strikt von UI und Reporting getrennt bleiben.
+Neue Funktionen sollen nur aufgenommen werden, wenn sie typische
+Balkenberechnungen im Maschinenbau schneller, intuitiver, transparenter oder
+zuverlässiger machen.
 
-Geplante Solution-Struktur:
+## 9. Nächste Produktziele
 
-```text
-SpanDraft
-│
-├── SpanDraft.Core
-│   ├── Beam
-│   ├── Material
-│   ├── Section
-│   ├── Support
-│   ├── Load
-│   └── Units
-│
-├── SpanDraft.Solver
-│   ├── Elements
-│   ├── Mesh
-│   ├── Assembly
-│   ├── BoundaryConditions
-│   ├── Reactions
-│   └── InternalForces
-│
-├── SpanDraft.Engineering
-│   ├── AbsoluteExtrema
-│   └── ElasticBendingAssessment
-│
-├── SpanDraft.Analysis
-│   ├── BeamAnalysis
-│   ├── BeamAnalysisResult
-│   └── SuccessFailureContract
-│
-├── SpanDraft.Desktop
-│   └── Avalonia UI
-│
-├── SpanDraft.Reporting
-│   ├── PDF
-│   └── XLSX
-│
-└── SpanDraft.Tests
-```
+Für den ersten nutzbaren Release steht die Arbeit im Programm selbst im
+Vordergrund.
 
-### 13.1 SpanDraft.Core
+Priorität haben:
 
-Enthält das fachliche Datenmodell, jedoch keine UI-Abhängigkeit und möglichst keine Abhängigkeit von konkreten Solver-Implementierungen.
+1. vollständige Ergebnisdarstellung mit Reaktionen und w/V/M-Diagrammen
+2. verbleibendes App-Shell-Polishing und weitere sinnvolle Menüfunktionen
+3. Profil-/Material- und Eingabe-Workflow dort erweitern, wo er für reale
+   Projekte benötigt wird
 
-### 13.2 SpanDraft.Solver
+PDF-, XLSX- und Druckexport sind für den ersten Release keine Voraussetzung.
+Reports sollen später Eingaben, Ergebnisse und Rechenannahmen nachvollziehbar
+dokumentieren.
 
-Enthält die technische Mechanik und numerische Berechnung.
+Danach mögliche Erweiterungen:
 
-Der Solver soll unabhängig von Avalonia verwendbar und vollständig automatisiert testbar sein.
+- Tabellenansicht
+- Zoom/Pan
+- Einheiten-Einstellungen
+- Profilbibliotheken und Herstellerkennwerte
+- eigene Materialien und Querschnitte
+- weitere Streckenlastformen
+- Eigengewicht
+- zusätzliche Sprachen
+- Timoshenko-Balkentheorie
+- weitere gezielte Engineering-Auswertungen
 
-### 13.3 SpanDraft.Engineering
-
-Enthält fachliches Postprocessing einer vorhandenen `BeamSolution`: betragsgrößte
-Durchbiegung und Biegemoment, reine elastische Biegespannung `|M|/W` und das
-dimensionslose Verhältnis zur Streckgrenze. Engineering referenziert Core und
-Solver, ohne UI- oder Reporting-Abhängigkeiten und ohne eigene Balkenberechnung.
-Der unabhängig validierte Core/Solver bleibt davon getrennt. Diese Auswertung
-ist kein normativer Festigkeitsnachweis; Details und Grenzen beschreibt
-[ENGINEERING.md](ENGINEERING.md).
-
-### 13.4 SpanDraft.Analysis
-
-Orchestriert die bestehenden Schritte Solver und Engineering über
-`BeamAnalysis.Analyze(BeamModel beam)`. Ein erfolgreicher Aufruf liefert die
-ursprüngliche Solution und deren Engineering-Ergebnis gemeinsam. Erwartbare
-Solverfehler werden strukturiert zurückgegeben; es gibt keine Partial Results.
-Engineering-Exceptions bleiben sichtbar. Analysis enthält keine eigene Mechanik,
-Validierung oder Ergebnisformeln und referenziert ausschließlich Core, Solver und
-Engineering. Der Rechenpfad lautet BeamModel → BeamAnalysis → Solver → BeamSolution
-→ Engineering → BeamAnalysisResult. Details stehen in [ANALYSIS.md](ANALYSIS.md).
-
-### 13.5 SpanDraft.Desktop
-
-Enthält ausschließlich Desktop-UI, Interaktionslogik und Darstellung.
-MainWindow hostet Menü und Setup/Editor; eigene kleine ViewModels halten Navigation,
-temporäre Eingaben und eine ProjectSession als einzige committed Zustandsquelle.
-ProjectState enthält EditorDocument und EditorPresentationState; History, Savepoint
-und Dateipfad gehören zur Session, nicht zum Dateiformat. Dessen immutable
-EditorSupports, EditorPointLoads und EditorUniformDistributedLoads tragen stabile UI-IDs; Preview, Flyout und Drag bleiben temporär.
-BeamEditorSurface
-trennt editierbare Controls vom DrawingContext-Rendering des BeamCanvas.
-
-Die UI soll keine Berechnungsformeln enthalten.
-Desktop referenziert direkt Core und Analysis und startet Berechnungen ausschließlich
-über BeamAnalysis. Solver und Engineering werden nicht direkt referenziert.
-
-### 13.6 SpanDraft.Reporting
-
-Soll Reports und Exporte aus vollständigen Analysis-Ergebnissen erzeugen. Das
-Projekt enthält noch keine Implementierung. Eine Analysis-Projektreferenz wird
-erst bei Umsetzung von Reporting hinzugefügt.
-
-### 13.7 SpanDraft.Tests
-
-Enthält analytische Referenzfälle, Regressionstests und Validierung des Solvers.
-Die Engineering-Auswertung und der Analysis-Vertrag werden hier ebenfalls
-getestet; Engineering und Analysis sind nicht Bestandteil der separaten
-unabhängigen Validation-Solution.
-
-## 14. Qualität und Validierung
-
-Da SpanDraft ein Engineering-Werkzeug ist, hat die Nachvollziehbarkeit des Rechenkerns hohe Priorität.
-
-Jede zentrale Solver-Funktion soll durch automatisierte Tests abgesichert werden.
-
-Referenzfälle sollen unter anderem bekannte analytische Lösungen enthalten, z. B.:
-
-- einfach gelagerter Balken mit mittiger Einzelkraft,
-- Kragarm mit Endlast,
-- Kragarm mit Streckenlast,
-- einfach gelagerter Balken mit Streckenlast,
-- Balken mit Überhang,
-- statisch unbestimmter Durchlaufträger.
-
-Für geeignete Fälle können Ergebnisse zusätzlich gegen unabhängige Open-Source-Solver wie FEALiTE2D oder IndeterminateBeam verglichen werden. Diese dienen als Entwicklungs- und Validierungsreferenz, nicht als Runtime-Abhängigkeit.
-
-Toleranzen für numerische Vergleiche sollen explizit definiert werden.
-
-## 15. Transparenz der Berechnung
+## 10. Transparenz und Qualität
 
 SpanDraft soll Ergebnisse nicht als Blackbox präsentieren.
 
-Langfristig soll nachvollziehbar sein:
+Nachvollziehbar bleiben sollen insbesondere:
 
-- welches Rechenmodell verwendet wurde,
-- welche Eingabewerte in die Berechnung eingeflossen sind,
-- welche Randbedingungen gelten,
-- welche Maximalwerte gefunden wurden,
-- welche Annahmen und Grenzen der Berechnung bestehen.
+- verwendetes Rechenmodell
+- Eingabewerte
+- Randbedingungen
+- Vorzeichenkonventionen
+- maßgebende Ergebnisse
+- Grenzen der Berechnung
 
-Der Report soll diese Informationen soweit sinnvoll dokumentieren.
-
-## 16. Lizenz
-
-SpanDraft wird unter der GNU General Public License v3.0 (GPL-3.0) veröffentlicht.
-
-Kommerzielle Nutzung ist zulässig. Bei Weitergabe abgeleiteter GPL-Versionen gelten die Copyleft-Bedingungen der GPL.
-
-Projektname und Branding sind getrennt von der Code-Lizenz zu betrachten. Eine konkrete Branding-/Trademark-Regelung kann vor einer breiteren Veröffentlichung ergänzt werden.
-
-## 17. Grobe Umsetzungsreihenfolge
-
-### Phase 0 – Projektfundament
-
-- .NET-Solution anlegen,
-- Projektstruktur erstellen,
-- Avalonia-Grundprojekt einrichten,
-- Testprojekt einrichten,
-- CI-Grundlage vorbereiten.
-
-### Phase 1 – Fachmodell und Solver
-
-- Einheiten und Grundtypen,
-- Balkenmodell,
-- Querschnitte,
-- Materialien,
-- Lager,
-- Lasten,
-- automatische Knotenerzeugung,
-- Euler-Bernoulli-Element,
-- globale Matrixassemblierung,
-- Randbedingungen,
-- Lösung von (Kq = F),
-- Reaktionen,
-- Schnittgrößen,
-- Durchbiegung,
-- Spannungen und Sicherheitsfaktor,
-- analytische Referenztests.
-
-### Phase 2 – Interaktiver Editor
-
-Vor dem Editor ist der Analysis/API-Meilenstein umgesetzt: ein Anwendungseinstieg
-für Solver und Engineering, unveränderliche Success-/Failure-Ergebnisse und
-strukturierte Solverdiagnostik. Core, Euler-Bernoulli-Solver und Engineering sind
-bereits implementiert; Analysis erweitert weder Mechanik noch Engineering-Nachweise.
-
-Umgesetzt: Light-Fluent-Setup mit einer geometrischen Vierkantrohr-Vorlage
-100×100×5 mm und einer vorläufigen S235JR-Materialvorlage, Setup/Editor-Navigation,
-horizontale Toolbar, Projektinfo, Balkendarstellung, transaktionale direkte
-Längenbemaßung und Analysis-Presentation-State. Lagerplatzierung mit 1-mm-Snap und
-exaktem Endpoint-Snap, transaktionale Lager-Flyouts, Typ-/Positionsbearbeitung,
-bestätigtes Drag-Verschieben und Löschen sind ebenfalls implementiert. Vorhandene
-Lager, Punktlasten und Streckenlasten bleiben bei Setup-Änderungen erhalten und verhindern eine
-Balkenverkürzung unter ihre Position beziehungsweise ihr Bereichsende. Punktkräfte und Punktmomente verwenden
-One-shot-Placement, transaktionale Position-/Wert-Flyouts, wiederholtes Drag und
-Löschen. Mehrere Punktlasten am selben x sind zulässig und werden einzeln gestaffelt
-dargestellt; Analysis erfolgt erst nach tatsächlichen Commits. Die Vorlagen sind keine Norm- oder
-Herstellerbibliothek; A/I/W stammen aus dem idealisierten Core-Modell.
-
-Nächste Schritte gemäß [UI.md](UI.md):
-
-- Tabellenansicht. Undo/Redo und Projekt-Sessions sind implementiert.
-
-### Phase 3 – Ergebnisse
-
-- Reaktionskräfte,
-- Querkraftdiagramm,
-- Momentendiagramm,
-- Durchbiegungslinie,
-- Ergebniskennwerte,
-- grafische Synchronisation zwischen Modell und Ergebnissen.
-
-### Phase 4 – Persistenz und Ausgabe
-
-- Projekt speichern/laden und lokale Recovery (implementiert),
-- PDF-Report,
-- XLSX-Export,
-- Druckworkflow für Reports.
-
-### Phase 5 – Ausbau
-
-Mögliche spätere Funktionen:
-
-- Timoshenko-Balken,
-- weitere Streckenlastformen,
-- Eigengewicht,
-- Profilbibliothek,
-- importierbare Herstellerprofile,
-- weitere Werkstoffdaten,
-- zusätzliche Sprachen,
-- macOS/Linux-Builds,
-- zusätzliche Festigkeits- oder Gebrauchstauglichkeitsprüfungen.
-
-## 18. Leitlinien für Scope-Entscheidungen
-
-Neue Funktionen sollen nur aufgenommen werden, wenn sie mindestens eines dieser Ziele unterstützen:
-
-1. typische Balkenberechnungen im Maschinenbau schneller machen,
-2. die Modellierung intuitiver machen,
-3. die Berechnung transparenter oder zuverlässiger machen,
-4. wiederkehrende manuelle Excel-/Handrechnungen sinnvoll ersetzen.
-
-Funktionen, die SpanDraft in Richtung eines allgemeinen FEM- oder Bauwerksbemessungssystems ziehen, sollen kritisch hinterfragt werden.
-
-Die Einfachheit des Workflows ist ein Kernbestandteil des Produkts.
+Der numerische Kern wird automatisiert und unabhängig validiert. Änderungen an
+Solververträgen benötigen entsprechende Tests und eine erneute fachliche Prüfung.

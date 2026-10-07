@@ -3,7 +3,7 @@
 ## Zweck und Datenfluss
 
 `SpanDraft.Analysis` ist der synchrone Anwendungseinstieg zwischen Rechenkern und
-zukünftiger Desktop-Oberfläche. `BeamAnalysis.Analyze(BeamModel beam)` orchestriert
+Desktop-Oberfläche. `BeamAnalysis.Analyze(BeamModel beam)` orchestriert
 die vorhandenen Komponenten und liefert ein `BeamAnalysisOutcome`:
 
 ```text
@@ -22,9 +22,8 @@ Ein null-Beam wird mit `ArgumentNullException` (Parameter `beam`) abgelehnt.
 
 ## Success und Failure
 
-Das unveränderliche, versiegelte `BeamAnalysisOutcome` besitzt einen privaten
-Konstruktor und interne, nullgeprüfte Erzeugungsmethoden. Öffentlich sind nur
-lesbare Properties verfügbar:
+`BeamAnalysisOutcome` ist unveränderlich und enthält genau ein Ergebnis oder
+einen Fehler:
 
 | Zustand | IsSuccess | Result | Failure |
 | --- | --- | --- | --- |
@@ -34,16 +33,14 @@ lesbare Properties verfügbar:
 Leere oder doppelte Zustände sind über die API nicht erzeugbar.
 
 `BeamAnalysisResult` enthält die ursprüngliche `BeamSolution Solution` und das
-genau daraus erzeugte `BeamEngineeringResult Engineering`. Die Convenience-Property
-`Beam => Solution.Beam` speichert kein zweites Modell. Der Input-Beam und
-`result.Beam` sind dasselbe Objekt; Engineering greift auf die Extremwerte,
-Querschnitts- und Werkstoffdaten dieser Solution zu. Kennwerte bleiben in Solution
-beziehungsweise Engineering und werden in Analysis weder dupliziert noch geflattet.
+daraus erzeugte `BeamEngineeringResult Engineering`. `result.Beam` verweist auf
+das unveränderte Eingabemodell. Kennwerte bleiben in Solution beziehungsweise
+Engineering; Analysis interpretiert die Ergebnisse nicht erneut.
 
 ## Fehlervertrag
 
 Ausschließlich `BeamSolverException` aus dem Solveraufruf wird in einen
-`BeamAnalysisFailure` übersetzt. Der zentrale, explizite Switch bildet ab:
+`BeamAnalysisFailure` übersetzt. Die Fehlerkategorien werden wie folgt abgebildet:
 
 | SolverErrorCode | BeamAnalysisFailureCode |
 | --- | --- |
@@ -52,9 +49,8 @@ Ausschließlich `BeamSolverException` aus dem Solveraufruf wird in einen
 | IllConditionedSystem | IllConditionedSystem |
 | NumericalFailure | NumericalFailure |
 
-Ein unbekannter zukünftiger SolverErrorCode löst `ArgumentOutOfRangeException`
-aus. Es gibt keine Klassifizierung anhand von Meldungstexten und keinen
-Fallback auf einen bestehenden Fehlercode.
+Ein unbekannter SolverErrorCode löst `ArgumentOutOfRangeException` aus.
+Fehler werden ausschließlich anhand strukturierter Codes klassifiziert.
 
 `BeamAnalysisFailure` enthält:
 
@@ -71,10 +67,9 @@ Bei Solverfehlern gibt es keine Partial Results: keine Solution, kein
 Engineering-Ergebnis, kein korrigiertes Modell und kein letztes gültiges Resultat.
 Eine spätere Anzeige früherer gültiger Ergebnisse gehört zum UI-/Editor-State.
 
-Engineering-Exceptions werden derzeit nicht normalisiert. Die Engineering-Auswertung
-liegt außerhalb des Solver-Catch-Bereichs. Programmierfehler und unbekannte Fehler
-bleiben sichtbar. Für spätere erwartbare Engineering-Fehler muss zuerst ein eigener
-strukturierter Engineering-Fehlervertrag eingeführt werden.
+Engineering-Exceptions und unerwartete Fehler werden nicht normalisiert,
+sondern an den Aufrufer weitergegeben. Für spätere erwartbare Engineering-Fehler
+muss zuerst ein eigener strukturierter Engineering-Fehlervertrag eingeführt werden.
 
 ## Architektur und Verbraucher
 
@@ -86,13 +81,10 @@ Details stehen in [DOMAIN.md](DOMAIN.md), [SOLVER.md](SOLVER.md) und
 
 Analysis referenziert direkt Core, Solver und Engineering, ohne eigene NuGet-Pakete
 oder Abhängigkeiten auf Avalonia, Desktop oder Reporting. Desktop referenziert
-direkt Core und Analysis und startet Berechnungen künftig nur über BeamAnalysis.
+direkt Core und Analysis und startet Berechnungen ausschließlich über BeamAnalysis.
 Core, Solver und Engineering bleiben unabhängig von Desktop.
 
 Reporting soll später vollständige Analysis-Ergebnisse konsumieren. Es enthält
 derzeit keine Implementierung; eine Analysis-Projektreferenz wird erst bei seiner
 Implementierung ergänzt. Analysis gehört zur normalen Solution und den
 Produkttests, nicht zur separaten unabhängigen Validation-Solution.
-
-UI, ViewModels, Editor-State, Persistenz, Exporte, Async/Cancellation und Caching
-sind nicht Bestandteil dieses Meilensteins.

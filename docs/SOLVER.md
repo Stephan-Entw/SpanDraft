@@ -295,24 +295,11 @@ mit der angegebenen Seite wieder über `EvaluateAt` auswerten.
 
 ## Verifikation und Grenzen
 
-Tests decken die analytischen Fälle mittige Punktkraft auf Pinned/Roller,
-Kragarm mit Endkraft, Endmoment, voller und partieller UDL sowie Pinned/Roller
-mit konstanter UDL ab. Die bisherigen Knotenreferenzen bleiben erhalten.
-Die kontinuierliche UDL-Referenz verwendet ausdrücklich eine einzige UDL
-über 0 bis L mit nur zwei Knoten: Viertelpunkt und Mitte werden gegen die
-analytische Durchbiegung geprüft, insbesondere `w(L/2) = −5q_absL⁴/(384EI)`.
-M-Maximum und w-Minimum werden ohne Mittelknoten bei L/2 gefunden.
-Weitere Referenzen prüfen drei Lager,
-beidseitige Einspannung, Überhänge, Lastüberlagerung und Lagerlasten.
-Struktur- und Fehlerprüfungen sichern DOFs, Assembly, Starrkörpermoden,
-Singularität, Kondition, Eingabe-/Ergebnis-Unveränderlichkeit und signed Werte ab.
-Kontinuierliche Referenzen prüfen innere Verformungs- und Schnittgrößenwerte,
-Punktkraft-/Punktmomentsprünge mit beiden Lastvorzeichen, teilweise überlappende
-UDLs, UDL-Grenzstetigkeit, innere Lagerreaktionen, zusätzliche Nullastknoten,
-Kräfte-/Momentengleichgewicht und die Ableitungsbeziehungen. Extremwerttests
-prüfen einseitige Werte, nichtnodale Extremstellen, mehrere stationäre Stellen,
-Lastskalierung und deterministische Gleichstände. Separate Wurzeltests decken
-reduzierte Grade, reelle/komplexe und mehrfache Wurzeln sowie Randfälle ab.
+Produkttests prüfen analytische Referenzen, Lastüberlagerungen und statisch
+unbestimmte Systeme sowie Assembly, Stabilität und numerische Fehlerfälle.
+Kontinuierliche Felder und Extremwerte werden einschließlich Sprungstellen,
+Ableitungsbeziehungen, nichtnodaler Extremstellen und Rundungsgrenzen geprüft.
+Der unabhängige Validierungsnachweis steht in [VALIDATION.md](VALIDATION.md).
 
 Ergebnisvergleiche verwenden `absTol + 1e-9 · |Soll|`: absolut `1e-7 N`,
 `1e-7 Nm`, `1e-12 m` und `1e-12 rad`. Diese Testtoleranzen sind von den
@@ -345,5 +332,4 @@ Extrem kleine Beiträge können unterlaufen; nicht endliche Koeffizienten oder
 Ergebniswerte werden als NumericalFailure abgelehnt. Sehr kleine Elemente
 weit vom Ursprung können zusätzlich die Darstellung innerer globaler
 Positionen begrenzen. Mathematisch gleiche, binär unterschiedliche
-Eingabepositionen werden weiterhin nicht zusammengelegt; deren Behandlung
-an der Eingabe-/Modellgrenze bleibt ein separater späterer Auftrag.
+Eingabepositionen werden nicht zusammengelegt.

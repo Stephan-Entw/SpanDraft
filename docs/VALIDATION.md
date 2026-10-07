@@ -1,15 +1,20 @@
 # Unabhängige Verifikation des bestehenden V1-Solvers
 
-Stand: 2026-10-03. **SpanDraft Euler-Bernoulli solver: validated for the currently defined V1 scope.**
+Nachweisstand: 2026-10-03. **SpanDraft Euler-Bernoulli solver: validated for the V1 scope described in this report.**
 
-Alle 18 Acceptance-Fälle bestehen vollständig. V14 ist `PASS`: Ausschließlich
+Dieser Bericht dokumentiert die Abnahme vom 03.10.2026. Ausführungsumgebung,
+Testzahlen und Abschlussnachweise beziehen sich auf diesen Stand. Anleitungen
+für neue Prüfläufe stehen in [validation/README.md](../validation/README.md).
+
+Alle 18 Acceptance-Fälle bestanden. V14 wurde als `PASS` bewertet: Ausschließlich
 sechs Positionsvergleiche für IndeterminateBeam 2.4.0 sind ausdrücklich
 `NOT APPLICABLE`, weil dessen Rundungsrestfelder keine belastbare Extremortmenge
-des physikalischen Nullverlaufs liefern. Alle sechs Extremwerte bleiben
-Pflichtvergleiche und bestehen, ebenso sämtliche übrigen anwendbaren Prüfungen.
-Es besteht keine ungeklärte fachliche oder numerische Abweichung im definierten
-Scope. Produktcode in `src/`, bestehende Produkttests, `SpanDraft.sln`,
-Toleranzen und alle 45 Golden References sind unverändert.
+des physikalischen Nullverlaufs liefern. Alle sechs Extremwerte wurden als
+Pflichtvergleiche geprüft und bestanden, ebenso sämtliche übrigen anwendbaren Prüfungen.
+Zum Abschluss bestand keine ungeklärte fachliche oder numerische Abweichung im
+definierten Scope. Bei der Validierung einschließlich der V14-Untersuchung wurden
+Produktcode in `src/`, bestehende Produkttests, `SpanDraft.sln`, Toleranzen und
+alle 45 Golden References nicht verändert.
 
 ## Zweck, Ausgangsbasis und Grenzen
 
@@ -22,12 +27,12 @@ interne Ableitungsfunktion wird für den unabhängigen Nachweis wiederverwendet.
 
 Der untersuchte Scope ist ein gerader Einzelbalken, linear elastisch, mit kleinen
 Verschiebungen und Rotationen, Euler-Bernoulli-Theorie, konstantem E, A und I,
-Fixed/Pinned/Roller, PointForce, PointMoment und konstanten UDLs in der aktuellen
+Fixed/Pinned/Roller, PointForce, PointMoment und konstanten UDLs in der untersuchten
 linearen Solverformulierung. Überhänge und statisch unbestimmte Lagerungen sind
 eingeschlossen. Die Fallauswahl ist bewusst gut konditioniert; numerische
 Grenzfälle bleiben in den vorhandenen Produkttests.
 
-Diese Nachweise validieren **keine reale Bauteilsicherheit**, lokalen Spannungen,
+Diese Nachweise validieren weder die **reale Bauteilsicherheit** noch lokale Spannungen,
 Kerben, Schweißverbindungen, Plastizität, Knicken, Beulen, Ermüdung,
 Timoshenko-Schubverformung, geometrische Nichtlinearität, Normnachweise oder
 Flächen-/Volumen-FEM. Öffentliche V1-Lasten enthalten keine Axiallasten:
@@ -42,8 +47,8 @@ Steifigkeiten, elastische Lager und Gelenkfreigaben sind nicht Gegenstand.
 enthält die Validierungsbibliothek, CLI und xUnit-Tests sowie Referenzen auf
 Core/Solver. Die Abhängigkeit verläuft nur von Validation zum Produkt. Beide
 Solutions lassen sich ohne Python separat restaurieren und bauen. Ein normaler
-Haupt-Testlauf prüft alle Produkttests (aktueller Stand im README); das vollständige Acceptance-Gate
-erfordert zusätzlich die getrennte Validation-Solution.
+Haupt-Testlauf prüft alle Produkttests; das vollständige Acceptance-Gate erfordert
+zusätzlich die getrennte Validation-Solution.
 
 [`validation/cases/`](../validation/cases/) enthält 18 neutrale JSON-Eingaben mit
 Schema-/Fallversion, ID, Beschreibung, L/E/A/I, Lagern, Punktkräften,
@@ -288,7 +293,7 @@ und alle sechs Felder an den katalogisierten Positionen. **96 Tests: PASS.**
 Globales Gleichgewicht wird direkt aus Eingaben und veröffentlichten Reaktionen
 berechnet: ΣFx=0, ΣFy=0 und ΣM₀=0. UDL-Resultierende q(b−a) am Schwerpunkt
 (a+b)/2, Punktmomente und Reaktionsmomente werden berücksichtigt. Alle
-18 SpanDraft-Fälle sowie alle 45 Referenzen bestehen ihre jeweils unterstützten
+18 SpanDraft-Fälle sowie alle 45 Referenzen bestanden ihre jeweils unterstützten
 Gleichgewichtsprüfungen. Für PyCBA ist horizontales Gleichgewicht nicht extern
 prüfbar, weil Rx fehlt; SpanDraft prüft es für jeden Fall.
 
@@ -308,10 +313,10 @@ Jede Abweichung wird in der Reihenfolge Modell/Lagerung, Theorie, Einheiten,
 Lastdefinition, Vorzeichen, Seite, numerische Toleranz und Ursache untersucht.
 Es gibt keine Mehrheitsentscheidung. Die historischen Zahlen-/Seitenfehler
 stehen vollständig strukturiert in
-[`initial-report.json`](../validation/results/initial-report.json); der aktuelle
-Stand steht in [`acceptance.json`](../validation/results/acceptance.json).
-Die historischen Berichte beziehen sich auf frühere Adapterstände und sind
-kein aktueller Acceptance-Nachweis.
+[`initial-report.json`](../validation/results/initial-report.json); der abschließende
+Abnahmestand steht in [`acceptance.json`](../validation/results/acceptance.json).
+Der initiale Bericht bezieht sich auf frühere Adapterstände und ist kein
+abschließender Acceptance-Nachweis.
 
 | Fall | Befund und Ursache | Maßnahme / Status |
 | --- | --- | --- |
@@ -380,7 +385,7 @@ verpflichtenden Extremwerte und die Begrenzung der Ausnahme ab.
 
 Der unveränderte historische Golden-/Adapterstatus `PARTIAL` bezeichnet bei
 V14 ausschließlich diese sechs Ortsgrenzen. Er bleibt als ursprüngliche
-Extraktionsevidenz erhalten; der aktuelle Vergleichs- und Acceptance-Status
+Extraktionsevidenz erhalten; der abschließende Vergleichs- und Acceptance-Status
 bewertet alle tatsächlich anwendbaren Pflichtvergleiche und ist **PASS**.
 Es gibt keinen offenen fachlichen oder numerischen Abnahmepunkt mehr.
 
@@ -423,34 +428,10 @@ Referenzspalten. Die damaligen 200 Produkttests bestanden insgesamt.
 
 ## Reproduktion, Golden Files und Abschlussprüfung
 
-Die vollständigen Befehle stehen in
-[`validation/README.md`](../validation/README.md). Von der Repositorywurzel:
-
-```sh
-dotnet restore SpanDraft.sln
-dotnet build SpanDraft.sln --no-restore
-dotnet test --solution SpanDraft.sln --no-build --no-restore
-dotnet restore validation/SpanDraft.Validation.sln
-dotnet build validation/SpanDraft.Validation.sln --no-restore
-dotnet test --solution validation/SpanDraft.Validation.sln --no-build --no-restore
-
-# python3 muss CPython 3.9.6 sein.
-# Jedes Generierungsverzeichnis muss neu sein.
-python3 -m venv validation/python/.venv
-validation/python/.venv/bin/python -m pip install pip==25.2
-validation/python/.venv/bin/python -m pip install --require-hashes \
-  -r validation/python/requirements.txt
-validation/python/.venv/bin/python validation/investigations/v14_native_fields.py
-validation/python/.venv/bin/python validation/python/generate_references.py \
-  --output validation/results/v14-reviewed-reproduction
-validation/python/.venv/bin/python validation/python/audit_references.py \
-  --directory validation/results/v14-reviewed-reproduction \
-  --against validation/references --report validation/results/reproduction.json
-dotnet run --project validation/dotnet/SpanDraft.Validation.Runner -- export
-dotnet run --project validation/dotnet/SpanDraft.Validation.Runner -- compare \
-  --references validation/results/v14-reviewed-reproduction \
-  --actual validation/results/spandraft.json --report validation/results/acceptance.json
-```
+Die Befehle für Builds, Tests, Referenzregeneration und Vergleich stehen in
+[validation/README.md](../validation/README.md). Neue Prüfläufe schreiben in
+eigene, ignorierte Ausgabeverzeichnisse; die eingecheckten Berichte bleiben als
+Evidenz der dokumentierten Abnahme erhalten.
 
 Jedes Generierungsverzeichnis muss neu sein. Die Generierung schreibt niemals
 direkt nach `references/` und überschreibt keine Datei. Referenzen können nur
@@ -466,22 +447,20 @@ Case-ID, Version, CPython-Version, UTC-Erzeugungszeit, Theorie, Optionen,
 Vorzeichenabbildung, Adapterversion, Eingabe-, Lock- und Adapterquelltexthash.
 Eine spätere Änderung eines Referenzskripts in `validation/python/` erfordert
 eine bewusste Regeneration; fehlende/veraltete Dateien scheitern an .NET-Provenienzprüfungen.
-Die aktuelle vollständige Referenzgenerierung wurde ausgeführt: alle 45 Dateien
-stimmen nach Entfernung ausschließlich des Erzeugungszeitpunkts **exakt**
-mit den unveränderten Golden Files überein. [`reproduction.json`](../validation/results/reproduction.json) enthält
+Bei der dokumentierten Reproduktion stimmten alle 45 Dateien nach Entfernung
+ausschließlich des Erzeugungszeitpunkts **exakt** mit den Golden Files überein.
+[`reproduction.json`](../validation/results/reproduction.json) enthält
 die 45 semantischen Hashes und die direkte analytische Kalibrierung.
 
-Der unveränderte Referenzgenerator endet weiterhin mit Exitcode **1**, weil er
-die historische V14-Extraktionsmarkierung PARTIAL exakt reproduziert. Alle
-45 Dateien wurden vollständig erzeugt, der Reproduktionsaudit besteht mit
-Exitcode **0** und ohne Datenunterschiede außer Zeitstempeln. Dies ist vom
-aktuellen Acceptance-Ergebnis zu unterscheiden: CLI-Vergleich und beide
-vollständigen Testläufe enden mit Exitcode **0**. Beide Solutions restaurieren
-und bauen erfolgreich mit **0 Warnungen und 0 Fehlern**. Die Builds verwendeten
-`-m:1 -p:UseSharedCompilation=false`; die ausführbaren Testartefakte stammen
-aus diesen aktuellen Builds.
+Der Referenzgenerator endete mit Exitcode **1**, weil er die historische
+V14-Extraktionsmarkierung PARTIAL reproduzierte. Alle 45 Dateien wurden vollständig
+erzeugt; der Reproduktionsaudit endete mit Exitcode **0** und ohne Datenunterschiede
+außer Zeitstempeln. CLI-Vergleich und beide vollständigen Testläufe endeten ebenfalls
+mit Exitcode **0**. Beide Solutions wurden mit **0 Warnungen und 0 Fehlern** gebaut.
+Die Builds verwendeten `-m:1 -p:UseSharedCompilation=false`; die dokumentierten
+Testläufe verwendeten die daraus erzeugten Artefakte.
 
-| Abschlussnachweis | Tatsächliches Ergebnis |
+| Abschlussnachweis vom 03.10.2026 | Tatsächliches Ergebnis |
 | --- | --- |
 | Haupt-Solution Restore / Build | PASS |
 | Validation-Solution Restore / Build | PASS |
@@ -505,5 +484,3 @@ also **14381**. Guard-Tests werden als Tests gezählt, nicht nochmals als
 Acceptance-Zahlenvergleiche. Die sechs N/A-Positionen sind separat ausgewiesen.
 Produktquellen und Golden Files wurden zusätzlich per SHA-256 gegen den Stand
 vor dieser V14-Untersuchung geprüft: **keine Änderungen**.
-
-**SpanDraft Euler-Bernoulli solver: validated for the currently defined V1 scope.**

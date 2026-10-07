@@ -2,52 +2,63 @@
 
 [![CI](https://github.com/Stephan-Entw/SpanDraft/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Stephan-Entw/SpanDraft/actions/workflows/ci.yml)
 
-SpanDraft is an open-source desktop application for intuitive beam analysis. Start with one straight beam, edit its dimensions, place and edit supports, point loads and constant distributed loads visually to calculate reactions, shear forces, bending moments, deflection, stresses and safety factors.
+SpanDraft is an open-source desktop application for intuitive beam analysis.
 
-The repository contains a tested beam domain model, an independently validated
-Euler-Bernoulli solver, engineering assessment and an application analysis API:
-explicit SI quantities, materials, sections, supports, loads, model validation,
-nodal displacements, support reactions, analytical extrema, elastic bending stress
-and a yield-strength safety factor. `BeamAnalysis.Analyze(beam)` combines solving
-and engineering assessment with structured solver failures. The light Fluent
-desktop starts with section/material setup and opens a technical beam editor with
-a horizontal toolbar, project information, editable length on the dimension
-line, and a compact calculation status bar. The initial 1000 mm beam
-has no supports or loads. Fixed, pinned and roller supports can be placed with
-preview and millimeter/endpoint snapping, edited transactionally in object-bound
-flyouts, dragged to a new position, and deleted. Each confirmed change uses the
-existing analysis API. Point forces and point moments use the same one-shot
-placement, transactional flyout, repeated drag and delete workflow. Signed values
-define direction; coincident loads remain separate and are stacked visually.
-Constant distributed loads support two-click range placement, transactional flyouts,
-endpoint drags and deletion. The future results action remains disabled.
-Project sessions support `.spandraft` files, transactional open/save, snapshot undo/redo,
-savepoints and private crash recovery. Diagrams and exports are not yet implemented.
-Current status (2026-10-07): Support, point force, point moment and constant
-distributed load placement and editing are implemented.
-The regression baseline is 969 passing product tests, 195 validation tests and
-18 acceptance cases.
-Architecture and scope are defined in [the project concept](docs/KONZEPT.md).
-Local coordinates, signs and domain validation are documented in [the domain notes](docs/DOMAIN.md).
-The numerical formulation, solver API and current limits are documented in [the solver notes](docs/SOLVER.md).
-The implemented assessment and its limits are documented in [the engineering notes](docs/ENGINEERING.md).
-The application entry point and success/failure contract are documented in [the analysis notes](docs/ANALYSIS.md).
-The implemented desktop and binding placement/flyout interaction rules are documented in [the UI specification](docs/UI.md).
-Project files and compatibility rules are documented in [the project format](docs/PROJECT_FORMAT.md).
+It is designed for mechanical-engineering workflows between hand/Excel
+calculations and large general-purpose FEM systems: define one straight beam,
+place supports and loads directly in a technical sketch, edit exact dimensions
+and inspect the resulting structural response.
+
+SpanDraft is under active development and has not reached a stable release yet.
+
+## Current capabilities
+
+The current desktop application supports:
+
+- one straight beam with constant material and cross-section
+- fixed, pinned and roller supports
+- point forces and point moments
+- constant distributed loads
+- direct graphical placement and editing
+- exact numeric positioning
+- schematic layout for dense models without changing physical coordinates
+- undo and redo
+- versioned `.spandraft` project files
+- crash recovery
+- automatic analysis after committed model changes
+- compact display of maximum deflection, bending moment, bending stress and
+  yield-strength safety factor
+
+The numerical core provides support reactions and continuous analytical fields
+for displacement, rotation, axial force, shear force and bending moment.
+
+Result diagrams, a dedicated results view and PDF/XLSX export are planned.
+
+## Engineering scope
+
+SpanDraft currently uses a linear-elastic Euler-Bernoulli beam formulation with
+small displacements and rotations.
+
+The current model is intentionally focused on small single-beam problems.
+It is not a general-purpose FEM system and does not provide nonlinear analysis,
+buckling, fatigue, contact, 2D/3D frames or normative design verification.
+
+The displayed bending stress and safety factor are simple elastic assessments,
+not a code-based structural verification.
+
+The solver has been independently validated against analytical references,
+IndeterminateBeam and PyCBA. See
+[VALIDATION.md](docs/VALIDATION.md) for the validation scope and evidence.
 
 ## Development
 
-Install the .NET 10 SDK. Windows is the primary target; development on macOS and
-Linux remains possible. All projects target `net10.0` with nullable reference types
-and the latest stable C# language version supported by the selected SDK.
+Requirements:
 
-GitHub Actions automatically runs the Product and Validation gates for pushes to
-main and pull requests targeting main. Normal CI requires neither Python nor
-external solver installations.
+- .NET 10 SDK
 
-After installing the SDK, reopen your terminal (and restart your IDE if its
-terminal cannot find `dotnet`). Verify the installation with `dotnet --version`.
-Run the following commands from the repository root:
+Windows is the primary target. Development on macOS and Linux is supported.
+
+From the repository root:
 
 ```sh
 dotnet restore SpanDraft.sln
@@ -56,66 +67,43 @@ dotnet test --solution SpanDraft.sln --no-build --no-restore
 dotnet run --project src/SpanDraft.Desktop
 ```
 
-The repository root contains a solution, not an executable project. A bare
-`dotnet run` there reports that no runnable project was found. Use the `--project`
-command above, or run `dotnet run` from `src/SpanDraft.Desktop`.
+GitHub Actions runs both the product and independent validation gates on pushes
+to `main` and pull requests targeting `main`.
 
-On macOS, local Desktop builds create a development app bundle at
-`src/SpanDraft.Desktop/bin/Debug/net10.0/SpanDraft.app` (or `Release` for that
-configuration). An explicit `osx-*` runtime identifier adds its own directory
-before `SpanDraft.app`. The existing `dotnet run` command starts the executable
-inside the bundle, with the SpanDraft application name and Dock icon. You can
-also open the generated bundle in Finder or run:
+On macOS, Desktop builds also create a development `SpanDraft.app` bundle inside
+the corresponding build output. It uses the locally installed .NET runtime and
+is intended for development only.
 
-```sh
-open src/SpanDraft.Desktop/bin/Debug/net10.0/SpanDraft.app
-```
+## Architecture
 
-The development bundle uses the locally installed .NET 10 runtime. Remove the
-generated bundle with `dotnet clean src/SpanDraft.Desktop/SpanDraft.Desktop.csproj`.
-There are no additional signing, notarization or DMG steps. Windows and Linux
-build outputs, including Windows cross-builds on macOS, keep their existing layout.
+The application is split into small layers with explicit responsibilities:
 
-## Projects
+| Project | Responsibility |
+| --- | --- |
+| `SpanDraft.Core` | domain model, units and validation |
+| `SpanDraft.Solver` | Euler-Bernoulli beam mechanics |
+| `SpanDraft.Engineering` | elastic engineering assessment |
+| `SpanDraft.Analysis` | application-facing analysis orchestration |
+| `SpanDraft.Desktop` | Avalonia desktop application |
+| `SpanDraft.Reporting` | reserved for future reports and exports |
+| `SpanDraft.Tests` | product and regression tests |
 
-| Project | Purpose | Project references |
-| --- | --- | --- |
-| `src/SpanDraft.Core` | Beam domain model and validation | None |
-| `src/SpanDraft.Solver` | Euler-Bernoulli beam solver; Math.NET Numerics | Core |
-| `src/SpanDraft.Engineering` | Elastic bending assessment of an existing solution | Core, Solver |
-| `src/SpanDraft.Analysis` | Application entry point; solver and engineering orchestration | Core, Solver, Engineering |
-| `src/SpanDraft.Desktop` | Avalonia setup and sketch-first beam editor | Core, Analysis |
-| `src/SpanDraft.Reporting` | Future PDF and XLSX exports | Core |
-| `tests/SpanDraft.Tests` | xUnit domain, solver, engineering, analysis, desktop state and dependency tests | Core, Solver, Engineering, Analysis, Desktop |
+Core is independent of UI, numerical libraries, persistence and reporting. Desktop consumes the analysis
+API rather than implementing mechanical formulas itself.
 
-The reporting library contains no implementation yet. It will consume Analysis
-results; its Analysis reference will be added when reporting is implemented.
-Core does not depend on
-Avalonia or Math.NET; Solver and its tests use Math.NET for linear algebra.
-The desktop application uses
-Avalonia's standard Fluent theme, explicitly set to Light. English default and
-German UI strings are stored in `Resources/Strings.resx` and
-`Resources/Strings.de.resx` inside the Desktop project. Text, length/load parsing and
-formatting use the current UI culture. Inline length editing is transactional:
-Enter commits, Escape cancels, and invalid input never changes the project.
-Rejected Enter keeps the editor and error open for correction, including a
-length-conflict preview for blocked shortening. Rejected focus loss restores the committed length and clears the
-conflict, preview, highlights and error without analysis.
+## Documentation
 
-The initial square tube is an idealized sharp-cornered geometric Core template,
-not a normative or manufacturer profile. S235JR (E = 210 GPa, Re = 235 MPa)
-is a provisional material template, not a normative material database.
+- [KONZEPT.md](docs/KONZEPT.md) — product vision, scope and roadmap
+- [DOMAIN.md](docs/DOMAIN.md) — domain model, units and sign conventions
+- [SOLVER.md](docs/SOLVER.md) — numerical formulation and solver contract
+- [ENGINEERING.md](docs/ENGINEERING.md) — engineering assessment and limits
+- [ANALYSIS.md](docs/ANALYSIS.md) — application analysis API
+- [UI.md](docs/UI.md) — rationale for editor state and interaction
+- [PROJECT_FORMAT.md](docs/PROJECT_FORMAT.md) — `.spandraft` file format
+- [VALIDATION.md](docs/VALIDATION.md) — independent solver validation
+- [RELEASING.md](docs/RELEASING.md) — intended release process
 
-Tests use xUnit with Microsoft Testing Platform, selected in `global.json`.
+## License
 
-Independent solver acceptance lives in the separate
-[validation solution](validation/README.md); it is not included in `SpanDraft.sln`
-and adds no Python requirement to the product. Engineering and Analysis are not
-part of this separate solution. Current evidence and the passing
-acceptance gate are documented in [VALIDATION.md](docs/VALIDATION.md).
-
-## Deferred decisions
-
-As described in the concept, additional UI languages and
-concrete PDF/XLSX libraries remain open. Settings,
-theme switching and profile libraries remain deferred. No reporting libraries are installed.
+SpanDraft is licensed under the GNU General Public License v3.0.
+See [LICENSE](LICENSE).

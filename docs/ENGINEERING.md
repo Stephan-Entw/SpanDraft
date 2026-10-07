@@ -4,9 +4,9 @@
 
 `SpanDraft.Engineering` ist fachliches Postprocessing einer bereits berechneten
 Euler-Bernoulli-Lösung. Die Schicht referenziert Core und Solver, benötigt keine
-UI, kein Reporting und keine zusätzlichen externen Pakete. Der unabhängig
-validierte Rechenkern bleibt unverändert. Die separate Validation-Solution
-enthält Engineering nicht; Engineering wird in den normalen Produkttests geprüft.
+UI, kein Reporting und keine zusätzlichen externen Pakete. Die separate
+Validation-Solution enthält Engineering nicht; Engineering wird in den normalen
+Produkttests geprüft.
 
 ```csharp
 BeamEngineeringResult result = BeamEngineeringAnalysis.Analyze(solution);
@@ -30,7 +30,7 @@ Die einzige Eingabe ist `BeamSolution`; Material und Querschnitt stammen aus
 Balkenachse, keine obere oder untere Randfaser. `Side == null` kennzeichnet ein
 inneres analytisches Extremum und bleibt unverändert erhalten.
 
-## Maximum absolute, Vorzeichen und Auswahl
+## Betragsmaximum, Vorzeichen und Auswahl
 
 Für Durchbiegung und Moment wird jeweils zwischen dem signed Minimum und dem
 signed Maximum aus `BeamSolution.Extrema` anhand des Betrags gewählt:
@@ -51,8 +51,7 @@ besteht ein Gleichstand bei `scale == 0` oder
 `abs(a/scale - b/scale) <= 64 * 2.2204460492503131e-16`.
 Dies ist keine fachliche Toleranz; es gibt keine absolute SI-Schwelle und kein
 Positionsepsilon. Bei Gleichstand gewinnt die kleinste Position, danach Left
-vor Right. Nullable Seiten werden wie im Solver mit `GetValueOrDefault()`
-sortiert. Bei identischen Schlüsseln bleibt der Minimum-Kandidat gewählt.
+vor Right. Bei identischen Schlüsseln bleibt der Minimum-Kandidat gewählt.
 Bei einem Rundungsgleichstand kann dadurch der numerisch geringfügig kleinere
 Betrag maßgebend werden.
 
@@ -60,7 +59,7 @@ Wert, Position und Seite werden exakt vom ausgewählten Solverextremum übernomm
 Der signed Wert bleibt verfügbar: w ist nach oben positiv; M ist positiv/sagend
 beziehungsweise negativ/hoggend. Die Magnitude wird separat nicht-negativ geliefert.
 
-## Formeln und Nullastfall
+## Formeln und Nulllastfall
 
 V1 berechnet ausschließlich reine elastische Biegung:
 

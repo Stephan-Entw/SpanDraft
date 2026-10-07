@@ -2,7 +2,8 @@
 
 Das Modell in `SpanDraft.Core` beschreibt einen einzelnen geraden Balken mit
 konstantem Werkstoff und Querschnitt. Es enthält keine Solverlogik.
-Die verbindliche Projektgrundlage bleibt [KONZEPT.md](KONZEPT.md).
+Produkt-Scope und Zielbild stehen in [KONZEPT.md](KONZEPT.md); numerische Details
+und Solververträge in [SOLVER.md](SOLVER.md).
 
 ## Lokale Koordinaten und Vorzeichen
 
@@ -60,5 +61,5 @@ Nachricht und Property-Pfad; Listenindizes sind nullbasiert. Geprüft werden:
 Bereichsgrenzen und Duplikate werden ohne numerische Toleranz verglichen.
 Negative Positionen werden bereits vom Längenwerttyp ausgeschlossen.
 Unterschiedliche Lagertypen am gleichen Ort, überlappende Lasten und
-Überhänge werden hier nicht abgelehnt. Statische Bestimmtheit, Stabilität
-und die Zuordnung von Randbedingungen bleiben Aufgabe des späteren Solvers.
+Überhänge werden hier nicht abgelehnt. Stabilitätsprüfung und Zuordnung der
+Randbedingungen erfolgen im Solver; Details stehen in [SOLVER.md](SOLVER.md).
