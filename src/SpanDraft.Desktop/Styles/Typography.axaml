@@ -1,5 +1,10 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!-- Inherit the platform UI font; do not ship or force a font family. -->
+  <!-- Some platform fallback glyphs extend beyond the nominal line box.
+       Keep their diacritics visible, including button/menu AccessText. -->
+  <Style Selector=":is(TextBlock)">
+    <Setter Property="ClipToBounds" Value="False" />
+  </Style>
   <Style Selector="Window">
     <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />

@@ -15,6 +15,7 @@ public sealed partial class EditorViewModel : ObservableObject
 {
     private readonly Func<BeamModel, BeamAnalysisOutcome> _analyze;
     private AnalysisPresentationState _presentation;
+    private ProjectOverviewState _overview;
     private KeyValuePair<Guid, AnnotationOffset>? _annotationPreview;
     private SupportInteraction _interaction;
     private SupportType? _placementTool;
@@ -39,6 +40,7 @@ public sealed partial class EditorViewModel : ObservableObject
         Session = session;
         _analyze = analyze ?? BeamAnalysis.Analyze;
         _presentation = AnalysisPresentationState.FromOutcome(_analyze(Document.ToBeamModel()));
+        _overview = ProjectOverviewState.From(Document, _presentation);
         DimensionLength = new(() => Document.Length, ChangeLength, () => PreserveDrafts);
         Session.StateApplied += ApplyState;
         Session.Changed += () => Notify(nameof(IsBusy));
@@ -73,10 +75,10 @@ public sealed partial class EditorViewModel : ObservableObject
     public event Action? InteractionsCancelling;
     public EditorDocument Document => Session.CurrentRevision.State.Document;
     public AnalysisPresentationState Presentation => _presentation;
+    public ProjectOverviewState Overview => _overview;
     public EditorPresentationState EditorPresentation => Session.CurrentRevision.State.Presentation;
     public EditorPresentationState RenderPresentation => _annotationPreview is { } p
         ? EditorPresentation.WithOffset(p.Key, p.Value) : EditorPresentation;
-    public string ProjectInfo => SectionDisplay.Name(Document.Section) + " · " + Document.Material.Name;
     public LengthInputViewModel DimensionLength { get; }
     public ConstraintConflictState? ConstraintConflict => _constraintConflict;
     public IReadOnlyList<Guid> ConflictEntityIds => ConstraintConflict?.BlockingEntityIds ?? Array.Empty<Guid>();
@@ -105,7 +107,7 @@ public sealed partial class EditorViewModel : ObservableObject
         && DistributedLoadState == DistributedLoadInteraction.Neutral;
     public bool HasCoordinate => Preview is not null || LoadPreview is not null || DistributedPointerPosition is not null || DistributedLoadPreview is not null;
     public string CoordinateText => (Preview?.Position ?? LoadPreview?.Position ?? DistributedPointerPosition ?? DistributedLoadPreview?.EndPosition) is { } position
-        ? string.Format(CultureInfo.CurrentUICulture, Strings.SupportCoordinate, UiNumbers.Format(position.Millimeters)) : "";
+        ? string.Format(CultureInfo.CurrentUICulture, Strings.SupportCoordinate, UiNumbers.Compact(position.Millimeters)) : "";
 
     public void ToggleSupportTool(SupportType type)
     {
@@ -375,9 +377,14 @@ public sealed partial class EditorViewModel : ObservableObject
             if (ConstraintConflict is { } conflict) UpdateConstraintConflict(conflict.RequestedLength);
             _presentation = AnalysisPresentationState.FromOutcome(_analyze(next.Document.ToBeamModel()));
             DimensionLength.Refresh(preserveError: ConstraintConflict is not null);
-            Notify(nameof(Presentation));
         }
-        if (documentChanged) { Notify(nameof(Document)); Notify(nameof(ProjectInfo)); }
+        if (documentChanged) _overview = ProjectOverviewState.From(next.Document, _presentation);
+        if (change == EditorChangeKind.Mechanical) Notify(nameof(Presentation));
+        if (documentChanged)
+        {
+            Notify(nameof(Document));
+            Notify(nameof(Overview));
+        }
         if (presentationChanged) { Notify(nameof(EditorPresentation)); Notify(nameof(RenderPresentation)); }
     }
 }

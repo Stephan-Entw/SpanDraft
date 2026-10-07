@@ -1,7 +1,14 @@
 using System.Globalization;
+using System.Runtime.InteropServices;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Media.TextFormatting;
+using Avalonia.Platform;
 using Avalonia.Skia;
+using Avalonia.VisualTree;
 using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.State;
@@ -24,6 +31,105 @@ public sealed class SchematicRenderingFixture
 [Collection("Schematic text")]
 public sealed class DesktopNativeTextMeasurementTests
 {
+    [Theory]
+    [InlineData("Ändern", true)]
+    [InlineData("Übernehmen", true)]
+    [InlineData("Öffnen", true)]
+    [InlineData("Rückgängig", false)]
+    [InlineData("Löschen", false)]
+    [InlineData("Balkenlänge", false)]
+    [InlineData("Maßgebendes Moment", false)]
+    public void StyledTextAndButtonCaptionsPreserveUnicodePixelsWithoutClippingAccents(string text, bool button)
+    {
+        using var environment = new DesktopControlEnvironment();
+        Control control = button ? new Button { Content = text, Classes = { "ghost" } } : new TextBlock { Text = text };
+        control.Margin = new Thickness(8);
+        control.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left;
+        control.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top;
+        var host = new Panel { Children = { control } };
+        var window = new Window { Content = host };
+        window.ApplyTemplate();
+        window.Measure(new Size(400, 80));
+        window.Arrange(new Rect(0, 0, 400, 80));
+        host.Measure(new Size(400, 80));
+        host.Arrange(new Rect(0, 0, 400, 80));
+        var caption = button ? Assert.Single(control.GetVisualDescendants().OfType<AccessText>()) : (TextBlock)control;
+        Assert.Equal(text, caption.Text);
+        Assert.False(caption.ClipToBounds);
+
+        // Fonts can place accents outside the line box, despite having valid glyphs.
+        // Check the actual pixels above it; the former clip removes those pixels.
+        var origin = caption.TranslatePoint(default, host)!.Value;
+        int top = (int)Math.Floor(origin.Y * 2);
+        int left = (int)Math.Floor(origin.X * 2);
+        int right = (int)Math.Ceiling((origin.X + caption.Bounds.Width) * 2);
+        var visible = RenderCaption();
+        Assert.Contains(visible.Pixels.Where((_, i) => i % 4 == 3), alpha => alpha != 0);
+        if (button)
+        {
+            caption.ClipToBounds = true;
+            var clipped = RenderCaption();
+            Assert.True(visible.Above > clipped.Above,
+                $"No additional accent pixels for {text}: {visible.Above} vs {clipped.Above}");
+        }
+        else
+        {
+            // Lowercase diacritics may fit inside the font's line box. They must
+            // still render differently from an ASCII substitution.
+            caption.Text = text.Replace("ü", "u").Replace("ä", "a").Replace("ö", "o").Replace("ß", "ss");
+            var ascii = RenderCaption();
+            Assert.NotEqual(visible.Pixels, ascii.Pixels);
+        }
+
+        (byte[] Pixels, int Above) RenderCaption()
+        {
+            using var bitmap = new RenderTargetBitmap(new PixelSize(800, 160), new Vector(192, 192));
+            bitmap.Render(host);
+            using var pixels = new WriteableBitmap(bitmap.PixelSize, bitmap.Dpi, PixelFormat.Bgra8888, AlphaFormat.Premul);
+            using var buffer = pixels.Lock();
+            bitmap.CopyPixels(buffer);
+            var bytes = new byte[buffer.RowBytes * buffer.Size.Height];
+            Marshal.Copy(buffer.Address, bytes, 0, bytes.Length);
+            int ink = 0;
+            for (int y = Math.Max(0, top - 8); y < top; y++)
+                for (int x = left; x < right; x++)
+                    if (bytes[y * buffer.RowBytes + x * 4 + 3] != 0) ink++;
+            return (bytes, ink);
+        }
+    }
+
+    [Theory]
+    [InlineData("Ändern Übernehmen Öffnen Rückgängig Löschen Balkenlänge Maßgebendes Moment")]
+    [InlineData("äöüÄÖÜß")]
+    [InlineData("13,3·10³ 123·10⁻⁶ 4,94·10⁻³²⁴ 180·10³⁰⁶")]
+    public void PlatformTextShapingPreservesUnicodeAndHasNoMissingGlyphs(string text)
+    {
+        using var layout = new TextLayout(text, Typeface.Default, 13, Brushes.Black);
+        var runs = layout.TextLines.SelectMany(l => l.TextRuns).OfType<ShapedTextRun>().ToArray();
+        Assert.NotEmpty(runs);
+        Assert.Equal(text, string.Concat(runs.Select(r => r.Text.ToString())));
+        foreach (var run in runs)
+            foreach (var glyph in run.GlyphRun.GlyphInfos)
+                Assert.NotEqual(0, glyph.GlyphIndex);
+    }
+
+    [Theory]
+    [InlineData("Ä", "A")]
+    [InlineData("ö", "o")]
+    [InlineData("ü", "u")]
+    [InlineData("³", "3")]
+    public void DiacriticsAndSuperscriptsAreDistinctRenderedGlyphs(string unicode, string plain)
+    {
+        using var unicodeLayout = new TextLayout(unicode, Typeface.Default, 13, Brushes.Black);
+        using var plainLayout = new TextLayout(plain, Typeface.Default, 13, Brushes.Black);
+        var unicodeRun = Assert.IsType<ShapedTextRun>(Assert.Single(Assert.Single(unicodeLayout.TextLines).TextRuns));
+        var plainRun = Assert.IsType<ShapedTextRun>(Assert.Single(Assert.Single(plainLayout.TextLines).TextRuns));
+        Assert.NotEqual(plainRun.GlyphRun.GlyphInfos[0].GlyphIndex, unicodeRun.GlyphRun.GlyphInfos[0].GlyphIndex);
+        if (unicode == "³")
+            Assert.True(unicodeRun.GlyphRun.InkBounds.Bottom < plainRun.GlyphRun.InkBounds.Bottom);
+        else
+            Assert.True(unicodeRun.GlyphRun.InkBounds.Top < plainRun.GlyphRun.InkBounds.Top);
+    }
 
     [Theory]
     [InlineData("de-DE")]
@@ -45,7 +151,7 @@ public sealed class DesktopNativeTextMeasurementTests
             }
             var axis = CoordinateAxisLayout.Create(layout, 1000, Measure);
             Assert.Equal(layout.Stations.Count, measured.Count);
-            Assert.Equal(layout.Stations.Select(s => UiNumbers.Format(s.PhysicalX * 1000)), measured.Select(m => m.Text));
+            Assert.Equal(layout.Stations.Select(s => UiNumbers.Compact(s.PhysicalX * 1000)), measured.Select(m => m.Text));
             Assert.All(measured, m =>
             {
                 Assert.True(double.IsFinite(m.Size.Width) && m.Size.Width > 0);
@@ -73,7 +179,7 @@ public sealed class DesktopNativeTextMeasurementTests
         var frame = new BeamLayoutState().Update(document, 1100, 600)!;
         var scene = BeamRenderState.Create(document, frame, text => SchematicText.Measure(text, Typeface.Default, 13));
         var label = Assert.Single(scene.Annotations);
-        Assert.Equal("Motorlast = " + UiNumbers.Format(load.Value) + " N", label.Text);
+        Assert.Equal("Motorlast = " + UiNumbers.Compact(load.Value) + " N", label.Text);
         Assert.True(double.IsFinite(label.Bounds.X) && double.IsFinite(label.Bounds.Y));
         Assert.True(double.IsFinite(label.Bounds.Width) && label.Bounds.Width > 0);
         Assert.True(double.IsFinite(label.Bounds.Height) && label.Bounds.Height > 0);

@@ -16,7 +16,8 @@ public sealed class BeamLayoutState
     public BeamPointerInteraction? Interaction { get; private set; }
     public BeamLayoutFrame? Current => Snapshot ?? _committed;
 
-    public BeamLayoutFrame? Update(EditorDocument document, double width, double height)
+    public BeamLayoutFrame? Update(EditorDocument document, double width, double height,
+        double belowBeamSpace = SchematicMetrics.BelowBeamSpace)
     {
         if (Snapshot is not null) return Snapshot;
         if (!double.IsFinite(width) || !double.IsFinite(height) || width <= 0 || height <= 0) return null;
@@ -30,12 +31,12 @@ public sealed class BeamLayoutState
             double left = margins.Left * factor, right = width - margins.Right * factor;
             var layout = StationLayout.Compute(document.Length.Meters, left, right, requirements,
                 spanRequirements: StationRequirementBuilder.SpansFromDocument(document));
-            _committed = new(layout, BeamViewport.Fit(width, height));
+            _committed = new(layout, BeamViewport.Fit(width, height, belowBeamSpace));
             _document = document;
             _width = width;
         }
-        else if (_committed.Viewport.Height != height)
-            _committed = _committed with { Viewport = BeamViewport.Fit(width, height) };
+        else if (_committed.Viewport.Height != height || _committed.Viewport.BelowBeamSpace != belowBeamSpace)
+            _committed = _committed with { Viewport = BeamViewport.Fit(width, height, belowBeamSpace) };
         return _committed;
     }
 

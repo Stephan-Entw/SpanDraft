@@ -7,6 +7,7 @@ using SpanDraft.Core.Sections;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Controls;
+using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
@@ -342,7 +343,7 @@ public class DesktopStateTests
         Assert.Same(outcome.Result, state.Result);
         var engineering = outcome.Result!.Engineering;
         Assert.Equal(UiNumbers.Indicator(engineering.TransverseDisplacementMagnitude.Meters * 1000) + " mm", state.Displacement);
-        Assert.Equal(UiNumbers.Indicator(engineering.BendingMomentMagnitude.NewtonMeters / 1000) + " kNm", state.Moment);
+        Assert.Equal(UiNumbers.Indicator(engineering.BendingMomentMagnitude.NewtonMeters) + " Nm", state.Moment);
         Assert.Equal(UiNumbers.Indicator(engineering.MaximumBendingStress.Megapascals) + " MPa", state.Stress);
         Assert.Equal(UiNumbers.Indicator(engineering.SafetyFactor), state.SafetyFactor);
         if (!loaded) Assert.Equal("∞", state.SafetyFactor);
@@ -361,6 +362,6 @@ public class DesktopStateTests
         Assert.Equal(viewport.Layout.Stations[^1].ScreenX, viewport.Layout.Transform.PhysicalToScreen(length));
         NumericAssert.Close(length * 0.25, viewport.Layout.Transform.ScreenToPhysical(viewport.Layout.Transform.PhysicalToScreen(length * 0.25)));
         Assert.True(viewport.Layout.Stations[^1].ScreenX > viewport.Layout.Stations[0].ScreenX);
-        Assert.Equal(height * 0.5, viewport.Viewport.BeamY);
+        Assert.Equal(Math.Max(0, height - SchematicMetrics.BelowBeamSpace), viewport.Viewport.BeamY);
     }
 }

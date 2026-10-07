@@ -484,7 +484,7 @@ public sealed class DesktopSupportTests
         s.Add(0);
         Assert.Equal(AnalysisPresentationKind.Success, s.Editor.Presentation.Kind);
         Assert.Equal("0 mm", s.Editor.Presentation.Displacement);
-        Assert.Equal("0 kNm", s.Editor.Presentation.Moment);
+        Assert.Equal("0 Nm", s.Editor.Presentation.Moment);
         Assert.Equal("0 MPa", s.Editor.Presentation.Stress);
         Assert.Equal("∞", s.Editor.Presentation.SafetyFactor);
         Assert.Empty(s.Beam!.Loads);

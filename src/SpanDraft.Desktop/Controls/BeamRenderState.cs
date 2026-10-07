@@ -16,6 +16,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
     IReadOnlyList<EntityAnnotation> Annotations, double MinimumPaneHeight)
 {
     public IReadOnlyList<DistributedLoadVisual> DistributedLoads { get; init; } = [];
+    public double RequiredBelowBeamSpace { get; init; } = SchematicMetrics.BelowBeamSpace;
 
     public static BeamRenderState Create(EditorDocument document, BeamLayoutFrame frame, Func<string, Size> measure,
         SupportPreview? supportPreview = null, Guid? hiddenSupportId = null, string? supportName = null,
@@ -58,14 +59,18 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             AvoidManual(false);
             AvoidManual(true);
         }
-        double extent = annotations.Select(a => Math.Max(Math.Abs(a.Bounds.Top - frame.Viewport.BeamY),
-            Math.Abs(a.Bounds.Bottom - frame.Viewport.BeamY))).DefaultIfEmpty(0).Max() + SchematicMetrics.EntityLabelPadding;
-        // Offsets remain unrestricted. Saturate only the requested pane height in
-        // numerically extreme cases, never a label's position or stored offset.
-        double visibleHeight = 2 * Math.Min(double.MaxValue / 2, extent);
+        above = Math.Max(above, Math.Max(0, annotations.Select(a => frame.Viewport.BeamY - a.Bounds.Top)
+            .DefaultIfEmpty(0).Max()) + SchematicMetrics.EntityLabelPadding);
+        below = Math.Max(below, Math.Max(0, annotations.Select(a => a.Bounds.Bottom - frame.Viewport.BeamY)
+            .DefaultIfEmpty(0).Max()));
+        // Reserve one fixed support row below the beam. Only actual overflow
+        // (e.g. manual offsets or overlapping support labels) needs extra space.
+        below = Math.Max(below, SchematicMetrics.BelowBeamSpace);
+        // Offsets remain unrestricted. Saturate only the requested pane height.
+        double visibleHeight = Math.Min(double.MaxValue, above + below);
         return new(frame, supports.AsReadOnly(), loads, PointLoadSymbol.Group(loads), annotations.AsReadOnly(),
-            Math.Max(visibleHeight, Math.Max(SchematicMetrics.MinimumBeamPaneHeight, 2 * Math.Max(above, below))))
-            { DistributedLoads = distributed };
+            Math.Max(visibleHeight, SchematicMetrics.MinimumBeamPaneHeight))
+            { DistributedLoads = distributed, RequiredBelowBeamSpace = below };
 
         void AvoidManual(bool support)
         {
@@ -94,8 +99,9 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         double Place(IEnumerable<(Guid? Id, string Name, string Text, double X, bool IsPreview, bool IsInvalid, int Order)> source, bool support)
         {
             var measured = source.Select(v => (Value: v, Size: measure(v.Text))).ToArray();
-            double line = Math.Max(SchematicMetrics.AxisLabelLineHeight, measured.Select(v => v.Size.Height).DefaultIfEmpty(16).Max())
-                + SchematicMetrics.EntityLabelPadding;
+            double rowHeight = Math.Max(SchematicMetrics.AxisLabelLineHeight,
+                measured.Select(v => v.Size.Height).DefaultIfEmpty(SchematicMetrics.AxisLabelLineHeight).Max());
+            double line = rowHeight + SchematicMetrics.EntityLabelPadding;
             var ends = new List<double>();
             foreach (var item in measured.OrderBy(v => Left(v.Value.X, v.Size.Width)).ThenBy(v => v.Value.Order).ThenBy(v => v.Value.Id))
             {
@@ -108,9 +114,12 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
                 var bounds = new Rect(left, y, item.Size.Width, item.Size.Height);
                 annotations.Add(new(item.Value.Id, support, item.Value.Text, bounds, bounds, item.Value.IsPreview, item.Value.IsInvalid));
             }
-            // Always reserve a preview row. Hover/leave cannot change the beam height.
-            return (support ? SchematicMetrics.SupportLabelTopOffset + SchematicMetrics.EntityLabelPadding : SchematicMetrics.ForceTopOffset + 16) +
-                (ends.Count + (support ? 0 : 1)) * line;
+            // Only put spacing between support rows; the axis provides the lower
+            // clearance. Keep one support row available even before placement.
+            if (support)
+                return SchematicMetrics.SupportLabelTopOffset + rowHeight + Math.Max(0, ends.Count - 1) * line;
+            // Always reserve a load preview row. Hover/leave cannot change the beam height.
+            return SchematicMetrics.ForceTopOffset + 16 + (ends.Count + 1) * line;
         }
         double Left(double x, double width) => Math.Clamp(x - width / 2, 8, Math.Max(8, frame.Viewport.Width - width - 8));
     }

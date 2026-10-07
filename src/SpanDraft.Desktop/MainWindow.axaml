@@ -35,7 +35,6 @@
       </MenuItem>
       <MenuItem Header="{x:Static resources:Strings.View}">
         <MenuItem Header="{x:Static resources:Strings.Zoom}" IsEnabled="False" />
-        <MenuItem Header="{x:Static resources:Strings.Results}" IsEnabled="False" />
       </MenuItem>
       <MenuItem Header="{x:Static resources:Strings.Help}">
         <MenuItem Header="{x:Static resources:Strings.About}" IsEnabled="{Binding !IsBusy}" Click="ShowAbout" />

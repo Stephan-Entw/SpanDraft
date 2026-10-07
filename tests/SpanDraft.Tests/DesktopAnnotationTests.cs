@@ -3,6 +3,7 @@ using SpanDraft.Analysis;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Controls;
+using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
@@ -208,16 +209,56 @@ public sealed class DesktopAnnotationTests
         var frame = layout.Update(document, 1100, 220)!; layout.BeginInteraction(BeamPointerInteraction.LabelDrag);
         var state = Offset(load.Id, 5, -600);
         var moving = Scene(document, layout.Update(document, 1500, 800)!, state);
-        Assert.Same(frame, moving.Frame); Assert.Equal(110, moving.Frame.Viewport.BeamY);
+        Assert.Same(frame, moving.Frame); Assert.Equal(220 - SchematicMetrics.BelowBeamSpace, moving.Frame.Viewport.BeamY);
         Assert.Same(frame.Layout.Transform, moving.Frame.Layout.Transform);
         layout.EndInteraction();
-        var resized = layout.Update(document, 1100, moving.MinimumPaneHeight)!;
+        var resized = layout.Update(document, 1100, moving.MinimumPaneHeight, moving.RequiredBelowBeamSpace)!;
         var released = Scene(document, resized, state);
         var label = Label(released, load.Id);
         Assert.True(label.Bounds.Top >= 0 && label.Bounds.Bottom <= resized.Viewport.Height);
         Assert.Same(frame.Layout.Transform, resized.Layout.Transform);
         Assert.Equal(moving.MinimumPaneHeight, released.MinimumPaneHeight);
         AssertOffset(label, new(5, -600));
+    }
+
+    [Theory]
+    [InlineData(-600)]
+    [InlineData(600)]
+    public void AsymmetricPaneFitsManualAndAutomaticLabelsAboveAndBelowTheBeam(double dy)
+    {
+        var load = Load("F1");
+        var support = new EditorSupport(Guid.NewGuid(), Mm(500), SupportType.Pinned, "A");
+        var document = Document(load).WithSupports([support]);
+        var layout = new BeamLayoutState();
+        var initial = layout.Update(document, 1100, 220)!;
+        var offsets = Offset(load.Id, 0, dy).WithOffset(support.Id, new(0, dy));
+        var request = Scene(document, initial, offsets);
+        var fitted = layout.Update(document, 1100, request.MinimumPaneHeight, request.RequiredBelowBeamSpace)!;
+        var scene = Scene(document, fitted, offsets);
+        Assert.Same(initial.Layout, fitted.Layout);
+        Assert.Equal(request.RequiredBelowBeamSpace, fitted.Viewport.Height - fitted.Viewport.BeamY, 6);
+        Assert.All(scene.Annotations, label =>
+        {
+            Assert.True(label.Bounds.Top >= 0);
+            Assert.True(label.Bounds.Bottom <= fitted.Viewport.Height);
+            Assert.Equal(label.Id, scene.HitTestLabel(label.Bounds.Center.X, label.Bounds.Center.Y)!.Id);
+        });
+        Assert.Equal(request.MinimumPaneHeight, scene.MinimumPaneHeight, 6);
+        AssertOffset(Label(scene, load.Id), new(0, dy));
+        AssertOffset(Label(scene, support.Id), new(0, dy));
+    }
+
+    [Theory]
+    [InlineData(double.MaxValue)]
+    [InlineData(-double.MaxValue)]
+    public void ExtremeManualOffsetsKeepRequestedHeightFiniteWithoutChangingOffsets(double dy)
+    {
+        var load = Load("F1"); var document = Document(load);
+        var offsets = Offset(load.Id, 0, dy);
+        var scene = Scene(document, Frame(document), offsets);
+        Assert.Equal(double.MaxValue, scene.MinimumPaneHeight);
+        Assert.Equal(dy, offsets.AnnotationOffsets[load.Id].Dy);
+        AssertOffset(Label(scene, load.Id), new(0, dy));
     }
 
     [Theory]

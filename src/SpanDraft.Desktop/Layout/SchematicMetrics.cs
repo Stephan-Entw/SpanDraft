@@ -41,7 +41,9 @@ public static class SchematicMetrics
     public const double DistributedMaximumFillOpacity = 0.75;
     public const double DistributedTopOffset = ForceBeamOffset + DistributedArrowHeight;
     public const double EntityLabelPadding = 8;
-    public const double MinimumBeamPaneHeight = 220;
+    public const double MinimumBeamPaneHeight = 180;
+    // One support label row. The axis pane supplies the clearance below it.
+    public const double BelowBeamSpace = SupportLabelTopOffset + AxisLabelLineHeight;
     public const double LengthInputWidth = 88;
     public const double LengthInputHeight = 30;
     public const double BaseSideMargin = 72;

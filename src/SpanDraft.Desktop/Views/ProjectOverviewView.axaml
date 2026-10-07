@@ -1,0 +1,154 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+             xmlns:state="clr-namespace:SpanDraft.Desktop.State"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Views.ProjectOverviewView"
+             x:DataType="vm:EditorViewModel">
+  <UserControl.Resources>
+    <DataTemplate x:Key="SupportRowTemplate" x:DataType="state:ProjectOverviewItem">
+      <Grid Classes="overviewRow" ColumnDefinitions="64,*,96">
+        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
+                AutomationProperties.Name="{Binding Name}"
+                IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
+          <TextBlock Text="{Binding Name}" Classes="entityName" />
+        </Button>
+        <TextBlock Grid.Column="1" Text="{Binding Type}" Classes="centered" />
+        <TextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
+      </Grid>
+    </DataTemplate>
+    <DataTemplate x:Key="LoadRowTemplate" x:DataType="state:ProjectOverviewItem">
+      <Grid Classes="overviewRow" ColumnDefinitions="64,0.7*,1.3*">
+        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
+                AutomationProperties.Name="{Binding Name}"
+                IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
+          <TextBlock Text="{Binding Name}" Classes="entityName" />
+        </Button>
+        <TextBlock Grid.Column="1" Text="{Binding Value}" Classes="number" />
+        <TextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
+      </Grid>
+    </DataTemplate>
+    <DataTemplate x:Key="ReactionRowTemplate" x:DataType="state:ProjectOverviewReaction">
+      <Grid Classes="overviewRow" ColumnDefinitions="64,*,*,*">
+        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
+                AutomationProperties.Name="{Binding Name}"
+                IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
+          <TextBlock Text="{Binding Name}" Classes="entityName" />
+        </Button>
+        <TextBlock Grid.Column="1" Text="{Binding Rx}" Classes="number" />
+        <TextBlock Grid.Column="2" Text="{Binding Ry}" Classes="number" />
+        <TextBlock Grid.Column="3" Text="{Binding Moment}" Classes="number" />
+      </Grid>
+    </DataTemplate>
+  </UserControl.Resources>
+  <UserControl.Styles>
+    <Style Selector="TextBlock">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Grid.overviewRow">
+      <Setter Property="ColumnSpacing" Value="6" />
+      <Setter Property="MinHeight" Value="24" />
+    </Style>
+    <Style Selector="Grid.overviewRow TextBlock">
+      <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
+    </Style>
+    <Style Selector="Grid.tableHeader TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    </Style>
+    <Style Selector="TextBlock.entityName">
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <Style Selector="Button.overviewEntityAction">
+      <Setter Property="Height" Value="24" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="TextBlock.centered">
+      <Setter Property="TextAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.number">
+      <Setter Property="TextAlignment" Value="Right" />
+    </Style>
+    <Style Selector="ItemsControl">
+      <Setter Property="ItemsPanel">
+        <ItemsPanelTemplate><StackPanel /></ItemsPanelTemplate>
+      </Setter>
+    </Style>
+  </UserControl.Styles>
+  <Border Background="{DynamicResource SurfaceSubtle}" BorderBrush="{DynamicResource Border}" BorderThickness="1,0,0,0">
+    <ScrollViewer x:Name="OverviewScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="{DynamicResource Padding16}" Spacing="{StaticResource Space16}">
+        <Grid x:Name="ProjectBlock" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space8}" RowSpacing="{StaticResource Space4}">
+          <TextBlock Text="{x:Static resources:Strings.BeamModel}" Classes="sectionTitle" />
+          <Button Grid.Column="1" Content="{x:Static resources:Strings.Change}" Command="{Binding ChangeProjectCommand}" Classes="ghost" />
+          <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="{StaticResource Space4}">
+            <TextBlock Text="{Binding Overview.Section}" Classes="bodyStrong" />
+            <TextBlock x:Name="MaterialAndLength" Classes="secondary"><Run Text="{Binding Overview.Material}" /><Run Text=" · " /><Run Text="{Binding Overview.Length}" /></TextBlock>
+          </StackPanel>
+        </Grid>
+        <StackPanel Spacing="{StaticResource Space4}">
+          <TextBlock Text="{x:Static resources:Strings.Supports}" Classes="sectionTitle" />
+          <StackPanel IsVisible="{Binding Overview.HasSupports}">
+            <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,*,96">
+              <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
+              <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewType}" Classes="centered" />
+              <TextBlock Grid.Column="2" Text="{x:Static resources:Strings.OverviewPosition}" Classes="number" />
+            </Grid>
+            <ItemsControl x:Name="SupportTable" ItemsSource="{Binding Overview.Supports}" ItemTemplate="{StaticResource SupportRowTemplate}" />
+          </StackPanel>
+        </StackPanel>
+        <StackPanel Spacing="{StaticResource Space4}">
+          <TextBlock Text="{x:Static resources:Strings.Loads}" Classes="sectionTitle" />
+          <StackPanel IsVisible="{Binding Overview.HasLoads}">
+            <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,0.7*,1.3*">
+              <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
+              <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
+              <TextBlock Grid.Column="2" Text="{x:Static resources:Strings.OverviewPosition}" Classes="number" />
+            </Grid>
+            <ItemsControl x:Name="LoadTable" ItemsSource="{Binding Overview.Loads}" ItemTemplate="{StaticResource LoadRowTemplate}" />
+          </StackPanel>
+        </StackPanel>
+        <StackPanel x:Name="ReactionsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.Analysis.IsSuccess}">
+          <TextBlock Text="{x:Static resources:Strings.Reactions}" Classes="sectionTitle" />
+          <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,*,*,*">
+            <TextBlock Text="{x:Static resources:Strings.Support}" Classes="centered" />
+            <TextBlock Grid.Column="1" Text="Rx [N]" Classes="number" />
+            <TextBlock Grid.Column="2" Text="Ry [N]" Classes="number" />
+            <TextBlock Grid.Column="3" Text="M [Nm]" Classes="number" />
+          </Grid>
+          <ItemsControl x:Name="ReactionTable" ItemsSource="{Binding Overview.Reactions}" ItemTemplate="{StaticResource ReactionRowTemplate}" />
+        </StackPanel>
+        <StackPanel Spacing="{StaticResource Space4}">
+          <TextBlock Text="{x:Static resources:Strings.Indicators}" Classes="sectionTitle" />
+          <TextBlock x:Name="AnalysisStatus" Text="{Binding Overview.Analysis.StatusText}" IsVisible="{Binding !Overview.Analysis.IsSuccess}" Classes="secondary" />
+          <StackPanel x:Name="IndicatorsPanel" IsVisible="{Binding Overview.Analysis.IsSuccess}">
+            <Grid Classes="overviewRow" ColumnDefinitions="*,Auto">
+              <TextBlock Text="{x:Static resources:Strings.MaximumDeflection}" Classes="propertyLabel" />
+              <TextBlock Grid.Column="1" Text="{Binding Overview.Analysis.Displacement}" Classes="number bodyStrong" />
+            </Grid>
+            <Grid Classes="overviewRow" ColumnDefinitions="*,Auto">
+              <TextBlock Text="{x:Static resources:Strings.GoverningMoment}" Classes="propertyLabel" />
+              <TextBlock Grid.Column="1" Text="{Binding Overview.Analysis.Moment}" Classes="number bodyStrong" />
+            </Grid>
+            <Grid Classes="overviewRow" ColumnDefinitions="*,Auto">
+              <TextBlock Text="{x:Static resources:Strings.MaximumBendingStress}" Classes="propertyLabel" />
+              <TextBlock Grid.Column="1" Text="{Binding Overview.Analysis.Stress}" Classes="number bodyStrong" />
+            </Grid>
+            <Grid Classes="overviewRow" ColumnDefinitions="*,Auto">
+              <TextBlock Text="{x:Static resources:Strings.SafetyFactorLabel}" Classes="propertyLabel" />
+              <TextBlock Grid.Column="1" Text="{Binding Overview.Analysis.SafetyFactor}" Classes="number bodyStrong" />
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+</UserControl>

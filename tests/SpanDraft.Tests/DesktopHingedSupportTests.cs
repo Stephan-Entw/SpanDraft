@@ -212,6 +212,7 @@ public sealed class DesktopHingedSupportTests
     [Fact]
     public void AllSupportTypesKeepTheSameLabelRowAndPaneHeightReservation()
     {
+        double? reservedHeight = null;
         foreach (var type in new[] { SupportType.Fixed, SupportType.Pinned, SupportType.Roller })
         {
             var support = Support(type);
@@ -219,7 +220,11 @@ public sealed class DesktopHingedSupportTests
             var frame = DesktopLayoutFixture.Linear(0, 1000, 200, 1);
             var scene = Scene(document, frame);
             Assert.Equal(240, Assert.Single(scene.Annotations).AutoBounds.Top);
-            Assert.Equal(220, scene.MinimumPaneHeight);
+            reservedHeight ??= scene.MinimumPaneHeight;
+            Assert.Equal(reservedHeight.Value, scene.MinimumPaneHeight);
+            var fitted = BeamViewport.Fit(1100, scene.MinimumPaneHeight);
+            Assert.True(fitted.BeamY >= 0);
+            Assert.True(fitted.BeamY + 40 + 16 <= fitted.Height);
         }
     }
 }

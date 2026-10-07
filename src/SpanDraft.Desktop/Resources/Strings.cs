@@ -79,7 +79,20 @@ public static class Strings
     public static string FixedSupport => Get(nameof(FixedSupport));
     public static string PinnedSupport => Get(nameof(PinnedSupport));
     public static string RollerSupport => Get(nameof(RollerSupport));
-    public static string Results => Get(nameof(Results));
+    public static string BeamModel => Get(nameof(BeamModel));
+    public static string OverviewLength => Get(nameof(OverviewLength));
+    public static string OverviewPosition => Get(nameof(OverviewPosition));
+    public static string Supports => Get(nameof(Supports));
+    public static string Loads => Get(nameof(Loads));
+    public static string Reactions => Get(nameof(Reactions));
+    public static string Indicators => Get(nameof(Indicators));
+    public static string MaximumDeflection => Get(nameof(MaximumDeflection));
+    public static string GoverningMoment => Get(nameof(GoverningMoment));
+    public static string MaximumBendingStress => Get(nameof(MaximumBendingStress));
+    public static string SafetyFactorLabel => Get(nameof(SafetyFactorLabel));
+    public static string OverviewName => Get(nameof(OverviewName));
+    public static string OverviewType => Get(nameof(OverviewType));
+    public static string OverviewValue => Get(nameof(OverviewValue));
     public static string CalculationUnavailable => Get(nameof(CalculationUnavailable));
     public static string SupportsMissing => Get(nameof(SupportsMissing));
     public static string InsufficientSupport => Get(nameof(InsufficientSupport));
@@ -103,9 +116,4 @@ public static class Strings
     public static string GitHubLink => Get(nameof(GitHubLink));
     public static string LinkOpenError => Get(nameof(LinkOpenError));
     public static string LicenseOpenError => Get(nameof(LicenseOpenError));
-    public static string ResultsPending => Get(nameof(ResultsPending));
-    public static string DisplacementSymbol => Get(nameof(DisplacementSymbol));
-    public static string MomentSymbol => Get(nameof(MomentSymbol));
-    public static string StressSymbol => Get(nameof(StressSymbol));
-    public static string SafetySymbol => Get(nameof(SafetySymbol));
 }

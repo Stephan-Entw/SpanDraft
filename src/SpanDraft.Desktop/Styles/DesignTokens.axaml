@@ -54,9 +54,6 @@
   <Thickness x:Key="InlinePadding">8,4</Thickness>
   <Thickness x:Key="ToolbarButtonPadding">2,4,8,4</Thickness>
   <Thickness x:Key="ToolbarPadding">16,8</Thickness>
-  <Thickness x:Key="ProjectInfoPadding">24,8</Thickness>
-  <Thickness x:Key="StatusPadding">24,8</Thickness>
-  <Thickness x:Key="TopBorder">0,1,0,0</Thickness>
   <Thickness x:Key="BottomBorder">0,0,0,1</Thickness>
   <Thickness x:Key="SeparatorMargin">12,8</Thickness>
   <Thickness x:Key="UnitMargin">8,0,0,0</Thickness>

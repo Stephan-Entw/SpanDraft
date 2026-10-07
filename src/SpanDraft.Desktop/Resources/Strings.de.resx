@@ -23,7 +23,20 @@
   <data name="FixedSupport" xml:space="preserve"><value>Einspannung</value></data>
   <data name="PinnedSupport" xml:space="preserve"><value>Festlager</value></data>
   <data name="RollerSupport" xml:space="preserve"><value>Loslager</value></data>
-  <data name="Results" xml:space="preserve"><value>Ergebnisse</value></data>
+  <data name="BeamModel" xml:space="preserve"><value>Balkenmodell</value></data>
+  <data name="OverviewLength" xml:space="preserve"><value>Länge {0} mm</value></data>
+  <data name="OverviewPosition" xml:space="preserve"><value>Position [mm]</value></data>
+  <data name="Supports" xml:space="preserve"><value>Lager</value></data>
+  <data name="Loads" xml:space="preserve"><value>Lasten</value></data>
+  <data name="Reactions" xml:space="preserve"><value>Reaktionen</value></data>
+  <data name="Indicators" xml:space="preserve"><value>Kennwerte</value></data>
+  <data name="MaximumDeflection" xml:space="preserve"><value>Maximale Durchbiegung</value></data>
+  <data name="GoverningMoment" xml:space="preserve"><value>Maßgebendes Moment</value></data>
+  <data name="MaximumBendingStress" xml:space="preserve"><value>Maximale Biegespannung</value></data>
+  <data name="SafetyFactorLabel" xml:space="preserve"><value>Sicherheitsfaktor</value></data>
+  <data name="OverviewName" xml:space="preserve"><value>Name</value></data>
+  <data name="OverviewType" xml:space="preserve"><value>Typ</value></data>
+  <data name="OverviewValue" xml:space="preserve"><value>Wert</value></data>
   <data name="CalculationUnavailable" xml:space="preserve"><value>Berechnung nicht verfügbar</value></data>
   <data name="SupportsMissing" xml:space="preserve"><value>Lagerung fehlt</value></data>
   <data name="InsufficientSupport" xml:space="preserve"><value>Lagerung nicht ausreichend</value></data>
@@ -48,11 +61,6 @@
   <data name="GitHubLink" xml:space="preserve"><value>GitHub</value></data>
   <data name="LinkOpenError" xml:space="preserve"><value>Der Link konnte nicht im Browser geöffnet werden.</value></data>
   <data name="LicenseOpenError" xml:space="preserve"><value>Der mitgelieferte Lizenztext konnte nicht geöffnet werden.</value></data>
-  <data name="ResultsPending" xml:space="preserve"><value>Die Ergebnisansicht folgt in einem späteren Meilenstein.</value></data>
-  <data name="DisplacementSymbol" xml:space="preserve"><value>|w|max</value></data>
-  <data name="MomentSymbol" xml:space="preserve"><value>|M|max</value></data>
-  <data name="StressSymbol" xml:space="preserve"><value>σmax</value></data>
-  <data name="SafetySymbol" xml:space="preserve"><value>S</value></data>
   <data name="Support" xml:space="preserve"><value>Lager</value></data>
   <data name="SupportTypeLabel" xml:space="preserve"><value>Lagertyp</value></data>
   <data name="Position" xml:space="preserve"><value>Position X</value></data>

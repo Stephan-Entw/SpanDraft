@@ -19,6 +19,101 @@ public sealed class DesktopSchematicIntegrationTests
     private static BeamLayoutFrame Frame(EditorDocument document, double width = 1100, double height = 600) => new BeamLayoutState().Update(document, width, height)!;
     private static BeamRenderState Scene(EditorDocument document, BeamLayoutFrame frame) => BeamRenderState.Create(document, frame, DesktopLayoutFixture.Measure);
 
+    [Theory]
+    [InlineData(SupportType.Fixed)]
+    [InlineData(SupportType.Pinned)]
+    [InlineData(SupportType.Roller)]
+    public void MinimumPaneKeepsOneFixedLowerRowAndAdditionalLoadLabelsGrowOnlyTheUpperArea(SupportType type)
+    {
+        var support = new EditorSupport(Guid.NewGuid(), Mm(0), type, "A");
+        double previousHeight = 0;
+        foreach (int count in new[] { 1, 2, 6 })
+        {
+            var document = Document(Enumerable.Range(1, count)
+                .Select(i => Load(500, -1000, PointLoadKind.Force, "F" + i)).ToArray(), [support]);
+            var state = new BeamLayoutState();
+            var initial = state.Update(document, 1100, SchematicMetrics.MinimumBeamPaneHeight)!;
+            var request = Scene(document, initial);
+            var frame = state.Update(document, 1100, request.MinimumPaneHeight)!;
+            var scene = Scene(document, frame);
+            Assert.Equal(56, scene.RequiredBelowBeamSpace);
+            Assert.Equal(56, frame.Viewport.Height - frame.Viewport.BeamY);
+            Assert.Equal(8, frame.Viewport.Height + CoordinateAxisLayout.AxisY -
+                scene.Annotations.Where(a => a.IsSupport).Max(a => a.Bounds.Bottom));
+            Assert.Same(initial.Layout, frame.Layout);
+            Assert.Equal(request.MinimumPaneHeight, scene.MinimumPaneHeight);
+            Assert.All(scene.Annotations, label =>
+            {
+                Assert.True(label.Bounds.Top >= 0);
+                Assert.True(label.Bounds.Bottom <= frame.Viewport.Height);
+            });
+            if (count == 1)
+            {
+                Assert.Equal(180, frame.Viewport.Height);
+                Assert.Equal(124, frame.Viewport.BeamY);
+            }
+            else Assert.True(frame.Viewport.Height > previousHeight);
+            previousHeight = frame.Viewport.Height;
+
+            // The committed pane already has room for a placement preview row.
+            var preview = BeamRenderState.Create(document, frame, DesktopLayoutFixture.Measure,
+                loadPreview: new(Mm(500), PointLoadKind.Force, -1000), loadName: "Next");
+            Assert.Same(frame, preview.Frame);
+            Assert.All(preview.Annotations, label =>
+            {
+                Assert.True(label.Bounds.Top >= 0);
+                Assert.True(label.Bounds.Bottom <= frame.Viewport.Height);
+            });
+            Assert.Equal(scene.RequiredBelowBeamSpace, preview.RequiredBelowBeamSpace);
+        }
+    }
+
+    [Theory]
+    [InlineData(13)]
+    [InlineData(16)]
+    [InlineData(23)]
+    public void OverlappingSupportLabelsKeepRowSpacingWithoutTrailingPadding(double measuredHeight)
+    {
+        var document = Document(supports:
+        [
+            new(Guid.NewGuid(), Mm(500), SupportType.Pinned, "Left support"),
+            new(Guid.NewGuid(), Mm(501), SupportType.Roller, "Right support")
+        ]);
+        var state = new BeamLayoutState();
+        var initial = state.Update(document, 1100, 180)!;
+        Size Measure(string _) => new(160, measuredHeight);
+        var request = BeamRenderState.Create(document, initial, Measure);
+        var frame = state.Update(document, 1100, request.MinimumPaneHeight, request.RequiredBelowBeamSpace)!;
+        var scene = BeamRenderState.Create(document, frame, Measure);
+        var labels = scene.Annotations.OrderBy(a => a.Bounds.Top).ToArray();
+        Assert.Equal(2, labels.Length);
+        double rowHeight = Math.Max(16, measuredHeight);
+        Assert.Equal(rowHeight + 8, labels[1].Bounds.Top - labels[0].Bounds.Top);
+        Assert.Equal(40 + 2 * rowHeight + 8, scene.RequiredBelowBeamSpace);
+        Assert.Equal(rowHeight - measuredHeight,
+            frame.Viewport.Height - labels[1].Bounds.Bottom, 6);
+        Assert.InRange(frame.Viewport.Height + CoordinateAxisLayout.AxisY - labels[1].Bounds.Bottom, 8, 11);
+        Assert.Equal(request.MinimumPaneHeight, scene.MinimumPaneHeight);
+        Assert.Same(initial.Layout, frame.Layout);
+    }
+
+    [Fact]
+    public void ChangingOnlyTheLowerOverflowReserveReusesStationsAndFreezesDuringInteractions()
+    {
+        var document = Document([Load(500, -1000, PointLoadKind.Force, "F1")]);
+        var state = new BeamLayoutState();
+        var initial = state.Update(document, 1100, 600)!;
+        state.BeginInteraction(BeamPointerInteraction.LabelDrag);
+        Assert.Same(initial, state.Update(document, 1100, 600, 300));
+        state.EndInteraction();
+        var overflow = state.Update(document, 1100, 600, 300)!;
+        Assert.Same(initial.Layout, overflow.Layout);
+        Assert.Equal(300, overflow.Viewport.BeamY);
+        var reset = state.Update(document, 1100, 600)!;
+        Assert.Same(initial.Layout, reset.Layout);
+        Assert.Equal(initial.Viewport, reset.Viewport);
+    }
+
     [Fact]
     public void BeamAndAxisShareOneLayoutAndExactlyEqualStationAnchors()
     {
@@ -49,7 +144,7 @@ public sealed class DesktopSchematicIntegrationTests
         Assert.Same(initial, state.Update(document, 1100, 600));
         var taller = state.Update(document, 1100, 800)!;
         Assert.Same(initial.Layout, taller.Layout);
-        Assert.Equal(400, taller.Viewport.BeamY);
+        Assert.Equal(800 - SchematicMetrics.BelowBeamSpace, taller.Viewport.BeamY);
         var preview = new PointLoadPreview(Mm(401), PointLoadKind.Force, -100);
         var scene = BeamRenderState.Create(document, taller, DesktopLayoutFixture.Measure, loadPreview: preview, loadName: "F2");
         Assert.Equal(3, scene.Frame.Layout.Stations.Count);
@@ -93,7 +188,7 @@ public sealed class DesktopSchematicIntegrationTests
         Assert.Null(state.Interaction);
         var resized = state.Update(document, 1500, 800)!;
         Assert.NotSame(original.Layout, resized.Layout);
-        Assert.Equal(400, resized.Viewport.BeamY);
+        Assert.Equal(800 - SchematicMetrics.BelowBeamSpace, resized.Viewport.BeamY);
     }
 
     [Theory]
@@ -234,7 +329,7 @@ public sealed class DesktopSchematicIntegrationTests
         Assert.Equal(document.Loads[0].Id, PointLoadSymbol.HitTest(scene.Loads, bottom.X, bottom.Y));
         var label = Assert.Single(scene.Annotations);
         Assert.True(label.Bounds.Bottom < top.Y - SchematicMetrics.SymbolStrokeWidth / 2);
-        Assert.Equal("F7 = " + UiNumbers.Format(value) + " N", label.Text);
+        Assert.Equal("F7 = " + UiNumbers.Compact(value) + " N", label.Text);
         Assert.Equal(document.Loads[0].Id, PointLoadSymbol.ResolveEntity(glyph));
         Assert.True(SchematicMetrics.ForceHeight > 0);
     }
@@ -279,7 +374,7 @@ public sealed class DesktopSchematicIntegrationTests
         Assert.Equal(14.7721162952, PointLoadSymbol.MomentTip(true).Y, 10);
         Assert.Equal(-PointLoadSymbol.MomentTip(true).X, PointLoadSymbol.MomentTip(false).X);
         Assert.Equal(PointLoadSymbol.MomentTip(true).Y, PointLoadSymbol.MomentTip(false).Y);
-        Assert.Equal("M1 = " + UiNumbers.Format(first) + " Nm", scene.Annotations.Single(a => a.Id == document.Loads[0].Id).Text);
+        Assert.Equal("M1 = " + UiNumbers.Compact(first) + " Nm", scene.Annotations.Single(a => a.Id == document.Loads[0].Id).Text);
         Assert.Equal(2, document.ToBeamModel().Loads.Count);
         Assert.Equal(2, glyph.Entities.Count);
         Assert.Equal(2, scene.Annotations.Count);

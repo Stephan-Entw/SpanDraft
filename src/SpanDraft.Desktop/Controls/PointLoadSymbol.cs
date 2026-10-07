@@ -71,7 +71,7 @@ public static class PointLoadSymbol
         HitTestGlyph(Group(visuals), x, y) is { } glyph ? ResolveEntity(glyph, editedId) : null;
 
     public static string Label(PointLoadPreview preview, string name) => name.Trim() + " = " +
-        UiNumbers.Format(preview.Value) + (preview.Kind == PointLoadKind.Force ? " N" : " Nm");
+        UiNumbers.Compact(preview.Value) + (preview.Kind == PointLoadKind.Force ? " N" : " Nm");
 
     public static Point ForceTip(double value) => new(0,
         value > 0 ? -SchematicMetrics.ForceTopOffset : -SchematicMetrics.ForceBeamOffset);

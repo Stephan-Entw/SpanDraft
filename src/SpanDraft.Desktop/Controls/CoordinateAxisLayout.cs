@@ -13,7 +13,7 @@ public sealed record CoordinateAxisLayout(StationLayoutResult StationLayout, IRe
     public static CoordinateAxisLayout Create(StationLayoutResult layout, double paneWidth,
         Func<string, Size> measure, bool editing = false)
     {
-        var text = layout.Stations.Select(s => UiNumbers.Format(s.PhysicalX * 1000)).ToArray();
+        var text = layout.Stations.Select(s => UiNumbers.Compact(s.PhysicalX * 1000)).ToArray();
         var sizes = text.Select(measure).ToArray();
         double lineHeight = Math.Max(SchematicMetrics.AxisLabelLineHeight, sizes.Max(s => s.Height));
         if (editing) lineHeight = Math.Max(lineHeight, SchematicMetrics.LengthInputHeight);

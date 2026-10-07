@@ -23,7 +23,20 @@
   <data name="FixedSupport" xml:space="preserve"><value>Fixed Support</value></data>
   <data name="PinnedSupport" xml:space="preserve"><value>Pinned Support</value></data>
   <data name="RollerSupport" xml:space="preserve"><value>Roller Support</value></data>
-  <data name="Results" xml:space="preserve"><value>Results</value></data>
+  <data name="BeamModel" xml:space="preserve"><value>Beam model</value></data>
+  <data name="OverviewLength" xml:space="preserve"><value>Length {0} mm</value></data>
+  <data name="OverviewPosition" xml:space="preserve"><value>Position [mm]</value></data>
+  <data name="Supports" xml:space="preserve"><value>Supports</value></data>
+  <data name="Loads" xml:space="preserve"><value>Loads</value></data>
+  <data name="Reactions" xml:space="preserve"><value>Reactions</value></data>
+  <data name="Indicators" xml:space="preserve"><value>Indicators</value></data>
+  <data name="MaximumDeflection" xml:space="preserve"><value>Maximum deflection</value></data>
+  <data name="GoverningMoment" xml:space="preserve"><value>Governing moment</value></data>
+  <data name="MaximumBendingStress" xml:space="preserve"><value>Maximum bending stress</value></data>
+  <data name="SafetyFactorLabel" xml:space="preserve"><value>Safety factor</value></data>
+  <data name="OverviewName" xml:space="preserve"><value>Name</value></data>
+  <data name="OverviewType" xml:space="preserve"><value>Type</value></data>
+  <data name="OverviewValue" xml:space="preserve"><value>Value</value></data>
   <data name="CalculationUnavailable" xml:space="preserve"><value>Calculation unavailable</value></data>
   <data name="SupportsMissing" xml:space="preserve"><value>Supports missing</value></data>
   <data name="InsufficientSupport" xml:space="preserve"><value>Insufficient support</value></data>
@@ -48,11 +61,6 @@
   <data name="GitHubLink" xml:space="preserve"><value>GitHub</value></data>
   <data name="LinkOpenError" xml:space="preserve"><value>The link could not be opened in your browser.</value></data>
   <data name="LicenseOpenError" xml:space="preserve"><value>The bundled license text could not be opened.</value></data>
-  <data name="ResultsPending" xml:space="preserve"><value>Results view will follow in a later milestone.</value></data>
-  <data name="DisplacementSymbol" xml:space="preserve"><value>|w|max</value></data>
-  <data name="MomentSymbol" xml:space="preserve"><value>|M|max</value></data>
-  <data name="StressSymbol" xml:space="preserve"><value>σmax</value></data>
-  <data name="SafetySymbol" xml:space="preserve"><value>S</value></data>
   <data name="Support" xml:space="preserve"><value>Support</value></data>
   <data name="SupportTypeLabel" xml:space="preserve"><value>Support type</value></data>
   <data name="Position" xml:space="preserve"><value>Position X</value></data>

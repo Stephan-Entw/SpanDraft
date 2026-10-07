@@ -2,13 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
              xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             xmlns:views="clr-namespace:SpanDraft.Desktop.Views"
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Svg.Controls.Skia.Avalonia"
              xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
              x:Class="SpanDraft.Desktop.Views.EditorView"
              x:DataType="vm:EditorViewModel" KeyDown="EditorKeyDown">
-  <Grid RowDefinitions="Auto,Auto,*,Auto">
+  <Grid RowDefinitions="Auto,*">
     <!-- The compositor needs full opacity handling on the SVGs' ancestor. -->
-    <Border BorderThickness="{DynamicResource BottomBorder}" BorderBrush="{DynamicResource Border}"
+    <Border x:Name="EditorToolbar" BorderThickness="{DynamicResource BottomBorder}" BorderBrush="{DynamicResource Border}"
             Background="{DynamicResource Surface}" Padding="{DynamicResource ToolbarPadding}"
             RenderOptions.RequiresFullOpacityHandling="True">
       <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
@@ -51,42 +52,20 @@
         </ToggleButton>
       </StackPanel>
     </Border>
-    <Border Grid.Row="1" Padding="{DynamicResource ProjectInfoPadding}" BorderThickness="{DynamicResource NoBorder}" Background="{DynamicResource CanvasBackground}"
-            BorderBrush="{DynamicResource Border}">
-      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
-        <TextBlock Text="{Binding ProjectInfo}" VerticalAlignment="Center" Classes="bodyStrong" />
-        <Button Content="{x:Static resources:Strings.Change}" Command="{Binding ChangeProjectCommand}" Classes="ghost" />
-      </StackPanel>
-    </Border>
-    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-      <controls:BeamEditorSurface />
-    </ScrollViewer>
-    <Border Grid.Row="3" Padding="{DynamicResource StatusPadding}" BorderThickness="{DynamicResource TopBorder}"
-            BorderBrush="{DynamicResource Border}"
-            Background="{DynamicResource SurfaceSubtle}">
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Text="{Binding Presentation.StatusText}" IsVisible="{Binding !Presentation.IsSuccess}" VerticalAlignment="Center" />
-        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}" IsVisible="{Binding Presentation.IsSuccess}" VerticalAlignment="Center">
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <TextBlock Text="{x:Static resources:Strings.DisplacementSymbol}" Classes="propertyLabel" />
-            <TextBlock Text="{Binding Presentation.Displacement}" />
-          </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <TextBlock Text="{x:Static resources:Strings.MomentSymbol}" Classes="propertyLabel" />
-            <TextBlock Text="{Binding Presentation.Moment}" />
-          </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <TextBlock Text="{x:Static resources:Strings.StressSymbol}" Classes="propertyLabel" />
-            <TextBlock Text="{Binding Presentation.Stress}" />
-          </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <TextBlock Text="{x:Static resources:Strings.SafetySymbol}" Classes="propertyLabel" />
-            <TextBlock Text="{Binding Presentation.SafetyFactor}" />
-          </StackPanel>
-        </StackPanel>
-        <Button Grid.Column="1" Content="{x:Static resources:Strings.Results}" IsEnabled="False"
-                ToolTip.Tip="{x:Static resources:Strings.ResultsPending}" Classes="secondary" />
-      </Grid>
-    </Border>
+    <Grid Grid.Row="1" x:Name="EditorWorkspace">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="4*" />
+        <ColumnDefinition Width="*" MinWidth="320" />
+      </Grid.ColumnDefinitions>
+      <!-- Reserve the scrollbar gutter so vertical overflow never changes station geometry. -->
+      <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
+        <Grid x:Name="EditorContent" RowDefinitions="Auto,*" MinHeight="{Binding #EditorScroll.Viewport.Height}"
+              Background="{DynamicResource CanvasBackground}">
+          <controls:BeamEditorSurface VerticalAlignment="Top" />
+          <Border Grid.Row="1" x:Name="DiagramSpace" />
+        </Grid>
+      </ScrollViewer>
+      <views:ProjectOverviewView Grid.Column="1" />
+    </Grid>
   </Grid>
 </UserControl>

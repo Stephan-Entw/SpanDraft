@@ -114,6 +114,11 @@ public partial class BeamEditorSurface : UserControl
     private void SupportOutsidePointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_editor is null || _editor.PreserveDrafts || OverMenu(e.Source) || (!_editor.IsSupportFlyoutVisible && !_editor.IsLoadFlyoutVisible && !_editor.IsDistributedLoadFlyoutVisible)) return;
+        // Overview name buttons open the existing editors on Click (also via keyboard).
+        // Do not consume their press or discard the same component's active buffer here.
+        if (e.Source is Control overviewSource && (overviewSource is Button { } overviewButton
+                && overviewButton.Classes.Contains("overviewEntityAction")
+            || overviewSource.GetVisualAncestors().OfType<Button>().Any(b => b.Classes.Contains("overviewEntityAction")))) return;
         if (OverSupportFlyout(e.Source) || OverLoadFlyout(e.Source) || OverDistributedFlyout(e.Source)) return;
         if (DistributedLoadPopup.IsOpen && new Rect(DistributedLoadEditor.Bounds.Size).Contains(e.GetPosition(DistributedLoadEditor))) return;
         if (LoadPopup.IsOpen && new Rect(LoadEditor.Bounds.Size).Contains(e.GetPosition(LoadEditor))) return;
@@ -179,7 +184,8 @@ public partial class BeamEditorSurface : UserControl
                 || _editor.DistributedLoadState == DistributedLoadInteraction.Placement;
             if (!placement && _gesture is null && _loadGesture is null && _distributedGesture is null
                 && _placementClick is null && _labelGesture is null) _layout.EndInteraction();
-            var frame = _layout.Update(_editor.Document, BeamPane.Bounds.Width, BeamPane.Bounds.Height);
+            var frame = _layout.Update(_editor.Document, BeamPane.Bounds.Width, BeamPane.Bounds.Height,
+                Frame?.Viewport.BelowBeamSpace ?? SpanDraft.Desktop.Layout.SchematicMetrics.BelowBeamSpace);
             if (frame is null) return;
             if (placement && _layout.Snapshot is null)
                 frame = _layout.BeginInteraction(_editor.Interaction == SupportInteraction.Placement
@@ -189,7 +195,14 @@ public partial class BeamEditorSurface : UserControl
             // Reserve from committed labels, including a spare preview row. Neither
             // hover nor transient text changes the pane's requested height.
             var committed = BeamRenderState.Create(_editor.Document, frame, measure, presentation: _editor.EditorPresentation);
-            if (_labelGesture is null) BeamPane.MinHeight = committed.MinimumPaneHeight;
+            if (_labelGesture is null)
+            {
+                BeamPane.MinHeight = committed.MinimumPaneHeight;
+                // Keep the ordinary lower reserve fixed when the upper area grows.
+                // Accommodate genuine annotation overflow only after a gesture ends.
+                frame = _layout.Update(_editor.Document, BeamPane.Bounds.Width, BeamPane.Bounds.Height,
+                    committed.RequiredBelowBeamSpace)!;
+            }
             _scene = BeamRenderState.Create(_editor.Document, frame, measure,
                 _editor.Preview, _editor.HiddenSupportId, _editor.SupportPreviewName,
                 _editor.LoadPreview, _editor.HiddenLoadId, _editor.LoadPreviewName, _editor.RenderPresentation,

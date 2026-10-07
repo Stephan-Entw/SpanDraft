@@ -36,7 +36,7 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
     public bool IsDisplay => !IsEditing;
     public bool HasError { get => _hasError; private set => Set(ref _hasError, value); }
     public string ErrorText => _commitError ?? Strings.InvalidLength;
-    public string DisplayText => UiNumbers.Format(read().Millimeters) + " mm";
+    public string DisplayText => UiNumbers.Compact(read().Millimeters) + " mm";
 
     public void Begin()
     {

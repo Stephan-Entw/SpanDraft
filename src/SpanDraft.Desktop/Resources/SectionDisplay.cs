@@ -19,5 +19,5 @@ public static class SectionDisplay
     };
 
     private static string Caption(string format, params double[] values) =>
-        string.Format(CultureInfo.CurrentUICulture, format, values.Select(v => (object)UiNumbers.Format(v)).ToArray());
+        string.Format(CultureInfo.CurrentUICulture, format, values.Select(v => (object)UiNumbers.Compact(v)).ToArray());
 }

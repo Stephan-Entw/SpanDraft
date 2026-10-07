@@ -42,7 +42,7 @@ public sealed record AnalysisPresentationState(AnalysisPresentationKind Kind, Be
     public string Displacement => Result is { } r
         ? UiNumbers.Indicator(r.Engineering.TransverseDisplacementMagnitude.Meters * 1000) + " mm" : "";
     public string Moment => Result is { } r
-        ? UiNumbers.Indicator(r.Engineering.BendingMomentMagnitude.NewtonMeters / 1000) + " kNm" : "";
+        ? UiNumbers.Indicator(r.Engineering.BendingMomentMagnitude.NewtonMeters) + " Nm" : "";
     public string Stress => Result is { } r
         ? UiNumbers.Indicator(r.Engineering.MaximumBendingStress.Megapascals) + " MPa" : "";
     public string SafetyFactor => Result is { } r ? UiNumbers.Indicator(r.Engineering.SafetyFactor) : "";

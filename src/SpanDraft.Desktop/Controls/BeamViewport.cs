@@ -1,7 +1,15 @@
+using SpanDraft.Desktop.Layout;
+
 namespace SpanDraft.Desktop.Controls;
 
 /// <summary>Pane geometry only. Horizontal physical mapping belongs to StationTransform.</summary>
 public readonly record struct BeamViewport(double Width, double Height, double BeamY)
 {
-    public static BeamViewport Fit(double width, double height) => new(width, height, height / 2);
+    public double BelowBeamSpace { get; init; } = SchematicMetrics.BelowBeamSpace;
+
+    public static BeamViewport Fit(double width, double height, double belowBeamSpace = SchematicMetrics.BelowBeamSpace)
+    {
+        double reserve = Math.Max(SchematicMetrics.BelowBeamSpace, belowBeamSpace);
+        return new(width, height, Math.Max(0, height - reserve)) { BelowBeamSpace = reserve };
+    }
 }
