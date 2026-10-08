@@ -57,34 +57,60 @@ public sealed class DesktopNativeTextMeasurementTests
         Assert.Equal(text, caption.Text);
         Assert.False(caption.ClipToBounds);
 
-        // Fonts can place accents outside the line box, despite having valid glyphs.
-        // Check the actual pixels above it; the former clip removes those pixels.
+        var line = Assert.Single(caption.TextLayout.TextLines);
+        var runs = line.TextRuns.OfType<ShapedTextRun>().ToArray();
+        Assert.NotEmpty(runs);
+        Assert.Equal(text, string.Concat(runs.Select(run => run.Text.ToString())));
+        foreach (var run in runs)
+        {
+            Assert.NotEmpty(run.GlyphRun.GlyphInfos);
+            foreach (var glyph in run.GlyphRun.GlyphInfos)
+                Assert.NotEqual(0, glyph.GlyphIndex);
+        }
+
+        // Use the rendered glyphs' ink bounds in line coordinates: platform fonts
+        // differ in whether accents extend above the line box at all.
+        double inkTop = runs.Min(run =>
+            run.GlyphRun.InkBounds.Top + line.Baseline - run.GlyphRun.BaselineOrigin.Y);
         var origin = caption.TranslatePoint(default, host)!.Value;
         int top = (int)Math.Floor(origin.Y * 2);
         int left = (int)Math.Floor(origin.X * 2);
         int right = (int)Math.Ceiling((origin.X + caption.Bounds.Width) * 2);
         var visible = RenderCaption();
         Assert.Contains(visible.Pixels.Where((_, i) => i % 4 == 3), alpha => alpha != 0);
+        var reference = RenderCaption(drawLayoutOnly: true);
+        Assert.Equal(reference.Pixels, visible.Pixels);
         if (button)
         {
             caption.ClipToBounds = true;
             var clipped = RenderCaption();
-            Assert.True(visible.Above > clipped.Above,
-                $"No additional accent pixels for {text}: {visible.Above} vs {clipped.Above}");
-        }
-        else
-        {
-            // Lowercase diacritics may fit inside the font's line box. They must
-            // still render differently from an ASCII substitution.
-            caption.Text = text.Replace("ü", "u").Replace("ä", "a").Replace("ö", "o").Replace("ß", "ss");
-            var ascii = RenderCaption();
-            Assert.NotEqual(visible.Pixels, ascii.Pixels);
+            Assert.Contains(clipped.Pixels.Where((_, i) => i % 4 == 3), alpha => alpha != 0);
+            Assert.True(visible.Above >= clipped.Above);
+            // InkBounds are conservative. Require a difference only when the
+            // unclipped layout also proves that visible ink exceeds the line box.
+            if (inkTop < 0 && reference.Above > 0)
+                Assert.True(visible.Above > clipped.Above,
+                    $"No additional accent pixels for {text} with ink top {inkTop}: {visible.Above} vs {clipped.Above}");
+            caption.ClipToBounds = false;
         }
 
-        (byte[] Pixels, int Above) RenderCaption()
+        // Diacritics must render differently from ASCII even when they fit
+        // entirely inside the platform font's line box.
+        caption.Text = text.Replace("Ä", "A").Replace("Ö", "O").Replace("Ü", "U")
+            .Replace("ü", "u").Replace("ä", "a").Replace("ö", "o").Replace("ß", "ss");
+        var ascii = RenderCaption();
+        Assert.NotEqual(visible.Pixels, ascii.Pixels);
+
+        (byte[] Pixels, int Above) RenderCaption(bool drawLayoutOnly = false)
         {
             using var bitmap = new RenderTargetBitmap(new PixelSize(800, 160), new Vector(192, 192));
-            bitmap.Render(host);
+            if (drawLayoutOnly)
+            {
+                using var context = bitmap.CreateDrawingContext();
+                caption.TextLayout.Draw(context, origin);
+            }
+            else
+                bitmap.Render(host);
             using var pixels = new WriteableBitmap(bitmap.PixelSize, bitmap.Dpi, PixelFormat.Bgra8888, AlphaFormat.Premul);
             using var buffer = pixels.Lock();
             bitmap.CopyPixels(buffer);
