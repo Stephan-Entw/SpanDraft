@@ -20,8 +20,9 @@ m², m⁴, m³ bzw. N/m. Explizite Factories und benannte Properties ermögliche
 die benötigten Umrechnungen; implizite Konvertierungen und allgemeine
 Einheitenarithmetik sind nicht vorgesehen.
 
-Alle gespeicherten Werte müssen endlich sein. Geometrische Größen sind
-nichtnegativ. Der Standardwert eines Werttyps ist 0, damit insbesondere
+Alle gespeicherten Werte müssen endlich sein. Abstände, Flächen sowie
+Flächenträgheits- und Widerstandsmomente sind nichtnegativ.
+Der Standardwert eines Werttyps ist 0, damit insbesondere
 Positionen am Ursprung gültig sind. Balkenlänge, Querschnittsabmessungen,
 Querschnittskennwerte, E und Streckgrenze müssen im jeweiligen Fachobjekt
 streng positiv sein. Kraft, Moment und Linienlast dürfen auch negativ oder
@@ -43,6 +44,69 @@ Hohlquerschnitte werden über Außenabmessungen und konstante Wandstärke
 definiert. Die Innenabmessungen müssen positiv bleiben. Rechteckrohre haben
 idealisierte scharfe Ecken. Reale Herstellerkennwerte können mit
 `CustomSection` ohne Geometrieapproximation übernommen werden.
+
+## Allgemeiner Querschnitts-Geometriekern
+
+`Core.Sections.Geometry` beschreibt eine zusammenhängende Materialfläche mit
+einer einfachen Außenkontur und optionalen einfachen Innenkonturen.
+Innenkonturen liegen strikt innen, berühren keine Kontur und dürfen weder
+überlappen noch ineinander liegen. Konturen bestehen aus geordneten Geraden
+und exakten Kreisbögen; benachbarte Endpunkte müssen exakt übereinstimmen.
+Selbstüberschneidungen und überlappende Elemente sind ungültig. Die Konturrichtung
+(CW/CCW) ändert die Kennwerte nicht; Löcher werden stets abgezogen.
+Geometrien, Konturen und ihre kopierten Elementlisten sind immutable.
+
+Ein `SectionArc` wird durch Mittelpunkt, Startpunkt, Endpunkt und Laufrichtung
+eindeutig bestimmt. Gleiche Endpunkte bedeuten einen Vollkreis; verschiedene
+Endpunkte müssen eine darstellbare, von null verschiedene Winkeländerung
+definieren. Die beiden Radien dürfen nur um Floating-Point-Rundung abweichen
+(relativ höchstens `64 * 2.2204460492503131e-16`). Endpunkte werden nicht
+verschoben oder repariert. Der Radius stammt aus dem Startpunktabstand;
+`Reversed()` erhält Radius und Sweepbetrag desselben analytischen Bogens.
+Ein späterer Editor muss gemeinsame Endpunkte wiederverwenden und die
+Laufrichtung ausdrücklich festlegen.
+
+Querschnittskoordinaten verwenden y horizontal und z vertikal.
+`SectionCoordinate` speichert vorzeichenbehaftete Koordinaten in m;
+`Length` bleibt ein nichtnegativer Abstand. Der Schwerpunkt ist (yS, zS).
+Für die Schwerpunktkoordinaten Y = y - yS, Z = z - zS gilt:
+
+- A = ∫ dA; yS = ∫ y dA / A; zS = ∫ z dA / A.
+- Iy = ∫ Z² dA, Iz = ∫ Y² dA.
+- Iyz = ∫ YZ dA, ausdrücklich ohne vorgeschaltetes Minuszeichen.
+  `ProductMomentOfArea` speichert dieses vorzeichenbehaftete Moment in m⁴;
+  `SecondMomentOfArea` bleibt nichtnegativ.
+- Der Übergang von Ursprungs- zu Schwerpunktmomenten ist
+  Iy = Iy0 - A zS², Iz = Iz0 - A yS², Iyz = Iyz0 - A yS zS.
+
+`SectionGeometry.CalculateProperties()` liefert Flächen- und Schwerpunktmomente,
+Hauptmomente und vier elastische Widerstandsmomente. Geraden und Kreisbögen
+werden analytisch über die Kontur integriert; Bögen werden nicht polygonisiert.
+Randfaserabstände berücksichtigen auch innere Extrempunkte auf Kreisbögen.
+
+I1 ist das größere, I2 das kleinere Hauptträgheitsmoment. Die gerichtete
+erste Hauptachse hat e1 = (cos θ, sin θ), die zweite e2 = (-sin θ, cos θ).
+θ läuft von +y nach +z und liegt in [-π/2, π/2); die vertikale erste Achse
+zeigt somit nach -z. Diese Achsen diagonalisieren
+`[[Iy, -Iyz], [-Iyz, Iz]]`. Bei einem Hauptmomentunterschied von höchstens
+`64 * 2.2204460492503131e-16 * max(Iy, Iz)` wird θ deterministisch auf 0
+gesetzt. Dies ist ausschließlich eine relative Rundungsregel; I1/I2 und Iyz
+werden dadurch nicht künstlich gleichgesetzt beziehungsweise auf null gesetzt.
+
+Für Biegung um Achse 1 ist d1 = (Y, Z) · e2, für Achse 2 ist
+d2 = (Y, Z) · e1. Die positiven und negativen Randfaserabstände sind
+c1+ = max(d1), c1- = -min(d1), c2+ = max(d2), c2- = -min(d2).
+Alle vier Abstände sind positive Beträge. Es gilt W1± = I1 / c1± und
+W2± = I2 / c2±. Die Vorzeichen bezeichnen die jeweilige geometrische Seite,
+keine Aussage über Zug oder Druck. Eine Achsenumorientierung um π vertauscht
+jeweils die positiven und negativen Seiten.
+
+Eingaben und Ergebnisse müssen als endliche double-Werte darstellbar sein;
+A, Iy, Iz, I1, I2, Randfaserabstände und W müssen streng positiv bleiben.
+Nicht darstellbare Werte werden mit Argument-Exceptions abgewiesen.
+Rundungsvergleiche bei analytischen Schnittpunkten sind keine fachlichen
+Längen- oder Flächentoleranzen. In den Eingabekoordinaten bereits verlorene
+Geometriedetails können nicht rekonstruiert werden.
 
 ## Modellvalidierung
 
