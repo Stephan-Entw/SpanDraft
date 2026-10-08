@@ -1,4 +1,3 @@
-using System.Globalization;
 using SpanDraft.Analysis;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
@@ -212,32 +211,27 @@ public sealed class DesktopSupportRefinementTests
     [Fact]
     public void LengthBufferRemainsRawWithoutFormattingCommitOrAnalysisWhileTyping()
     {
-        var previous = CultureInfo.CurrentUICulture;
-        try
+        using var scope = new ResultCultureScope("de-DE", "de-DE");
+        var s = new Session();
+        var document = s.Editor.Document;
+        var input = s.Editor.DimensionLength;
+        input.Begin();
+        foreach (var text in new[] { "1", "12", "1234,", "01234,500" })
         {
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("de-DE");
-            var s = new Session();
-            var document = s.Editor.Document;
-            var input = s.Editor.DimensionLength;
-            input.Begin();
-            foreach (var text in new[] { "1", "12", "1234,", "01234,500" })
-            {
-                input.Text = text;
-                Assert.Equal(text, input.Text);
-                Assert.Same(document, s.Editor.Document);
-                Assert.Equal(1, s.Calls);
-            }
-            Assert.True(input.Confirm());
-            Assert.Equal("1234,5", input.Text);
-            Assert.Equal(2, s.Calls);
-            input.Begin();
-            input.Text = "abc";
-            Assert.False(input.Confirm());
-            Assert.Equal("abc", input.Text);
-            input.Cancel();
-            Assert.Equal("1234,5", input.Text);
-            Assert.Equal(2, s.Calls);
+            input.Text = text;
+            Assert.Equal(text, input.Text);
+            Assert.Same(document, s.Editor.Document);
+            Assert.Equal(1, s.Calls);
         }
-        finally { CultureInfo.CurrentUICulture = previous; }
+        Assert.True(input.Confirm());
+        Assert.Equal("1234,5", input.Text);
+        Assert.Equal(2, s.Calls);
+        input.Begin();
+        input.Text = "abc";
+        Assert.False(input.Confirm());
+        Assert.Equal("abc", input.Text);
+        input.Cancel();
+        Assert.Equal("1234,5", input.Text);
+        Assert.Equal(2, s.Calls);
     }
 }

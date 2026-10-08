@@ -233,29 +233,24 @@ public sealed class DesktopPointLoadTests
     [InlineData(PointLoadKind.Moment, "1,234.5")]
     public void InvalidValueKeepsLastValidPreviewAndFlyoutOpen(PointLoadKind kind, string text)
     {
-        var old = CultureInfo.CurrentUICulture;
-        try
-        {
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-            var s = new Session();
-            var load = s.Add(kind);
-            var document = s.Editor.Document;
-            s.Editor.EditLoad(load.Id);
-            s.Editor.LoadDraft!.ValueText = "123";
-            s.Editor.LoadDraft.ValueText = text;
-            Assert.True(s.Editor.LoadDraft.HasValueError);
-            Assert.Equal(123, s.Editor.LoadPreview!.Value);
-            Assert.True(s.Editor.LoadPreview.IsInvalid);
-            Assert.False(s.Editor.ConfirmLoad());
-            Assert.True(s.Editor.IsLoadFlyoutVisible);
-            Assert.Same(document, s.Editor.Document);
-            Assert.Equal(2, s.Calls);
-            s.Editor.LoadDraft.ValueText = "0";
-            Assert.True(s.Editor.ConfirmLoad());
-            Assert.Equal(0, s.Editor.Document.Loads[0].Value);
-            Assert.Equal(3, s.Calls);
-        }
-        finally { CultureInfo.CurrentUICulture = old; }
+        using var scope = new ResultCultureScope("en-US", "en-US");
+        var s = new Session();
+        var load = s.Add(kind);
+        var document = s.Editor.Document;
+        s.Editor.EditLoad(load.Id);
+        s.Editor.LoadDraft!.ValueText = "123";
+        s.Editor.LoadDraft.ValueText = text;
+        Assert.True(s.Editor.LoadDraft.HasValueError);
+        Assert.Equal(123, s.Editor.LoadPreview!.Value);
+        Assert.True(s.Editor.LoadPreview.IsInvalid);
+        Assert.False(s.Editor.ConfirmLoad());
+        Assert.True(s.Editor.IsLoadFlyoutVisible);
+        Assert.Same(document, s.Editor.Document);
+        Assert.Equal(2, s.Calls);
+        s.Editor.LoadDraft.ValueText = "0";
+        Assert.True(s.Editor.ConfirmLoad());
+        Assert.Equal(0, s.Editor.Document.Loads[0].Value);
+        Assert.Equal(3, s.Calls);
     }
 
     [Theory]
