@@ -8,6 +8,9 @@ public partial class EditorView : UserControl
 {
     public EditorView() => InitializeComponent();
 
+    private void WorkspaceSizeChanged(object? sender, SizeChangedEventArgs e) =>
+        EditorScroll.MaxHeight = e.NewSize.Height * 0.6;
+
     private void EditorKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Escape || DataContext is not EditorViewModel editor) return;

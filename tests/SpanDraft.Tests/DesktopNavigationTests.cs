@@ -372,7 +372,7 @@ public sealed class DesktopNavigationTests
     [InlineData("de-DE", 1100, 650)]
     [InlineData("en-US", 1250, 800)]
     [InlineData("de-DE", 1600, 900)]
-    public void ModelAndAxisStayAtTopWithBlankSpaceBelowAndNoHeightDrivenGeometryChanges(
+    public void ModelAndAxisStayAtTopWithDiagramsBelowAndNoHeightDrivenGeometryChanges(
         string culture, double width, double height)
     {
         using var environment = new DesktopControlEnvironment();
@@ -390,11 +390,11 @@ public sealed class DesktopNavigationTests
         var pane = surface.FindControl<Grid>("BeamPane")!;
         var canvas = surface.FindControl<BeamCanvas>("TechnicalCanvas")!;
         var axis = surface.FindControl<CoordinateAxisPane>("CoordinateAxis")!;
-        var space = view.FindControl<Border>("DiagramSpace")!;
+        var diagrams = view.FindControl<ScrollViewer>("DiagramScroll")!;
         var scroll = view.FindControl<ScrollViewer>("EditorScroll")!;
         Assert.Equal(0, surface.Bounds.Top);
         Assert.Equal(pane.Bounds.Bottom, axis.Bounds.Top);
-        Assert.Equal(surface.Bounds.Bottom, space.Bounds.Top);
+        Assert.Equal(scroll.Bounds.Bottom, diagrams.Bounds.Top);
         Assert.Equal(SchematicMetrics.MinimumBeamPaneHeight, pane.Bounds.Height);
         Assert.Equal(124, canvas.Scene!.Frame.Viewport.BeamY);
         Assert.Equal(SchematicMetrics.BelowBeamSpace, pane.Bounds.Height - canvas.Scene.Frame.Viewport.BeamY);
@@ -407,19 +407,20 @@ public sealed class DesktopNavigationTests
             Assert.True(label.Bounds.Top >= 0);
             Assert.True(label.Bounds.Bottom <= pane.Bounds.Height);
         });
-        Assert.True(axis.Bounds.Bottom < scroll.Viewport.Height);
-        Assert.True(space.Bounds.Height > 200);
+        Assert.True(axis.Bounds.Bottom <= scroll.Viewport.Height);
+        Assert.True(diagrams.Bounds.Height > 200);
+        Assert.Equal(3, view.GetVisualDescendants().OfType<ResultDiagram>().Count());
         Assert.Equal(ScrollBarVisibility.Disabled, scroll.HorizontalScrollBarVisibility);
         var frame = canvas.Scene.Frame;
         Assert.Equal(culture == "de-DE" ? "F1 = -13,3·10³ N" : "F1 = -13.3·10³ N",
             canvas.Scene.Annotations.Single(a => !a.IsSupport).Text);
         double axisTop = axis.Bounds.Top;
-        double blankHeight = space.Bounds.Height;
+        double diagramHeight = diagrams.Bounds.Height;
         Layout(window, width, height + 200);
         Assert.Same(frame.Layout, canvas.Scene.Frame.Layout);
         Assert.Equal(frame.Viewport, canvas.Scene.Frame.Viewport);
         Assert.Equal(axisTop, axis.Bounds.Top);
-        Assert.Equal(blankHeight + 200, space.Bounds.Height);
+        Assert.Equal(diagramHeight + 200, diagrams.Bounds.Height);
 
         // The existing length editor reserves only axis space, without moving the model.
         model.Editor.DimensionLength.Begin();
@@ -481,27 +482,27 @@ public sealed class DesktopNavigationTests
         model.Setup.ApplyCommand.Execute(null);
         Layout(window);
         var view = Assert.Single(window.GetVisualDescendants().OfType<EditorView>());
-        var scroll = view.FindControl<ScrollViewer>("EditorScroll")!;
-        var space = view.FindControl<Border>("DiagramSpace")!;
+        var editorScroll = view.FindControl<ScrollViewer>("EditorScroll")!;
+        var scroll = view.FindControl<ScrollViewer>("DiagramScroll")!;
         var canvas = Assert.Single(view.GetVisualDescendants().OfType<BeamCanvas>());
         var axis = Assert.Single(view.GetVisualDescendants().OfType<CoordinateAxisPane>());
         var overview = Assert.Single(view.GetVisualDescendants().OfType<ProjectOverviewView>());
         var sidebarScroll = overview.FindControl<ScrollViewer>("OverviewScroll")!;
         var frame = canvas.Scene!.Frame;
         double axisTop = axis.Bounds.Top;
-        Assert.True(scroll.Extent.Height <= scroll.Viewport.Height);
-        // Simulate future tall content below the axis without adding product features.
-        space.MinHeight = 1000;
-        Layout(window);
+        Assert.True(editorScroll.Extent.Height <= editorScroll.Viewport.Height);
         Assert.True(scroll.Extent.Height > scroll.Viewport.Height);
         Assert.Equal(frame.Viewport, canvas.Scene.Frame.Viewport);
         Assert.Same(frame.Layout, canvas.Scene.Frame.Layout);
         Assert.Same(frame.Layout, axis.StationLayout);
         Assert.Equal(axisTop, axis.Bounds.Top);
         var sidebarOffset = sidebarScroll.Offset;
-        scroll.Offset = new Vector(0, 150);
+        var editorOffset = editorScroll.Offset;
+        double requestedOffset = Math.Min(100, scroll.Extent.Height - scroll.Viewport.Height);
+        scroll.Offset = new Vector(0, requestedOffset);
         Layout(window);
-        Assert.Equal(150, scroll.Offset.Y);
+        Assert.Equal(requestedOffset, scroll.Offset.Y);
+        Assert.Equal(editorOffset, editorScroll.Offset);
         Assert.Equal(sidebarOffset, sidebarScroll.Offset);
         Assert.Equal(frame.Viewport, canvas.Scene.Frame.Viewport);
         Assert.Same(frame.Layout, canvas.Scene.Frame.Layout);

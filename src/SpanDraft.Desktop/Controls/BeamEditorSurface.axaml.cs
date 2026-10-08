@@ -8,6 +8,7 @@ using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 
@@ -15,6 +16,10 @@ namespace SpanDraft.Desktop.Controls;
 
 public partial class BeamEditorSurface : UserControl
 {
+    public static readonly DirectProperty<BeamEditorSurface, StationLayoutResult?> StationLayoutProperty =
+        AvaloniaProperty.RegisterDirect<BeamEditorSurface, StationLayoutResult?>(nameof(StationLayout), surface => surface.StationLayout);
+    private StationLayoutResult? _stationLayout;
+    public StationLayoutResult? StationLayout => _stationLayout;
     private EditorViewModel? _editor;
     private readonly BeamLayoutState _layout = new();
     private BeamRenderState? _scene;
@@ -52,6 +57,7 @@ public partial class BeamEditorSurface : UserControl
                 _editor.InteractionsCancelling -= CancelSurfaceInteractions;
             }
             _layout.EndInteraction();
+            SetAndRaise(StationLayoutProperty, ref _stationLayout, null);
             SelectionPopup.IsOpen = false;
             _editor = null;
             SupportPopup.IsOpen = false;
@@ -176,7 +182,12 @@ public partial class BeamEditorSurface : UserControl
 
     private void SynchronizeVisuals()
     {
-        if (_synchronizing || _editor is null) return;
+        if (_synchronizing) return;
+        if (_editor is null)
+        {
+            SetAndRaise(StationLayoutProperty, ref _stationLayout, null);
+            return;
+        }
         _synchronizing = true;
         try
         {
@@ -186,7 +197,11 @@ public partial class BeamEditorSurface : UserControl
                 && _placementClick is null && _labelGesture is null) _layout.EndInteraction();
             var frame = _layout.Update(_editor.Document, BeamPane.Bounds.Width, BeamPane.Bounds.Height,
                 Frame?.Viewport.BelowBeamSpace ?? SpanDraft.Desktop.Layout.SchematicMetrics.BelowBeamSpace);
-            if (frame is null) return;
+            if (frame is null)
+            {
+                SetAndRaise(StationLayoutProperty, ref _stationLayout, null);
+                return;
+            }
             if (placement && _layout.Snapshot is null)
                 frame = _layout.BeginInteraction(_editor.Interaction == SupportInteraction.Placement
                     ? BeamPointerInteraction.SupportPlacement : _editor.LoadState == LoadInteraction.Placement
@@ -209,6 +224,7 @@ public partial class BeamEditorSurface : UserControl
                 _editor.DistributedLoadPreview, _editor.HiddenDistributedLoadId, _editor.DistributedLoadPreviewName);
             TechnicalCanvas.Scene = _scene;
             CoordinateAxis.SetStationLayout(frame.Layout, frame.Viewport.Width);
+            SetAndRaise(StationLayoutProperty, ref _stationLayout, frame.Layout);
             double x = (_editor.Preview?.Position ?? _editor.LoadPreview?.Position
                 ?? _editor.DistributedPointerPosition ?? _editor.DistributedLoadPreview?.EndPosition) is { } position
                 ? frame.Layout.Transform.PhysicalToScreen(position.Meters)

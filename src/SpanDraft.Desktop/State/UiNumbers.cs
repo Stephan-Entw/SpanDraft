@@ -14,6 +14,26 @@ public static class UiNumbers
 
     public static string Indicator(double value) => Compact(value);
 
+    /// <summary>Exact nice-tick labels, including decimal steps outside double's range.</summary>
+    public static string AxisTick(int index, double stepMantissa, int stepExponent)
+    {
+        if (index == 0) return "0";
+        if (stepMantissa is not (1 or 2 or 2.5 or 5 or 10))
+            throw new ArgumentOutOfRangeException(nameof(stepMantissa));
+        if (stepExponent is < -324 or > 309) throw new ArgumentOutOfRangeException(nameof(stepExponent));
+        double coefficient = index * stepMantissa;
+        int exponent = stepExponent + (int)Math.Floor(Math.Log10(Math.Abs(coefficient)));
+        int decimals = Math.Max(0, -stepExponent + (stepMantissa == 2.5 ? 1 : 0));
+        if (exponent is >= -2 and < 4 && decimals <= 4)
+        {
+            string pattern = decimals == 0 ? "0" : "0." + new string('#', decimals);
+            return (coefficient * Math.Pow(10, stepExponent)).ToString(pattern, CultureInfo.CurrentUICulture);
+        }
+        int engineeringExponent = (int)Math.Floor(exponent / 3d) * 3;
+        double mantissa = coefficient * Math.Pow(10, stepExponent - engineeringExponent);
+        return mantissa.ToString("0.##", CultureInfo.CurrentUICulture) + "·10" + Superscript(engineeringExponent);
+    }
+
     /// <summary>Compact read-only values; retain small nonzero values and bound very large numbers.</summary>
     public static string Compact(double value)
     {

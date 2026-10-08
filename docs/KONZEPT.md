@@ -104,9 +104,8 @@ Die Engineering-Auswertung ergänzt:
 Der Sicherheitsfaktor ist eine einfache elastische Bewertung und kein
 normativer Festigkeitsnachweis.
 
-Im Desktop werden bereits kompakte Ergebniskennwerte dargestellt.
-Eine vollständige grafische Ergebnisansicht mit Reaktionen sowie w/V/M-Diagrammen
-ist noch ausstehend.
+Im Desktop werden kompakte Ergebniskennwerte und Lagerreaktionen sowie
+Live-Diagramme für Durchbiegung, Querkraft und Biegemoment dargestellt.
 
 ## 5. Rechenmodell
 
@@ -219,9 +218,8 @@ Vordergrund.
 
 Priorität haben:
 
-1. vollständige Ergebnisdarstellung mit Reaktionen und w/V/M-Diagrammen
-2. verbleibendes App-Shell-Polishing und weitere sinnvolle Menüfunktionen
-3. Profil-/Material- und Eingabe-Workflow dort erweitern, wo er für reale
+1. verbleibendes App-Shell-Polishing und weitere sinnvolle Menüfunktionen
+2. Profil-/Material- und Eingabe-Workflow dort erweitern, wo er für reale
    Projekte benötigt wird
 
 PDF-, XLSX- und Druckexport sind für den ersten Release keine Voraussetzung.

@@ -5,6 +5,12 @@ namespace SpanDraft.Desktop.Resources;
 
 public static class Strings
 {
+    public static string DeflectionDiagram => Get(nameof(DeflectionDiagram));
+    public static string ShearDiagram => Get(nameof(ShearDiagram));
+    public static string BendingDiagram => Get(nameof(BendingDiagram));
+    public static string DiagramMinimum => Get(nameof(DiagramMinimum));
+    public static string DiagramMaximum => Get(nameof(DiagramMaximum));
+    public static string DiagramMinimumAndMaximum => Get(nameof(DiagramMinimumAndMaximum));
     public static string DistributedStartLabel => Get(nameof(DistributedStartLabel));
     public static string DistributedEndLabel => Get(nameof(DistributedEndLabel));
     public static string DistributedIntensityLabel => Get(nameof(DistributedIntensityLabel));

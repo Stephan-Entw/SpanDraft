@@ -7,6 +7,14 @@
              xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
              x:Class="SpanDraft.Desktop.Views.EditorView"
              x:DataType="vm:EditorViewModel" KeyDown="EditorKeyDown">
+  <UserControl.Styles>
+    <!-- Keep Fluent's gutter in the layout while removing all chrome and input
+         when the upper editor has no scrollable range. -->
+    <Style Selector="ScrollViewer#EditorScroll /template/ ScrollBar:vertical[Maximum=0]">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="IsHitTestVisible" Value="False" />
+    </Style>
+  </UserControl.Styles>
   <Grid RowDefinitions="Auto,*">
     <!-- The compositor needs full opacity handling on the SVGs' ancestor. -->
     <Border x:Name="EditorToolbar" BorderThickness="{DynamicResource BottomBorder}" BorderBrush="{DynamicResource Border}"
@@ -57,14 +65,23 @@
         <ColumnDefinition Width="4*" />
         <ColumnDefinition Width="*" MinWidth="320" />
       </Grid.ColumnDefinitions>
-      <!-- Reserve the scrollbar gutter so vertical overflow never changes station geometry. -->
-      <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
-        <Grid x:Name="EditorContent" RowDefinitions="Auto,*" MinHeight="{Binding #EditorScroll.Viewport.Height}"
-              Background="{DynamicResource CanvasBackground}">
-          <controls:BeamEditorSurface VerticalAlignment="Top" />
-          <Border Grid.Row="1" x:Name="DiagramSpace" />
-        </Grid>
-      </ScrollViewer>
+      <Grid x:Name="EditorContent" RowDefinitions="Auto,*" SizeChanged="WorkspaceSizeChanged"
+            Background="{DynamicResource CanvasBackground}">
+        <!-- Both viewports reserve the same gutter, including when only one overflows. -->
+        <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
+          <controls:BeamEditorSurface x:Name="BeamSurface" VerticalAlignment="Top" />
+        </ScrollViewer>
+        <ScrollViewer Grid.Row="1" x:Name="DiagramScroll" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel x:Name="ResultDiagrams" Spacing="{StaticResource Space16}">
+            <controls:ResultDiagram Kind="TransverseDisplacement" Presentation="{Binding Presentation}"
+                                    StationLayout="{Binding #BeamSurface.StationLayout}" />
+            <controls:ResultDiagram Kind="ShearForce" Presentation="{Binding Presentation}"
+                                    StationLayout="{Binding #BeamSurface.StationLayout}" />
+            <controls:ResultDiagram Kind="BendingMoment" Presentation="{Binding Presentation}"
+                                    StationLayout="{Binding #BeamSurface.StationLayout}" />
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
       <views:ProjectOverviewView Grid.Column="1" />
     </Grid>
   </Grid>
