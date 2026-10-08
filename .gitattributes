@@ -1,0 +1,2 @@
+# Keep the generated notices byte-identical for --check on every platform.
+THIRD_PARTY_NOTICES.txt text eol=lf

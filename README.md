@@ -74,6 +74,31 @@ On macOS, Desktop builds also create a development `SpanDraft.app` bundle inside
 the corresponding build output. It uses the locally installed .NET runtime and
 is intended for development only.
 
+### Third-party notices
+
+After changing Desktop dependencies, regenerate the committed notices from the
+repository root using the .NET 10 SDK:
+
+```sh
+dotnet run --file scripts/generate-third-party-notices.cs
+```
+
+The script restores the pinned local ThirdLicense tool and the Desktop project,
+then updates `THIRD_PARTY_NOTICES.txt` with direct and transitive runtime packages
+for all desktop platforms. Test, validation and build-only packages are excluded.
+The notices contain ThirdLicense's package metadata and license references.
+Generation requires access to the configured NuGet feeds and runs only when
+explicitly requested; regular builds do not generate notices.
+
+To verify the committed file without changing it, use:
+
+```sh
+dotnet run --file scripts/generate-third-party-notices.cs -- --check
+```
+
+The check returns a nonzero exit code if generation fails or the file is missing
+or outdated. Commit updated notices alongside dependency changes.
+
 ## Architecture
 
 The application is split into small layers with explicit responsibilities:
@@ -107,3 +132,4 @@ API rather than implementing mechanical formulas itself.
 
 SpanDraft is licensed under the GNU General Public License v3.0.
 See [LICENSE](LICENSE).
+Third-party package notices are listed in [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt).
