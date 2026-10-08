@@ -37,9 +37,22 @@ public class SectionGeometryNumericalTests
         Close((i1 + i2) / 2, result.Iz.MetersToTheFourth);
         Close((i1 - i2) / 2, result.Iyz.MetersToTheFourth);
         Close(1 / Math.Sqrt(2), result.Axis1PositiveDistance.Meters);
-        Close(t / Math.Sqrt(2), result.Axis2PositiveDistance.Meters);
-        Close(t / Math.Sqrt(2), result.Axis2NegativeDistance.Meters);
-        Close(i2 / (t / Math.Sqrt(2)), result.W2Positive.CubicMeters);
+
+        var centroid = P((1 + t) / 2, (1 - t) / 2);
+        var axisY = 1 / Math.Sqrt(2);
+        var axisZ = -axisY;
+        // Nearly cancelling centroidal projection terms round at the geometric
+        // input scale, not at the tiny resulting extreme-fiber distance.
+        var geometryScale = contour.Segments.Max(segment =>
+            Math.Abs(axisY * (segment.Start.Y.Meters - centroid.Y.Meters)) +
+            Math.Abs(axisZ * (segment.Start.Z.Meters - centroid.Z.Meters)));
+        var distance2 = t / Math.Sqrt(2);
+        CloseProjected(distance2, result.Axis2PositiveDistance.Meters, geometryScale);
+        CloseProjected(distance2, result.Axis2NegativeDistance.Meters, geometryScale);
+
+        var w2 = i2 / distance2;
+        // Propagate distance roundoff through W2 = I2 / d: |dW2/dd| = I2/d^2 = |W2|/d.
+        CloseProjected(w2, result.W2Positive.CubicMeters, Math.Abs(w2) * geometryScale / distance2);
     }
 
     [Theory]

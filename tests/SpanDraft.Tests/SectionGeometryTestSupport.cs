@@ -17,6 +17,17 @@ internal static class SectionGeometryTestSupport
             $"Expected {expected:R}; actual {actual:R}; rounding budget {tolerance:R}.");
     }
 
+    // This extra budget covers projection roundoff only. The input scale must have
+    // the units of expected, after error propagation for projection-derived values.
+    internal static void CloseProjected(double expected, double actual, double projectionRoundoffScale)
+    {
+        var tolerance = Math.Max(
+            Math.Max(256 * Epsilon * Math.Abs(expected), 8 * Epsilon * Math.Abs(projectionRoundoffScale)),
+            4 * double.Epsilon);
+        Assert.True(double.IsFinite(actual) && Math.Abs(expected - actual) <= tolerance,
+            $"Expected {expected:R}; actual {actual:R}; rounding budget {tolerance:R}.");
+    }
+
     internal static SectionPoint P(double y, double z) => SectionPoint.FromMeters(y, z);
 
     internal static SectionContour Polygon(params SectionPoint[] points) =>
