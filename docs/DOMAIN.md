@@ -108,6 +108,49 @@ Rundungsvergleiche bei analytischen Schnittpunkten sind keine fachlichen
 Längen- oder Flächentoleranzen. In den Eingabekoordinaten bereits verlorene
 Geometriedetails können nicht rekonstruiert werden.
 
+## Parametrische Querschnittsgeometrien
+
+Die parametrischen Definitionen in `Core.Sections.Parametric` behalten ihre
+fachlichen Abmessungen als immutable Längenwerte und erzeugen daraus eine
+`SectionGeometry`. Ihre Kennwerte stammen ausschließlich aus dem allgemeinen
+Geometriekern. Sie sind eigenständige Geometriedefinitionen; das bestehende
+`Section`-Modell verwendet weiterhin seinen bisherigen Kennwertvertrag.
+
+Alle Formen verwenden y horizontal und z vertikal. Die Bounding-Box beginnt
+links unten bei (0, 0); die Geometrie wird nicht auf ihren Schwerpunkt verschoben.
+Breite b und Höhe h bezeichnen die äußeren Abmessungen, bei Kreisformen begrenzt
+der Außendurchmesser beide Koordinatenrichtungen.
+
+- **Rechteck:** `Width` b und `Height` h; ausschließlich gerade Kanten.
+- **Rechteckrohr:** `Width` b, `Height` h, `WallThickness` t und `OuterRadius`
+  rOuter. Das Loch liegt um t von den äußeren Begrenzungen eingerückt. Es gibt
+  nur einen unabhängigen Radius; `rInner = max(0, rOuter - t)`.
+- **Rundstab:** `Diameter` d; Mittelpunkt (d/2, d/2).
+- **Rundrohr:** `OuterDiameter` d und `WallThickness` t; konzentrisches Loch
+  mit Innendurchmesser d - 2t, Mittelpunkt (d/2, d/2).
+- **I-/H-Profil:** `Height` h, `Width` b, `WebThickness` tw,
+  `FlangeThickness` tf und `Radius` r. Der vertikale Steg liegt horizontal
+  mittig; beide horizontalen Flansche sind gleich dick. Das Profil ist doppelt
+  symmetrisch. r beschreibt die vier inneren Steg-Flansch-Übergänge.
+- **U-Profil:** dieselben fünf Parameter. Der Steg liegt links, beide
+  Flansche zeigen nach rechts. Das Profil ist zur horizontalen Mittellinie
+  symmetrisch. r beschreibt die beiden inneren Steg-Flansch-Übergänge.
+- **T-Profil:** dieselben fünf Parameter. Der Flansch liegt oben und der
+  vertikale Steg horizontal mittig. Das Profil ist zur vertikalen Mittellinie
+  symmetrisch. r beschreibt die beiden inneren Steg-Flansch-Übergänge.
+- **Winkelprofil:** `Width` b, `Height` h, `Thickness` t und `InnerRadius` r.
+  Der vertikale Schenkel liegt links, der horizontale unten. Beide besitzen
+  dieselbe Dicke; ungleichschenklige Winkel sind zulässig. r beschreibt
+  ausschließlich den inneren Übergang zwischen den Schenkeln.
+
+Für jeden Radiusparameter bedeutet r = 0 scharfkantig, r > 0 verrundet.
+Rundungen und Kreisformen bestehen aus exakten Kreisbögen. Die Außenkanten
+von I-, U-, T- und Winkelprofilen bleiben scharf. Geometrisch gültige
+Grenzradien dürfen gerade Reststrecken vollständig aufzehren; diese Strecken
+entfallen dann. Positive Materialbreiten, Löcher und Geometriedetails müssen
+darstellbar bleiben. Ungültige Eingaben werden abgelehnt und nicht begrenzt,
+verkleinert oder durch verschobene Punkte repariert.
+
 ## Modellvalidierung
 
 `BeamModel` kopiert übergebene Lager- und Lastlisten und stellt sie lesbar
