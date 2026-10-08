@@ -24,14 +24,21 @@ public sealed class MainWindowViewModel : ObservableObject
     private bool _fileMenuOpen;
     private Exception? _pendingRecoveryError;
     private ResultPresentationOptions _resultPresentation = ResultPresentationOptions.Default;
+    private readonly LocalSettingsStore? _settingsStore;
+    private bool _settingsSaving;
+    private UserSettings _settings = UserSettings.Default;
 
     public MainWindowViewModel(Func<BeamModel, BeamAnalysisOutcome>? analyze = null,
-        IProjectFileStore? files = null, IProjectDialogs? dialogs = null, ProjectRecovery? recovery = null)
+        IProjectFileStore? files = null, IProjectDialogs? dialogs = null, ProjectRecovery? recovery = null,
+        LocalSettingsStore? settingsStore = null, UserSettings? settings = null)
     {
         _analyze = analyze;
         _files = files ?? new ProjectFileStore();
         _dialogs = dialogs;
         _recovery = recovery;
+        _settingsStore = settingsStore;
+        _settings = settings ?? UserSettings.Default;
+        _resultPresentation = _settings.Presentation;
         if (_recovery is not null) _recovery.Failed += RecoveryFailed;
         _setup = NewSetup();
         NewCommand = new(() => NewAsync(), () => !IsBusy);
@@ -46,13 +53,60 @@ public sealed class MainWindowViewModel : ObservableObject
     public ProjectSetupViewModel Setup => _setup;
     public EditorViewModel? Editor => _editor;
     public ResultPresentationOptions ResultPresentation => _resultPresentation;
+    public UserSettings Settings => _settings;
 
-    /// <summary>Refreshes result displays only, including while drafts or file operations are active.</summary>
-    public void SetResultPresentation(UnitProfile profile, PresentationMode mode)
+    public async Task InitializeSettingsAsync()
+    {
+        if (_settingsStore is null) return;
+        ActivateSettings(await _settingsStore.LoadAsync());
+    }
+
+    public void SetSettingsDialogOpen(bool open)
+    {
+        if (Editor is { } editor) editor.IsSettingsDialogOpen = open;
+    }
+
+    public async Task<string?> ApplySettingsAsync(UserSettings settings)
+    {
+        if (_settingsSaving || IsBusy) return Strings.ProjectBusy;
+        if (Editor?.CanApplyInputUnits(settings.Profile) == false) return Strings.SettingsDraftBlocked;
+        _settingsSaving = true;
+        try
+        {
+            if (_settingsStore is not null) await _settingsStore.SaveAsync(settings);
+            ActivateSettings(settings);
+            return null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+        { return Strings.SettingsSaveError + "\n" + e.Message; }
+        finally { _settingsSaving = false; }
+    }
+
+    private void ActivateSettings(UserSettings settings)
+    {
+        _settings = settings;
+        SetPresentation(settings.Presentation);
+        Notify(nameof(Settings));
+    }
+
+    /// <summary>Changes presentation only; affected open input sessions reject unit changes.</summary>
+    public bool SetResultPresentation(UnitProfile profile, PresentationMode mode)
     {
         ArgumentNullException.ThrowIfNull(profile);
         var options = new ResultPresentationOptions(profile, mode);
-        if (_resultPresentation == options) return;
+        if (_settingsSaving || Editor?.CanApplyInputUnits(profile) == false) return false;
+        profile = UserSettings.Recognize(profile);
+        options = new(profile, mode);
+        _settings = _settings with { Profile = profile, Mode = mode,
+            CustomProfile = profile.Kind == UnitProfileKind.Custom ? profile : _settings.CustomProfile,
+            LastStandardProfile = profile.Kind == UnitProfileKind.Custom ? _settings.LastStandardProfile : profile.Kind };
+        SetPresentation(options);
+        return true;
+    }
+
+    private void SetPresentation(ResultPresentationOptions options)
+    {
+        if (_resultPresentation.Mode == options.Mode && UserSettings.SameUnits(_resultPresentation.Profile, options.Profile)) return;
         _resultPresentation = options;
         Setup.ApplyResultPresentation(options);
         Editor?.ApplyResultPresentation(options);

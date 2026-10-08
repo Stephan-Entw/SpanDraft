@@ -16,13 +16,15 @@ public partial class MainWindow : Window
     private bool _closing;
     private bool _closeApproved;
     private AboutWindow? _aboutWindow;
+    private SettingsWindow? _settingsWindow;
+    private bool _initializing = true;
 
     public MainWindow()
     {
         InitializeComponent();
         var files = new ProjectFileStore();
-        _model = new(files: files, dialogs: new ProjectDialogs(this), recovery: ProjectRecovery.Local(files));
-        DataContext = _model;
+        _model = new(files: files, dialogs: new ProjectDialogs(this), recovery: ProjectRecovery.Local(files),
+            settingsStore: LocalSettingsStore.Local(files));
         NewMenuItem.InputGesture = new(Key.N, _primary);
         OpenMenuItem.InputGesture = new(Key.O, _primary);
         SaveMenuItem.InputGesture = new(Key.S, _primary);
@@ -45,13 +47,34 @@ public partial class MainWindow : Window
                 else Dispatcher.UIThread.Post(() => _model.SetFileMenuOpen(ProjectMenu.IsOpen));
             }
         };
-        Opened += async (_, _) => await _model.InitializeRecoveryAsync();
+        Opened += async (_, _) =>
+        {
+            await _model.InitializeSettingsAsync();
+            DataContext = _model;
+            _initializing = false;
+            await _model.InitializeRecoveryAsync();
+        };
         Closing += WindowClosing;
+    }
+
+    private async void ShowSettings(object? sender, RoutedEventArgs e)
+    {
+        if (_initializing || _model.IsBusy || _closing || _settingsWindow is not null) return;
+        var dialog = new SettingsWindow(new(_model.Settings, _model.ApplySettingsAsync)) { Icon = Icon };
+        _settingsWindow = dialog;
+        _model.SetSettingsDialogOpen(true);
+        try { await dialog.ShowDialog(this); }
+        finally
+        {
+            _settingsWindow = null;
+            // Leave the protection in place through activation and deferred focus events.
+            Dispatcher.UIThread.Post(() => _model.SetSettingsDialogOpen(false), DispatcherPriority.Background);
+        }
     }
 
     private async void ShowAbout(object? sender, RoutedEventArgs e)
     {
-        if (_model.IsBusy || _closing || _aboutWindow is not null) return;
+        if (_initializing || _model.IsBusy || _closing || _aboutWindow is not null || _settingsWindow is not null) return;
         var dialog = new AboutWindow { Icon = Icon };
         _aboutWindow = dialog;
         try { await dialog.ShowDialog(this); }
@@ -60,6 +83,7 @@ public partial class MainWindow : Window
 
     private void ProjectKeyDown(object? sender, KeyEventArgs e)
     {
+        if (_initializing || _settingsWindow is not null) return;
         ICommand? command = (e.Key, e.KeyModifiers) switch
         {
             (Key.N, var m) when m == _primary => _model.NewCommand,
@@ -81,7 +105,7 @@ public partial class MainWindow : Window
     {
         if (_closeApproved) return;
         e.Cancel = true;
-        if (_closing || _model.IsBusy) return;
+        if (_initializing || _closing || _model.IsBusy || _settingsWindow is not null) return;
         _closing = true;
         try
         {

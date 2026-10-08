@@ -13,8 +13,8 @@ public sealed class DesktopUnicodeTests
     {
         using var scope = new UiCultureScope(culture);
         string[] expected = culture == "de-DE"
-            ? ["Ändern", "Übernehmen", "Öffnen…", "Rückgängig", "Löschen", "Balkenlänge", "Maßgebendes Moment", "Balkenmodell", "Länge {0} mm"]
-            : ["Change", "Apply", "Open…", "Undo", "Delete", "Beam Length", "Governing moment", "Beam model", "Length {0} mm"];
+            ? ["Ändern", "Übernehmen", "Öffnen…", "Rückgängig", "Löschen", "Balkenlänge", "Maßgebendes Moment", "Balkenmodell", "Länge {0} {1}"]
+            : ["Change", "Apply", "Open…", "Undo", "Delete", "Beam Length", "Governing moment", "Beam model", "Length {0} {1}"];
         Assert.Equal(expected, new[] { Strings.Change, Strings.Apply, Strings.Open, Strings.Undo, Strings.Delete,
             Strings.BeamLength, Strings.GoverningMoment, Strings.BeamModel, Strings.OverviewLength });
     }

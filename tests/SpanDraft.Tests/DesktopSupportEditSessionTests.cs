@@ -313,9 +313,10 @@ public sealed class DesktopSupportEditSessionTests
     public void CultureParsingCommitsExactTextWithoutMovingPreview(string culture, string text)
     {
         var previous = CultureInfo.CurrentUICulture;
+        var numericCulture = CultureInfo.CurrentCulture;
         try
         {
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
             var s = new Session(689);
             s.Editor.EditSupport(s.Editor.Document.Supports[0].Id);
             s.Editor.SupportDraft!.PositionText = text;
@@ -324,6 +325,6 @@ public sealed class DesktopSupportEditSessionTests
             Assert.Equal(Mm(700.5), s.Editor.Document.Supports[0].Position);
             Assert.Equal(2, s.Analyses);
         }
-        finally { CultureInfo.CurrentUICulture = previous; }
+        finally { CultureInfo.CurrentUICulture = previous; CultureInfo.CurrentCulture = numericCulture; }
     }
 }

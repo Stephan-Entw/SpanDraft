@@ -248,7 +248,7 @@ public sealed partial class EditorViewModel
 
     private void OpenLoadDraft(Guid? id, PointLoadKind kind, Length position, double value)
     {
-        _loadDraft = new(() => Document, id, kind, position, value);
+        _loadDraft = new(() => Document, id, kind, position, value, ResultPresentation.Profile);
         _loadDraft.PropertyChanged += LoadDraftChanged;
         _loadPreview = _loadDraft.Preview;
         _hoveredLoadId = null;

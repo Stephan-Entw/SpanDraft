@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Media;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Layout;
 
 namespace SpanDraft.Desktop.Controls;
@@ -70,8 +71,10 @@ public static class PointLoadSymbol
     public static Guid? HitTest(IReadOnlyList<PointLoadVisual> visuals, double x, double y, Guid? editedId = null) =>
         HitTestGlyph(Group(visuals), x, y) is { } glyph ? ResolveEntity(glyph, editedId) : null;
 
-    public static string Label(PointLoadPreview preview, string name) => name.Trim() + " = " +
-        UiNumbers.Compact(preview.Value) + (preview.Kind == PointLoadKind.Force ? " N" : " Nm");
+    public static string Label(PointLoadPreview preview, string name, UnitProfile? profile = null) =>
+        name.Trim() + " = " + InputQuantityFormatter.WithUnit(preview.Value,
+            (profile ?? UnitProfile.Default)[preview.Kind == PointLoadKind.Force
+                ? QuantityKind.TransverseForce : QuantityKind.Moment]);
 
     public static Point ForceTip(double value) => new(0,
         value > 0 ? -SchematicMetrics.ForceTopOffset : -SchematicMetrics.ForceBeamOffset);

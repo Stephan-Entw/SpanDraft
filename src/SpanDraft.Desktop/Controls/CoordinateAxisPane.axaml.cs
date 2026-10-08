@@ -6,6 +6,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.ViewModels;
+using SpanDraft.Desktop.Presentation;
 
 namespace SpanDraft.Desktop.Controls;
 
@@ -49,17 +50,21 @@ public partial class CoordinateAxisPane : UserControl
     private void LengthChanged(object? sender, PropertyChangedEventArgs e)
     {
         // Buffer changes are intentionally absent: editing reserves fixed bounds once.
-        if (e.PropertyName == nameof(LengthInputViewModel.IsEditing)) Repack();
+        if (e.PropertyName is nameof(LengthInputViewModel.IsEditing) or nameof(LengthInputViewModel.Unit)) Repack();
     }
 
     private void Repack()
     {
         if (StationLayout is null || _paneWidth <= 0) return;
-        AxisLayout = CoordinateAxisLayout.Create(StationLayout, _paneWidth,
-            text => SchematicText.Measure(text, Typeface.Default, FontSize), _editor?.DimensionLength.IsEditing == true);
+        Size Measure(string text) => SchematicText.Measure(text, Typeface.Default, FontSize);
+        bool editing = _editor?.DimensionLength.IsEditing == true;
+        AxisLayout = CoordinateAxisLayout.Create(StationLayout, _paneWidth, Measure, editing,
+            _editor?.ResultPresentation.Profile[QuantityKind.BeamLength]);
         AxisCanvas.AxisLayout = AxisLayout;
         AxisCanvas.LabelFontSize = FontSize;
-        Height = AxisLayout.PaneHeight;
+        // Reserve for all supported input units, so changing label text never moves the beam.
+        Height = UnitCatalog.All.Where(u => u.Dimension == UnitDimension.Length)
+            .Max(u => CoordinateAxisLayout.Create(StationLayout, _paneWidth, Measure, editing, u).PaneHeight);
         var end = AxisLayout.Labels.Single(l => l.Role == AxisEndpointRole.End);
         LengthButton.Content = end.Text;
         LengthButton.Height = end.Bounds.Height;
@@ -102,7 +107,7 @@ public sealed class CoordinateAxisCanvas : Control
             context.DrawLine(pen, new(station.ScreenX, CoordinateAxisLayout.AxisY - 4), new(station.ScreenX, CoordinateAxisLayout.AxisY + 4));
         foreach (var label in axis.Labels.Where(l => l.Role != AxisEndpointRole.End))
             context.DrawText(SchematicText.Format(label.Text, Typeface.Default, LabelFontSize, AxisBrush), label.Bounds.Position);
-        context.DrawText(SchematicText.Format("x [mm]", Typeface.Default, LabelFontSize, AxisBrush),
+        context.DrawText(SchematicText.Format("x [" + axis.UnitSymbol + "]", Typeface.Default, LabelFontSize, AxisBrush),
             new(axis.StationLayout.Stations[^1].ScreenX + 8, 0));
     }
 }

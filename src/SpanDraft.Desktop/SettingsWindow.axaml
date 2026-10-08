@@ -1,0 +1,85 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+        xmlns:presentation="clr-namespace:SpanDraft.Desktop.Presentation"
+        xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+        x:Class="SpanDraft.Desktop.SettingsWindow" x:DataType="vm:SettingsViewModel"
+        Title="{x:Static resources:Strings.SettingsTitle}"
+        Width="900" Height="780" MinWidth="820" MinHeight="450"
+        ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+  <Window.Resources>
+    <DataTemplate x:Key="UnitRow" x:DataType="vm:UnitSettingViewModel">
+      <Grid ColumnDefinitions="*,132" ColumnSpacing="{StaticResource Space12}" MinHeight="34" Margin="0,0,0,4">
+        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Classes="propertyLabel" TextWrapping="Wrap" />
+        <ComboBox Grid.Column="1" ItemsSource="{Binding Units}" SelectedItem="{Binding SelectedUnit, Mode=TwoWay}"
+                  IsVisible="{Binding IsEditable}" HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Label}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="presentation:UnitDefinition"><TextBlock Text="{Binding Symbol}" /></DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock Grid.Column="1" Text="{Binding SelectedUnit.Symbol}" IsVisible="{Binding !IsEditable}"
+                   VerticalAlignment="Center" Margin="12,0,0,0" />
+      </Grid>
+    </DataTemplate>
+  </Window.Resources>
+  <ScrollViewer x:Name="SettingsScroll" Background="{DynamicResource AppBackground}"
+                VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="{DynamicResource Padding24}" Spacing="{StaticResource Space16}">
+      <StackPanel x:Name="EditableSettings" Spacing="{StaticResource Space16}" IsEnabled="{Binding !IsSaving}">
+        <StackPanel Spacing="{StaticResource Space16}">
+          <TextBlock Text="{x:Static resources:Strings.SettingsUnits}" Classes="sectionTitle" />
+          <StackPanel x:Name="ProfileRow" Orientation="Horizontal" Spacing="{StaticResource Space16}">
+            <RadioButton Content="{x:Static resources:Strings.ProfileMechanical}" GroupName="Units"
+                         IsChecked="{Binding IsMechanical, Mode=TwoWay}" />
+            <RadioButton Content="{x:Static resources:Strings.ProfileStructural}" GroupName="Units"
+                         IsChecked="{Binding IsStructural, Mode=TwoWay}" />
+            <RadioButton Content="{x:Static resources:Strings.ProfileUnitedStates}" GroupName="Units"
+                         IsChecked="{Binding IsUnitedStates, Mode=TwoWay}" />
+            <RadioButton x:Name="CustomProfileOption" Content="{x:Static resources:Strings.ProfileCustom}" GroupName="Units"
+                         IsVisible="{Binding HasCustomProfile}" IsChecked="{Binding IsCustom, Mode=TwoWay}" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
+            <ItemsControl x:Name="LeftUnitList" ItemsSource="{Binding LeftUnits}" ItemTemplate="{StaticResource UnitRow}" />
+            <ItemsControl x:Name="RightUnitList" Grid.Column="1" ItemsSource="{Binding RightUnits}" ItemTemplate="{StaticResource UnitRow}" />
+          </Grid>
+        </StackPanel>
+        <StackPanel Spacing="{StaticResource Space12}">
+          <TextBlock Text="{x:Static resources:Strings.SettingsNumeric}" Classes="sectionTitle" />
+          <RadioButton GroupName="Presentation" IsChecked="{Binding IsStandard, Mode=TwoWay}"
+                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+            <StackPanel Spacing="{StaticResource Space4}">
+              <TextBlock Text="{x:Static resources:Strings.PresentationStandard}" Classes="bodyStrong" />
+              <TextBlock Text="{x:Static resources:Strings.PresentationStandardDescription}" Classes="secondary" TextWrapping="Wrap" />
+            </StackPanel>
+          </RadioButton>
+          <RadioButton GroupName="Presentation" IsChecked="{Binding IsDetailed, Mode=TwoWay}"
+                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+            <StackPanel Spacing="{StaticResource Space4}">
+              <TextBlock Text="{x:Static resources:Strings.PresentationDetailed}" Classes="bodyStrong" />
+              <TextBlock Text="{x:Static resources:Strings.PresentationDetailedDescription}" Classes="secondary" TextWrapping="Wrap" />
+            </StackPanel>
+          </RadioButton>
+          <TextBlock Text="{x:Static resources:Strings.PresentationCalculationHint}" Classes="caption" TextWrapping="Wrap" />
+        </StackPanel>
+        <StackPanel Spacing="{StaticResource Space12}">
+          <TextBlock Text="{x:Static resources:Strings.SettingsLanguage}" Classes="sectionTitle" />
+          <Grid ColumnDefinitions="Auto,220" ColumnSpacing="{StaticResource Space16}">
+            <TextBlock Text="{x:Static resources:Strings.InterfaceLanguage}" Classes="propertyLabel" VerticalAlignment="Center" />
+            <ComboBox x:Name="LanguagePicker" Grid.Column="1" IsEnabled="False" SelectedIndex="0" HorizontalAlignment="Stretch"
+                      AutomationProperties.Name="{x:Static resources:Strings.InterfaceLanguage}">
+              <ComboBoxItem Content="{x:Static resources:Strings.SystemLanguage}" />
+            </ComboBox>
+          </Grid>
+          <TextBlock Text="{x:Static resources:Strings.LanguageUnavailable}" Classes="caption" TextWrapping="Wrap" />
+        </StackPanel>
+      </StackPanel>
+      <TextBlock Text="{Binding ErrorText}" IsVisible="{Binding HasError}" Classes="validationMessage" />
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Space8}">
+        <Button x:Name="CancelButton" Content="{x:Static resources:Strings.Cancel}" Classes="secondary"
+                IsEnabled="{Binding !IsSaving}" Click="CancelSettings" />
+        <Button x:Name="OkButton" Content="{x:Static resources:Strings.OK}" Classes="primary" IsDefault="True"
+                IsEnabled="{Binding !IsSaving}" Click="ConfirmSettings" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</Window>

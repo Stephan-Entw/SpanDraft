@@ -609,7 +609,7 @@ public sealed class DesktopResultDiagramControlTests
         var window = new Window { Content = view }; Arrange(window);
         Assert.All(Diagrams(view), d => Assert.Null(d.Projection));
         app.Dialogs.Leave = LeaveDecision.Discard;
-        app.Dialogs.OpenPath = "/test/diagrams.spandraft";
+        app.Dialogs.OpenPath = ProjectTestSupport.TestPath("diagrams.spandraft");
         app.Files.Data[app.Dialogs.OpenPath] = ProjectFileCodec.Serialize(new(Document(), new()));
         Assert.True(await app.Main.OpenAsync());
         view.DataContext = app.Main.Editor; Arrange(window);
@@ -625,7 +625,7 @@ public sealed class DesktopResultDiagramControlTests
         Assert.All(Diagrams(view), d => Assert.Null(d.Projection));
 
         var restored = new ProjectTestSupport.App(create: false);
-        await restored.Recovery.FlushAsync(new(Document(), new()), "/test/recovered.spandraft");
+        await restored.Recovery.FlushAsync(new(Document(), new()), ProjectTestSupport.TestPath("recovered.spandraft"));
         Assert.True(await restored.Main.InitializeRecoveryAsync());
         view.DataContext = restored.Main.Editor; Arrange(window);
         Assert.Equal(1, restored.Analyses);

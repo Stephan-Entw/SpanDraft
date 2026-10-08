@@ -36,13 +36,14 @@ public static class UiNumbers
     }
 
     /// <summary>Compact read-only values; retain small nonzero values and bound very large numbers.</summary>
-    public static string Compact(double value)
+    public static string Compact(double value, CultureInfo? culture = null)
     {
+        culture ??= CultureInfo.CurrentUICulture;
         if (!double.IsFinite(value)) return Format(value);
         if (value == 0) return "0";
         double magnitude = Math.Abs(value);
         if (magnitude is >= 0.01 and < 10000)
-            return value.ToString("0.##", CultureInfo.CurrentUICulture);
+            return value.ToString("0.##", culture);
 
         // Round before regrouping so a carry cannot be lost to binary scaling.
         // The normalized representation also avoids underflow for subnormal
@@ -54,7 +55,7 @@ public static class UiNumbers
         int engineeringExponent = (int)Math.Floor(exponent / 3d) * 3;
         mantissa *= Math.Pow(10, exponent - engineeringExponent);
         if (value < 0) mantissa = -mantissa;
-        return mantissa.ToString("0.##", CultureInfo.CurrentUICulture) + "·10" + Superscript(engineeringExponent);
+        return mantissa.ToString("0.##", culture) + "·10" + Superscript(engineeringExponent);
     }
 
     private static string Superscript(int exponent) => string.Concat(exponent.ToString(CultureInfo.InvariantCulture)

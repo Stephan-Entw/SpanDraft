@@ -163,9 +163,10 @@ public sealed class DesktopNativeTextMeasurementTests
     public void FormattingThenRealMeasurementFeedsPurePackerWithFiniteBounds(string culture)
     {
         var previous = CultureInfo.CurrentUICulture;
+        var numericCulture = CultureInfo.CurrentCulture;
         try
         {
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
             var layout = StationLayout.Compute(1.4005, 72, 900,
                 [new(1.2, 4.75, 4.75), new(1.25, 4.75, 4.75), new(1.3, 4.75, 4.75)]);
             var measured = new List<(string Text, Size Size)>();
@@ -193,7 +194,7 @@ public sealed class DesktopNativeTextMeasurementTests
             Assert.True(double.IsFinite(axis.PaneHeight) && axis.PaneHeight > 0);
             Assert.Same(layout.Transform, axis.StationLayout.Transform);
         }
-        finally { CultureInfo.CurrentUICulture = previous; }
+        finally { CultureInfo.CurrentUICulture = previous; CultureInfo.CurrentCulture = numericCulture; }
     }
 
     [Fact]

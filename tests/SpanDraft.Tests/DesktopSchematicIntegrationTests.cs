@@ -374,7 +374,7 @@ public sealed class DesktopSchematicIntegrationTests
         Assert.Equal(14.7721162952, PointLoadSymbol.MomentTip(true).Y, 10);
         Assert.Equal(-PointLoadSymbol.MomentTip(true).X, PointLoadSymbol.MomentTip(false).X);
         Assert.Equal(PointLoadSymbol.MomentTip(true).Y, PointLoadSymbol.MomentTip(false).Y);
-        Assert.Equal("M1 = " + UiNumbers.Compact(first) + " Nm", scene.Annotations.Single(a => a.Id == document.Loads[0].Id).Text);
+        Assert.Equal("M1 = " + UiNumbers.Compact(first) + " N·m", scene.Annotations.Single(a => a.Id == document.Loads[0].Id).Text);
         Assert.Equal(2, document.ToBeamModel().Loads.Count);
         Assert.Equal(2, glyph.Entities.Count);
         Assert.Equal(2, scene.Annotations.Count);

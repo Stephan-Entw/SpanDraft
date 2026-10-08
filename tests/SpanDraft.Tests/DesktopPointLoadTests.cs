@@ -198,14 +198,14 @@ public sealed class DesktopPointLoadTests
     [InlineData(PointLoadKind.Force, "en-US", "700.5", "-12.5")]
     [InlineData(PointLoadKind.Moment, "de-DE", "700,5", "12,5")]
     [InlineData(PointLoadKind.Moment, "en-US", "700.5", "12.5")]
-    public void ParsingAndLabelsUseUiCultureEvenWhenNumericCultureDiffers(PointLoadKind kind, string culture, string position, string value)
+    public void ParsingAndLabelsUseNumericCultureEvenWhenUiCultureDiffers(PointLoadKind kind, string culture, string position, string value)
     {
         var oldUi = CultureInfo.CurrentUICulture;
         var old = CultureInfo.CurrentCulture;
         try
         {
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
-            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture == "de-DE" ? "en-US" : "de-DE");
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture == "de-DE" ? "en-US" : "de-DE");
             var s = new Session();
             s.Editor.ToggleLoadTool(kind);
             s.Editor.HoverLoadPlacement(Mm(300));

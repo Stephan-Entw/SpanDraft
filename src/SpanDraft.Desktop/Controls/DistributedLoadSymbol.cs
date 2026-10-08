@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Presentation;
 
 namespace SpanDraft.Desktop.Controls;
 
@@ -100,8 +101,9 @@ public static class DistributedLoadSymbol
     public static bool Contains(DistributedLoadVisual visual, double x, double y) =>
         HitEndpoint(visual, x, y) is not null || visual.Bounds.Contains(new Point(x, y));
 
-    public static string Label(DistributedLoadPreview preview, string name) =>
-        name.Trim() + " = " + UiNumbers.Compact(preview.Intensity) + " N/m";
+    public static string Label(DistributedLoadPreview preview, string name, UnitProfile? profile = null) =>
+        name.Trim() + " = " + InputQuantityFormatter.WithUnit(preview.Intensity,
+            (profile ?? UnitProfile.Default)[QuantityKind.DistributedLoad]);
 
     public static void DrawFill(DrawingContext context, DistributedLoadVisual visual, IBrush? neutralBrush)
     {

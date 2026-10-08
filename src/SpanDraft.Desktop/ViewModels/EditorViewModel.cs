@@ -43,13 +43,14 @@ public sealed partial class EditorViewModel : ObservableObject
         _analyze = analyze ?? BeamAnalysis.Analyze;
         _presentation = AnalysisPresentationState.FromOutcome(_analyze(Document.ToBeamModel()), resultPresentation);
         _overview = ProjectOverviewState.From(Document, _presentation);
-        DimensionLength = new(() => Document.Length, ChangeLength, () => PreserveDrafts);
+        DimensionLength = new(() => Document.Length, ChangeLength, () => PreserveDrafts,
+            () => ResultPresentation.Profile[QuantityKind.BeamLength]);
         Session.StateApplied += ApplyState;
         Session.Changed += () => Notify(nameof(IsBusy));
         DimensionLength.BufferChanged += text =>
         {
             if (ConstraintConflict is not null)
-                UpdateConstraintConflict(UiNumbers.TryParseLength(text, out var length) ? length : null);
+                UpdateConstraintConflict(DimensionLength.TryGetLength(out var length) ? length : null);
         };
         DimensionLength.EditCancelled += () => UpdateConstraintConflict(null);
         ChangeProjectCommand = new(() => { CancelEditorInteraction(); changeProject(); });
@@ -73,12 +74,26 @@ public sealed partial class EditorViewModel : ObservableObject
     public ProjectSession Session { get; }
     public bool IsBusy => Session.IsBusy;
     public bool IsFileMenuOpen { get; set; }
-    public bool PreserveDrafts => IsBusy || IsFileMenuOpen;
+    public bool IsSettingsDialogOpen { get; set; }
+    public bool PreserveDrafts => IsBusy || IsFileMenuOpen || IsSettingsDialogOpen;
     public event Action? InteractionsCancelling;
     public EditorDocument Document => Session.CurrentRevision.State.Document;
     public AnalysisPresentationState Presentation => _presentation;
     public ProjectOverviewState Overview => _overview;
     public ResultPresentationOptions ResultPresentation => _presentation.Options;
+
+    public bool CanApplyInputUnits(UnitProfile profile)
+    {
+        bool Changed(QuantityKind q) => profile[q].Id != ResultPresentation.Profile[q].Id;
+        bool positionEditing = DimensionLength.IsEditing || SupportDraft is not null || LoadDraft is not null
+            || DistributedLoadDraft is not null || Interaction == SupportInteraction.Drag
+            || LoadState == LoadInteraction.Drag || DistributedLoadState == DistributedLoadInteraction.Drag;
+        if (positionEditing && Changed(QuantityKind.BeamLength)) return false;
+        var pointKind = LoadDraft?.Kind ?? _dragLoad?.Kind;
+        if (pointKind is { } kind && Changed(kind == PointLoadKind.Force ? QuantityKind.TransverseForce : QuantityKind.Moment)) return false;
+        return !(DistributedLoadDraft is not null || DistributedLoadState == DistributedLoadInteraction.Drag)
+            || !Changed(QuantityKind.DistributedLoad);
+    }
 
     internal void ApplyResultPresentation(ResultPresentationOptions options)
     {
@@ -89,6 +104,8 @@ public sealed partial class EditorViewModel : ObservableObject
         Notify(nameof(ResultPresentation));
         Notify(nameof(Presentation));
         Notify(nameof(Overview));
+        DimensionLength.Refresh(preserveError: DimensionLength.IsEditing);
+        Notify(nameof(CoordinateText));
     }
     public EditorPresentationState EditorPresentation => Session.CurrentRevision.State.Presentation;
     public EditorPresentationState RenderPresentation => _annotationPreview is { } p
@@ -121,7 +138,9 @@ public sealed partial class EditorViewModel : ObservableObject
         && DistributedLoadState == DistributedLoadInteraction.Neutral;
     public bool HasCoordinate => Preview is not null || LoadPreview is not null || DistributedPointerPosition is not null || DistributedLoadPreview is not null;
     public string CoordinateText => (Preview?.Position ?? LoadPreview?.Position ?? DistributedPointerPosition ?? DistributedLoadPreview?.EndPosition) is { } position
-        ? string.Format(CultureInfo.CurrentUICulture, Strings.SupportCoordinate, UiNumbers.Compact(position.Millimeters)) : "";
+        ? string.Format(CultureInfo.CurrentUICulture, Strings.SupportCoordinate,
+            InputQuantityFormatter.Display(position.Meters, ResultPresentation.Profile[QuantityKind.BeamLength]),
+            ResultPresentation.Profile[QuantityKind.BeamLength].Symbol) : "";
 
     public void ToggleSupportTool(SupportType type)
     {
@@ -288,7 +307,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     private void OpenDraft(Guid? id, SupportType type, Length position)
     {
-        _draft = new(() => Document, id, type, position);
+        _draft = new(() => Document, id, type, position, ResultPresentation.Profile);
         _draft.PropertyChanged += DraftChanged;
         _preview = _draft.Preview;
         _hoveredSupportId = null;

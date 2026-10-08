@@ -31,7 +31,7 @@
         <MenuItem x:Name="UndoMenuItem" Header="{x:Static resources:Strings.Undo}" Command="{Binding UndoCommand}" />
         <MenuItem x:Name="RedoMenuItem" Header="{x:Static resources:Strings.Redo}" Command="{Binding RedoCommand}" />
         <Separator />
-        <MenuItem Header="{x:Static resources:Strings.Settings}" IsEnabled="False" />
+        <MenuItem Header="{x:Static resources:Strings.Settings}" IsEnabled="{Binding !IsBusy}" Click="ShowSettings" />
       </MenuItem>
       <MenuItem Header="{x:Static resources:Strings.View}">
         <MenuItem Header="{x:Static resources:Strings.Zoom}" IsEnabled="False" />

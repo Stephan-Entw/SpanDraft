@@ -19,9 +19,10 @@ public sealed class DesktopSupportTests
     private sealed class CultureScope(string culture) : IDisposable
     {
         private readonly CultureInfo _old = CultureInfo.CurrentUICulture;
+        private readonly CultureInfo _oldNumeric = CultureInfo.CurrentCulture;
         private readonly CultureInfo _selected = SetCulture(culture);
-        private static CultureInfo SetCulture(string name) => CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(name);
-        public void Dispose() { _ = _selected; CultureInfo.CurrentUICulture = _old; }
+        private static CultureInfo SetCulture(string name) => CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(name);
+        public void Dispose() { _ = _selected; CultureInfo.CurrentUICulture = _old; CultureInfo.CurrentCulture = _oldNumeric; }
     }
     private sealed class Session
     {

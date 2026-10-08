@@ -21,7 +21,7 @@
           <TextBlock Text="{x:Static resources:Strings.Position}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Grid.Column="1" x:Name="PositionInput" Text="{Binding LoadDraft.PositionText, Mode=TwoWay}"
                    Classes.error="{Binding LoadDraft.HasPositionError}" AutomationProperties.Name="{x:Static resources:Strings.Position}" />
-          <TextBlock Grid.Column="2" Text="mm" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="2" Text="{Binding LoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
         <TextBlock Text="{Binding LoadDraft.PositionError}" IsVisible="{Binding LoadDraft.HasPositionError}"
                    Classes="validationMessage" TextWrapping="Wrap" />

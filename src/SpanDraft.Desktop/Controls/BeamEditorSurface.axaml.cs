@@ -169,7 +169,7 @@ public partial class BeamEditorSurface : UserControl
             || e.PropertyName == nameof(EditorViewModel.IsLoadFlyoutVisible) && _editor!.LoadState == LoadInteraction.Placement
             || e.PropertyName == nameof(EditorViewModel.IsDistributedLoadFlyoutVisible) && _editor!.DistributedLoadState == DistributedLoadInteraction.Placement))
             CancelLabelGesture();
-        if (e.PropertyName is nameof(EditorViewModel.IsBusy) or nameof(EditorViewModel.Document) or nameof(EditorViewModel.EditorPresentation) or nameof(EditorViewModel.RenderPresentation) or nameof(EditorViewModel.SupportDraft)
+        if (e.PropertyName is nameof(EditorViewModel.ResultPresentation) or nameof(EditorViewModel.IsBusy) or nameof(EditorViewModel.Document) or nameof(EditorViewModel.EditorPresentation) or nameof(EditorViewModel.RenderPresentation) or nameof(EditorViewModel.SupportDraft)
             or nameof(EditorViewModel.IsSupportFlyoutVisible) or nameof(EditorViewModel.Preview)
             or nameof(EditorViewModel.HoveredSupportId) or nameof(EditorViewModel.HasSupportFeedback)
             or nameof(EditorViewModel.ConstraintConflict) or nameof(EditorViewModel.LoadPreview)
@@ -209,7 +209,8 @@ public partial class BeamEditorSurface : UserControl
             System.Func<string, Size> measure = text => SchematicText.Measure(text, Typeface.Default, TechnicalCanvas.LabelFontSize);
             // Reserve from committed labels, including a spare preview row. Neither
             // hover nor transient text changes the pane's requested height.
-            var committed = BeamRenderState.Create(_editor.Document, frame, measure, presentation: _editor.EditorPresentation);
+            var committed = BeamRenderState.Create(_editor.Document, frame, measure, presentation: _editor.EditorPresentation,
+                profile: _editor.ResultPresentation.Profile, reserveUnitWidths: true);
             if (_labelGesture is null)
             {
                 BeamPane.MinHeight = committed.MinimumPaneHeight;
@@ -221,7 +222,8 @@ public partial class BeamEditorSurface : UserControl
             _scene = BeamRenderState.Create(_editor.Document, frame, measure,
                 _editor.Preview, _editor.HiddenSupportId, _editor.SupportPreviewName,
                 _editor.LoadPreview, _editor.HiddenLoadId, _editor.LoadPreviewName, _editor.RenderPresentation,
-                _editor.DistributedLoadPreview, _editor.HiddenDistributedLoadId, _editor.DistributedLoadPreviewName);
+                _editor.DistributedLoadPreview, _editor.HiddenDistributedLoadId, _editor.DistributedLoadPreviewName,
+                _editor.ResultPresentation.Profile, reserveUnitWidths: true);
             TechnicalCanvas.Scene = _scene;
             CoordinateAxis.SetStationLayout(frame.Layout, frame.Viewport.Width);
             SetAndRaise(StationLayoutProperty, ref _stationLayout, frame.Layout);

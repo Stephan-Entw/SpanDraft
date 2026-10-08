@@ -15,12 +15,12 @@ public sealed class ProjectRecoveryTests
     {
         var app = new App(); app.ChangeLength(1.2); app.ChangeLength(1.4); app.ChangeLength(1.6);
         Assert.Empty(app.Files.Writes);
-        app.Delay.ReleaseAll(); await app.Recovery.DrainAsync();
+        app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         Assert.Single(app.Files.Writes);
         Assert.Equal(1.6, (await app.Recovery.ReadAsync())!.State.Document.Length.Meters);
-        app.Main.Undo(); app.Delay.ReleaseAll(); await app.Recovery.DrainAsync();
+        app.Main.Undo(); app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         Assert.Equal(1.4, (await app.Recovery.ReadAsync())!.State.Document.Length.Meters);
-        app.Main.Redo(); app.Delay.ReleaseAll(); await app.Recovery.DrainAsync();
+        app.Main.Redo(); app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         Assert.Equal(1.6, (await app.Recovery.ReadAsync())!.State.Document.Length.Meters);
     }
 
@@ -28,12 +28,12 @@ public sealed class ProjectRecoveryTests
     public async Task ReturningToSavepointDeletesRecoveryAndNewEditsCreateItAgain()
     {
         var app = new App(); Assert.True(await app.Main.SaveAsync());
-        app.ChangeLength(); app.Delay.ReleaseAll(); await app.Recovery.DrainAsync(); Assert.NotNull(await app.Recovery.ReadAsync());
-        app.Main.Undo(); await app.Recovery.DrainAsync();
+        app.ChangeLength(); app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync()); Assert.NotNull(await app.Recovery.ReadAsync());
+        app.Main.Undo(); await WaitFor(app.Recovery.DrainAsync());
         Assert.False(app.Main.Session!.IsDirty); Assert.Null(await app.Recovery.ReadAsync());
-        app.Main.Redo(); app.Delay.ReleaseAll(); await app.Recovery.DrainAsync(); Assert.NotNull(await app.Recovery.ReadAsync());
+        app.Main.Redo(); app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync()); Assert.NotNull(await app.Recovery.ReadAsync());
         Assert.True(await app.Main.SaveAsync()); Assert.Null(await app.Recovery.ReadAsync());
-        app.ChangeLength(2); app.Delay.ReleaseAll(); await app.Recovery.DrainAsync(); Assert.NotNull(await app.Recovery.ReadAsync());
+        app.ChangeLength(2); app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync()); Assert.NotNull(await app.Recovery.ReadAsync());
     }
 
     [Fact]
@@ -44,14 +44,21 @@ public sealed class ProjectRecoveryTests
         var session = ProjectSession.Create(State());
         recovery.Schedule(session);
         var oldTask = recovery.DrainAsync();
-        await recovery.FlushAsync(session.CurrentRevision.State, "/test/file.spandraft");
-        session.MarkSaved(session.CurrentRevision, "/test/file.spandraft");
-        await recovery.DeleteAsync();
-        delay.ReleaseAll(); await oldTask;
+        try
+        {
+            await WaitFor(recovery.FlushAsync(session.CurrentRevision.State, TestPath("file.spandraft")));
+            session.MarkSaved(session.CurrentRevision, TestPath("file.spandraft"));
+            await WaitFor(recovery.DeleteAsync());
+        }
+        finally
+        {
+            delay.ReleaseAll(); await WaitFor(oldTask);
+        }
         Assert.Null(await recovery.ReadAsync()); Assert.Single(files.Writes);
         session.Commit(State() with { Document = State().Document with { Length = M(2) } });
         recovery.Schedule(session); oldTask = recovery.DrainAsync();
-        await recovery.DeleteAsync(); delay.ReleaseAll(); await oldTask;
+        try { await WaitFor(recovery.DeleteAsync()); }
+        finally { delay.ReleaseAll(); await WaitFor(oldTask); }
         Assert.Null(await recovery.ReadAsync()); Assert.Single(files.Writes);
     }
 
@@ -60,14 +67,25 @@ public sealed class ProjectRecoveryTests
     {
         var files = new Files { HonorWriteCancellation = false }; var delay = new Delay();
         var recovery = new ProjectRecovery(files, App.Slot, delay.Wait, () => Now);
-        var session = ProjectSession.Open(State(), "/test/file.spandraft");
+        var session = ProjectSession.Open(State(), TestPath("file.spandraft"));
         session.Commit(State() with { Document = State().Document with { Length = M(2) } });
-        var entered = new TaskCompletionSource(); var release = new TaskCompletionSource();
-        files.BeforeWrite = async (_, _, _) => { entered.SetResult(); await release.Task; };
-        recovery.Schedule(session); delay.ReleaseAll(); await entered.Task;
-        session.Undo(); recovery.Schedule(session);
-        var deleting = recovery.DrainAsync(); Assert.False(deleting.IsCompleted);
-        release.SetResult(); await deleting;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        files.BeforeWrite = async (_, _, _) => { entered.SetResult(); await WaitFor(release.Task); };
+        recovery.Schedule(session); delay.ReleaseAll();
+        var writing = recovery.DrainAsync();
+        try
+        {
+            await WaitForCheckpoint(entered.Task, writing);
+            session.Undo(); recovery.Schedule(session);
+            Assert.False(recovery.DrainAsync().IsCompleted);
+        }
+        finally
+        {
+            release.TrySetResult();
+            await WaitFor(writing);
+            await WaitFor(recovery.DrainAsync());
+        }
         Assert.Null(await recovery.ReadAsync());
     }
 
@@ -77,15 +95,27 @@ public sealed class ProjectRecoveryTests
         var files = new Files { HonorWriteCancellation = false }; var delay = new Delay();
         var recovery = new ProjectRecovery(files, App.Slot, delay.Wait, () => Now);
         var session = ProjectSession.Create(State());
-        var entered = new TaskCompletionSource(); var release = new TaskCompletionSource();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         bool first = true;
-        files.BeforeWrite = async (_, _, _) => { if (first) { first = false; entered.SetResult(); await release.Task; } };
-        recovery.Schedule(session); delay.ReleaseAll(); await entered.Task;
+        files.BeforeWrite = async (_, _, _) => { if (first) { first = false; entered.SetResult(); await WaitFor(release.Task); } };
+        recovery.Schedule(session); delay.ReleaseAll();
+        var writing = recovery.DrainAsync();
         var latest = State() with { Document = State().Document with { Length = M(2) } };
-        var flush = recovery.FlushAsync(latest, "/test/latest.spandraft"); Assert.False(flush.IsCompleted);
-        release.SetResult(); await flush;
+        Task? flush = null;
+        try
+        {
+            await WaitForCheckpoint(entered.Task, writing);
+            flush = recovery.FlushAsync(latest, TestPath("latest.spandraft")); Assert.False(flush.IsCompleted);
+        }
+        finally
+        {
+            release.TrySetResult();
+            await WaitFor(writing);
+            if (flush is not null) await WaitFor(flush);
+        }
         var snapshot = await recovery.ReadAsync();
-        Assert.True(latest.ContentEquals(snapshot!.State)); Assert.Equal("/test/latest.spandraft", snapshot.OriginalFilePath);
+        Assert.True(latest.ContentEquals(snapshot!.State)); Assert.Equal(TestPath("latest.spandraft"), snapshot.OriginalFilePath);
         await recovery.DeleteAsync(); Assert.Null(await recovery.ReadAsync());
     }
 
@@ -93,13 +123,13 @@ public sealed class ProjectRecoveryTests
     public async Task RestoredProjectIsDirtyWithEmptyHistoryOriginalTargetAndOneAnalysis()
     {
         var app = new App(create: false); var state = State(2);
-        app.Files.Data[App.Slot] = ProjectRecovery.Encode(new(state, "/test/original.spandraft", Now));
+        app.Files.Data[App.Slot] = ProjectRecovery.Encode(new(state, TestPath("original.spandraft"), Now));
         Assert.True(await app.Main.InitializeRecoveryAsync());
         Assert.True(app.Main.Session!.IsDirty); Assert.Null(app.Main.Session.SavedRevisionId);
         Assert.Empty(app.Main.Session.UndoHistory); Assert.Empty(app.Main.Session.RedoHistory);
-        Assert.Equal("/test/original.spandraft", app.Main.Session.FilePath); Assert.Equal(1, app.Analyses);
+        Assert.Equal(TestPath("original.spandraft"), app.Main.Session.FilePath); Assert.Equal(1, app.Analyses);
         Assert.True(state.ContentEquals(app.Main.Session.CurrentRevision.State)); Assert.Equal(1, app.Dialogs.RecoveryQuestions);
-        Assert.False(app.Files.Data.ContainsKey("/test/original.spandraft"));
+        Assert.False(app.Files.Data.ContainsKey(TestPath("original.spandraft")));
     }
 
     [Fact]
@@ -116,7 +146,7 @@ public sealed class ProjectRecoveryTests
     [Fact]
     public async Task RedundantRecoveryUsesFullContentEqualityRatherThanBytesOrMechanicalEquality()
     {
-        var app = new App(create: false); var state = State(3); const string path = "/test/existing.spandraft";
+        var app = new App(create: false); var state = State(3); string path = TestPath("existing.spandraft");
         app.Files.Data[App.Slot] = ProjectRecovery.Encode(new(state, path, Now));
         var json = JsonNode.Parse(ProjectFileCodec.Serialize(state))!; json["futureField"] = true;
         app.Files.Data[path] = Encoding.UTF8.GetBytes(json.ToJsonString()); // Different formatting and additional data.
@@ -165,12 +195,25 @@ public sealed class ProjectRecoveryTests
         await Assert.ThrowsAsync<ProjectFormatException>(() => recovery.ReadAsync());
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("relative.spandraft")]
+    [InlineData("folder/relative.spandraft")]
+    public async Task RecoveryRejectsPathsThatAreNotFullyQualified(string path)
+    {
+        var files = new Files(); var recovery = new ProjectRecovery(files, App.Slot);
+        files.Data[App.Slot] = ProjectRecovery.Encode(new(State(), path, Now));
+        var error = await Assert.ThrowsAsync<ProjectFormatException>(() => recovery.ReadAsync());
+        Assert.Equal("Invalid recovery file path.", error.Message);
+    }
+
     [Fact]
     public async Task RecoveryIsStillRestorableWhenTheOriginalProjectFileIsMissingOrMalformed()
     {
         foreach (bool malformed in new[] { false, true })
         {
-            var app = new App(create: false); const string path = "/test/missing.spandraft";
+            var app = new App(create: false); string path = TestPath("missing.spandraft");
             app.Files.Data[App.Slot] = ProjectRecovery.Encode(new(State(), path, Now));
             if (malformed) app.Files.Data[path] = Encoding.UTF8.GetBytes("{}");
             Assert.True(await app.Main.InitializeRecoveryAsync()); Assert.NotNull(app.Main.Session);
@@ -182,9 +225,9 @@ public sealed class ProjectRecoveryTests
     public async Task FailedRecoveryDebounceReportsErrorAndTheNextCommitCanRetry()
     {
         var app = new App(); app.Files.FailWritePath = App.Slot;
-        app.Delay.ReleaseAll(); await app.Recovery.DrainAsync();
+        app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         Assert.Single(app.Dialogs.Errors); Assert.True(app.Main.Session!.IsDirty); Assert.Null(await app.Recovery.ReadAsync());
-        app.Files.FailWritePath = null; app.ChangeLength(); app.Delay.ReleaseAll(); await app.Recovery.DrainAsync();
+        app.Files.FailWritePath = null; app.ChangeLength(); app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         Assert.NotNull(await app.Recovery.ReadAsync());
     }
 }

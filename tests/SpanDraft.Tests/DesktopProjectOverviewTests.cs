@@ -104,7 +104,7 @@ public sealed class DesktopProjectOverviewTests
         Assert.Empty(overview.Supports[0].Value);
         Assert.Equal(new[] { "F1", "M1", "q1" }, overview.Loads.Select(l => l.Name));
         Assert.Equal(new[] { "F", "M", "q" }, overview.Loads.Select(l => l.Type));
-        Assert.Equal(new[] { "-100 N", "50 Nm", "-500 N/m" }, overview.Loads.Select(l => l.Value));
+        Assert.Equal(new[] { "-100 N", "50 N·m", "-500 N/m" }, overview.Loads.Select(l => l.Value));
         Assert.Equal(new[] { "400", "600", "200…800" }, overview.Loads.Select(l => l.Position));
         Assert.True(overview.HasSupports);
         Assert.True(overview.HasLoads);
@@ -406,9 +406,9 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", "400,12", "-100,57 N", "600,99", "50,12 Nm", "200,25…800,75", "-500,99 N/m")]
-    [InlineData("en-US", "400.12", "-100.57 N", "600.99", "50.12 Nm", "200.25…800.75", "-500.99 N/m")]
-    public void TableCellsRoundOnlyDisplayValuesInCurrentUICulture(string culture, string forcePosition,
+    [InlineData("de-DE", "400,12", "-100,57 N", "600,99", "50,12 N·m", "200,25…800,75", "-500,99 N/m")]
+    [InlineData("en-US", "400.12", "-100.57 N", "600.99", "50.12 N·m", "200.25…800.75", "-500.99 N/m")]
+    public void TableCellsRoundOnlyDisplayValuesInNumericCulture(string culture, string forcePosition,
         string force, string momentPosition, string moment, string range, string intensity)
     {
         using var scope = new UiCultureScope(culture);
@@ -459,6 +459,7 @@ public sealed class DesktopProjectOverviewTests
 internal sealed class UiCultureScope : IDisposable
 {
     private readonly CultureInfo _previous = CultureInfo.CurrentUICulture;
-    public UiCultureScope(string culture) => CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
-    public void Dispose() => CultureInfo.CurrentUICulture = _previous;
+    private readonly CultureInfo _previousNumeric = CultureInfo.CurrentCulture;
+    public UiCultureScope(string culture) => CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+    public void Dispose() { CultureInfo.CurrentUICulture = _previous; CultureInfo.CurrentCulture = _previousNumeric; }
 }

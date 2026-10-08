@@ -20,8 +20,12 @@ env:
 
 jobs:
   product:
-    name: Product
-    runs-on: ubuntu-latest
+    name: Product (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
     timeout-minutes: 15
     steps:
       - name: Checkout

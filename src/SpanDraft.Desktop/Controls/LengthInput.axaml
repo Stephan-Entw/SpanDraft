@@ -8,6 +8,6 @@
     <TextBox x:Name="InputBox" Width="88" TextAlignment="Left" Text="{Binding Text, Mode=TwoWay}" Classes="inlineDimension" Classes.error="{Binding HasError}"
              GotFocus="InputGotFocus" LostFocus="InputLostFocus" KeyDown="InputKeyDown"
              AutomationProperties.Name="{x:Static resources:Strings.BeamLength}" ToolTip.Tip="{Binding ErrorText}" />
-    <TextBlock Grid.Column="1" Text="mm" Margin="{DynamicResource UnitMargin}" VerticalAlignment="Center" Classes="body" />
+    <TextBlock Grid.Column="1" Text="{Binding Unit}" Margin="{DynamicResource UnitMargin}" VerticalAlignment="Center" Classes="body" />
   </Grid>
 </UserControl>

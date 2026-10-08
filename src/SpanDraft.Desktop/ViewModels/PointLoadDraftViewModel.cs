@@ -1,6 +1,7 @@
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Presentation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -8,6 +9,7 @@ namespace SpanDraft.Desktop.ViewModels;
 public sealed class PointLoadDraftViewModel : ObservableObject
 {
     private readonly Func<EditorDocument> _read;
+    private readonly UnitDefinition _positionUnit, _valueUnit;
     private Length _referencePosition;
     private string _referencePositionText;
     private readonly double _referenceValue;
@@ -23,11 +25,14 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     private PointLoadPreview _preview;
 
     public PointLoadDraftViewModel(Func<EditorDocument> read, Guid? originalId,
-        PointLoadKind kind, Length position, double value)
+        PointLoadKind kind, Length position, double value, UnitProfile? profile = null)
     {
         if (!Enum.IsDefined(kind)) throw new ArgumentOutOfRangeException(nameof(kind));
         if (!double.IsFinite(value)) throw new ArgumentOutOfRangeException(nameof(value));
         _read = read;
+        profile ??= UnitProfile.Default;
+        _positionUnit = profile[QuantityKind.BeamLength];
+        _valueUnit = profile[kind == PointLoadKind.Force ? QuantityKind.TransverseForce : QuantityKind.Moment];
         OriginalId = originalId;
         Kind = kind;
         var document = read();
@@ -35,9 +40,9 @@ public sealed class PointLoadDraftViewModel : ObservableObject
             kind == PointLoadKind.Force ? AutoNameKind.Force : AutoNameKind.Moment) : null;
         _nameText = AutoCandidate?.Name ?? document.Loads.First(l => l.Id == originalId).Name;
         _referencePosition = position;
-        _positionText = _referencePositionText = UiNumbers.Format(position.Millimeters);
+        _positionText = _referencePositionText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
         _referenceValue = value;
-        _valueText = _referenceValueText = UiNumbers.Format(value);
+        _valueText = _referenceValueText = InputQuantityFormatter.Format(value, _valueUnit);
         _preview = new(position, kind, value);
         Validate();
     }
@@ -54,7 +59,8 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     public bool HasNameError => NameError is not null;
     public PointLoadKind Kind { get; }
     public string ValueLabel => Kind == PointLoadKind.Force ? Strings.ForceValueLabel : Strings.MomentValueLabel;
-    public string Unit => Kind == PointLoadKind.Force ? "N" : "Nm";
+    public string Unit => _valueUnit.Symbol;
+    public string PositionUnit => _positionUnit.Symbol;
     public string PositionText
     {
         get => _positionText;
@@ -84,7 +90,7 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     internal void ApplyDragPosition(Length position)
     {
         _referencePosition = position;
-        _referencePositionText = UiNumbers.Format(position.Millimeters);
+        _referencePositionText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
         _preview = _preview with { Position = position };
         Set(ref _positionText, _referencePositionText, nameof(PositionText));
         Validate();
@@ -101,11 +107,21 @@ public sealed class PointLoadDraftViewModel : ObservableObject
             NameValidationError.Duplicate => Strings.DuplicateEntityName,
             _ => null
         };
-        _positionError = UiNumbers.TryParsePosition(PositionText, document.Length, out var position)
+        bool positionValid;
+        Length position;
+        if (PositionText == _referencePositionText)
+        {
+            position = _referencePosition;
+            positionValid = position.Meters >= 0 && position.Meters <= document.Length.Meters;
+        }
+        else positionValid = InputQuantityFormatter.TryParsePosition(PositionText, _positionUnit, document.Length, out position);
+        _positionError = positionValid
             ? null : Strings.PositionInsideBeam;
         if (_positionError is null)
             _inputPosition = PositionText == _referencePositionText ? _referencePosition : position;
-        _valueError = UiNumbers.TryParseSignedValue(ValueText, out double value) ? null : Strings.InvalidLoadValue;
+        double value = _referenceValue;
+        _valueError = ValueText == _referenceValueText || InputQuantityFormatter.TryParse(ValueText, _valueUnit, out value)
+            ? null : Strings.InvalidLoadValue;
         if (_valueError is null)
         {
             _inputValue = ValueText == _referenceValueText ? _referenceValue : value;

@@ -117,7 +117,8 @@ public sealed class DesktopResultPresentationTests
         foreach (var profile in new[] { UnitProfile.UnitedStates, Mixed, UnitProfile.Default })
         foreach (var mode in Enum.GetValues<PresentationMode>())
         {
-            app.Main.SetResultPresentation(profile, mode);
+            Assert.Equal(UserSettings.SameUnits(profile, UnitProfile.Default), app.Main.SetResultPresentation(profile, mode));
+            Assert.True(app.Main.SetResultPresentation(UnitProfile.Default, mode));
             Assert.Same(presentation.Result, editor.Presentation.Result);
             Assert.Same(references, editor.Presentation.References);
             Assert.Same(revision, session.CurrentRevision);
@@ -142,7 +143,7 @@ public sealed class DesktopResultPresentationTests
         }
         Assert.Equal(0, changed);
         Assert.Equal(0, applied);
-        Assert.All(notifications, name => Assert.Contains(name, new[] { "ResultPresentation", "Presentation", "Overview" }));
+        Assert.All(notifications, name => Assert.Contains(name, new[] { "ResultPresentation", "Presentation", "Overview", "CoordinateText" }));
         var before = editor.Presentation;
         int count = notifications.Count;
         app.Main.SetResultPresentation(UnitProfile.Default, PresentationMode.Detailed);

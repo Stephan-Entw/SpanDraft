@@ -14,17 +14,19 @@ public sealed class ProjectOverviewState
 {
     private ProjectOverviewState(EditorDocument document, AnalysisPresentationState analysis)
     {
-        Section = SectionDisplay.Name(document.Section);
-        Material = document.Material.Name;
-        Length = string.Format(CultureInfo.CurrentUICulture, Strings.OverviewLength, Position(document.Length));
         Analysis = analysis;
+        Section = SectionDisplay.Name(document.Section, analysis.Options.Profile);
+        Material = document.Material.Name;
+        Length = string.Format(CultureInfo.CurrentUICulture, Strings.OverviewLength, Position(document.Length),
+            analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
         Supports = Array.AsReadOnly(document.Supports.Select(s => new ProjectOverviewItem(s.Id, s.Name,
             SupportTypeName(s.Type), "", Position(s.Position))).ToArray());
         Loads = Array.AsReadOnly(document.Loads.Select(l => new ProjectOverviewItem(l.Id, l.Name,
             l.Kind == PointLoadKind.Force ? "F" : "M",
-            UiNumbers.Compact(l.Value) + (l.Kind == PointLoadKind.Force ? " N" : " Nm"), Position(l.Position)))
+            InputQuantityFormatter.WithUnit(l.Value, analysis.Options.Profile[l.Kind == PointLoadKind.Force
+                ? QuantityKind.TransverseForce : QuantityKind.Moment]), Position(l.Position)))
             .Concat(document.DistributedLoads.Select(l => new ProjectOverviewItem(l.Id, l.Name,
-                "q", UiNumbers.Compact(l.Intensity.NewtonsPerMeter) + " N/m",
+                "q", InputQuantityFormatter.WithUnit(l.Intensity.NewtonsPerMeter, analysis.Options.Profile[QuantityKind.DistributedLoad]),
                 Position(l.StartPosition) + "…" + Position(l.EndPosition))))
             .ToArray());
         Reactions = Array.AsReadOnly(analysis.Result is { } result
@@ -53,11 +55,13 @@ public sealed class ProjectOverviewState
     public string ReactionXHeader => "Rx [" + Analysis.Options.Profile[QuantityKind.AxialForce].Symbol + "]";
     public string ReactionYHeader => "Ry [" + Analysis.Options.Profile[QuantityKind.TransverseForce].Symbol + "]";
     public string ReactionMomentHeader => "M [" + Analysis.Options.Profile[QuantityKind.Moment].Symbol + "]";
+    public string PositionHeader => string.Format(CultureInfo.CurrentUICulture, Strings.OverviewPosition,
+        Analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
 
     private string Reaction(double siValue, QuantityKind kind) => QuantityFormatter.FormatNumber(siValue, kind,
         Analysis.Options.Profile, Analysis.Options.Mode, Analysis.References);
 
-    private static string Position(Length position) => UiNumbers.Compact(position.Millimeters);
+    private string Position(Length position) => InputQuantityFormatter.Display(position.Meters, Analysis.Options.Profile[QuantityKind.BeamLength]);
 
     private static string SupportTypeName(SupportType type) => type switch
     {

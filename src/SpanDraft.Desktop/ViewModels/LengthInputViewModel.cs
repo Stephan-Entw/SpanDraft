@@ -1,6 +1,6 @@
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Resources;
-using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Presentation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -11,9 +11,12 @@ public readonly record struct LengthCommitResult(bool Accepted, string? ErrorTex
 
 /// <summary>Transient input session for the single inline dimension editor.</summary>
 public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthCommitResult> commit,
-    Func<bool>? preserveBuffer = null) : ObservableObject
+    Func<bool>? preserveBuffer = null, Func<UnitDefinition>? readUnit = null) : ObservableObject
 {
-    private string _text = UiNumbers.Format(read().Millimeters);
+    private string _text = InputQuantityFormatter.Format(read().Meters, readUnit?.Invoke() ?? UnitCatalog.Millimeter);
+    private UnitDefinition _editUnit = UnitCatalog.Millimeter;
+    private Length _referenceLength;
+    private string _referenceText = "";
     private bool _isEditing;
     private bool _hasError;
     private string? _commitError;
@@ -36,21 +39,32 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
     public bool IsDisplay => !IsEditing;
     public bool HasError { get => _hasError; private set => Set(ref _hasError, value); }
     public string ErrorText => _commitError ?? Strings.InvalidLength;
-    public string DisplayText => UiNumbers.Compact(read().Millimeters) + " mm";
+    private UnitDefinition CurrentUnit => IsEditing ? _editUnit : readUnit?.Invoke() ?? UnitCatalog.Millimeter;
+    public string Unit => CurrentUnit.Symbol;
+    public string DisplayText => InputQuantityFormatter.WithUnit(read().Meters, CurrentUnit);
+
+    public bool TryGetLength(out Length length)
+    {
+        if (IsEditing && Text == _referenceText) { length = _referenceLength; return true; }
+        return InputQuantityFormatter.TryParseLength(Text, CurrentUnit, out length);
+    }
 
     public void Begin()
     {
         if (IsEditing) return;
-        Text = UiNumbers.Format(read().Millimeters);
+        _editUnit = readUnit?.Invoke() ?? UnitCatalog.Millimeter;
+        _referenceLength = read();
+        Text = _referenceText = InputQuantityFormatter.Format(_referenceLength.Meters, _editUnit);
         ClearError();
         IsEditing = true;
+        Notify(nameof(Unit));
         BufferChanged?.Invoke(Text);
     }
 
     public bool Confirm()
     {
         if (!IsEditing || _isConfirming) return true;
-        if (!UiNumbers.TryParseLength(Text, out Length length))
+        if (!TryGetLength(out Length length))
         {
             ClearError();
             HasError = true;
@@ -97,9 +111,10 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
 
     public void Refresh(bool preserveError = false)
     {
-        if (!IsEditing) Text = UiNumbers.Format(read().Millimeters);
+        if (!IsEditing) Text = InputQuantityFormatter.Format(read().Meters, CurrentUnit);
         if (!preserveError) ClearError();
         Notify(nameof(DisplayText));
+        Notify(nameof(Unit));
     }
 
     private void ClearError()

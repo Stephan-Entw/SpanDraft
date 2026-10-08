@@ -27,8 +27,8 @@
   <data name="PinnedSupport" xml:space="preserve"><value>Festlager</value></data>
   <data name="RollerSupport" xml:space="preserve"><value>Loslager</value></data>
   <data name="BeamModel" xml:space="preserve"><value>Balkenmodell</value></data>
-  <data name="OverviewLength" xml:space="preserve"><value>Länge {0} mm</value></data>
-  <data name="OverviewPosition" xml:space="preserve"><value>Position [mm]</value></data>
+  <data name="OverviewLength" xml:space="preserve"><value>Länge {0} {1}</value></data>
+  <data name="OverviewPosition" xml:space="preserve"><value>Position [{0}]</value></data>
   <data name="Supports" xml:space="preserve"><value>Lager</value></data>
   <data name="Loads" xml:space="preserve"><value>Lasten</value></data>
   <data name="Reactions" xml:space="preserve"><value>Reaktionen</value></data>
@@ -73,7 +73,7 @@
   <data name="PositionInsideBeam" xml:space="preserve"><value>Die Position muss innerhalb des Balkens liegen (0 ≤ x ≤ L).</value></data>
   <data name="LengthExcludesSupports" xml:space="preserve"><value>Balkenlänge darf vorhandene Lager nicht ausschließen.</value></data>
   <data name="InvalidSupportType" xml:space="preserve"><value>Eine gültige Lagerart auswählen.</value></data>
-  <data name="SupportCoordinate" xml:space="preserve"><value>x = {0} mm</value></data>
+  <data name="SupportCoordinate" xml:space="preserve"><value>x = {0} {1}</value></data>
   <data name="ForceValueLabel" xml:space="preserve"><value>Kraft F</value></data>
   <data name="MomentValueLabel" xml:space="preserve"><value>Moment M</value></data>
   <data name="InvalidLoadValue" xml:space="preserve"><value>Eine endliche Zahl eingeben.</value></data>
@@ -101,10 +101,10 @@
   <data name="RecoveryError" xml:space="preserve"><value>Die Wiederherstellung konnte nicht aktualisiert werden. Ihr Projekt bleibt in diesem Fenster erhalten.</value></data>
   <data name="Restore" xml:space="preserve"><value>Wiederherstellen</value></data>
   <data name="Discard" xml:space="preserve"><value>Verwerfen</value></data>
-  <data name="RectangleSectionName" xml:space="preserve"><value>Rechteck {0} × {1} mm</value></data>
-  <data name="RectangularHollowSectionName" xml:space="preserve"><value>Rechteckrohr {0} × {1} × {2} mm</value></data>
-  <data name="CircleSectionName" xml:space="preserve"><value>Rundmaterial Ø{0} mm</value></data>
-  <data name="CircularHollowSectionName" xml:space="preserve"><value>Rundrohr Ø{0} × {1} mm</value></data>
+  <data name="RectangleSectionName" xml:space="preserve"><value>Rechteck {0} × {1} {2}</value></data>
+  <data name="RectangularHollowSectionName" xml:space="preserve"><value>Rechteckrohr {0} × {1} × {2} {3}</value></data>
+  <data name="CircleSectionName" xml:space="preserve"><value>Rundmaterial Ø{0} {1}</value></data>
+  <data name="CircularHollowSectionName" xml:space="preserve"><value>Rundrohr Ø{0} × {1} {2}</value></data>
   <data name="CustomSectionName" xml:space="preserve"><value>Benutzerquerschnitt</value></data>
   <data name="DiagramMinimum" xml:space="preserve"><value>min = {0}</value></data>
   <data name="DiagramMaximum" xml:space="preserve"><value>max = {0}</value></data>
@@ -112,4 +112,33 @@
   <data name="DiagramMinimumApproximate" xml:space="preserve"><value>min ≈ {0}</value></data>
   <data name="DiagramMaximumApproximate" xml:space="preserve"><value>max ≈ {0}</value></data>
   <data name="DiagramMinimumAndMaximumApproximate" xml:space="preserve"><value>min = max ≈ {0}</value></data>
+  <data name="SettingsTitle" xml:space="preserve"><value>Einstellungen</value></data>
+  <data name="SettingsUnits" xml:space="preserve"><value>Einheiten</value></data>
+  <data name="ProfileMechanical" xml:space="preserve"><value>Maschinenbau</value></data>
+  <data name="ProfileStructural" xml:space="preserve"><value>Bauwesen</value></data>
+  <data name="ProfileUnitedStates" xml:space="preserve"><value>US-amerikanisch</value></data>
+  <data name="ProfileCustom" xml:space="preserve"><value>Benutzerdefiniert</value></data>
+  <data name="UnitBeamLength" xml:space="preserve"><value>Balkenlänge / Position</value></data>
+  <data name="UnitSectionDimension" xml:space="preserve"><value>Querschnittsabmessungen</value></data>
+  <data name="UnitDeflection" xml:space="preserve"><value>Durchbiegung</value></data>
+  <data name="UnitAxialDisplacement" xml:space="preserve"><value>Axiale Verschiebung</value></data>
+  <data name="UnitArea" xml:space="preserve"><value>Querschnittsfläche A</value></data>
+  <data name="UnitInertia" xml:space="preserve"><value>Flächenträgheitsmoment I</value></data>
+  <data name="UnitModulus" xml:space="preserve"><value>Widerstandsmoment W</value></data>
+  <data name="UnitForce" xml:space="preserve"><value>Kraft / Querkraft / Lagerreaktion</value></data>
+  <data name="UnitAxialForce" xml:space="preserve"><value>Normalkraft</value></data>
+  <data name="UnitStress" xml:space="preserve"><value>Spannung</value></data>
+  <data name="UnitRotation" xml:space="preserve"><value>Rotation</value></data>
+  <data name="SettingsNumeric" xml:space="preserve"><value>Numerische Ergebnisdarstellung</value></data>
+  <data name="PresentationStandard" xml:space="preserve"><value>Standard</value></data>
+  <data name="PresentationDetailed" xml:space="preserve"><value>Detailliert</value></data>
+  <data name="PresentationStandardDescription" xml:space="preserve"><value>Empfohlen für die normale Auswertung. SpanDraft reduziert unnötige Zahlengenauigkeit und passt die Anzeige bei bestimmten Ergebnissen an die Größenordnung des Modells an. Dadurch bleiben die Ergebnisse übersichtlich, ohne eine höhere Genauigkeit vorzutäuschen.</value></data>
+  <data name="PresentationDetailedDescription" xml:space="preserve"><value>Zeigt Ergebnisse mit bis zu drei signifikanten Stellen und ohne die zusätzliche modellabhängige Reduzierung des Standardmodus. Geeignet, wenn kleine Zahlenunterschiede genauer betrachtet werden sollen.</value></data>
+  <data name="PresentationCalculationHint" xml:space="preserve"><value>Der Darstellungsmodus verändert nur die angezeigten Zahlen. Die Berechnung selbst ist in beiden Modi identisch.</value></data>
+  <data name="SettingsLanguage" xml:space="preserve"><value>Sprache</value></data>
+  <data name="InterfaceLanguage" xml:space="preserve"><value>Sprache der Benutzeroberfläche</value></data>
+  <data name="SystemLanguage" xml:space="preserve"><value>Systemsprache</value></data>
+  <data name="LanguageUnavailable" xml:space="preserve"><value>Manuelle Sprachauswahl ist noch nicht verfügbar.</value></data>
+  <data name="SettingsDraftBlocked" xml:space="preserve"><value>Bestätigen oder verwerfen Sie zunächst die aktive Bearbeitung, bevor Sie deren Eingabeeinheiten ändern. Ihre Änderungen in den Einstellungen bleiben erhalten.</value></data>
+  <data name="SettingsSaveError" xml:space="preserve"><value>Die Einstellungen konnten nicht gespeichert werden.</value></data>
 </root>

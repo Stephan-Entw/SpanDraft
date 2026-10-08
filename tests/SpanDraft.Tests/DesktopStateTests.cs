@@ -21,8 +21,9 @@ public class DesktopStateTests
     private sealed class UiCultureScope : IDisposable
     {
         private readonly CultureInfo _previous = CultureInfo.CurrentUICulture;
-        public UiCultureScope(string culture) => CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
-        public void Dispose() => CultureInfo.CurrentUICulture = _previous;
+        private readonly CultureInfo _previousNumeric = CultureInfo.CurrentCulture;
+        public UiCultureScope(string culture) => CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        public void Dispose() { CultureInfo.CurrentUICulture = _previous; CultureInfo.CurrentCulture = _previousNumeric; }
     }
 
     private sealed class Session
@@ -114,7 +115,7 @@ public class DesktopStateTests
     [InlineData("-1")]
     [InlineData("NaN")]
     [InlineData("Infinity")]
-    [InlineData("1e309")]
+    [InlineData("1e312")]
     [InlineData("1e-323")]
     [InlineData("1,000.5")]
     public void InvalidEnterRetainsCommittedStateAndAllowsCorrection(string text)

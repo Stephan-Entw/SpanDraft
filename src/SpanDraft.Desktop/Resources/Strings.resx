@@ -27,8 +27,8 @@
   <data name="PinnedSupport" xml:space="preserve"><value>Pinned Support</value></data>
   <data name="RollerSupport" xml:space="preserve"><value>Roller Support</value></data>
   <data name="BeamModel" xml:space="preserve"><value>Beam model</value></data>
-  <data name="OverviewLength" xml:space="preserve"><value>Length {0} mm</value></data>
-  <data name="OverviewPosition" xml:space="preserve"><value>Position [mm]</value></data>
+  <data name="OverviewLength" xml:space="preserve"><value>Length {0} {1}</value></data>
+  <data name="OverviewPosition" xml:space="preserve"><value>Position [{0}]</value></data>
   <data name="Supports" xml:space="preserve"><value>Supports</value></data>
   <data name="Loads" xml:space="preserve"><value>Loads</value></data>
   <data name="Reactions" xml:space="preserve"><value>Reactions</value></data>
@@ -73,7 +73,7 @@
   <data name="PositionInsideBeam" xml:space="preserve"><value>Position must be inside the beam (0 ≤ x ≤ L).</value></data>
   <data name="LengthExcludesSupports" xml:space="preserve"><value>Beam length cannot exclude existing supports.</value></data>
   <data name="InvalidSupportType" xml:space="preserve"><value>Select a valid support type.</value></data>
-  <data name="SupportCoordinate" xml:space="preserve"><value>x = {0} mm</value></data>
+  <data name="SupportCoordinate" xml:space="preserve"><value>x = {0} {1}</value></data>
   <data name="ForceValueLabel" xml:space="preserve"><value>Force F</value></data>
   <data name="MomentValueLabel" xml:space="preserve"><value>Moment M</value></data>
   <data name="InvalidLoadValue" xml:space="preserve"><value>Enter a finite number.</value></data>
@@ -101,10 +101,10 @@
   <data name="RecoveryError" xml:space="preserve"><value>Recovery could not be updated. Your project remains available in this window.</value></data>
   <data name="Restore" xml:space="preserve"><value>Restore</value></data>
   <data name="Discard" xml:space="preserve"><value>Discard</value></data>
-  <data name="RectangleSectionName" xml:space="preserve"><value>Rectangle {0} × {1} mm</value></data>
-  <data name="RectangularHollowSectionName" xml:space="preserve"><value>Rectangular tube {0} × {1} × {2} mm</value></data>
-  <data name="CircleSectionName" xml:space="preserve"><value>Circle Ø{0} mm</value></data>
-  <data name="CircularHollowSectionName" xml:space="preserve"><value>Circular tube Ø{0} × {1} mm</value></data>
+  <data name="RectangleSectionName" xml:space="preserve"><value>Rectangle {0} × {1} {2}</value></data>
+  <data name="RectangularHollowSectionName" xml:space="preserve"><value>Rectangular tube {0} × {1} × {2} {3}</value></data>
+  <data name="CircleSectionName" xml:space="preserve"><value>Circle Ø{0} {1}</value></data>
+  <data name="CircularHollowSectionName" xml:space="preserve"><value>Circular tube Ø{0} × {1} {2}</value></data>
   <data name="CustomSectionName" xml:space="preserve"><value>Custom section</value></data>
   <data name="DiagramMinimum" xml:space="preserve"><value>min = {0}</value></data>
   <data name="DiagramMaximum" xml:space="preserve"><value>max = {0}</value></data>
@@ -112,4 +112,33 @@
   <data name="DiagramMinimumApproximate" xml:space="preserve"><value>min ≈ {0}</value></data>
   <data name="DiagramMaximumApproximate" xml:space="preserve"><value>max ≈ {0}</value></data>
   <data name="DiagramMinimumAndMaximumApproximate" xml:space="preserve"><value>min = max ≈ {0}</value></data>
+  <data name="SettingsTitle" xml:space="preserve"><value>Settings</value></data>
+  <data name="SettingsUnits" xml:space="preserve"><value>Units</value></data>
+  <data name="ProfileMechanical" xml:space="preserve"><value>Mechanical engineering</value></data>
+  <data name="ProfileStructural" xml:space="preserve"><value>Structural engineering</value></data>
+  <data name="ProfileUnitedStates" xml:space="preserve"><value>US customary</value></data>
+  <data name="ProfileCustom" xml:space="preserve"><value>Custom</value></data>
+  <data name="UnitBeamLength" xml:space="preserve"><value>Beam length / position</value></data>
+  <data name="UnitSectionDimension" xml:space="preserve"><value>Section dimensions</value></data>
+  <data name="UnitDeflection" xml:space="preserve"><value>Deflection</value></data>
+  <data name="UnitAxialDisplacement" xml:space="preserve"><value>Axial displacement</value></data>
+  <data name="UnitArea" xml:space="preserve"><value>Section area A</value></data>
+  <data name="UnitInertia" xml:space="preserve"><value>Second moment of area I</value></data>
+  <data name="UnitModulus" xml:space="preserve"><value>Section modulus W</value></data>
+  <data name="UnitForce" xml:space="preserve"><value>Force / shear / reaction</value></data>
+  <data name="UnitAxialForce" xml:space="preserve"><value>Axial force</value></data>
+  <data name="UnitStress" xml:space="preserve"><value>Stress</value></data>
+  <data name="UnitRotation" xml:space="preserve"><value>Rotation</value></data>
+  <data name="SettingsNumeric" xml:space="preserve"><value>Numerical result presentation</value></data>
+  <data name="PresentationStandard" xml:space="preserve"><value>Standard</value></data>
+  <data name="PresentationDetailed" xml:space="preserve"><value>Detailed</value></data>
+  <data name="PresentationStandardDescription" xml:space="preserve"><value>Recommended for normal evaluation. SpanDraft reduces unnecessary numerical precision and adjusts the display of certain results to the scale of the model. This keeps results clear without suggesting greater accuracy.</value></data>
+  <data name="PresentationDetailedDescription" xml:space="preserve"><value>Shows results with up to three significant digits, without the additional model-dependent reduction of Standard mode. Useful when examining small numerical differences more closely.</value></data>
+  <data name="PresentationCalculationHint" xml:space="preserve"><value>The presentation mode changes only the displayed numbers. The calculation itself is identical in both modes.</value></data>
+  <data name="SettingsLanguage" xml:space="preserve"><value>Language</value></data>
+  <data name="InterfaceLanguage" xml:space="preserve"><value>User interface language</value></data>
+  <data name="SystemLanguage" xml:space="preserve"><value>System language</value></data>
+  <data name="LanguageUnavailable" xml:space="preserve"><value>Manual language selection is not yet available.</value></data>
+  <data name="SettingsDraftBlocked" xml:space="preserve"><value>Confirm or cancel the active edit before applying changes to its input units. Your pending settings are retained.</value></data>
+  <data name="SettingsSaveError" xml:space="preserve"><value>The settings could not be saved.</value></data>
 </root>

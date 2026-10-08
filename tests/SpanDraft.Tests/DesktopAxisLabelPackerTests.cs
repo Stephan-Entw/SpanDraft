@@ -131,9 +131,10 @@ public sealed class DesktopAxisLabelPackerTests
     public void CultureFormattingAndMeasurementHappenBeforePacking(string culture, string expected)
     {
         var previous = CultureInfo.CurrentUICulture;
+        var numericCulture = CultureInfo.CurrentCulture;
         try
         {
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
             string longText = UiNumbers.Format(1200.5);
             string shortText = UiNumbers.Format(1);
             Assert.Equal(expected, longText);
@@ -144,7 +145,7 @@ public sealed class DesktopAxisLabelPackerTests
             Assert.Equal(48, result.Labels[0].Right - result.Labels[0].Left);
             Assert.Equal(8, result.Labels[1].Right - result.Labels[1].Left);
         }
-        finally { CultureInfo.CurrentUICulture = previous; }
+        finally { CultureInfo.CurrentUICulture = previous; CultureInfo.CurrentCulture = numericCulture; }
     }
 
     [Theory]

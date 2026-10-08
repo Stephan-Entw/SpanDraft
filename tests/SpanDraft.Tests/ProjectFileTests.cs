@@ -215,7 +215,11 @@ public sealed class ProjectFileTests
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.WriteAtomicAsync(path, [1, 2, 3], cancelled.Token));
             Assert.True(State(1).ContentEquals(ProjectFileCodec.Deserialize((await store.ReadAsync(path))!)));
             var destinationDirectory = Path.Combine(directory, "blocked"); Directory.CreateDirectory(destinationDirectory);
-            await Assert.ThrowsAnyAsync<IOException>(() => store.WriteAtomicAsync(destinationDirectory, [1, 2, 3], TestContext.Current.CancellationToken));
+            var failure = await Record.ExceptionAsync(() =>
+                store.WriteAtomicAsync(destinationDirectory, [1, 2, 3], TestContext.Current.CancellationToken));
+            Assert.True(failure is IOException or UnauthorizedAccessException,
+                $"Expected a filesystem write failure, got {failure?.GetType().Name ?? "no exception"}.");
+            Assert.True(State(1).ContentEquals(ProjectFileCodec.Deserialize((await store.ReadAsync(path))!)));
             Assert.Empty(Directory.GetFiles(directory, "*.tmp"));
             await store.DeleteAsync(path); Assert.Null(await store.ReadAsync(path));
         }

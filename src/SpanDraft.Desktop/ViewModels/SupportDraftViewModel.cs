@@ -2,6 +2,7 @@ using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Presentation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -20,6 +21,7 @@ public sealed record SupportTypeOption(SupportType Type)
 public sealed class SupportDraftViewModel : ObservableObject
 {
     private readonly Func<EditorDocument> _read;
+    private readonly UnitDefinition _positionUnit;
     private Length _bufferReferencePosition;
     private string _bufferReferenceText;
     private Length _inputPosition;
@@ -30,16 +32,17 @@ public sealed class SupportDraftViewModel : ObservableObject
     private string? _errorText;
     private SupportPreview _preview;
 
-    public SupportDraftViewModel(Func<EditorDocument> read, Guid? originalId, SupportType type, Length position)
+    public SupportDraftViewModel(Func<EditorDocument> read, Guid? originalId, SupportType type, Length position, UnitProfile? profile = null)
     {
         _read = read;
+        _positionUnit = (profile ?? UnitProfile.Default)[QuantityKind.BeamLength];
         OriginalId = originalId;
         var document = read();
         AutoCandidate = originalId is null ? EntityNaming.Peek(document, AutoNameKind.Support) : null;
         _nameText = AutoCandidate?.Name ?? document.Supports.First(s => s.Id == originalId).Name;
         _type = type;
         _bufferReferencePosition = position;
-        _bufferReferenceText = UiNumbers.Format(position.Millimeters);
+        _bufferReferenceText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
         _positionText = _bufferReferenceText;
         _preview = new(position, type);
         Validate();
@@ -50,6 +53,7 @@ public sealed class SupportDraftViewModel : ObservableObject
         new SupportTypeOption(SupportType.Fixed), new(SupportType.Pinned), new(SupportType.Roller)
     });
     public Guid? OriginalId { get; }
+    public string PositionUnit => _positionUnit.Symbol;
     public bool IsExisting => OriginalId.HasValue;
     public AutoNameCandidate? AutoCandidate { get; }
     public string NameText
@@ -90,7 +94,7 @@ public sealed class SupportDraftViewModel : ObservableObject
     internal void ApplyDragPosition(Length position)
     {
         _bufferReferencePosition = position;
-        _bufferReferenceText = UiNumbers.Format(position.Millimeters);
+        _bufferReferenceText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
         _preview = _preview with { Position = position };
         Set(ref _positionText, _bufferReferenceText, nameof(PositionText));
         Validate();
@@ -109,7 +113,7 @@ public sealed class SupportDraftViewModel : ObservableObject
         };
         string? error = null;
         if (!Enum.IsDefined(Type)) error = Strings.InvalidSupportType;
-        else if (!UiNumbers.TryParsePosition(PositionText, document.Length, out var position))
+        else if (!TryPosition(document.Length, out var position))
             error = Strings.PositionInsideBeam;
         else
         {
@@ -129,5 +133,15 @@ public sealed class SupportDraftViewModel : ObservableObject
         Notify(nameof(HasError));
         Notify(nameof(IsValid));
         Notify(nameof(Preview));
+    }
+
+    private bool TryPosition(Length beamLength, out Length position)
+    {
+        if (PositionText == _bufferReferenceText)
+        {
+            position = _bufferReferencePosition;
+            return position.Meters >= 0 && position.Meters <= beamLength.Meters;
+        }
+        return InputQuantityFormatter.TryParsePosition(PositionText, _positionUnit, beamLength, out position);
     }
 }

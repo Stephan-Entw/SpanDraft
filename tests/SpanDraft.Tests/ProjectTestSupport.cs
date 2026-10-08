@@ -12,6 +12,29 @@ namespace SpanDraft.Tests;
 
 internal static class ProjectTestSupport
 {
+    private static readonly string VirtualDirectory = Path.Combine(Path.GetTempPath(),
+        "SpanDraft-tests", "virtual", Guid.NewGuid().ToString("N"));
+
+    // These paths address only the in-memory store; no directory is created.
+    public static string TestPath(string fileName) => Path.GetFullPath(Path.Combine(VirtualDirectory, fileName));
+
+    public static Task WaitFor(Task task) =>
+        task.WaitAsync(TimeSpan.FromSeconds(30), Xunit.TestContext.Current.CancellationToken);
+
+    public static Task<T> WaitFor<T>(Task<T> task) =>
+        task.WaitAsync(TimeSpan.FromSeconds(30), Xunit.TestContext.Current.CancellationToken);
+
+    public static async Task WaitForCheckpoint(Task checkpoint, Task operation)
+    {
+        await WaitFor(Task.WhenAny(checkpoint, operation));
+        if (!checkpoint.IsCompleted)
+        {
+            await WaitFor(operation);
+            throw new InvalidOperationException("Operation completed before reaching the expected checkpoint.");
+        }
+        await WaitFor(checkpoint);
+    }
+
     public static readonly Guid SupportId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     public static readonly Guid LoadId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
     public static readonly DateTimeOffset Now = new(2026, 10, 7, 10, 0, 0, TimeSpan.Zero);
@@ -86,7 +109,7 @@ internal static class ProjectTestSupport
     public sealed class Dialogs : IProjectDialogs
     {
         public string? OpenPath { get; set; }
-        public string? SavePath { get; set; } = "/test/Beam01.spandraft";
+        public string? SavePath { get; set; } = TestPath("Beam01.spandraft");
         public LeaveDecision Leave { get; set; } = LeaveDecision.Cancel;
         public RecoveryDecision Recovery { get; set; } = RecoveryDecision.Restore;
         public List<string> Errors { get; } = [];
@@ -107,7 +130,7 @@ internal static class ProjectTestSupport
 
     public sealed class App
     {
-        public const string Slot = "/private/recovery.json";
+        public static readonly string Slot = TestPath("recovery.json");
         public Files Files { get; } = new();
         public Dialogs Dialogs { get; } = new();
         public Delay Delay { get; } = new();

@@ -57,7 +57,7 @@ public sealed class DesktopNavigationTests
         var state = ProjectTestSupport.State();
         Assert.True(model.Editor!.Session.Commit(new(state.Document with { Length = Length.FromMeters(1) }, state.Presentation)));
         var editor = model.Editor;
-        editor.Session.MarkSaved(editor.Session.CurrentRevision, "/private/tmp/overview-test.spandraft");
+        editor.Session.MarkSaved(editor.Session.CurrentRevision, ProjectTestSupport.TestPath("overview-test.spandraft"));
         Layout(window);
         var overview = Assert.Single(window.GetVisualDescendants().OfType<ProjectOverviewView>());
         var surface = Assert.Single(window.GetVisualDescendants().OfType<BeamEditorSurface>());
@@ -395,9 +395,11 @@ public sealed class DesktopNavigationTests
         Assert.Equal(0, surface.Bounds.Top);
         Assert.Equal(pane.Bounds.Bottom, axis.Bounds.Top);
         Assert.Equal(scroll.Bounds.Bottom, diagrams.Bounds.Top);
-        Assert.Equal(SchematicMetrics.MinimumBeamPaneHeight, pane.Bounds.Height);
-        Assert.Equal(124, canvas.Scene!.Frame.Viewport.BeamY);
-        Assert.Equal(SchematicMetrics.BelowBeamSpace, pane.Bounds.Height - canvas.Scene.Frame.Viewport.BeamY);
+        Assert.True(pane.Bounds.Height >= SchematicMetrics.MinimumBeamPaneHeight);
+        Assert.Equal(canvas.Scene!.MinimumPaneHeight, pane.Bounds.Height);
+        Assert.True(canvas.Scene!.Frame.Viewport.BeamY > 0);
+        Assert.Equal(canvas.Scene.RequiredBelowBeamSpace, pane.Bounds.Height - canvas.Scene.Frame.Viewport.BeamY);
+        Assert.True(canvas.Scene.RequiredBelowBeamSpace >= SchematicMetrics.BelowBeamSpace);
         Assert.Equal(8, CoordinateAxisLayout.AxisY);
         double supportToAxisGap = axis.Bounds.Top + CoordinateAxisLayout.AxisY -
             canvas.Scene.Annotations.Where(a => a.IsSupport).Max(a => a.Bounds.Bottom);
@@ -463,9 +465,9 @@ public sealed class DesktopNavigationTests
                 Assert.True(label.Bounds.Bottom <= canvas.Scene.Frame.Viewport.Height);
             });
             if (dy < 0)
-                Assert.Equal(SchematicMetrics.BelowBeamSpace, canvas.Scene.Frame.Viewport.BelowBeamSpace);
+                Assert.Equal(initial.Viewport.BelowBeamSpace, canvas.Scene.Frame.Viewport.BelowBeamSpace);
             else
-                Assert.True(canvas.Scene.Frame.Viewport.BelowBeamSpace > SchematicMetrics.BelowBeamSpace);
+                Assert.True(canvas.Scene.Frame.Viewport.BelowBeamSpace > initial.Viewport.BelowBeamSpace);
         }
         model.Editor.SetAnnotationOffset(load.Id, new(0, 0));
         Layout(window);
@@ -542,7 +544,7 @@ public sealed class DesktopNavigationTests
             Assert.Equal(TextAlignment.Center, header.Children.OfType<TextBlock>().First().TextAlignment);
             if (name == "SupportTable")
             {
-                Assert.Equal(Strings.OverviewPosition, header.Children.OfType<TextBlock>().Last().Text);
+                Assert.Equal(string.Format(Strings.OverviewPosition, "mm"), header.Children.OfType<TextBlock>().Last().Text);
                 Assert.True(header.ColumnDefinitions[0].ActualWidth > 48);
                 Assert.Equal(TextAlignment.Center, header.Children.OfType<TextBlock>().ElementAt(1).TextAlignment);
             }

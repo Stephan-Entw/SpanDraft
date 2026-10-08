@@ -1,6 +1,7 @@
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Presentation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -8,6 +9,7 @@ namespace SpanDraft.Desktop.ViewModels;
 public sealed class DistributedLoadDraftViewModel : ObservableObject
 {
     private readonly Func<EditorDocument> _read;
+    private readonly UnitDefinition _positionUnit, _intensityUnit;
     private Length _referenceStart, _referenceEnd;
     private string _referenceStartText, _referenceEndText;
     private readonly double _referenceIntensity;
@@ -19,24 +21,29 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
     private DistributedLoadPreview _preview;
 
     public DistributedLoadDraftViewModel(Func<EditorDocument> read, Guid? originalId,
-        Length start, Length end, double intensity)
+        Length start, Length end, double intensity, UnitProfile? profile = null)
     {
         if (!double.IsFinite(intensity)) throw new ArgumentOutOfRangeException(nameof(intensity));
         _read = read;
+        profile ??= UnitProfile.Default;
+        _positionUnit = profile[QuantityKind.BeamLength];
+        _intensityUnit = profile[QuantityKind.DistributedLoad];
         OriginalId = originalId;
         AutoCandidate = originalId is null ? EntityNaming.Peek(read(), AutoNameKind.DistributedLoad) : null;
         _nameText = AutoCandidate?.Name ?? read().DistributedLoads.First(l => l.Id == originalId).Name;
         _referenceStart = start;
         _referenceEnd = end;
-        _startText = _referenceStartText = UiNumbers.Format(start.Millimeters);
-        _endText = _referenceEndText = UiNumbers.Format(end.Millimeters);
+        _startText = _referenceStartText = InputQuantityFormatter.Format(start.Meters, _positionUnit);
+        _endText = _referenceEndText = InputQuantityFormatter.Format(end.Meters, _positionUnit);
         _referenceIntensity = intensity;
-        _intensityText = _referenceIntensityText = UiNumbers.Format(intensity);
+        _intensityText = _referenceIntensityText = InputQuantityFormatter.Format(intensity, _intensityUnit);
         _preview = new(start, end, intensity);
         Validate();
     }
 
     public Guid? OriginalId { get; }
+    public string PositionUnit => _positionUnit.Symbol;
+    public string IntensityUnit => _intensityUnit.Symbol;
     public bool IsExisting => OriginalId.HasValue;
     public AutoNameCandidate? AutoCandidate { get; }
     public string NameText { get => _nameText; set { if (Set(ref _nameText, value)) Validate(); } }
@@ -68,14 +75,14 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         if (endpoint == DistributedLoadEndpoint.Start)
         {
             _referenceStart = position;
-            _referenceStartText = UiNumbers.Format(position.Millimeters);
+            _referenceStartText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
             _preview = _preview with { StartPosition = position };
             Set(ref _startText, _referenceStartText, nameof(StartText));
         }
         else
         {
             _referenceEnd = position;
-            _referenceEndText = UiNumbers.Format(position.Millimeters);
+            _referenceEndText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
             _preview = _preview with { EndPosition = position };
             Set(ref _endText, _referenceEndText, nameof(EndText));
         }
@@ -92,13 +99,15 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
             NameValidationError.Duplicate => Strings.DuplicateEntityName,
             _ => null
         };
-        _startError = UiNumbers.TryParsePosition(StartText, document.Length, out var start) ? null : Strings.PositionInsideBeam;
-        _endError = UiNumbers.TryParsePosition(EndText, document.Length, out var end) ? null : Strings.PositionInsideBeam;
+        _startError = TryPosition(StartText, _referenceStartText, _referenceStart, document.Length, out var start) ? null : Strings.PositionInsideBeam;
+        _endError = TryPosition(EndText, _referenceEndText, _referenceEnd, document.Length, out var end) ? null : Strings.PositionInsideBeam;
         if (_startError is null) _inputStart = StartText == _referenceStartText ? _referenceStart : start;
         if (_endError is null) _inputEnd = EndText == _referenceEndText ? _referenceEnd : end;
         if (_startError is null && _endError is null && _inputStart.Meters >= _inputEnd.Meters)
             _startError = _endError = Strings.InvalidDistributedRange;
-        _intensityError = UiNumbers.TryParseSignedValue(IntensityText, out double intensity) ? null : Strings.InvalidLoadValue;
+        double intensity = _referenceIntensity;
+        _intensityError = IntensityText == _referenceIntensityText || InputQuantityFormatter.TryParse(IntensityText, _intensityUnit, out intensity)
+            ? null : Strings.InvalidLoadValue;
         if (_intensityError is null)
         {
             _inputIntensity = IntensityText == _referenceIntensityText ? _referenceIntensity : intensity;
@@ -107,5 +116,15 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         _preview = _preview with { IsInvalid = !IsValid };
         foreach (string name in new[] { nameof(NameError), nameof(StartError), nameof(EndError), nameof(IntensityError),
             nameof(HasNameError), nameof(HasStartError), nameof(HasEndError), nameof(HasIntensityError), nameof(IsValid), nameof(Preview) }) Notify(name);
+    }
+
+    private bool TryPosition(string text, string referenceText, Length reference, Length beamLength, out Length position)
+    {
+        if (text == referenceText)
+        {
+            position = reference;
+            return position.Meters >= 0 && position.Meters <= beamLength.Meters;
+        }
+        return InputQuantityFormatter.TryParsePosition(text, _positionUnit, beamLength, out position);
     }
 }

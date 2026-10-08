@@ -34,7 +34,7 @@ public sealed class ProjectSessionTests
         var state = State();
         var session = ProjectSession.Create(state);
         Assert.True(session.IsDirty);
-        session.MarkSaved(session.CurrentRevision, "/test/project.spandraft");
+        session.MarkSaved(session.CurrentRevision, TestPath("project.spandraft"));
         var savepoint = session.SavedRevisionId;
         Assert.False(session.IsDirty);
         session.Commit(state with { Document = state.Document with { Length = M(2) } });
@@ -58,7 +58,7 @@ public sealed class ProjectSessionTests
         var session = ProjectSession.Create(state);
         var changed = state with { Document = state.Document with { Length = M(2) } };
         session.Commit(changed);
-        session.MarkSaved(session.CurrentRevision, "/test/saved.spandraft");
+        session.MarkSaved(session.CurrentRevision, TestPath("saved.spandraft"));
         var saved = session.SavedRevisionId;
         Assert.Single(session.UndoHistory);
         session.Undo(); Assert.True(session.IsDirty);
@@ -129,7 +129,7 @@ public sealed class ProjectSessionTests
         session.Commit(state with { Document = state.Document with { Length = M(2) } });
         session.SetBusy(true);
         Assert.False(session.CanUndo); Assert.False(session.Commit(state)); Assert.False(session.Undo()); Assert.False(session.Redo());
-        session.MarkSaved(session.CurrentRevision, "/test/file.spandraft"); Assert.False(session.IsDirty);
+        session.MarkSaved(session.CurrentRevision, TestPath("file.spandraft")); Assert.False(session.IsDirty);
         session.SetBusy(false); Assert.True(session.CanUndo);
     }
 

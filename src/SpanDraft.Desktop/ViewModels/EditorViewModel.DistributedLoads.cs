@@ -196,7 +196,7 @@ public sealed partial class EditorViewModel
 
     private void OpenDistributedLoadDraft(Guid? id, Length start, Length end, double intensity)
     {
-        _distributedLoadDraft = new(() => Document, id, start, end, intensity);
+        _distributedLoadDraft = new(() => Document, id, start, end, intensity, ResultPresentation.Profile);
         _distributedLoadDraft.PropertyChanged += DistributedLoadDraftChanged;
         _distributedLoadPreview = _distributedLoadDraft.Preview;
         _distributedPointerPosition = null;

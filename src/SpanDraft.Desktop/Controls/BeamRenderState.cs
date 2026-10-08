@@ -2,6 +2,7 @@ using Avalonia;
 using SpanDraft.Core.Supports;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Presentation;
 
 namespace SpanDraft.Desktop.Controls;
 
@@ -22,7 +23,8 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         SupportPreview? supportPreview = null, Guid? hiddenSupportId = null, string? supportName = null,
         PointLoadPreview? loadPreview = null, Guid? hiddenLoadId = null, string? loadName = null,
         EditorPresentationState? presentation = null, DistributedLoadPreview? distributedPreview = null,
-        Guid? hiddenDistributedId = null, string? distributedName = null)
+        Guid? hiddenDistributedId = null, string? distributedName = null, UnitProfile? profile = null,
+        bool reserveUnitWidths = false)
     {
         var supports = new List<SupportVisual>();
         foreach (var support in document.Supports)
@@ -38,10 +40,29 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
                 preview.Type == SupportType.Fixed && FixedSupportGeometry.AtPosition(preview.Position.Meters, document.Length.Meters).IsMirrored));
         var loads = PointLoadSymbol.Layout(document.Loads, frame, loadPreview, hiddenLoadId, loadName);
         var distributed = DistributedLoadSymbol.Layout(document.DistributedLoads, frame, distributedPreview, hiddenDistributedId, distributedName);
+        if (reserveUnitWidths)
+        {
+            var originalMeasure = measure;
+            var reserved = new Dictionary<string, Size>();
+            foreach (var load in loads)
+            {
+                var quantity = load.Preview.Kind == PointLoadKind.Force ? QuantityKind.TransverseForce : QuantityKind.Moment;
+                Reserve(PointLoadSymbol.Label(load.Preview, load.Name, profile), load.Name, load.Preview.Value, quantity);
+            }
+            foreach (var load in distributed)
+                Reserve(DistributedLoadSymbol.Label(load.Preview, load.Name, profile), load.Name, load.Preview.Intensity, QuantityKind.DistributedLoad);
+            void Reserve(string label, string name, double value, QuantityKind quantity)
+            {
+                var sizes = UnitCatalog.All.Where(u => u.Dimension == UnitCatalog.DimensionOf(quantity))
+                    .Select(u => originalMeasure(name.Trim() + " = " + InputQuantityFormatter.WithUnit(value, u))).ToArray();
+                reserved[label] = new(sizes.Max(s => s.Width), sizes.Max(s => s.Height));
+            }
+            measure = text => reserved.TryGetValue(text, out var size) ? size : originalMeasure(text);
+        }
         var annotations = new List<EntityAnnotation>();
-        double above = Place(loads.Select((v, i) => (v.Id, v.Name, Text: PointLoadSymbol.Label(v.Preview, v.Name),
+        double above = Place(loads.Select((v, i) => (v.Id, v.Name, Text: PointLoadSymbol.Label(v.Preview, v.Name, profile),
             v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)).Concat(distributed.Select((v, i) =>
-            (v.Id, v.Name, Text: DistributedLoadSymbol.Label(v.Preview, v.Name), X: v.CenterX,
+            (v.Id, v.Name, Text: DistributedLoadSymbol.Label(v.Preview, v.Name, profile), X: v.CenterX,
                 v.IsPreview, v.Preview.IsInvalid, Order: loads.Count + i))), false);
         double below = Place(supports.Select((v, i) => (v.Id, v.Name, Text: v.Name,
             v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)), true);

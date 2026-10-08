@@ -212,12 +212,13 @@ public sealed class DesktopDistributedLoadTests
     [Theory]
     [InlineData("de-DE", "123,5", "900,5", "-500,25")]
     [InlineData("en-US", "123.5", "900.5", "-500.25")]
-    public void ParsingUsesUICultureWithoutThousandsSeparators(string culture, string start, string end, string intensity)
+    public void ParsingUsesNumericCultureWithoutThousandsSeparators(string culture, string start, string end, string intensity)
     {
         var original = CultureInfo.CurrentUICulture;
+        var numericCulture = CultureInfo.CurrentCulture;
         try
         {
-            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
             var editor = new EditorViewModel(Document(), () => { });
             NewDraft(editor);
             var draft = editor.DistributedLoadDraft!;
@@ -231,7 +232,7 @@ public sealed class DesktopDistributedLoadTests
             editor.DistributedLoadDraft!.IntensityText = culture == "en-US" ? "1,000" : "1.000";
             Assert.False(editor.ConfirmDistributedLoad());
         }
-        finally { CultureInfo.CurrentUICulture = original; }
+        finally { CultureInfo.CurrentUICulture = original; CultureInfo.CurrentCulture = numericCulture; }
     }
 
     [Fact]

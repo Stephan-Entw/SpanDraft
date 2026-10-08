@@ -40,19 +40,19 @@ public sealed class ProjectWorkflowTests
         Assert.Equal("Beam01.spandraft — SpanDraft", app.Main.WindowTitle);
         Assert.True(app.Main.Undo()); Assert.True(app.Main.Session.IsDirty);
         Assert.True(app.Main.Redo()); Assert.False(app.Main.Session.IsDirty);
-        app.Dialogs.SavePath = "/test/Copy.SPANDRAFT";
+        app.Dialogs.SavePath = TestPath("Copy.SPANDRAFT");
         Assert.True(await app.Main.SaveAsync(saveAs: true));
-        Assert.Equal("/test/Copy.SPANDRAFT", app.Main.Session.FilePath);
+        Assert.Equal(TestPath("Copy.SPANDRAFT"), app.Main.Session.FilePath);
         Assert.Same(revision, app.Main.Session.CurrentRevision);
         Assert.Equal(4, app.Analyses);
     }
 
     [Theory]
-    [InlineData("/test/beam", "/test/beam.spandraft")]
-    [InlineData("/test/beam.spandraft", "/test/beam.spandraft")]
-    [InlineData("/test/beam.SpanDraft", "/test/beam.SpanDraft")]
+    [InlineData("beam", "beam.spandraft")]
+    [InlineData("beam.spandraft", "beam.spandraft")]
+    [InlineData("beam.SpanDraft", "beam.SpanDraft")]
     public void SaveAsExtensionIsAddedOnlyWhenMissing(string chosen, string expected) =>
-        Assert.Equal(expected, MainWindowViewModel.EnsureProjectExtension(chosen));
+        Assert.Equal(TestPath(expected), MainWindowViewModel.EnsureProjectExtension(TestPath(chosen)));
 
     [Fact]
     public async Task FailedSaveAsPreservesOldFileSavepointPathAndCurrentDraft()
@@ -62,7 +62,7 @@ public sealed class ProjectWorkflowTests
         var saved = app.Main.Session.SavedRevisionId;
         app.ChangeLength();
         app.Main.Editor!.DimensionLength.Begin(); app.Main.Editor.DimensionLength.Text = "invalid";
-        app.Dialogs.SavePath = "/test/broken.spandraft"; app.Files.FailWritePath = app.Dialogs.SavePath;
+        app.Dialogs.SavePath = TestPath("broken.spandraft"); app.Files.FailWritePath = app.Dialogs.SavePath;
         Assert.False(await app.Main.SaveAsync(saveAs: true));
         Assert.Equal(oldPath, app.Main.Session.FilePath); Assert.Equal(saved, app.Main.Session.SavedRevisionId);
         Assert.True(app.Main.Session.IsDirty); Assert.Equal(oldBytes, app.Files.Data[oldPath]);
@@ -78,11 +78,11 @@ public sealed class ProjectWorkflowTests
     public async Task InvalidOpenNeverAsksLeaveAndLeavesSessionAndTransientBuffersUntouched()
     {
         var app = new App(); app.ChangeLength();
-        app.Delay.ReleaseAll(); await app.Recovery.DrainAsync();
+        app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         var recovery = app.Files.Data[App.Slot].ToArray();
         var session = app.Main.Session; var revision = session!.CurrentRevision;
         app.Main.Editor!.DimensionLength.Begin(); app.Main.Editor.DimensionLength.Text = "-";
-        app.Dialogs.OpenPath = "/test/invalid.spandraft";
+        app.Dialogs.OpenPath = TestPath("invalid.spandraft");
         app.Files.Data[app.Dialogs.OpenPath] = Encoding.UTF8.GetBytes("{}");
         app.Dialogs.Leave = LeaveDecision.Discard;
         Assert.False(await app.Main.OpenAsync());
@@ -95,7 +95,7 @@ public sealed class ProjectWorkflowTests
     public async Task ValidOpenIsActivatedOnlyAfterLeaveAndAnalyzesExactlyOnce()
     {
         var app = new App(); app.ChangeLength();
-        app.Dialogs.OpenPath = "/test/open.spandraft"; app.Files.Data[app.Dialogs.OpenPath] = ProjectFileCodec.Serialize(State(4));
+        app.Dialogs.OpenPath = TestPath("open.spandraft"); app.Files.Data[app.Dialogs.OpenPath] = ProjectFileCodec.Serialize(State(4));
         var session = app.Main.Session;
         Assert.False(await app.Main.OpenAsync()); Assert.Same(session, app.Main.Session); Assert.Equal(2, app.Analyses);
         app.Dialogs.Leave = LeaveDecision.Discard;
@@ -115,10 +115,10 @@ public sealed class ProjectWorkflowTests
     public async Task EveryLeaveActionRetainsEverythingOnCancelAndSaveAsCancel(string action)
     {
         var app = new App();
-        app.Delay.ReleaseAll(); await app.Recovery.DrainAsync();
+        app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         var session = app.Main.Session; var recovery = app.Files.Data[App.Slot].ToArray();
         app.Main.Editor!.DimensionLength.Begin(); app.Main.Editor.DimensionLength.Text = "bad draft";
-        app.Dialogs.OpenPath = "/test/target.spandraft"; app.Files.Data[app.Dialogs.OpenPath] = ProjectFileCodec.Serialize(State());
+        app.Dialogs.OpenPath = TestPath("target.spandraft"); app.Files.Data[app.Dialogs.OpenPath] = ProjectFileCodec.Serialize(State());
         Task<bool> Leave() => action switch { "new" => app.Main.NewAsync(), "open" => app.Main.OpenAsync(), _ => app.Main.RequestCloseAsync() };
         Assert.False(await Leave());
         app.Dialogs.Leave = LeaveDecision.Save; app.Dialogs.SavePath = null;
@@ -135,13 +135,13 @@ public sealed class ProjectWorkflowTests
     [InlineData("close", true)]
     public async Task SuccessfulSaveOrDiscardLeavesAndDeletesRecovery(string action, bool save)
     {
-        var app = new App(); app.Delay.ReleaseAll(); await app.Recovery.DrainAsync();
+        var app = new App(); app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         app.Dialogs.Leave = save ? LeaveDecision.Save : LeaveDecision.Discard;
         bool result = action == "new" ? await app.Main.NewAsync() : await app.Main.RequestCloseAsync();
         Assert.True(result); Assert.False(app.Files.Data.ContainsKey(App.Slot));
         Assert.Equal(save, app.Files.Data.ContainsKey(app.Dialogs.SavePath!));
         if (action == "new") { Assert.Null(app.Main.Session); Assert.Equal(MainViewMode.ProjectSetup, app.Main.Mode); }
-        app.Delay.ReleaseAll(); await app.Recovery.DrainAsync(); Assert.False(app.Files.Data.ContainsKey(App.Slot));
+        app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync()); Assert.False(app.Files.Data.ContainsKey(App.Slot));
     }
 
     [Fact]
@@ -158,16 +158,25 @@ public sealed class ProjectWorkflowTests
     [Fact]
     public async Task BusyGuardRejectsConcurrentCommandsCommitsAndRepeatedCloseRequests()
     {
-        var app = new App(); var entered = new TaskCompletionSource(); var release = new TaskCompletionSource<LeaveDecision>();
-        app.Dialogs.LeaveHook = () => { entered.SetResult(); return release.Task; };
-        var closing = app.Main.RequestCloseAsync(); await entered.Task;
-        var revision = app.Main.Session!.CurrentRevision;
-        Assert.True(app.Main.IsBusy); Assert.False(app.Main.NewCommand.CanExecute(null));
-        Assert.False(await app.Main.RequestCloseAsync()); Assert.False(await app.Main.NewAsync()); Assert.False(await app.Main.SaveAsync());
-        Assert.False(app.Main.Session.Commit(State())); Assert.Same(revision, app.Main.Session.CurrentRevision);
-        app.Main.Setup.ApplyCommand.Execute(null); Assert.Same(revision, app.Main.Session.CurrentRevision);
-        release.SetResult(LeaveDecision.Cancel);
-        Assert.False(await closing); Assert.False(app.Main.IsBusy); Assert.False(app.Main.Session.IsBusy);
+        var app = new App(); var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<LeaveDecision>(TaskCreationOptions.RunContinuationsAsynchronously);
+        app.Dialogs.LeaveHook = () => { entered.SetResult(); return WaitFor(release.Task); };
+        var closing = app.Main.RequestCloseAsync();
+        try
+        {
+            await WaitForCheckpoint(entered.Task, closing);
+            var revision = app.Main.Session!.CurrentRevision;
+            Assert.True(app.Main.IsBusy); Assert.False(app.Main.NewCommand.CanExecute(null));
+            Assert.False(await app.Main.RequestCloseAsync()); Assert.False(await app.Main.NewAsync()); Assert.False(await app.Main.SaveAsync());
+            Assert.False(app.Main.Session.Commit(State())); Assert.Same(revision, app.Main.Session.CurrentRevision);
+            app.Main.Setup.ApplyCommand.Execute(null); Assert.Same(revision, app.Main.Session.CurrentRevision);
+        }
+        finally
+        {
+            release.TrySetResult(LeaveDecision.Cancel);
+            await WaitFor(closing);
+        }
+        Assert.False(await closing); Assert.False(app.Main.IsBusy); Assert.False(app.Main.Session!.IsBusy);
         Assert.Equal(1, app.Dialogs.LeaveQuestions);
     }
 
@@ -175,18 +184,28 @@ public sealed class ProjectWorkflowTests
     public async Task DirtySaveFlushesTheExactCommittedSnapshotBeforeUserFilePublication()
     {
         var app = new App(); app.ChangeLength(); var revision = app.Main.Session!.CurrentRevision;
-        var entered = new TaskCompletionSource(); var release = new TaskCompletionSource();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         app.Files.BeforeWrite = async (path, bytes, token) =>
         {
             if (path != app.Dialogs.SavePath) return;
             var snapshot = await app.Recovery.ReadAsync();
             Assert.NotNull(snapshot); Assert.True(revision.State.ContentEquals(snapshot.State)); Assert.Equal(path, snapshot.OriginalFilePath);
-            entered.SetResult(); await release.Task;
+            entered.SetResult(); await WaitFor(release.Task);
         };
-        var saving = app.Main.SaveAsync(); await entered.Task;
-        Assert.Same(revision, app.Main.Session.CurrentRevision); Assert.True(app.Main.Session.IsDirty);
-        Assert.False(await app.Main.OpenAsync()); Assert.False(await app.Main.SaveAsync());
-        release.SetResult(); Assert.True(await saving);
+        var saving = app.Main.SaveAsync();
+        try
+        {
+            await WaitForCheckpoint(entered.Task, saving);
+            Assert.Same(revision, app.Main.Session.CurrentRevision); Assert.True(app.Main.Session.IsDirty);
+            Assert.False(await app.Main.OpenAsync()); Assert.False(await app.Main.SaveAsync());
+        }
+        finally
+        {
+            release.TrySetResult();
+            await WaitFor(saving);
+        }
+        Assert.True(await saving);
         Assert.Equal(new[] { App.Slot, app.Dialogs.SavePath }, app.Files.Writes.ToArray());
         Assert.False(app.Files.Data.ContainsKey(App.Slot)); Assert.False(app.Main.Session.IsDirty);
     }
@@ -205,7 +224,7 @@ public sealed class ProjectWorkflowTests
     {
         var app = new App(); Assert.True(await app.Main.SaveAsync());
         var current = app.Main.Session;
-        app.Dialogs.OpenPath = "/test/missing.spandraft";
+        app.Dialogs.OpenPath = TestPath("missing.spandraft");
         Assert.False(await app.Main.OpenAsync()); Assert.Same(current, app.Main.Session);
         Assert.Equal(0, app.Dialogs.LeaveQuestions);
         app.Files.Data[app.Dialogs.OpenPath] = ProjectFileCodec.Serialize(State());
