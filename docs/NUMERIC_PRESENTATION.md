@@ -10,9 +10,9 @@
 
 ## 2. Standardmodus: verbindliche Rundungsregeln
 
-Zunächst wird aus dem **ungerundeten SI-Wert** eine Mindestschrittweite `Δmin` bestimmt; die gröbere der angegebenen Teilregeln gewinnt. Diese wird auf die kleinste Schrittweite `Δ ≥ Δmin` der Form `a · 10ᵏ` mit `a ∈ {1, 2, 5}` und ganzzahligem `k` aufgerundet, jeweils in der kanonischen SI-Einheit der Größe. Bereits passende Schrittweiten bleiben unverändert. Erst danach wird der Ergebniswert einmal auf das nächste Vielfache von `Δ` gerundet (bei exakten Halbwerten von null weg). Vorzeichen bleiben erhalten. Für den Sicherheitsfaktor gilt die eigene Staffelung gemäß Abschnitt 3.
+Zunächst werden der **ungerundete SI-Wert** und die in SI bestimmte modellabhängige Mindestauflösung in die gewählte **Anzeigeeinheit** umgerechnet. In dieser Einheit wird die signifikante Schrittweite bestimmt; die gröbere der angegebenen Teilregeln gewinnt als `Δmin`. Diese wird auf die kleinste Schrittweite `Δ ≥ Δmin` der Form `a · 10ᵏ` mit `a ∈ {1, 2, 5}` und ganzzahligem `k` aufgerundet, jeweils in der Anzeigeeinheit der Größe. Bereits passende Schrittweiten bleiben unverändert. Erst danach wird der umgerechnete Rohwert einmal auf das nächste Vielfache von `Δ` gerundet (bei exakten Halbwerten von null weg). Es gibt weder eine SI-Vorrundung noch eine zweite Rundung für die Textausgabe. Vorzeichen bleiben erhalten. Für den Sicherheitsfaktor gilt die eigene Staffelung gemäß Abschnitt 3.
 
-Für `n` signifikante Stellen gilt bei `x ≠ 0`:
+Für `n` signifikante Stellen gilt beim umgerechneten Rohwert `x ≠ 0` in der Anzeigeeinheit:
 
 `Δsig(x, n) = 10^(floor(log10(abs(x))) - n + 1)`
 
@@ -25,8 +25,10 @@ Für `n` signifikante Stellen gilt bei `x ≠ 0`:
 | Sicherheitsfaktor `S` | Eigene Staffelung gemäß Abschnitt 3 |
 | Übrige berechnete Größen, z. B. Normalkraft `N`, axiale Verschiebung `u`, Rotation `θ`, Querschnittskennwerte `A/I/W` | `Δsig(x, 3)`; **keine** modellabhängige Mindestauflösung |
 
+Die Modellbeiträge der Tabelle (`L · 10⁻⁵` und die `min(...)`-Ausdrücke) werden in SI bestimmt und vor dem Vergleich mit `Δsig` in die Anzeigeeinheit der Ergebnisgröße umgerechnet. Die signifikante Schrittweite und die 1–2–5-Stufung werden dagegen ausschließlich in der Anzeigeeinheit bestimmt.
+
 Definitionen:
-- `L`: physikalische Balkenlänge. Für `w` und `L` gilt dieselbe Längeneinheit; die längenabhängige Mindestauflösung wächst **proportional und ohne künstliche Obergrenze** mit `L`. Die tatsächliche Schrittweite folgt der oben festgelegten Stufung.
+- `L`: physikalische Balkenlänge. Der Beitrag `L · 10⁻⁵` wird in die Anzeigeeinheit von `w` umgerechnet, unabhängig von der ausgewählten Balkenlängeneinheit. Die längenabhängige Mindestauflösung wächst **proportional und ohne künstliche Obergrenze** mit `L`. Die tatsächliche Schrittweite folgt der oben festgelegten Stufung.
 - `Fref`: größter Betrag aus Punktkräften, Resultierenden der einzelnen Streckenlasten `|q| · Lastlänge`, äquivalenten Kräften der Punktmomente `|M|/L` sowie berechneten Querkräften und vertikalen Lagerreaktionen. Gegensinnige Lasten werden **nicht** vorher saldiert.
 - `Mref`: größter Betrag des berechneten Biegemomentverlaufs (aus den vorhandenen analytischen Extrema).
 - `Re`: Streckgrenze des gewählten Werkstoffs.
@@ -82,11 +84,11 @@ Falls künftig Grenzwerte bewertet werden, erfolgt der Vergleich ausschließlich
 
 ## 4. Detailliert, Schreibweise und Einheiten
 
-- **Detailliert:** Für berechnete Größen einschließlich Sicherheitsfaktor drei signifikante Stellen; keine Standard-Auflösungsgrenzen. `0` bleibt `0`, `+∞` bleibt `∞`.
-- **Schreibweise:** SpanDraft wählt **automatisch** zwischen gewöhnlicher Dezimaldarstellung und Engineering-Notation (`·10ⁿ`, Exponent in Dreierschritten). Engineering nur bei unhandlichen Zahlen; **nie `·10⁰`**. Keine zusätzliche Benutzerauswahl für die Notation.
-- Die Entscheidung zur Schreibweise fällt **nach** Einheitenauswahl und numerischer Rundung. Sie darf keine automatische Einheitenskalierung (`N → kN`) auslösen.
-- Einheitensymbole und Dezimaltrennzeichen werden konsistent dargestellt; `de-DE` und `en-US` sind zu unterstützen.
-- Die physikalische Standardauflösung wird in **SI** bestimmt, danach in die gewählte Anzeigeeinheit übertragen. Auch bei gemischten Einheiten bleibt die fachliche Präzisionsentscheidung dieselbe.
+- **Detailliert:** Den ungerundeten SI-Wert zuerst in die Anzeigeeinheit umrechnen und dort einmal auf maximal drei signifikante Stellen runden; keine Standard-Auflösungsgrenzen. `0` bleibt `0`, `+∞` bleibt `∞`.
+- **Schreibweise:** SpanDraft wählt **automatisch** zwischen gewöhnlicher Dezimaldarstellung und Engineering-Notation (`·10ⁿ`, Exponent in Dreierschritten). Dezimaldarstellung gilt, wenn der Betrag des bereits gerundeten Werts kleiner als `10⁶` ist und höchstens vier notwendige Nachkommastellen hat. Nicht benötigte Endnullen zählen nicht als Nachkommastellen. Sonst gilt Engineering-Notation; **nie `·10⁰`** (in diesem Fall Dezimaldarstellung). Keine zusätzliche Benutzerauswahl für die Notation.
+- Die Entscheidung zur Schreibweise fällt **nach** Einheitenauswahl und numerischer Rundung. Sie darf weder eine erneute Rundung noch eine automatische Einheitenskalierung (`N → kN`) auslösen.
+- Einheitensymbole sind sprachunabhängig. Dezimaltrennzeichen folgen standardmäßig `CurrentCulture`; eine explizit übergebene Kultur hat Vorrang. `de-DE` und `en-US` sind zu unterstützen, auch wenn `CurrentUICulture` abweicht.
+- Die physikalische modellabhängige Mindestauflösung wird in **SI** bestimmt und in die Anzeigeeinheit übertragen. Signifikante Schrittweite, 1–2–5-Stufung und einmalige Rundung erfolgen in der Anzeigeeinheit, auch bei gemischten Profilen.
 
 Eingebaute Einheitenprofile (später durch weitere erweiterbar; derzeit sehr niedrige Priorität):
 
