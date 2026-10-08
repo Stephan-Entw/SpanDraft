@@ -4,6 +4,7 @@ using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
@@ -350,8 +351,10 @@ public sealed class DesktopProjectOverviewTests
         {
             var node = editor.Presentation.Result!.Solution.Nodes.Single(n => n.Position == support.Position);
             var row = editor.Overview.Reactions.Single(r => r.Id == support.Id);
-            Assert.Equal(UiNumbers.Compact(node.ReactionY!.Value.Newtons), row.Ry);
-            if (node.ReactionX is { } rx) Assert.Equal(UiNumbers.Compact(rx.Newtons), row.Rx);
+            Assert.Equal(QuantityFormatter.FormatNumber(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce,
+                references: editor.Presentation.References), row.Ry);
+            if (node.ReactionX is { } rx) Assert.Equal(QuantityFormatter.FormatNumber(rx.Newtons, QuantityKind.AxialForce,
+                references: editor.Presentation.References), row.Rx);
             if (loaded) Assert.StartsWith("-", row.Ry);
             else Assert.Equal("0", row.Ry);
         }
@@ -359,7 +362,7 @@ public sealed class DesktopProjectOverviewTests
         {
             Assert.Equal("0", editor.Overview.Reactions[1].Rx);
             Assert.Equal("0 mm", editor.Overview.Analysis.Displacement);
-            Assert.Equal("0 Nm", editor.Overview.Analysis.Moment);
+            Assert.Equal("0 N·m", editor.Overview.Analysis.Moment);
             Assert.Equal("0 MPa", editor.Overview.Analysis.Stress);
             Assert.Equal("∞", editor.Overview.Analysis.SafetyFactor);
         }
@@ -371,7 +374,8 @@ public sealed class DesktopProjectOverviewTests
     {
         var editor = Observed(Document(), out var analyses);
         var moment = editor.Presentation.Result!.Solution.Nodes[0].ReactionMoment!.Value;
-        Assert.Equal(UiNumbers.Compact(moment.NewtonMeters), Assert.Single(editor.Overview.Reactions).Moment);
+        Assert.Equal(QuantityFormatter.FormatNumber(moment.NewtonMeters, QuantityKind.Moment,
+            references: editor.Presentation.References), Assert.Single(editor.Overview.Reactions).Moment);
         var material = new Material("Other steel", Pressure.FromPascals(200e9), Pressure.FromPascals(250e6));
         var section = new CircleSection(Mm(50));
         editor.ApplySetup(section, material);
@@ -382,9 +386,9 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", "-1234,57")]
-    [InlineData("en-US", "-1234.57")]
-    public void ReactionDisplayIsCompactAndLocalizedWithoutRoundingCommittedLoads(string culture, string expected)
+    [InlineData("de-DE", "-1230")]
+    [InlineData("en-US", "-1230")]
+    public void ReactionDisplayUsesResultPrecisionWithoutRoundingCommittedLoads(string culture, string expected)
     {
         using var scope = new UiCultureScope(culture);
         const double value = 1234.5678;

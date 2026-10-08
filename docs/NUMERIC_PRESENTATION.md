@@ -35,6 +35,7 @@ Definitionen:
 - Für Spannungen gilt `n = 2`; ab `|σ| ≥ 0,5 · Re` gilt `n = 3`. Damit der Übergang keine rückläufige Anzeige verursacht, gilt `n = 3` bereits dann, wenn die vorläufige Rundung auf zwei signifikante Stellen `0,5 · Re` erreicht oder überschreitet.
 - Die Kraftregel mit `Fref` gilt für **transversale** Kräfte und Reaktionen. Die Normalkraft `N` verwendet bis zur fachlichen Definition eines axialen Lastmaßstabs die Auffangregel. `u` übernimmt **nicht** die längenabhängige Durchbiegungsregel; `A/I/W` sind nur bei **lesender** Anzeige betroffen, nicht beim Bearbeiten eines Querschnitts.
 - Ist eine Referenzgröße null, entfällt ihr Modellbeitrag. Exakte Ergebnisse `0` werden als `0` ausgegeben. Ein Wert ungleich null, der auf null gerundet würde, erscheint als `≈ 0` (mit Einheit); niemals als scheinbar exakte Null.
+- In Diagrammextremum-Beschriftungen ersetzt `≈` bei angenäherter Null das Gleichheitszeichen: `min ≈ 0 mm`, `max ≈ 0 mm` beziehungsweise `min = max ≈ 0 mm`; niemals `min = ≈ 0 mm`.
 - Die Rundungspräzision folgt den festgelegten Schrittweiten. Nicht benötigte nachgestellte Nullen werden entfernt. Die Anzeige vermittelt keine zusätzliche Genauigkeit durch künstlich aufgefüllte Dezimalstellen.
 
 ### Beispiele im Standardmodus

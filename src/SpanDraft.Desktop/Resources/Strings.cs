@@ -11,6 +11,9 @@ public static class Strings
     public static string DiagramMinimum => Get(nameof(DiagramMinimum));
     public static string DiagramMaximum => Get(nameof(DiagramMaximum));
     public static string DiagramMinimumAndMaximum => Get(nameof(DiagramMinimumAndMaximum));
+    public static string DiagramMinimumApproximate => Get(nameof(DiagramMinimumApproximate));
+    public static string DiagramMaximumApproximate => Get(nameof(DiagramMaximumApproximate));
+    public static string DiagramMinimumAndMaximumApproximate => Get(nameof(DiagramMinimumAndMaximumApproximate));
     public static string DistributedStartLabel => Get(nameof(DistributedStartLabel));
     public static string DistributedEndLabel => Get(nameof(DistributedEndLabel));
     public static string DistributedIntensityLabel => Get(nameof(DistributedIntensityLabel));

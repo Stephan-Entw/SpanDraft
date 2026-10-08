@@ -3,17 +3,18 @@ using System.Globalization;
 using SpanDraft.Core.Loads;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Layout;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Solver;
 
 namespace SpanDraft.Desktop.Controls;
 
 public enum ResultDiagramKind { TransverseDisplacement, ShearForce, BendingMoment }
-public sealed record ResultDiagramPoint(Length Position, EvaluationSide Side, double Value, Point Screen);
+public sealed record ResultDiagramPoint(Length Position, EvaluationSide Side, double Value, Point Screen, double SiValue);
 public sealed record ResultDiagramJump(ResultDiagramPoint Left, ResultDiagramPoint Right);
 public sealed record ResultDiagramTick(int Index, double ScreenY);
 public enum ResultDiagramExtremumKind { Minimum, Maximum, MinimumAndMaximum }
 public sealed record ResultDiagramMarker(ResultDiagramExtremumKind Kind, Length Position,
-    EvaluationSide? Side, double Value, Point Screen);
+    EvaluationSide? Side, double Value, Point Screen, double SiValue);
 
 /// <summary>Signed display-unit scale; normalization avoids overflowing a mixed-sign range.</summary>
 public sealed class ResultDiagramScale
@@ -111,14 +112,22 @@ public sealed class ResultDiagramScale
 /// <summary>Pure plotting projection of an existing solution and the editor's immutable mapping.</summary>
 public sealed record ResultDiagramProjection(StationLayoutResult StationLayout, ResultDiagramScale Scale,
     IReadOnlyList<IReadOnlyList<ResultDiagramPoint>> Sections, IReadOnlyList<ResultDiagramJump> Jumps,
-    IReadOnlyList<ResultDiagramTick> Ticks, IReadOnlyList<ResultDiagramMarker> Markers)
+    IReadOnlyList<ResultDiagramTick> Ticks, IReadOnlyList<ResultDiagramMarker> Markers, UnitDefinition Unit)
 {
     public const double MaximumSampleSpacing = 8;
     public const double MaximumChordError = 0.5;
     private const int MaximumDepth = 16;
 
+    public static QuantityKind QuantityOf(ResultDiagramKind kind) => kind switch
+    {
+        ResultDiagramKind.TransverseDisplacement => QuantityKind.TransverseDisplacement,
+        ResultDiagramKind.ShearForce => QuantityKind.TransverseForce,
+        ResultDiagramKind.BendingMoment => QuantityKind.Moment,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind))
+    };
+
     public static ResultDiagramProjection Create(BeamSolution solution, ResultDiagramKind kind,
-        StationLayoutResult layout, double plotTop, double plotHeight)
+        StationLayoutResult layout, double plotTop, double plotHeight, UnitProfile? profile = null)
     {
         ArgumentNullException.ThrowIfNull(solution);
         ArgumentNullException.ThrowIfNull(layout);
@@ -127,11 +136,12 @@ public sealed record ResultDiagramProjection(StationLayoutResult StationLayout, 
             throw new ArgumentOutOfRangeException(nameof(plotHeight));
 
         var extrema = solution.Extrema;
-        var (minimum, maximum, minimumPosition, maximumPosition, minimumSide, maximumSide) = kind switch
+        var unit = (profile ?? UnitProfile.Default)[QuantityOf(kind)];
+        var (minimumSi, maximumSi, minimumPosition, maximumPosition, minimumSide, maximumSide) = kind switch
         {
             ResultDiagramKind.TransverseDisplacement =>
-                (extrema.MinimumTransverseDisplacement.Value.Meters * 1000,
-                 extrema.MaximumTransverseDisplacement.Value.Meters * 1000,
+                (extrema.MinimumTransverseDisplacement.Value.Meters,
+                 extrema.MaximumTransverseDisplacement.Value.Meters,
                  extrema.MinimumTransverseDisplacement.Position, extrema.MaximumTransverseDisplacement.Position,
                  extrema.MinimumTransverseDisplacement.Side, extrema.MaximumTransverseDisplacement.Side),
             ResultDiagramKind.ShearForce =>
@@ -142,16 +152,14 @@ public sealed record ResultDiagramProjection(StationLayoutResult StationLayout, 
                   extrema.MinimumBendingMoment.Position, extrema.MaximumBendingMoment.Position,
                   extrema.MinimumBendingMoment.Side, extrema.MaximumBendingMoment.Side)
         };
-        var scale = new ResultDiagramScale(minimum, maximum, plotTop, plotHeight);
+        var scale = new ResultDiagramScale(unit.FromSi(minimumSi), unit.FromSi(maximumSi), plotTop, plotHeight);
         // Keep the solver's selected representative and side, including zeros and ties.
         // The analytic value places the dot on the corresponding one-sided limit.
-        bool isConstant = kind == ResultDiagramKind.TransverseDisplacement
-            ? extrema.MinimumTransverseDisplacement.Value.Meters == extrema.MaximumTransverseDisplacement.Value.Meters
-            : minimum == maximum;
+        bool isConstant = minimumSi == maximumSi;
         ResultDiagramMarker[] markers = isConstant
-            ? [Marker(ResultDiagramExtremumKind.MinimumAndMaximum, minimumPosition, minimumSide, minimum)]
-            : [Marker(ResultDiagramExtremumKind.Minimum, minimumPosition, minimumSide, minimum),
-               Marker(ResultDiagramExtremumKind.Maximum, maximumPosition, maximumSide, maximum)];
+            ? [Marker(ResultDiagramExtremumKind.MinimumAndMaximum, minimumPosition, minimumSide, minimumSi)]
+            : [Marker(ResultDiagramExtremumKind.Minimum, minimumPosition, minimumSide, minimumSi),
+               Marker(ResultDiagramExtremumKind.Maximum, maximumPosition, maximumSide, maximumSi)];
         var sections = new List<IReadOnlyList<ResultDiagramPoint>>();
         var jumps = new List<ResultDiagramJump>();
         // Exact positions only: close but distinct physical stations must remain distinct.
@@ -173,26 +181,30 @@ public sealed record ResultDiagramProjection(StationLayoutResult StationLayout, 
             {
                 var left = Evaluate(end, EvaluationSide.Left);
                 var right = Evaluate(end, EvaluationSide.Right);
-                if (left.Value != right.Value) jumps.Add(new(left, right));
+                if (left.SiValue != right.SiValue) jumps.Add(new(left, right));
             }
         }
-        return new(layout, scale, sections.AsReadOnly(), jumps.AsReadOnly(), scale.Ticks(), Array.AsReadOnly(markers));
+        return new(layout, scale, sections.AsReadOnly(), jumps.AsReadOnly(), scale.Ticks(), Array.AsReadOnly(markers), unit);
 
-        ResultDiagramMarker Marker(ResultDiagramExtremumKind markerKind, Length position, EvaluationSide? side, double value) =>
-            new(markerKind, position, side, value,
-                new(layout.Transform.PhysicalToScreen(position.Meters), scale.ToScreen(value)));
+        ResultDiagramMarker Marker(ResultDiagramExtremumKind markerKind, Length position, EvaluationSide? side, double siValue)
+        {
+            double value = unit.FromSi(siValue);
+            return new(markerKind, position, side, value,
+                new(layout.Transform.PhysicalToScreen(position.Meters), scale.ToScreen(value)), siValue);
+        }
 
         ResultDiagramPoint Evaluate(double x, EvaluationSide side)
         {
             var position = Length.FromMeters(x);
             var result = solution.EvaluateAt(position, side);
-            double value = kind switch
+            double siValue = kind switch
             {
-                ResultDiagramKind.TransverseDisplacement => result.TransverseDisplacement.Meters * 1000,
+                ResultDiagramKind.TransverseDisplacement => result.TransverseDisplacement.Meters,
                 ResultDiagramKind.ShearForce => result.ShearForce.Newtons,
                 _ => result.BendingMoment.NewtonMeters
             };
-            return new(position, side, value, new(layout.Transform.PhysicalToScreen(x), scale.ToScreen(value)));
+            double value = unit.FromSi(siValue);
+            return new(position, side, value, new(layout.Transform.PhysicalToScreen(x), scale.ToScreen(value)), siValue);
         }
 
         bool CanJump(int nodeIndex)

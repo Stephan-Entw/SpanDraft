@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using System.Globalization;
 using SpanDraft.Desktop.Layout;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 
@@ -13,6 +14,7 @@ public sealed record ResultDiagramMarkerLabel(ResultDiagramMarker Marker, string
 /// <summary>Read-only result drawing. Cached geometry is never a project/session state.</summary>
 public sealed class ResultDiagram : Control
 {
+    private AnalysisPresentationState? _projectedPresentation;
     public static readonly StyledProperty<AnalysisPresentationState?> PresentationProperty =
         AvaloniaProperty.Register<ResultDiagram, AnalysisPresentationState?>(nameof(Presentation));
     public static readonly StyledProperty<StationLayoutResult?> StationLayoutProperty =
@@ -24,12 +26,13 @@ public sealed class ResultDiagram : Control
     public ResultDiagramKind Kind { get => GetValue(KindProperty); set => SetValue(KindProperty, value); }
     public ResultDiagramProjection? Projection { get; private set; }
     public IReadOnlyList<ResultDiagramMarkerLabel> MarkerLabels { get; private set; } = [];
-    public string Title => Kind switch
+    private ResultPresentationOptions Options => Presentation?.Options ?? ResultPresentationOptions.Default;
+    public string Title => (Kind switch
     {
-        ResultDiagramKind.TransverseDisplacement => Strings.DeflectionDiagram + " w(x) [mm]",
-        ResultDiagramKind.ShearForce => Strings.ShearDiagram + " V(x) [N]",
-        _ => Strings.BendingDiagram + " M(x) [Nm]"
-    };
+        ResultDiagramKind.TransverseDisplacement => Strings.DeflectionDiagram + " w(x)",
+        ResultDiagramKind.ShearForce => Strings.ShearDiagram + " V(x)",
+        _ => Strings.BendingDiagram + " M(x)"
+    }) + " [" + Options.Profile[ResultDiagramProjection.QuantityOf(Kind)].Symbol + "]";
 
     public ResultDiagram()
     {
@@ -43,9 +46,15 @@ public sealed class ResultDiagram : Control
         if (change.Property == PresentationProperty || change.Property == StationLayoutProperty
             || change.Property == KindProperty || change.Property == BoundsProperty)
         {
-            Projection = Presentation?.Result is { } result && StationLayout is { } layout
-                && Bounds.Width > 0 && Bounds.Height > 48
-                ? ResultDiagramProjection.Create(result.Solution, Kind, layout, 36, Bounds.Height - 48) : null;
+            // A mode-only switch needs new labels, not a new scale or adaptive sampling.
+            bool textOnly = change.Property == PresentationProperty
+                && ReferenceEquals(Presentation?.Result, _projectedPresentation?.Result)
+                && ReferenceEquals(Presentation?.Options.Profile, _projectedPresentation?.Options.Profile);
+            if (!textOnly)
+                Projection = Presentation?.Result is { } result && StationLayout is { } layout
+                    && Bounds.Width > 0 && Bounds.Height > 48
+                    ? ResultDiagramProjection.Create(result.Solution, Kind, layout, 36, Bounds.Height - 48, Options.Profile) : null;
+            _projectedPresentation = Presentation;
             MarkerLabels = Projection is { } projection ? PlaceMarkerLabels(projection) : [];
             InvalidateVisual();
         }
@@ -55,24 +64,24 @@ public sealed class ResultDiagram : Control
 
     private string MarkerText(ResultDiagramMarker marker)
     {
+        string quantity = QuantityFormatter.Format(marker.SiValue, ResultDiagramProjection.QuantityOf(Kind),
+            Options.Profile, Options.Mode, Presentation!.References);
+        bool approximate = quantity.StartsWith("≈ ", StringComparison.Ordinal);
         string format = marker.Kind switch
         {
-            ResultDiagramExtremumKind.Minimum => Strings.DiagramMinimum,
-            ResultDiagramExtremumKind.Maximum => Strings.DiagramMaximum,
-            _ => Strings.DiagramMinimumAndMaximum
+            ResultDiagramExtremumKind.Minimum => approximate ? Strings.DiagramMinimumApproximate : Strings.DiagramMinimum,
+            ResultDiagramExtremumKind.Maximum => approximate ? Strings.DiagramMaximumApproximate : Strings.DiagramMaximum,
+            _ => approximate ? Strings.DiagramMinimumAndMaximumApproximate : Strings.DiagramMinimumAndMaximum
         };
-        string unit = Kind switch
-        {
-            ResultDiagramKind.TransverseDisplacement => "mm",
-            ResultDiagramKind.ShearForce => "N",
-            _ => "Nm"
-        };
-        return string.Format(CultureInfo.CurrentUICulture, format, UiNumbers.Compact(marker.Value), unit);
+        return string.Format(CultureInfo.CurrentUICulture, format, approximate ? quantity[2..] : quantity);
     }
 
-    private FormattedText TickText(ResultDiagramProjection projection, ResultDiagramTick tick, IBrush brush) =>
-        SchematicText.Format(UiNumbers.AxisTick(tick.Index, projection.Scale.StepMantissa,
-            projection.Scale.StepExponent), Typeface.Default, 12, brush);
+    public string TickLabel(ResultDiagramTick tick) => Projection is { } projection
+        ? UiNumbers.AxisTick(tick.Index, projection.Scale.StepMantissa, projection.Scale.StepExponent, CultureInfo.CurrentCulture)
+        : "";
+
+    private FormattedText TickText(ResultDiagramTick tick, IBrush brush) =>
+        SchematicText.Format(TickLabel(tick), Typeface.Default, 12, brush);
 
     private Rect TickBounds(ResultDiagramProjection projection, ResultDiagramTick tick, FormattedText text)
     {
@@ -84,7 +93,7 @@ public sealed class ResultDiagram : Control
     private IReadOnlyList<ResultDiagramMarkerLabel> PlaceMarkerLabels(ResultDiagramProjection projection)
     {
         var area = new Rect(8, 30, Math.Max(1, Bounds.Width - 16), Bounds.Height - 34);
-        var tickBounds = projection.Ticks.Select(t => TickBounds(projection, t, TickText(projection, t, Brushes.Black))).ToArray();
+        var tickBounds = projection.Ticks.Select(t => TickBounds(projection, t, TickText(t, Brushes.Black))).ToArray();
         var segments = projection.Sections.SelectMany(s => s.Zip(s.Skip(1), (a, b) => (a.Screen, b.Screen)))
             .Concat(projection.Jumps.Select(j => (j.Left.Screen, j.Right.Screen))).ToArray();
         var choices = projection.Markers.Select(marker =>
@@ -171,7 +180,7 @@ public sealed class ResultDiagram : Control
         foreach (var jump in projection.Jumps) context.DrawLine(curvePen, jump.Left.Screen, jump.Right.Screen);
         foreach (var tick in projection.Ticks)
         {
-            var label = TickText(projection, tick, text);
+            var label = TickText(tick, text);
             // The scale uses the existing left gutter; long values can extend inward
             // without introducing a different horizontal physical mapping.
             var bounds = TickBounds(projection, tick, label);

@@ -1,6 +1,7 @@
 using System.Globalization;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 
 namespace SpanDraft.Desktop.State;
@@ -31,9 +32,9 @@ public sealed class ProjectOverviewState
             {
                 var node = result.Solution.Nodes.Single(n => n.Position == s.Position);
                 return new ProjectOverviewReaction(s.Id, s.Name,
-                    node.ReactionX is { } rx ? UiNumbers.Compact(rx.Newtons) : "",
-                    node.ReactionY is { } ry ? UiNumbers.Compact(ry.Newtons) : "",
-                    node.ReactionMoment is { } moment ? UiNumbers.Compact(moment.NewtonMeters) : "");
+                    node.ReactionX is { } rx ? Reaction(rx.Newtons, QuantityKind.AxialForce) : "",
+                    node.ReactionY is { } ry ? Reaction(ry.Newtons, QuantityKind.TransverseForce) : "",
+                    node.ReactionMoment is { } moment ? Reaction(moment.NewtonMeters, QuantityKind.Moment) : "");
             }).ToArray()
             : []);
     }
@@ -49,6 +50,12 @@ public sealed class ProjectOverviewState
     public AnalysisPresentationState Analysis { get; }
     public bool HasSupports => Supports.Count > 0;
     public bool HasLoads => Loads.Count > 0;
+    public string ReactionXHeader => "Rx [" + Analysis.Options.Profile[QuantityKind.AxialForce].Symbol + "]";
+    public string ReactionYHeader => "Ry [" + Analysis.Options.Profile[QuantityKind.TransverseForce].Symbol + "]";
+    public string ReactionMomentHeader => "M [" + Analysis.Options.Profile[QuantityKind.Moment].Symbol + "]";
+
+    private string Reaction(double siValue, QuantityKind kind) => QuantityFormatter.FormatNumber(siValue, kind,
+        Analysis.Options.Profile, Analysis.Options.Mode, Analysis.References);
 
     private static string Position(Length position) => UiNumbers.Compact(position.Millimeters);
 

@@ -120,9 +120,9 @@
           <TextBlock Text="{x:Static resources:Strings.Reactions}" Classes="sectionTitle" />
           <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,*,*,*">
             <TextBlock Text="{x:Static resources:Strings.Support}" Classes="centered" />
-            <TextBlock Grid.Column="1" Text="Rx [N]" Classes="number" />
-            <TextBlock Grid.Column="2" Text="Ry [N]" Classes="number" />
-            <TextBlock Grid.Column="3" Text="M [Nm]" Classes="number" />
+            <TextBlock x:Name="ReactionXHeader" Grid.Column="1" Text="{Binding Overview.ReactionXHeader}" Classes="number" />
+            <TextBlock x:Name="ReactionYHeader" Grid.Column="2" Text="{Binding Overview.ReactionYHeader}" Classes="number" />
+            <TextBlock x:Name="ReactionMomentHeader" Grid.Column="3" Text="{Binding Overview.ReactionMomentHeader}" Classes="number" />
           </Grid>
           <ItemsControl x:Name="ReactionTable" ItemsSource="{Binding Overview.Reactions}" ItemTemplate="{StaticResource ReactionRowTemplate}" />
         </StackPanel>

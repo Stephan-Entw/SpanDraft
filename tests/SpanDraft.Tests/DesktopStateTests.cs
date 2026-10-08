@@ -10,6 +10,7 @@ using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
 
@@ -342,10 +343,13 @@ public class DesktopStateTests
         Assert.True(state.IsSuccess);
         Assert.Same(outcome.Result, state.Result);
         var engineering = outcome.Result!.Engineering;
-        Assert.Equal(UiNumbers.Indicator(engineering.TransverseDisplacementMagnitude.Meters * 1000) + " mm", state.Displacement);
-        Assert.Equal(UiNumbers.Indicator(engineering.BendingMomentMagnitude.NewtonMeters) + " Nm", state.Moment);
-        Assert.Equal(UiNumbers.Indicator(engineering.MaximumBendingStress.Megapascals) + " MPa", state.Stress);
-        Assert.Equal(UiNumbers.Indicator(engineering.SafetyFactor), state.SafetyFactor);
+        Assert.Equal(QuantityFormatter.Format(engineering.TransverseDisplacementMagnitude.Meters,
+            QuantityKind.TransverseDisplacement, references: state.References), state.Displacement);
+        Assert.Equal(QuantityFormatter.Format(engineering.BendingMomentMagnitude.NewtonMeters,
+            QuantityKind.Moment, references: state.References), state.Moment);
+        Assert.Equal(QuantityFormatter.Format(engineering.MaximumBendingStress.Pascals,
+            QuantityKind.Stress, references: state.References), state.Stress);
+        Assert.Equal(QuantityFormatter.Format(engineering.SafetyFactor, QuantityKind.SafetyFactor), state.SafetyFactor);
         if (!loaded) Assert.Equal("∞", state.SafetyFactor);
     }
 

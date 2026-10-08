@@ -3,6 +3,7 @@ using SpanDraft.Analysis;
 using SpanDraft.Core.Beams;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 
@@ -22,6 +23,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private bool _busy;
     private bool _fileMenuOpen;
     private Exception? _pendingRecoveryError;
+    private ResultPresentationOptions _resultPresentation = ResultPresentationOptions.Default;
 
     public MainWindowViewModel(Func<BeamModel, BeamAnalysisOutcome>? analyze = null,
         IProjectFileStore? files = null, IProjectDialogs? dialogs = null, ProjectRecovery? recovery = null)
@@ -43,6 +45,19 @@ public sealed class MainWindowViewModel : ObservableObject
     public MainViewMode Mode => _mode;
     public ProjectSetupViewModel Setup => _setup;
     public EditorViewModel? Editor => _editor;
+    public ResultPresentationOptions ResultPresentation => _resultPresentation;
+
+    /// <summary>Refreshes result displays only, including while drafts or file operations are active.</summary>
+    public void SetResultPresentation(UnitProfile profile, PresentationMode mode)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        var options = new ResultPresentationOptions(profile, mode);
+        if (_resultPresentation == options) return;
+        _resultPresentation = options;
+        Setup.ApplyResultPresentation(options);
+        Editor?.ApplyResultPresentation(options);
+        Notify(nameof(ResultPresentation));
+    }
     public ProjectSession? Session => Editor?.Session;
     public bool IsBusy => _busy;
     public bool CanUndo => !IsBusy && Session?.CanUndo == true;
@@ -65,13 +80,13 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     private ProjectSetupViewModel NewSetup() => new(ProjectSetupMode.Create,
-        ProjectTemplates.Section, ProjectTemplates.Material, ApplySetup, CancelSetup);
+        ProjectTemplates.Section, ProjectTemplates.Material, ApplySetup, CancelSetup, ResultPresentation);
 
     public void EditProject()
     {
         if (IsBusy || Editor is null) return;
         Editor.CancelEditorInteraction();
-        _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.Material, ApplySetup, CancelSetup);
+        _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.Material, ApplySetup, CancelSetup, ResultPresentation);
         Navigate(MainViewMode.ProjectSetup);
     }
 
@@ -95,7 +110,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private void Activate(ProjectSession session)
     {
         DetachSession();
-        _editor = EditorViewModel.ForSession(session, EditProject, _analyze);
+        _editor = EditorViewModel.ForSession(session, EditProject, _analyze, ResultPresentation);
         _editor.IsFileMenuOpen = _fileMenuOpen;
         session.SetBusy(IsBusy);
         session.Changed += SessionChanged;

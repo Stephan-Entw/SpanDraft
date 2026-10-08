@@ -55,8 +55,17 @@ public static class QuantityFormatter
     {
         profile ??= UnitProfile.Default;
         var unit = profile[kind];
-        var rounded = NumericRounding.Round(siValue, kind, unit, mode, references);
-        string number = NumberFormatter.Format(rounded, culture);
+        string number = FormatNumber(siValue, kind, profile, mode, references, culture);
         return unit.Symbol.Length == 0 ? number : number + " " + unit.Symbol;
+    }
+
+    /// <summary>Same result precision as Format, without a unit suffix for cells with unit headers.</summary>
+    public static string FormatNumber(double siValue, QuantityKind kind, UnitProfile? profile = null,
+        PresentationMode mode = PresentationMode.Standard, ModelReferenceValues? references = null,
+        CultureInfo? culture = null)
+    {
+        profile ??= UnitProfile.Default;
+        var rounded = NumericRounding.Round(siValue, kind, profile[kind], mode, references);
+        return NumberFormatter.Format(rounded, culture);
     }
 }

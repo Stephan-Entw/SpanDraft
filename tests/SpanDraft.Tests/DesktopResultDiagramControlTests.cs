@@ -11,6 +11,7 @@ using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
@@ -78,7 +79,7 @@ public sealed class DesktopResultDiagramControlTests
             Assert.Contains(dots, d => d.Geometry!.Bounds.Center == marker.Screen);
     }
 
-    private static void Snapshot(EditorView view, string name)
+    private static void Snapshot(Control view, string name)
     {
         // Reviewable render artifacts live beside the ignored test build output.
         string directory = Path.Combine(AppContext.BaseDirectory, "TestResults", "diagrams");
@@ -86,6 +87,98 @@ public sealed class DesktopResultDiagramControlTests
         using var bitmap = new RenderTargetBitmap(new PixelSize((int)view.Bounds.Width, (int)view.Bounds.Height));
         bitmap.Render(view);
         bitmap.Save(Path.Combine(directory, name + ".png"), PngBitmapEncoderOptions.Default);
+    }
+
+    [Theory]
+    [InlineData("de-DE", "en-US", 2, 1250)]
+    [InlineData("en-US", "de-DE", 2, 1250)]
+    [InlineData("de-DE", "en-US", 3, 900)]
+    [InlineData("en-US", "de-DE", 3, 900)]
+    public void PresentationChangesRefreshBoundResultsWithRegionalNumbersAndPreserveSolverAndXMapping(
+        string uiCulture, string culture, int profileIndex, double width)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var cultures = new ResultCultureScope(culture, uiCulture);
+        int analyses = 0;
+        var main = new MainWindowViewModel(b => { analyses++; return BeamAnalysis.Analyze(b); });
+        main.Setup.ApplyCommand.Execute(null);
+        var editor = main.Editor!;
+        var document = Document().WithLoads([
+            new EditorPointForce(Guid.NewGuid(), Length.FromMeters(.03), Force.FromNewtons(-1234567.89), "F1"),
+            new EditorPointMoment(Guid.NewGuid(), Length.FromMeters(.04), Moment.FromNewtonMeters(123456.789), "M1")]);
+        Assert.True(main.Session!.Commit(main.Session.CurrentRevision.State with { Document = document }));
+        var result = editor.Presentation.Result!;
+        var references = editor.Presentation.References;
+        var view = new EditorView { DataContext = editor };
+        var window = new Window { Content = view };
+        Arrange(window, width, 950);
+        var diagrams = Diagrams(view);
+        var layouts = diagrams.Select(d => d.Projection!.StationLayout).ToArray();
+        var markers = diagrams.Select(d => d.Projection!.Markers.ToArray()).ToArray();
+        var jumps = diagrams.Select(d => d.Projection!.Jumps.ToArray()).ToArray();
+        int count = analyses;
+        var profile = DesktopResultPresentationTests.Profile(profileIndex);
+        main.SetResultPresentation(profile, PresentationMode.Standard);
+        Arrange(window, width, 950);
+        var projections = diagrams.Select(d => d.Projection!).ToArray();
+        for (int i = 0; i < diagrams.Length; i++)
+        {
+            var diagram = diagrams[i];
+            var projection = projections[i];
+            var kind = ResultDiagramProjection.QuantityOf(diagram.Kind);
+            Assert.Same(layouts[i], projection.StationLayout);
+            Assert.Same(profile[kind], projection.Unit);
+            Assert.EndsWith($"[{profile[kind].Symbol}]", diagram.Title);
+            Assert.Equal(markers[i].Select(m => (m.Kind, m.Position, m.Side, m.SiValue, m.Screen.X)),
+                projection.Markers.Select(m => (m.Kind, m.Position, m.Side, m.SiValue, m.Screen.X)));
+            Assert.Equal(jumps[i].Select(j => (j.Left.Position, j.Left.Side, j.Left.SiValue, j.Right.Side, j.Right.SiValue)),
+                projection.Jumps.Select(j => (j.Left.Position, j.Left.Side, j.Left.SiValue, j.Right.Side, j.Right.SiValue)));
+            foreach (var point in projection.Sections.SelectMany(s => s))
+            {
+                var raw = result.Solution.EvaluateAt(point.Position, point.Side);
+                double si = diagram.Kind switch
+                {
+                    ResultDiagramKind.TransverseDisplacement => raw.TransverseDisplacement.Meters,
+                    ResultDiagramKind.ShearForce => raw.ShearForce.Newtons,
+                    _ => raw.BendingMoment.NewtonMeters
+                };
+                Assert.Equal(si, point.SiValue);
+                Assert.Equal(profile[kind].FromSi(si), point.Value);
+                Assert.Equal(layouts[i].Transform.PhysicalToScreen(point.Position.Meters), point.Screen.X);
+            }
+            Assert.Equal(projection.Ticks.Count, projection.Ticks.Select(diagram.TickLabel).Distinct().Count());
+            foreach (var tick in projection.Ticks)
+                Assert.Equal(UiNumbers.AxisTick(tick.Index, projection.Scale.StepMantissa,
+                    projection.Scale.StepExponent, System.Globalization.CultureInfo.GetCultureInfo(culture)), diagram.TickLabel(tick));
+            AssertReadableMarkers(diagram);
+            Snapshot(diagram, $"phase2-{uiCulture}-{profileIndex}-standard-{diagram.Kind}");
+        }
+        var overview = Assert.Single(view.GetVisualDescendants().OfType<ProjectOverviewView>());
+        Assert.Equal(editor.Overview.ReactionXHeader, overview.FindControl<TextBlock>("ReactionXHeader")!.Text);
+        Assert.Equal(editor.Overview.ReactionYHeader, overview.FindControl<TextBlock>("ReactionYHeader")!.Text);
+        Assert.Equal(editor.Overview.ReactionMomentHeader, overview.FindControl<TextBlock>("ReactionMomentHeader")!.Text);
+        Snapshot(view, $"phase2-{uiCulture}-{profileIndex}-standard-workspace");
+        main.SetResultPresentation(profile, PresentationMode.Detailed);
+        Arrange(window, width, 950);
+        Assert.Equal(count, analyses);
+        Assert.Same(result, editor.Presentation.Result);
+        Assert.Same(references, editor.Presentation.References);
+        for (int i = 0; i < diagrams.Length; i++)
+        {
+            Assert.Same(projections[i], diagrams[i].Projection);
+            AssertReadableMarkers(diagrams[i]);
+            foreach (var label in diagrams[i].MarkerLabels)
+                Assert.Contains(QuantityFormatter.Format(label.Marker.SiValue,
+                    ResultDiagramProjection.QuantityOf(diagrams[i].Kind), profile, PresentationMode.Detailed, references), label.Text);
+            Snapshot(diagrams[i], $"phase2-{uiCulture}-{profileIndex}-detailed-{diagrams[i].Kind}");
+        }
+        Snapshot(view, $"phase2-{uiCulture}-{profileIndex}-detailed-workspace");
+        Assert.True(main.Session.Commit(main.Session.CurrentRevision.State with { Document = document.WithSupports([]) }));
+        Assert.All(diagrams, d => { Assert.Null(d.Projection); Assert.Empty(d.MarkerLabels); });
+        main.SetResultPresentation(UnitProfile.Default, PresentationMode.Standard);
+        Assert.All(diagrams, d => { Assert.Null(d.Projection); Assert.Empty(d.MarkerLabels); });
+        Assert.Empty(editor.Overview.Reactions);
+        window.Content = null;
     }
 
     [Theory]
@@ -370,7 +463,7 @@ public sealed class DesktopResultDiagramControlTests
     [InlineData("de-DE", 1100, -1000)]
     [InlineData("en-US", 1250, 1000)]
     [InlineData("de-DE", 1600, -1e-12)]
-    public void EdgeMarkersAreReadableAndUseLocalizedCompactValuesAndUnits(string culture, double width, double force)
+    public void EdgeMarkersAreReadableAndUseResultPrecisionAndUnits(string culture, double width, double force)
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
@@ -387,17 +480,72 @@ public sealed class DesktopResultDiagramControlTests
             {
                 ResultDiagramKind.TransverseDisplacement => "mm",
                 ResultDiagramKind.ShearForce => "N",
-                _ => "Nm"
+                _ => "N·m"
             };
             Assert.All(diagram.MarkerLabels, label =>
             {
                 Assert.EndsWith(" " + unit, label.Text);
-                Assert.Contains(UiNumbers.Compact(label.Marker.Value), label.Text);
+                Assert.Contains(QuantityFormatter.Format(label.Marker.SiValue,
+                    ResultDiagramProjection.QuantityOf(diagram.Kind), references: editor.Presentation.References), label.Text);
                 Assert.DoesNotContain("E", label.Text);
                 if (label.Marker.Value != 0) Assert.DoesNotContain("= 0 ", label.Text);
             });
         }
         Snapshot(view, $"edge-markers-{culture}-{(int)width}");
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("en-US")]
+    public void ConstantApproximateZeroUsesOneComparisonSign(string culture)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new ResultCultureScope(culture, culture);
+        var document = Document().WithLoads([
+            new EditorPointForce(Guid.NewGuid(), Length.FromMeters(1), Force.FromNewtons(-1e-8), "F1"),
+            new EditorPointMoment(Guid.NewGuid(), Length.FromMeters(1), Moment.FromNewtonMeters(1000), "M1")]);
+        var editor = new EditorViewModel(document, () => { });
+        var view = new EditorView { DataContext = editor };
+        var window = new Window { Content = view };
+        Arrange(window, 900, 950);
+        var diagram = Assert.Single(Diagrams(view), d => d.Kind == ResultDiagramKind.ShearForce);
+        var label = Assert.Single(diagram.MarkerLabels);
+        Assert.NotEqual(0, label.Marker.SiValue);
+        Assert.Equal("min = max ≈ 0 N", label.Text);
+        AssertReadableMarkers(diagram);
+        Snapshot(diagram, $"approximate-constant-{culture}");
+        window.Content = null;
+    }
+
+    [Theory]
+    [InlineData("de-DE", -1e-8, "min ≈ 0 mm")]
+    [InlineData("en-US", -1e-8, "min ≈ 0 mm")]
+    [InlineData("de-DE", 1e-8, "max ≈ 0 mm")]
+    [InlineData("en-US", 1e-8, "max ≈ 0 mm")]
+    public void ApproximateZeroReplacesEqualityInExtremumLabels(string culture, double force, string expected)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new ResultCultureScope(culture, culture);
+        var document = Document().WithLoads([
+            new EditorPointForce(Guid.NewGuid(), Length.FromMeters(1), Force.FromNewtons(force), "F1")]);
+        var editor = new EditorViewModel(document, () => { });
+        var view = new EditorView { DataContext = editor };
+        var window = new Window { Content = view };
+        Arrange(window, 900, 950);
+        var diagram = Assert.Single(Diagrams(view), d => d.Kind == ResultDiagramKind.TransverseDisplacement);
+        var projection = diagram.Projection;
+        var label = Assert.Single(diagram.MarkerLabels, l => l.Marker.SiValue != 0);
+        Assert.Equal(expected, label.Text);
+        Assert.Equal(force < 0 ? ResultDiagramExtremumKind.Minimum : ResultDiagramExtremumKind.Maximum, label.Marker.Kind);
+        Assert.Contains(diagram.MarkerLabels, l => l.Text == (force < 0 ? "max = 0 mm" : "min = 0 mm"));
+        AssertReadableMarkers(diagram);
+        Snapshot(diagram, $"approximate-comparison-{culture}-{(force < 0 ? "minimum" : "maximum")}");
+        diagram.Presentation = editor.Presentation.WithPresentation(new(mode: PresentationMode.Detailed));
+        Assert.Same(projection, diagram.Projection);
+        Assert.All(diagram.MarkerLabels, l => Assert.DoesNotContain("≈", l.Text));
+        Assert.Contains(diagram.MarkerLabels, l => l.Text == (force < 0 ? "min = " : "max = ")
+            + QuantityFormatter.Format(label.Marker.SiValue, QuantityKind.TransverseDisplacement, mode: PresentationMode.Detailed));
+        window.Content = null;
     }
 
     [Theory]

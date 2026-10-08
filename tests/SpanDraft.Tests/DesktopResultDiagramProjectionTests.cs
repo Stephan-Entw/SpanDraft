@@ -2,6 +2,7 @@ using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Layout;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Solver;
 using Xunit;
 using static SpanDraft.Tests.SolverTestSupport;
@@ -10,6 +11,44 @@ namespace SpanDraft.Tests;
 
 public sealed class DesktopResultDiagramProjectionTests
 {
+    [Theory]
+    [InlineData(ResultDiagramKind.TransverseDisplacement)]
+    [InlineData(ResultDiagramKind.ShearForce)]
+    [InlineData(ResultDiagramKind.BendingMoment)]
+    public void EveryProfileConvertsOriginalSamplesExtremaAndJumpsBeforeScaling(ResultDiagramKind kind)
+    {
+        var solution = Solve(Beam(loads: [Point(.02, -1000), Couple(.03, 200), Uniform(.4, 1.5, -500)]));
+        var layout = StationLayout.Compute(L, 72, 480, [new(.02, 24, 24), new(.03, 24, 24)]);
+        var original = Project(solution, kind, layout);
+        foreach (var profile in new[] { UnitProfile.Default, UnitProfile.StructuralEngineering,
+            UnitProfile.UnitedStates, DesktopResultPresentationTests.Mixed })
+        {
+            var plot = ResultDiagramProjection.Create(solution, kind, layout, 36, 132, profile);
+            var unit = profile[ResultDiagramProjection.QuantityOf(kind)];
+            Assert.Same(layout, plot.StationLayout);
+            Assert.Same(unit, plot.Unit);
+            Assert.Equal(original.Markers.Select(m => (m.Position, m.Side, m.Kind, m.SiValue, m.Screen.X)),
+                plot.Markers.Select(m => (m.Position, m.Side, m.Kind, m.SiValue, m.Screen.X)));
+            Assert.Equal(unit.FromSi(original.Markers.Min(m => m.SiValue)), plot.Scale.Minimum);
+            Assert.Equal(unit.FromSi(original.Markers.Max(m => m.SiValue)), plot.Scale.Maximum);
+            Assert.Equal(original.Jumps.Select(j => (j.Left.Position, j.Left.Side, j.Left.SiValue, j.Right.Side, j.Right.SiValue)),
+                plot.Jumps.Select(j => (j.Left.Position, j.Left.Side, j.Left.SiValue, j.Right.Side, j.Right.SiValue)));
+            Assert.All(plot.Sections.SelectMany(s => s).Concat(plot.Jumps.SelectMany(j => new[] { j.Left, j.Right })), p =>
+            {
+                var raw = solution.EvaluateAt(p.Position, p.Side);
+                double si = kind switch
+                {
+                    ResultDiagramKind.TransverseDisplacement => raw.TransverseDisplacement.Meters,
+                    ResultDiagramKind.ShearForce => raw.ShearForce.Newtons,
+                    _ => raw.BendingMoment.NewtonMeters
+                };
+                Assert.Equal(si, p.SiValue);
+                Assert.Equal(unit.FromSi(si), p.Value);
+                Assert.Equal(layout.Transform.PhysicalToScreen(p.Position.Meters), p.Screen.X);
+            });
+        }
+    }
+
     private static ResultDiagramProjection Project(BeamSolution solution, ResultDiagramKind kind,
         StationLayoutResult? layout = null) => ResultDiagramProjection.Create(solution, kind,
             layout ?? StationLayout.Compute(L, 72, 872, []), 36, 132);

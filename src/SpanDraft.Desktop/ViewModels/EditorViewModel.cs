@@ -6,6 +6,7 @@ using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 
@@ -28,18 +29,19 @@ public sealed partial class EditorViewModel : ObservableObject
     private ConstraintConflictState? _constraintConflict;
 
     public EditorViewModel(EditorDocument document, Action changeProject,
-        Func<BeamModel, BeamAnalysisOutcome>? analyze = null)
-        : this(changeProject, ProjectSession.Create(new(document, new())), analyze) { }
+        Func<BeamModel, BeamAnalysisOutcome>? analyze = null, ResultPresentationOptions? resultPresentation = null)
+        : this(changeProject, ProjectSession.Create(new(document, new())), analyze, resultPresentation) { }
 
     public static EditorViewModel ForSession(ProjectSession session, Action changeProject,
-        Func<BeamModel, BeamAnalysisOutcome>? analyze = null) => new(changeProject, session, analyze);
+        Func<BeamModel, BeamAnalysisOutcome>? analyze = null, ResultPresentationOptions? resultPresentation = null) =>
+        new(changeProject, session, analyze, resultPresentation);
 
     private EditorViewModel(Action changeProject, ProjectSession session,
-        Func<BeamModel, BeamAnalysisOutcome>? analyze)
+        Func<BeamModel, BeamAnalysisOutcome>? analyze, ResultPresentationOptions? resultPresentation)
     {
         Session = session;
         _analyze = analyze ?? BeamAnalysis.Analyze;
-        _presentation = AnalysisPresentationState.FromOutcome(_analyze(Document.ToBeamModel()));
+        _presentation = AnalysisPresentationState.FromOutcome(_analyze(Document.ToBeamModel()), resultPresentation);
         _overview = ProjectOverviewState.From(Document, _presentation);
         DimensionLength = new(() => Document.Length, ChangeLength, () => PreserveDrafts);
         Session.StateApplied += ApplyState;
@@ -76,6 +78,18 @@ public sealed partial class EditorViewModel : ObservableObject
     public EditorDocument Document => Session.CurrentRevision.State.Document;
     public AnalysisPresentationState Presentation => _presentation;
     public ProjectOverviewState Overview => _overview;
+    public ResultPresentationOptions ResultPresentation => _presentation.Options;
+
+    internal void ApplyResultPresentation(ResultPresentationOptions options)
+    {
+        var next = _presentation.WithPresentation(options);
+        if (ReferenceEquals(next, _presentation)) return;
+        _presentation = next;
+        _overview = ProjectOverviewState.From(Document, _presentation);
+        Notify(nameof(ResultPresentation));
+        Notify(nameof(Presentation));
+        Notify(nameof(Overview));
+    }
     public EditorPresentationState EditorPresentation => Session.CurrentRevision.State.Presentation;
     public EditorPresentationState RenderPresentation => _annotationPreview is { } p
         ? EditorPresentation.WithOffset(p.Key, p.Value) : EditorPresentation;
@@ -375,7 +389,7 @@ public sealed partial class EditorViewModel : ObservableObject
         if (change == EditorChangeKind.Mechanical)
         {
             if (ConstraintConflict is { } conflict) UpdateConstraintConflict(conflict.RequestedLength);
-            _presentation = AnalysisPresentationState.FromOutcome(_analyze(next.Document.ToBeamModel()));
+            _presentation = AnalysisPresentationState.FromOutcome(_analyze(next.Document.ToBeamModel()), ResultPresentation);
             DimensionLength.Refresh(preserveError: ConstraintConflict is not null);
         }
         if (documentChanged) _overview = ProjectOverviewState.From(next.Document, _presentation);

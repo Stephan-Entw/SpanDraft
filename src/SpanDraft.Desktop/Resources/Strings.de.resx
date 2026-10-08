@@ -106,7 +106,10 @@
   <data name="CircleSectionName" xml:space="preserve"><value>Rundmaterial Ø{0} mm</value></data>
   <data name="CircularHollowSectionName" xml:space="preserve"><value>Rundrohr Ø{0} × {1} mm</value></data>
   <data name="CustomSectionName" xml:space="preserve"><value>Benutzerquerschnitt</value></data>
-  <data name="DiagramMinimum" xml:space="preserve"><value>min = {0} {1}</value></data>
-  <data name="DiagramMaximum" xml:space="preserve"><value>max = {0} {1}</value></data>
-  <data name="DiagramMinimumAndMaximum" xml:space="preserve"><value>min = max = {0} {1}</value></data>
+  <data name="DiagramMinimum" xml:space="preserve"><value>min = {0}</value></data>
+  <data name="DiagramMaximum" xml:space="preserve"><value>max = {0}</value></data>
+  <data name="DiagramMinimumAndMaximum" xml:space="preserve"><value>min = max = {0}</value></data>
+  <data name="DiagramMinimumApproximate" xml:space="preserve"><value>min ≈ {0}</value></data>
+  <data name="DiagramMaximumApproximate" xml:space="preserve"><value>max ≈ {0}</value></data>
+  <data name="DiagramMinimumAndMaximumApproximate" xml:space="preserve"><value>min = max ≈ {0}</value></data>
 </root>
