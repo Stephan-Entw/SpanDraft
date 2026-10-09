@@ -1,6 +1,6 @@
 namespace SpanDraft.Desktop.Persistence;
 
-/// <summary>Small I/O seam shared by project files and the private recovery slot.</summary>
+/// <summary>Small I/O seam shared by projects, recovery, settings and local user libraries.</summary>
 public interface IProjectFileStore
 {
     Task<byte[]?> ReadAsync(string path);

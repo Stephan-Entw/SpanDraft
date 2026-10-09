@@ -32,6 +32,7 @@
     <AssemblyMetadata Include="LicenseDisplayName" Value="$(LicenseDisplayName)" />
     <AssemblyMetadata Include="LicenseShortName" Value="$(LicenseShortName)" />
     <EmbeddedResource Include="../../LICENSE" LogicalName="SpanDraft.Desktop.LICENSE" />
+    <EmbeddedResource Include="Libraries/material-catalog.json" LogicalName="SpanDraft.Desktop.Libraries.material-catalog.json" />
     <AvaloniaResource Include="Assets/Icons/Toolbar/*.svg" />
     <AvaloniaResource Include="Assets/AppIcon/SpanDraft.ico" />
     <AvaloniaResource Include="Assets/AppIcon/app-icon-1024.png" />

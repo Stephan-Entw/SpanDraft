@@ -3,7 +3,7 @@
 - `docs/KONZEPT.md` defines product vision, scope and roadmap.
 - Durable technical contracts belong in their dedicated documents:
   `docs/DOMAIN.md`, `docs/SOLVER.md`, `docs/ENGINEERING.md`, `docs/ANALYSIS.md`,
-  `docs/PROJECT_FORMAT.md` and `docs/VALIDATION.md`.
+  `docs/PROJECT_FORMAT.md`, `docs/LIBRARIES.md` and `docs/VALIDATION.md`.
 - Keep `docs/UI.md` limited to rationale that code and tests do not adequately
   explain. Do not mirror the current interface or require documentation updates
   for changes to controls, menus, dialogs or layout.
