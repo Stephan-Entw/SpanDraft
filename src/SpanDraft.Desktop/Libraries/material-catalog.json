@@ -1,5 +1,98 @@
 {
   "format": "SpanDraft.MaterialCatalog",
   "formatVersion": 1,
-  "entries": []
+  "entries": [
+    {
+      "material": {
+        "name": "S235JR",
+        "youngsModulus": 210000000000,
+        "yieldStrength": 235000000,
+        "density": 7850,
+        "poissonRatio": 0.30
+      },
+      "category": "structuralSteel",
+      "materialNumber": "1.0038"
+    },
+    {
+      "material": {
+        "name": "S355JR",
+        "youngsModulus": 210000000000,
+        "yieldStrength": 355000000,
+        "density": 7850,
+        "poissonRatio": 0.30
+      },
+      "category": "structuralSteel",
+      "materialNumber": "1.0045"
+    },
+    {
+      "material": {
+        "name": "X5CrNi18-10",
+        "youngsModulus": 200000000000,
+        "yieldStrength": 190000000,
+        "density": 7900,
+        "poissonRatio": 0.30
+      },
+      "category": "stainlessSteel",
+      "materialNumber": "1.4301",
+      "otherStandards": ["AISI 304"]
+    },
+    {
+      "material": {
+        "name": "X2CrNiMo17-12-2",
+        "youngsModulus": 200000000000,
+        "yieldStrength": 200000000,
+        "density": 8000,
+        "poissonRatio": 0.30
+      },
+      "category": "stainlessSteel",
+      "materialNumber": "1.4404",
+      "otherStandards": ["AISI 316L"]
+    },
+    {
+      "material": {
+        "name": "42CrMo4 +QT",
+        "youngsModulus": 210000000000,
+        "yieldStrength": 650000000,
+        "density": 7800,
+        "poissonRatio": 0.30
+      },
+      "category": "alloySteel",
+      "materialNumber": "1.7225"
+    },
+    {
+      "material": {
+        "name": "34CrNiMo6 +QT",
+        "youngsModulus": 210000000000,
+        "yieldStrength": 800000000,
+        "density": 7800,
+        "poissonRatio": 0.30
+      },
+      "category": "alloySteel",
+      "materialNumber": "1.6582"
+    },
+    {
+      "material": {
+        "name": "AlMgSi0,5 T66",
+        "youngsModulus": 69000000000,
+        "yieldStrength": 150000000,
+        "density": 2700,
+        "poissonRatio": 0.33
+      },
+      "category": "aluminium",
+      "materialNumber": "3.3206",
+      "otherStandards": ["EN AW-6060 T66"]
+    },
+    {
+      "material": {
+        "name": "AlMg3 H22",
+        "youngsModulus": 70000000000,
+        "yieldStrength": 130000000,
+        "density": 2670,
+        "poissonRatio": 0.33
+      },
+      "category": "aluminium",
+      "materialNumber": "3.3535",
+      "otherStandards": ["EN AW-5754 H22"]
+    }
+  ]
 }

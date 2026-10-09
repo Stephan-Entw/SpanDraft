@@ -155,9 +155,8 @@ public sealed class MaterialLibraryCodecTests
     }
 
     [Fact]
-    public void CatalogLoadsEmptyResourceAndSyntheticEntriesAndRejectsLibraryEnvelope()
+    public void CatalogCodecLoadsSyntheticAndEmptyEntriesAndRejectsLibraryEnvelope()
     {
-        Assert.Empty(MaterialCatalogCodec.LoadBuiltIn().All);
         var root = MaterialJson(true);
         var catalog = MaterialCatalogCodec.Deserialize(Bytes(root));
         Assert.Equivalent(MaterialLibraryCodec.Deserialize(Encoding.UTF8.GetBytes(MaterialFixture)).All[0], catalog.All[0], strict: true);
