@@ -46,6 +46,11 @@ buckling, fatigue, contact, 2D/3D frames or normative design verification.
 The displayed bending stress and safety factor are simple elastic assessments,
 not a code-based structural verification.
 
+Built-in material properties are curated SpanDraft reference values assembled
+from publicly available technical information and cross-checked against multiple
+sources. They do not replace material standards, manufacturer specifications or
+material certificates.
+
 The solver has been independently validated against analytical references,
 IndeterminateBeam and PyCBA. See
 [VALIDATION.md](docs/VALIDATION.md) for the validation scope and evidence.
