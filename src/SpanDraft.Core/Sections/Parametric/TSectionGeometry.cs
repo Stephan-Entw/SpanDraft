@@ -5,8 +5,10 @@ using static SpanDraft.Core.Sections.Parametric.ParametricGeometry;
 namespace SpanDraft.Core.Sections.Parametric;
 
 /// <summary>A vertically symmetric T profile with its flange at the top.</summary>
-public sealed class TSectionGeometry
+public sealed class TSectionGeometry : IParametricSectionDefinition
 {
+    private readonly ParametricSectionData data;
+
     public TSectionGeometry(Length height, Length width, Length webThickness, Length flangeThickness, Length radius)
     {
         var h = Positive(height, nameof(height));
@@ -27,7 +29,7 @@ public sealed class TSectionGeometry
         WebThickness = webThickness;
         FlangeThickness = flangeThickness;
         Radius = radius;
-        Geometry = Validated(() => new(Contour([
+        data = Validated(SectionShapeKind.TSection, () => new(Contour([
             P(left, 0), P(right, 0), P(right, underside), P(b, underside), P(b, h), P(0, h),
             P(0, underside), P(left, underside)], [0, 0, r, 0, 0, 0, 0, r])));
     }
@@ -37,5 +39,10 @@ public sealed class TSectionGeometry
     public Length WebThickness { get; }
     public Length FlangeThickness { get; }
     public Length Radius { get; }
-    public SectionGeometry Geometry { get; }
+    public SectionShapeKind ShapeKind => SectionShapeKind.TSection;
+    public SectionGeometry Geometry => data.Geometry;
+    public SectionGeometryProperties GeometryProperties => data.GeometryProperties;
+    public Area Area => GeometryProperties.Area;
+    public IReadOnlyList<SectionAxisProperties> Axes => data.Axes;
+    public SectionAxisProperties GetAxis(SectionAxisDesignation axisDesignation) => data.GetAxis(axisDesignation);
 }

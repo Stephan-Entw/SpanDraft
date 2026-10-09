@@ -5,8 +5,10 @@ using static SpanDraft.Core.Sections.Parametric.ParametricGeometry;
 namespace SpanDraft.Core.Sections.Parametric;
 
 /// <summary>A rectangular tube with an outer corner radius; the inner radius is max(0, OuterRadius - WallThickness).</summary>
-public sealed class RectangularHollowSectionGeometry
+public sealed class RectangularHollowSectionGeometry : IParametricSectionDefinition
 {
+    private readonly ParametricSectionData data;
+
     public RectangularHollowSectionGeometry(Length width, Length height, Length wallThickness, Length outerRadius)
     {
         var b = Positive(width, nameof(width));
@@ -28,7 +30,7 @@ public sealed class RectangularHollowSectionGeometry
         WallThickness = wallThickness;
         OuterRadius = outerRadius;
         InnerRadius = Length.FromMeters(ri);
-        Geometry = Validated(() => new(Rectangle(0, 0, b, h, r), [Rectangle(t, t, right, top, ri)]));
+        data = Validated(SectionShapeKind.RectangularHollow, () => new(Rectangle(0, 0, b, h, r), [Rectangle(t, t, right, top, ri)]));
     }
 
     public Length Width { get; }
@@ -36,5 +38,10 @@ public sealed class RectangularHollowSectionGeometry
     public Length WallThickness { get; }
     public Length OuterRadius { get; }
     public Length InnerRadius { get; }
-    public SectionGeometry Geometry { get; }
+    public SectionShapeKind ShapeKind => SectionShapeKind.RectangularHollow;
+    public SectionGeometry Geometry => data.Geometry;
+    public SectionGeometryProperties GeometryProperties => data.GeometryProperties;
+    public Area Area => GeometryProperties.Area;
+    public IReadOnlyList<SectionAxisProperties> Axes => data.Axes;
+    public SectionAxisProperties GetAxis(SectionAxisDesignation axisDesignation) => data.GetAxis(axisDesignation);
 }

@@ -5,8 +5,10 @@ using static SpanDraft.Core.Sections.Parametric.ParametricGeometry;
 namespace SpanDraft.Core.Sections.Parametric;
 
 /// <summary>A doubly symmetric I/H profile with a vertical web and four internal fillets.</summary>
-public sealed class ISectionGeometry
+public sealed class ISectionGeometry : IParametricSectionDefinition
 {
+    private readonly ParametricSectionData data;
+
     public ISectionGeometry(Length height, Length width, Length webThickness, Length flangeThickness, Length radius)
     {
         var h = Positive(height, nameof(height));
@@ -27,7 +29,7 @@ public sealed class ISectionGeometry
         WebThickness = webThickness;
         FlangeThickness = flangeThickness;
         Radius = radius;
-        Geometry = Validated(() => new(Contour([
+        data = Validated(SectionShapeKind.ISection, () => new(Contour([
             P(0, 0), P(b, 0), P(b, tf), P(right, tf), P(right, upper), P(b, upper),
             P(b, h), P(0, h), P(0, upper), P(left, upper), P(left, tf), P(0, tf)],
             [0, 0, 0, r, r, 0, 0, 0, 0, r, r, 0])));
@@ -38,5 +40,10 @@ public sealed class ISectionGeometry
     public Length WebThickness { get; }
     public Length FlangeThickness { get; }
     public Length Radius { get; }
-    public SectionGeometry Geometry { get; }
+    public SectionShapeKind ShapeKind => SectionShapeKind.ISection;
+    public SectionGeometry Geometry => data.Geometry;
+    public SectionGeometryProperties GeometryProperties => data.GeometryProperties;
+    public Area Area => GeometryProperties.Area;
+    public IReadOnlyList<SectionAxisProperties> Axes => data.Axes;
+    public SectionAxisProperties GetAxis(SectionAxisDesignation axisDesignation) => data.GetAxis(axisDesignation);
 }

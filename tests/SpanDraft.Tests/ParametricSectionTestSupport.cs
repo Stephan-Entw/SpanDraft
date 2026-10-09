@@ -10,7 +10,7 @@ internal static class ParametricSectionTestSupport
 {
     internal static Length M(double value) => Length.FromMeters(value);
 
-    internal static object Shape(int kind, double b = 6, double h = 10, double t = 1, double tf = 1, double r = 0) => kind switch
+    internal static IParametricSectionDefinition Shape(int kind, double b = 6, double h = 10, double t = 1, double tf = 1, double r = 0) => kind switch
     {
         0 => new RectangleSectionGeometry(M(b), M(h)),
         1 => new RectangularHollowSectionGeometry(M(b), M(h), M(t), M(r)),
@@ -24,7 +24,7 @@ internal static class ParametricSectionTestSupport
     };
 
     internal static SectionGeometry Geometry(object shape) =>
-        (SectionGeometry)shape.GetType().GetProperty("Geometry")!.GetValue(shape)!;
+        ((IParametricSectionDefinition)shape).Geometry;
 
     // Independent area integrals of rectangles and quarter disks, not boundary integration.
     internal readonly record struct Integrals(double A, double Qy, double Qz, double Jy, double Jz, double Jyz)

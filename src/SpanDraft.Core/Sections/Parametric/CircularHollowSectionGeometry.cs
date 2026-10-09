@@ -5,8 +5,10 @@ using static SpanDraft.Core.Sections.Parametric.ParametricGeometry;
 namespace SpanDraft.Core.Sections.Parametric;
 
 /// <summary>An exact annulus centred at (OuterDiameter/2, OuterDiameter/2).</summary>
-public sealed class CircularHollowSectionGeometry
+public sealed class CircularHollowSectionGeometry : IParametricSectionDefinition
 {
+    private readonly ParametricSectionData data;
+
     public CircularHollowSectionGeometry(Length outerDiameter, Length wallThickness)
     {
         var d = Positive(outerDiameter, nameof(outerDiameter));
@@ -18,10 +20,15 @@ public sealed class CircularHollowSectionGeometry
             "The inner contour and both sides of the wall must remain representable.");
         OuterDiameter = outerDiameter;
         WallThickness = wallThickness;
-        Geometry = Validated(() => new(Circle(ro, ro, ro), [Circle(ro, ro, ri)]));
+        data = Validated(SectionShapeKind.CircularHollow, () => new(Circle(ro, ro, ro), [Circle(ro, ro, ri)]));
     }
 
     public Length OuterDiameter { get; }
     public Length WallThickness { get; }
-    public SectionGeometry Geometry { get; }
+    public SectionShapeKind ShapeKind => SectionShapeKind.CircularHollow;
+    public SectionGeometry Geometry => data.Geometry;
+    public SectionGeometryProperties GeometryProperties => data.GeometryProperties;
+    public Area Area => GeometryProperties.Area;
+    public IReadOnlyList<SectionAxisProperties> Axes => data.Axes;
+    public SectionAxisProperties GetAxis(SectionAxisDesignation axisDesignation) => data.GetAxis(axisDesignation);
 }

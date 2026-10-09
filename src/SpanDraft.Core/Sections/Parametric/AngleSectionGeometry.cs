@@ -5,8 +5,10 @@ using static SpanDraft.Core.Sections.Parametric.ParametricGeometry;
 namespace SpanDraft.Core.Sections.Parametric;
 
 /// <summary>An equal- or unequal-leg angle with its vertical leg on the left and horizontal leg at the bottom.</summary>
-public sealed class AngleSectionGeometry
+public sealed class AngleSectionGeometry : IParametricSectionDefinition
 {
+    private readonly ParametricSectionData data;
+
     public AngleSectionGeometry(Length width, Length height, Length thickness, Length innerRadius)
     {
         var b = Positive(width, nameof(width));
@@ -19,7 +21,7 @@ public sealed class AngleSectionGeometry
         Height = height;
         Thickness = thickness;
         InnerRadius = innerRadius;
-        Geometry = Validated(() => new(Contour([
+        data = Validated(SectionShapeKind.Angle, () => new(Contour([
             P(0, 0), P(b, 0), P(b, t), P(t, t), P(t, h), P(0, h)], [0, 0, 0, r, 0, 0])));
     }
 
@@ -27,5 +29,10 @@ public sealed class AngleSectionGeometry
     public Length Height { get; }
     public Length Thickness { get; }
     public Length InnerRadius { get; }
-    public SectionGeometry Geometry { get; }
+    public SectionShapeKind ShapeKind => SectionShapeKind.Angle;
+    public SectionGeometry Geometry => data.Geometry;
+    public SectionGeometryProperties GeometryProperties => data.GeometryProperties;
+    public Area Area => GeometryProperties.Area;
+    public IReadOnlyList<SectionAxisProperties> Axes => data.Axes;
+    public SectionAxisProperties GetAxis(SectionAxisDesignation axisDesignation) => data.GetAxis(axisDesignation);
 }

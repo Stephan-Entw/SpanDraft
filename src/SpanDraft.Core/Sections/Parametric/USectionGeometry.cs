@@ -5,8 +5,10 @@ using static SpanDraft.Core.Sections.Parametric.ParametricGeometry;
 namespace SpanDraft.Core.Sections.Parametric;
 
 /// <summary>A horizontally symmetric channel with its web on the left and flanges pointing right.</summary>
-public sealed class USectionGeometry
+public sealed class USectionGeometry : IParametricSectionDefinition
 {
+    private readonly ParametricSectionData data;
+
     public USectionGeometry(Length height, Length width, Length webThickness, Length flangeThickness, Length radius)
     {
         var h = Positive(height, nameof(height));
@@ -24,7 +26,7 @@ public sealed class USectionGeometry
         WebThickness = webThickness;
         FlangeThickness = flangeThickness;
         Radius = radius;
-        Geometry = Validated(() => new(Contour([
+        data = Validated(SectionShapeKind.USection, () => new(Contour([
             P(0, 0), P(b, 0), P(b, tf), P(tw, tf), P(tw, upper), P(b, upper), P(b, h), P(0, h)],
             [0, 0, 0, r, r, 0, 0, 0])));
     }
@@ -34,5 +36,10 @@ public sealed class USectionGeometry
     public Length WebThickness { get; }
     public Length FlangeThickness { get; }
     public Length Radius { get; }
-    public SectionGeometry Geometry { get; }
+    public SectionShapeKind ShapeKind => SectionShapeKind.USection;
+    public SectionGeometry Geometry => data.Geometry;
+    public SectionGeometryProperties GeometryProperties => data.GeometryProperties;
+    public Area Area => GeometryProperties.Area;
+    public IReadOnlyList<SectionAxisProperties> Axes => data.Axes;
+    public SectionAxisProperties GetAxis(SectionAxisDesignation axisDesignation) => data.GetAxis(axisDesignation);
 }

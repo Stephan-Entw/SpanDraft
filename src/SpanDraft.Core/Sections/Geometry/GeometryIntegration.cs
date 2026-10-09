@@ -4,7 +4,12 @@ namespace SpanDraft.Core.Sections.Geometry;
 
 internal static class GeometryIntegration
 {
-    internal static SectionGeometryProperties Calculate(SectionGeometry geometry)
+    internal static SectionGeometryProperties Calculate(SectionGeometry geometry) => Calculate(geometry, false, out _);
+
+    internal static SectionGeometryProperties Calculate(SectionGeometry geometry, out CoordinateAxisModuli moduli) =>
+        Calculate(geometry, true, out moduli);
+
+    private static SectionGeometryProperties Calculate(SectionGeometry geometry, bool coordinateAxes, out CoordinateAxisModuli moduli)
     {
         var contours = new[] { geometry.OuterContour }.Concat(geometry.Holes).ToArray();
         var frame = GeometryFrame.Create(contours);
@@ -41,8 +46,19 @@ internal static class GeometryIntegration
         i2 = Math.Min(i1, i2);
 
         var (sine, cosine) = Math.SinCos(angle);
-        var distances1 = Extrema(contours, frame, cy, cz, -sine, cosine);
-        var distances2 = Extrema(contours, frame, cy, cz, cosine, sine);
+        var distances1 = GeometryProjection.Extrema(contours, frame, cy, cz, -sine, cosine);
+        var distances2 = GeometryProjection.Extrema(contours, frame, cy, cz, cosine, sine);
+        moduli = default;
+        if (coordinateAxes)
+        {
+            var yDistances = GeometryProjection.Extrema(contours, frame, cy, cz, 0, 1);
+            var zDistances = GeometryProjection.Extrema(contours, frame, cy, cz, 1, 0);
+            moduli = new(
+                SectionModulus.FromCubicMeters(Rescale(iy.Value / yDistances.Positive, 3)),
+                SectionModulus.FromCubicMeters(Rescale(iy.Value / yDistances.Negative, 3)),
+                SectionModulus.FromCubicMeters(Rescale(iz.Value / zDistances.Positive, 3)),
+                SectionModulus.FromCubicMeters(Rescale(iz.Value / zDistances.Negative, 3)));
+        }
         var centroid = SectionPoint.FromMeters(
             DomainGuard.Finite(frame.Origin.Y.Meters + Math.ScaleB(cy.Value, frame.Exponent), nameof(geometry)),
             DomainGuard.Finite(frame.Origin.Z.Meters + Math.ScaleB(cz.Value, frame.Exponent), nameof(geometry)));
@@ -171,36 +187,6 @@ internal static class GeometryIntegration
             factorial *= (2.0 * k + 2) * (2.0 * k + 3);
         }
         return sum.Value;
-    }
-
-    private static (double Positive, double Negative) Extrema(SectionContour[] contours,
-        GeometryFrame frame, Extended cy, Extended cz, double dy, double dz)
-    {
-        var min = double.PositiveInfinity;
-        var max = double.NegativeInfinity;
-        foreach (var contour in contours)
-        foreach (var segment in contour.Segments)
-        {
-            Include(frame.Point(segment.Start));
-            Include(frame.Point(segment.End));
-            if (segment is SectionArc arc)
-            {
-                var parameter = GeometryMath.ArcParameter(arc, dy, dz);
-                if (GeometryMath.OnArc(arc, parameter))
-                    Include(frame.ArcPoint(arc, parameter));
-                parameter = GeometryMath.ArcParameter(arc, -dy, -dz);
-                if (GeometryMath.OnArc(arc, parameter))
-                    Include(frame.ArcPoint(arc, parameter));
-            }
-        }
-        return (DomainGuard.Positive(max, nameof(contours)), DomainGuard.Positive(-min, nameof(contours)));
-
-        void Include(Point2 p)
-        {
-            var distance = (((Extended)p.Y - cy) * dy + ((Extended)p.Z - cz) * dz).Value;
-            min = Math.Min(min, distance);
-            max = Math.Max(max, distance);
-        }
     }
 
     internal struct Moments

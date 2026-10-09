@@ -113,8 +113,8 @@ Geometriedetails können nicht rekonstruiert werden.
 Die parametrischen Definitionen in `Core.Sections.Parametric` behalten ihre
 fachlichen Abmessungen als immutable Längenwerte und erzeugen daraus eine
 `SectionGeometry`. Ihre Kennwerte stammen ausschließlich aus dem allgemeinen
-Geometriekern. Sie sind eigenständige Geometriedefinitionen; das bestehende
-`Section`-Modell verwendet weiterhin seinen bisherigen Kennwertvertrag.
+Geometriekern. Sie implementieren den fachlichen Vertrag `IParametricSectionDefinition`; das
+bestehende `Section`-Modell verwendet weiterhin seinen bisherigen Kennwertvertrag.
 
 Alle Formen verwenden y horizontal und z vertikal. Die Bounding-Box beginnt
 links unten bei (0, 0); die Geometrie wird nicht auf ihren Schwerpunkt verschoben.
@@ -150,6 +150,57 @@ Grenzradien dürfen gerade Reststrecken vollständig aufzehren; diese Strecken
 entfallen dann. Positive Materialbreiten, Löcher und Geometriedetails müssen
 darstellbar bleiben. Ungültige Eingaben werden abgelehnt und nicht begrenzt,
 verkleinert oder durch verschobene Punkte repariert.
+
+## Fachliche Querschnittsdefinitionen und Biegeachsen
+
+`ISectionDefinition` beschreibt Fläche A und die verfügbaren fachlichen
+Biegeachsen. `SectionAxisDesignation` identifiziert Y (y-y), Z (z-z), U (u-u)
+und V (v-v) ohne führende Stringrepräsentation. Jede Achse liefert über
+`SectionAxisProperties` ihr Flächenträgheitsmoment sowie getrennte positive
+und negative elastische Widerstandsmomente. Die Vorzeichen bezeichnen
+geometrische Seiten, nicht Zug oder Druck. Ein einzelnes W beschreibt den
+geometrischen Vertrag asymmetrischer Querschnitte nicht vollständig.
+
+`IParametricSectionDefinition` ergänzt die stabile Formidentität
+`SectionShapeKind`, die ursprüngliche Geometrie und deren vollständige
+Kennwerte. Die konkreten Definitionen erhalten ihre typisierten Parameter.
+Die mathematischen Hauptachsen 1/2 sind weiterhin Rohdaten des Geometriekerns;
+sie sind keine fachlichen Achsenbezeichnungen für bekannte Profile.
+
+Rechteck, Rechteckrohr, Kreis, Rundrohr, I-/H-, U- und T-Profil bieten genau
+Y und Z an. Dabei gilt Iy = ∫ Z² dA und Iz = ∫ Y² dA unabhängig davon,
+welches Moment größer ist. Wy+ gehört zur +z-Seite, Wy− zur −z-Seite,
+Wz+ zur +y-Seite und Wz− zur −y-Seite. Jedes Widerstandsmoment ist das
+zugehörige Schwerpunktmoment dividiert durch den tatsächlichen positiven
+Randfaserabstand auf dieser Seite. Die Werte stammen aus der allgemeinen
+Konturgeometrie einschließlich exakter Kreisbögen. Die deterministische
+Achsenkonvention des Kerns bleibt auch bei isotropen Formen erhalten.
+
+Winkelprofile bieten für Biegung genau U und V an: u-u ist die größere
+Hauptachse mit Iu = I1 und Wu± = W1±, v-v die kleinere mit Iv = I2 und
+Wv± = W2±. Die Seiten folgen unverändert den gerichteten Hauptachsen des
+Geometriekerns. Iy, Iz und Iyz bleiben zusammen mit Schwerpunkt,
+Hauptachsenwinkel, Randfaserabständen und allen Hauptachsenkennwerten über
+die vollständigen Geometrieeigenschaften erreichbar. Zwischen y/z und u/v
+findet keine automatische Umdeutung statt.
+
+`ManualSectionDefinition` übernimmt Tabellenkennwerte ohne angenommene
+Geometrie: eine endliche, streng positive Fläche und eine oder zwei
+`ManualSectionAxis`-Eingaben mit expliziter Bezeichnung, positivem endlichem
+I und W. Weil nur ein W eingegeben wird, gilt ausdrücklich **W+ = W− = W**.
+Jede einzelne Y-, Z-, U- oder V-Achse ist zulässig. Zwei Achsen müssen
+verschieden sein und das Paar Y/Z oder U/V bilden; Mischpaare sind ungültig.
+Die Eingabereihenfolge verändert die Bedeutung nicht. Es werden weder eine
+fehlende Achse noch Schwerpunkt, Koordinatenmomente, Hauptachsenwinkel oder
+Geometrie ergänzt; gleiche I-Werte bedeuten keine gleiche Achsenidentität.
+
+Achsenlisten sind unveränderlich und kanonisch Y/Z beziehungsweise U/V
+geordnet. `GetAxis` verlangt eine explizite Bezeichnung: ungültige Enumwerte
+führen zu `ArgumentOutOfRangeException`, nicht vorhandene gültige Achsen zu
+`KeyNotFoundException`. Die für einen Balken tatsächlich verwendete Achse
+gehört nicht intrinsisch zum Querschnitt. Keine Querschnittsdefinition
+speichert daher eine Achsenauswahl. Das neue Modell besteht parallel zu
+`Section` und `CustomSection`; eine Kopplung an das Balkenmodell ist separat.
 
 ## Modellvalidierung
 

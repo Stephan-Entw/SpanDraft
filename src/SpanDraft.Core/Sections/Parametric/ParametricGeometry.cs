@@ -15,13 +15,11 @@ internal static class ParametricGeometry
             throw new ArgumentOutOfRangeException(name, message);
     }
 
-    internal static SectionGeometry Validated(Func<SectionGeometry> construct)
+    internal static ParametricSectionData Validated(SectionShapeKind shapeKind, Func<SectionGeometry> construct)
     {
         try
         {
-            var geometry = construct();
-            _ = geometry.CalculateProperties();
-            return geometry;
+            return new(construct(), shapeKind);
         }
         catch (ArgumentException exception)
         {
