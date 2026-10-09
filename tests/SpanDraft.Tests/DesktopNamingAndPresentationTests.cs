@@ -455,7 +455,7 @@ public sealed class DesktopNamingAndPresentationTests
         var s = new Session();
         var document = s.Editor.Document;
         var material = new Material("Alternate name", document.Material.YoungsModulus, document.Material.YieldStrength);
-        var section = new CustomSection(document.Section.Area, document.Section.SecondMomentOfArea, document.Section.SectionModulus);
+        var section = new CustomSection(document.Section.Area, document.Section.GetAxis(document.BendingAxis).SecondMomentOfArea, document.Section.GetAxis(document.BendingAxis).PositiveSectionModulus);
         var analysis = s.Editor.Presentation;
         s.Editor.ApplySetup(section, material);
         Assert.Same(material, s.Editor.Document.Material);

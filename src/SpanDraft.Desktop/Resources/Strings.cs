@@ -61,6 +61,11 @@ public static class Strings
     public static string RectangularHollowSectionName => Get(nameof(RectangularHollowSectionName));
     public static string CircleSectionName => Get(nameof(CircleSectionName));
     public static string CircularHollowSectionName => Get(nameof(CircularHollowSectionName));
+    public static string RoundedRectangularHollowSectionName => Get(nameof(RoundedRectangularHollowSectionName));
+    public static string ISectionName => Get(nameof(ISectionName));
+    public static string USectionName => Get(nameof(USectionName));
+    public static string TSectionName => Get(nameof(TSectionName));
+    public static string AngleSectionName => Get(nameof(AngleSectionName));
     public static string CustomSectionName => Get(nameof(CustomSectionName));
 
     private static string Get(string name) =>

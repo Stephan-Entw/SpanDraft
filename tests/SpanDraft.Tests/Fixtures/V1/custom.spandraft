@@ -1,0 +1,64 @@
+{
+  "format": "SpanDraft.Project",
+  "formatVersion": 1,
+  "document": {
+    "length": 2,
+    "material": {
+      "name": "Test steel",
+      "youngsModulus": 210000000000,
+      "yieldStrength": 235000000
+    },
+    "section": {
+      "type": "custom",
+      "area": 0.003,
+      "secondMomentOfArea": 8e-06,
+      "sectionModulus": 0.0002
+    },
+    "supports": [
+      {
+        "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "name": "A",
+        "type": "fixed",
+        "position": 0
+      }
+    ],
+    "pointLoads": [
+      {
+        "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "name": "F1",
+        "type": "force",
+        "position": 2,
+        "value": -1000
+      }
+    ],
+    "distributedLoads": [
+      {
+        "id": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+        "name": "q1",
+        "startPosition": 0,
+        "endPosition": 2,
+        "intensity": -500
+      }
+    ],
+    "namingState": {
+      "nextSupportOrdinal": 2,
+      "nextForceNumber": 2,
+      "nextMomentNumber": 1,
+      "nextDistributedLoadNumber": 2
+    }
+  },
+  "presentation": {
+    "annotationOffsets": [
+      {
+        "entityId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "dx": 12.5,
+        "dy": -30
+      },
+      {
+        "entityId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "dx": 0,
+        "dy": 0
+      }
+    ]
+  }
+}

@@ -8,7 +8,7 @@ public sealed record RecoveryEnvelopeV1
     public required int RecoveryVersion { get; init; }
     public string? OriginalFilePath { get; init; }
     public required DateTimeOffset WrittenAtUtc { get; init; }
-    public required ProjectFileV1 Project { get; init; }
+    public required JsonElement Project { get; init; }
 }
 
 public sealed record RecoverySnapshot(ProjectState State, string? OriginalFilePath, DateTimeOffset WrittenAtUtc);
@@ -122,8 +122,8 @@ public sealed class ProjectRecovery
                 throw new ProjectFormatException("Invalid recovery version or UTC timestamp.");
             if (envelope.OriginalFilePath is { } path && (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path)))
                 throw new ProjectFormatException("Invalid recovery file path.");
-            if (envelope.Project is null) throw new ProjectFormatException("Missing recovery project.");
-            return new(ProjectFileCodec.FromDto(envelope.Project), envelope.OriginalFilePath, envelope.WrittenAtUtc);
+            if (envelope.Project.ValueKind != JsonValueKind.Object) throw new ProjectFormatException("Missing recovery project.");
+            return new(ProjectFileCodec.Deserialize(System.Text.Encoding.UTF8.GetBytes(envelope.Project.GetRawText())), envelope.OriginalFilePath, envelope.WrittenAtUtc);
         }
         catch (JsonException e) { throw new ProjectFormatException("Invalid recovery data: " + e.Message, e); }
     }
@@ -131,6 +131,6 @@ public sealed class ProjectRecovery
     public static byte[] Encode(RecoverySnapshot snapshot) => JsonSerializer.SerializeToUtf8Bytes(new RecoveryEnvelopeV1
     {
         RecoveryVersion = 1, OriginalFilePath = snapshot.OriginalFilePath,
-        WrittenAtUtc = snapshot.WrittenAtUtc, Project = ProjectFileCodec.ToDto(snapshot.State)
+        WrittenAtUtc = snapshot.WrittenAtUtc, Project = JsonElement.Parse(ProjectFileCodec.Serialize(snapshot.State))
     }, ProjectFileCodec.JsonOptions);
 }

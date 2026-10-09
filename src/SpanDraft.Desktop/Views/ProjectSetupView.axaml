@@ -25,8 +25,8 @@
             </Grid>
             <Grid Grid.Row="2" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="{StaticResource Space12}">
               <TextBlock Text="A" Classes="propertyLabel" /><TextBlock Grid.Column="1" Text="{Binding Area}" Classes="technicalValue" />
-              <TextBlock Grid.Row="1" Text="I" Classes="propertyLabel" /><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Inertia}" Classes="technicalValue" />
-              <TextBlock Grid.Row="2" Text="W" Classes="propertyLabel" /><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Modulus}" Classes="technicalValue" />
+              <TextBlock Grid.Row="1" Text="{Binding InertiaLabel}" Classes="propertyLabel" /><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Inertia}" Classes="technicalValue" />
+              <TextBlock Grid.Row="2" Text="{Binding ModulusLabel}" Classes="propertyLabel" /><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Modulus}" TextWrapping="Wrap" Classes="technicalValue" />
             </Grid>
             <TextBlock Grid.Row="3" Text="{x:Static resources:Strings.SectionTemplateNote}" TextWrapping="Wrap"
                        Classes="caption" VerticalAlignment="Bottom" />

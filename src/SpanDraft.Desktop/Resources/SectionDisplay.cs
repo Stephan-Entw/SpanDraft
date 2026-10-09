@@ -1,5 +1,6 @@
 using System.Globalization;
 using SpanDraft.Core.Sections;
+using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.Presentation;
 
@@ -8,7 +9,7 @@ namespace SpanDraft.Desktop.Resources;
 /// <summary>Names actual loaded geometry instead of assuming the initial square-tube template.</summary>
 public static class SectionDisplay
 {
-    public static string Name(Section section, UnitProfile? profile = null)
+    public static string Name(ISectionDefinition section, UnitProfile? profile = null)
     {
         var unit = (profile ?? UnitProfile.Default)[QuantityKind.SectionDimension];
         return section switch
@@ -18,7 +19,21 @@ public static class SectionDisplay
                 s.Height.Meters, s.WallThickness.Meters),
             CircleSection s => Caption(Strings.CircleSectionName, unit, s.Diameter.Meters),
             CircularHollowSection s => Caption(Strings.CircularHollowSectionName, unit, s.OuterDiameter.Meters, s.WallThickness.Meters),
-            CustomSection => Strings.CustomSectionName,
+            RectangleSectionGeometry s => Caption(Strings.RectangleSectionName, unit, s.Width.Meters, s.Height.Meters),
+            RectangularHollowSectionGeometry s => Caption(Strings.RoundedRectangularHollowSectionName, unit,
+                s.Width.Meters, s.Height.Meters, s.WallThickness.Meters, s.OuterRadius.Meters),
+            CircleSectionGeometry s => Caption(Strings.CircleSectionName, unit, s.Diameter.Meters),
+            CircularHollowSectionGeometry s => Caption(Strings.CircularHollowSectionName, unit,
+                s.OuterDiameter.Meters, s.WallThickness.Meters),
+            ISectionGeometry s => Caption(Strings.ISectionName, unit,
+                s.Height.Meters, s.Width.Meters, s.WebThickness.Meters, s.FlangeThickness.Meters, s.Radius.Meters),
+            USectionGeometry s => Caption(Strings.USectionName, unit,
+                s.Height.Meters, s.Width.Meters, s.WebThickness.Meters, s.FlangeThickness.Meters, s.Radius.Meters),
+            TSectionGeometry s => Caption(Strings.TSectionName, unit,
+                s.Height.Meters, s.Width.Meters, s.WebThickness.Meters, s.FlangeThickness.Meters, s.Radius.Meters),
+            AngleSectionGeometry s => Caption(Strings.AngleSectionName, unit,
+                s.Width.Meters, s.Height.Meters, s.Thickness.Meters, s.InnerRadius.Meters),
+            CustomSection or ManualSectionDefinition => Strings.CustomSectionName,
             _ => throw new ArgumentException("Unknown section type.", nameof(section))
         };
     }

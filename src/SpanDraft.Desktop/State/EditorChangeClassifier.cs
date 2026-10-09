@@ -10,7 +10,7 @@ public static class EditorChangeClassifier
     {
         if (!BeamModelMechanicalComparer.AreEquivalent(previous.ToBeamModel(), next.ToBeamModel()))
             return EditorChangeKind.Mechanical;
-        // Selected Core objects retain their profile/template metadata. Their analysis equivalence
+        // Core definitions retain their complete persistent inputs. Their analysis equivalence
         // is defined only above; desktop records also retain IDs, names and creation order.
         return ProjectState.DocumentContentEquals(previous, next) && previousPresentation.ContentEquals(nextPresentation)
                 ? EditorChangeKind.None : EditorChangeKind.MetadataOnly;

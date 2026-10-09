@@ -147,6 +147,6 @@ public sealed class DesktopMechanicalComparerTests
         Assert.Equal(EditorChangeKind.Mechanical, EditorChangeClassifier.Classify(document,
             document with { Material = Material(re: 355e6) }, presentation, presentation));
         Assert.Equal(EditorChangeKind.Mechanical, EditorChangeClassifier.Classify(document,
-            document with { Section = Section(w: .002) }, presentation, presentation));
+            document.WithSection(Section(w: .002), SectionAxisDesignation.Y), presentation, presentation));
     }
 }

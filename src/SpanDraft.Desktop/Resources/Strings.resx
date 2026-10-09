@@ -48,8 +48,8 @@
   <data name="CalculationComplete" xml:space="preserve"><value>Calculation complete</value></data>
   <data name="InvalidLength" xml:space="preserve"><value>Enter a finite length greater than zero.</value></data>
   <data name="SectionTemplateName" xml:space="preserve"><value>Square tube 100 × 100 × 5 mm</value></data>
-  <data name="SectionTemplateNote" xml:space="preserve"><value>Geometric V1 template with idealized sharp corners; no standard or manufacturer profile.</value></data>
-  <data name="MaterialTemplateNote" xml:space="preserve"><value>Provisional V1 material template; no normative material database.</value></data>
+  <data name="SectionTemplateNote" xml:space="preserve"><value>Section data for this project; no standard or manufacturer catalogue.</value></data>
+  <data name="MaterialTemplateNote" xml:space="preserve"><value>Material data for this project; no normative material database.</value></data>
   <data name="SetupDescription" xml:space="preserve"><value>Choose the constant section and material for your beam.</value></data>
   <data name="EditLength" xml:space="preserve"><value>Edit beam length</value></data>
   <data name="Open" xml:space="preserve"><value>Open…</value></data>
@@ -141,4 +141,9 @@
   <data name="LanguageUnavailable" xml:space="preserve"><value>Manual language selection is not yet available.</value></data>
   <data name="SettingsDraftBlocked" xml:space="preserve"><value>Confirm or cancel the active edit before applying changes to its input units. Your pending settings are retained.</value></data>
   <data name="SettingsSaveError" xml:space="preserve"><value>The settings could not be saved.</value></data>
+  <data name="RoundedRectangularHollowSectionName" xml:space="preserve"><value>Rectangular tube {0} × {1} × {2}, r={3} {4}</value></data>
+  <data name="ISectionName" xml:space="preserve"><value>I/H section h={0}, b={1}, tw={2}, tf={3}, r={4} {5}</value></data>
+  <data name="USectionName" xml:space="preserve"><value>U section h={0}, b={1}, tw={2}, tf={3}, r={4} {5}</value></data>
+  <data name="TSectionName" xml:space="preserve"><value>T section h={0}, b={1}, tw={2}, tf={3}, r={4} {5}</value></data>
+  <data name="AngleSectionName" xml:space="preserve"><value>Angle {0} × {1} × {2}, r={3} {4}</value></data>
 </root>

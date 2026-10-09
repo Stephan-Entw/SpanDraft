@@ -48,8 +48,8 @@
   <data name="CalculationComplete" xml:space="preserve"><value>Berechnung abgeschlossen</value></data>
   <data name="InvalidLength" xml:space="preserve"><value>Eine endliche Länge größer als null eingeben.</value></data>
   <data name="SectionTemplateName" xml:space="preserve"><value>Vierkantrohr 100 × 100 × 5 mm</value></data>
-  <data name="SectionTemplateNote" xml:space="preserve"><value>Geometrische V1-Vorlage mit idealisierten scharfen Kanten; kein Norm- oder Herstellerprofil.</value></data>
-  <data name="MaterialTemplateNote" xml:space="preserve"><value>Vorläufige V1-Werkstoffvorlage; keine normative Werkstoffdatenbank.</value></data>
+  <data name="SectionTemplateNote" xml:space="preserve"><value>Querschnittsdaten dieses Projekts; kein Norm- oder Herstellerkatalog.</value></data>
+  <data name="MaterialTemplateNote" xml:space="preserve"><value>Werkstoffdaten dieses Projekts; keine normative Werkstoffdatenbank.</value></data>
   <data name="SetupDescription" xml:space="preserve"><value>Konstanten Querschnitt und Werkstoff für den Balken auswählen.</value></data>
   <data name="EditLength" xml:space="preserve"><value>Balkenlänge bearbeiten</value></data>
   <data name="Open" xml:space="preserve"><value>Öffnen…</value></data>
@@ -141,4 +141,9 @@
   <data name="LanguageUnavailable" xml:space="preserve"><value>Manuelle Sprachauswahl ist noch nicht verfügbar.</value></data>
   <data name="SettingsDraftBlocked" xml:space="preserve"><value>Bestätigen oder verwerfen Sie zunächst die aktive Bearbeitung, bevor Sie deren Eingabeeinheiten ändern. Ihre Änderungen in den Einstellungen bleiben erhalten.</value></data>
   <data name="SettingsSaveError" xml:space="preserve"><value>Die Einstellungen konnten nicht gespeichert werden.</value></data>
+  <data name="RoundedRectangularHollowSectionName" xml:space="preserve"><value>Rechteckrohr {0} × {1} × {2}, r={3} {4}</value></data>
+  <data name="ISectionName" xml:space="preserve"><value>I/H-Profil h={0}, b={1}, tw={2}, tf={3}, r={4} {5}</value></data>
+  <data name="USectionName" xml:space="preserve"><value>U-Profil h={0}, b={1}, tw={2}, tf={3}, r={4} {5}</value></data>
+  <data name="TSectionName" xml:space="preserve"><value>T-Profil h={0}, b={1}, tw={2}, tf={3}, r={4} {5}</value></data>
+  <data name="AngleSectionName" xml:space="preserve"><value>Winkelprofil {0} × {1} × {2}, r={3} {4}</value></data>
 </root>

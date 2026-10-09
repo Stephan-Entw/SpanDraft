@@ -66,11 +66,11 @@ public sealed class DesktopResultPresentationTests
         Assert.Equal($"Rx [{profile[QuantityKind.AxialForce].Symbol}]", editor.Overview.ReactionXHeader);
         Assert.Equal($"Ry [{profile[QuantityKind.TransverseForce].Symbol}]", editor.Overview.ReactionYHeader);
         Assert.Equal($"M [{profile[QuantityKind.Moment].Symbol}]", editor.Overview.ReactionMomentHeader);
-        var setup = new ProjectSetupViewModel(ProjectSetupMode.Edit, state.Document.Section, state.Document.Material,
+        var setup = new ProjectSetupViewModel(ProjectSetupMode.Edit, state.Document.Section, state.Document.BendingAxis, state.Document.Material,
             _ => { }, () => { }, options);
         Assert.Equal(Format(setup.SelectedSection.Area.SquareMeters, QuantityKind.Area), setup.Area);
-        Assert.Equal(Format(setup.SelectedSection.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea), setup.Inertia);
-        Assert.Equal(Format(setup.SelectedSection.SectionModulus.CubicMeters, QuantityKind.SectionModulus), setup.Modulus);
+        Assert.Equal(Format(setup.SelectedSection.GetAxis(setup.BendingAxis).SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea), setup.Inertia);
+        Assert.Equal(Format(setup.SelectedSection.GetAxis(setup.BendingAxis).PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus), setup.Modulus);
         Assert.Equal(UiNumbers.Indicator(state.Document.Material.YoungsModulus.Pascals / 1e9) + " GPa", setup.YoungsModulus);
         Assert.Equal(UiNumbers.Indicator(state.Document.Material.YieldStrength.Megapascals) + " MPa", setup.YieldStrength);
     }

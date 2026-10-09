@@ -360,8 +360,10 @@ public sealed partial class EditorViewModel : ObservableObject
         Notify(nameof(ConflictEntityIds));
     }
 
-    public void ApplySetup(Section section, Material material) =>
-        Commit(Document with { Section = section, Material = material });
+    public void ApplySetup(Section section, Material material) => ApplySetup(section, SectionAxisDesignation.Y, material);
+
+    public void ApplySetup(ISectionDefinition section, SectionAxisDesignation bendingAxis, Material material) =>
+        Commit(Document.WithSection(section, bendingAxis) with { Material = material });
 
     public bool SetAnnotationOffset(Guid id, AnnotationOffset? offset)
     {

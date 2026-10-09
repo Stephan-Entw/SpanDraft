@@ -38,7 +38,7 @@ public partial class ProjectSetupView : UserControl
 
     private void RefreshSectionTemplate()
     {
-        SectionPicker.ItemTemplate = new FuncDataTemplate<Section>((section, _) =>
+        SectionPicker.ItemTemplate = new FuncDataTemplate<ISectionDefinition>((section, _) =>
             new TextBlock { Text = section is null ? null : SectionDisplay.Name(section, _model?.ResultPresentation.Profile) });
     }
 }

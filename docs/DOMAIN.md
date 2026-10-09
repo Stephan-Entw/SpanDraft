@@ -16,7 +16,7 @@ und Solververträge in [SOLVER.md](SOLVER.md).
 ## Einheiten und Einzelobjekte
 
 Immutable `readonly record struct`-Werttypen speichern kanonisch m, N, N·m, Pa,
-m², m⁴, m³ bzw. N/m. Explizite Factories und benannte Properties ermöglichen
+m², m⁴, m³, N/m und kg/m³. Explizite Factories und benannte Properties ermöglichen
 die benötigten Umrechnungen; implizite Konvertierungen und allgemeine
 Einheitenarithmetik sind nicht vorgesehen.
 
@@ -32,6 +32,27 @@ die zusätzliche Positivitätsbedingung durch.
 Ungültige Einzelobjekte werden durch Argument-Exceptions verhindert, auch
 bei nicht darstellbaren berechneten Querschnittswerten. Alle fachlichen
 Objekte haben ausschließlich lesbare Properties.
+
+## Materialien
+
+`Material` enthält verpflichtend einen nichtleeren Namen, einen positiven
+endlichen Elastizitätsmodul E und eine positive endliche Streckgrenze fy.
+Optional sind `MassDensity? Density` und `PoissonRatio? PoissonRatio`.
+Beide können unabhängig fehlen; null bedeutet unbekannt. Der bestehende
+Drei-Parameter-Konstruktor setzt beide auf null.
+
+`MassDensity` speichert kg/m³ über `FromKilogramsPerCubicMeter` und
+`KilogramsPerCubicMeter`. Ein angegebener Wert muss endlich und streng positiv
+sein; auch der sonst unvermeidliche Null-Standardwert wird im Material
+abgewiesen. `PoissonRatio` ist ein kleiner dimensionsloser Werttyp mit
+`FromValue` und `Value`; es gilt strikt −1 < ν < 0,5. Seine Grenzen und
+nicht endliche Werte sind ungültig; der Zahlenwert 0 ist zulässig.
+
+Der Solver verwendet E, Engineering verwendet fy. Dichte und Poissonzahl
+werden derzeit ausschließlich validiert, gehalten und persistiert; sie
+aktivieren weder Eigengewicht noch Schubverformung. Materialname und Änderungen
+nur an ρ/ν ändern den Projektinhalt, erfordern aber keine Neuberechnung.
+Die vollständigen Materialdaten gehören zum eigenständigen Projektsnapshot.
 
 ## Querschnitte
 
@@ -221,8 +242,14 @@ abgewiesen; beide nennen den Parameter `bendingAxis`. Diese intrinsische
 Gültigkeit wird vor jedem Solverlauf sichergestellt.
 
 Nur der Kompatibilitätskonstruktor mit einer alten `Section` wählt automatisch Y.
-Bestehende Desktop-Dokumente und Projekte V1 nutzen diesen Weg ohne zusätzliche
-Achsenauswahl und behalten dieselben Kennwerte und Berechnungsergebnisse.
+`EditorDocument` speichert ebenfalls die ursprüngliche `ISectionDefinition` und
+separat eine explizite `BendingAxis`. Konstruktion und atomarer Querschnittswechsel
+validieren diese Kombination; andere Dokumentänderungen erhalten sie.
+`ToBeamModel()` übergibt beide Werte ausdrücklich. Der begrenzte
+Desktop-Kompatibilitätskonstruktor für alte `Section`-Aufrufer setzt Y.
+Historische V1-Projekte werden beim Laden auf parametrische beziehungsweise
+manuelle Definitionen mit Y migriert; die mechanischen Ergebnisse bleiben erhalten.
+Der dauerhafte Dateivertrag steht in [PROJECT_FORMAT.md](PROJECT_FORMAT.md).
 Die 2D-Balkendarstellung repräsentiert jeweils die ausgewählte Biegeebene,
 keine räumliche Einbaulage des Querschnitts.
 

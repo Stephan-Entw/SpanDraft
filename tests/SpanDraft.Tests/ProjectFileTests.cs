@@ -28,7 +28,7 @@ public sealed class ProjectFileTests
             var bytes = ProjectFileCodec.Serialize(state);
             var loaded = ProjectFileCodec.Deserialize(bytes);
             Assert.True(state.ContentEquals(loaded));
-            Assert.Equal(state.Document.Section.GetType(), loaded.Document.Section.GetType());
+            Assert.Equal(2, JsonNode.Parse(bytes)!["formatVersion"]!.GetValue<int>());
             Assert.Equal(BitConverter.DoubleToInt64Bits(state.Document.Length.Meters), BitConverter.DoubleToInt64Bits(loaded.Document.Length.Meters));
             Assert.Equal(state.Document.NamedEntities, loaded.Document.NamedEntities);
             Assert.Equal(state.Document.NamingState, loaded.Document.NamingState);
@@ -46,6 +46,7 @@ public sealed class ProjectFileTests
     [InlineData("formatVersion")]
     [InlineData("document")]
     [InlineData("presentation")]
+    [InlineData("document.bendingAxis")]
     [InlineData("document.length")]
     [InlineData("document.material")]
     [InlineData("document.material.name")]
@@ -90,7 +91,7 @@ public sealed class ProjectFileTests
     [Theory]
     [InlineData("format", "Other")]
     [InlineData("formatVersion", 0)]
-    [InlineData("formatVersion", 2)]
+    [InlineData("formatVersion", 3)]
     [InlineData("document.length", 0)]
     [InlineData("document.length", -1)]
     [InlineData("document.material.youngsModulus", 0)]
@@ -191,8 +192,7 @@ public sealed class ProjectFileTests
     [InlineData(3, "outerDiameter")]
     [InlineData(3, "wallThickness")]
     [InlineData(4, "area")]
-    [InlineData(4, "secondMomentOfArea")]
-    [InlineData(4, "sectionModulus")]
+    [InlineData(4, "axes")]
     public void EverySectionVariantRequiresItsConstructiveData(int section, string field)
     {
         var root = JsonNode.Parse(ProjectFileCodec.Serialize(State(section)))!;

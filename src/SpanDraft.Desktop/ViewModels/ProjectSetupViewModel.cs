@@ -10,13 +10,24 @@ public enum ProjectSetupMode { Create, Edit }
 
 public sealed class ProjectSetupViewModel : ObservableObject
 {
-    private Section _selectedSection;
+    private ISectionDefinition _selectedSection;
     private Material _selectedMaterial;
     private ResultPresentationOptions _resultPresentation;
 
     public ProjectSetupViewModel(ProjectSetupMode mode, Section section, Material material,
         Action<ProjectSetupViewModel> apply, Action cancel, ResultPresentationOptions? resultPresentation = null)
+        : this(mode, section, SectionAxisDesignation.Y, material, apply, cancel, resultPresentation)
     {
+    }
+
+    public ProjectSetupViewModel(ProjectSetupMode mode, ISectionDefinition section, SectionAxisDesignation bendingAxis,
+        Material material, Action<ProjectSetupViewModel> apply, Action cancel,
+        ResultPresentationOptions? resultPresentation = null)
+    {
+        ArgumentNullException.ThrowIfNull(section);
+        ArgumentNullException.ThrowIfNull(material);
+        section.GetAxis(bendingAxis);
+        BendingAxis = bendingAxis;
         Mode = mode;
         _selectedSection = section;
         _selectedMaterial = material;
@@ -31,22 +42,37 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public bool IsEdit => Mode == ProjectSetupMode.Edit;
     public string Title => IsEdit ? Strings.EditProject : Strings.NewProject;
     public string PrimaryAction => IsEdit ? Strings.Apply : Strings.CreateProject;
-    public IReadOnlyList<Section> Sections { get; }
+    public IReadOnlyList<ISectionDefinition> Sections { get; }
     public IReadOnlyList<Material> Materials { get; }
-    public Section SelectedSection
+    public ISectionDefinition SelectedSection
     {
         get => _selectedSection;
-        set { if (Set(ref _selectedSection, value)) { Notify(nameof(Area)); Notify(nameof(Inertia)); Notify(nameof(Modulus)); } }
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            value.GetAxis(BendingAxis);
+            if (Set(ref _selectedSection, value))
+            { Notify(nameof(Area)); Notify(nameof(Inertia)); Notify(nameof(Modulus)); }
+        }
     }
+    public SectionAxisDesignation BendingAxis { get; }
+    private SectionAxisProperties SelectedAxis => SelectedSection.GetAxis(BendingAxis);
+
     public Material SelectedMaterial
     {
         get => _selectedMaterial;
         set { if (Set(ref _selectedMaterial, value)) { Notify(nameof(YoungsModulus)); Notify(nameof(YieldStrength)); } }
     }
     public ResultPresentationOptions ResultPresentation => _resultPresentation;
+    public string InertiaLabel => "I" + BendingAxis.ToString().ToLowerInvariant();
+    public string ModulusLabel => "W" + BendingAxis.ToString().ToLowerInvariant();
     public string Area => Format(SelectedSection.Area.SquareMeters, QuantityKind.Area);
-    public string Inertia => Format(SelectedSection.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea);
-    public string Modulus => Format(SelectedSection.SectionModulus.CubicMeters, QuantityKind.SectionModulus);
+    public string Inertia => Format(SelectedAxis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea);
+    // A single W is truthful only for equal positive/negative section moduli.
+    public string Modulus => SelectedAxis.PositiveSectionModulus == SelectedAxis.NegativeSectionModulus
+        ? Format(SelectedAxis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus)
+        : "W+ = " + Format(SelectedAxis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus)
+            + "; W− = " + Format(SelectedAxis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus);
     public string YoungsModulus => UiNumbers.Indicator(SelectedMaterial.YoungsModulus.Pascals / 1e9) + " GPa";
     public string YieldStrength => UiNumbers.Indicator(SelectedMaterial.YieldStrength.Megapascals) + " MPa";
     public ActionCommand ApplyCommand { get; }

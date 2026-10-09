@@ -140,7 +140,7 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         if (IsBusy || Editor is null) return;
         Editor.CancelEditorInteraction();
-        _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.Material, ApplySetup, CancelSetup, ResultPresentation);
+        _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.BendingAxis, Editor.Document.Material, ApplySetup, CancelSetup, ResultPresentation);
         Navigate(MainViewMode.ProjectSetup);
     }
 
@@ -148,10 +148,10 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         if (IsBusy) return;
         if (setup.Mode == ProjectSetupMode.Create)
-            Activate(ProjectSession.Create(new(new(Length.FromMillimeters(1000), setup.SelectedMaterial, setup.SelectedSection), new())));
+            Activate(ProjectSession.Create(new(new(Length.FromMillimeters(1000), setup.SelectedMaterial, setup.SelectedSection, setup.BendingAxis), new())));
         else
         {
-            Editor!.ApplySetup(setup.SelectedSection, setup.SelectedMaterial);
+            Editor!.ApplySetup(setup.SelectedSection, setup.BendingAxis, setup.SelectedMaterial);
             Navigate(MainViewMode.Editor);
         }
     }
