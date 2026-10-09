@@ -11,7 +11,7 @@ namespace SpanDraft.Desktop;
 
 public partial class MainWindow : Window
 {
-    private readonly MainWindowViewModel _model;
+    private MainWindowViewModel _model = null!;
     private readonly KeyModifiers _primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
     private bool _closing;
     private bool _closeApproved;
@@ -23,13 +23,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var files = new ProjectFileStore();
-        _model = new(files: files, dialogs: new ProjectDialogs(this), recovery: ProjectRecovery.Local(files),
-            settingsStore: LocalSettingsStore.Local(files));
+        var settingsStore = LocalSettingsStore.Local(files);
         NewMenuItem.InputGesture = new(Key.N, _primary);
         OpenMenuItem.InputGesture = new(Key.O, _primary);
         SaveMenuItem.InputGesture = new(Key.S, _primary);
         SaveAsMenuItem.InputGesture = new(Key.S, _primary | KeyModifiers.Shift);
-        QuitMenuItem.Command = new ActionCommand(Close, () => !_model.IsBusy && !_closing);
+        var quitCommand = new ActionCommand(Close, () => !_initializing && !_model.IsBusy && !_closing);
+        QuitMenuItem.Command = quitCommand;
         QuitMenuItem.InputGesture = new(Key.Q, _primary);
         UndoMenuItem.InputGesture = new(Key.Z, _primary);
         RedoMenuItem.InputGesture = new(Key.Z, _primary | KeyModifiers.Shift);
@@ -37,11 +37,11 @@ public partial class MainWindow : Window
         AddHandler(PointerPressedEvent, (_, e) =>
         {
             if (e.Source is Control control && (control is Menu or MenuItem
-                || control.FindAncestorOfType<Menu>() is not null)) _model.SetFileMenuOpen(true);
+                || control.FindAncestorOfType<Menu>() is not null) && !_initializing) _model.SetFileMenuOpen(true);
         }, RoutingStrategies.Tunnel);
         ProjectMenu.PropertyChanged += (_, e) =>
         {
-            if (e.Property == MenuBase.IsOpenProperty)
+            if (!_initializing && e.Property == MenuBase.IsOpenProperty)
             {
                 if (ProjectMenu.IsOpen) _model.SetFileMenuOpen(true);
                 else Dispatcher.UIThread.Post(() => _model.SetFileMenuOpen(ProjectMenu.IsOpen));
@@ -49,9 +49,14 @@ public partial class MainWindow : Window
         };
         Opened += async (_, _) =>
         {
-            await _model.InitializeSettingsAsync();
+            var settings = await settingsStore.LoadAsync();
+            _model = new(files: files, dialogs: new ProjectDialogs(this), recovery: ProjectRecovery.Local(files),
+                settingsStore: settingsStore, settings: settings,
+                materialStore: MaterialLibraryStore.Local(files), sectionStore: SectionLibraryStore.Local(files));
+            await _model.InitializeLibrariesAsync();
             DataContext = _model;
             _initializing = false;
+            quitCommand.Refresh();
             await _model.InitializeRecoveryAsync();
         };
         Closing += WindowClosing;

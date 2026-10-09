@@ -1,5 +1,6 @@
 using System.Globalization;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -50,6 +51,13 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
 
     public async Task ShowErrorAsync(string message) => await ShowAsync(message, [(Strings.OK, true)]);
 
+    public Task<bool> ConfirmMaterialDeleteAsync(string name) => ShowAsync(
+        string.Format(CultureInfo.CurrentUICulture, Strings.DeleteMaterialQuestion, name),
+        [(Strings.Cancel, false), (Strings.Delete, true)]);
+    public Task<bool> ConfirmSectionDeleteAsync(string name) => ShowAsync(
+        string.Format(CultureInfo.CurrentUICulture, Strings.DeleteSectionQuestion, name),
+        [(Strings.Cancel, false), (Strings.Delete, true)]);
+
     private Task<T> ShowAsync<T>(string message, (string Label, T Result)[] choices)
     {
         var dialog = new Window
@@ -62,6 +70,7 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
         foreach (var (label, result) in choices)
         {
             var button = new Button { Content = label, IsDefault = buttons.Children.Count == 0 };
+            AutomationProperties.SetName(button, label);
             button.Click += (_, _) => dialog.Close(result);
             buttons.Children.Add(button);
         }

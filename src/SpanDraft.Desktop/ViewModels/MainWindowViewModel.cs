@@ -11,7 +11,7 @@ namespace SpanDraft.Desktop.ViewModels;
 
 public enum MainViewMode { ProjectSetup, Editor }
 
-public sealed class MainWindowViewModel : ObservableObject
+public sealed partial class MainWindowViewModel : ObservableObject
 {
     private readonly Func<BeamModel, BeamAnalysisOutcome>? _analyze;
     private readonly IProjectFileStore _files;
@@ -30,7 +30,9 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public MainWindowViewModel(Func<BeamModel, BeamAnalysisOutcome>? analyze = null,
         IProjectFileStore? files = null, IProjectDialogs? dialogs = null, ProjectRecovery? recovery = null,
-        LocalSettingsStore? settingsStore = null, UserSettings? settings = null)
+        LocalSettingsStore? settingsStore = null, UserSettings? settings = null,
+        MaterialLibraryStore? materialStore = null, SectionLibraryStore? sectionStore = null,
+        Func<SpanDraft.Desktop.Libraries.BuiltInMaterialCatalog>? catalogLoader = null)
     {
         _analyze = analyze;
         _files = files ?? new ProjectFileStore();
@@ -39,6 +41,14 @@ public sealed class MainWindowViewModel : ObservableObject
         _settingsStore = settingsStore;
         _settings = settings ?? UserSettings.Default;
         _resultPresentation = _settings.Presentation;
+        _materialStore = materialStore;
+        _sectionStore = sectionStore;
+        try
+        {
+            BuiltInMaterials = (catalogLoader ?? MaterialCatalogCodec.LoadBuiltIn)();
+            if (BuiltInMaterials.Find("S235JR") is null) throw new LibraryFormatException("Missing S235JR.");
+        }
+        catch (Exception e) when (IsLibraryError(e)) { BuiltInError = Strings.BuiltInUnavailable; BuiltInMaterials = null; }
         if (_recovery is not null) _recovery.Failed += RecoveryFailed;
         _setup = NewSetup();
         NewCommand = new(() => NewAsync(), () => !IsBusy);
@@ -69,7 +79,7 @@ public sealed class MainWindowViewModel : ObservableObject
     public async Task<string?> ApplySettingsAsync(UserSettings settings)
     {
         if (_settingsSaving || IsBusy) return Strings.ProjectBusy;
-        if (Editor?.CanApplyInputUnits(settings.Profile) == false) return Strings.SettingsDraftBlocked;
+        if (Editor?.CanApplyInputUnits(settings.Profile) == false || !Setup.CanApplyInputUnits(settings.Profile)) return Strings.SettingsDraftBlocked;
         _settingsSaving = true;
         try
         {
@@ -94,7 +104,7 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(profile);
         var options = new ResultPresentationOptions(profile, mode);
-        if (_settingsSaving || Editor?.CanApplyInputUnits(profile) == false) return false;
+        if (_settingsSaving || IsBusy || Editor?.CanApplyInputUnits(profile) == false || !Setup.CanApplyInputUnits(profile)) return false;
         profile = UserSettings.Recognize(profile);
         options = new(profile, mode);
         _settings = _settings with { Profile = profile, Mode = mode,
@@ -113,7 +123,7 @@ public sealed class MainWindowViewModel : ObservableObject
         Notify(nameof(ResultPresentation));
     }
     public ProjectSession? Session => Editor?.Session;
-    public bool IsBusy => _busy;
+    public bool IsBusy => _busy || _libraryBusy;
     public bool CanUndo => !IsBusy && Session?.CanUndo == true;
     public bool CanRedo => !IsBusy && Session?.CanRedo == true;
     public string ProjectName => Session?.FilePath is { } path ? Path.GetFileName(path) : Strings.Untitled;
@@ -134,24 +144,27 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     private ProjectSetupViewModel NewSetup() => new(ProjectSetupMode.Create,
-        ProjectTemplates.Section, ProjectTemplates.Material, ApplySetup, CancelSetup, ResultPresentation);
+        new SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry(
+            Length.FromMillimeters(100), Length.FromMillimeters(100), Length.FromMillimeters(5), Length.FromMillimeters(0)),
+        SpanDraft.Core.Sections.SectionAxisDesignation.Y, BuiltInMaterials?.Find("S235JR")?.Material,
+        ApplySetup, CancelSetup, ResultPresentation, this);
 
     public void EditProject()
     {
         if (IsBusy || Editor is null) return;
         Editor.CancelEditorInteraction();
-        _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.BendingAxis, Editor.Document.Material, ApplySetup, CancelSetup, ResultPresentation);
+        _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.BendingAxis, Editor.Document.Material, ApplySetup, CancelSetup, ResultPresentation, this);
         Navigate(MainViewMode.ProjectSetup);
     }
 
     private void ApplySetup(ProjectSetupViewModel setup)
     {
-        if (IsBusy) return;
+        if (IsBusy || !setup.CanApply || setup.SelectedMaterial is not { } material) return;
         if (setup.Mode == ProjectSetupMode.Create)
-            Activate(ProjectSession.Create(new(new(Length.FromMillimeters(1000), setup.SelectedMaterial, setup.SelectedSection, setup.BendingAxis), new())));
+            Activate(ProjectSession.Create(new(new(Length.FromMillimeters(1000), material, setup.SelectedSection, setup.BendingAxis), new())));
         else
         {
-            Editor!.ApplySetup(setup.SelectedSection, setup.BendingAxis, setup.SelectedMaterial);
+            Editor!.ApplySetup(setup.SelectedSection, setup.BendingAxis, material);
             Navigate(MainViewMode.Editor);
         }
     }
@@ -384,6 +397,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void NotifySession()
     {
+        _setup?.RefreshLibraryState();
         Notify(nameof(Session));
         Notify(nameof(IsBusy));
         Notify(nameof(CanUndo));

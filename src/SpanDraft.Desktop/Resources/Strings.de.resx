@@ -146,4 +146,74 @@
   <data name="USectionName" xml:space="preserve"><value>U-Profil h={0}, b={1}, tw={2}, tf={3}, r={4} {5}</value></data>
   <data name="TSectionName" xml:space="preserve"><value>T-Profil h={0}, b={1}, tw={2}, tf={3}, r={4} {5}</value></data>
   <data name="AngleSectionName" xml:space="preserve"><value>Winkelprofil {0} × {1} × {2}, r={3} {4}</value></data>
+  <data name="Use" xml:space="preserve"><value>Verwenden</value></data>
+  <data name="ContinueUsing" xml:space="preserve"><value>Weiter verwenden</value></data>
+  <data name="Back" xml:space="preserve"><value>Zurück</value></data>
+  <data name="EditEntry" xml:space="preserve"><value>Bearbeiten…</value></data>
+  <data name="Customize" xml:space="preserve"><value>Anpassen…</value></data>
+  <data name="BuiltInLabel" xml:space="preserve"><value>Eingebaut</value></data>
+  <data name="UserLabel" xml:space="preserve"><value>Benutzerbibliothek</value></data>
+  <data name="MaterialSelection" xml:space="preserve"><value>Werkstoff auswählen</value></data>
+  <data name="SectionSelection" xml:space="preserve"><value>Querschnitt auswählen</value></data>
+  <data name="CurrentProjectMaterial" xml:space="preserve"><value>Aktuelles Projektmaterial</value></data>
+  <data name="CurrentProjectSection" xml:space="preserve"><value>Aktueller Projektquerschnitt</value></data>
+  <data name="BuiltInMaterials" xml:space="preserve"><value>Eingebaute Materialien</value></data>
+  <data name="MyMaterials" xml:space="preserve"><value>Meine Materialien</value></data>
+  <data name="MySections" xml:space="preserve"><value>Meine Querschnitte</value></data>
+  <data name="CreateMaterial" xml:space="preserve"><value>Benutzerdefinierter Werkstoff</value></data>
+  <data name="NewMaterial" xml:space="preserve"><value>Neues Material…</value></data>
+  <data name="EditUserMaterial" xml:space="preserve"><value>Bibliothekswerkstoff bearbeiten</value></data>
+  <data name="CreateSection" xml:space="preserve"><value>Querschnitt definieren</value></data>
+  <data name="NewSection" xml:space="preserve"><value>Neuen Querschnitt erstellen…</value></data>
+  <data name="EditUserSection" xml:space="preserve"><value>Querschnittspreset bearbeiten</value></data>
+  <data name="EmptyMaterialLibrary" xml:space="preserve"><value>Noch keine Materialien gespeichert.</value></data>
+  <data name="EmptySectionLibrary" xml:space="preserve"><value>Noch keine Querschnitte gespeichert.</value></data>
+  <data name="CategoryStructuralSteel" xml:space="preserve"><value>Baustahl</value></data>
+  <data name="CategoryStainlessSteel" xml:space="preserve"><value>Nichtrostender Stahl</value></data>
+  <data name="CategoryAlloySteel" xml:space="preserve"><value>Legierter Stahl</value></data>
+  <data name="CategoryAluminium" xml:space="preserve"><value>Aluminium</value></data>
+  <data name="CategoryOther" xml:space="preserve"><value>Sonstige</value></data>
+  <data name="MaterialDesignation" xml:space="preserve"><value>Bezeichnung *</value></data>
+  <data name="MaterialCategory" xml:space="preserve"><value>Kategorie *</value></data>
+  <data name="MaterialNumber" xml:space="preserve"><value>Werkstoffnummer</value></data>
+  <data name="OtherStandards" xml:space="preserve"><value>Andere Normen</value></data>
+  <data name="OtherStandardsHint" xml:space="preserve"><value>Mehrere Bezeichnungen mit Semikolon trennen, z. B. AISI 304; UNS S30400.</value></data>
+  <data name="SaveMaterialToLibrary" xml:space="preserve"><value>In meiner Materialbibliothek speichern</value></data>
+  <data name="SaveSectionToLibrary" xml:space="preserve"><value>In meiner Querschnittsbibliothek speichern</value></data>
+  <data name="PresetName" xml:space="preserve"><value>Presetname *</value></data>
+  <data name="SectionType" xml:space="preserve"><value>Querschnittstyp</value></data>
+  <data name="AxisConfiguration" xml:space="preserve"><value>Achskonfiguration</value></data>
+  <data name="BendingAxis" xml:space="preserve"><value>Biegeachse</value></data>
+  <data name="SectionProperties" xml:space="preserve"><value>Querschnittskennwerte</value></data>
+  <data name="ShapeRectangle" xml:space="preserve"><value>Rechteck</value></data>
+  <data name="ShapeRectangularHollow" xml:space="preserve"><value>Rechteckrohr</value></data>
+  <data name="ShapeCircle" xml:space="preserve"><value>Kreis</value></data>
+  <data name="ShapeCircularHollow" xml:space="preserve"><value>Rundrohr</value></data>
+  <data name="ShapeI" xml:space="preserve"><value>I/H-Profil</value></data>
+  <data name="ShapeU" xml:space="preserve"><value>U-Profil</value></data>
+  <data name="ShapeT" xml:space="preserve"><value>T-Profil</value></data>
+  <data name="ShapeAngle" xml:space="preserve"><value>Winkelprofil</value></data>
+  <data name="ShapeManual" xml:space="preserve"><value>Manuell A/I/W</value></data>
+  <data name="OuterRadiusHint" xml:space="preserve"><value>r ist der äußere Eckradius. Null bedeutet scharfe Ecken.</value></data>
+  <data name="InnerRadiusHint" xml:space="preserve"><value>r ist der Innenradius zwischen den Schenkeln. Null bedeutet eine scharfe Ecke.</value></data>
+  <data name="FilletRadiusHint" xml:space="preserve"><value>r ist der innere Übergangsradius zwischen Steg und Flansch. Null bedeutet scharfe Ecken.</value></data>
+  <data name="ManualSectionHint" xml:space="preserve"><value>Ein W je Achse eingeben; W+ und W− entsprechen beide W.</value></data>
+  <data name="PositiveInput" xml:space="preserve"><value>Eine endliche Zahl größer als null eingeben.</value></data>
+  <data name="NonnegativeInput" xml:space="preserve"><value>Eine endliche Zahl größer oder gleich null eingeben.</value></data>
+  <data name="MaterialNameRequired" xml:space="preserve"><value>Eine Werkstoffbezeichnung eingeben.</value></data>
+  <data name="MaterialCategoryRequired" xml:space="preserve"><value>Eine Werkstoffkategorie auswählen.</value></data>
+  <data name="InvalidMaterialInputs" xml:space="preserve"><value>Werkstoffwerte und Hinweise unter den Eingaben prüfen.</value></data>
+  <data name="InvalidPoissonRatio" xml:space="preserve"><value>Die Poissonzahl muss strikt zwischen −1 und 0,5 liegen.</value></data>
+  <data name="InvalidSectionInputs" xml:space="preserve"><value>Querschnittswerte und Hinweise unter den Eingaben prüfen.</value></data>
+  <data name="InvalidSectionGeometry" xml:space="preserve"><value>Diese Parameter ergeben keinen gültigen, darstellbaren Querschnitt. Abmessungen und Radien prüfen.</value></data>
+  <data name="PresetNameRequired" xml:space="preserve"><value>Einen Presetnamen eingeben.</value></data>
+  <data name="LibraryNameConflict" xml:space="preserve"><value>Dieser Name existiert bereits in Ihrer Bibliothek. Einen anderen Namen wählen.</value></data>
+  <data name="LibraryEntryMissing" xml:space="preserve"><value>Der Bibliothekseintrag ist nicht mehr verfügbar.</value></data>
+  <data name="LibrarySaveFailed" xml:space="preserve"><value>Die Bibliothek konnte nicht gespeichert werden. Ihre Eingaben und die bisherige Bibliothek bleiben erhalten. Bitte versuchen Sie es erneut.</value></data>
+  <data name="MaterialLibraryUnavailable" xml:space="preserve"><value>Ihre Materialbibliothek konnte nicht geladen werden und ist nicht verfügbar. Die Datei wurde nicht verändert. Eingebaute und einmalige Materialien bleiben nutzbar.</value></data>
+  <data name="SectionLibraryUnavailable" xml:space="preserve"><value>Ihre Querschnittsbibliothek konnte nicht geladen werden und ist nicht verfügbar. Die Datei wurde nicht verändert. Einmalige Querschnitte bleiben nutzbar.</value></data>
+  <data name="BuiltInUnavailable" xml:space="preserve"><value>Der eingebettete Materialkatalog konnte nicht geladen werden. Projekte und Wiederherstellung bleiben verfügbar. Vor dem Erstellen eines Projekts einen eigenen oder einmaligen Werkstoff auswählen.</value></data>
+  <data name="SelectMaterialRequired" xml:space="preserve"><value>Werkstoff auswählen</value></data>
+  <data name="DeleteMaterialQuestion" xml:space="preserve"><value>„{0}“ aus Ihrer Materialbibliothek löschen? Bestehende Projekte bleiben unverändert.</value></data>
+  <data name="DeleteSectionQuestion" xml:space="preserve"><value>„{0}“ aus Ihrer Querschnittsbibliothek löschen? Bestehende Projekte bleiben unverändert.</value></data>
 </root>

@@ -126,6 +126,9 @@ internal static class ProjectTestSupport
         public Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc)
         { RecoveryQuestions++; return Task.FromResult(damaged ? RecoveryDecision.Discard : Recovery); }
         public Task ShowErrorAsync(string message) { Errors.Add(message); return Task.CompletedTask; }
+        public bool ConfirmLibraryDelete { get; set; } = true;
+        public Task<bool> ConfirmMaterialDeleteAsync(string name) => Task.FromResult(ConfirmLibraryDelete);
+        public Task<bool> ConfirmSectionDeleteAsync(string name) => Task.FromResult(ConfirmLibraryDelete);
     }
 
     public sealed class App

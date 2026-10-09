@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels">
+  <DataTemplate x:Key="SetupInput" x:DataType="vm:SetupNumberInput">
+    <StackPanel Spacing="4" Margin="0,0,0,12">
+      <TextBlock Text="{Binding InputLabel}" Classes="propertyLabel" TextWrapping="Wrap" />
+      <TextBox Text="{Binding Text, Mode=TwoWay}" AutomationProperties.Name="{Binding InputLabel}" />
+      <TextBlock Text="{Binding Hint}" IsVisible="{Binding HasHint}" Classes="caption" TextWrapping="Wrap" />
+      <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Classes="validationMessage" TextWrapping="Wrap" />
+    </StackPanel>
+  </DataTemplate>
+  <DataTemplate x:Key="AxisValues" x:DataType="vm:SectionAxisValue">
+    <StackPanel Spacing="8" Margin="0,0,0,12">
+      <TextBlock Text="{Binding Label}" Classes="bodyStrong" />
+      <Grid ColumnDefinitions="50,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+        <TextBlock Text="I" Classes="propertyLabel" /><TextBlock Grid.Column="1" Text="{Binding Inertia}" Classes="technicalValue" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="1" Text="W" Classes="propertyLabel" IsVisible="{Binding !IsAsymmetric}" />
+        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Modulus}" Classes="technicalValue" IsVisible="{Binding !IsAsymmetric}" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="1" Text="W+" Classes="propertyLabel" IsVisible="{Binding IsAsymmetric}" />
+        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PositiveModulus}" Classes="technicalValue" IsVisible="{Binding IsAsymmetric}" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="2" Text="W−" Classes="propertyLabel" IsVisible="{Binding IsAsymmetric}" />
+        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding NegativeModulus}" Classes="technicalValue" IsVisible="{Binding IsAsymmetric}" TextWrapping="Wrap" />
+      </Grid>
+    </StackPanel>
+  </DataTemplate>
+</ResourceDictionary>

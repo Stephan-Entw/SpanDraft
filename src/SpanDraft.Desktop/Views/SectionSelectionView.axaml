@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels" xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Views.SectionSelectionView" x:DataType="vm:SectionSelectionViewModel">
+  <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceInclude Source="/Views/SetupTemplates.axaml" /></ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
+  <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
+    <TextBlock Text="{x:Static resources:Strings.SectionSelection}" Classes="sectionTitle" />
+    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="16">
+        <StackPanel IsVisible="{Binding HasCurrent}" Spacing="8">
+          <TextBlock Text="{x:Static resources:Strings.CurrentProjectSection}" Classes="bodyStrong" /><TextBlock Text="{Binding CurrentDescription}" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="{x:Static resources:Strings.ContinueUsing}" Command="{Binding UseCurrentCommand}" AutomationProperties.Name="{x:Static resources:Strings.ContinueUsing}" /><Button Content="{x:Static resources:Strings.EditEntry}" Command="{Binding EditCurrentCommand}" AutomationProperties.Name="{x:Static resources:Strings.EditEntry}" /></StackPanel>
+        </StackPanel>
+        <TextBlock Text="{x:Static resources:Strings.MySections}" Classes="bodyStrong" />
+        <TextBlock Text="{Binding LibraryError}" IsVisible="{Binding HasLibraryError}" Classes="validationMessage" TextWrapping="Wrap" />
+        <TextBlock Text="{x:Static resources:Strings.EmptySectionLibrary}" IsVisible="{Binding IsUserEmpty}" Classes="secondary" />
+        <ItemsControl ItemsSource="{Binding UserEntries}" IsVisible="{Binding !HasLibraryError}">
+          <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:SectionSelectionItem">
+            <Border Classes="selectionSurface" Margin="0,0,0,8"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+              <StackPanel Spacing="8"><TextBlock Text="{Binding Entry.Name}" Classes="bodyStrong" TextWrapping="Wrap" /><TextBlock Text="{Binding Description}" TextWrapping="Wrap" /><TextBlock Text="{Binding Area, StringFormat='A = {0}'}" Classes="technicalValue" /><ItemsControl ItemsSource="{Binding Axes}" ItemTemplate="{StaticResource AxisValues}" /></StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top"><Button Content="{x:Static resources:Strings.Use}" Command="{Binding UseCommand}" AutomationProperties.Name="{x:Static resources:Strings.Use}" /><Button Content="{x:Static resources:Strings.EditEntry}" Command="{Binding EditCommand}" AutomationProperties.Name="{x:Static resources:Strings.EditEntry}" /><Button Content="{x:Static resources:Strings.Delete}" Command="{Binding DeleteCommand}" AutomationProperties.Name="{x:Static resources:Strings.Delete}" /></StackPanel>
+            </Grid></Border>
+          </DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
+    </ScrollViewer>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button Content="{x:Static resources:Strings.Back}" Command="{Binding BackCommand}" AutomationProperties.Name="{x:Static resources:Strings.Back}" /><Button x:Name="NewSectionButton" Content="{x:Static resources:Strings.NewSection}" Command="{Binding NewCommand}" Classes="primary" AutomationProperties.Name="{x:Static resources:Strings.NewSection}" /></StackPanel>
+  </Grid>
+</UserControl>

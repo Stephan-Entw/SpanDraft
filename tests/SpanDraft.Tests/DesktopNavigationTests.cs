@@ -227,13 +227,12 @@ public sealed class DesktopNavigationTests
     }
 
     [Fact]
-    public void SectionTemplateAllowsClearedSelectionDuringSetupDetachment()
+    public void SetupAllowsClearedDataContextDuringDetachment()
     {
         using var environment = new DesktopControlEnvironment();
         var view = new ProjectSetupView();
-        var picker = view.FindControl<ComboBox>("SectionPicker")!;
-        var placeholder = Assert.IsType<TextBlock>(picker.ItemTemplate!.Build(null));
-        Assert.True(string.IsNullOrEmpty(placeholder.Text));
+        view.DataContext = null;
+        Assert.True(string.IsNullOrEmpty(view.FindControl<TextBlock>("SectionDescription")!.Text));
     }
 
     [Theory]

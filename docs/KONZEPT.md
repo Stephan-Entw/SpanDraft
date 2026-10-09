@@ -79,10 +79,11 @@ Fläche, Schwerpunkt, Flächenträgheits- und Widerstandsmomente aus der gemeins
 analytischen Konturgeometrie ab. Unsymmetrische Querschnitte können für eine
 Biegeachse unterschiedliche positive und negative Widerstandsmomente besitzen.
 
-Diese fachlichen Möglichkeiten sind noch nicht vollständig über den Desktop
-konfigurierbar. Das aktuelle Project Setup ist weiterhin ein begrenzter
-Übergangsworkflow; Material-/Querschnittsbibliotheken, eigene Einträge und der
-vollständige Auswahl- und Eingabeprozess folgen in den nächsten Ausbauschritten.
+Diese fachlichen Möglichkeiten sind über das Project Setup im Desktop
+konfigurierbar. Der vollständige Material-, Querschnitts- und Biegeachsenworkflow
+umfasst eingebaute Materialien, eigene Materialien, alle parametrischen Formen
+und manuelle A/I/W-Eingaben. Eigene Materialien und Querschnittspresets können
+in getrennten lokalen Benutzerbibliotheken wiederverwendet werden.
 
 Der Solver verwendet drei Freiheitsgrade je Knoten:
 
@@ -152,7 +153,9 @@ zum gespeicherten Projektzustand.
 
 Implementiert sind:
 
-- Project Setup für Werkstoff und Querschnitt
+- transaktionales Project Setup für Werkstoff, Querschnitt und Biegeachse
+- eingebaute Materialien und lokale Benutzerbibliotheken für Materialien
+  und parametrische beziehungsweise manuelle Querschnittspresets
 - direkter Balkeneditor
 - Platzieren und Bearbeiten aller aktuellen Lager- und Lasttypen
 - Undo/Redo
@@ -241,17 +244,8 @@ zuverlässiger machen.
 Für den ersten nutzbaren Release steht die Arbeit im Programm selbst im
 Vordergrund.
 
-Die nächsten zusammenhängenden Ausbauschritte sind:
-
-1. lokale Material- und Querschnittsbibliotheken auf dem bestehenden
-   Domain- und Projektformat aufbauen
-2. einen kleinen kuratierten Satz eingebauter Materialien bereitstellen und
-   eigene Materialien dauerhaft verwaltbar machen
-3. parametrische Querschnittspresets und manuelle A/I/W-Einträge lokal
-   wiederverwendbar machen
-4. den Project-Setup-Workflow auf die vollständige Material-, Querschnitts-
-   und Biegeachsenauswahl umstellen
-5. verbleibendes App-Shell-Polishing und sinnvolle Menüfunktionen abschließen
+Als nächster Ausbauschritt folgt das verbleibende App-Shell-Polishing mit
+sinnvollen Menüfunktionen.
 
 Ein eingebauter importierter Normprofilkatalog ist dafür nicht erforderlich.
 Querschnittsbibliotheken dienen zunächst der Wiederverwendung eigener

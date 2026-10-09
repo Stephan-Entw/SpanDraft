@@ -1,59 +1,61 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
-             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
-             xmlns:materials="clr-namespace:SpanDraft.Core.Materials;assembly=SpanDraft.Core"
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels" xmlns:views="clr-namespace:SpanDraft.Desktop.Views"
              xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
-             x:Class="SpanDraft.Desktop.Views.ProjectSetupView"
-             x:DataType="vm:ProjectSetupViewModel">
-  <Grid Background="{DynamicResource AppBackground}" Margin="{DynamicResource Padding32}">
-    <StackPanel MaxWidth="1000" HorizontalAlignment="Stretch" VerticalAlignment="Top" Spacing="{StaticResource Space24}">
-      <StackPanel Spacing="{StaticResource Space8}">
-        <TextBlock Text="{Binding Title}" Classes="pageTitle" />
-        <TextBlock Text="{x:Static resources:Strings.SetupDescription}" Classes="secondary" />
-      </StackPanel>
-      <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
-        <Border Classes="selectionSurface">
-          <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="{StaticResource Space24}">
-            <TextBlock Text="{x:Static resources:Strings.Section}" Classes="sectionTitle" />
-            <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
-              <controls:EngineeringIcon Data="{StaticResource SectionProfile}" Margin="{DynamicResource SectionIconMargin}"
-                                        VerticalAlignment="Center" />
-              <ComboBox x:Name="SectionPicker" Grid.Column="1" ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}"
-                        HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.Section}">
-              </ComboBox>
-            </Grid>
-            <Grid Grid.Row="2" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="{StaticResource Space12}">
-              <TextBlock Text="A" Classes="propertyLabel" /><TextBlock Grid.Column="1" Text="{Binding Area}" Classes="technicalValue" />
-              <TextBlock Grid.Row="1" Text="{Binding InertiaLabel}" Classes="propertyLabel" /><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Inertia}" Classes="technicalValue" />
-              <TextBlock Grid.Row="2" Text="{Binding ModulusLabel}" Classes="propertyLabel" /><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Modulus}" TextWrapping="Wrap" Classes="technicalValue" />
-            </Grid>
-            <TextBlock Grid.Row="3" Text="{x:Static resources:Strings.SectionTemplateNote}" TextWrapping="Wrap"
-                       Classes="caption" VerticalAlignment="Bottom" />
+             x:Class="SpanDraft.Desktop.Views.ProjectSetupView" x:DataType="vm:ProjectSetupViewModel">
+  <UserControl.DataTemplates>
+    <DataTemplate DataType="{x:Type vm:MaterialSelectionViewModel}"><views:MaterialSelectionView /></DataTemplate>
+    <DataTemplate DataType="{x:Type vm:MaterialEditorViewModel}"><views:MaterialEditorView /></DataTemplate>
+    <DataTemplate DataType="{x:Type vm:SectionSelectionViewModel}"><views:SectionSelectionView /></DataTemplate>
+    <DataTemplate DataType="{x:Type vm:SectionEditorViewModel}"><views:SectionEditorView /></DataTemplate>
+  </UserControl.DataTemplates>
+  <Grid Background="{DynamicResource AppBackground}" Margin="{DynamicResource Padding32}" RowDefinitions="Auto,*" RowSpacing="16">
+    <TextBlock Text="{Binding Title}" Classes="pageTitle" />
+    <Grid Grid.Row="1" IsVisible="{Binding IsOverview}" RowDefinitions="*,Auto" RowSpacing="16">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="24" MaxWidth="1000">
+          <TextBlock Text="{Binding StartupError}" IsVisible="{Binding HasStartupError}" Classes="validationMessage" TextWrapping="Wrap" />
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+            <Border Classes="selectionSurface">
+              <StackPanel Spacing="16">
+                <TextBlock Text="{x:Static resources:Strings.Section}" Classes="sectionTitle" />
+                <TextBlock x:Name="SectionDescription" Text="{Binding SectionName}" Classes="bodyStrong" TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="60,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+                  <TextBlock Text="A" Classes="propertyLabel" /><TextBlock Grid.Column="1" Text="{Binding Area}" Classes="technicalValue" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="1" Text="{Binding InertiaLabel}" Classes="propertyLabel" /><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Inertia}" Classes="technicalValue" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="2" Text="{Binding ModulusLabel}" Classes="propertyLabel" IsVisible="{Binding !IsAsymmetric}" /><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PositiveModulus}" Classes="technicalValue" IsVisible="{Binding !IsAsymmetric}" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="2" Text="W+" Classes="propertyLabel" IsVisible="{Binding IsAsymmetric}" /><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PositiveModulus}" Classes="technicalValue" IsVisible="{Binding IsAsymmetric}" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="3" Text="W−" Classes="propertyLabel" IsVisible="{Binding IsAsymmetric}" /><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding NegativeModulus}" Classes="technicalValue" IsVisible="{Binding IsAsymmetric}" TextWrapping="Wrap" />
+                </Grid>
+                <Button x:Name="ChangeSectionButton" Content="{x:Static resources:Strings.Change}" Command="{Binding ChangeSectionCommand}" HorizontalAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.SectionSelection}" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="selectionSurface">
+              <StackPanel Spacing="16">
+                <TextBlock Text="{x:Static resources:Strings.Material}" Classes="sectionTitle" />
+                <TextBlock Text="{Binding MaterialName}" Classes="bodyStrong" TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="60,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+                  <TextBlock Text="E" Classes="propertyLabel" /><TextBlock Grid.Column="1" Text="{Binding YoungsModulus}" Classes="technicalValue" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="1" Text="fy" Classes="propertyLabel" /><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding YieldStrength}" Classes="technicalValue" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="2" Text="ρ" Classes="propertyLabel" IsVisible="{Binding HasDensity}" /><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Density}" Classes="technicalValue" IsVisible="{Binding HasDensity}" />
+                  <TextBlock Grid.Row="3" Text="ν" Classes="propertyLabel" IsVisible="{Binding HasPoissonRatio}" /><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PoissonRatio}" Classes="technicalValue" IsVisible="{Binding HasPoissonRatio}" />
+                </Grid>
+                <Button x:Name="ChangeMaterialButton" Content="{x:Static resources:Strings.Change}" Command="{Binding ChangeMaterialCommand}" HorizontalAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.MaterialSelection}" />
+              </StackPanel>
+            </Border>
           </Grid>
-        </Border>
-        <Border Grid.Column="1" Classes="selectionSurface">
-          <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="{StaticResource Space24}">
-            <TextBlock Text="{x:Static resources:Strings.Material}" Classes="sectionTitle" />
-            <ComboBox Grid.Row="1" ItemsSource="{Binding Materials}" SelectedItem="{Binding SelectedMaterial}"
-                      HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.Material}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="materials:Material"><TextBlock Text="{Binding Name}" /></DataTemplate>
-              </ComboBox.ItemTemplate>
+          <StackPanel Orientation="Horizontal" Spacing="16">
+            <TextBlock Text="{x:Static resources:Strings.BendingAxis}" VerticalAlignment="Center" Classes="propertyLabel" />
+            <ComboBox x:Name="AxisPicker" ItemsSource="{Binding AvailableAxes}" SelectedItem="{Binding SelectedAxisChoice, Mode=TwoWay}" MinWidth="150" AutomationProperties.Name="{x:Static resources:Strings.BendingAxis}">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:AxisChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
             </ComboBox>
-            <Grid Grid.Row="2" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space12}">
-              <TextBlock Text="E" Classes="propertyLabel" /><TextBlock Grid.Column="1" Text="{Binding YoungsModulus}" Classes="technicalValue" />
-              <TextBlock Grid.Row="1" Text="Re" Classes="propertyLabel" /><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding YieldStrength}" Classes="technicalValue" />
-            </Grid>
-            <TextBlock Grid.Row="3" Text="{x:Static resources:Strings.MaterialTemplateNote}" TextWrapping="Wrap"
-                       Classes="caption" VerticalAlignment="Bottom" />
-          </Grid>
-        </Border>
-      </Grid>
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Space8}">
-        <Button Content="{x:Static resources:Strings.Cancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsEdit}" Classes="secondary" />
-        <Button Content="{Binding PrimaryAction}" Command="{Binding ApplyCommand}" Classes="primary" />
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+      <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Content="{x:Static resources:Strings.Cancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsEdit}" Classes="secondary" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
+        <Button x:Name="ApplySetupButton" Content="{Binding PrimaryAction}" Command="{Binding ApplyCommand}" Classes="primary" AutomationProperties.Name="{Binding PrimaryAction}" />
       </StackPanel>
-    </StackPanel>
+    </Grid>
+    <ContentControl Grid.Row="1" Content="{Binding CurrentStep}" IsVisible="{Binding !IsOverview}" />
   </Grid>
 </UserControl>

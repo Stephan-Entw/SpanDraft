@@ -54,8 +54,8 @@ public class DesktopStateTests
         Assert.Null(s.Main.Editor);
         Assert.Same(s.Main.Setup, s.Main.CurrentViewModel);
         Assert.Equal(ProjectSetupMode.Create, s.Main.Setup.Mode);
-        Assert.Same(ProjectTemplates.Section, s.Main.Setup.SelectedSection);
-        Assert.Same(ProjectTemplates.Material, s.Main.Setup.SelectedMaterial);
+        Assert.IsType<SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry>(s.Main.Setup.SelectedSection);
+        Assert.Same(s.Main.BuiltInMaterials!.Find("S235JR")!.Material, s.Main.Setup.SelectedMaterial);
         Assert.Equal(0, s.Calls);
     }
 
@@ -67,10 +67,11 @@ public class DesktopStateTests
         Assert.Equal(MainViewMode.Editor, s.Main.Mode);
         Assert.Same(s.Editor, s.Main.CurrentViewModel);
         Assert.Equal(1000, s.Editor.Document.Length.Millimeters);
-        var section = Assert.IsType<RectangularHollowSection>(s.Editor.Document.Section);
+        var section = Assert.IsType<SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry>(s.Editor.Document.Section);
         Assert.Equal(100, section.Width.Millimeters);
         Assert.Equal(100, section.Height.Millimeters);
         Assert.Equal(5, section.WallThickness.Millimeters);
+        Assert.Equal(0, section.OuterRadius.Millimeters);
         Assert.Equal("S235JR", s.Editor.Document.Material.Name);
         Assert.Equal(210e9, s.Editor.Document.Material.YoungsModulus.Pascals);
         Assert.Equal(235e6, s.Editor.Document.Material.YieldStrength.Pascals);

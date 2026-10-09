@@ -1,6 +1,8 @@
 using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Platform;
 using Avalonia.Rendering;
 using Avalonia.Rendering.Composition;
@@ -25,6 +27,10 @@ public sealed class DesktopControlEnvironment : IDisposable
             [DispatchProxy.Create<IRenderTimer, DefaultPlatformProxy>()])!);
         Bind(DispatchProxy.Create<IPlatformIconLoader, DefaultPlatformProxy>());
         Bind(DispatchProxy.Create<IWindowingPlatform, WindowingPlatformProxy>());
+        Bind((IPlatformSettings)Activator.CreateInstance(typeof(DefaultPlatformSettings), nonPublic: true)!);
+        Bind((PlatformHotkeyConfiguration)Activator.CreateInstance(typeof(PlatformHotkeyConfiguration), nonPublic: true)!);
+        Bind((IFocusManager)Activator.CreateInstance(typeof(FocusManager), nonPublic: true)!);
+        Bind((IKeyboardDevice)Activator.CreateInstance(typeof(KeyboardDevice), nonPublic: true)!);
         var app = new App();
         app.Initialize();
         var resources = app.Resources;
@@ -51,6 +57,14 @@ public sealed class DesktopControlEnvironment : IDisposable
         registration.GetType().GetMethod("ToConstant")!.MakeGenericMethod(typeof(T)).Invoke(registration, [service]);
     }
 
+    public static bool MoveFocus(InputElement root, IInputElement input, NavigationDirection direction)
+    {
+        var type = typeof(InputElement).Assembly.GetType("Avalonia.Input.KeyboardNavigationHandler")!;
+        var handler = Activator.CreateInstance(type, nonPublic: true)!;
+        type.GetMethod("SetOwner")!.Invoke(handler, [root]);
+        return (bool)type.GetMethod("Move")!.Invoke(handler, [input, direction, KeyModifiers.None, null])!;
+    }
+
     public class DefaultPlatformProxy : DispatchProxy
     {
         protected override object? Invoke(MethodInfo? method, object?[]? args) =>
@@ -73,13 +87,23 @@ public sealed class DesktopControlEnvironment : IDisposable
     public class WindowPlatformProxy : DefaultPlatformProxy
     {
         private Compositor? _compositor;
-        protected override object? Invoke(MethodInfo? method, object?[]? args) => method!.Name switch
+        private Size _clientSize = new(1250, 800);
+        private Action? _closed;
+        private readonly IScreenImpl _screens = DispatchProxy.Create<IScreenImpl, DefaultPlatformProxy>();
+        protected override object? Invoke(MethodInfo? method, object?[]? args)
         {
-            "get_Compositor" => _compositor ??= (Compositor)Activator.CreateInstance(typeof(Compositor), [null, false])!,
-            "get_ClientSize" => new Size(1250, 800),
-            "get_RenderScaling" or "get_DesktopScaling" => 1d,
-            "get_Surfaces" => Array.Empty<object>(),
-            _ => base.Invoke(method, args)
-        };
+            if (method!.Name == "Resize" && args?[0] is Size size) { _clientSize = size; return null; }
+            if (method.Name == "set_Closed") { _closed = (Action?)args?[0]; return null; }
+            if (method.Name == "Dispose") { var closed = _closed; _closed = null; closed?.Invoke(); return null; }
+            return method.Name == "TryGetFeature"
+                && args?[0] is Type type && type == typeof(IScreenImpl) ? _screens : method.Name switch
+            {
+                "get_Compositor" => _compositor ??= (Compositor)Activator.CreateInstance(typeof(Compositor), [null, false])!,
+                "get_ClientSize" => _clientSize,
+                "get_RenderScaling" or "get_DesktopScaling" => 1d,
+                "get_Surfaces" => Array.Empty<object>(),
+                _ => base.Invoke(method, args)
+            };
+        }
     }
 }

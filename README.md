@@ -16,6 +16,10 @@ SpanDraft is under active development and has not reached a stable release yet.
 The current desktop application supports:
 
 - one straight beam with constant material and cross-section
+- parametric and manual cross-section setup
+- built-in and custom material libraries
+- reusable custom section presets
+- explicit bending-axis selection
 - fixed, pinned and roller supports
 - point forces and point moments
 - constant distributed loads

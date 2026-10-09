@@ -88,7 +88,8 @@ public sealed class ProjectSectionStateTests
         Assert.True(await app.Main.NewAsync()); app.Main.Setup.ApplyCommand.Execute(null);
         Assert.True(app.Main.Session!.IsDirty); Assert.Empty(app.Main.Session.UndoHistory); Assert.Null(app.Main.Session.FilePath);
         Assert.Equal(SectionAxisDesignation.Y, app.Main.Editor!.Document.BendingAxis);
-        Assert.Null(app.Main.Editor.Document.Material.Density); Assert.Null(app.Main.Editor.Document.Material.PoissonRatio);
+        Assert.Equal(7850, app.Main.Editor.Document.Material.Density!.Value.KilogramsPerCubicMeter);
+        Assert.Equal(.3, app.Main.Editor.Document.Material.PoissonRatio!.Value.Value);
         app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
     }
 

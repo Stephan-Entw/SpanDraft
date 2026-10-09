@@ -42,7 +42,7 @@ public sealed class DesktopSectionDefinitionTests
         app.Main.EditProject(); var setup = app.Main.Setup;
         Assert.Same(d.Section, setup.SelectedSection); Assert.Same(d.Material, setup.SelectedMaterial);
         Assert.Equal(axis, setup.BendingAxis);
-        Assert.Single(setup.Sections); Assert.Single(setup.Materials);
+        Assert.Same(d.Section, setup.OriginalSection); Assert.Same(d.Material, setup.OriginalMaterial);
         var selected = d.Section.GetAxis(axis);
         string Format(double si, QuantityKind quantity) => QuantityFormatter.Format(si, quantity,
             setup.ResultPresentation.Profile, setup.ResultPresentation.Mode);
@@ -57,8 +57,7 @@ public sealed class DesktopSectionDefinitionTests
             Assert.Contains("W− = " + Format(selected.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus), setup.Modulus);
         }
         var view = new ProjectSetupView { DataContext = setup };
-        var picker = view.FindControl<ComboBox>("SectionPicker")!;
-        var text = Assert.IsType<TextBlock>(picker.ItemTemplate!.Build(d.Section));
+        var text = view.FindControl<TextBlock>("SectionDescription")!;
         var expectedCaption = SectionDisplay.Name(d.Section, setup.ResultPresentation.Profile);
         Assert.Equal(expectedCaption, text.Text);
         Assert.Equal(expectedCaption, app.Main.Editor.Overview.Section);

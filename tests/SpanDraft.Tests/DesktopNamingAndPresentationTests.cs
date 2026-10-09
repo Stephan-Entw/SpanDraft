@@ -454,10 +454,14 @@ public sealed class DesktopNamingAndPresentationTests
     {
         var s = new Session();
         var document = s.Editor.Document;
-        var material = new Material("Alternate name", document.Material.YoungsModulus, document.Material.YieldStrength);
-        var section = new CustomSection(document.Section.Area, document.Section.GetAxis(document.BendingAxis).SecondMomentOfArea, document.Section.GetAxis(document.BendingAxis).PositiveSectionModulus);
+        var material = new Material("Alternate name", document.Material.YoungsModulus, document.Material.YieldStrength,
+            document.Material.Density, document.Material.PoissonRatio);
+        var original = Assert.IsType<SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry>(document.Section);
+        var section = new SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry(
+            original.Width, original.Height, original.WallThickness, original.OuterRadius);
+        Assert.NotSame(original, section);
         var analysis = s.Editor.Presentation;
-        s.Editor.ApplySetup(section, material);
+        s.Editor.ApplySetup(section, document.BendingAxis, material);
         Assert.Same(material, s.Editor.Document.Material);
         Assert.Same(section, s.Editor.Document.Section);
         Assert.Same(analysis, s.Editor.Presentation);

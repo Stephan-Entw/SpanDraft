@@ -182,7 +182,8 @@ public sealed class DesktopResultPresentationTests
         setup.PropertyChanged += (_, e) => notifications.Add(e.PropertyName);
         int analyses = app.Analyses;
         app.Main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Standard);
-        Assert.Equal(new[] { "ResultPresentation", "Area", "Inertia", "Modulus" }, notifications);
+        Assert.Equal(new[] { "ResultPresentation", "SectionName", "SelectedAxisChoice", "BendingAxis", "Area", "Inertia", "Modulus",
+            "InertiaLabel", "ModulusLabel", "IsAsymmetric", "PositiveModulus", "NegativeModulus" }, notifications);
         Assert.Same(section, setup.SelectedSection);
         Assert.Same(material, setup.SelectedMaterial);
         Assert.Equal(materialText, (setup.YoungsModulus, setup.YieldStrength));

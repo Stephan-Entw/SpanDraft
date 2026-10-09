@@ -1,10 +1,10 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
         xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Svg.Controls.Skia.Avalonia">
-  <!-- Fluent scrollbars and radio buttons retain their native control templates. -->
+  <!-- Fluent scrollbars, radio buttons and checkboxes retain their native control templates. -->
   <!-- One button template for all variants, including future ToggleButton tools.
        Focus is a separate overlay: borders never move the content. -->
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox)">
     <Setter Property="Height" Value="{DynamicResource StandardControl}" />
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Padding" Value="{DynamicResource ControlPadding}" />
@@ -36,83 +36,83 @@
       </ControlTemplate>
     </Setter>
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
     <Setter Property="RenderTransform" Value="none" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).primary">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).primary">
     <Setter Property="Height" Value="{DynamicResource PrimaryAction}" />
     <Setter Property="Background" Value="{DynamicResource Accent}" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).primary:pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).primary:pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource AccentHover}" />
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).primary:pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).primary:pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource AccentPressed}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).secondary">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).secondary">
     <Setter Property="Background" Value="{DynamicResource Surface}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).secondary:pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).secondary:pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).secondary:pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).secondary:pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).ghost, :is(Button):not(:is(RepeatButton)):not(RadioButton).toolbar, :is(Button):not(:is(RepeatButton)):not(RadioButton).iconToolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).ghost, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).ghost">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).ghost">
     <Setter Property="Height" Value="{DynamicResource CompactControl}" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).toolbar, :is(Button):not(:is(RepeatButton)):not(RadioButton).iconToolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar">
     <Setter Property="Height" Value="{DynamicResource ToolbarButton}" />
     <Setter Property="FontSize" Value="{DynamicResource ToolbarSize}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).toolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar">
     <Setter Property="Padding" Value="{DynamicResource ToolbarButtonPadding}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).iconToolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar">
     <Setter Property="Width" Value="{DynamicResource ToolbarButton}" />
     <Setter Property="Padding" Value="{DynamicResource Padding4}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).ghost:pointerover:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton).toolbar:pointerover:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton).iconToolbar:pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).ghost:pointerover:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar:pointerover:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar:pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).ghost:pressed:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton).toolbar:pressed:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton).iconToolbar:pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).ghost:pressed:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar:pressed:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar:pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).toolbar.selected, :is(Button):not(:is(RepeatButton)):not(RadioButton).iconToolbar.selected, ToggleButton.toolbar:checked, ToggleButton.iconToolbar:checked">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar.selected, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar.selected, ToggleButton.toolbar:checked, ToggleButton.iconToolbar:checked">
     <Setter Property="Background" Value="{DynamicResource AccentSubtle}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
     <Setter Property="Foreground" Value="{DynamicResource AccentPressed}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):disabled">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):disabled">
     <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
     <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
     <Setter Property="Opacity" Value="1" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).toolbar:disabled, :is(Button):not(:is(RepeatButton)):not(RadioButton).iconToolbar:disabled, :is(Button):not(:is(RepeatButton)):not(RadioButton).ghost:disabled">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar:disabled, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar:disabled, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).ghost:disabled">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):focus-visible /template/ Border#FocusRing">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):focus-visible /template/ Border#FocusRing">
     <Setter Property="IsVisible" Value="True" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).primary /template/ Border#FocusRing">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).primary /template/ Border#FocusRing">
     <Setter Property="BorderBrush" Value="{DynamicResource TextOnAccent}" />
     <Setter Property="Margin" Value="{DynamicResource Padding4}" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXS}" />
@@ -236,7 +236,7 @@
     <Setter Property="Focusable" Value="False" />
     <Setter Property="IsHitTestVisible" Value="False" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton).toolbar:disabled svg|Svg.toolbarIcon">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar:disabled svg|Svg.toolbarIcon">
     <Setter Property="Opacity" Value="0.45" />
   </Style>
   <Style Selector="controls|EngineeringIcon">
