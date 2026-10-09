@@ -15,7 +15,7 @@ internal static class BeamAssembly
         foreach (BeamElement element in model.Elements)
         {
             Matrix<double> local = EulerBernoulliElement.Stiffness(beam.Material.YoungsModulus.Pascals,
-                beam.Section.Area.SquareMeters, beam.Section.SecondMomentOfArea.MetersToTheFourth,
+                beam.Section.Area.SquareMeters, beam.BendingAxisProperties.SecondMomentOfArea.MetersToTheFourth,
                 element.LengthMeters);
             int[] indices = element.GlobalDofs;
             for (int i = 0; i < 6; i++)

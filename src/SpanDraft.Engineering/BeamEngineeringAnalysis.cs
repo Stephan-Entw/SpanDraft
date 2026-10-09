@@ -16,8 +16,10 @@ public static class BeamEngineeringAnalysis
             extrema.MaximumTransverseDisplacement, value => value.Meters);
         var moment = SelectMaximumAbsolute(extrema.MinimumBendingMoment,
             extrema.MaximumBendingMoment, value => value.NewtonMeters);
-        var stress = Pressure.FromPascals(Math.Abs(moment.Value.NewtonMeters) /
-            solution.Beam.Section.SectionModulus.CubicMeters);
+        var axis = solution.Beam.BendingAxisProperties;
+        double governingModulus = Math.Min(axis.PositiveSectionModulus.CubicMeters,
+            axis.NegativeSectionModulus.CubicMeters);
+        var stress = Pressure.FromPascals(Math.Abs(moment.Value.NewtonMeters) / governingModulus);
         double safetyFactor = stress.Pascals == 0 ? double.PositiveInfinity :
             solution.Beam.Material.YieldStrength.Pascals / stress.Pascals;
 

@@ -21,7 +21,7 @@ internal sealed class ElementField
         this.right = right;
         length = element.LengthMeters;
         ei = NumericalGuard.Positive(beam.Material.YoungsModulus.Pascals *
-            beam.Section.SecondMomentOfArea.MetersToTheFourth, "Bending rigidity EI");
+            beam.BendingAxisProperties.SecondMomentOfArea.MetersToTheFourth, "Bending rigidity EI");
         double ea = NumericalGuard.Positive(beam.Material.YoungsModulus.Pascals *
             beam.Section.Area.SquareMeters, "Axial rigidity EA");
         axialForce = NumericalGuard.Finite((ea / length) *

@@ -35,8 +35,11 @@ Objekte haben ausschließlich lesbare Properties.
 
 ## Querschnitte
 
-`Section` stellt Fläche A, Flächenträgheitsmoment I und elastisches
-Widerstandsmoment W für eine einzige Schwerpunkt-Biegeachse bereit.
+Die bestehende `Section`-Hierarchie implementiert `ISectionDefinition` und stellt
+aus Kompatibilitätsgründen genau die Schwerpunkt-Biegeachse Y bereit. Fläche A,
+Flächenträgheitsmoment Iy und beide Widerstandsmomente Wy+ = Wy− entsprechen
+unverändert den bisherigen Properties `Area`, `SecondMomentOfArea` und
+`SectionModulus`. Die analytischen Berechnungsformeln bleiben eigenständig.
 Bei Rechtecken ist die Höhe die transversale Abmessung und die Biegeachse
 parallel zur Breite. Bei Kreisen ist sie ein Schwerpunktdurchmesser.
 
@@ -199,8 +202,29 @@ geordnet. `GetAxis` verlangt eine explizite Bezeichnung: ungültige Enumwerte
 führen zu `ArgumentOutOfRangeException`, nicht vorhandene gültige Achsen zu
 `KeyNotFoundException`. Die für einen Balken tatsächlich verwendete Achse
 gehört nicht intrinsisch zum Querschnitt. Keine Querschnittsdefinition
-speichert daher eine Achsenauswahl. Das neue Modell besteht parallel zu
-`Section` und `CustomSection`; eine Kopplung an das Balkenmodell ist separat.
+speichert daher eine Achsenauswahl.
+
+## Querschnitt und ausgewählte Balkenachse
+
+`BeamModel.Section` enthält die ursprüngliche `ISectionDefinition`.
+`BeamModel.BendingAxis` wählt genau eine ihrer verfügbaren Achsen aus;
+`BendingAxisProperties` enthält deren bei der Konstruktion einmal aufgelöste
+Eigenschaften I, W+ und W−. Es gibt keine automatische Ersatzachse.
+Die Properties sind unveränderlich. `BeamSolution.Beam` behält das ursprüngliche
+Modell; A/I/W werden nicht redundant in die Lösung kopiert.
+
+Der Konstruktor für allgemeine `ISectionDefinition` verlangt eine explizite
+`SectionAxisDesignation`, auch für parametrische und manuelle Definitionen mit
+nur einer Achse. Undefinierte Enumwerte werden mit `ArgumentOutOfRangeException`,
+für den konkreten Querschnitt fehlende gültige Achsen mit `ArgumentException`
+abgewiesen; beide nennen den Parameter `bendingAxis`. Diese intrinsische
+Gültigkeit wird vor jedem Solverlauf sichergestellt.
+
+Nur der Kompatibilitätskonstruktor mit einer alten `Section` wählt automatisch Y.
+Bestehende Desktop-Dokumente und Projekte V1 nutzen diesen Weg ohne zusätzliche
+Achsenauswahl und behalten dieselben Kennwerte und Berechnungsergebnisse.
+Die 2D-Balkendarstellung repräsentiert jeweils die ausgewählte Biegeebene,
+keine räumliche Einbaulage des Querschnitts.
 
 ## Modellvalidierung
 

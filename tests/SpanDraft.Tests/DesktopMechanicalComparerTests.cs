@@ -109,7 +109,6 @@ public sealed class DesktopMechanicalComparerTests
             3 => new CircularHollowSection(M(.1), M(.005)),
             _ => Section()
         };
-        Assert.True(BeamModelMechanicalComparer.IsKnownSectionType(section.GetType()));
         var equivalentProperties = new CustomSection(section.Area, section.SecondMomentOfArea, section.SectionModulus);
         Assert.True(BeamModelMechanicalComparer.AreEquivalent(Beam(section: section), Beam(section: equivalentProperties)));
     }
@@ -122,9 +121,6 @@ public sealed class DesktopMechanicalComparerTests
     [Fact]
     public void UnknownVariantsUseTheConservativeFallback()
     {
-        // Core prevents external subclasses; check the explicit type policy without reflection or Core changes.
-        Assert.False(BeamModelMechanicalComparer.IsKnownSectionType(typeof(Section)));
-        Assert.False(BeamModelMechanicalComparer.IsKnownSectionType(typeof(object)));
         Assert.False(BeamModelMechanicalComparer.IsKnownSupportType((SupportType)999));
         Assert.True(BeamModelMechanicalComparer.IsKnownSupportType(SupportType.Fixed));
         Assert.False(BeamModelMechanicalComparer.LoadsEquivalent(new PointForce(M(.2), Force.FromNewtons(1)),

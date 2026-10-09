@@ -7,6 +7,19 @@ Balken mit konstantem E, A und I mittels direktem Steifigkeitsverfahren.
 Math.NET Numerics 5.0.0 übernimmt dichte Matrizen, Vektoren, SVD und Cholesky.
 Core enthält weiterhin ausschließlich das Fachmodell.
 
+Die Fläche stammt aus `beam.Section.Area`, das Trägheitsmoment ausschließlich aus
+`beam.BendingAxisProperties.SecondMomentOfArea`: EA = E·A und EI = E·I der
+ausgewählten Achse. Assembly, Elementfelder und Schnittgrößenauswertung verwenden
+diese Kennwerte konsistent. Die fachlichen Bezeichnungen Y/Z/U/V werden bereits
+im BeamModel aufgelöst; die Solvermechanik benötigt nur das ausgewählte I.
+
+Pro Berechnung wird genau eine planare Biegeebene modelliert. Die positive
+transversale Richtung w gehört zu dieser ausgewählten 2D-Biegeebene und zeigt
+in der Balkendarstellung nach oben. Sie ist nicht generell mit der geometrischen
++z-Richtung des Querschnitts gleichzusetzen. Y/Z/U/V wählen Iy/Iz/Iu/Iv ohne
+Änderung der mathematischen 2D-Solverformulierung. Eine räumliche Profilorientierung,
+3D-Lastvektortransformation oder gleichzeitige biaxiale Biegung wird nicht modelliert.
+
 Die Berechnung ist linear elastisch mit kleinen Verschiebungen und Rotationen.
 Euler-Bernoulli setzt voraus, dass Querschnitte eben und senkrecht zur verformten
 Balkenachse bleiben; Schubverformung wird vernachlässigt. Axiale Dehnung wird

@@ -64,12 +64,14 @@ beziehungsweise negativ/hoggend. Die Magnitude wird separat nicht-negativ gelief
 V1 berechnet ausschließlich reine elastische Biegung:
 
 ```text
-σ_b,max [Pa] = BendingMomentMagnitude [Nm] / W [m³]
+σ_b,max [Pa] = BendingMomentMagnitude [Nm] / min(W+, W−) [m³]
 S           = Re [Pa] / σ_b,max [Pa]
 ```
 
-W stammt aus `Beam.Section.SectionModulus`, Re aus
-`Beam.Material.YieldStrength`; beide sind im Domain Model positiv validiert.
+W+ und W− stammen aus `Beam.BendingAxisProperties.PositiveSectionModulus`
+beziehungsweise `NegativeSectionModulus`, Re aus `Beam.Material.YieldStrength`;
+alle sind im Domain Model positiv validiert. Der maximale elastische
+Spannungsbetrag ist das Maximum aus |M|/W+ und |M|/W−.
 Der Spannungsbetrag besitzt denselben kritischen Ort und dieselbe Seite wie
 das ausgewählte Moment. S ist ein einfaches Verhältnis zur Streckgrenze,
 kein normativer Sicherheitsnachweis und keine Freigabe einer Konstruktion.
@@ -87,19 +89,18 @@ ergeben. Eine nicht endlich darstellbare Spannung wird von der bestehenden
 `Pressure`-Validierung mit `ArgumentOutOfRangeException` abgewiesen, nicht als
 unendliche Spannung veröffentlicht.
 
-## Ein einziges W und fachliche Grenzen
+## Randfasern und fachliche Grenzen
 
-Das Domain Model besitzt ein einziges skalares elastisches Widerstandsmoment W
-für die betrachtete Biegeachse. Für die vorhandenen symmetrischen
-Standardquerschnitte ist das aktuelle Modell eindeutig.
+Die ausgewählte Biegeachse stellt getrennte positive und negative geometrische
+Widerstandsmomente bereit. Da der Querschnitt entlang des Balkens konstant ist,
+bleibt der Ort des maximalen |M| auch der maßgebende Ort für den maximalen
+Spannungsbetrag. Dieser Betrag ist unabhängig davon, welche Seite bei einem
+gegebenen Momentenvorzeichen unter Zug beziehungsweise Druck steht.
+Es werden keine Zug-/Druck-Randfaser und keine signed fiber stresses ausgewiesen.
 
-Ein `CustomSection` kann derzeit keine getrennten W-Werte für die beiden
-Randfasern darstellen. Bei asymmetrischen benutzerdefinierten Querschnitten
-darf SpanDraft deshalb keinen seitenspezifischen Spannungsnachweis behaupten.
-Ein bewusst als maßgebend gewähltes W kann verwendet werden; SpanDraft kennt
-jedoch dessen geometrische Zuordnung zu den Randfasern nicht. Aus dem
-Momentvorzeichen wird keine Aussage über Zug oder Druck an der oberen oder
-unteren Randfaser abgeleitet.
+Alte `Section`-Typen einschließlich `CustomSection` sowie manuelle Definitionen
+mit einem W pro Achse liefern W+ = W− = W. Ihre Spannungs- und
+Safety-Factor-Auswertung entspricht deshalb unverändert dem bisherigen Verhalten.
 
 Ausdrücklich ausgeschlossen sind kombinierte Normalspannung `N/A ± M/W`,
 von-Mises-Spannung, Schubspannung, Spannungsinteraktionen, Normbeiwerte,

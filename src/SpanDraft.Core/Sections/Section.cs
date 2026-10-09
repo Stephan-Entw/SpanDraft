@@ -2,9 +2,11 @@ using SpanDraft.Core.Units;
 
 namespace SpanDraft.Core.Sections;
 
-/// <summary>Constant section properties about the single centroidal bending axis used by the beam.</summary>
-public abstract class Section
+/// <summary>Legacy constant section properties providing exactly the centroidal bending axis Y.</summary>
+public abstract class Section : ISectionDefinition
 {
+    private readonly SectionAxes axes;
+
     private protected Section(Area area, SecondMomentOfArea secondMomentOfArea, SectionModulus sectionModulus)
     {
         DomainGuard.Positive(area.SquareMeters, nameof(area));
@@ -14,6 +16,8 @@ public abstract class Section
         Area = area;
         SecondMomentOfArea = secondMomentOfArea;
         SectionModulus = sectionModulus;
+        axes = new(new SectionAxisProperties(SectionAxisDesignation.Y, secondMomentOfArea,
+            sectionModulus, sectionModulus));
     }
 
     /// <summary>Cross-sectional area A.</summary>
@@ -24,4 +28,8 @@ public abstract class Section
 
     /// <summary>Elastic section modulus W about the same bending axis.</summary>
     public SectionModulus SectionModulus { get; }
+
+    public IReadOnlyList<SectionAxisProperties> Axes => axes.Values;
+
+    public SectionAxisProperties GetAxis(SectionAxisDesignation axisDesignation) => axes.GetAxis(axisDesignation);
 }
