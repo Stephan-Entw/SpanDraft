@@ -1,6 +1,6 @@
 # SpanDraft – Konzept
 
-Stand: 07.10.2026
+Stand: 09.10.2026
 
 Dieses Dokument legt Produktvision, Scope, Architekturgrundsätze und Roadmap
 von SpanDraft fest. Verbindliche Fach-, API- und Dateiverträge stehen in
@@ -63,16 +63,26 @@ Fachmodell und Rechenkern unterstützen:
 - Punktmomente
 - konstante Streckenlasten
 - Rechteck
-- Rechteck-/Vierkantrohr
+- Rechteck-/Vierkantrohr mit optionaler Außenrundung
 - Kreis
 - Rundrohr
-- benutzerdefinierte Querschnittskennwerte A/I/W
-- Werkstoff mit E-Modul und Streckgrenze
+- I-/H-Profil
+- U-Profil
+- T-Profil
+- Winkelprofil
+- manuelle Querschnittskennwerte A/I/W für eine oder zwei explizite Biegeachsen
+- explizite Auswahl der verwendeten Biegeachse
+- Werkstoff mit E-Modul und Streckgrenze sowie optional Dichte und Poissonzahl
 
-Diese fachlichen Möglichkeiten sind nicht alle im Desktop frei konfigurierbar.
-Das aktuelle Project Setup bietet eine geometrische Vierkantrohr-Vorlage und
-eine vorläufige S235JR-Materialvorlage. Eigene Material- und Querschnittseditoren
-sowie Profilbibliotheken sind noch geplant.
+Parametrische Querschnitte behalten ihre ursprünglichen Abmessungen und leiten
+Fläche, Schwerpunkt, Flächenträgheits- und Widerstandsmomente aus der gemeinsamen
+analytischen Konturgeometrie ab. Unsymmetrische Querschnitte können für eine
+Biegeachse unterschiedliche positive und negative Widerstandsmomente besitzen.
+
+Diese fachlichen Möglichkeiten sind noch nicht vollständig über den Desktop
+konfigurierbar. Das aktuelle Project Setup ist weiterhin ein begrenzter
+Übergangsworkflow; Material-/Querschnittsbibliotheken, eigene Einträge und der
+vollständige Auswahl- und Eingabeprozess folgen in den nächsten Ausbauschritten.
 
 Der Solver verwendet drei Freiheitsgrade je Knoten:
 
@@ -80,7 +90,7 @@ Der Solver verwendet drei Freiheitsgrade je Knoten:
 - transversale Verschiebung w
 - Rotation θ
 
-Der öffentliche V1-Lastumfang enthält derzeit keine Axiallasten.
+Der aktuelle Lastumfang enthält noch keine axialen äußeren Lasten.
 
 ## 4. Ergebnisse
 
@@ -101,8 +111,10 @@ Die Engineering-Auswertung ergänzt:
 - maximale elastische Biegespannung
 - Sicherheitsfaktor gegenüber der hinterlegten Streckgrenze
 
-Der Sicherheitsfaktor ist eine einfache elastische Bewertung und kein
-normativer Festigkeitsnachweis.
+Für die maximale elastische Biegespannung wird bei unsymmetrischen
+Querschnitten das kleinere der beiden Widerstandsmomente der ausgewählten
+Biegeachse maßgebend. Der Sicherheitsfaktor ist eine einfache elastische
+Bewertung und kein normativer Festigkeitsnachweis.
 
 Im Desktop werden kompakte Ergebniskennwerte und Lagerreaktionen sowie
 Live-Diagramme für Durchbiegung, Querkraft und Biegemoment dargestellt.
@@ -121,7 +133,7 @@ Ergebnisinterpretation bleiben Bestandteil von SpanDraft.
 
 Details und numerische Verträge stehen in [SOLVER.md](SOLVER.md).
 
-Der Solver ist für den aktuellen V1-Scope unabhängig gegen analytische Lösungen,
+Der Solver ist für den aktuellen Scope unabhängig gegen analytische Lösungen,
 IndeterminateBeam und PyCBA validiert. Details stehen in
 [VALIDATION.md](VALIDATION.md).
 
@@ -144,9 +156,17 @@ Implementiert sind:
 - direkter Balkeneditor
 - Platzieren und Bearbeiten aller aktuellen Lager- und Lasttypen
 - Undo/Redo
-- `.spandraft`-Projektdateien
+- versionierte, eigenständige `.spandraft`-Projektdateien
+- V1-Lesekompatibilität und aktuelles V2-Schreibformat
 - Savepoints und Dirty-State
 - private Crash-Recovery
+- globale Einheitenprofile und benutzerdefinierte Einheitenkombinationen
+- einheitliche numerische Eingabe- und Ergebnisdarstellung
+
+Projektdateien enthalten vollständige Snapshots von Werkstoff, Querschnitt und
+ausgewählter Biegeachse. Sie bleiben von lokalen Bibliotheken, Presets oder
+Katalogen unabhängig; das Löschen oder Ändern eines Bibliothekseintrags darf
+bestehende Projekte nicht verändern.
 
 UI-Texte werden über lokalisierbare Ressourcen verwaltet. Aktuell sind Englisch
 als Default und Deutsch vorhanden; Eingabe und Formatierung folgen der aktuellen
@@ -184,10 +204,14 @@ Verantwortlichkeiten:
 - **`SpanDraft.Analysis`:** Anwendungseinstieg, der Solver und Engineering zu einem strukturierten
   Success-/Failure-Ergebnis verbindet.
 
-- **`SpanDraft.Desktop`:** UI, Interaktion, Projektzustand, Persistenz und Darstellung. Keine eigenen
-  mechanischen Formeln.
+- **`SpanDraft.Desktop`:** UI, Interaktion, Projektzustand, Persistenz, lokale Bibliotheken
+  und Darstellung. Keine eigenen mechanischen Formeln.
 
 - **`SpanDraft.Reporting`:** reserviert für spätere Reports und Exporte.
+
+Lokale Material- und Querschnittsbibliotheken sind Anwendungsdaten des Desktops.
+Sie erzeugen Core-Domainobjekte, werden aber selbst nicht Teil von Core und
+erzeugen keine dauerhafte Referenz aus einem Projekt auf einen Bibliothekseintrag.
 
 ## 8. Bewusste Nicht-Ziele
 
@@ -206,6 +230,7 @@ Nicht zum aktuellen Produktziel gehören:
 - Ermüdungsnachweise
 - vollständige normbasierte Bemessung
 - automatische Profiloptimierung
+- Import eines FreeCAD-Profilkatalogs
 
 Neue Funktionen sollen nur aufgenommen werden, wenn sie typische
 Balkenberechnungen im Maschinenbau schneller, intuitiver, transparenter oder
@@ -216,11 +241,21 @@ zuverlässiger machen.
 Für den ersten nutzbaren Release steht die Arbeit im Programm selbst im
 Vordergrund.
 
-Priorität haben:
+Die nächsten zusammenhängenden Ausbauschritte sind:
 
-1. verbleibendes App-Shell-Polishing und weitere sinnvolle Menüfunktionen
-2. Profil-/Material- und Eingabe-Workflow dort erweitern, wo er für reale
-   Projekte benötigt wird
+1. lokale Material- und Querschnittsbibliotheken auf dem bestehenden
+   Domain- und Projektformat aufbauen
+2. einen kleinen kuratierten Satz eingebauter Materialien bereitstellen und
+   eigene Materialien dauerhaft verwaltbar machen
+3. parametrische Querschnittspresets und manuelle A/I/W-Einträge lokal
+   wiederverwendbar machen
+4. den Project-Setup-Workflow auf die vollständige Material-, Querschnitts-
+   und Biegeachsenauswahl umstellen
+5. verbleibendes App-Shell-Polishing und sinnvolle Menüfunktionen abschließen
+
+Ein eingebauter importierter Normprofilkatalog ist dafür nicht erforderlich.
+Querschnittsbibliotheken dienen zunächst der Wiederverwendung eigener
+parametrischer Definitionen und manueller Tabellenkennwerte.
 
 PDF-, XLSX- und Druckexport sind für den ersten Release keine Voraussetzung.
 Reports sollen später Eingaben, Ergebnisse und Rechenannahmen nachvollziehbar
@@ -230,9 +265,6 @@ Danach mögliche Erweiterungen:
 
 - Tabellenansicht
 - Zoom/Pan
-- Einheiten-Einstellungen
-- Profilbibliotheken und Herstellerkennwerte
-- eigene Materialien und Querschnitte
 - weitere Streckenlastformen
 - Eigengewicht
 - zusätzliche Sprachen
