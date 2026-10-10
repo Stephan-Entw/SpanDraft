@@ -27,6 +27,7 @@
                   <TextBlock Grid.Row="3" Text="W−" Classes="propertyLabel" IsVisible="{Binding IsAsymmetric}" /><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding NegativeModulus}" Classes="technicalValue" IsVisible="{Binding IsAsymmetric}" TextWrapping="Wrap" />
                 </Grid>
                 <Button x:Name="ChangeSectionButton" Content="{x:Static resources:Strings.Change}" Command="{Binding ChangeSectionCommand}" HorizontalAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.SectionSelection}" />
+                <Button x:Name="TestSectionDefinitionButton" Content="{x:Static resources:Strings.SectionDefinitionTest}" IsVisible="{Binding !IsEdit}" IsEnabled="{Binding !IsBusy}" Click="TestSectionDefinition" Classes="ghost" HorizontalAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionTest}" />
               </StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="selectionSurface">

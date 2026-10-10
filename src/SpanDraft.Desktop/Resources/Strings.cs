@@ -5,6 +5,28 @@ namespace SpanDraft.Desktop.Resources;
 
 public static class Strings
 {
+    public static string SectionDefinitionCustomName => Get(nameof(SectionDefinitionCustomName));
+    public static string SectionDefinitionManualProperties => Get(nameof(SectionDefinitionManualProperties));
+    public static string SectionDefinitionTitle => Get(nameof(SectionDefinitionTitle));
+    public static string SectionDefinitionTest => Get(nameof(SectionDefinitionTest));
+    public static string SectionDefinitionEditName => Get(nameof(SectionDefinitionEditName));
+    public static string SectionDefinitionSaveLibrary => Get(nameof(SectionDefinitionSaveLibrary));
+    public static string SectionDefinitionManualChoice => Get(nameof(SectionDefinitionManualChoice));
+    public static string SectionDefinitionChangeForm => Get(nameof(SectionDefinitionChangeForm));
+    public static string SectionDefinitionInputs => Get(nameof(SectionDefinitionInputs));
+    public static string SectionDefinitionSketch => Get(nameof(SectionDefinitionSketch));
+    public static string SectionDefinitionProperties => Get(nameof(SectionDefinitionProperties));
+    public static string SectionDefinitionAxisConfiguration => Get(nameof(SectionDefinitionAxisConfiguration));
+    public static string SectionDefinitionCompleteHint => Get(nameof(SectionDefinitionCompleteHint));
+    public static string SectionDefinitionPreviewHint => Get(nameof(SectionDefinitionPreviewHint));
+    public static string SectionDefinitionRadiusHint => Get(nameof(SectionDefinitionRadiusHint));
+    public static string SectionDefinitionNameRequired => Get(nameof(SectionDefinitionNameRequired));
+    public static string SectionDefinitionRadiusSuffix => Get(nameof(SectionDefinitionRadiusSuffix));
+    public static string SectionDefinitionThicknessError => Get(nameof(SectionDefinitionThicknessError));
+    public static string SectionDefinitionWebError => Get(nameof(SectionDefinitionWebError));
+    public static string SectionDefinitionFlangeError => Get(nameof(SectionDefinitionFlangeError));
+    public static string SectionDefinitionRadiusError => Get(nameof(SectionDefinitionRadiusError));
+
     public static string DeflectionDiagram => Get(nameof(DeflectionDiagram));
     public static string ShearDiagram => Get(nameof(ShearDiagram));
     public static string BendingDiagram => Get(nameof(BendingDiagram));

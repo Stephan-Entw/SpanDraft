@@ -216,4 +216,25 @@
   <data name="SelectMaterialRequired" xml:space="preserve"><value>Select a material</value></data>
   <data name="DeleteMaterialQuestion" xml:space="preserve"><value>Delete “{0}” from your material library? Existing projects will remain unchanged.</value></data>
   <data name="DeleteSectionQuestion" xml:space="preserve"><value>Delete “{0}” from your cross-section library? Existing projects will remain unchanged.</value></data>
+  <data name="SectionDefinitionTitle" xml:space="preserve"><value>Section definition</value></data>
+  <data name="SectionDefinitionTest" xml:space="preserve"><value>Test new section definition…</value></data>
+  <data name="SectionDefinitionEditName" xml:space="preserve"><value>Edit section name</value></data>
+  <data name="SectionDefinitionSaveLibrary" xml:space="preserve"><value>Save in my section library</value></data>
+  <data name="SectionDefinitionManualChoice" xml:space="preserve"><value>Custom (A/I/W)</value></data>
+  <data name="SectionDefinitionChangeForm" xml:space="preserve"><value>Change shape</value></data>
+  <data name="SectionDefinitionInputs" xml:space="preserve"><value>1. Inputs</value></data>
+  <data name="SectionDefinitionSketch" xml:space="preserve"><value>2. Sketch</value></data>
+  <data name="SectionDefinitionProperties" xml:space="preserve"><value>3. Section properties</value></data>
+  <data name="SectionDefinitionAxisConfiguration" xml:space="preserve"><value>Available axes</value></data>
+  <data name="SectionDefinitionCompleteHint" xml:space="preserve"><value>Enter and confirm all required dimensions to calculate section properties.</value></data>
+  <data name="SectionDefinitionPreviewHint" xml:space="preserve"><value>Preview · missing dimensions shown as symbols</value></data>
+  <data name="SectionDefinitionRadiusHint" xml:space="preserve"><value>r = 0: sharp corners; r &gt; 0: rounded corners.</value></data>
+  <data name="SectionDefinitionNameRequired" xml:space="preserve"><value>Enter a section name.</value></data>
+  <data name="SectionDefinitionRadiusSuffix" xml:space="preserve"><value> (r = {0} {1})</value></data>
+  <data name="SectionDefinitionThicknessError" xml:space="preserve"><value>The thickness must leave a positive opening or leg projection.</value></data>
+  <data name="SectionDefinitionWebError" xml:space="preserve"><value>The web must be thinner than the profile width.</value></data>
+  <data name="SectionDefinitionFlangeError" xml:space="preserve"><value>The flanges must leave a positive clear web height.</value></data>
+  <data name="SectionDefinitionRadiusError" xml:space="preserve"><value>The radius must fit within the available opening or projection.</value></data>
+  <data name="SectionDefinitionCustomName" xml:space="preserve"><value>Custom section</value></data>
+  <data name="SectionDefinitionManualProperties" xml:space="preserve"><value>2. Section properties</value></data>
 </root>

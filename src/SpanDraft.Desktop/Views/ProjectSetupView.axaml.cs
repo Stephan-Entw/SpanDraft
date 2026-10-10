@@ -11,6 +11,7 @@ namespace SpanDraft.Desktop.Views;
 public partial class ProjectSetupView : UserControl
 {
     private ProjectSetupViewModel? _model;
+    private SectionDefinitionWindow? _definitionWindow;
     public ProjectSetupView()
     {
         InitializeComponent();
@@ -18,6 +19,16 @@ public partial class ProjectSetupView : UserControl
         AttachedToVisualTree += (_, _) => Observe();
         DetachedFromVisualTree += (_, _) => { if (_model is not null) _model.PropertyChanged -= ModelChanged; _model = null; };
         AddHandler(KeyDownEvent, SetupKeyDown, RoutingStrategies.Bubble);
+    }
+    private async void TestSectionDefinition(object? sender, RoutedEventArgs e)
+    {
+        if (_model is not { Mode: ProjectSetupMode.Create, IsBusy: false } model || _definitionWindow is not null
+            || TopLevel.GetTopLevel(this) is not Window owner) return;
+        var library = model.Libraries is { } main ? new Sections.SectionDefinitionLibrary(main) : null;
+        var dialog = new SectionDefinitionWindow(new(model.ResultPresentation, library)) { Icon = owner.Icon };
+        _definitionWindow = dialog;
+        try { _ = await dialog.ShowDialog<Sections.SectionDefinitionResult?>(owner); }
+        finally { _definitionWindow = null; }
     }
     private void Observe()
     {

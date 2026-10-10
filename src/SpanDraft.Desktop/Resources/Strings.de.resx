@@ -216,4 +216,25 @@
   <data name="SelectMaterialRequired" xml:space="preserve"><value>Werkstoff auswählen</value></data>
   <data name="DeleteMaterialQuestion" xml:space="preserve"><value>„{0}“ aus Ihrer Materialbibliothek löschen? Bestehende Projekte bleiben unverändert.</value></data>
   <data name="DeleteSectionQuestion" xml:space="preserve"><value>„{0}“ aus Ihrer Querschnittsbibliothek löschen? Bestehende Projekte bleiben unverändert.</value></data>
+  <data name="SectionDefinitionTitle" xml:space="preserve"><value>Querschnittdefinition</value></data>
+  <data name="SectionDefinitionTest" xml:space="preserve"><value>Neue Querschnittdefinition testen…</value></data>
+  <data name="SectionDefinitionEditName" xml:space="preserve"><value>Querschnittnamen bearbeiten</value></data>
+  <data name="SectionDefinitionSaveLibrary" xml:space="preserve"><value>In meiner Querschnittsbibliothek speichern</value></data>
+  <data name="SectionDefinitionManualChoice" xml:space="preserve"><value>Benutzerdefiniert (A/I/W)</value></data>
+  <data name="SectionDefinitionChangeForm" xml:space="preserve"><value>Form ändern</value></data>
+  <data name="SectionDefinitionInputs" xml:space="preserve"><value>1. Eingaben</value></data>
+  <data name="SectionDefinitionSketch" xml:space="preserve"><value>2. Skizze</value></data>
+  <data name="SectionDefinitionProperties" xml:space="preserve"><value>3. Querschnittswerte</value></data>
+  <data name="SectionDefinitionAxisConfiguration" xml:space="preserve"><value>Achsenkonfiguration</value></data>
+  <data name="SectionDefinitionCompleteHint" xml:space="preserve"><value>Alle erforderlichen Maße gültig eingeben und bestätigen, um Kennwerte zu berechnen.</value></data>
+  <data name="SectionDefinitionPreviewHint" xml:space="preserve"><value>Vorschau · fehlende Maße als Symbole</value></data>
+  <data name="SectionDefinitionRadiusHint" xml:space="preserve"><value>r = 0: scharfkantig; r &gt; 0: verrundet.</value></data>
+  <data name="SectionDefinitionNameRequired" xml:space="preserve"><value>Einen Querschnittnamen eingeben.</value></data>
+  <data name="SectionDefinitionRadiusSuffix" xml:space="preserve"><value> (r = {0} {1})</value></data>
+  <data name="SectionDefinitionThicknessError" xml:space="preserve"><value>Die Dicke muss eine positive Öffnung bzw. einen Schenkelüberstand lassen.</value></data>
+  <data name="SectionDefinitionWebError" xml:space="preserve"><value>Der Steg muss dünner als die Profilbreite sein.</value></data>
+  <data name="SectionDefinitionFlangeError" xml:space="preserve"><value>Die Flansche müssen eine positive freie Steghöhe lassen.</value></data>
+  <data name="SectionDefinitionRadiusError" xml:space="preserve"><value>Der Radius muss in die verfügbare Öffnung bzw. den Überstand passen.</value></data>
+  <data name="SectionDefinitionCustomName" xml:space="preserve"><value>Benutzerdefiniertes Profil</value></data>
+  <data name="SectionDefinitionManualProperties" xml:space="preserve"><value>2. Querschnittswerte</value></data>
 </root>
