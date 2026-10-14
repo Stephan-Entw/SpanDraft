@@ -94,7 +94,7 @@
     <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
     <Menu x:Name="SectionMenu" Background="{DynamicResource SurfaceSubtle}">
       <MenuItem Header="{x:Static resources:Strings.File}">
-        <MenuItem x:Name="SectionSaveMenuItem" Header="{x:Static resources:Strings.SectionDefinitionAddLibrary}" Command="{Binding SaveLibraryCommand}" IsVisible="{Binding ShowLibraryOption}" />
+        <MenuItem x:Name="SectionSaveMenuItem" Header="{x:Static resources:Strings.SectionDefinitionAddLibrary}" Command="{Binding SaveLibraryCommand}" IsVisible="{Binding ShowLibraryAction}" />
         <MenuItem Header="{x:Static resources:Strings.Apply}" Command="{Binding ConfirmCommand}" />
         <Separator />
         <MenuItem Header="{x:Static resources:Strings.SectionDefinitionDiscard}" Command="{Binding CancelCommand}" />

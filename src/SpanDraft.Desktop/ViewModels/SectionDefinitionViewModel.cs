@@ -348,8 +348,10 @@ public sealed class SectionDefinitionViewModel : ObservableObject
     public bool CommitName()
     {
         if (!IsEditingName) return true;
-        if (string.IsNullOrWhiteSpace(PendingName)) { _nameError = Strings.SectionDefinitionNameRequired; Refresh(); return false; }
-        Current.CustomName = PendingName.Trim();
+        string name = PendingName.Trim();
+        if (string.IsNullOrWhiteSpace(name)) { _nameError = Strings.SectionDefinitionNameRequired; Refresh(); return false; }
+        if (!string.Equals(name, DisplayName, StringComparison.Ordinal))
+            Current.CustomName = name;
         _editingName = false; _nameError = null; _saveError = null; Refresh(); return true;
     }
     public void CancelNameEdit() { _editingName = false; _nameError = null; Refresh(); }

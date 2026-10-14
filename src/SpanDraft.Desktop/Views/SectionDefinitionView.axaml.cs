@@ -76,8 +76,6 @@ public partial class SectionDefinitionView : UserControl
     protected override Avalonia.Size MeasureOverride(Avalonia.Size availableSize)
     {
         Reflow(availableSize.Width);
-        if (double.IsFinite(availableSize.Height))
-            InputWorkspace.Classes.Set("compactSectionInputs", availableSize.Height < 750);
         return base.MeasureOverride(availableSize);
     }
     protected override Avalonia.Size ArrangeOverride(Avalonia.Size finalSize)

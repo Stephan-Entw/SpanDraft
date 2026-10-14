@@ -49,6 +49,112 @@ public sealed class SectionDefinitionRedesignTests
         }
     }
     [Fact]
+    public void UnchangedAutomaticNameEditKeepsNameResponsiveToDimensions()
+    {
+        using var culture = new UiCultureScope("en-US");
+        var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.Circle); Fill(vm);
+        string name = vm.DisplayName;
+        vm.BeginNameEdit(); Assert.True(vm.CommitName());
+        Assert.False(vm.IsEditingName); Assert.False(vm.HasCustomName); Assert.Equal(name, vm.DisplayName);
+        vm.BeginNameEdit(); vm.PendingName = "  " + name + "  "; Assert.True(vm.CommitName());
+        Assert.False(vm.HasCustomName); Assert.Equal(name, vm.DisplayName);
+        var diameter = vm.Parameters.Single(); diameter.PendingText = "120"; Assert.True(diameter.Commit());
+        Assert.False(vm.HasCustomName); Assert.NotEqual(name, vm.DisplayName); Assert.Contains("120", vm.DisplayName);
+    }
+    [Fact]
+    public void UnchangedCustomNameEditPreservesNameAcrossDimensionChanges()
+    {
+        var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.Circle); Fill(vm);
+        vm.BeginNameEdit(); vm.PendingName = "My profile"; Assert.True(vm.CommitName());
+        Assert.True(vm.HasCustomName);
+        vm.BeginNameEdit(); Assert.True(vm.CommitName());
+        Assert.False(vm.IsEditingName); Assert.True(vm.HasCustomName); Assert.Equal("My profile", vm.DisplayName);
+        var diameter = vm.Parameters.Single(); diameter.PendingText = "120"; Assert.True(diameter.Commit());
+        Assert.True(vm.HasCustomName); Assert.Equal("My profile", vm.DisplayName);
+    }
+    [Fact]
+    public void UnchangedLibraryNameEditPreservesLoadedCustomName()
+    {
+        var library = new Library(); var entry = new SectionLibraryEntry("Library profile", new CircleSectionGeometry(M(.04)));
+        library.Source.Add(entry);
+        var vm = new SectionDefinitionViewModel(library: library); vm.SelectForm(SectionEditorType.Circle); vm.LoadPreset(entry);
+        Assert.True(vm.HasCustomName); Assert.Equal(entry.Name, vm.DisplayName);
+        vm.BeginNameEdit(); Assert.True(vm.CommitName());
+        Assert.False(vm.IsEditingName); Assert.True(vm.HasCustomName); Assert.Equal(entry.Name, vm.DisplayName);
+        var diameter = vm.Parameters.Single(); diameter.PendingText = "120"; Assert.True(diameter.Commit());
+        Assert.True(vm.HasCustomName); Assert.Equal(entry.Name, vm.DisplayName);
+        Assert.Equal(M(.04), Assert.IsType<CircleSectionGeometry>(entry.Section).Diameter);
+    }
+    [Fact]
+    public void CompactSectionInputsChangeOnlyWithArrangedHeight()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.ISection); Fill(vm);
+        var view = new SectionDefinitionView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1100, Height = 650 };
+        window.Show();
+        try
+        {
+            Dispatcher.UIThread.RunJobs();
+            view.Measure(new Size(1100, 650)); view.Arrange(new Rect(0, 0, 1100, 650));
+            var workspace = view.FindControl<Grid>("InputWorkspace")!;
+            Assert.Contains("compactSectionInputs", workspace.Classes);
+
+            view.InvalidateMeasure(); view.Measure(new Size(1100, 900));
+            Assert.Contains("compactSectionInputs", workspace.Classes);
+            view.Arrange(new Rect(0, 0, 1100, 900));
+            Assert.DoesNotContain("compactSectionInputs", workspace.Classes);
+
+            view.InvalidateMeasure(); view.Measure(new Size(1100, 650));
+            Assert.DoesNotContain("compactSectionInputs", workspace.Classes);
+            view.Arrange(new Rect(0, 0, 1100, 650));
+            Assert.Contains("compactSectionInputs", workspace.Classes);
+        }
+        finally { window.Close(); }
+    }
+    [Fact]
+    public void LibraryMenuAndHeaderShareVisibilityAcrossDraftStates()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var vm = new SectionDefinitionViewModel();
+        var view = new SectionDefinitionView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1100, Height = 650 };
+        window.Show();
+        try
+        {
+            var menu = view.FindControl<MenuItem>("SectionSaveMenuItem")!;
+            var header = view.FindControl<Grid>("LibrarySaveAction")!;
+            var button = view.FindControl<Button>("SaveLibraryButton")!;
+            Assert.Same(vm.SaveLibraryCommand, menu.Command);
+            AssertVisibility(false);
+            vm.SelectForm(SectionEditorType.ISection); AssertVisibility(false);
+            var input = vm.Parameters.Single(p => p.Key == "h");
+            input.PendingText = "100"; Assert.True(input.Commit()); AssertVisibility(false);
+            Fill(vm); Assert.Null(vm.SelectedAxis); Assert.False(vm.CanConfirm); AssertVisibility(true);
+
+            string valid = input.PendingText;
+            input.PendingText = "120"; AssertVisibility(false);
+            Assert.True(input.Commit()); AssertVisibility(true);
+            input.PendingText = "invalid"; AssertVisibility(false);
+            Assert.False(input.Commit()); AssertVisibility(false);
+            input.PendingText = valid; Assert.True(input.Commit()); AssertVisibility(true);
+
+            var hidden = new SectionDefinitionViewModel(showLibraryOption: false);
+            hidden.SelectForm(SectionEditorType.ISection); Fill(hidden); view.DataContext = hidden;
+            AssertVisibility(false);
+
+            void AssertVisibility(bool expected)
+            {
+                Dispatcher.UIThread.RunJobs();
+                view.Measure(new Size(1100, 650)); view.Arrange(new Rect(0, 0, 1100, 650));
+                Assert.Equal(expected, menu.IsVisible);
+                Assert.Equal(expected, header.IsVisible);
+                Assert.Equal(expected, button.IsEffectivelyVisible);
+            }
+        }
+        finally { window.Close(); }
+    }
+    [Fact]
     public async Task SaveUsesCurrentAutomaticNameAndDuplicateNeverOverwrites()
     {
         var library = new Library(); var vm = new SectionDefinitionViewModel(library: library);
@@ -308,9 +414,11 @@ public sealed class SectionDefinitionRedesignTests
             void Arrange(double height)
             {
                 window.Width = 1000; window.Height = height;
+                // The platform proxy does not send native resize callbacks. Explicit view dimensions
+                // keep queued parent layout passes from restoring the previous window client size.
+                view.Width = 1000; view.Height = height;
                 for (int pass = 0; pass < 3; pass++)
                 {
-                    // The platform proxy does not send native resize callbacks; constrain the view directly.
                     Dispatcher.UIThread.RunJobs();
                     view.Measure(new Size(1000, height)); view.Arrange(new Rect(0, 0, 1000, height));
                 }
