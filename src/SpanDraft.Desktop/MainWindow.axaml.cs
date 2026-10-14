@@ -37,7 +37,8 @@ public partial class MainWindow : Window
         AddHandler(PointerPressedEvent, (_, e) =>
         {
             if (e.Source is Control control && (control is Menu or MenuItem
-                || control.FindAncestorOfType<Menu>() is not null) && !_initializing) _model.SetFileMenuOpen(true);
+                || control.FindAncestorOfType<Menu>() is not null) && !_initializing
+                && Content is not Views.SectionDefinitionView) _model.SetFileMenuOpen(true);
         }, RoutingStrategies.Tunnel);
         ProjectMenu.PropertyChanged += (_, e) =>
         {
@@ -89,6 +90,9 @@ public partial class MainWindow : Window
     private void ProjectKeyDown(object? sender, KeyEventArgs e)
     {
         if (_initializing || _settingsWindow is not null) return;
+        // The temporary section workspace owns its editing commands; do not route
+        // its keystrokes to the hidden project editor. The application can still quit.
+        if (Content is Views.SectionDefinitionView && (e.Key != Key.Q || e.KeyModifiers != _primary)) return;
         ICommand? command = (e.Key, e.KeyModifiers) switch
         {
             (Key.N, var m) when m == _primary => _model.NewCommand,
@@ -110,7 +114,8 @@ public partial class MainWindow : Window
     {
         if (_closeApproved) return;
         e.Cancel = true;
-        if (_initializing || _closing || _model.IsBusy || _settingsWindow is not null) return;
+        if (_initializing || _closing || _model.IsBusy || _settingsWindow is not null
+            || Content is Views.SectionDefinitionView { DataContext: SectionDefinitionViewModel { IsBusy: true } }) return;
         _closing = true;
         try
         {

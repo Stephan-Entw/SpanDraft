@@ -8,7 +8,7 @@ namespace SpanDraft.Desktop.Sections;
 
 // Drawing coordinates use y right, z up, in metres. These types carry no section properties.
 public sealed record PreviewSegment(Point Start, Point End, Point? Center = null, double Sweep = 0);
-public sealed record PreviewDimension(string Key, double Value, bool IsConfirmed, Point Anchor);
+public sealed record PreviewDimension(string Key, double Value, bool IsConfirmed, Point Anchor, Point Start, Point End, Point? RadiusCenter = null);
 public sealed record SectionPreviewGeometry(SectionEditorType Type, double Width, double Height,
     IReadOnlyList<IReadOnlyList<PreviewSegment>> Contours, IReadOnlyDictionary<string, PreviewDimension> Dimensions,
     Point? Centroid = null, double? PrincipalAngle = null);
@@ -128,7 +128,33 @@ public static class SectionPreviewGeometryResolver
                 _ => P((type == SectionEditorType.USection ? tw : right) + r - r / Math.Sqrt(2), tf + r - r / Math.Sqrt(2))
             }, _ => P(b / 2, h / 2)
         };
-        var dimensions = ParameterKeys(type).ToDictionary(k => k, k => new PreviewDimension(k, values[k], confirmed.ContainsKey(k), Anchor(k)));
+        PreviewDimension Dimension(string key)
+        {
+            Point start, end;
+            Point? center = null;
+            switch (key)
+            {
+                case "b": start = P(0, 0); end = P(b, 0); break;
+                case "h": start = P(0, 0); end = P(0, h); break;
+                case "d": case "D": start = P(0, h / 2); end = P(b, h / 2); break;
+                case "tw": start = P(type == SectionEditorType.USection ? 0 : (b - tw) / 2, h / 2); end = start + new Vector(tw, 0); break;
+                case "tf": start = P(b, type == SectionEditorType.TSection ? h - tf : 0); end = start + new Vector(0, tf); break;
+                case "t":
+                    start = type == SectionEditorType.Angle ? P(b, 0) : P(b - t, h / 2);
+                    end = start + (type == SectionEditorType.Angle ? new Vector(0, t) : new Vector(t, 0)); break;
+                default:
+                    center = type switch
+                    {
+                        SectionEditorType.RectangularHollow => P(b - r, h - r),
+                        SectionEditorType.Angle => P(t + r, t + r),
+                        SectionEditorType.TSection => P(right + r, h - tf - r),
+                        _ => P((type == SectionEditorType.USection ? tw : right) + r, tf + r)
+                    };
+                    start = center.Value; end = Anchor(key); break;
+            }
+            return new(key, values[key], confirmed.ContainsKey(key), Anchor(key), start, end, center);
+        }
+        var dimensions = ParameterKeys(type).ToDictionary(k => k, Dimension);
         return new(type, b, h, contours, new ReadOnlyDictionary<string, PreviewDimension>(dimensions));
     }
 

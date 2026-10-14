@@ -15,7 +15,12 @@ public sealed class SectionShapeIcon : Control
     public override void Render(DrawingContext context)
     {
         if (Type == SectionEditorType.Manual) return;
-        var geometry = SectionPreviewGeometryResolver.Resolve(Type,new Dictionary<string,double>());
+        var dimensions = new Dictionary<string, double>
+        {
+            ["h"] = .1, ["b"] = Type == SectionEditorType.Rectangle ? .06 : .1,
+            ["d"] = .1, ["D"] = .1, ["t"] = .01, ["tw"] = .01, ["tf"] = .01, ["r"] = 0
+        };
+        var geometry = SectionPreviewGeometryResolver.Resolve(Type, dimensions);
         double scale = Math.Min((Bounds.Width-4)/geometry.Width,(Bounds.Height-4)/geometry.Height);
         Point Project(Point p) => new((Bounds.Width-geometry.Width*scale)/2+p.X*scale,(Bounds.Height+geometry.Height*scale)/2-p.Y*scale);
         var path = new StreamGeometry();
@@ -39,6 +44,6 @@ public sealed class SectionShapeIcon : Control
             }
         }
         var brush = this.TryFindResource("TextPrimary",out var resource) && resource is IBrush b ? b : Brushes.DarkSlateGray;
-        context.DrawGeometry(new SolidColorBrush(Color.FromArgb(25,80,110,130)),new Pen(brush,1.1),path);
+        context.DrawGeometry(this.TryFindResource("SurfacePressed", out var fill) && fill is IBrush fillBrush ? fillBrush : Brushes.Transparent,new Pen(brush,1.5),path);
     }
 }

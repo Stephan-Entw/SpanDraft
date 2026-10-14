@@ -222,12 +222,12 @@
   <data name="SectionDefinitionSaveLibrary" xml:space="preserve"><value>In meiner Querschnittsbibliothek speichern</value></data>
   <data name="SectionDefinitionManualChoice" xml:space="preserve"><value>Benutzerdefiniert (A/I/W)</value></data>
   <data name="SectionDefinitionChangeForm" xml:space="preserve"><value>Form ändern</value></data>
-  <data name="SectionDefinitionInputs" xml:space="preserve"><value>1. Eingaben</value></data>
-  <data name="SectionDefinitionSketch" xml:space="preserve"><value>2. Skizze</value></data>
-  <data name="SectionDefinitionProperties" xml:space="preserve"><value>3. Querschnittswerte</value></data>
+  <data name="SectionDefinitionInputs" xml:space="preserve"><value>Eingaben</value></data>
+  <data name="SectionDefinitionSketch" xml:space="preserve"><value>Querschnittsansicht</value></data>
+  <data name="SectionDefinitionProperties" xml:space="preserve"><value>Berechnete Querschnittswerte</value></data>
   <data name="SectionDefinitionAxisConfiguration" xml:space="preserve"><value>Achsenkonfiguration</value></data>
   <data name="SectionDefinitionCompleteHint" xml:space="preserve"><value>Alle erforderlichen Maße gültig eingeben und bestätigen, um Kennwerte zu berechnen.</value></data>
-  <data name="SectionDefinitionPreviewHint" xml:space="preserve"><value>Vorschau · fehlende Maße als Symbole</value></data>
+  <data name="SectionDefinitionPreviewHint" xml:space="preserve"><value>Vorschau · Bezugsachsen y/z</value></data>
   <data name="SectionDefinitionRadiusHint" xml:space="preserve"><value>r = 0: scharfkantig; r &gt; 0: verrundet.</value></data>
   <data name="SectionDefinitionNameRequired" xml:space="preserve"><value>Einen Querschnittnamen eingeben.</value></data>
   <data name="SectionDefinitionRadiusSuffix" xml:space="preserve"><value> (r = {0} {1})</value></data>
@@ -236,5 +236,41 @@
   <data name="SectionDefinitionFlangeError" xml:space="preserve"><value>Die Flansche müssen eine positive freie Steghöhe lassen.</value></data>
   <data name="SectionDefinitionRadiusError" xml:space="preserve"><value>Der Radius muss in die verfügbare Öffnung bzw. den Überstand passen.</value></data>
   <data name="SectionDefinitionCustomName" xml:space="preserve"><value>Benutzerdefiniertes Profil</value></data>
-  <data name="SectionDefinitionManualProperties" xml:space="preserve"><value>2. Querschnittswerte</value></data>
+  <data name="SectionDefinitionManualProperties" xml:space="preserve"><value>Querschnittswerte</value></data>
+  <data name="SectionDefinitionShapeI" xml:space="preserve"><value>I/H-Profil</value></data>
+  <data name="SectionDefinitionArea" xml:space="preserve"><value>Querschnittsfläche</value></data>
+  <data name="SectionDefinitionInertia" xml:space="preserve"><value>Flächenträgheitsmoment</value></data>
+  <data name="SectionDefinitionModulus" xml:space="preserve"><value>Widerstandsmoment</value></data>
+  <data name="SectionDefinitionHeight" xml:space="preserve"><value>Höhe</value></data>
+  <data name="SectionDefinitionWidth" xml:space="preserve"><value>Breite</value></data>
+  <data name="SectionDefinitionFlangeWidth" xml:space="preserve"><value>Flanschbreite</value></data>
+  <data name="SectionDefinitionDiameter" xml:space="preserve"><value>Durchmesser</value></data>
+  <data name="SectionDefinitionOuterDiameter" xml:space="preserve"><value>Außendurchmesser</value></data>
+  <data name="SectionDefinitionThickness" xml:space="preserve"><value>Dicke</value></data>
+  <data name="SectionDefinitionWallThickness" xml:space="preserve"><value>Wanddicke</value></data>
+  <data name="SectionDefinitionWebThickness" xml:space="preserve"><value>Stegdicke</value></data>
+  <data name="SectionDefinitionFlangeThickness" xml:space="preserve"><value>Flanschdicke</value></data>
+  <data name="SectionDefinitionOuterRadius" xml:space="preserve"><value>Außenradius</value></data>
+  <data name="SectionDefinitionInnerRadius" xml:space="preserve"><value>Innenradius</value></data>
+  <data name="SectionDefinitionSelectAxis" xml:space="preserve"><value>Wählen Sie bitte die Achse für die Berechnung.</value></data>
+  <data name="SectionDefinitionEquivalent" xml:space="preserve"><value>gleichwertig</value></data>
+  <data name="SectionDefinitionStrongAxis" xml:space="preserve"><value>starke Achse</value></data>
+  <data name="SectionDefinitionWeakAxis" xml:space="preserve"><value>schwache Achse</value></data>
+  <data name="SectionDefinitionChooseTitle" xml:space="preserve"><value>Querschnitt auswählen</value></data>
+  <data name="SectionDefinitionGalleryTitle" xml:space="preserve"><value>Querschnittsform auswählen</value></data>
+  <data name="SectionDefinitionGalleryLead" xml:space="preserve"><value>Wählen Sie die Geometrie für Ihren Querschnitt.</value></data>
+  <data name="SectionDefinitionResetName" xml:space="preserve"><value>Automatischen Namen verwenden</value></data>
+  <data name="SectionDefinitionDiscard" xml:space="preserve"><value>Änderungen verwerfen</value></data>
+  <data name="SectionDefinitionAddLibrary" xml:space="preserve"><value>Zur Bibliothek hinzufügen</value></data>
+  <data name="SectionDefinitionFromLibrary" xml:space="preserve"><value>Aus meiner Bibliothek</value></data>
+  <data name="SectionDefinitionLibraryMatches" xml:space="preserve"><value>Gespeicherte Profile dieser Form</value></data>
+  <data name="SectionDefinitionLibraryEmpty" xml:space="preserve"><value>Für diese Form sind noch keine Profile gespeichert.</value></data>
+  <data name="SectionDefinitionLibrarySaved" xml:space="preserve"><value>Profil zur Bibliothek hinzugefügt.</value></data>
+  <data name="SectionDefinitionDimensions" xml:space="preserve"><value>Abmessungen</value></data>
+  <data name="SectionDefinitionDimensionHint" xml:space="preserve"><value>Alle Maße beziehen sich auf den dargestellten Querschnitt.</value></data>
+  <data name="SectionDefinitionParametricForm" xml:space="preserve"><value>Parametrische Form</value></data>
+  <data name="SectionDefinitionManualFormDescription" xml:space="preserve"><value>Manuelle Querschnittswerte</value></data>
+  <data name="SectionDefinitionChangeProfile" xml:space="preserve"><value>Ändern ›</value></data>
+  <data name="SectionDefinitionParametricGroup" xml:space="preserve"><value>PARAMETRISCHE QUERSCHNITTE</value></data>
+  <data name="SectionDefinitionAutomatic" xml:space="preserve"><value>Automatisch</value></data>
 </root>

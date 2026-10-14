@@ -4,115 +4,303 @@
              x:Class="SpanDraft.Desktop.Views.SectionDefinitionView" x:DataType="vm:SectionDefinitionViewModel">
   <UserControl.Resources>
     <DataTemplate x:Key="DefinitionInput" x:DataType="vm:SectionDefinitionInput">
-      <StackPanel Spacing="4" Margin="0,0,0,10">
-        <Grid ColumnDefinitions="54,*" ColumnSpacing="8">
-          <TextBlock Text="{Binding Symbol}" VerticalAlignment="Center" Classes="propertyLabel" />
-          <Grid Grid.Column="1" ColumnDefinitions="*,48" ColumnSpacing="6">
-            <TextBox Text="{Binding PendingText, Mode=TwoWay}" KeyDown="InputKeyDown" LostFocus="InputLostFocus" GotFocus="InputGotFocus"
-                     AutomationProperties.Name="{Binding Label}" />
-            <TextBlock Grid.Column="1" Text="{Binding Unit.Symbol}" VerticalAlignment="Center" Classes="secondary" />
-          </Grid>
+      <Grid Classes="definitionInputRow" ColumnDefinitions="*,88,Auto" ColumnSpacing="8" MinHeight="36">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" VerticalAlignment="Center" HorizontalAlignment="Left">
+          <TextBlock Text="{Binding DisplayLabel}" Classes="definitionLabel" TextWrapping="Wrap" VerticalAlignment="Center" />
+          <controls:SectionInputHint Grid.Column="1" Classes="inputHint" IsVisible="{Binding HasRadiusHint}"
+              Message="{x:Static resources:Strings.SectionDefinitionRadiusHint}">
+            <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_info_16_regular.svg" Foreground="{DynamicResource TextSecondary}" />
+          </controls:SectionInputHint>
         </Grid>
-        <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Classes="validationMessage" TextWrapping="Wrap" />
-      </StackPanel>
+        <TextBox Grid.Column="1" Width="88" Height="36" FontSize="14" Classes.error="{Binding HasError}"
+            Classes.definitionInput="True" Foreground="{DynamicResource TextPrimary}" TextAlignment="Left" HorizontalContentAlignment="Right"
+            Text="{Binding PendingText, Mode=TwoWay}" KeyDown="InputKeyDown" LostFocus="InputLostFocus" GotFocus="InputGotFocus"
+            AutomationProperties.Name="{Binding Label}" />
+        <controls:SectionInputHint Grid.Column="1" Classes="inputHint errorHint" IsVisible="{Binding HasError}"
+            Message="{Binding Error}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+          <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_error_circle_16_regular.svg" Foreground="{DynamicResource Error}" />
+        </controls:SectionInputHint>
+        <TextBlock Grid.Column="2" MinWidth="24" Text="{Binding Unit.Symbol}" VerticalAlignment="Center" Classes="definitionLabel" />
+      </Grid>
     </DataTemplate>
   </UserControl.Resources>
-  <Border Background="{DynamicResource AppBackground}">
-  <Grid Margin="24" RowDefinitions="Auto,*" RowSpacing="16">
-    <StackPanel Spacing="6">
-      <Button x:Name="TitleButton" Command="{Binding EditNameCommand}" IsVisible="{Binding !IsEditingName}" Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Height="NaN" MinHeight="34"
-              AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionEditName}">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-          <TextBlock Text="{Binding DisplayName}" Classes="sectionTitle" TextWrapping="Wrap" />
-          <TextBlock Grid.Column="1" Text="✎" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+  <UserControl.Styles>
+    <Style Selector="Grid.inputWorkspace">
+      <Setter Property="Margin" Value="24,24,0,24" />
+    </Style>
+    <Style Selector="StackPanel.sectionInputs, StackPanel.dimensionsPanel">
+      <Setter Property="Spacing" Value="20" />
+    </Style>
+    <Style Selector="Grid.definitionInputRow">
+      <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+    <Style Selector="StackPanel.libraryHeading">
+      <Setter Property="Margin" Value="0,24,0,12" />
+      <Setter Property="Spacing" Value="12" />
+    </Style>
+    <Style Selector="Grid.inputWorkspace.compactSectionInputs">
+      <Setter Property="Margin" Value="24,16,0,16" />
+    </Style>
+    <Style Selector="Grid.inputWorkspace.compactSectionInputs StackPanel.sectionInputs, Grid.inputWorkspace.compactSectionInputs StackPanel.dimensionsPanel">
+      <Setter Property="Spacing" Value="12" />
+    </Style>
+    <Style Selector="Grid.inputWorkspace.compactSectionInputs Grid.definitionInputRow">
+      <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+    <Style Selector="Grid.inputWorkspace.compactSectionInputs StackPanel.libraryHeading">
+      <Setter Property="Margin" Value="0,8,0,8" />
+      <Setter Property="Spacing" Value="8" />
+    </Style>
+    <Style Selector="Button.librarySaveError">
+      <Setter Property="Background" Value="{DynamicResource ErrorSubtle}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Error}" />
+    </Style>
+    <Style Selector="Grid.manualValues">
+      <Setter Property="MaxWidth" Value="720" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+    <Style Selector="TextBox.definitionInput">
+      <Setter Property="Padding" Value="8,0,24,0" />
+    </Style>
+    <Style Selector="Button.inputHint">
+      <Setter Property="Width" Value="18" />
+      <Setter Property="Height" Value="18" />
+      <Setter Property="MinWidth" Value="18" />
+      <Setter Property="MinHeight" Value="18" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.inputHint:pointerover, Button.inputHint:pressed">
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="TextBlock.definitionLabel, TextBlock.definitionValue">
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    </Style>
+    <Style Selector="TextBlock.definitionAxisTitle">
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    </Style>
+  </UserControl.Styles>
+  <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,Auto,*">
+    <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
+    <Menu x:Name="SectionMenu" Background="{DynamicResource SurfaceSubtle}">
+      <MenuItem Header="{x:Static resources:Strings.File}">
+        <MenuItem x:Name="SectionSaveMenuItem" Header="{x:Static resources:Strings.SectionDefinitionAddLibrary}" Command="{Binding SaveLibraryCommand}" IsVisible="{Binding ShowLibraryOption}" />
+        <MenuItem Header="{x:Static resources:Strings.Apply}" Command="{Binding ConfirmCommand}" />
+        <Separator />
+        <MenuItem Header="{x:Static resources:Strings.SectionDefinitionDiscard}" Command="{Binding CancelCommand}" />
+      </MenuItem>
+      <MenuItem Header="{x:Static resources:Strings.Edit}">
+        <MenuItem x:Name="SectionChangeFormMenuItem" Header="{x:Static resources:Strings.SectionDefinitionChangeForm}" Command="{Binding ChangeFormCommand}" />
+        <MenuItem Header="{x:Static resources:Strings.SectionDefinitionEditName}" Command="{Binding EditNameCommand}" />
+        <MenuItem Header="{x:Static resources:Strings.SectionDefinitionResetName}" Command="{Binding ResetNameCommand}" />
+      </MenuItem>
+      <MenuItem Header="{x:Static resources:Strings.Help}">
+        <MenuItem x:Name="SectionAboutMenuItem" Header="{x:Static resources:Strings.About}" IsEnabled="{Binding !IsBusy}" Click="ShowAbout" />
+      </MenuItem>
+    </Menu>
+    </Border>
+    <Border Grid.Row="1" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="24,16">
+      <Grid x:Name="CommandHeader" ColumnDefinitions="*,Auto" ColumnSpacing="16" Height="{DynamicResource PrimaryAction}">
+        <Grid x:Name="DefinitionHeader" VerticalAlignment="Stretch">
+            <Button x:Name="TitleButton" Command="{Binding EditNameCommand}" IsVisible="{Binding !IsEditingName}" Classes="ghost definitionTitleButton"
+                HorizontalAlignment="Left" HorizontalContentAlignment="Stretch" Height="{DynamicResource PrimaryAction}" Padding="0"
+                AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionEditName}">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBlock x:Name="DefinitionTitle" Text="{Binding HeaderTitle}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                    TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding HeaderTitle}" />
+                <controls:SectionFluentIcon x:Name="TitleEditIcon" Grid.Column="1" Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_edit_16_regular.svg"
+                    IsVisible="{Binding HasDefinition}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <Grid x:Name="NameEditor" ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding IsEditingName}">
+              <Grid>
+                <TextBox x:Name="NameInput" Text="{Binding PendingName, Mode=TwoWay}" Classes.error="{Binding HasNameError}"
+                    Height="{DynamicResource PrimaryAction}" Padding="8,0,28,0" FontSize="22" FontWeight="SemiBold"
+                    KeyDown="NameKeyDown" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionEditName}" />
+                <controls:SectionInputHint x:Name="NameErrorHint" Classes="inputHint errorHint" IsVisible="{Binding HasNameError}"
+                    Message="{Binding NameError}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
+                  <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_error_circle_16_regular.svg" Foreground="{DynamicResource Error}" />
+                </controls:SectionInputHint>
+              </Grid>
+              <Button x:Name="ResetNameButton" Grid.Column="1" Content="{x:Static resources:Strings.SectionDefinitionAutomatic}" Command="{Binding ResetNameCommand}"
+                  Classes="ghost" Padding="0" Height="{DynamicResource PrimaryAction}"
+                  AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionResetName}" />
+            </Grid>
         </Grid>
-      </Button>
-      <TextBox x:Name="NameInput" Text="{Binding PendingName, Mode=TwoWay}" IsVisible="{Binding IsEditingName}"
-               KeyDown="NameKeyDown" LostFocus="NameLostFocus" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionEditName}" />
-      <TextBlock Text="{Binding NameError}" IsVisible="{Binding HasNameError}" Classes="validationMessage" />
-      <CheckBox x:Name="LibraryCheckbox" Content="{x:Static resources:Strings.SectionDefinitionSaveLibrary}" IsVisible="{Binding ShowLibraryOption}"
-                IsEnabled="{Binding !IsBusy}" IsChecked="{Binding SaveToLibrary, Mode=TwoWay}" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionSaveLibrary}" />
-      <TextBlock Text="{Binding LibraryError}" IsVisible="{Binding HasLibraryError}" Classes="validationMessage" TextWrapping="Wrap" />
-    </StackPanel>
-    <Grid x:Name="DefinitionColumns" Grid.Row="1" ColumnDefinitions="28*,44*,28*" ColumnSpacing="16">
-      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" IsEnabled="{Binding !IsBusy}">
-        <StackPanel Spacing="12">
-          <TextBlock Text="{x:Static resources:Strings.SectionDefinitionInputs}" Classes="sectionTitle" />
-          <StackPanel x:Name="FormChooser" IsVisible="{Binding IsChoosingForm}" Spacing="12">
-            <ItemsControl ItemsSource="{Binding Forms}">
-              <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:SectionDefinitionForm">
-                  <Button Height="NaN" MinHeight="84" Tag="{Binding Value}" Click="SelectForm" Margin="0,0,6,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Label}">
-                    <StackPanel Spacing="6">
-                      <controls:SectionShapeIcon Type="{Binding Value}" Width="44" Height="42" HorizontalAlignment="Center" />
-                      <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="12" />
-                    </StackPanel>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <Border Height="1" Background="{DynamicResource Border}" />
-            <Button x:Name="ManualFormButton" Content="{x:Static resources:Strings.SectionDefinitionManualChoice}" Click="SelectManual" HorizontalAlignment="Stretch"
-                    AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionManualChoice}" />
-          </StackPanel>
-          <StackPanel IsVisible="{Binding HasDefinition}" Spacing="12">
-            <TextBlock Text="{Binding SelectedFormName}" Classes="bodyStrong" TextWrapping="Wrap" />
-            <Button Content="{x:Static resources:Strings.SectionDefinitionChangeForm}" Command="{Binding ChangeFormCommand}" Classes="ghost" HorizontalAlignment="Left"
-                    AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionChangeForm}" />
-            <ItemsControl x:Name="GeometryInputList" ItemsSource="{Binding GeometryInputs}" ItemTemplate="{StaticResource DefinitionInput}" IsVisible="{Binding !IsManual}" />
-            <TextBlock Text="{x:Static resources:Strings.SectionDefinitionRadiusHint}" Classes="caption" TextWrapping="Wrap" IsVisible="{Binding HasRadius}" />
-            <StackPanel IsVisible="{Binding IsManual}" Spacing="8">
-              <TextBlock Text="{x:Static resources:Strings.SectionDefinitionAxisConfiguration}" Classes="propertyLabel" />
-              <StackPanel x:Name="ConfigurationOptions" Spacing="6" />
-            </StackPanel>
-            <TextBlock Text="{x:Static resources:Strings.BendingAxis}" Classes="propertyLabel" />
-            <StackPanel x:Name="AxisOptions" Spacing="6" />
-          </StackPanel>
+        <StackPanel x:Name="HeaderActions" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button x:Name="CancelButton" Content="{x:Static resources:Strings.SectionDefinitionDiscard}" Command="{Binding CancelCommand}"
+              Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionDiscard}" />
+          <Grid x:Name="LibrarySaveAction" ColumnDefinitions="Auto,18" ColumnSpacing="6" IsVisible="{Binding ShowLibraryAction}">
+            <Button x:Name="SaveLibraryButton" Command="{Binding SaveLibraryCommand}" Classes.librarySaveError="{Binding HasLibraryError}"
+                Classes="secondary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionAddLibrary}">
+              <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
+                <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_star_16_regular.svg"
+                    Foreground="{Binding Foreground, ElementName=SaveLibraryButton}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.SectionDefinitionAddLibrary}" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <controls:SectionInputHint x:Name="LibraryErrorHint" Grid.Column="1" Classes="inputHint errorHint" IsVisible="{Binding HasLibraryError}"
+                Message="{Binding LibraryError}" VerticalAlignment="Center">
+              <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_error_circle_16_regular.svg" Foreground="{DynamicResource Error}" />
+            </controls:SectionInputHint>
+          </Grid>
+          <Button x:Name="ConfirmButton" Content="{x:Static resources:Strings.Apply}" Command="{Binding ConfirmCommand}"
+              IsVisible="{Binding ShowConfirm}" Classes="primary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.Apply}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+    <Grid Grid.Row="2">
+      <ScrollViewer x:Name="GalleryScroll" IsVisible="{Binding IsChoosingForm}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="FormChooser" Spacing="16" MaxWidth="1090" Margin="32" VerticalAlignment="Center" IsEnabled="{Binding !IsBusy}">
+          <TextBlock Text="{x:Static resources:Strings.SectionDefinitionGalleryTitle}" FontSize="24" FontWeight="SemiBold" />
+          <TextBlock Text="{x:Static resources:Strings.SectionDefinitionGalleryLead}" FontSize="15" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,12" />
+          <TextBlock Text="{x:Static resources:Strings.SectionDefinitionParametricGroup}" Classes="caption" FontWeight="SemiBold" />
+          <ItemsControl ItemsSource="{Binding Forms}" Margin="0,0,-16,0">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SectionDefinitionForm">
+                <Button Height="168" Tag="{Binding Value}" Click="SelectForm" Margin="0,0,16,16" Classes="secondary"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Label}">
+                  <StackPanel Spacing="16" VerticalAlignment="Center">
+                    <controls:SectionShapeIcon Type="{Binding Value}" Width="68" Height="68" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="15" />
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button x:Name="ManualFormButton" Click="SelectManual" Height="58"
+              Classes="secondary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+              AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionManualChoice}">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="{x:Static resources:Strings.SectionDefinitionManualChoice}" TextWrapping="Wrap" />
+              <TextBlock Grid.Column="1" Text="›" Margin="12,0,0,0" />
+            </Grid>
+          </Button>
         </StackPanel>
       </ScrollViewer>
-      <Grid x:Name="PreviewColumn" Grid.Column="1" RowDefinitions="Auto,*" IsVisible="{Binding !IsManual}">
-        <TextBlock Text="{x:Static resources:Strings.SectionDefinitionSketch}" Classes="sectionTitle" />
-        <controls:SectionPreviewControl x:Name="SectionPreview" Grid.Row="1" Geometry="{Binding Preview}" SelectedAxis="{Binding SelectedAxis}"
-            HighlightedParameter="{Binding HighlightedParameter}" UnitProfile="{Binding Presentation.Profile}"
-            AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionSketch}" />
-      </Grid>
-      <Grid x:Name="ValuesColumn" Grid.Column="2" RowDefinitions="Auto,*,Auto" RowSpacing="12">
-        <TextBlock Text="{Binding ValuesTitle}" Classes="sectionTitle" TextWrapping="Wrap" />
-        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" IsEnabled="{Binding !IsBusy}">
-          <StackPanel Spacing="12">
-            <StackPanel x:Name="CalculatedValues" IsVisible="{Binding !IsManual}" Spacing="12">
-              <TextBlock Text="A" Classes="propertyLabel" /><TextBlock Text="{Binding Area}" Classes="technicalValue" />
-              <ItemsControl ItemsSource="{Binding AxisValues}">
+      <Grid x:Name="DefinitionColumns" ColumnDefinitions="*" IsVisible="{Binding HasDefinition}">
+        <Border x:Name="InputColumn" Background="{DynamicResource AppBackground}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0">
+          <Grid x:Name="InputWorkspace" Classes="inputWorkspace" ColumnDefinitions="*,24" RowDefinitions="Auto,Auto,*" IsEnabled="{Binding !IsBusy}">
+            <StackPanel x:Name="PinnedInputs" Classes="sectionInputs">
+              <TextBlock Text="{x:Static resources:Strings.Section}" Classes="sectionTitle" />
+              <Border x:Name="ProfileCard" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="1"
+                  CornerRadius="6" MinHeight="70" Padding="12" Margin="0,0,0,8">
+                <Grid x:Name="ProfileCardContent" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                  <controls:SectionShapeIcon x:Name="SelectedFormIcon" Type="{Binding SelectedFormType}" Width="32" Height="32"
+                      IsVisible="{Binding ShowPreview}" VerticalAlignment="Center" AutomationProperties.Name="{Binding SelectedFormName}" />
+                  <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding SelectedFormName}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{x:Static resources:Strings.SectionDefinitionParametricForm}" Classes="caption" IsVisible="{Binding !IsManual}" TextWrapping="Wrap" />
+                    <TextBlock Text="{x:Static resources:Strings.SectionDefinitionManualFormDescription}" Classes="caption" IsVisible="{Binding IsManual}" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <Button x:Name="ChangeFormButton" Grid.Column="2" Content="{x:Static resources:Strings.SectionDefinitionChangeProfile}"
+                      Command="{Binding ChangeFormCommand}" IsVisible="{Binding HasDefinition}" Classes="ghost" Foreground="{DynamicResource Accent}" Padding="0" VerticalAlignment="Center"
+                      AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionChangeForm}" />
+                </Grid>
+              </Border>
+              <StackPanel Classes="dimensionsPanel" IsVisible="{Binding !IsManual}">
+                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionDimensions}" FontSize="15" FontWeight="SemiBold" />
+                <ItemsControl x:Name="GeometryInputList" ItemsSource="{Binding GeometryInputs}" ItemTemplate="{StaticResource DefinitionInput}" />
+                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionDimensionHint}" Classes="caption" TextWrapping="Wrap" />
+              </StackPanel>
+              <StackPanel IsVisible="{Binding IsManual}" Spacing="12">
+                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionAxisConfiguration}" Classes="definitionLabel" TextWrapping="Wrap" />
+                <StackPanel x:Name="ConfigurationOptions" Spacing="8" />
+              </StackPanel>
+            </StackPanel>
+            <StackPanel x:Name="LibraryHeading" Grid.Row="1" Classes="libraryHeading" IsVisible="{Binding ShowLibraryOption}">
+              <Border Height="1" Background="{DynamicResource Border}" />
+              <TextBlock Text="{x:Static resources:Strings.SectionDefinitionFromLibrary}" FontSize="15" FontWeight="SemiBold" />
+            </StackPanel>
+            <ScrollViewer x:Name="LibraryScroll" Grid.Row="2" Grid.ColumnSpan="2" IsVisible="{Binding ShowLibraryOption}"
+                HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+              <StackPanel x:Name="LibraryContent" Spacing="12" Width="{Binding Bounds.Width, ElementName=PinnedInputs}" HorizontalAlignment="Left">
+                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionLibraryMatches}" Classes="caption" TextWrapping="Wrap" />
+                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionLibraryEmpty}" IsVisible="{Binding IsLibraryEmpty}" Classes="caption" TextWrapping="Wrap" />
+                <ItemsControl x:Name="LibraryEntryList" ItemsSource="{Binding LibraryEntries}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SectionDefinitionPreset">
+                      <Button Click="LoadPreset" Classes="secondary" Height="NaN" MinHeight="62" Padding="12,10" Margin="0,0,0,8"
+                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding Summary}" Classes="caption" TextWrapping="Wrap" />
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+        <Grid x:Name="PreviewColumn" Grid.Column="0" IsVisible="{Binding ShowPreview}" Background="{DynamicResource CanvasBackground}" RowDefinitions="Auto,*">
+          <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="24,16">
+            <TextBlock Text="{x:Static resources:Strings.SectionDefinitionSketch}" FontSize="15" FontWeight="SemiBold" />
+          </Border>
+          <Border Grid.RowSpan="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0" IsHitTestVisible="False" />
+          <controls:SectionPreviewControl x:Name="SectionPreview" Grid.Row="1" Margin="16" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+              Geometry="{Binding Preview}" SelectedAxis="{Binding SelectedAxis}" HighlightedParameter="{Binding HighlightedParameter}" UnitProfile="{Binding Presentation.Profile}"
+              AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionSketch}" />
+        </Grid>
+        <Grid x:Name="ValuesColumn" Background="{DynamicResource AppBackground}" Classes.manualValues="{Binding IsManual}" Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="16" Margin="12,24,12,24" Grid.IsSharedSizeScope="True" IsVisible="{Binding ShowValues}">
+          <TextBlock Text="{Binding ValuesTitle}" Classes="sectionTitle" TextWrapping="Wrap" Margin="12,0,12,0" />
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" IsEnabled="{Binding !IsBusy}">
+            <StackPanel Spacing="16">
+              <controls:SectionPropertyRow x:Name="CalculatedValues" IsVisible="{Binding !IsManual}" Label="{Binding AreaLabel}" Value="{Binding Area}" Margin="12,0,12,0" />
+              <ItemsControl x:Name="ManualAreaInputList" ItemsSource="{Binding ManualAreaInputs}" ItemTemplate="{StaticResource DefinitionInput}" IsVisible="{Binding IsManual}" Margin="12,0,12,0" />
+              <TextBlock x:Name="AxisSelectionHint" Text="{x:Static resources:Strings.SectionDefinitionSelectAxis}" IsVisible="{Binding RequiresAxisSelection}" Classes="caption" TextWrapping="Wrap" />
+              <ItemsControl x:Name="AxisValueList" ItemsSource="{Binding AxisValues}" IsVisible="{Binding !IsManual}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:SectionDefinitionAxisValue">
-                    <Border Classes.selected="{Binding IsSelected}" Padding="8" Margin="0,0,0,8" BorderThickness="2,0,0,0" BorderBrush="{DynamicResource Border}">
+                    <controls:SectionAxisBlock IsSelected="{Binding IsSelected}" IsSelectable="{Binding IsSelectable}" Selected="AxisBlockSelected" AutomationProperties.Name="{Binding Label}">
                       <StackPanel Spacing="8">
-                        <TextBlock Text="{Binding Label}" Classes="bodyStrong" />
-                        <Grid ColumnDefinitions="40,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
-                          <TextBlock Text="{Binding InertiaLabel}" /><TextBlock Grid.Column="1" Text="{Binding Inertia}" Classes="technicalValue" TextWrapping="Wrap" />
-                          <TextBlock Grid.Row="1" Text="{Binding PositiveLabel}" /><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PositiveModulus}" Classes="technicalValue" TextWrapping="Wrap" />
-                          <TextBlock Grid.Row="2" Text="{Binding NegativeLabel}" /><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding NegativeModulus}" Classes="technicalValue" TextWrapping="Wrap" />
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                          <Border Width="16" Height="16" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource Accent}" Background="{DynamicResource Surface}" IsVisible="{Binding IsSelectable}" VerticalAlignment="Center">
+                            <Ellipse Width="8" Height="8" Fill="{DynamicResource Accent}" IsVisible="{Binding IsSelected}" />
+                          </Border>
+                          <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="definitionAxisTitle" TextWrapping="Wrap" Margin="0,0,0,12" />
                         </Grid>
+                        <controls:SectionPropertyRow Label="{Binding InertiaLabel}" Value="{Binding Inertia}" />
+                        <controls:SectionPropertyRow Label="{Binding PositiveLabel}" Value="{Binding PositiveModulus}" />
+                        <controls:SectionPropertyRow Label="{Binding NegativeLabel}" Value="{Binding NegativeModulus}" />
                       </StackPanel>
-                    </Border>
+                    </controls:SectionAxisBlock>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Text="{x:Static resources:Strings.SectionDefinitionCompleteHint}" IsVisible="{Binding !HasValidSection}" Classes="caption" TextWrapping="Wrap" />
+              <ItemsControl x:Name="ManualInputList" ItemsSource="{Binding AxisValues}" IsVisible="{Binding IsManual}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SectionDefinitionAxisValue">
+                    <controls:SectionAxisBlock IsSelected="{Binding IsSelected}" IsSelectable="{Binding IsSelectable}" Selected="AxisBlockSelected" AutomationProperties.Name="{Binding Label}">
+                      <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                          <Border Width="16" Height="16" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource Accent}" Background="{DynamicResource Surface}" IsVisible="{Binding IsSelectable}" VerticalAlignment="Center">
+                            <Ellipse Width="8" Height="8" Fill="{DynamicResource Accent}" IsVisible="{Binding IsSelected}" />
+                          </Border>
+                          <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="definitionAxisTitle" TextWrapping="Wrap" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding Inputs}" ItemTemplate="{StaticResource DefinitionInput}" />
+                      </StackPanel>
+                    </controls:SectionAxisBlock>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </StackPanel>
-            <ItemsControl x:Name="ManualInputList" ItemsSource="{Binding ManualInputs}" ItemTemplate="{StaticResource DefinitionInput}" IsVisible="{Binding IsManual}" />
-          </StackPanel>
-        </ScrollViewer>
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-          <Button Content="{x:Static resources:Strings.Cancel}" Command="{Binding CancelCommand}" Classes="secondary" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
-          <Button x:Name="ConfirmButton" Content="{x:Static resources:Strings.Apply}" Command="{Binding ConfirmCommand}" Classes="primary" AutomationProperties.Name="{x:Static resources:Strings.Apply}" />
-        </StackPanel>
+          </ScrollViewer>
+        </Grid>
       </Grid>
     </Grid>
   </Grid>
-  </Border>
-  <UserControl.Styles>
-    <Style Selector="Border.selected"><Setter Property="BorderBrush" Value="{DynamicResource Accent}" /><Setter Property="Background" Value="{DynamicResource AccentSubtle}" /></Style>
-  </UserControl.Styles>
 </UserControl>

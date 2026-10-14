@@ -34,6 +34,8 @@
     <EmbeddedResource Include="../../LICENSE" LogicalName="SpanDraft.Desktop.LICENSE" />
     <EmbeddedResource Include="Libraries/material-catalog.json" LogicalName="SpanDraft.Desktop.Libraries.material-catalog.json" />
     <AvaloniaResource Include="Assets/Icons/Toolbar/*.svg" />
+    <AvaloniaResource Include="Assets/Icons/Fluent/*.svg" />
+    <None Update="Assets/Icons/Fluent/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <AvaloniaResource Include="Assets/AppIcon/SpanDraft.ico" />
     <AvaloniaResource Include="Assets/AppIcon/app-icon-1024.png" />
   </ItemGroup>

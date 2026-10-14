@@ -11,7 +11,7 @@ namespace SpanDraft.Desktop.Views;
 public partial class ProjectSetupView : UserControl
 {
     private ProjectSetupViewModel? _model;
-    private SectionDefinitionWindow? _definitionWindow;
+    private bool _definitionOpen;
     public ProjectSetupView()
     {
         InitializeComponent();
@@ -20,15 +20,37 @@ public partial class ProjectSetupView : UserControl
         DetachedFromVisualTree += (_, _) => { if (_model is not null) _model.PropertyChanged -= ModelChanged; _model = null; };
         AddHandler(KeyDownEvent, SetupKeyDown, RoutingStrategies.Bubble);
     }
-    private async void TestSectionDefinition(object? sender, RoutedEventArgs e)
+    private void TestSectionDefinition(object? sender, RoutedEventArgs e)
     {
-        if (_model is not { Mode: ProjectSetupMode.Create, IsBusy: false } model || _definitionWindow is not null
+        if (_definitionOpen || _model is not { Mode: ProjectSetupMode.Create, IsBusy: false } model
             || TopLevel.GetTopLevel(this) is not Window owner) return;
         var library = model.Libraries is { } main ? new Sections.SectionDefinitionLibrary(main) : null;
-        var dialog = new SectionDefinitionWindow(new(model.ResultPresentation, library)) { Icon = owner.Icon };
-        _definitionWindow = dialog;
-        try { _ = await dialog.ShowDialog<Sections.SectionDefinitionResult?>(owner); }
-        finally { _definitionWindow = null; }
+        var definition = new SectionDefinitionViewModel(model.ResultPresentation, library);
+        var previousContent = owner.Content;
+        var preview = new SectionDefinitionView { DataContext = definition };
+        _definitionOpen = true;
+        definition.CloseRequested += ReturnToSetup;
+        owner.Closing += GuardSave;
+        owner.Closed += OwnerClosed;
+        // Keep the actual application window, its native chrome and its current geometry.
+        // This remains a preview: accepting a section does not change project/setup state.
+        owner.Content = preview;
+
+        void ReturnToSetup(Sections.SectionDefinitionResult? result)
+        {
+            Cleanup();
+            owner.Content = previousContent;
+        }
+        void GuardSave(object? sender, WindowClosingEventArgs args)
+        { if (definition.IsBusy) args.Cancel = true; }
+        void OwnerClosed(object? sender, EventArgs args) => Cleanup();
+        void Cleanup()
+        {
+            definition.CloseRequested -= ReturnToSetup;
+            owner.Closing -= GuardSave;
+            owner.Closed -= OwnerClosed;
+            _definitionOpen = false;
+        }
     }
     private void Observe()
     {

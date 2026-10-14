@@ -5,6 +5,25 @@ namespace SpanDraft.Desktop.Resources;
 
 public static class Strings
 {
+    public static string SectionDefinitionShapeI => Get(nameof(SectionDefinitionShapeI));
+    public static string SectionDefinitionArea => Get(nameof(SectionDefinitionArea));
+    public static string SectionDefinitionInertia => Get(nameof(SectionDefinitionInertia));
+    public static string SectionDefinitionModulus => Get(nameof(SectionDefinitionModulus));
+    public static string SectionDefinitionHeight => Get(nameof(SectionDefinitionHeight));
+    public static string SectionDefinitionWidth => Get(nameof(SectionDefinitionWidth));
+    public static string SectionDefinitionFlangeWidth => Get(nameof(SectionDefinitionFlangeWidth));
+    public static string SectionDefinitionDiameter => Get(nameof(SectionDefinitionDiameter));
+    public static string SectionDefinitionOuterDiameter => Get(nameof(SectionDefinitionOuterDiameter));
+    public static string SectionDefinitionThickness => Get(nameof(SectionDefinitionThickness));
+    public static string SectionDefinitionWallThickness => Get(nameof(SectionDefinitionWallThickness));
+    public static string SectionDefinitionWebThickness => Get(nameof(SectionDefinitionWebThickness));
+    public static string SectionDefinitionFlangeThickness => Get(nameof(SectionDefinitionFlangeThickness));
+    public static string SectionDefinitionOuterRadius => Get(nameof(SectionDefinitionOuterRadius));
+    public static string SectionDefinitionInnerRadius => Get(nameof(SectionDefinitionInnerRadius));
+    public static string SectionDefinitionSelectAxis => Get(nameof(SectionDefinitionSelectAxis));
+    public static string SectionDefinitionEquivalent => Get(nameof(SectionDefinitionEquivalent));
+    public static string SectionDefinitionStrongAxis => Get(nameof(SectionDefinitionStrongAxis));
+    public static string SectionDefinitionWeakAxis => Get(nameof(SectionDefinitionWeakAxis));
     public static string SectionDefinitionCustomName => Get(nameof(SectionDefinitionCustomName));
     public static string SectionDefinitionManualProperties => Get(nameof(SectionDefinitionManualProperties));
     public static string SectionDefinitionTitle => Get(nameof(SectionDefinitionTitle));
@@ -251,4 +270,21 @@ public static class Strings
     public static string SelectMaterialRequired => Get(nameof(SelectMaterialRequired));
     public static string DeleteMaterialQuestion => Get(nameof(DeleteMaterialQuestion));
     public static string DeleteSectionQuestion => Get(nameof(DeleteSectionQuestion));
+    public static string SectionDefinitionChooseTitle => Get(nameof(SectionDefinitionChooseTitle));
+    public static string SectionDefinitionGalleryTitle => Get(nameof(SectionDefinitionGalleryTitle));
+    public static string SectionDefinitionGalleryLead => Get(nameof(SectionDefinitionGalleryLead));
+    public static string SectionDefinitionResetName => Get(nameof(SectionDefinitionResetName));
+    public static string SectionDefinitionAutomatic => Get(nameof(SectionDefinitionAutomatic));
+    public static string SectionDefinitionDiscard => Get(nameof(SectionDefinitionDiscard));
+    public static string SectionDefinitionAddLibrary => Get(nameof(SectionDefinitionAddLibrary));
+    public static string SectionDefinitionFromLibrary => Get(nameof(SectionDefinitionFromLibrary));
+    public static string SectionDefinitionLibraryMatches => Get(nameof(SectionDefinitionLibraryMatches));
+    public static string SectionDefinitionLibraryEmpty => Get(nameof(SectionDefinitionLibraryEmpty));
+    public static string SectionDefinitionLibrarySaved => Get(nameof(SectionDefinitionLibrarySaved));
+    public static string SectionDefinitionParametricForm => Get(nameof(SectionDefinitionParametricForm));
+    public static string SectionDefinitionManualFormDescription => Get(nameof(SectionDefinitionManualFormDescription));
+    public static string SectionDefinitionChangeProfile => Get(nameof(SectionDefinitionChangeProfile));
+    public static string SectionDefinitionParametricGroup => Get(nameof(SectionDefinitionParametricGroup));
+    public static string SectionDefinitionDimensions => Get(nameof(SectionDefinitionDimensions));
+    public static string SectionDefinitionDimensionHint => Get(nameof(SectionDefinitionDimensionHint));
 }

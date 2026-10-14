@@ -9,6 +9,7 @@ public sealed record SectionDefinitionResult(ISectionDefinition Section, Section
 /// <summary>Library access only; the definition editor does not own a project or persistence.</summary>
 public interface ISectionDefinitionLibrary
 {
+    IReadOnlyList<SectionLibraryEntry> Entries { get; }
     bool CanSave { get; }
     string? Error { get; }
     bool ContainsName(string name);
@@ -17,6 +18,7 @@ public interface ISectionDefinitionLibrary
 
 internal sealed class SectionDefinitionLibrary(MainWindowViewModel main) : ISectionDefinitionLibrary
 {
+    public IReadOnlyList<SectionLibraryEntry> Entries => main.UserSections.All;
     public bool CanSave => main.CanSaveSections && !main.IsBusy;
     public string? Error => main.SectionLibraryError;
     public bool ContainsName(string name) => main.UserSections.Find(name) is not null;
