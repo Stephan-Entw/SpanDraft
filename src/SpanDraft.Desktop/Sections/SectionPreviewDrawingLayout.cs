@@ -121,8 +121,8 @@ public sealed class SectionPreviewDrawingLayout
             if (direction.Length == 0) direction = geometry.Type == SectionEditorType.TSection ? new Vector(1, 1) : new Vector(1, -1);
             return direction / direction.Length;
         }
-        bool IsFixedWebMeasure(string key) => key == "tw"
-            && geometry.Type is SectionEditorType.ISection or SectionEditorType.USection or SectionEditorType.TSection;
+        bool hasFixedWebDimension = geometry.Type is SectionEditorType.ISection or SectionEditorType.USection or SectionEditorType.TSection;
+        bool IsFixedWebMeasure(string key) => hasFixedWebDimension && key == "tw";
         bool CaptionCoversMaterial(Rect text)
         {
             if (!bounds.Intersects(text)) return false;
@@ -169,7 +169,7 @@ public sealed class SectionPreviewDrawingLayout
                 ? new[] { bounds.Bottom - bounds.Height * (geometry.Type == SectionEditorType.TSection ? TWebHeightFraction : WebHeightFraction) - start.Y }
                 : new[] { -24d, 24d, -40d, 40d, -56d, 56d, -72d, 72d, -88d, 88d, -104d, 104d }
                     .Concat(new[] { 12d, 20d, 36d, 52d, 68d }.SelectMany(gap => new[] { bounds.Bottom + gap - start.Y, bounds.Top - gap - start.Y }));
-            var verticalOffsets = IsFixedWebMeasure("tw")
+            var verticalOffsets = hasFixedWebDimension
                 ? new[] { 32d, 36d, 38d, 46d, 60d, 6d, 10d, 14d, 18d, 22d, 26d,
                     size.Width - bounds.Right - PreviewDrawingArrow.HalfWidth - 4 }
                 : new[] { 32d, 36d, 38d, 46d, 60d };
@@ -194,8 +194,8 @@ public sealed class SectionPreviewDrawingLayout
                     ? Enumerable.Range((int)WebCaptionGap, Math.Max(1,
                         (int)Math.Floor(size.Width - b.X - textSizes[dimension.Key].Width - 4) - (int)WebCaptionGap + 1))
                         .Select(gap => (double)gap) : new[] { 18d })
-                foreach (bool captionOnLeft in vertical && IsFixedWebMeasure("tw") ? new[] { false, true } : new[] { false })
-                foreach (double captionOffset in vertical && IsFixedWebMeasure("tw")
+                foreach (bool captionOnLeft in vertical && hasFixedWebDimension ? new[] { false, true } : new[] { false })
+                foreach (double captionOffset in vertical && hasFixedWebDimension
                     ? new[] { 0d, -textSizes[dimension.Key].Height - 8, textSizes[dimension.Key].Height + 8 } : new[] { 0d })
                 {
                     var caption = Caption(dimension.Key, new(vertical
@@ -243,7 +243,7 @@ public sealed class SectionPreviewDrawingLayout
         }
         // Resolve the fixed web and its straight radius line before the flange's
         // flexible outer annotation, so impossible radius positions are tried once.
-        var details = geometry.Dimensions.Values.Where(IsDetail).OrderBy(d => IsFixedWebMeasure("tw")
+        var details = geometry.Dimensions.Values.Where(IsDetail).OrderBy(d => hasFixedWebDimension
             ? d.Key switch { "tw" => 0, "r" => 1, _ => 2 } : d.Key == "r" ? 1 : 0).ToArray();
         var candidates = details.Select(d => Candidates(d)
             .DistinctBy(candidate => (candidate.TextBounds, candidate.Lines[0], candidate.Lines[^1])).ToArray()).ToArray();

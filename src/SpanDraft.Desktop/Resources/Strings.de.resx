@@ -263,7 +263,6 @@
   <data name="SectionDefinitionDiscard" xml:space="preserve"><value>Änderungen verwerfen</value></data>
   <data name="SectionDefinitionAddLibrary" xml:space="preserve"><value>Zur Bibliothek hinzufügen</value></data>
   <data name="SectionDefinitionFromLibrary" xml:space="preserve"><value>Aus meiner Bibliothek</value></data>
-  <data name="SectionDefinitionLibraryMatches" xml:space="preserve"><value>Gespeicherte Profile dieser Form</value></data>
   <data name="SectionDefinitionLibraryEmpty" xml:space="preserve"><value>Für diese Form sind noch keine Profile gespeichert.</value></data>
   <data name="SectionDefinitionLibrarySaved" xml:space="preserve"><value>Profil zur Bibliothek hinzugefügt.</value></data>
   <data name="SectionDefinitionDimensions" xml:space="preserve"><value>Abmessungen</value></data>

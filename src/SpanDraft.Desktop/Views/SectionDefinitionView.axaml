@@ -140,17 +140,19 @@
         <StackPanel x:Name="HeaderActions" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
           <Button x:Name="CancelButton" Content="{x:Static resources:Strings.SectionDefinitionDiscard}" Command="{Binding CancelCommand}"
               Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionDiscard}" />
-          <Grid x:Name="LibrarySaveAction" ColumnDefinitions="Auto,18" ColumnSpacing="6" IsVisible="{Binding ShowLibraryAction}">
+          <Grid x:Name="LibrarySaveAction" ColumnDefinitions="Auto,Auto" IsVisible="{Binding ShowLibraryAction}">
             <Button x:Name="SaveLibraryButton" Command="{Binding SaveLibraryCommand}" Classes.librarySaveError="{Binding HasLibraryError}"
                 Classes="secondary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionAddLibrary}">
               <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
                 <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_star_16_regular.svg"
-                    Foreground="{Binding Foreground, ElementName=SaveLibraryButton}" VerticalAlignment="Center" />
+                    Foreground="{Binding Foreground, ElementName=SaveLibraryButton}" VerticalAlignment="Center">
+                  <controls:SectionFluentIcon.RenderTransform><TranslateTransform Y="-1" /></controls:SectionFluentIcon.RenderTransform>
+                </controls:SectionFluentIcon>
                 <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.SectionDefinitionAddLibrary}" VerticalAlignment="Center" />
               </Grid>
             </Button>
             <controls:SectionInputHint x:Name="LibraryErrorHint" Grid.Column="1" Classes="inputHint errorHint" IsVisible="{Binding HasLibraryError}"
-                Message="{Binding LibraryError}" VerticalAlignment="Center">
+                Message="{Binding LibraryError}" VerticalAlignment="Center" Margin="6,0,0,0">
               <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_error_circle_16_regular.svg" Foreground="{DynamicResource Error}" />
             </controls:SectionInputHint>
           </Grid>
@@ -191,7 +193,7 @@
       </ScrollViewer>
       <Grid x:Name="DefinitionColumns" ColumnDefinitions="*" IsVisible="{Binding HasDefinition}">
         <Border x:Name="InputColumn" Background="{DynamicResource AppBackground}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0">
-          <Grid x:Name="InputWorkspace" Classes="inputWorkspace" ColumnDefinitions="*,24" RowDefinitions="Auto,Auto,*" IsEnabled="{Binding !IsBusy}">
+          <Grid x:Name="InputWorkspace" Classes="inputWorkspace" ColumnDefinitions="*,24" RowDefinitions="Auto,*" IsEnabled="{Binding !IsBusy}">
             <StackPanel x:Name="PinnedInputs" Classes="sectionInputs">
               <TextBlock Text="{x:Static resources:Strings.Section}" Classes="sectionTitle" />
               <Border x:Name="ProfileCard" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="1"
@@ -219,30 +221,31 @@
                 <StackPanel x:Name="ConfigurationOptions" Spacing="8" />
               </StackPanel>
             </StackPanel>
-            <StackPanel x:Name="LibraryHeading" Grid.Row="1" Classes="libraryHeading" IsVisible="{Binding ShowLibraryOption}">
-              <Border Height="1" Background="{DynamicResource Border}" />
-              <TextBlock Text="{x:Static resources:Strings.SectionDefinitionFromLibrary}" FontSize="15" FontWeight="SemiBold" />
-            </StackPanel>
-            <ScrollViewer x:Name="LibraryScroll" Grid.Row="2" Grid.ColumnSpan="2" IsVisible="{Binding ShowLibraryOption}"
-                HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-              <StackPanel x:Name="LibraryContent" Spacing="12" Width="{Binding Bounds.Width, ElementName=PinnedInputs}" HorizontalAlignment="Left">
-                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionLibraryMatches}" Classes="caption" TextWrapping="Wrap" />
-                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionLibraryEmpty}" IsVisible="{Binding IsLibraryEmpty}" Classes="caption" TextWrapping="Wrap" />
-                <ItemsControl x:Name="LibraryEntryList" ItemsSource="{Binding LibraryEntries}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:SectionDefinitionPreset">
-                      <Button Click="LoadPreset" Classes="secondary" Height="NaN" MinHeight="62" Padding="12,10" Margin="0,0,0,8"
-                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
-                        <StackPanel Spacing="4">
-                          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                          <TextBlock Text="{Binding Summary}" Classes="caption" TextWrapping="Wrap" />
-                        </StackPanel>
-                      </Button>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
+            <Grid x:Name="LibraryQuickSelection" Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,24" RowDefinitions="Auto,*">
+              <StackPanel x:Name="LibraryHeading" Classes="libraryHeading">
+                <Border Height="1" Background="{DynamicResource Border}" />
+                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionFromLibrary}" FontSize="15" FontWeight="SemiBold" />
               </StackPanel>
-            </ScrollViewer>
+              <ScrollViewer x:Name="LibraryScroll" Grid.Row="1" Grid.ColumnSpan="2"
+                  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="LibraryContent" Spacing="12" Width="{Binding Bounds.Width, ElementName=PinnedInputs}" HorizontalAlignment="Left">
+                  <TextBlock Text="{x:Static resources:Strings.SectionDefinitionLibraryEmpty}" IsVisible="{Binding IsLibraryEmpty}" Classes="caption" TextWrapping="Wrap" />
+                  <ItemsControl x:Name="LibraryEntryList" ItemsSource="{Binding LibraryEntries}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:SectionDefinitionPreset">
+                        <Button Click="LoadPreset" Classes="secondary" Height="NaN" MinHeight="62" Padding="12,10" Margin="0,0,0,8"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Summary}" Classes="caption" TextWrapping="Wrap" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </ScrollViewer>
+            </Grid>
           </Grid>
         </Border>
         <Grid x:Name="PreviewColumn" Grid.Column="0" IsVisible="{Binding ShowPreview}" Background="{DynamicResource CanvasBackground}" RowDefinitions="Auto,*">
@@ -260,17 +263,17 @@
             <StackPanel Spacing="16">
               <controls:SectionPropertyRow x:Name="CalculatedValues" IsVisible="{Binding !IsManual}" Label="{Binding AreaLabel}" Value="{Binding Area}" Margin="12,0,12,0" />
               <ItemsControl x:Name="ManualAreaInputList" ItemsSource="{Binding ManualAreaInputs}" ItemTemplate="{StaticResource DefinitionInput}" IsVisible="{Binding IsManual}" Margin="12,0,12,0" />
-              <TextBlock x:Name="AxisSelectionHint" Text="{x:Static resources:Strings.SectionDefinitionSelectAxis}" IsVisible="{Binding RequiresAxisSelection}" Classes="caption" TextWrapping="Wrap" />
+              <TextBlock x:Name="AxisSelectionHint" Text="{x:Static resources:Strings.SectionDefinitionSelectAxis}" IsVisible="{Binding RequiresAxisSelection}" Classes="caption" TextWrapping="Wrap" Margin="12,0,12,0" />
               <ItemsControl x:Name="AxisValueList" ItemsSource="{Binding AxisValues}" IsVisible="{Binding !IsManual}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:SectionDefinitionAxisValue">
                     <controls:SectionAxisBlock IsSelected="{Binding IsSelected}" IsSelectable="{Binding IsSelectable}" Selected="AxisBlockSelected" AutomationProperties.Name="{Binding Label}">
                       <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,0,0,12">
                           <Border Width="16" Height="16" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource Accent}" Background="{DynamicResource Surface}" IsVisible="{Binding IsSelectable}" VerticalAlignment="Center">
                             <Ellipse Width="8" Height="8" Fill="{DynamicResource Accent}" IsVisible="{Binding IsSelected}" />
                           </Border>
-                          <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="definitionAxisTitle" TextWrapping="Wrap" Margin="0,0,0,12" />
+                          <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="definitionAxisTitle" TextWrapping="Wrap" VerticalAlignment="Center" />
                         </Grid>
                         <controls:SectionPropertyRow Label="{Binding InertiaLabel}" Value="{Binding Inertia}" />
                         <controls:SectionPropertyRow Label="{Binding PositiveLabel}" Value="{Binding PositiveModulus}" />
@@ -289,7 +292,7 @@
                           <Border Width="16" Height="16" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource Accent}" Background="{DynamicResource Surface}" IsVisible="{Binding IsSelectable}" VerticalAlignment="Center">
                             <Ellipse Width="8" Height="8" Fill="{DynamicResource Accent}" IsVisible="{Binding IsSelected}" />
                           </Border>
-                          <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="definitionAxisTitle" TextWrapping="Wrap" />
+                          <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="definitionAxisTitle" TextWrapping="Wrap" VerticalAlignment="Center" />
                         </Grid>
                         <ItemsControl ItemsSource="{Binding Inputs}" ItemTemplate="{StaticResource DefinitionInput}" />
                       </StackPanel>

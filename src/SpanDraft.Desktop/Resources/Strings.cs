@@ -278,7 +278,6 @@ public static class Strings
     public static string SectionDefinitionDiscard => Get(nameof(SectionDefinitionDiscard));
     public static string SectionDefinitionAddLibrary => Get(nameof(SectionDefinitionAddLibrary));
     public static string SectionDefinitionFromLibrary => Get(nameof(SectionDefinitionFromLibrary));
-    public static string SectionDefinitionLibraryMatches => Get(nameof(SectionDefinitionLibraryMatches));
     public static string SectionDefinitionLibraryEmpty => Get(nameof(SectionDefinitionLibraryEmpty));
     public static string SectionDefinitionLibrarySaved => Get(nameof(SectionDefinitionLibrarySaved));
     public static string SectionDefinitionParametricForm => Get(nameof(SectionDefinitionParametricForm));

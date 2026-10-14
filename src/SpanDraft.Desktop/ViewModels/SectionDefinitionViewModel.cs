@@ -23,6 +23,8 @@ public sealed class SectionDefinitionViewModel : ObservableObject
 {
     private sealed class FormDraft
     {
+        public string AutomaticName { get; set; } = "";
+        public string? CustomName { get; set; }
         public Dictionary<string, SectionDefinitionInput> Inputs { get; } = [];
         public Dictionary<ManualAxisConfiguration, SectionAxisDesignation?> ManualAxisSelections { get; } = [];
         public ManualAxisConfiguration Configuration { get; set; } = ManualAxisConfiguration.Y;
@@ -34,8 +36,8 @@ public sealed class SectionDefinitionViewModel : ObservableObject
     private readonly ISectionDefinitionLibrary? _library;
     private readonly ResultPresentationOptions _presentation;
     private SectionEditorType? _type;
-    private bool _choosing = true, _busy, _editingName, _customName;
-    private string _name, _pendingName = "";
+    private bool _choosing = true, _busy, _editingName;
+    private string _pendingName = "";
     private string? _nameError, _saveError, _highlight;
     private ISectionDefinition? _section;
     private IReadOnlyList<SectionDefinitionAxisValue> _axisValues = [];
@@ -45,7 +47,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
         bool showLibraryOption = true)
     {
         _presentation = presentation ?? ResultPresentationOptions.Default; _library = library;
-        ShowLibraryOption = showLibraryOption; _name = Strings.SectionDefinitionTitle;
+        ShowLibraryOption = showLibraryOption;
         Forms = new[]
         {
             new SectionDefinitionForm(SectionEditorType.Rectangle, Strings.ShapeRectangle),
@@ -82,13 +84,13 @@ public sealed class SectionDefinitionViewModel : ObservableObject
     public bool ShowPreview => LayoutState is SectionDefinitionLayout.ParametricDraft or SectionDefinitionLayout.ParametricSection;
     public bool ShowValues => LayoutState is SectionDefinitionLayout.ParametricSection or SectionDefinitionLayout.Manual;
     public bool ShowConfirm => HasDefinition;
-    public bool ShowLibraryAction => ShowLibraryOption && HasDefinition;
+    public bool ShowLibraryAction => ShowLibraryOption && HasCommittedInputs && !string.IsNullOrWhiteSpace(DisplayName);
     public bool HasPreview => ShowPreview && Preview is not null;
     public string ValuesTitle => IsManual ? Strings.SectionDefinitionManualProperties : Strings.SectionDefinitionProperties;
     public string SelectedFormName => IsManual ? Strings.SectionDefinitionManualChoice : Forms.FirstOrDefault(f => f.Value == _type)?.Label ?? "";
     public bool IsBusy => _busy;
     public bool IsEditingName => _editingName;
-    public string DisplayName => _name;
+    public string DisplayName => _type is null ? Strings.SectionDefinitionTitle : Current.CustomName ?? Current.AutomaticName;
     public string PendingName
     {
         get => _pendingName;
@@ -102,7 +104,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
     public string? NameError => _nameError;
     public bool HasNameError => NameError is not null;
     public bool ShowLibraryOption { get; }
-    public bool HasCustomName => _customName;
+    public bool HasCustomName => _type is not null && Current.CustomName is not null;
     public bool ShowResetName => HasDefinition && IsEditingName;
     public string HeaderTitle => IsChoosingForm ? Strings.SectionDefinitionChooseTitle : DisplayName;
     public string? LibraryError => _saveError;
@@ -206,7 +208,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
 
     public void SelectForm(SectionEditorType type)
     {
-        if (IsBusy || !Enum.IsDefined(type)) return;
+        if (IsBusy || !Enum.IsDefined(type) || !CommitName()) return;
         _type = type; _choosing = false; _highlight = null; _saveError = null;
         if (!_drafts.ContainsKey(type)) _drafts[type] = new();
         EnsureInputs(); NormalizeAxis(); RefreshInputs(); Recalculate(null);
@@ -263,7 +265,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
         }
         else
         {
-            Notify(nameof(CanConfirm)); Notify(nameof(CanSaveLibrary));
+            Notify(nameof(CanConfirm)); Notify(nameof(ShowLibraryAction)); Notify(nameof(CanSaveLibrary));
             ConfirmCommand.Refresh(); SaveLibraryCommand.Refresh();
         }
     }
@@ -329,33 +331,32 @@ public sealed class SectionDefinitionViewModel : ObservableObject
     }
     private void UpdateAutomaticName(Dictionary<string, double> values)
     {
-        if (_customName) return;
-        if (IsManual) { _name = Strings.SectionDefinitionCustomName; return; }
+        if (IsManual) { Current.AutomaticName = Strings.SectionDefinitionCustomName; return; }
         string[] main = SectionPreviewGeometryResolver.ParameterKeys(_type!.Value).Where(k => k != "r").ToArray();
-        _name = SelectedFormName;
+        var name = SelectedFormName;
         if (main.All(values.ContainsKey))
         {
             var unit = Presentation.Profile[QuantityKind.SectionDimension];
-            _name += " " + (_type is SectionEditorType.Circle or SectionEditorType.CircularHollow ? "Ø" : "")
+            name += " " + (_type is SectionEditorType.Circle or SectionEditorType.CircularHollow ? "Ø" : "")
                 + string.Join(" × ", main.Select(k => InputQuantityFormatter.Display(values[k], unit))) + " " + unit.Symbol;
             if (values.TryGetValue("r", out double radius) && radius > 0)
-                _name += string.Format(CultureInfo.CurrentUICulture, Strings.SectionDefinitionRadiusSuffix, InputQuantityFormatter.Display(radius, unit), unit.Symbol);
+                name += string.Format(CultureInfo.CurrentUICulture, Strings.SectionDefinitionRadiusSuffix, InputQuantityFormatter.Display(radius, unit), unit.Symbol);
         }
+        Current.AutomaticName = name;
     }
     public void BeginNameEdit() { if (!HasDefinition || IsBusy) return; _pendingName = DisplayName; _editingName = true; _nameError = null; Refresh(); }
     public bool CommitName()
     {
         if (!IsEditingName) return true;
         if (string.IsNullOrWhiteSpace(PendingName)) { _nameError = Strings.SectionDefinitionNameRequired; Refresh(); return false; }
-        var name = PendingName.Trim();
-        if (name != DisplayName) { _name = name; _customName = true; }
+        Current.CustomName = PendingName.Trim();
         _editingName = false; _nameError = null; _saveError = null; Refresh(); return true;
     }
     public void CancelNameEdit() { _editingName = false; _nameError = null; Refresh(); }
     public void ResetName()
     {
         if (!HasDefinition || IsBusy) return;
-        _customName = false; _editingName = false; _nameError = null; _saveError = null;
+        Current.CustomName = null; _editingName = false; _nameError = null; _saveError = null;
         UpdateAutomaticName(Parameters.Where(p => p.ConfirmedValue is not null).ToDictionary(p => p.Key, p => p.ConfirmedValue!.Value));
         Refresh();
     }
@@ -397,6 +398,8 @@ public sealed class SectionDefinitionViewModel : ObservableObject
         foreach (var value in values) Current.Inputs[value.Key].Load(value.Value);
         NormalizeAxis();
         if (IsManual) Current.ManualAxisSelections[Current.Configuration] = Current.Axis;
+        Current.CustomName = entry.Name;
+        _editingName = false; _nameError = null;
         _highlight = null; _saveError = null;
         RefreshInputs(); Recalculate(null);
     }

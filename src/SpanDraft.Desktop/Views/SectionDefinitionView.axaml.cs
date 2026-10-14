@@ -18,6 +18,7 @@ public partial class SectionDefinitionView : UserControl
     private bool _observedEditingName;
     private int _nameEditRevision;
     private string? _observedLibraryError;
+    private bool _libraryVisibilityUpdatePending;
     public SectionDefinitionView()
     {
         InitializeComponent();
@@ -30,6 +31,7 @@ public partial class SectionDefinitionView : UserControl
         };
         AddHandler(KeyDownEvent, ViewKeyDown, RoutingStrategies.Bubble);
         NameEditor.AddHandler(LostFocusEvent, NameLostFocus, RoutingStrategies.Bubble);
+        LayoutUpdated += (_,_) => ScheduleLibraryVisibilityUpdate();
     }
     private void Observe()
     {
@@ -74,12 +76,39 @@ public partial class SectionDefinitionView : UserControl
     protected override Avalonia.Size MeasureOverride(Avalonia.Size availableSize)
     {
         Reflow(availableSize.Width);
+        if (double.IsFinite(availableSize.Height))
+            InputWorkspace.Classes.Set("compactSectionInputs", availableSize.Height < 750);
         return base.MeasureOverride(availableSize);
     }
     protected override Avalonia.Size ArrangeOverride(Avalonia.Size finalSize)
     {
         InputWorkspace.Classes.Set("compactSectionInputs", finalSize.Height < 750);
-        return base.ArrangeOverride(finalSize);
+        var arrangedSize = base.ArrangeOverride(finalSize);
+        ScheduleLibraryVisibilityUpdate();
+        return arrangedSize;
+    }
+    private void ScheduleLibraryVisibilityUpdate()
+    {
+        if (_libraryVisibilityUpdatePending || _model?.HasDefinition != true) return;
+        _libraryVisibilityUpdatePending = true;
+        // Changing visibility during Arrange can leave Grid's measured rows stale.
+        // Coalesce updates and apply them after the current layout pass finishes.
+        Dispatcher.UIThread.Post(() =>
+        {
+            _libraryVisibilityUpdatePending = false;
+            UpdateLibraryVisibility();
+        });
+    }
+    private void UpdateLibraryVisibility()
+    {
+        if (_model?.HasDefinition != true || InputWorkspace.Bounds.Width <= 0) return;
+        // Measure the heading itself even when its containing library region is hidden.
+        // This keeps the hypothetical scroll height current after resizing or text reflow.
+        if (!LibraryQuickSelection.IsVisible)
+            LibraryHeading.Measure(new Avalonia.Size(PinnedInputs.Bounds.Width, double.PositiveInfinity));
+        double scrollHeight = InputWorkspace.Bounds.Height - PinnedInputs.DesiredSize.Height - LibraryHeading.DesiredSize.Height;
+        bool visible = _model.ShowLibraryOption && scrollHeight >= 96;
+        if (LibraryQuickSelection.IsVisible != visible) LibraryQuickSelection.IsVisible = visible;
     }
     private void Reflow(double? availableWidth = null)
     {

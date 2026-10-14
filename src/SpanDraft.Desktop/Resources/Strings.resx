@@ -263,7 +263,6 @@
   <data name="SectionDefinitionDiscard" xml:space="preserve"><value>Discard changes</value></data>
   <data name="SectionDefinitionAddLibrary" xml:space="preserve"><value>Add to library</value></data>
   <data name="SectionDefinitionFromLibrary" xml:space="preserve"><value>From my library</value></data>
-  <data name="SectionDefinitionLibraryMatches" xml:space="preserve"><value>Saved profiles of this shape</value></data>
   <data name="SectionDefinitionLibraryEmpty" xml:space="preserve"><value>No profiles saved for this shape yet.</value></data>
   <data name="SectionDefinitionLibrarySaved" xml:space="preserve"><value>Profile added to the library.</value></data>
   <data name="SectionDefinitionDimensions" xml:space="preserve"><value>Dimensions</value></data>
