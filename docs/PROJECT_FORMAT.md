@@ -45,8 +45,11 @@ bleibt auch bei numerisch gleichen Kennwerten erhalten, etwa Kreis Y und Z.
 Das Dokument kann zusätzlich einen optionalen Querschnittsanzeigenamen enthalten.
 Fehlend oder null bedeutet eine automatisch aus der Definition erzeugte Bezeichnung;
 diese folgt der aktuellen Sprache und den Anzeigeeinheiten. Ein gesetzter Name
-ist nichtleer und getrimmt und bleibt auch nach Geometrieänderungen erhalten, bis
-der Anwender ihn ändert oder zur automatischen Bezeichnung zurückkehrt.
+ist nichtleer und getrimmt. Innerhalb des übernommenen Querschnittssnapshots
+bleibt er bei Änderungen seiner Abmessungen erhalten, bis der Anwender ihn
+ändert oder zur automatischen Bezeichnung zurückkehrt. Drafts verschiedener
+Grundformen sind transienter UI-Zustand und besitzen getrennte Namen; nur der
+Anzeigename des aktuell übernommenen Querschnitts wird im Projekt gespeichert.
 Benutzer- und übernommene Bibliotheksnamen verwenden denselben Metadatenvertrag;
 sie enthalten keine Herkunftsreferenz und sind keine mechanische Eigenschaft.
 Die optionale Erweiterung bleibt in V2; historische Dateien benötigen dieses Feld

@@ -28,9 +28,6 @@
         </StackPanel>
       </ScrollViewer>
     </Grid>
-    <Grid IsVisible="{Binding !IsOverview}" RowDefinitions="Auto,*">
-      <TextBlock Text="{Binding Title}" Classes="pageTitle" Margin="32,24,32,0" IsVisible="{Binding !IsSectionDefinition}" />
-      <ContentControl Grid.Row="1" Content="{Binding CurrentStep}" />
-    </Grid>
+    <ContentControl IsVisible="{Binding !IsOverview}" Content="{Binding CurrentStep}" />
   </Grid>
 </UserControl>

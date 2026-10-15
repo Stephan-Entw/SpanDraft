@@ -133,7 +133,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool CanUndo => Mode == MainViewMode.Editor && !IsWorkspaceBusy && Session?.CanUndo == true;
     public bool CanRedo => Mode == MainViewMode.Editor && !IsWorkspaceBusy && Session?.CanRedo == true;
     public string ProjectName => Session?.FilePath is { } path ? Path.GetFileName(path) : Strings.Untitled;
-    public string WindowTitle => Session is null ? Strings.ApplicationTitle
+    public string WindowTitle => Mode == MainViewMode.ProjectSetup && Setup.Mode == ProjectSetupMode.Create
+        ? Strings.NewProject + " — " + Strings.ApplicationTitle : Session is null ? Strings.ApplicationTitle
         : ProjectName + (Session.IsDirty ? "*" : "") + " — " + Strings.ApplicationTitle;
     public object CurrentViewModel => Mode == MainViewMode.ProjectSetup ? Setup : Editor!;
     public AsyncActionCommand NewCommand { get; }

@@ -23,6 +23,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
 {
     private sealed class FormDraft
     {
+        public string? CustomName { get; set; }
         public string AutomaticName { get; set; } = "";
         public Dictionary<string, SectionDefinitionInput> Inputs { get; } = [];
         public Dictionary<ManualAxisConfiguration, SectionAxisDesignation?> ManualAxisSelections { get; } = [];
@@ -37,7 +38,6 @@ public sealed class SectionDefinitionViewModel : ObservableObject
     private SectionEditorType? _type;
     private bool _choosing = true, _busy, _editingName;
     private string _pendingName = "";
-    private string? _customName;
     private string? _nameError, _saveError, _highlight;
     private ISectionDefinition? _section;
     private IReadOnlyList<SectionDefinitionAxisValue> _axisValues = [];
@@ -80,7 +80,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
         _type = FormOf(section); _choosing = false;
         _drafts[_type.Value] = new() { Configuration = section is ManualSectionDefinition
             ? ManualConfiguration(section) : ManualAxisConfiguration.Y, Axis = initial.BendingAxis };
-        _customName = initial.DisplayName;
+        Current.CustomName = initial.DisplayName;
         EnsureInputs();
         foreach (var value in PresetValues(section)) Current.Inputs[value.Key].Load(value.Value);
         if (IsManual) Current.ManualAxisSelections[Current.Configuration] = initial.BendingAxis;
@@ -125,7 +125,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
     public string SelectedFormName => IsManual ? Strings.SectionDefinitionManualChoice : Forms.FirstOrDefault(f => f.Value == _type)?.Label ?? "";
     public bool IsBusy => _busy;
     public bool IsEditingName => _editingName;
-    public string DisplayName => _type is null ? Strings.SectionDefinitionTitle : _customName ?? Current.AutomaticName;
+    public string DisplayName => _type is null ? Strings.SectionDefinitionTitle : Current.CustomName ?? Current.AutomaticName;
     public string PendingName
     {
         get => _pendingName;
@@ -139,7 +139,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
     public string? NameError => _nameError;
     public bool HasNameError => NameError is not null;
     public bool ShowLibraryOption { get; }
-    public bool HasCustomName => _customName is not null;
+    public bool HasCustomName => _type is not null && Current.CustomName is not null;
     public bool ShowResetName => HasDefinition && IsEditingName;
     public string HeaderTitle => IsChoosingForm ? Strings.SectionDefinitionChooseTitle : DisplayName;
     public string? LibraryError => _saveError;
@@ -388,14 +388,14 @@ public sealed class SectionDefinitionViewModel : ObservableObject
         string name = PendingName.Trim();
         if (string.IsNullOrWhiteSpace(name)) { _nameError = Strings.SectionDefinitionNameRequired; Refresh(); return false; }
         if (!string.Equals(name, DisplayName, StringComparison.Ordinal))
-            _customName = name;
+            Current.CustomName = name;
         _editingName = false; _nameError = null; _saveError = null; Refresh(); return true;
     }
     public void CancelNameEdit() { _editingName = false; _nameError = null; Refresh(); }
     public void ResetName()
     {
         if (!HasDefinition || IsBusy) return;
-        _customName = null; _editingName = false; _nameError = null; _saveError = null;
+        Current.CustomName = null; _editingName = false; _nameError = null; _saveError = null;
         UpdateAutomaticName(Parameters.Where(p => p.ConfirmedValue is not null).ToDictionary(p => p.Key, p => p.ConfirmedValue!.Value));
         Refresh();
     }
@@ -437,7 +437,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
         foreach (var value in values) Current.Inputs[value.Key].Load(value.Value);
         NormalizeAxis();
         if (IsManual) Current.ManualAxisSelections[Current.Configuration] = Current.Axis;
-        _customName = entry.Name;
+        Current.CustomName = entry.Name;
         _editingName = false; _nameError = null;
         _highlight = null; _saveError = null;
         RefreshInputs(); Recalculate(null);

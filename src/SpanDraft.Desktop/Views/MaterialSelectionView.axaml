@@ -3,42 +3,69 @@
              x:Class="SpanDraft.Desktop.Views.MaterialSelectionView" x:DataType="vm:MaterialSelectionViewModel">
   <UserControl.Resources>
     <DataTemplate x:Key="MaterialRow" x:DataType="vm:MaterialSelectionItem">
-      <Border Classes="selectionSurface" Margin="0,0,0,8">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-          <StackPanel Spacing="4"><TextBlock Text="{Binding Caption}" TextWrapping="Wrap" Classes="bodyStrong" /><TextBlock Text="{Binding SourceLabel}" Classes="caption" /></StackPanel>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Content="{x:Static resources:Strings.Use}" Command="{Binding UseCommand}" AutomationProperties.Name="{x:Static resources:Strings.Use}" />
-            <Button Content="{Binding EditLabel}" Command="{Binding EditCommand}" AutomationProperties.Name="{Binding EditLabel}" />
-            <Button Content="{x:Static resources:Strings.Delete}" Command="{Binding DeleteCommand}" IsVisible="{Binding IsUser}" AutomationProperties.Name="{x:Static resources:Strings.Delete}" />
-          </StackPanel>
+      <StackPanel Spacing="6">
+        <TextBlock Text="{x:Static resources:Strings.MaterialCurrentEntry}" IsVisible="{Binding IsProject}" Classes="caption" />
+        <Grid ColumnDefinitions="*,88,64,64" ColumnSpacing="8">
+          <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
+          <TextBlock Grid.Column="1" Text="{Binding MaterialNumber}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialNumber}" />
+          <TextBlock Grid.Column="2" Text="{Binding YoungsModulus}" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="3" Text="{Binding YieldStrength}" HorizontalAlignment="Right" />
         </Grid>
-      </Border>
+      </StackPanel>
     </DataTemplate>
   </UserControl.Resources>
-  <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
-    <TextBlock Text="{x:Static resources:Strings.MaterialSelection}" Classes="sectionTitle" />
-    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-      <StackPanel Spacing="16">
-        <StackPanel IsVisible="{Binding HasCurrent}" Spacing="8">
-          <TextBlock Text="{x:Static resources:Strings.CurrentProjectMaterial}" Classes="bodyStrong" />
-          <TextBlock Text="{Binding CurrentMaterial.Name}" TextWrapping="Wrap" />
-          <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="{x:Static resources:Strings.ContinueUsing}" Command="{Binding UseCurrentCommand}" AutomationProperties.Name="{x:Static resources:Strings.ContinueUsing}" /><Button Content="{x:Static resources:Strings.EditEntry}" Command="{Binding EditCurrentCommand}" AutomationProperties.Name="{x:Static resources:Strings.EditEntry}" /></StackPanel>
+  <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,*">
+    <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="{DynamicResource BottomBorder}" Padding="24,16">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <TextBlock Text="{x:Static resources:Strings.MaterialSelection}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <Button x:Name="NewMaterialButton" Content="{x:Static resources:Strings.NewMaterial}" Command="{Binding NewCommand}" Classes="secondary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.NewMaterial}" />
+          <Button Content="{x:Static resources:Strings.Back}" Command="{Binding BackCommand}" Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.Back}" />
+          <Button x:Name="UseMaterialButton" Content="{x:Static resources:Strings.Apply}" Command="{Binding UseSelectedCommand}" Classes="primary" AutomationProperties.Name="{x:Static resources:Strings.Apply}" />
         </StackPanel>
-        <TextBlock Text="{x:Static resources:Strings.BuiltInMaterials}" Classes="bodyStrong" />
-        <TextBlock Text="{Binding BuiltInError}" IsVisible="{Binding HasBuiltInError}" Classes="validationMessage" TextWrapping="Wrap" />
-        <ItemsControl ItemsSource="{Binding BuiltInGroups}">
-          <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:MaterialGroup"><StackPanel Spacing="8"><TextBlock Text="{Binding Label}" Classes="secondary" /><ItemsControl ItemsSource="{Binding Entries}" ItemTemplate="{StaticResource MaterialRow}" /></StackPanel></DataTemplate></ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <TextBlock Text="{x:Static resources:Strings.MyMaterials}" Classes="bodyStrong" />
-        <TextBlock Text="{Binding LibraryError}" IsVisible="{Binding HasLibraryError}" Classes="validationMessage" TextWrapping="Wrap" />
-        <TextBlock Text="{x:Static resources:Strings.EmptyMaterialLibrary}" IsVisible="{Binding IsUserEmpty}" Classes="secondary" />
-        <ItemsControl ItemsSource="{Binding UserEntries}" ItemTemplate="{StaticResource MaterialRow}" IsVisible="{Binding !HasLibraryError}" />
-        <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Classes="validationMessage" TextWrapping="Wrap" />
-      </StackPanel>
-    </ScrollViewer>
-    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="{x:Static resources:Strings.Back}" Command="{Binding BackCommand}" AutomationProperties.Name="{x:Static resources:Strings.Back}" />
-      <Button x:Name="NewMaterialButton" Content="{x:Static resources:Strings.NewMaterial}" Command="{Binding NewCommand}" Classes="primary" AutomationProperties.Name="{x:Static resources:Strings.NewMaterial}" />
-    </StackPanel>
+      </Grid>
+    </Border>
+    <Grid Grid.Row="1" ColumnDefinitions="170,*,280" ColumnSpacing="16" Margin="24" IsEnabled="{Binding !IsBusy}">
+      <ListBox x:Name="MaterialFilters" ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter, Mode=TwoWay}" Classes="materialFilters"
+          VerticalAlignment="Top" AutomationProperties.Name="{x:Static resources:Strings.MaterialFilters}">
+        <ListBox.ItemTemplate><DataTemplate x:DataType="vm:MaterialFilter"><TextBlock Text="{Binding Label}" /></DataTemplate></ListBox.ItemTemplate>
+      </ListBox>
+      <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="12">
+        <TextBox x:Name="MaterialSearchInput" Text="{Binding SearchText, Mode=TwoWay}" PlaceholderText="{x:Static resources:Strings.MaterialSearch}" KeyDown="SearchKeyDown" AutomationProperties.Name="{x:Static resources:Strings.MaterialSearch}" />
+        <Grid Grid.Row="1" ColumnDefinitions="*,88,64,64" ColumnSpacing="8" Margin="9,0">
+          <TextBlock Text="{x:Static resources:Strings.MaterialDesignation}" Classes="caption" />
+          <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.MaterialNumber}" Classes="caption" TextTrimming="CharacterEllipsis" ToolTip.Tip="{x:Static resources:Strings.MaterialNumber}" />
+          <TextBlock Grid.Column="2" Text="E [GPa]" Classes="caption" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="3" Text="fy [MPa]" Classes="caption" HorizontalAlignment="Right" />
+        </Grid>
+        <ListBox x:Name="MaterialEntries" Grid.Row="2" ItemsSource="{Binding VisibleEntries}" SelectedItem="{Binding SelectedEntry, Mode=TwoWay}" SelectionMode="Single"
+            ItemTemplate="{StaticResource MaterialRow}" Classes="materialEntries" DoubleTapped="EntriesDoubleTapped"
+            AutomationProperties.Name="{x:Static resources:Strings.MaterialList}" />
+      </Grid>
+      <ScrollViewer Grid.Column="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="16">
+          <StackPanel x:Name="MaterialDetails" DataContext="{Binding SelectedEntry}" x:DataType="vm:MaterialSelectionItem" IsVisible="{Binding $parent[UserControl].((vm:MaterialSelectionViewModel)DataContext).HasSelection}" Spacing="12">
+            <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding MaterialNumber}" IsVisible="{Binding HasMaterialNumber}" Classes="secondary" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding CategoryLabel}" IsVisible="{Binding HasCategory}" Classes="secondary" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding OtherStandards}" IsVisible="{Binding HasOtherStandards}" Classes="secondary" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="12">
+              <TextBlock Text="E" Classes="propertyLabel" /><TextBlock Grid.Column="1"><Run Text="{Binding YoungsModulus}" /><Run Text=" GPa" /></TextBlock>
+              <TextBlock Grid.Row="1" Text="fy" Classes="propertyLabel" /><TextBlock Grid.Row="1" Grid.Column="1"><Run Text="{Binding YieldStrength}" /><Run Text=" MPa" /></TextBlock>
+              <TextBlock Grid.Row="2" Text="ρ" Classes="propertyLabel" IsVisible="{Binding HasDensity}" /><TextBlock Grid.Row="2" Grid.Column="1" IsVisible="{Binding HasDensity}"><Run Text="{Binding Density}" /><Run Text=" kg/m³" /></TextBlock>
+              <TextBlock Grid.Row="3" Text="ν" Classes="propertyLabel" IsVisible="{Binding HasPoissonRatio}" /><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PoissonRatio}" IsVisible="{Binding HasPoissonRatio}" />
+            </Grid>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasSelection}">
+            <Button x:Name="EditSelectedMaterialButton" Content="{Binding EditLabel}" Command="{Binding EditSelectedCommand}" AutomationProperties.Name="{Binding EditLabel}" />
+            <Button x:Name="DeleteSelectedMaterialButton" Content="{x:Static resources:Strings.Delete}" Command="{Binding DeleteSelectedCommand}" IsVisible="{Binding ShowDelete}" AutomationProperties.Name="{x:Static resources:Strings.Delete}" />
+          </StackPanel>
+          <TextBlock Text="{x:Static resources:Strings.NoMaterialsFound}" IsVisible="{Binding IsEmpty}" Classes="secondary" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding BuiltInError}" IsVisible="{Binding HasBuiltInError}" Classes="validationMessage" />
+          <TextBlock Text="{Binding LibraryError}" IsVisible="{Binding HasLibraryError}" Classes="validationMessage" />
+          <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Classes="validationMessage" />
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
   </Grid>
 </UserControl>

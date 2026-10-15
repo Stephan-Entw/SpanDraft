@@ -151,8 +151,6 @@
   <data name="Back" xml:space="preserve"><value>Back</value></data>
   <data name="EditEntry" xml:space="preserve"><value>Edit…</value></data>
   <data name="Customize" xml:space="preserve"><value>Customize…</value></data>
-  <data name="BuiltInLabel" xml:space="preserve"><value>Built-in</value></data>
-  <data name="UserLabel" xml:space="preserve"><value>User library</value></data>
   <data name="MaterialSelection" xml:space="preserve"><value>Select material</value></data>
   <data name="SectionSelection" xml:space="preserve"><value>Select cross-section</value></data>
   <data name="CurrentProjectMaterial" xml:space="preserve"><value>Current project material</value></data>
@@ -178,7 +176,6 @@
   <data name="MaterialNumber" xml:space="preserve"><value>Material number</value></data>
   <data name="OtherStandards" xml:space="preserve"><value>Other standards</value></data>
   <data name="OtherStandardsHint" xml:space="preserve"><value>Separate multiple designations with semicolons, e.g. AISI 304; UNS S30400.</value></data>
-  <data name="SaveMaterialToLibrary" xml:space="preserve"><value>Save in my material library</value></data>
   <data name="SaveSectionToLibrary" xml:space="preserve"><value>Save in my cross-section library</value></data>
   <data name="PresetName" xml:space="preserve"><value>Preset name *</value></data>
   <data name="SectionType" xml:space="preserve"><value>Cross-section type</value></data>
@@ -273,4 +270,18 @@
   <data name="SectionDefinitionChangeProfile" xml:space="preserve"><value>Change ›</value></data>
   <data name="SectionDefinitionParametricGroup" xml:space="preserve"><value>PARAMETRIC SECTIONS</value></data>
   <data name="SectionDefinitionAutomatic" xml:space="preserve"><value>Automatic</value></data>
+  <data name="AllMaterials" xml:space="preserve"><value>All materials</value></data>
+  <data name="MaterialSearch" xml:space="preserve"><value>Search materials</value></data>
+  <data name="NoMaterialsFound" xml:space="preserve"><value>No library materials match these filters.</value></data>
+  <data name="MaterialIdentification" xml:space="preserve"><value>Material identification</value></data>
+  <data name="MaterialProperties" xml:space="preserve"><value>Material properties</value></data>
+  <data name="MaterialYoungsModulus" xml:space="preserve"><value>Young’s modulus E</value></data>
+  <data name="MaterialYieldStrength" xml:space="preserve"><value>Yield strength fy</value></data>
+  <data name="MaterialDensity" xml:space="preserve"><value>Density ρ</value></data>
+  <data name="MaterialPoissonRatio" xml:space="preserve"><value>Poisson’s ratio ν</value></data>
+  <data name="MaterialInLibrary" xml:space="preserve"><value>In my library</value></data>
+  <data name="MaterialCurrentEntry" xml:space="preserve"><value>Currently in project</value></data>
+  <data name="MaterialFilters" xml:space="preserve"><value>Material filters</value></data>
+  <data name="MaterialList" xml:space="preserve"><value>Materials</value></data>
+  <data name="MaterialEditName" xml:space="preserve"><value>Edit material name</value></data>
 </root>

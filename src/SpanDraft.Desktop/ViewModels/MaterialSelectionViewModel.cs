@@ -1,87 +1,182 @@
 using SpanDraft.Core.Materials;
 using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Desktop.State;
 
 namespace SpanDraft.Desktop.ViewModels;
 
-public sealed class MaterialSelectionItem : ObservableObject
+public enum MaterialSelectionKind { BuiltIn, User, Project }
+public enum MaterialFilterKind { All, Category, User }
+public sealed record MaterialFilter(MaterialFilterKind Kind, string Label, MaterialCategory? Category = null);
+
+/// <summary>Source information exists only while browsing; a project row has no library metadata.</summary>
+public sealed class MaterialSelectionItem(Material material, MaterialSelectionKind kind, MaterialLibraryEntry? entry = null)
 {
-    public MaterialSelectionItem(MaterialLibraryEntry entry, bool builtIn, ProjectSetupViewModel setup,
-        Func<string, Task> delete)
-    {
-        Entry = entry; IsBuiltIn = builtIn;
-        UseCommand = new(() => { setup.SelectMaterial(entry); setup.ShowOverview(); }, () => !setup.IsBusy);
-        EditCommand = new(() => setup.EditMaterial(entry, builtIn ? SetupEditorMode.ProjectDraft : SetupEditorMode.UserLibraryEdit),
-            () => !setup.IsBusy && (builtIn || setup.Libraries?.CanSaveMaterials == true));
-        DeleteCommand = new(async () => { await delete(entry.Material.Name); return true; },
-            () => !builtIn && !setup.IsBusy && setup.Libraries?.CanSaveMaterials == true);
-    }
-    public MaterialLibraryEntry Entry { get; }
-    public bool IsBuiltIn { get; }
-    public bool IsUser => !IsBuiltIn;
-    public string Caption => string.Join(" · ", new[] { Entry.Material.Name, Entry.MaterialNumber }
-        .Concat(Entry.OtherStandards).Where(s => !string.IsNullOrEmpty(s)));
-    public string SourceLabel => IsBuiltIn ? Strings.BuiltInLabel : Strings.UserLabel;
-    public string EditLabel => IsBuiltIn ? Strings.Customize : Strings.EditEntry;
-    public ActionCommand UseCommand { get; }
-    public ActionCommand EditCommand { get; }
-    public AsyncActionCommand DeleteCommand { get; }
-    internal void Refresh() { UseCommand.Refresh(); EditCommand.Refresh(); DeleteCommand.Refresh(); }
+    public Material Material { get; } = material;
+    public MaterialSelectionKind Kind { get; } = kind;
+    public MaterialLibraryEntry? Entry { get; } = entry;
+    public bool IsProject => Kind == MaterialSelectionKind.Project;
+    public bool IsUser => Kind == MaterialSelectionKind.User;
+    public bool IsBuiltIn => Kind == MaterialSelectionKind.BuiltIn;
+    public string Name => Material.Name;
+    public string? MaterialNumber => Entry?.MaterialNumber;
+    public bool HasMaterialNumber => MaterialNumber is not null;
+    public bool HasCategory => Entry is not null;
+    public string? CategoryLabel => Entry is null ? null : MaterialSelectionViewModel.Categories().Single(c => c.Value == Entry.Category).Label;
+    public string OtherStandards => string.Join(" · ", Entry?.OtherStandards ?? []);
+    public bool HasOtherStandards => OtherStandards.Length > 0;
+    public string YoungsModulus => UiNumbers.Indicator(Material.YoungsModulus.Pascals / 1e9);
+    public string YieldStrength => UiNumbers.Indicator(Material.YieldStrength.Megapascals);
+    public bool HasDensity => Material.Density is not null;
+    public bool HasPoissonRatio => Material.PoissonRatio is not null;
+    public string? Density => Material.Density is { } rho ? UiNumbers.Indicator(rho.KilogramsPerCubicMeter) : null;
+    public string? PoissonRatio => Material.PoissonRatio is { } nu ? UiNumbers.Indicator(nu.Value) : null;
 }
 
-public sealed record MaterialGroup(string Label, IReadOnlyList<MaterialSelectionItem> Entries);
+internal static class MaterialSnapshotComparison
+{
+    internal static bool Equals(Material a, Material b) => a.Name == b.Name && a.YoungsModulus == b.YoungsModulus
+        && a.YieldStrength == b.YieldStrength && a.Density == b.Density && a.PoissonRatio == b.PoissonRatio;
+    internal static bool Equals(MaterialLibraryEntry a, MaterialLibraryEntry b) => Equals(a.Material, b.Material)
+        && a.Category == b.Category && a.MaterialNumber == b.MaterialNumber && a.OtherStandards.SequenceEqual(b.OtherStandards);
+}
 
 public sealed class MaterialSelectionViewModel : SetupStepViewModel
 {
-    private string? _error;
+    private readonly Material? _currentMaterial;
+    private readonly IReadOnlyList<MaterialSelectionItem> _builtIns;
     private UserMaterialLibrary? _shownLibrary;
-    private IReadOnlyList<MaterialSelectionItem> _users = [];
+    private IReadOnlyList<MaterialSelectionItem> _users = [], _entries = [], _visible = [], _filtered = [];
+    private MaterialSelectionItem? _currentEntry, _selected;
+    private string _search = "";
+    private MaterialFilter _filter;
+    private string? _error;
+
     public MaterialSelectionViewModel(ProjectSetupViewModel setup) : base(setup)
     {
-        BuiltInGroups = Categories().Where(c => c.Value != MaterialCategory.Other)
-            .Select(c => new MaterialGroup(c.Label, (setup.Libraries?.BuiltInMaterials?.All ?? [])
-                .Where(e => e.Category == c.Value).Select(e => new MaterialSelectionItem(e, true, setup, DeleteAsync)).ToArray()))
-            .Where(g => g.Entries.Count > 0).ToArray();
+        _currentMaterial = setup.SelectedMaterial;
+        _builtIns = (setup.Libraries?.BuiltInMaterials?.All ?? []).Select(e => new MaterialSelectionItem(e.Material, MaterialSelectionKind.BuiltIn, e)).ToArray();
+        Filters = new[] { new MaterialFilter(MaterialFilterKind.All, Strings.AllMaterials) }
+            .Concat(Categories().Select(c => new MaterialFilter(MaterialFilterKind.Category, c.Label, c.Value)))
+            .Append(new(MaterialFilterKind.User, Strings.MyMaterials)).ToArray();
+        _filter = Filters[0];
         BackCommand = new(setup.ShowOverview, () => !IsBusy);
         NewCommand = new(() => setup.EditMaterial(null, SetupEditorMode.ProjectDraft), () => !IsBusy);
-        UseCurrentCommand = new(() => { setup.SelectedMaterial = setup.OriginalMaterial; setup.ShowOverview(); },
-            () => !IsBusy && HasCurrent);
-        EditCurrentCommand = new(setup.EditCurrentMaterial,
-            () => !IsBusy && HasCurrent);
+        UseSelectedCommand = new(UseSelected, () => CanUseSelected);
+        EditSelectedCommand = new(EditSelected, () => CanEditSelected);
+        DeleteSelectedCommand = new(DeleteSelectedAsync, () => CanDeleteSelected);
+        RebuildEntries();
         Refresh();
     }
-    public Material? CurrentMaterial => Setup.OriginalMaterial;
-    public bool HasCurrent => CurrentMaterial is not null;
-    public IReadOnlyList<MaterialGroup> BuiltInGroups { get; }
+    public IReadOnlyList<MaterialFilter> Filters { get; }
+    public IReadOnlyList<MaterialSelectionItem> AllEntries => _entries;
+    public IReadOnlyList<MaterialSelectionItem> BuiltInEntries => _builtIns;
     public IReadOnlyList<MaterialSelectionItem> UserEntries => _users;
+    public MaterialSelectionItem? CurrentEntry => _currentEntry;
+    public IReadOnlyList<MaterialSelectionItem> VisibleEntries => _visible;
+    public IReadOnlyList<MaterialSelectionItem> FilteredEntries => _filtered;
+    public bool IsEmpty => _filtered.Count == 0;
+    public string SearchText { get => _search; set { if (Set(ref _search, value)) RebuildVisible(); } }
+    public MaterialFilter SelectedFilter
+    {
+        get => _filter;
+        set { if (value is not null && Filters.Contains(value) && Set(ref _filter, value)) RebuildVisible(); }
+    }
+    public MaterialSelectionItem? SelectedEntry
+    {
+        get => _selected;
+        set
+        {
+            if (value is not null && !_visible.Contains(value) || !Set(ref _selected, value)) return;
+            NotifySelection();
+        }
+    }
+    public bool HasSelection => SelectedEntry is not null;
+    public bool CanUseSelected => !IsBusy && HasSelection;
+    public bool CanEditSelected => !IsBusy && SelectedEntry is { } selected && (!selected.IsUser || Setup.Libraries?.CanSaveMaterials == true);
+    public bool CanDeleteSelected => !IsBusy && SelectedEntry?.IsUser == true && Setup.Libraries?.CanSaveMaterials == true;
+    public bool ShowDelete => SelectedEntry?.IsUser == true;
+    public string EditLabel => SelectedEntry?.IsUser == true ? Strings.EditEntry : Strings.Customize;
     public string? BuiltInError => Setup.Libraries?.BuiltInError;
     public bool HasBuiltInError => BuiltInError is not null;
     public string? LibraryError => Setup.Libraries?.MaterialLibraryError;
     public bool HasLibraryError => LibraryError is not null;
-    public bool IsUserEmpty => !HasLibraryError && UserEntries.Count == 0;
     public string? Error => _error;
     public bool HasError => Error is not null;
     public ActionCommand BackCommand { get; }
     public ActionCommand NewCommand { get; }
-    public ActionCommand UseCurrentCommand { get; }
-    public ActionCommand EditCurrentCommand { get; }
-    public async Task DeleteAsync(string name)
+    public ActionCommand UseSelectedCommand { get; }
+    public ActionCommand EditSelectedCommand { get; }
+    public AsyncActionCommand DeleteSelectedCommand { get; }
+
+    public void UseSelected()
     {
-        _error = await (Setup.Libraries?.DeleteMaterialAsync(name) ?? Task.FromResult<string?>(Strings.MaterialLibraryUnavailable));
-        Notify(nameof(Error)); Notify(nameof(HasError)); Refresh();
+        if (!CanUseSelected || SelectedEntry is not { } selected) return;
+        if (selected.Entry is { } entry) Setup.SelectMaterial(entry);
+        else Setup.SelectedMaterial = selected.Material;
+        Setup.ShowOverview();
+    }
+    private void EditSelected()
+    {
+        if (!CanEditSelected || SelectedEntry is not { } selected) return;
+        Setup.EditMaterial(selected.Entry, selected.IsUser ? SetupEditorMode.UserLibraryEdit : SetupEditorMode.ProjectDraft,
+            selected.IsProject ? selected.Material : null);
+    }
+    public async Task<bool> DeleteSelectedAsync()
+    {
+        if (!CanDeleteSelected || SelectedEntry is not { } selected) return false;
+        int index = _visible.ToList().IndexOf(selected);
+        _error = await Setup.Libraries!.DeleteMaterialAsync(selected.Name);
+        Refresh();
+        if (_error is null && !_visible.Contains(selected))
+            SelectedEntry = _currentEntry ?? _visible.ElementAtOrDefault(Math.Min(index, _visible.Count - 1));
+        Notify(nameof(Error)); Notify(nameof(HasError));
+        return _error is null;
+    }
+    internal void SelectReplacement(string name)
+    {
+        Refresh();
+        SelectedEntry = _visible.SingleOrDefault(e => e.IsUser && e.Name == name);
+    }
+    private void RebuildEntries()
+    {
+        var previous = SelectedEntry;
+        _shownLibrary = Setup.Libraries?.UserMaterials;
+        _users = (_shownLibrary?.All ?? []).Select(e => new MaterialSelectionItem(e.Material, MaterialSelectionKind.User, e)).ToArray();
+        _entries = _builtIns.Concat(_users).ToArray();
+        var matches = _currentMaterial is null ? [] : _entries.Where(e => MaterialSnapshotComparison.Equals(e.Material, _currentMaterial)).ToArray();
+        _currentEntry = _currentMaterial is not null && matches.Length != 1
+            ? _currentEntry ?? new(_currentMaterial, MaterialSelectionKind.Project) : null;
+        var preferred = previous is null ? _currentEntry ?? matches.SingleOrDefault()
+            : _entries.FirstOrDefault(e => e.Kind == previous.Kind && e.Entry == previous.Entry)
+                ?? (previous.IsProject ? _currentEntry ?? matches.SingleOrDefault() : null);
+        RebuildVisible(preferred);
+        foreach (var name in new[] { nameof(UserEntries), nameof(AllEntries), nameof(CurrentEntry) }) Notify(name);
+    }
+    private void RebuildVisible(MaterialSelectionItem? preferred = null)
+    {
+        _filtered = _entries.Where(e => (_filter.Kind == MaterialFilterKind.All || _filter.Kind == MaterialFilterKind.User && e.IsUser
+            || _filter.Kind == MaterialFilterKind.Category && e.Entry?.Category == _filter.Category)
+            && (Contains(e.Name) || Contains(e.MaterialNumber) || e.Entry?.OtherStandards.Any(Contains) == true)).ToArray();
+        var visible = (_currentEntry is null ? _filtered : new[] { _currentEntry }.Concat(_filtered)).ToArray();
+        var selection = preferred ?? SelectedEntry;
+        // Preserve the native selection when a busy-state notification has not changed any rows.
+        if (!_visible.SequenceEqual(visible)) { _visible = visible; Notify(nameof(VisibleEntries)); }
+        SelectedEntry = selection is not null && _visible.Contains(selection) ? selection : null;
+        Notify(nameof(FilteredEntries)); Notify(nameof(IsEmpty));
+    }
+    private bool Contains(string? text) => text?.Contains(SearchText.Trim(), StringComparison.OrdinalIgnoreCase) == true;
+    private void NotifySelection()
+    {
+        foreach (var name in new[] { nameof(HasSelection), nameof(CanUseSelected), nameof(CanEditSelected), nameof(CanDeleteSelected), nameof(ShowDelete), nameof(EditLabel) }) Notify(name);
+        UseSelectedCommand.Refresh(); EditSelectedCommand.Refresh(); DeleteSelectedCommand.Refresh();
     }
     public override void Refresh()
     {
         base.Refresh();
-        if (!ReferenceEquals(_shownLibrary, Setup.Libraries?.UserMaterials))
-        {
-            _shownLibrary = Setup.Libraries?.UserMaterials;
-            _users = (_shownLibrary?.All ?? []).Select(e => new MaterialSelectionItem(e, false, Setup, DeleteAsync)).ToArray();
-            Notify(nameof(UserEntries));
-        }
-        foreach (var row in BuiltInGroups.SelectMany(g => g.Entries).Concat(UserEntries)) row.Refresh();
-        foreach (var name in new[] { nameof(LibraryError), nameof(HasLibraryError), nameof(IsUserEmpty) }) Notify(name);
-        BackCommand.Refresh(); NewCommand.Refresh(); UseCurrentCommand.Refresh(); EditCurrentCommand.Refresh();
+        if (!ReferenceEquals(_shownLibrary, Setup.Libraries?.UserMaterials)) RebuildEntries();
+        foreach (var name in new[] { nameof(BuiltInError), nameof(HasBuiltInError), nameof(LibraryError), nameof(HasLibraryError) }) Notify(name);
+        BackCommand.Refresh(); NewCommand.Refresh(); NotifySelection();
     }
     internal static IReadOnlyList<SetupChoice<MaterialCategory>> Categories() =>
     [

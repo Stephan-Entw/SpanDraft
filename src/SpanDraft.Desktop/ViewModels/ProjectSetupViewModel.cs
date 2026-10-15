@@ -19,13 +19,13 @@ public sealed class ProjectSetupViewModel : ObservableObject
     private readonly EditorDocument? _originalDocument;
     private ISectionDefinition _selectedSection;
     private Material? _selectedMaterial;
-    private string? _materialNumber;
     private SectionAxisDesignation _bendingAxis;
     private string? _sectionDisplayName;
     private Length _length;
     private ResultPresentationOptions _resultPresentation;
     private ProjectSetupPage _page;
     private object? _step;
+    private MaterialSelectionViewModel? _materials;
     private bool _definitionBusy;
 
     public ProjectSetupViewModel(ProjectSetupMode mode, Section section, Material material,
@@ -107,33 +107,13 @@ public sealed class ProjectSetupViewModel : ObservableObject
         set
         {
             if (!Set(ref _selectedMaterial, value)) return;
-            _materialNumber = null;
             foreach (var name in new[] { nameof(MaterialName), nameof(MaterialSummary), nameof(YoungsModulus), nameof(YieldStrength),
                 nameof(Density), nameof(PoissonRatio), nameof(HasDensity), nameof(HasPoissonRatio), nameof(CanApply) }) Notify(name);
             ApplyCommand.Refresh();
         }
     }
-    // Caption enrichment does not establish a source identity or alter the project snapshot.
-    public string MaterialName
-    {
-        get
-        {
-            if (SelectedMaterial is not { } material) return Strings.SelectMaterialRequired;
-            if (_materialNumber is { } number) return material.Name + " · " + number;
-            var numbers = (Libraries?.BuiltInMaterials?.All ?? []).Concat(Libraries?.UserMaterials.All ?? [])
-                .Where(e => SameMaterial(e.Material, material)).Select(e => e.MaterialNumber)
-                .Where(n => n is not null).Distinct().ToArray();
-            return numbers.Length == 1 ? material.Name + " · " + numbers[0] : material.Name;
-        }
-    }
-    private static bool SameMaterial(Material a, Material b) => a.Name == b.Name && a.YoungsModulus == b.YoungsModulus
-        && a.YieldStrength == b.YieldStrength && a.Density == b.Density && a.PoissonRatio == b.PoissonRatio;
-    internal void SelectMaterial(SpanDraft.Desktop.Libraries.MaterialLibraryEntry entry)
-    {
-        SelectedMaterial = entry.Material;
-        _materialNumber = entry.MaterialNumber;
-        Notify(nameof(MaterialName));
-    }
+    public string MaterialName => SelectedMaterial?.Name ?? Strings.SelectMaterialRequired;
+    internal void SelectMaterial(SpanDraft.Desktop.Libraries.MaterialLibraryEntry entry) => SelectedMaterial = entry.Material;
     public string MaterialSummary => SelectedMaterial is null ? "" : "E " + YoungsModulus + " · fy " + YieldStrength;
     public string? StartupError => Libraries?.BuiltInError;
     public bool HasStartupError => StartupError is not null;
@@ -172,7 +152,13 @@ public sealed class ProjectSetupViewModel : ObservableObject
     {
         Notify(nameof(LengthError)); Notify(nameof(HasLengthError)); Notify(nameof(CanApply)); ApplyCommand?.Refresh();
     }
-    public void ShowMaterials() { if (!IsBusy) Navigate(ProjectSetupPage.MaterialSelection, new MaterialSelectionViewModel(this)); }
+    public void ShowMaterials()
+    {
+        if (IsBusy) return;
+        if (IsOverview || _materials is null) _materials = new MaterialSelectionViewModel(this);
+        _materials.Refresh();
+        Navigate(ProjectSetupPage.MaterialSelection, _materials);
+    }
     public void ShowSections()
     {
         if (IsBusy || IsSectionDefinition) return;
@@ -202,10 +188,13 @@ public sealed class ProjectSetupViewModel : ObservableObject
         RefreshLibraryState(); Libraries?.RefreshWorkspaceState();
     }
     public void ShowOverview() { if (!IsBusy) Navigate(ProjectSetupPage.Overview, null); }
-    internal void EditMaterial(SpanDraft.Desktop.Libraries.MaterialLibraryEntry? entry, SetupEditorMode mode) =>
-        Navigate(ProjectSetupPage.MaterialEditor, new MaterialEditorViewModel(this, entry, mode));
-    internal void EditCurrentMaterial() => Navigate(ProjectSetupPage.MaterialEditor,
-        new MaterialEditorViewModel(this, null, SetupEditorMode.ProjectDraft, OriginalMaterial));
+    internal void EditMaterial(SpanDraft.Desktop.Libraries.MaterialLibraryEntry? entry, SetupEditorMode mode, Material? snapshot = null)
+    { if (!IsBusy) Navigate(ProjectSetupPage.MaterialEditor, new MaterialEditorViewModel(this, entry, mode, snapshot)); }
+    internal void ReturnToMaterials(string? replacement = null)
+    {
+        ShowMaterials();
+        if (replacement is not null) _materials?.SelectReplacement(replacement);
+    }
     public void Escape()
     {
         if (IsBusy) return;

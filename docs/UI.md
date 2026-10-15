@@ -24,6 +24,15 @@ beeinflussen jedoch nicht die Mechanik. Die gemeinsame Änderungsgrenze entschei
 über eine Neuberechnung, damit einzelne Controls diese Unterscheidung nicht
 unterschiedlich treffen. Ein Ergebnis beschreibt immer ein bestätigtes Modell.
 
+## Querschnitts-Drafts
+
+Jede Querschnittsgrundform besitzt einen eigenen transienten Draft. Eingaben,
+Preview- und Achszustand sowie der optionale Anzeigename sind form-lokal.
+Benutzerdefinierte und aus einer Bibliothek übernommene Namen werden bei einem
+Grundformwechsel nicht übertragen. Die Rückkehr zu einer Form stellt ihren
+eigenen Draft wieder her. Erst Übernehmen erzeugt aus dem aktiven Draft einen
+Projektsnapshot; die anderen Form-Drafts werden nicht im Projekt gespeichert.
+
 ## Physikalische Koordinaten und Darstellung
 
 Die schematische Entzerrung verbessert die Lesbarkeit dichter Modelle. Sie führt

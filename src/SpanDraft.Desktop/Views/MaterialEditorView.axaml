@@ -1,34 +1,71 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels" xmlns:lib="clr-namespace:SpanDraft.Desktop.Libraries"
-             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels" xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
              x:Class="SpanDraft.Desktop.Views.MaterialEditorView" x:DataType="vm:MaterialEditorViewModel">
-  <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceInclude Source="/Views/SetupTemplates.axaml" /></ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
-  <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
-    <TextBlock Text="{Binding Title}" Classes="sectionTitle" />
-    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-      <StackPanel Spacing="16" MaxWidth="850" IsEnabled="{Binding !IsBusy}">
-        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="16">
-          <StackPanel Spacing="4"><TextBlock Text="{x:Static resources:Strings.MaterialDesignation}" Classes="propertyLabel" /><TextBox x:Name="MaterialNameInput" Text="{Binding Name, Mode=TwoWay}" AutomationProperties.Name="{x:Static resources:Strings.MaterialDesignation}" /></StackPanel>
-          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{x:Static resources:Strings.MaterialCategory}" Classes="propertyLabel" />
-            <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding Category, Mode=TwoWay}" HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.MaterialCategory}">
-              <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
-            </ComboBox>
+  <UserControl.Resources>
+    <DataTemplate x:Key="MaterialInputRow" x:DataType="vm:SetupNumberInput">
+      <Grid Classes="materialInputRow" ColumnDefinitions="*,128,64" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4" Margin="0,0,0,12">
+        <TextBlock x:Name="MaterialInputLabel" Text="{Binding Label}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <TextBox x:Name="MaterialValueInput" Grid.Column="1" Text="{Binding Text, Mode=TwoWay}" Classes="inlineDimension" Classes.error="{Binding HasError}" AutomationProperties.Name="{Binding InputLabel}" />
+        <TextBlock x:Name="MaterialInputUnit" Grid.Column="2" Text="{Binding DisplayUnit}" Classes="propertyLabel" VerticalAlignment="Center" />
+        <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Error}" IsVisible="{Binding HasError}" Classes="validationMessage" />
+      </Grid>
+    </DataTemplate>
+  </UserControl.Resources>
+  <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,*">
+    <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="{DynamicResource BottomBorder}" Padding="24,16">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" IsEnabled="{Binding !IsBusy}">
+        <Grid>
+          <Button x:Name="MaterialNameButton" IsVisible="{Binding !ShowNameInput}" Command="{Binding EditNameCommand}" Classes="ghost" Padding="0" Height="{DynamicResource PrimaryAction}" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.MaterialEditName}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <TextBlock Text="{Binding HeaderName}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding HeaderName}" />
+              <controls:SectionFluentIcon Grid.Column="1" Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_edit_16_regular.svg" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+            </Grid>
+          </Button>
+          <StackPanel IsVisible="{Binding ShowNameInput}" Spacing="4">
+            <TextBox x:Name="MaterialNameInput" Text="{Binding Name, Mode=TwoWay}" FontSize="22" FontWeight="SemiBold" Height="{DynamicResource PrimaryAction}" Classes.error="{Binding HasNameError}"
+                PlaceholderText="{x:Static resources:Strings.MaterialDesignation}" KeyDown="NameKeyDown" LostFocus="NameLostFocus" AutomationProperties.Name="{x:Static resources:Strings.MaterialDesignation}" />
+            <TextBlock Text="{Binding NameError}" IsVisible="{Binding HasNameError}" Classes="validationMessage" />
           </StackPanel>
-          <StackPanel Grid.Row="1" Spacing="4"><TextBlock Text="{x:Static resources:Strings.MaterialNumber}" Classes="propertyLabel" /><TextBox Text="{Binding MaterialNumber, Mode=TwoWay}" AutomationProperties.Name="{x:Static resources:Strings.MaterialNumber}" /></StackPanel>
-          <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4"><TextBlock Text="{x:Static resources:Strings.OtherStandards}" Classes="propertyLabel" /><TextBox Text="{Binding OtherStandards, Mode=TwoWay}" AutomationProperties.Name="{x:Static resources:Strings.OtherStandards}" /><TextBlock Text="{x:Static resources:Strings.OtherStandardsHint}" Classes="caption" TextWrapping="Wrap" /></StackPanel>
         </Grid>
-        <ItemsControl ItemsSource="{Binding Inputs}" ItemTemplate="{StaticResource SetupInput}">
-          <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-          <ItemsControl.Styles><Style Selector="ContentPresenter"><Setter Property="Margin" Value="0,0,24,0" /></Style></ItemsControl.Styles>
-        </ItemsControl>
-        <CheckBox Content="{x:Static resources:Strings.SaveMaterialToLibrary}" IsVisible="{Binding IsProjectDraft}" IsEnabled="{Binding CanSaveToLibrary}" IsChecked="{Binding SaveToLibrary, Mode=TwoWay}" AutomationProperties.Name="{x:Static resources:Strings.SaveMaterialToLibrary}" />
-        <TextBlock Text="{Binding LibraryError}" IsVisible="{Binding HasLibraryError}" Classes="validationMessage" TextWrapping="Wrap" />
-        <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Classes="validationMessage" TextWrapping="Wrap" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+          <Button x:Name="CancelMaterialButton" Content="{Binding CancelLabel}" Command="{Binding CancelCommand}" Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{Binding CancelLabel}" />
+          <Button x:Name="AddMaterialLibraryButton" IsVisible="{Binding IsProjectDraft}" Command="{Binding AddLibraryCommand}" Classes="secondary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{Binding LibraryActionLabel}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="☆" IsVisible="{Binding !IsInLibrary}" VerticalAlignment="Center" />
+              <TextBlock Text="✓" IsVisible="{Binding IsInLibrary}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding LibraryActionLabel}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="ConfirmMaterialButton" Content="{Binding PrimaryAction}" Command="{Binding ConfirmCommand}" Classes="primary" AutomationProperties.Name="{Binding PrimaryAction}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="24" Spacing="16" IsEnabled="{Binding !IsBusy}">
+        <Grid ColumnDefinitions="4*,6*" ColumnSpacing="32">
+          <StackPanel Spacing="16">
+            <TextBlock Text="{x:Static resources:Strings.MaterialIdentification}" Classes="sectionTitle" />
+            <Grid ColumnDefinitions="130,*" ColumnSpacing="12" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+              <TextBlock Text="{x:Static resources:Strings.MaterialCategory}" Classes="propertyLabel" VerticalAlignment="Center" />
+              <ComboBox x:Name="MaterialCategoryInput" Grid.Column="1" ItemsSource="{Binding Categories}" SelectedItem="{Binding Category, Mode=TwoWay}" HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.MaterialCategory}">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CategoryError}" IsVisible="{Binding HasCategoryError}" Classes="validationMessage" />
+              <TextBlock Grid.Row="2" Text="{x:Static resources:Strings.MaterialNumber}" Classes="propertyLabel" VerticalAlignment="Center" />
+              <TextBox x:Name="MaterialNumberInput" Grid.Row="2" Grid.Column="1" Text="{Binding MaterialNumber, Mode=TwoWay}" AutomationProperties.Name="{x:Static resources:Strings.MaterialNumber}" />
+              <TextBlock Grid.Row="3" Text="{x:Static resources:Strings.OtherStandards}" Classes="propertyLabel" VerticalAlignment="Center" />
+              <TextBox x:Name="MaterialStandardsInput" Grid.Row="3" Grid.Column="1" Text="{Binding OtherStandards, Mode=TwoWay}" ToolTip.Tip="{x:Static resources:Strings.OtherStandardsHint}" AutomationProperties.Name="{x:Static resources:Strings.OtherStandards}" />
+            </Grid>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="16">
+            <TextBlock Text="{x:Static resources:Strings.MaterialProperties}" Classes="sectionTitle" />
+            <ItemsControl x:Name="MaterialPropertyInputs" ItemsSource="{Binding Inputs}" ItemTemplate="{StaticResource MaterialInputRow}" />
+            <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Classes="validationMessage" />
+          </StackPanel>
+        </Grid>
+        <TextBlock x:Name="MaterialLibraryError" Text="{Binding LibraryError}" IsVisible="{Binding HasLibraryError}" Classes="validationMessage" />
       </StackPanel>
     </ScrollViewer>
-    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-      <Button Content="{x:Static resources:Strings.Cancel}" Command="{Binding CancelCommand}" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
-      <Button x:Name="ConfirmMaterialButton" Content="{Binding PrimaryAction}" Command="{Binding ConfirmCommand}" Classes="primary" AutomationProperties.Name="{Binding PrimaryAction}" />
-    </StackPanel>
   </Grid>
 </UserControl>

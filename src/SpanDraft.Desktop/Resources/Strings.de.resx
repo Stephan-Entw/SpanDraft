@@ -151,14 +151,12 @@
   <data name="Back" xml:space="preserve"><value>Zurück</value></data>
   <data name="EditEntry" xml:space="preserve"><value>Bearbeiten…</value></data>
   <data name="Customize" xml:space="preserve"><value>Anpassen…</value></data>
-  <data name="BuiltInLabel" xml:space="preserve"><value>Eingebaut</value></data>
-  <data name="UserLabel" xml:space="preserve"><value>Benutzerbibliothek</value></data>
   <data name="MaterialSelection" xml:space="preserve"><value>Werkstoff auswählen</value></data>
   <data name="SectionSelection" xml:space="preserve"><value>Querschnitt auswählen</value></data>
   <data name="CurrentProjectMaterial" xml:space="preserve"><value>Aktuelles Projektmaterial</value></data>
   <data name="CurrentProjectSection" xml:space="preserve"><value>Aktueller Projektquerschnitt</value></data>
   <data name="BuiltInMaterials" xml:space="preserve"><value>Eingebaute Materialien</value></data>
-  <data name="MyMaterials" xml:space="preserve"><value>Meine Materialien</value></data>
+  <data name="MyMaterials" xml:space="preserve"><value>Meine Werkstoffe</value></data>
   <data name="MySections" xml:space="preserve"><value>Meine Querschnitte</value></data>
   <data name="CreateMaterial" xml:space="preserve"><value>Benutzerdefinierter Werkstoff</value></data>
   <data name="NewMaterial" xml:space="preserve"><value>Neues Material…</value></data>
@@ -178,7 +176,6 @@
   <data name="MaterialNumber" xml:space="preserve"><value>Werkstoffnummer</value></data>
   <data name="OtherStandards" xml:space="preserve"><value>Andere Normen</value></data>
   <data name="OtherStandardsHint" xml:space="preserve"><value>Mehrere Bezeichnungen mit Semikolon trennen, z. B. AISI 304; UNS S30400.</value></data>
-  <data name="SaveMaterialToLibrary" xml:space="preserve"><value>In meiner Materialbibliothek speichern</value></data>
   <data name="SaveSectionToLibrary" xml:space="preserve"><value>In meiner Querschnittsbibliothek speichern</value></data>
   <data name="PresetName" xml:space="preserve"><value>Presetname *</value></data>
   <data name="SectionType" xml:space="preserve"><value>Querschnittstyp</value></data>
@@ -273,4 +270,18 @@
   <data name="SectionDefinitionChangeProfile" xml:space="preserve"><value>Ändern ›</value></data>
   <data name="SectionDefinitionParametricGroup" xml:space="preserve"><value>PARAMETRISCHE QUERSCHNITTE</value></data>
   <data name="SectionDefinitionAutomatic" xml:space="preserve"><value>Automatisch</value></data>
+  <data name="AllMaterials" xml:space="preserve"><value>Alle Werkstoffe</value></data>
+  <data name="MaterialSearch" xml:space="preserve"><value>Werkstoffe durchsuchen</value></data>
+  <data name="NoMaterialsFound" xml:space="preserve"><value>Keine Bibliothekswerkstoffe entsprechen diesen Filtern.</value></data>
+  <data name="MaterialIdentification" xml:space="preserve"><value>Materialidentifikation</value></data>
+  <data name="MaterialProperties" xml:space="preserve"><value>Werkstoffkennwerte</value></data>
+  <data name="MaterialYoungsModulus" xml:space="preserve"><value>E-Modul E</value></data>
+  <data name="MaterialYieldStrength" xml:space="preserve"><value>Streckgrenze fy</value></data>
+  <data name="MaterialDensity" xml:space="preserve"><value>Dichte ρ</value></data>
+  <data name="MaterialPoissonRatio" xml:space="preserve"><value>Poissonzahl ν</value></data>
+  <data name="MaterialInLibrary" xml:space="preserve"><value>In meiner Bibliothek</value></data>
+  <data name="MaterialCurrentEntry" xml:space="preserve"><value>Aktuell im Projekt</value></data>
+  <data name="MaterialFilters" xml:space="preserve"><value>Werkstofffilter</value></data>
+  <data name="MaterialList" xml:space="preserve"><value>Werkstoffe</value></data>
+  <data name="MaterialEditName" xml:space="preserve"><value>Werkstoffnamen bearbeiten</value></data>
 </root>

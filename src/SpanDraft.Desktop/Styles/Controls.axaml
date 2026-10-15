@@ -293,6 +293,19 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
   </Style>
+  <Style Selector="ListBox.materialEntries, ListBox.materialFilters">
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.materialEntries ListBoxItem, ListBox.materialFilters ListBoxItem">
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+  </Style>
   <Style Selector="MenuItem">
     <Setter Property="Padding" Value="{DynamicResource ControlPadding}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />

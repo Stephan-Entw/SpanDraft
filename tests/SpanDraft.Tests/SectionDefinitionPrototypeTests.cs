@@ -142,18 +142,19 @@ public sealed class SectionDefinitionPrototypeTests
         vm.CancelNameEdit(); Assert.Contains("60 × 120",vm.DisplayName);
         vm.BeginNameEdit(); vm.PendingName="  My profile  "; Assert.True(vm.CommitName()); Assert.Equal("My profile",vm.DisplayName);
         Commit(vm,"h","200"); Assert.Equal("My profile",vm.DisplayName);
-        vm.SelectForm(SectionEditorType.Manual); Assert.Equal("My profile",vm.DisplayName);
-        Assert.True(vm.HasCustomName);
+        vm.SelectForm(SectionEditorType.Manual); Assert.Equal(Strings.SectionDefinitionCustomName,vm.DisplayName);
+        Assert.False(vm.HasCustomName);
         vm.BeginNameEdit(); vm.PendingName="Manual profile"; Assert.True(vm.CommitName());
-        vm.SelectForm(SectionEditorType.Rectangle); Assert.Equal("Manual profile",vm.DisplayName);
+        vm.SelectForm(SectionEditorType.Rectangle); Assert.Equal("My profile",vm.DisplayName);
         Assert.Equal(.2,Input(vm,"h").ConfirmedValue);
         vm.ResetName(); Assert.False(vm.HasCustomName); Assert.Contains("60 × 200 mm",vm.DisplayName);
-        vm.SelectForm(SectionEditorType.Manual); Assert.Equal(Strings.SectionDefinitionCustomName,vm.DisplayName);
+        vm.SelectForm(SectionEditorType.Manual); Assert.Equal("Manual profile",vm.DisplayName);
+        vm.ResetName(); Assert.Equal(Strings.SectionDefinitionCustomName,vm.DisplayName);
         var manual=new SectionDefinitionViewModel(); manual.SelectForm(SectionEditorType.Manual); Assert.Equal(Strings.SectionDefinitionCustomName,manual.DisplayName);
     }
     [Theory]
     [InlineData("de-DE")] [InlineData("en-US")]
-    public void ExplicitNameSurvivesAllFormsWhileEachFormRestoresItsOwnInputs(string culture)
+    public void EachFormRestoresItsOwnExplicitNameAndInputs(string culture)
     {
         using var scope = new UiCultureScope(culture);
         var vm = new SectionDefinitionViewModel();
@@ -170,13 +171,15 @@ public sealed class SectionDefinitionPrototypeTests
         foreach (var type in types.Reverse())
         {
             vm.SelectForm(type);
-            Assert.Equal("Custom Manual", vm.DisplayName);
+            Assert.Equal(type == SectionEditorType.ISection ? "HEB 200" : "Custom " + type, vm.DisplayName);
             Assert.True(vm.HasCustomName); Assert.Equal(values[type], vm.Parameters.Select(p => p.ConfirmedValue));
         }
         vm.ResetName();
         foreach (var type in types)
         {
-            vm.SelectForm(type); Assert.False(vm.HasCustomName);
+            vm.SelectForm(type);
+            Assert.Equal(type != SectionEditorType.Rectangle, vm.HasCustomName);
+            vm.ResetName(); Assert.False(vm.HasCustomName);
             Assert.Equal(type == SectionEditorType.Manual, vm.DisplayName == Strings.SectionDefinitionCustomName);
         }
     }
@@ -185,11 +188,11 @@ public sealed class SectionDefinitionPrototypeTests
     {
         var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.ISection);
         vm.BeginNameEdit(); vm.PendingName = "HEB 200"; vm.SelectForm(SectionEditorType.Circle);
-        Assert.False(vm.IsEditingName); Assert.True(vm.HasCustomName); Assert.Equal("HEB 200", vm.DisplayName);
+        Assert.False(vm.IsEditingName); Assert.False(vm.HasCustomName); Assert.Equal(Strings.ShapeCircle, vm.DisplayName);
         vm.SelectForm(SectionEditorType.ISection); Assert.Equal("HEB 200", vm.DisplayName);
         vm.BeginNameEdit(); vm.PendingName = " "; vm.SelectForm(SectionEditorType.Manual);
         Assert.Equal(SectionEditorType.ISection, vm.Type); Assert.True(vm.HasNameError);
-        vm.CancelNameEdit(); vm.SelectForm(SectionEditorType.Manual); Assert.True(vm.HasCustomName);
+        vm.CancelNameEdit(); vm.SelectForm(SectionEditorType.Manual); Assert.False(vm.HasCustomName);
     }
     [Fact]
     public void NonDefaultUnitsAndPresentationDoNotChangeSIValuesOrManualInputKinds()

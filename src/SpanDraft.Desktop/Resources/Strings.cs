@@ -206,8 +206,6 @@ public static class Strings
     public static string Back => Get(nameof(Back));
     public static string EditEntry => Get(nameof(EditEntry));
     public static string Customize => Get(nameof(Customize));
-    public static string BuiltInLabel => Get(nameof(BuiltInLabel));
-    public static string UserLabel => Get(nameof(UserLabel));
     public static string MaterialSelection => Get(nameof(MaterialSelection));
     public static string SectionSelection => Get(nameof(SectionSelection));
     public static string CurrentProjectMaterial => Get(nameof(CurrentProjectMaterial));
@@ -233,7 +231,6 @@ public static class Strings
     public static string MaterialNumber => Get(nameof(MaterialNumber));
     public static string OtherStandards => Get(nameof(OtherStandards));
     public static string OtherStandardsHint => Get(nameof(OtherStandardsHint));
-    public static string SaveMaterialToLibrary => Get(nameof(SaveMaterialToLibrary));
     public static string SaveSectionToLibrary => Get(nameof(SaveSectionToLibrary));
     public static string PresetName => Get(nameof(PresetName));
     public static string SectionType => Get(nameof(SectionType));
@@ -287,4 +284,19 @@ public static class Strings
     public static string SectionDefinitionParametricGroup => Get(nameof(SectionDefinitionParametricGroup));
     public static string SectionDefinitionDimensions => Get(nameof(SectionDefinitionDimensions));
     public static string SectionDefinitionDimensionHint => Get(nameof(SectionDefinitionDimensionHint));
+    public static string AllMaterials => Get(nameof(AllMaterials));
+    public static string MaterialSearch => Get(nameof(MaterialSearch));
+    public static string NoMaterialsFound => Get(nameof(NoMaterialsFound));
+    public static string MaterialIdentification => Get(nameof(MaterialIdentification));
+    public static string MaterialProperties => Get(nameof(MaterialProperties));
+    public static string MaterialYoungsModulus => Get(nameof(MaterialYoungsModulus));
+    public static string MaterialYieldStrength => Get(nameof(MaterialYieldStrength));
+    public static string MaterialDensity => Get(nameof(MaterialDensity));
+    public static string MaterialPoissonRatio => Get(nameof(MaterialPoissonRatio));
+    public static string MaterialInLibrary => Get(nameof(MaterialInLibrary));
+    public static string MaterialCurrentEntry => Get(nameof(MaterialCurrentEntry));
+    public static string MaterialFilters => Get(nameof(MaterialFilters));
+    public static string MaterialList => Get(nameof(MaterialList));
+    public static string MaterialEditName => Get(nameof(MaterialEditName));
+
 }

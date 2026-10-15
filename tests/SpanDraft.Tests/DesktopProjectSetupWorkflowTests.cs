@@ -78,7 +78,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         Assert.Equal(100, s.Width.Millimeters); Assert.Equal(100, s.Height.Millimeters);
         Assert.Equal(5, s.WallThickness.Millimeters); Assert.Equal(0, s.OuterRadius.Millimeters);
         Assert.Same(f.Main.BuiltInMaterials!.Find("S235JR")!.Material, f.Main.Setup.SelectedMaterial);
-        Assert.False(Materials(f).HasCurrent); Assert.True(Sections(f).HasValidSection);
+        Assert.Null(Materials(f).CurrentEntry); Assert.True(Sections(f).HasValidSection);
         f.Main.Setup.ShowOverview(); f.Create();
         var d = f.Main.Editor!.Document;
         Assert.Same(s, d.Section); Assert.Equal(SectionAxisDesignation.Y, d.BendingAxis);
@@ -90,7 +90,7 @@ public sealed class DesktopProjectSetupWorkflowTests
     }
 
     [Fact]
-    public async Task ExistingSnapshotNeverMatchesSourcesAndCurrentEditHasNoLibraryMetadata()
+    public async Task AmbiguousSnapshotHasItsOwnRowAndCurrentEditHasNoLibraryMetadata()
     {
         var f = new Fixture();
         var builtIn = f.Main.BuiltInMaterials!.Find("S235JR")!;
@@ -101,10 +101,10 @@ public sealed class DesktopProjectSetupWorkflowTests
         var path = TestPath("matching.spandraft"); f.Files.Data[path] = ProjectFileCodec.Serialize(state); f.Dialogs.OpenPath = path;
         Assert.True(await f.Main.OpenAsync()); var snapshot = f.Main.Editor!.Document;
         f.Main.EditProject(); var selection = Materials(f);
-        Assert.Same(snapshot.Material, selection.CurrentMaterial);
-        Assert.Equal(4, selection.BuiltInGroups.Count); Assert.Equal(8, selection.BuiltInGroups.Sum(g => g.Entries.Count));
+        Assert.Same(snapshot.Material, selection.CurrentEntry!.Material);
+        Assert.Null(selection.CurrentEntry.Entry); Assert.Equal(8, selection.BuiltInEntries.Count);
         Assert.Single(selection.UserEntries);
-        selection.EditCurrentCommand.Execute(null);
+        selection.SelectedEntry = selection.CurrentEntry; selection.EditSelectedCommand.Execute(null);
         var editor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
         Assert.Equal(MaterialCategory.Other, editor.Category!.Value);
         Assert.Empty(editor.MaterialNumber); Assert.Empty(editor.OtherStandards);
@@ -119,17 +119,17 @@ public sealed class DesktopProjectSetupWorkflowTests
     public async Task BuiltInUseCopiesAllValuesAndCustomizePreservesCatalog()
     {
         var f = new Fixture(); await f.Load(); var selection = Materials(f);
-        var row = selection.BuiltInGroups.SelectMany(g => g.Entries).Single(r => r.Entry.Material.Name == "X5CrNi18-10");
-        Assert.Equal("X5CrNi18-10 · 1.4301 · AISI 304", row.Caption);
-        Assert.True(row.IsBuiltIn); Assert.False(row.DeleteCommand.CanExecute(null));
-        var original = row.Entry.Material;
-        row.EditCommand.Execute(null); var editor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
+        var row = selection.BuiltInEntries.Single(r => r.Material.Name == "X5CrNi18-10");
+        Assert.Equal("X5CrNi18-10", row.Name); Assert.Equal("1.4301", row.MaterialNumber); Assert.Equal("AISI 304", row.OtherStandards);
+        selection.SelectedEntry = row; Assert.True(row.IsBuiltIn); Assert.False(selection.DeleteSelectedCommand.CanExecute(null));
+        var original = row.Material;
+        selection.SelectedEntry = row; selection.EditSelectedCommand.Execute(null); var editor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
         Assert.Equal("1.4301", editor.MaterialNumber); Assert.Equal("AISI 304", editor.OtherStandards);
         Assert.NotSame(original, editor.Draft!.Material); editor.Inputs[0].Text = "190";
         Assert.True(await editor.ConfirmAsync()); Assert.Equal(190e9, f.Main.Setup.SelectedMaterial!.YoungsModulus.Pascals);
         Assert.Equal(200e9, original.YoungsModulus.Pascals); Assert.Empty(f.Main.UserMaterials.All);
-        row = Materials(f).BuiltInGroups.SelectMany(g => g.Entries).Single(r => r.Entry.Material.Name == original.Name);
-        row.UseCommand.Execute(null); Assert.Same(original, f.Main.Setup.SelectedMaterial);
+        selection = Materials(f); row = selection.BuiltInEntries.Single(r => r.Material.Name == original.Name);
+        selection.SelectedEntry = row; selection.UseSelectedCommand.Execute(null); Assert.Same(original, f.Main.Setup.SelectedMaterial);
         Assert.Equal(original.Density, f.Main.Setup.SelectedMaterial!.Density);
         Assert.Equal(original.PoissonRatio, f.Main.Setup.SelectedMaterial.PoissonRatio);
     }
@@ -165,8 +165,9 @@ public sealed class DesktopProjectSetupWorkflowTests
     public async Task MaterialSaveIsPersistentBeforeUseAndSurvivesSetupCancel()
     {
         var f = new Fixture(); await f.Load(); f.Create(); var document = f.Main.Editor!.Document;
-        f.Main.EditProject(); var editor = NewMaterial(f); editor.SaveToLibrary = true;
-        Assert.True(await editor.ConfirmAsync());
+        f.Main.EditProject(); var editor = NewMaterial(f);
+        Assert.True(await editor.AddLibraryAsync()); Assert.Same(editor, f.Main.Setup.CurrentStep);
+        Assert.Same(document.Material, f.Main.Setup.SelectedMaterial); Assert.True(await editor.ApplyAsync());
         Assert.Equal("One-off", Assert.Single(MaterialLibraryCodec.Deserialize(f.Files.Data["materials"]).All).Material.Name);
         Assert.Equal("One-off", f.Main.Setup.SelectedMaterial!.Name);
         f.Main.Setup.CancelCommand.Execute(null); Assert.Same(document, f.Main.Editor.Document);
@@ -178,18 +179,18 @@ public sealed class DesktopProjectSetupWorkflowTests
     {
         var f = new Fixture(); f.Files.Data["materials"] = MaterialLibraryCodec.Serialize(new([Entry()])); await f.Load(); f.Create();
         var snapshot = f.Main.Editor!.Document; f.Main.EditProject();
-        Materials(f).UserEntries.Single().EditCommand.Execute(null);
+        var selection = Materials(f); selection.SelectedEntry = selection.UserEntries.Single(); selection.EditSelectedCommand.Execute(null);
         var editor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
         Assert.True(editor.IsLibraryEdit); editor.Name = "Renamed"; editor.Inputs[1].Text = "400";
         Assert.True(await editor.ConfirmAsync()); Assert.Equal(ProjectSetupPage.MaterialSelection, f.Main.Setup.Page);
         Assert.Same(snapshot.Material, f.Main.Setup.SelectedMaterial); Assert.Same(snapshot, f.Main.Editor.Document);
-        var selection = Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep);
-        Assert.Equal("Renamed", selection.UserEntries.Single().Entry.Material.Name);
-        selection.UserEntries.Single().UseCommand.Execute(null);
+        selection = Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep);
+        Assert.Equal("Renamed", selection.UserEntries.Single().Material.Name);
+        selection.SelectedEntry = selection.UserEntries.Single(); selection.UseSelectedCommand.Execute(null);
         Assert.Equal(400e6, f.Main.Setup.SelectedMaterial!.YieldStrength.Pascals);
-        selection = Materials(f); f.Dialogs.ConfirmLibraryDelete = false; await selection.DeleteAsync("Renamed");
+        selection = Materials(f); f.Dialogs.ConfirmLibraryDelete = false; selection.SelectedEntry = selection.UserEntries.Single(); await selection.DeleteSelectedAsync();
         Assert.Single(f.Main.UserMaterials.All);
-        f.Dialogs.ConfirmLibraryDelete = true; await selection.DeleteAsync("Renamed");
+        f.Dialogs.ConfirmLibraryDelete = true; await selection.DeleteSelectedAsync();
         Assert.Empty(f.Main.UserMaterials.All); Assert.Same(snapshot, f.Main.Editor.Document);
         Assert.Equal("Renamed", f.Main.Setup.SelectedMaterial!.Name);
     }
@@ -229,10 +230,9 @@ public sealed class DesktopProjectSetupWorkflowTests
         f.Files.FailWritePath = material ? "materials" : "sections";
         if (material)
         {
-            var editor = NewMaterial(f); editor.SaveToLibrary = true; var draft = editor.Draft;
-            Assert.False(await editor.ConfirmAsync()); Assert.Same(editor, f.Main.Setup.CurrentStep);
-            Assert.Same(draft, editor.Draft); Assert.True(editor.HasError); Assert.Empty(f.Main.UserMaterials.All);
-            editor.SaveToLibrary = false; Assert.True(await editor.ConfirmAsync());
+            var editor = NewMaterial(f); var draft = editor.Draft;
+            Assert.False(await editor.AddLibraryAsync()); Assert.Same(editor, f.Main.Setup.CurrentStep);
+            Assert.Same(draft, editor.Draft); Assert.True(editor.HasLibraryError); Assert.Empty(f.Main.UserMaterials.All); Assert.True(await editor.ConfirmAsync());
         }
         else
         {
@@ -252,7 +252,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         f.Files.BeforeWrite = (_, _, _) => { entered.TrySetResult(); return release.Task; };
         var old = material ? (object)f.Main.UserMaterials : f.Main.UserSections;
         Task<bool> pending;
-        if (material) { var e = NewMaterial(f); e.SaveToLibrary = true; pending = e.ConfirmAsync(); }
+        if (material) { var e = NewMaterial(f); pending = e.AddLibraryAsync(); }
         else { var e = NewSection(f); pending = e.SaveLibraryAsync(); }
         try
         {
@@ -264,7 +264,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         }
         finally { release.TrySetResult(); }
         Assert.True(await WaitFor(pending)); Assert.False(f.Main.IsBusy);
-        Assert.Equal(material ? ProjectSetupPage.Overview : ProjectSetupPage.SectionDefinition, f.Main.Setup.Page);
+        Assert.Equal(material ? ProjectSetupPage.MaterialEditor : ProjectSetupPage.SectionDefinition, f.Main.Setup.Page);
     }
 
     [Theory]
@@ -352,9 +352,9 @@ public sealed class DesktopProjectSetupWorkflowTests
         Assert.Equal(!material, f.Main.CanSaveMaterials); Assert.Equal(material, f.Main.CanSaveSections);
         if (material)
         {
-            Assert.True(Materials(f).HasLibraryError); Assert.Equal(8, Materials(f).BuiltInGroups.Sum(g => g.Entries.Count));
+            Assert.True(Materials(f).HasLibraryError); Assert.Equal(8, Materials(f).BuiltInEntries.Count);
             Assert.Single(f.Main.UserSections.All); var e = NewMaterial(f); Assert.False(e.CanSaveToLibrary);
-            e.SaveToLibrary = true; Assert.False(await e.ConfirmAsync()); e.SaveToLibrary = false; Assert.True(await e.ConfirmAsync());
+            Assert.False(await e.AddLibraryAsync()); Assert.True(await e.ConfirmAsync());
         }
         else
         {
@@ -442,7 +442,7 @@ public sealed class DesktopProjectSetupWorkflowTests
             new(SectionAxisDesignation.U, SecondMomentOfArea.FromMetersToTheFourth(1.2345678901234567e-6), SectionModulus.FromCubicMeters(2.3456789012345678e-5)),
             new(SectionAxisDesignation.V, SecondMomentOfArea.FromMetersToTheFourth(3.4567890123456789e-6), SectionModulus.FromCubicMeters(4.567890123456789e-5)));
         f.Main.Setup.SelectedMaterial = material; f.Main.Setup.SelectedSection = manual; f.Create(); f.Main.EditProject();
-        Materials(f).EditCurrentCommand.Execute(null);
+        var selection = Materials(f); Assert.True(selection.SelectedEntry!.IsProject); selection.EditSelectedCommand.Execute(null);
         var materialEditor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
         Assert.Equal(material.Name, materialEditor.Name);
         Assert.Equal(material.YoungsModulus, materialEditor.Draft!.Material.YoungsModulus);
@@ -472,8 +472,9 @@ public sealed class DesktopProjectSetupWorkflowTests
     {
         var f = new Fixture(); f.Files.Data["materials"] = MaterialLibraryCodec.Serialize(new([Entry("One-off")]));
         f.Files.Data["sections"] = SectionLibraryCodec.Serialize(new([new("Mine", Rectangle())])); await f.Load();
-        var m = NewMaterial(f); m.Name = "one-OFF"; m.SaveToLibrary = true;
-        Assert.False(m.CanConfirm); m.SaveToLibrary = false; Assert.True(await m.ConfirmAsync());
+        var m = NewMaterial(f); m.Name = "one-OFF";
+        Assert.False(m.CanAddLibrary); Assert.True(m.HasLibraryError); Assert.False(await m.AddLibraryAsync());
+        Assert.True(m.CanConfirm); Assert.True(await m.ConfirmAsync());
         var s = NewSection(f); s.BeginNameEdit(); s.PendingName = "mINE"; s.CommitName();
         Assert.False(await s.SaveLibraryAsync()); Assert.True(s.HasLibraryError);
         Assert.True(await s.ConfirmAsync()); Assert.Empty(f.Files.Writes);

@@ -36,6 +36,7 @@ public sealed class SetupNumberInput : ObservableObject
     public UnitDefinition Unit { get; }
     public string? Hint { get; }
     public bool HasHint => !string.IsNullOrEmpty(Hint);
+    public string DisplayUnit => Hint ?? Unit.Symbol;
     public string InputLabel => Label + (Unit.Symbol.Length > 0 ? " [" + Unit.Symbol + "]" : "");
     public string Text
     {

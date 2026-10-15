@@ -197,26 +197,38 @@ public sealed class ProjectSetupIntegrationTests
 
     [Theory]
     [InlineData(false)] [InlineData(true)]
-    public async Task ExplicitAndLibraryNamesSurviveFormChangesUntilAnExplicitReset(bool fromLibrary)
+    public async Task ExplicitAndLibraryNamesRemainFormLocalAndOnlyTheActiveDraftIsPersisted(bool fromLibrary)
     {
         var files = new Files();
-        files.Data["sections"] = SectionLibraryCodec.Serialize(new([new("HEB 200",
-            new RectangularHollowSectionGeometry(M(.1), M(.1), M(.005), M(0)))]));
+        var ih = new ISectionGeometry(M(.2), M(.1), M(.005), M(.01), M(0));
+        files.Data["sections"] = SectionLibraryCodec.Serialize(new([new("HEB 200", ih)]));
         var main = new MainWindowViewModel(files: files, sectionStore: new(files, "sections"));
-        await main.InitializeLibrariesAsync(); Assert.True(await main.Setup.ConfirmAsync());
+        await main.InitializeLibrariesAsync(); main.Setup.SelectedSection = ih; main.Setup.BendingAxis = SectionAxisDesignation.Z;
+        Assert.True(await main.Setup.ConfirmAsync());
         main.EditProject(); main.Setup.ShowSections(); var vm = main.Setup.Definition!;
         if (fromLibrary) vm.LoadPreset(main.UserSections.All.Single());
-        else { vm.BeginNameEdit(); vm.PendingName = "HEB 200"; vm.CommitName(); }
-        vm.SelectForm(SectionEditorType.Circle); var diameter = Assert.Single(vm.Parameters);
-        diameter.PendingText = "150"; Assert.True(diameter.Commit()); Assert.Equal("HEB 200", vm.DisplayName);
+        else { vm.BeginNameEdit(); vm.PendingName = "HEB 200"; Assert.True(vm.CommitName()); }
+        var ihInputs = vm.Parameters.ToArray();
+        vm.SelectForm(SectionEditorType.Circle); Assert.False(vm.HasCustomName); Assert.NotEqual("HEB 200", vm.DisplayName);
+        var diameter = Assert.Single(vm.Parameters); diameter.PendingText = "80"; Assert.True(diameter.Commit());
+        vm.BeginNameEdit(); vm.PendingName = "Welle 80"; Assert.True(vm.CommitName());
+        for (int pass = 0; pass < 3; pass++)
+        {
+            vm.SelectForm(SectionEditorType.ISection); Assert.Equal("HEB 200", vm.DisplayName);
+            Assert.Equal(ihInputs, vm.Parameters); Assert.Equal(SectionAxisDesignation.Z, vm.ResultAxis);
+            vm.SelectForm(SectionEditorType.Circle); Assert.Equal("Welle 80", vm.DisplayName); Assert.Same(diameter, Assert.Single(vm.Parameters));
+        }
+        vm.ResetName(); Assert.False(vm.HasCustomName);
+        vm.SelectForm(SectionEditorType.ISection); Assert.Equal("HEB 200", vm.DisplayName);
+        vm.SelectForm(SectionEditorType.Circle); vm.BeginNameEdit(); vm.PendingName = "Welle 80"; Assert.True(vm.CommitName());
         Assert.True(await vm.ConfirmAsync()); Assert.True(await main.Setup.ConfirmAsync());
-        Assert.Equal("HEB 200", main.Editor!.Document.SectionDisplayName);
+        Assert.IsType<CircleSectionGeometry>(main.Editor!.Document.Section);
+        Assert.Equal(SectionAxisDesignation.Y, main.Editor.Document.BendingAxis); Assert.Equal("Welle 80", main.Editor.Document.SectionDisplayName);
         main.EditProject(); main.Setup.ShowSections(); vm = main.Setup.Definition!;
-        vm.SelectForm(SectionEditorType.RectangularHollow);
-        Assert.Equal("HEB 200", vm.DisplayName); vm.ResetName(); Assert.False(vm.HasCustomName);
-        vm.CancelCommand.Execute(null); Assert.Equal("HEB 200", main.Setup.SectionDisplayName);
-        main.Setup.CancelCommand.Execute(null);
-        Assert.False(await main.Setup.ConfirmAsync());
+        Assert.Equal("Welle 80", vm.DisplayName);
+        vm.SelectForm(SectionEditorType.ISection); Assert.False(vm.HasCustomName); Assert.NotEqual("HEB 200", vm.DisplayName);
+        vm.CancelCommand.Execute(null); Assert.Equal("Welle 80", main.Setup.SectionDisplayName);
+        main.Setup.CancelCommand.Execute(null); Assert.False(await main.Setup.ConfirmAsync());
     }
 
     [Theory]

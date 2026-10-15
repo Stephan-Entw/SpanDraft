@@ -10,6 +10,9 @@
 - Do not duplicate implementation details, milestone histories or changing test
   counts across documentation. Prefer code and tests for implementation details.
 - Keep Core independent of UI, numerical libraries, persistence and reporting.
+- Section-definition draft invariant: custom and library display names are
+  form-local. Switching the section shape must never carry a name into another
+  FormDraft; returning to a form restores its own name. See `docs/UI.md`.
 - Commit messages follow Conventional Commits: `<type>: <short description>`.
   Use types such as `feat:`, `fix:`, `docs:`, `test:`, `refactor:` or `chore:`;
   write the description in English.
