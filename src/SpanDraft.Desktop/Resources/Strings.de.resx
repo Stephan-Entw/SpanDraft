@@ -176,7 +176,6 @@
   <data name="MaterialNumber" xml:space="preserve"><value>Werkstoffnummer</value></data>
   <data name="OtherStandards" xml:space="preserve"><value>Andere Normen</value></data>
   <data name="OtherStandardsHint" xml:space="preserve"><value>Mehrere Bezeichnungen mit Semikolon trennen, z. B. AISI 304; UNS S30400.</value></data>
-  <data name="SaveSectionToLibrary" xml:space="preserve"><value>In meiner Querschnittsbibliothek speichern</value></data>
   <data name="PresetName" xml:space="preserve"><value>Presetname *</value></data>
   <data name="SectionType" xml:space="preserve"><value>Querschnittstyp</value></data>
   <data name="AxisConfiguration" xml:space="preserve"><value>Achskonfiguration</value></data>

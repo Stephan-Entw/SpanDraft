@@ -176,7 +176,6 @@
   <data name="MaterialNumber" xml:space="preserve"><value>Material number</value></data>
   <data name="OtherStandards" xml:space="preserve"><value>Other standards</value></data>
   <data name="OtherStandardsHint" xml:space="preserve"><value>Separate multiple designations with semicolons, e.g. AISI 304; UNS S30400.</value></data>
-  <data name="SaveSectionToLibrary" xml:space="preserve"><value>Save in my cross-section library</value></data>
   <data name="PresetName" xml:space="preserve"><value>Preset name *</value></data>
   <data name="SectionType" xml:space="preserve"><value>Cross-section type</value></data>
   <data name="AxisConfiguration" xml:space="preserve"><value>Axis configuration</value></data>

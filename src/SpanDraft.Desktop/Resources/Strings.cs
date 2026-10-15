@@ -231,7 +231,6 @@ public static class Strings
     public static string MaterialNumber => Get(nameof(MaterialNumber));
     public static string OtherStandards => Get(nameof(OtherStandards));
     public static string OtherStandardsHint => Get(nameof(OtherStandardsHint));
-    public static string SaveSectionToLibrary => Get(nameof(SaveSectionToLibrary));
     public static string PresetName => Get(nameof(PresetName));
     public static string SectionType => Get(nameof(SectionType));
     public static string AxisConfiguration => Get(nameof(AxisConfiguration));
