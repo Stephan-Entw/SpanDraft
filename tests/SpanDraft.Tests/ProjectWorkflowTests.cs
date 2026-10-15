@@ -119,7 +119,8 @@ public sealed class ProjectWorkflowTests
         var session = app.Main.Session; var recovery = app.Files.Data[App.Slot].ToArray();
         app.Main.Editor!.DimensionLength.Begin(); app.Main.Editor.DimensionLength.Text = "bad draft";
         app.Dialogs.OpenPath = TestPath("target.spandraft"); app.Files.Data[app.Dialogs.OpenPath] = ProjectFileCodec.Serialize(State());
-        Task<bool> Leave() => action switch { "new" => app.Main.NewAsync(), "open" => app.Main.OpenAsync(), _ => app.Main.RequestCloseAsync() };
+        if (action == "new") Assert.True(await app.Main.NewAsync());
+        Task<bool> Leave() => action switch { "new" => app.Main.Setup.ConfirmAsync(), "open" => app.Main.OpenAsync(), _ => app.Main.RequestCloseAsync() };
         Assert.False(await Leave());
         app.Dialogs.Leave = LeaveDecision.Save; app.Dialogs.SavePath = null;
         Assert.False(await Leave());
@@ -137,11 +138,13 @@ public sealed class ProjectWorkflowTests
     {
         var app = new App(); app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         app.Dialogs.Leave = save ? LeaveDecision.Save : LeaveDecision.Discard;
-        bool result = action == "new" ? await app.Main.NewAsync() : await app.Main.RequestCloseAsync();
+        if (action == "new") Assert.True(await app.Main.NewAsync());
+        bool result = action == "new" ? await app.Main.Setup.ConfirmAsync() : await app.Main.RequestCloseAsync();
         Assert.True(result); Assert.False(app.Files.Data.ContainsKey(App.Slot));
         Assert.Equal(save, app.Files.Data.ContainsKey(app.Dialogs.SavePath!));
-        if (action == "new") { Assert.Null(app.Main.Session); Assert.Equal(MainViewMode.ProjectSetup, app.Main.Mode); }
-        app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync()); Assert.False(app.Files.Data.ContainsKey(App.Slot));
+        if (action == "new") { Assert.Null(app.Main.Session!.FilePath); Assert.True(app.Main.Session.IsDirty); Assert.Equal(MainViewMode.Editor, app.Main.Mode); }
+        app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
+        Assert.Equal(action == "new", app.Files.Data.ContainsKey(App.Slot));
     }
 
     [Fact]
@@ -149,7 +152,8 @@ public sealed class ProjectWorkflowTests
     {
         var app = new App(); app.Dialogs.Leave = LeaveDecision.Save;
         app.Files.FailWritePath = app.Dialogs.SavePath;
-        Assert.False(await app.Main.NewAsync()); Assert.NotNull(app.Main.Session); Assert.True(app.Main.Session!.IsDirty);
+        Assert.True(await app.Main.NewAsync()); Assert.False(await app.Main.Setup.ConfirmAsync());
+        Assert.NotNull(app.Main.Session); Assert.True(app.Main.Session!.IsDirty);
         app.Files.FailWritePath = App.Slot;
         Assert.False(await app.Main.SaveAsync());
         Assert.False(app.Files.Data.ContainsKey(app.Dialogs.SavePath!)); Assert.Null(app.Main.Session.FilePath);
@@ -211,11 +215,12 @@ public sealed class ProjectWorkflowTests
     }
 
     [Fact]
-    public void UndoDuringSetupDiscardsTemporarySetupAndReturnsToEditor()
+    public void UndoDuringSetupIsBlockedUntilTheDraftIsClosed()
     {
         var app = new App(); app.ChangeLength(); app.Main.EditProject();
         Assert.Equal(MainViewMode.ProjectSetup, app.Main.Mode);
-        Assert.True(app.Main.Undo()); Assert.Equal(MainViewMode.Editor, app.Main.Mode);
+        Assert.False(app.Main.Undo()); Assert.Equal(MainViewMode.ProjectSetup, app.Main.Mode);
+        app.Main.Setup.CancelCommand.Execute(null); Assert.True(app.Main.Undo()); Assert.Equal(MainViewMode.Editor, app.Main.Mode);
         Assert.Equal(1, app.Main.Editor!.Document.Length.Meters); Assert.Equal(3, app.Analyses);
     }
 

@@ -96,7 +96,7 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
             if (_saveError is not null) { Refresh(); return false; }
         }
         if (IsLibraryEdit) Setup.ShowMaterials();
-        else { Setup.SelectedMaterial = entry.Material; Setup.ShowOverview(); }
+        else { Setup.SelectMaterial(entry); Setup.ShowOverview(); }
         return true;
     }
     public override void Refresh()

@@ -10,7 +10,7 @@ public sealed class MaterialSelectionItem : ObservableObject
         Func<string, Task> delete)
     {
         Entry = entry; IsBuiltIn = builtIn;
-        UseCommand = new(() => { setup.SelectedMaterial = entry.Material; setup.ShowOverview(); }, () => !setup.IsBusy);
+        UseCommand = new(() => { setup.SelectMaterial(entry); setup.ShowOverview(); }, () => !setup.IsBusy);
         EditCommand = new(() => setup.EditMaterial(entry, builtIn ? SetupEditorMode.ProjectDraft : SetupEditorMode.UserLibraryEdit),
             () => !setup.IsBusy && (builtIn || setup.Libraries?.CanSaveMaterials == true));
         DeleteCommand = new(async () => { await delete(entry.Material.Name); return true; },

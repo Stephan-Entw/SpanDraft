@@ -12,33 +12,32 @@ public static class SectionDisplay
     public static string Name(ISectionDefinition section, UnitProfile? profile = null)
     {
         var unit = (profile ?? UnitProfile.Default)[QuantityKind.SectionDimension];
-        return section switch
+        return SectionDefinitionCompatibility.Normalize(section) switch
         {
-            RectangleSection s => Caption(Strings.RectangleSectionName, unit, s.Width.Meters, s.Height.Meters),
-            RectangularHollowSection s => Caption(Strings.RectangularHollowSectionName, unit, s.Width.Meters,
-                s.Height.Meters, s.WallThickness.Meters),
-            CircleSection s => Caption(Strings.CircleSectionName, unit, s.Diameter.Meters),
-            CircularHollowSection s => Caption(Strings.CircularHollowSectionName, unit, s.OuterDiameter.Meters, s.WallThickness.Meters),
-            RectangleSectionGeometry s => Caption(Strings.RectangleSectionName, unit, s.Width.Meters, s.Height.Meters),
-            RectangularHollowSectionGeometry s => Caption(Strings.RoundedRectangularHollowSectionName, unit,
-                s.Width.Meters, s.Height.Meters, s.WallThickness.Meters, s.OuterRadius.Meters),
-            CircleSectionGeometry s => Caption(Strings.CircleSectionName, unit, s.Diameter.Meters),
-            CircularHollowSectionGeometry s => Caption(Strings.CircularHollowSectionName, unit,
+            RectangleSectionGeometry s => Caption(Strings.ShapeRectangle, unit, 0, false, s.Width.Meters, s.Height.Meters),
+            RectangularHollowSectionGeometry s => Caption(Strings.ShapeRectangularHollow, unit, s.OuterRadius.Meters,
+                false, s.Width.Meters, s.Height.Meters, s.WallThickness.Meters),
+            CircleSectionGeometry s => Caption(Strings.ShapeCircle, unit, 0, true, s.Diameter.Meters),
+            CircularHollowSectionGeometry s => Caption(Strings.ShapeCircularHollow, unit, 0, true,
                 s.OuterDiameter.Meters, s.WallThickness.Meters),
-            ISectionGeometry s => Caption(Strings.ISectionName, unit,
-                s.Height.Meters, s.Width.Meters, s.WebThickness.Meters, s.FlangeThickness.Meters, s.Radius.Meters),
-            USectionGeometry s => Caption(Strings.USectionName, unit,
-                s.Height.Meters, s.Width.Meters, s.WebThickness.Meters, s.FlangeThickness.Meters, s.Radius.Meters),
-            TSectionGeometry s => Caption(Strings.TSectionName, unit,
-                s.Height.Meters, s.Width.Meters, s.WebThickness.Meters, s.FlangeThickness.Meters, s.Radius.Meters),
-            AngleSectionGeometry s => Caption(Strings.AngleSectionName, unit,
-                s.Width.Meters, s.Height.Meters, s.Thickness.Meters, s.InnerRadius.Meters),
-            CustomSection or ManualSectionDefinition => Strings.CustomSectionName,
+            ISectionGeometry s => Caption(Strings.SectionDefinitionShapeI, unit, s.Radius.Meters,
+                false, s.Height.Meters, s.Width.Meters, s.WebThickness.Meters, s.FlangeThickness.Meters),
+            USectionGeometry s => Caption(Strings.ShapeU, unit, s.Radius.Meters,
+                false, s.Height.Meters, s.Width.Meters, s.WebThickness.Meters, s.FlangeThickness.Meters),
+            TSectionGeometry s => Caption(Strings.ShapeT, unit, s.Radius.Meters,
+                false, s.Height.Meters, s.Width.Meters, s.WebThickness.Meters, s.FlangeThickness.Meters),
+            AngleSectionGeometry s => Caption(Strings.ShapeAngle, unit, s.InnerRadius.Meters,
+                false, s.Width.Meters, s.Height.Meters, s.Thickness.Meters),
+            ManualSectionDefinition => Strings.SectionDefinitionCustomName,
             _ => throw new ArgumentException("Unknown section type.", nameof(section))
         };
     }
 
-    private static string Caption(string format, UnitDefinition unit, params double[] values) =>
-        string.Format(CultureInfo.CurrentUICulture, format,
-            values.Select(v => (object)InputQuantityFormatter.Display(v, unit)).Append(unit.Symbol).ToArray());
+    private static string Caption(string shape, UnitDefinition unit, double radius, bool diameter, params double[] values)
+    {
+        var name = shape + " " + (diameter ? "Ø" : "")
+            + string.Join(" × ", values.Select(v => InputQuantityFormatter.Display(v, unit))) + " " + unit.Symbol;
+        return radius > 0 ? name + string.Format(CultureInfo.CurrentUICulture, Strings.SectionDefinitionRadiusSuffix,
+            InputQuantityFormatter.Display(radius, unit), unit.Symbol) : name;
+    }
 }

@@ -4,7 +4,11 @@ using SpanDraft.Desktop.ViewModels;
 
 namespace SpanDraft.Desktop.Sections;
 
-public sealed record SectionDefinitionResult(ISectionDefinition Section, SectionAxisDesignation BendingAxis, string DisplayName);
+public sealed record SectionDefinitionInitialState(ISectionDefinition Section, SectionAxisDesignation BendingAxis,
+    string? DisplayName = null);
+
+public sealed record SectionDefinitionResult(ISectionDefinition Section, SectionAxisDesignation BendingAxis, string DisplayName,
+    bool IsAutomaticName = false);
 
 /// <summary>Library access only; the definition editor does not own a project or persistence.</summary>
 public interface ISectionDefinitionLibrary

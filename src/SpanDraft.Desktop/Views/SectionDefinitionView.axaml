@@ -91,8 +91,7 @@
     </Style>
   </UserControl.Styles>
   <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,Auto,*">
-    <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
-    <Menu x:Name="SectionMenu" Background="{DynamicResource SurfaceSubtle}">
+    <Menu x:Name="SectionMenu">
       <MenuItem Header="{x:Static resources:Strings.File}">
         <MenuItem x:Name="SectionSaveMenuItem" Header="{x:Static resources:Strings.SectionDefinitionAddLibrary}" Command="{Binding SaveLibraryCommand}" IsVisible="{Binding ShowLibraryAction}" />
         <MenuItem Header="{x:Static resources:Strings.Apply}" Command="{Binding ConfirmCommand}" />
@@ -108,7 +107,6 @@
         <MenuItem x:Name="SectionAboutMenuItem" Header="{x:Static resources:Strings.About}" IsEnabled="{Binding !IsBusy}" Click="ShowAbout" />
       </MenuItem>
     </Menu>
-    </Border>
     <Border Grid.Row="1" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="24,16">
       <Grid x:Name="CommandHeader" ColumnDefinitions="*,Auto" ColumnSpacing="16" Height="{DynamicResource PrimaryAction}">
         <Grid x:Name="DefinitionHeader" VerticalAlignment="Stretch">

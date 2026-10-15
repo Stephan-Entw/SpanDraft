@@ -77,7 +77,7 @@
   <data name="ForceValueLabel" xml:space="preserve"><value>Kraft F</value></data>
   <data name="MomentValueLabel" xml:space="preserve"><value>Moment M</value></data>
   <data name="InvalidLoadValue" xml:space="preserve"><value>Eine endliche Zahl eingeben.</value></data>
-  <data name="LengthExcludesEntities" xml:space="preserve"><value>Die gewünschte Länge schließt Lager oder Punktlasten aus.</value></data>
+  <data name="LengthExcludesEntities" xml:space="preserve"><value>Die gewünschte Länge schließt vorhandene Lager oder Lasten aus.</value></data>
   <data name="EmptyEntityName" xml:space="preserve"><value>Eine nicht leere Bezeichnung eingeben.</value></data>
   <data name="DuplicateEntityName" xml:space="preserve"><value>Diese Bezeichnung wird im Projekt bereits verwendet.</value></data>
   <data name="EntityNameLabel" xml:space="preserve"><value>Bezeichnung</value></data>
@@ -217,7 +217,8 @@
   <data name="DeleteMaterialQuestion" xml:space="preserve"><value>„{0}“ aus Ihrer Materialbibliothek löschen? Bestehende Projekte bleiben unverändert.</value></data>
   <data name="DeleteSectionQuestion" xml:space="preserve"><value>„{0}“ aus Ihrer Querschnittsbibliothek löschen? Bestehende Projekte bleiben unverändert.</value></data>
   <data name="SectionDefinitionTitle" xml:space="preserve"><value>Querschnittdefinition</value></data>
-  <data name="SectionDefinitionTest" xml:space="preserve"><value>Neue Querschnittdefinition testen…</value></data>
+  <data name="SetupBeam" xml:space="preserve"><value>Balken</value></data>
+  <data name="SetupLength" xml:space="preserve"><value>Länge</value></data>
   <data name="SectionDefinitionEditName" xml:space="preserve"><value>Querschnittnamen bearbeiten</value></data>
   <data name="SectionDefinitionSaveLibrary" xml:space="preserve"><value>In meiner Querschnittsbibliothek speichern</value></data>
   <data name="SectionDefinitionManualChoice" xml:space="preserve"><value>Benutzerdefiniert (A/I/W)</value></data>

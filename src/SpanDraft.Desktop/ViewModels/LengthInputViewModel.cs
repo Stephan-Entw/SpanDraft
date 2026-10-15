@@ -11,7 +11,8 @@ public readonly record struct LengthCommitResult(bool Accepted, string? ErrorTex
 
 /// <summary>Transient input session for the single inline dimension editor.</summary>
 public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthCommitResult> commit,
-    Func<bool>? preserveBuffer = null, Func<UnitDefinition>? readUnit = null) : ObservableObject
+    Func<bool>? preserveBuffer = null, Func<UnitDefinition>? readUnit = null,
+    bool retainRejectedOnBlur = false) : ObservableObject
 {
     private string _text = InputQuantityFormatter.Format(read().Meters, readUnit?.Invoke() ?? UnitCatalog.Millimeter);
     private UnitDefinition _editUnit = UnitCatalog.Millimeter;
@@ -46,6 +47,7 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
     public bool TryGetLength(out Length length)
     {
         if (IsEditing && Text == _referenceText) { length = _referenceLength; return true; }
+        if (!IsEditing && Text == InputQuantityFormatter.Format(read().Meters, CurrentUnit)) { length = read(); return true; }
         return InputQuantityFormatter.TryParseLength(Text, CurrentUnit, out length);
     }
 
@@ -106,7 +108,7 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
     {
         if (preserveBuffer?.Invoke() == true || _isConfirming || !IsEditing || Confirm()) return;
         // Leaving a rejected edit discards its request, conflict and feedback together.
-        Cancel();
+        if (!retainRejectedOnBlur) Cancel();
     }
 
     public void Refresh(bool preserveError = false)

@@ -396,14 +396,16 @@ public sealed class DesktopNamingAndPresentationTests
     }
 
     [Fact]
-    public void NewProjectSessionStartsWithNewPresentationAndNamingState()
+    public async Task NewProjectSessionStartsWithNewPresentationAndNamingState()
     {
         var s = new Session();
         var id = s.Create(AutoNameKind.Force);
         s.Editor.SetAnnotationOffset(id, new(5, 6));
         var previous = s.Editor;
-        // The retained Create setup represents creating a fresh project, without introducing a new UI action.
-        s.Main.Setup.ApplyCommand.Execute(null);
+        s.Main.Session!.MarkSaved(s.Main.Session.CurrentRevision, ProjectTestSupport.TestPath("old-project.spandraft"));
+        Assert.True(await s.Main.NewAsync());
+        Assert.Same(previous, s.Editor);
+        Assert.True(await s.Main.Setup.ConfirmAsync());
         Assert.NotSame(previous, s.Editor);
         Assert.Empty(s.Editor.EditorPresentation.AnnotationOffsets);
         Assert.Empty(s.Editor.Document.NamedEntities);

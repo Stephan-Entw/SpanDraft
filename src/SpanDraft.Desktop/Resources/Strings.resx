@@ -77,7 +77,7 @@
   <data name="ForceValueLabel" xml:space="preserve"><value>Force F</value></data>
   <data name="MomentValueLabel" xml:space="preserve"><value>Moment M</value></data>
   <data name="InvalidLoadValue" xml:space="preserve"><value>Enter a finite number.</value></data>
-  <data name="LengthExcludesEntities" xml:space="preserve"><value>The requested length excludes supports or point loads.</value></data>
+  <data name="LengthExcludesEntities" xml:space="preserve"><value>The requested length excludes existing supports or loads.</value></data>
   <data name="EmptyEntityName" xml:space="preserve"><value>Enter a non-empty name.</value></data>
   <data name="DuplicateEntityName" xml:space="preserve"><value>This name is already used in the project.</value></data>
   <data name="EntityNameLabel" xml:space="preserve"><value>Name</value></data>
@@ -217,7 +217,8 @@
   <data name="DeleteMaterialQuestion" xml:space="preserve"><value>Delete “{0}” from your material library? Existing projects will remain unchanged.</value></data>
   <data name="DeleteSectionQuestion" xml:space="preserve"><value>Delete “{0}” from your cross-section library? Existing projects will remain unchanged.</value></data>
   <data name="SectionDefinitionTitle" xml:space="preserve"><value>Section definition</value></data>
-  <data name="SectionDefinitionTest" xml:space="preserve"><value>Test new section definition…</value></data>
+  <data name="SetupBeam" xml:space="preserve"><value>Beam</value></data>
+  <data name="SetupLength" xml:space="preserve"><value>Length</value></data>
   <data name="SectionDefinitionEditName" xml:space="preserve"><value>Edit section name</value></data>
   <data name="SectionDefinitionSaveLibrary" xml:space="preserve"><value>Save in my section library</value></data>
   <data name="SectionDefinitionManualChoice" xml:space="preserve"><value>Custom (A/I/W)</value></data>

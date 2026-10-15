@@ -26,6 +26,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private ResultPresentationOptions _resultPresentation = ResultPresentationOptions.Default;
     private readonly LocalSettingsStore? _settingsStore;
     private bool _settingsSaving;
+    private bool _settingsDialogOpen;
     private UserSettings _settings = UserSettings.Default;
 
     public MainWindowViewModel(Func<BeamModel, BeamAnalysisOutcome>? analyze = null,
@@ -51,10 +52,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         catch (Exception e) when (IsLibraryError(e)) { BuiltInError = Strings.BuiltInUnavailable; BuiltInMaterials = null; }
         if (_recovery is not null) _recovery.Failed += RecoveryFailed;
         _setup = NewSetup();
-        NewCommand = new(() => NewAsync(), () => !IsBusy);
-        OpenCommand = new(() => OpenAsync(), () => !IsBusy);
-        SaveCommand = new(() => SaveAsync(), () => !IsBusy && Session is not null);
-        SaveAsCommand = new(() => SaveAsync(saveAs: true), () => !IsBusy && Session is not null);
+        NewCommand = new(() => NewAsync(), () => CanUseProjectActions);
+        OpenCommand = new(() => OpenAsync(), () => CanUseProjectActions);
+        SaveCommand = new(() => SaveAsync(), () => CanUseProjectActions && Session is not null);
+        SaveAsCommand = new(() => SaveAsync(saveAs: true), () => CanUseProjectActions && Session is not null);
         UndoCommand = new(() => Undo(), () => CanUndo);
         RedoCommand = new(() => Redo(), () => CanRedo);
     }
@@ -73,8 +74,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public void SetSettingsDialogOpen(bool open)
     {
+        _settingsDialogOpen = open;
         if (Editor is { } editor) editor.IsSettingsDialogOpen = open;
     }
+    internal bool PreserveSetupInputs => _fileMenuOpen || _settingsDialogOpen;
 
     public async Task<string?> ApplySettingsAsync(UserSettings settings)
     {
@@ -124,8 +127,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
     public ProjectSession? Session => Editor?.Session;
     public bool IsBusy => _busy || _libraryBusy;
-    public bool CanUndo => !IsBusy && Session?.CanUndo == true;
-    public bool CanRedo => !IsBusy && Session?.CanRedo == true;
+    public bool IsWorkspaceBusy => IsBusy || Mode == MainViewMode.ProjectSetup && Setup.IsBusy;
+    public bool IsSectionWorkspace => Mode == MainViewMode.ProjectSetup && Setup.IsSectionDefinition;
+    public bool CanUseProjectActions => !IsWorkspaceBusy && !IsSectionWorkspace;
+    public bool CanUndo => Mode == MainViewMode.Editor && !IsWorkspaceBusy && Session?.CanUndo == true;
+    public bool CanRedo => Mode == MainViewMode.Editor && !IsWorkspaceBusy && Session?.CanRedo == true;
     public string ProjectName => Session?.FilePath is { } path ? Path.GetFileName(path) : Strings.Untitled;
     public string WindowTitle => Session is null ? Strings.ApplicationTitle
         : ProjectName + (Session.IsDirty ? "*" : "") + " — " + Strings.ApplicationTitle;
@@ -147,31 +153,43 @@ public sealed partial class MainWindowViewModel : ObservableObject
         new SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry(
             Length.FromMillimeters(100), Length.FromMillimeters(100), Length.FromMillimeters(5), Length.FromMillimeters(0)),
         SpanDraft.Core.Sections.SectionAxisDesignation.Y, BuiltInMaterials?.Find("S235JR")?.Material,
-        ApplySetup, CancelSetup, ResultPresentation, this);
+        ApplySetupAsync, CancelSetup, ResultPresentation, this);
 
     public void EditProject()
     {
-        if (IsBusy || Editor is null) return;
+        if (!CanUseProjectActions || Editor is null) return;
         Editor.CancelEditorInteraction();
-        _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.BendingAxis, Editor.Document.Material, ApplySetup, CancelSetup, ResultPresentation, this);
+        _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.BendingAxis, Editor.Document.Material,
+            ApplySetupAsync, CancelSetup, ResultPresentation, this, Editor.Document);
         Navigate(MainViewMode.ProjectSetup);
     }
 
-    private void ApplySetup(ProjectSetupViewModel setup)
+    private Task<bool> ApplySetupAsync(ProjectSetupViewModel setup)
     {
-        if (IsBusy || !setup.CanApply || setup.SelectedMaterial is not { } material) return;
-        if (setup.Mode == ProjectSetupMode.Create)
-            Activate(ProjectSession.Create(new(new(Length.FromMillimeters(1000), material, setup.SelectedSection, setup.BendingAxis), new())));
-        else
+        if (Mode != MainViewMode.ProjectSetup || !ReferenceEquals(setup, Setup)
+            || IsWorkspaceBusy || !setup.CanApply || setup.SelectedMaterial is not { } material)
+            return Task.FromResult(false);
+        if (setup.Mode == ProjectSetupMode.Edit)
         {
-            Editor!.ApplySetup(setup.SelectedSection, setup.BendingAxis, material);
+            if (Editor?.ApplySetup(setup.SelectedLength, setup.SelectedSection, setup.BendingAxis, material, setup.SectionDisplayName) != true)
+                return Task.FromResult(false);
             Navigate(MainViewMode.Editor);
+            return Task.FromResult(true);
         }
+        var document = new EditorDocument(setup.SelectedLength, material, setup.SelectedSection, setup.BendingAxis,
+            sectionDisplayName: setup.SectionDisplayName);
+        return RunOperationAsync(async () =>
+        {
+            if (!await CanLeaveAsync()) return false;
+            await CompleteLeaveAsync();
+            Activate(ProjectSession.Create(new(document, new())));
+            return true;
+        });
     }
 
     private void CancelSetup()
     {
-        if (!IsBusy && Setup.IsEdit) Navigate(MainViewMode.Editor);
+        if (!IsWorkspaceBusy && Session is not null) Navigate(MainViewMode.Editor);
     }
 
     private void Activate(ProjectSession session)
@@ -212,18 +230,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return changed;
     }
 
-    public Task<bool> NewAsync() => RunOperationAsync(async () =>
+    public Task<bool> NewAsync() => RunOperationAsync(() =>
     {
-        if (!await CanLeaveAsync()) return false;
-        await CompleteLeaveAsync();
-        _editor = null;
+        if (IsSectionWorkspace) return Task.FromResult(false);
         _setup = NewSetup();
         Navigate(MainViewMode.ProjectSetup);
-        return true;
+        return Task.FromResult(true);
     });
 
     public Task<bool> OpenAsync() => RunOperationAsync(async () =>
     {
+        if (IsSectionWorkspace) return false;
         string? path = _dialogs is null ? null : await _dialogs.PickOpenPathAsync();
         if (path is null) return false;
         // Parse and validate before touching the old session or asking its leave question.
@@ -243,7 +260,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return true;
     });
 
-    public Task<bool> SaveAsync(bool saveAs = false) => RunOperationAsync(() => SaveCurrentAsync(saveAs));
+    public Task<bool> SaveAsync(bool saveAs = false) => IsSectionWorkspace ? Task.FromResult(false)
+        : RunOperationAsync(() => SaveCurrentAsync(saveAs));
 
     private async Task<bool> SaveCurrentAsync(bool saveAs = false)
     {
@@ -347,7 +365,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task<bool> RunOperationAsync(Func<Task<bool>> operation)
     {
-        if (IsBusy) return false;
+        if (IsWorkspaceBusy) return false;
         _busy = true;
         Session?.SetBusy(true);
         NotifySession();
@@ -387,6 +405,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void Navigate(MainViewMode mode)
     {
+        // Protect hidden editor buffers before changing the visible workspace.
+        if (Editor is { } editor) editor.IsProjectSetupOpen = mode == MainViewMode.ProjectSetup;
         _mode = mode;
         Notify(nameof(Mode));
         Notify(nameof(Setup));
@@ -400,10 +420,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _setup?.RefreshLibraryState();
         Notify(nameof(Session));
         Notify(nameof(IsBusy));
+        Notify(nameof(IsWorkspaceBusy)); Notify(nameof(IsSectionWorkspace)); Notify(nameof(CanUseProjectActions));
         Notify(nameof(CanUndo));
         Notify(nameof(CanRedo));
         Notify(nameof(WindowTitle));
         NewCommand?.Refresh(); OpenCommand?.Refresh(); SaveCommand?.Refresh(); SaveAsCommand?.Refresh();
         UndoCommand?.Refresh(); RedoCommand?.Refresh();
     }
+    internal void RefreshWorkspaceState() => NotifySession();
 }

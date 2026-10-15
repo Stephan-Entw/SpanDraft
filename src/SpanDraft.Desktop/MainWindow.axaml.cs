@@ -28,7 +28,7 @@ public partial class MainWindow : Window
         OpenMenuItem.InputGesture = new(Key.O, _primary);
         SaveMenuItem.InputGesture = new(Key.S, _primary);
         SaveAsMenuItem.InputGesture = new(Key.S, _primary | KeyModifiers.Shift);
-        var quitCommand = new ActionCommand(Close, () => !_initializing && !_model.IsBusy && !_closing);
+        var quitCommand = new ActionCommand(Close, () => !_initializing && !_model.IsWorkspaceBusy && !_closing);
         QuitMenuItem.Command = quitCommand;
         QuitMenuItem.InputGesture = new(Key.Q, _primary);
         UndoMenuItem.InputGesture = new(Key.Z, _primary);
@@ -38,7 +38,7 @@ public partial class MainWindow : Window
         {
             if (e.Source is Control control && (control is Menu or MenuItem
                 || control.FindAncestorOfType<Menu>() is not null) && !_initializing
-                && Content is not Views.SectionDefinitionView) _model.SetFileMenuOpen(true);
+                && !_model.IsSectionWorkspace) _model.SetFileMenuOpen(true);
         }, RoutingStrategies.Tunnel);
         ProjectMenu.PropertyChanged += (_, e) =>
         {
@@ -65,7 +65,7 @@ public partial class MainWindow : Window
 
     private async void ShowSettings(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || _model.IsBusy || _closing || _settingsWindow is not null) return;
+        if (_initializing || _model.IsWorkspaceBusy || _closing || _settingsWindow is not null) return;
         var dialog = new SettingsWindow(new(_model.Settings, _model.ApplySettingsAsync)) { Icon = Icon };
         _settingsWindow = dialog;
         _model.SetSettingsDialogOpen(true);
@@ -80,7 +80,7 @@ public partial class MainWindow : Window
 
     private async void ShowAbout(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || _model.IsBusy || _closing || _aboutWindow is not null || _settingsWindow is not null) return;
+        if (_initializing || _model.IsWorkspaceBusy || _closing || _aboutWindow is not null || _settingsWindow is not null) return;
         var dialog = new AboutWindow { Icon = Icon };
         _aboutWindow = dialog;
         try { await dialog.ShowDialog(this); }
@@ -90,9 +90,12 @@ public partial class MainWindow : Window
     private void ProjectKeyDown(object? sender, KeyEventArgs e)
     {
         if (_initializing || _settingsWindow is not null) return;
-        // The temporary section workspace owns its editing commands; do not route
+        // The section workspace owns its editing commands; do not route
         // its keystrokes to the hidden project editor. The application can still quit.
-        if (Content is Views.SectionDefinitionView && (e.Key != Key.Q || e.KeyModifiers != _primary)) return;
+        if (_model.IsSectionWorkspace && (e.Key != Key.Q || e.KeyModifiers != _primary)) return;
+        if (_model.Mode == MainViewMode.ProjectSetup
+            && (e.Key == Key.Z && (e.KeyModifiers == _primary || e.KeyModifiers == (_primary | KeyModifiers.Shift))
+                || e.Key == Key.Y && e.KeyModifiers == KeyModifiers.Control)) return;
         ICommand? command = (e.Key, e.KeyModifiers) switch
         {
             (Key.N, var m) when m == _primary => _model.NewCommand,
@@ -114,8 +117,7 @@ public partial class MainWindow : Window
     {
         if (_closeApproved) return;
         e.Cancel = true;
-        if (_initializing || _closing || _model.IsBusy || _settingsWindow is not null
-            || Content is Views.SectionDefinitionView { DataContext: SectionDefinitionViewModel { IsBusy: true } }) return;
+        if (_initializing || _closing || _model.IsWorkspaceBusy || _settingsWindow is not null) return;
         _closing = true;
         try
         {

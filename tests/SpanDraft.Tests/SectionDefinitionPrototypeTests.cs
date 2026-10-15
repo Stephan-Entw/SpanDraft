@@ -142,18 +142,18 @@ public sealed class SectionDefinitionPrototypeTests
         vm.CancelNameEdit(); Assert.Contains("60 × 120",vm.DisplayName);
         vm.BeginNameEdit(); vm.PendingName="  My profile  "; Assert.True(vm.CommitName()); Assert.Equal("My profile",vm.DisplayName);
         Commit(vm,"h","200"); Assert.Equal("My profile",vm.DisplayName);
-        vm.SelectForm(SectionEditorType.Manual); Assert.Equal(Strings.SectionDefinitionCustomName,vm.DisplayName);
-        Assert.False(vm.HasCustomName);
+        vm.SelectForm(SectionEditorType.Manual); Assert.Equal("My profile",vm.DisplayName);
+        Assert.True(vm.HasCustomName);
         vm.BeginNameEdit(); vm.PendingName="Manual profile"; Assert.True(vm.CommitName());
-        vm.SelectForm(SectionEditorType.Rectangle); Assert.Equal("My profile",vm.DisplayName);
+        vm.SelectForm(SectionEditorType.Rectangle); Assert.Equal("Manual profile",vm.DisplayName);
         Assert.Equal(.2,Input(vm,"h").ConfirmedValue);
         vm.ResetName(); Assert.False(vm.HasCustomName); Assert.Contains("60 × 200 mm",vm.DisplayName);
-        vm.SelectForm(SectionEditorType.Manual); Assert.Equal("Manual profile",vm.DisplayName);
+        vm.SelectForm(SectionEditorType.Manual); Assert.Equal(Strings.SectionDefinitionCustomName,vm.DisplayName);
         var manual=new SectionDefinitionViewModel(); manual.SelectForm(SectionEditorType.Manual); Assert.Equal(Strings.SectionDefinitionCustomName,manual.DisplayName);
     }
     [Theory]
     [InlineData("de-DE")] [InlineData("en-US")]
-    public void EveryFormRestoresItsOwnCustomNameAndInputs(string culture)
+    public void ExplicitNameSurvivesAllFormsWhileEachFormRestoresItsOwnInputs(string culture)
     {
         using var scope = new UiCultureScope(culture);
         var vm = new SectionDefinitionViewModel();
@@ -161,7 +161,7 @@ public sealed class SectionDefinitionPrototypeTests
         var values = new Dictionary<SectionEditorType, double?[]>();
         foreach (var type in types)
         {
-            vm.SelectForm(type); Assert.False(vm.HasCustomName); Fill(vm);
+            vm.SelectForm(type); Fill(vm);
             vm.BeginNameEdit(); vm.PendingName = type == SectionEditorType.ISection ? "HEB 200" : "Custom " + type;
             Assert.True(vm.CommitName());
             var input = vm.Parameters[0]; input.PendingText = "300"; Assert.True(input.Commit());
@@ -170,9 +170,13 @@ public sealed class SectionDefinitionPrototypeTests
         foreach (var type in types.Reverse())
         {
             vm.SelectForm(type);
-            Assert.Equal(type == SectionEditorType.ISection ? "HEB 200" : "Custom " + type, vm.DisplayName);
+            Assert.Equal("Custom Manual", vm.DisplayName);
             Assert.True(vm.HasCustomName); Assert.Equal(values[type], vm.Parameters.Select(p => p.ConfirmedValue));
-            vm.ResetName(); Assert.False(vm.HasCustomName);
+        }
+        vm.ResetName();
+        foreach (var type in types)
+        {
+            vm.SelectForm(type); Assert.False(vm.HasCustomName);
             Assert.Equal(type == SectionEditorType.Manual, vm.DisplayName == Strings.SectionDefinitionCustomName);
         }
     }
@@ -181,11 +185,11 @@ public sealed class SectionDefinitionPrototypeTests
     {
         var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.ISection);
         vm.BeginNameEdit(); vm.PendingName = "HEB 200"; vm.SelectForm(SectionEditorType.Circle);
-        Assert.False(vm.IsEditingName); Assert.False(vm.HasCustomName); Assert.NotEqual("HEB 200", vm.DisplayName);
+        Assert.False(vm.IsEditingName); Assert.True(vm.HasCustomName); Assert.Equal("HEB 200", vm.DisplayName);
         vm.SelectForm(SectionEditorType.ISection); Assert.Equal("HEB 200", vm.DisplayName);
         vm.BeginNameEdit(); vm.PendingName = " "; vm.SelectForm(SectionEditorType.Manual);
         Assert.Equal(SectionEditorType.ISection, vm.Type); Assert.True(vm.HasNameError);
-        vm.CancelNameEdit(); vm.SelectForm(SectionEditorType.Manual); Assert.False(vm.HasCustomName);
+        vm.CancelNameEdit(); vm.SelectForm(SectionEditorType.Manual); Assert.True(vm.HasCustomName);
     }
     [Fact]
     public void NonDefaultUnitsAndPresentationDoNotChangeSIValuesOrManualInputKinds()
@@ -384,9 +388,8 @@ public sealed class SectionDefinitionPrototypeTests
     public void ProductionControlsMeasureRequestedStatesAndManualModeReflows(string culture,double width,double height)
     {
         using var environment=new DesktopControlEnvironment(); using var scope=new UiCultureScope(culture);
-        var vm=new SectionDefinitionViewModel(); var window=new SectionDefinitionWindow(vm);
-        var view=(SectionDefinitionView)window.Content!; var owner=new Window(); owner.Show();
-        var pending=window.ShowDialog<SectionDefinitionResult?>(owner);
+        var vm=new SectionDefinitionViewModel(); var view=new SectionDefinitionView { DataContext=vm };
+        var window=new Window { Content=view }; var owner=new Window(); owner.Show(); window.Show();
         Capture("selection");
         foreach (var type in new[]{SectionEditorType.Rectangle,SectionEditorType.RectangularHollow,SectionEditorType.ISection,SectionEditorType.Angle})
         { vm.SelectForm(type); Capture(type+"-partial"); Fill(vm); Capture(type.ToString()); }
@@ -424,70 +427,64 @@ public sealed class SectionDefinitionPrototypeTests
     [Theory]
     [InlineData(false, 1100, 650)] [InlineData(true, 1250, 800)]
     [InlineData(false, 1400, 900)] [InlineData(true, 1400, 900)]
-    public async Task TestButtonUsesExistingWindowShellAndResultLeavesSetupAndProjectUnchanged(bool accept, double width, double height)
+    public async Task SectionCardUsesExistingWindowAndOnlyUpdatesTheDraftOnAcceptance(bool accept, double width, double height)
     {
         using var environment=new DesktopControlEnvironment();
         var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); await main.InitializeLibrariesAsync();
-        var setup=main.Setup; var originalSection=setup.SelectedSection; var originalAxis=setup.BendingAxis; var originalMaterial=setup.SelectedMaterial;
-        var view=new ProjectSetupView{DataContext=setup}; var shell=new Grid(); shell.Children.Add(view);
-        var owner=new Window{Content=shell}; owner.Show(); Arrange(owner, width, height);
-        var decorations = owner.WindowDecorations; var position = owner.Position;
-        var button=view.FindControl<Button>("TestSectionDefinitionButton")!; Assert.True(button.IsEffectivelyVisible);
-        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        var preview=Assert.IsType<SectionDefinitionView>(owner.Content);
-        Assert.Empty(owner.OwnedWindows);
-        Assert.Equal(width, owner.Width); Assert.Equal(height, owner.Height);
-        Assert.Equal(decorations, owner.WindowDecorations); Assert.Equal(position, owner.Position);
-        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Assert.Same(preview, owner.Content);
-        var vm=Assert.IsType<SectionDefinitionViewModel>(preview.DataContext); Assert.True(vm.IsChoosingForm);
+        var setup=main.Setup; var original=setup.SelectedSection; var axis=setup.BendingAxis;
+        var view=new ProjectSetupView{DataContext=setup}; var owner=new Window{Content=view}; owner.Show(); Arrange(owner,width,height);
+        var decorations=owner.WindowDecorations; var position=owner.Position;
+        main.Setup.ChangeSectionCommand.Execute(null); Arrange(owner,width,height);
+        var preview=Assert.Single(view.GetVisualDescendants().OfType<SectionDefinitionView>());
+        Assert.Same(view,owner.Content); Assert.Empty(owner.OwnedWindows);
+        var vm=Assert.IsType<SectionDefinitionViewModel>(preview.DataContext); Assert.False(vm.IsChoosingForm);
         Assert.Same(setup.ResultPresentation,vm.Presentation);
         if (accept) { vm.SelectForm(SectionEditorType.Rectangle); Fill(vm); Assert.True(await vm.ConfirmAsync()); }
         else vm.CancelCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs(); Assert.Empty(owner.OwnedWindows); Assert.Same(shell, owner.Content);
-        Assert.Equal(decorations, owner.WindowDecorations); Assert.Equal(position, owner.Position);
-        Assert.Same(originalSection,setup.SelectedSection); Assert.Equal(originalAxis,setup.BendingAxis); Assert.Same(originalMaterial,setup.SelectedMaterial);
+        Dispatcher.UIThread.RunJobs(); Assert.Same(view,owner.Content);
+        Assert.Equal(decorations,owner.WindowDecorations); Assert.Equal(position,owner.Position);
+        if (accept) Assert.IsType<RectangleSectionGeometry>(setup.SelectedSection);
+        else { Assert.Same(original,setup.SelectedSection); Assert.Equal(axis,setup.BendingAxis); }
         Assert.Equal(ProjectSetupPage.Overview,setup.Page); Assert.Null(main.Editor); Assert.Empty(files.Writes);
-        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        var reopened = Assert.IsType<SectionDefinitionView>(owner.Content);
-        Assert.NotSame(preview, reopened); Assert.Empty(owner.OwnedWindows);
-        Assert.IsType<SectionDefinitionViewModel>(reopened.DataContext).CancelCommand.Execute(null);
-        Assert.Same(shell, owner.Content);
-        var state=State(); var edit=new ProjectSetupViewModel(ProjectSetupMode.Edit,state.Document.Section,state.Document.BendingAxis,state.Document.Material,_=>{},()=>{});
-        view.DataContext=edit; Arrange(owner); Assert.False(button.IsEffectivelyVisible); owner.Close();
+        setup.ShowSections(); Assert.NotSame(vm,setup.Definition); setup.Escape(); owner.Close();
     }
     [Fact]
-    public async Task HostedPreviewProtectsAnActiveLibrarySaveAndRestoresTheShellAfterwards()
+    public async Task HostedDefinitionProtectsActiveLibrarySaveAndReturnsToSetup()
     {
-        using var environment = new DesktopControlEnvironment();
-        var files = new Files(); var main = new MainWindowViewModel(sectionStore: new(files, "sections"));
-        await main.InitializeLibrariesAsync();
-        var setup = new ProjectSetupView { DataContext = main.Setup };
-        var owner = new Window { Content = setup }; owner.Show(); Arrange(owner);
-        setup.FindControl<Button>("TestSectionDefinitionButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        var preview = Assert.IsType<SectionDefinitionView>(owner.Content);
-        var vm = Assert.IsType<SectionDefinitionViewModel>(preview.DataContext);
-        vm.SelectForm(SectionEditorType.Circle); Fill(vm);
-        var release = new TaskCompletionSource(); var reached = new TaskCompletionSource();
-        files.BeforeWrite = async (_, _, _) => { reached.SetResult(); await release.Task; };
-        var pending = vm.SaveLibraryAsync(); await WaitForCheckpoint(reached.Task, pending);
-        owner.Close(); Assert.True(owner.IsVisible); Assert.Same(preview, owner.Content);
-        release.SetResult(); Assert.True(await WaitFor(pending));
-        vm.CancelCommand.Execute(null); Assert.Same(setup, owner.Content); Assert.Single(main.UserSections.All);
-        owner.Close(); Assert.False(owner.IsVisible);
+        using var environment=new DesktopControlEnvironment();
+        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); await main.InitializeLibrariesAsync();
+        var setup=new ProjectSetupView { DataContext=main.Setup }; var owner=new Window { Content=setup }; owner.Show(); Arrange(owner);
+        main.Setup.ShowSections(); var vm=main.Setup.Definition!; vm.SelectForm(SectionEditorType.Circle); Fill(vm);
+        var release=new TaskCompletionSource(); var reached=new TaskCompletionSource();
+        files.BeforeWrite=async (_,_,_) => { reached.SetResult(); await release.Task; };
+        var pending=vm.SaveLibraryAsync(); await WaitForCheckpoint(reached.Task,pending);
+        try
+        {
+            Assert.True(main.IsWorkspaceBusy); Assert.False(await main.RequestCloseAsync());
+            Assert.Same(setup,owner.Content); Assert.False(main.NewCommand.CanExecute(null));
+            vm.CancelCommand.Execute(null); Assert.Same(vm,main.Setup.CurrentStep);
+        }
+        finally { release.SetResult(); }
+        Assert.True(await WaitFor(pending)); vm.CancelCommand.Execute(null);
+        Assert.Equal(ProjectSetupPage.Overview,main.Setup.Page); Assert.Single(main.UserSections.All); owner.Close();
     }
     [Fact]
     public async Task SavingBlocksWindowCloseAndReturnsRealSectionOnlyAfterPublication()
     {
-        using var environment=new DesktopControlEnvironment();
         var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); await main.InitializeLibrariesAsync();
-        var release=new TaskCompletionSource(); var reached=new TaskCompletionSource();
-        files.BeforeWrite=async(_,_,_)=>{reached.SetResult();await release.Task;};
-        var vm=new SectionDefinitionViewModel(library:Library(main)); vm.SelectForm(SectionEditorType.Circle); Fill(vm);
-        var owner=new Window(); owner.Show(); var dialog=new SectionDefinitionWindow(vm); var resultTask=dialog.ShowDialog<SectionDefinitionResult?>(owner);
+        main.Setup.ShowSections(); var vm=main.Setup.Definition!; vm.SelectForm(SectionEditorType.Circle); Fill(vm);
+        var original=main.Setup.SelectedSection; var release=new TaskCompletionSource(); var reached=new TaskCompletionSource();
+        files.BeforeWrite=async (_,_,_) => { reached.SetResult(); await release.Task; };
         var pending=vm.SaveLibraryAsync(); await WaitForCheckpoint(reached.Task,pending);
-        Assert.True(vm.IsBusy); Assert.False(vm.CanConfirm); dialog.Close(); Assert.False(resultTask.IsCompleted); Assert.Empty(main.UserSections.All);
-        release.SetResult(); Assert.True(await WaitFor(pending)); Assert.False(resultTask.IsCompleted); Assert.True(await vm.ConfirmAsync()); var result=await WaitFor(resultTask);
-        Assert.NotNull(result); Assert.IsType<CircleSectionGeometry>(result.Section); Assert.Single(main.UserSections.All); owner.Close();
+        try
+        {
+            Assert.False(await main.RequestCloseAsync()); Assert.False(await vm.ConfirmAsync());
+            Assert.Same(original,main.Setup.SelectedSection); Assert.Empty(main.UserSections.All);
+        }
+        finally { release.SetResult(); }
+        Assert.True(await WaitFor(pending)); Assert.True(await vm.ConfirmAsync());
+        Assert.IsType<CircleSectionGeometry>(main.Setup.SelectedSection); Assert.Null(main.Session);
+        Assert.Single(main.UserSections.All);
     }
     [Theory]
     [InlineData(SectionEditorType.Rectangle)] [InlineData(SectionEditorType.RectangularHollow)]

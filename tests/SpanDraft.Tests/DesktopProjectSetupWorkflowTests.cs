@@ -41,8 +41,8 @@ public sealed class DesktopProjectSetupWorkflowTests
     private static ISectionDefinition Rectangle() => new RectangleSectionGeometry(M(.1), M(.2));
     private static MaterialSelectionViewModel Materials(Fixture f)
     { f.Main.Setup.ShowMaterials(); return Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep); }
-    private static SectionSelectionViewModel Sections(Fixture f)
-    { f.Main.Setup.ShowSections(); return Assert.IsType<SectionSelectionViewModel>(f.Main.Setup.CurrentStep); }
+    private static SectionDefinitionViewModel Sections(Fixture f)
+    { f.Main.Setup.ShowSections(); return Assert.IsType<SectionDefinitionViewModel>(f.Main.Setup.CurrentStep); }
     private static MaterialEditorViewModel NewMaterial(Fixture f)
     {
         Materials(f).NewCommand.Execute(null);
@@ -51,12 +51,23 @@ public sealed class DesktopProjectSetupWorkflowTests
         e.Inputs[0].Text = "210"; e.Inputs[1].Text = "355";
         return e;
     }
-    private static SectionEditorViewModel NewSection(Fixture f)
+    private static SectionDefinitionViewModel NewSection(Fixture f)
     {
-        Sections(f).NewCommand.Execute(null);
-        var e = Assert.IsType<SectionEditorViewModel>(f.Main.Setup.CurrentStep);
-        foreach (var input in e.Parameters) input.Text = input.Key == "b" ? "100" : "200";
-        return e;
+        var e = Sections(f); e.SelectForm(SectionEditorType.Rectangle);
+        Fill(e); return e;
+    }
+    private static void Fill(SectionDefinitionViewModel editor)
+    {
+        foreach (var input in editor.Parameters)
+        {
+            input.PendingText = input.Key switch
+            {
+                "b" => "100", "h" => "200", "d" or "D" => "100", "t" or "tw" => "5", "tf" => "10", "r" => "0",
+                "A" => "1000", _ when input.Key.StartsWith('I') => "1000000", _ => "20000"
+            };
+            input.Commit();
+        }
+        if (editor.RequiresAxisSelection) editor.SelectedAxis = editor.AvailableAxes[0].Value;
     }
 
     [Fact]
@@ -67,7 +78,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         Assert.Equal(100, s.Width.Millimeters); Assert.Equal(100, s.Height.Millimeters);
         Assert.Equal(5, s.WallThickness.Millimeters); Assert.Equal(0, s.OuterRadius.Millimeters);
         Assert.Same(f.Main.BuiltInMaterials!.Find("S235JR")!.Material, f.Main.Setup.SelectedMaterial);
-        Assert.False(Materials(f).HasCurrent); Assert.False(Sections(f).HasCurrent);
+        Assert.False(Materials(f).HasCurrent); Assert.True(Sections(f).HasValidSection);
         f.Main.Setup.ShowOverview(); f.Create();
         var d = f.Main.Editor!.Document;
         Assert.Same(s, d.Section); Assert.Equal(SectionAxisDesignation.Y, d.BendingAxis);
@@ -225,10 +236,10 @@ public sealed class DesktopProjectSetupWorkflowTests
         }
         else
         {
-            var editor = NewSection(f); editor.SaveToLibrary = true; editor.PresetName = "Draft"; var draft = editor.Draft;
-            Assert.False(await editor.ConfirmAsync()); Assert.Same(editor, f.Main.Setup.CurrentStep);
-            Assert.Same(draft, editor.Draft); Assert.True(editor.HasError); Assert.Empty(f.Main.UserSections.All);
-            editor.SaveToLibrary = false; Assert.True(await editor.ConfirmAsync());
+            var editor = NewSection(f); var draft = editor.Section;
+            Assert.False(await editor.SaveLibraryAsync()); Assert.Same(editor, f.Main.Setup.CurrentStep);
+            Assert.Same(draft, editor.Section); Assert.True(editor.HasLibraryError); Assert.Empty(f.Main.UserSections.All);
+            Assert.True(await editor.ConfirmAsync());
         }
         Assert.Equal(ProjectSetupPage.Overview, f.Main.Setup.Page); Assert.Empty(f.Files.Writes);
     }
@@ -242,7 +253,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         var old = material ? (object)f.Main.UserMaterials : f.Main.UserSections;
         Task<bool> pending;
         if (material) { var e = NewMaterial(f); e.SaveToLibrary = true; pending = e.ConfirmAsync(); }
-        else { var e = NewSection(f); e.SaveToLibrary = true; e.PresetName = "Draft"; pending = e.ConfirmAsync(); }
+        else { var e = NewSection(f); pending = e.SaveLibraryAsync(); }
         try
         {
             await WaitFor(entered.Task);
@@ -252,7 +263,8 @@ public sealed class DesktopProjectSetupWorkflowTests
             Assert.NotNull(material ? await f.Main.SaveSectionAsync(new("Concurrent", Rectangle())) : await f.Main.SaveMaterialAsync(Entry("Concurrent")));
         }
         finally { release.TrySetResult(); }
-        Assert.True(await WaitFor(pending)); Assert.False(f.Main.IsBusy); Assert.Equal(ProjectSetupPage.Overview, f.Main.Setup.Page);
+        Assert.True(await WaitFor(pending)); Assert.False(f.Main.IsBusy);
+        Assert.Equal(material ? ProjectSetupPage.Overview : ProjectSetupPage.SectionDefinition, f.Main.Setup.Page);
     }
 
     [Theory]
@@ -260,17 +272,16 @@ public sealed class DesktopProjectSetupWorkflowTests
     [InlineData(4)] [InlineData(5)] [InlineData(6)] [InlineData(7)]
     public async Task EveryParametricShapeCanBeConstructedFromDraftAndDomainRejectsInvalidCombination(int kind)
     {
-        var f = new Fixture(); await f.Load(); var editor = NewSection(f);
-        editor.Type = editor.Types.Single(t => (int)t.Value == kind);
-        foreach (var input in editor.Parameters)
-            input.Text = input.Key switch { "b" => "100", "h" => "200", "d" or "D" => "100", "t" or "tw" => "5", "tf" => "10", "r" => "0", _ => throw new InvalidOperationException() };
-        Assert.True(editor.IsValid, editor.Error); Assert.IsAssignableFrom<IParametricSectionDefinition>(editor.Draft);
-        Assert.Equal(2, editor.Axes.Count); Assert.NotEmpty(editor.Area);
+        var f = new Fixture(); await f.Load(); var editor = Sections(f);
+        editor.SelectForm((SectionEditorType)kind); Fill(editor);
+        Assert.True(editor.HasValidSection); Assert.IsAssignableFrom<IParametricSectionDefinition>(editor.Section);
+        Assert.Equal(2, editor.Section!.Axes.Count); Assert.NotEmpty(editor.Area);
         if (editor.Parameters.Any(p => p.Key == "t"))
         {
-            var input = editor.Parameters.Single(p => p.Key == "t"); input.Text = "500";
-            Assert.False(editor.IsValid); Assert.Empty(editor.Axes); Assert.False(await editor.ConfirmAsync());
-            input.Text = "5"; Assert.True(editor.IsValid);
+            var input = editor.Parameters.Single(p => p.Key == "t"); input.PendingText = "500"; input.Commit();
+            Assert.False(editor.HasValidSection); Assert.False(await editor.ConfirmAsync());
+            input.PendingText = "5"; input.Commit();
+            if (editor.RequiresAxisSelection) editor.SelectedAxis = editor.AvailableAxes[0].Value;
         }
         Assert.True(await editor.ConfirmAsync()); Assert.Equal(ProjectSetupPage.Overview, f.Main.Setup.Page);
         Assert.Empty(f.Main.UserSections.All); Assert.Empty(f.Files.Writes);
@@ -282,11 +293,10 @@ public sealed class DesktopProjectSetupWorkflowTests
     [InlineData(ManualAxisConfiguration.YZ)] [InlineData(ManualAxisConfiguration.UV)]
     public async Task ManualConfigurationsHaveCanonicalAxesAndExactlyOneW(ManualAxisConfiguration config)
     {
-        var f = new Fixture(); await f.Load(); var editor = NewSection(f);
-        editor.Type = editor.Types.Single(t => t.Value == SectionEditorType.Manual);
-        editor.Configuration = editor.Configurations.Single(c => c.Value == config);
-        foreach (var input in editor.Parameters) input.Text = input.Key == "A" ? "1000" : input.Key.StartsWith('I') ? "1000000" : "20000";
-        var section = Assert.IsType<ManualSectionDefinition>(editor.Draft);
+        var f = new Fixture(); await f.Load(); var editor = Sections(f);
+        editor.SelectForm(SectionEditorType.Manual);
+        editor.Configuration = editor.Configurations.Single(c => c.Value == config); Fill(editor);
+        var section = Assert.IsType<ManualSectionDefinition>(editor.Section);
         Assert.Equal(config is ManualAxisConfiguration.YZ or ManualAxisConfiguration.UV ? 2 : 1, section.Axes.Count);
         Assert.All(section.Axes, a => Assert.Equal(a.PositiveSectionModulus, a.NegativeSectionModulus));
         Assert.Equal(section.Axes.OrderBy(a => a.AxisDesignation), section.Axes);
@@ -314,26 +324,19 @@ public sealed class DesktopProjectSetupWorkflowTests
     }
 
     [Fact]
-    public async Task SectionPresetSaveEditDeleteDoesNotChangeSnapshotWithoutUse()
+    public async Task SectionPresetSaveAndSelectionOnlyChangeProjectOnExplicitApply()
     {
         var f = new Fixture(); await f.Load(); f.Create(); var snapshot = f.Main.Editor!.Document;
-        f.Main.EditProject(); var editor = NewSection(f); editor.SaveToLibrary = true; editor.PresetName = "My preset";
-        Assert.True(await editor.ConfirmAsync()); Assert.Single(SectionLibraryCodec.Deserialize(f.Files.Data["sections"]).All);
+        f.Main.EditProject(); var editor = NewSection(f);
+        editor.BeginNameEdit(); editor.PendingName = "My preset"; Assert.True(editor.CommitName());
+        Assert.True(await editor.SaveLibraryAsync()); Assert.Single(SectionLibraryCodec.Deserialize(f.Files.Data["sections"]).All);
+        Assert.Same(snapshot, f.Main.Editor.Document); Assert.NotEqual("My preset", f.Main.Setup.SectionDisplayName);
+        editor.CancelCommand.Execute(null); Assert.Same(snapshot.Section, f.Main.Setup.SelectedSection);
+        editor = NewSection(f); editor.LoadPreset(f.Main.UserSections.All.Single());
+        Assert.True(await editor.ConfirmAsync()); Assert.Equal("My preset", f.Main.Setup.SectionDisplayName);
         Assert.Same(snapshot, f.Main.Editor.Document);
-        Sections(f).UserEntries.Single().EditCommand.Execute(null);
-        editor = Assert.IsType<SectionEditorViewModel>(f.Main.Setup.CurrentStep); Assert.True(editor.IsLibraryEdit);
-        var used = f.Main.Setup.SelectedSection; editor.PresetName = "Renamed";
-        editor.Type = editor.Types.Single(t => t.Value == SectionEditorType.Circle); editor.Parameters.Single().Text = "50";
-        Assert.True(await editor.ConfirmAsync()); Assert.Same(used, f.Main.Setup.SelectedSection);
-        var selection = Assert.IsType<SectionSelectionViewModel>(f.Main.Setup.CurrentStep);
-        Assert.Equal("Renamed", selection.UserEntries.Single().Entry.Name);
-        selection.UserEntries.Single().UseCommand.Execute(null); Assert.IsType<CircleSectionGeometry>(f.Main.Setup.SelectedSection);
-        selection = Sections(f); f.Dialogs.ConfirmLibraryDelete = false; await selection.DeleteAsync("Renamed"); Assert.Single(f.Main.UserSections.All);
-        f.Dialogs.ConfirmLibraryDelete = true; await selection.DeleteAsync("Renamed"); Assert.Empty(f.Main.UserSections.All);
-        Assert.Same(snapshot, f.Main.Editor.Document);
-        f.Main.Setup.ShowOverview(); f.Main.Setup.ApplyCommand.Execute(null);
-        Assert.DoesNotContain("My preset", Encoding.UTF8.GetString(ProjectFileCodec.Serialize(f.Main.Session!.CurrentRevision.State)));
-        Assert.DoesNotContain("Renamed", Encoding.UTF8.GetString(ProjectFileCodec.Serialize(f.Main.Session.CurrentRevision.State)));
+        Assert.True(await f.Main.Setup.ConfirmAsync()); Assert.Equal("My preset", f.Main.Editor.Document.SectionDisplayName);
+        Assert.Contains("My preset", Encoding.UTF8.GetString(ProjectFileCodec.Serialize(f.Main.Session!.CurrentRevision.State)));
     }
 
     [Theory]
@@ -355,8 +358,8 @@ public sealed class DesktopProjectSetupWorkflowTests
         }
         else
         {
-            Assert.True(Sections(f).HasLibraryError); Assert.Single(f.Main.UserMaterials.All);
-            var e = NewSection(f); Assert.False(e.CanSaveToLibrary); Assert.True(await e.ConfirmAsync());
+            Assert.Single(f.Main.UserMaterials.All);
+            var e = NewSection(f); Assert.False(await e.SaveLibraryAsync()); Assert.True(e.HasLibraryError); Assert.True(await e.ConfirmAsync());
         }
         Assert.Equal(corrupt, f.Files.Data[path]); Assert.Empty(f.Files.Writes);
     }
@@ -417,11 +420,11 @@ public sealed class DesktopProjectSetupWorkflowTests
     [Fact]
     public async Task OpenSectionEditorRejectsAffectedUnitChangesAndRetainsTextOnPresentationChange()
     {
-        var f = new Fixture(); await f.Load(); var editor = NewSection(f); editor.Parameters[0].Text = "100,";
+        var f = new Fixture(); await f.Load(); var editor = NewSection(f); editor.Parameters[0].PendingText = "100,";
         Assert.False(f.Main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Standard));
-        Assert.Same(editor, f.Main.Setup.CurrentStep); Assert.Equal("100,", editor.Parameters[0].Text);
+        Assert.Same(editor, f.Main.Setup.CurrentStep); Assert.Equal("100,", editor.Parameters[0].PendingText);
         Assert.True(f.Main.SetResultPresentation(UnitProfile.Default, PresentationMode.Detailed));
-        Assert.Equal("100,", editor.Parameters[0].Text);
+        Assert.Equal("100,", editor.Parameters[0].PendingText);
         f.Main.Setup.Escape(); Assert.True(f.Main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Standard));
     }
 
@@ -446,13 +449,12 @@ public sealed class DesktopProjectSetupWorkflowTests
         Assert.Equal(material.YieldStrength, materialEditor.Draft.Material.YieldStrength);
         Assert.Equal(material.Density, materialEditor.Draft.Material.Density); Assert.Equal(material.PoissonRatio, materialEditor.Draft.Material.PoissonRatio);
         Assert.True(await materialEditor.ConfirmAsync());
-        Sections(f).EditCurrentCommand.Execute(null);
-        var sectionEditor = Assert.IsType<SectionEditorViewModel>(f.Main.Setup.CurrentStep);
-        Assert.Equal(manual.Area, sectionEditor.Draft!.Area); Assert.Equal(manual.Axes, sectionEditor.Draft.Axes);
+        var sectionEditor = Sections(f);
+        Assert.Equal(manual.Area, sectionEditor.Section!.Area); Assert.Equal(manual.Axes, sectionEditor.Section.Axes);
         Assert.True(await sectionEditor.ConfirmAsync());
         f.Main.Setup.SelectedSection = new RectangleSection(M(.12345678901234567), M(.23456789012345678));
-        f.Main.Setup.ApplyCommand.Execute(null); f.Main.EditProject(); Sections(f).EditCurrentCommand.Execute(null);
-        var geometry = Assert.IsType<RectangleSectionGeometry>(Assert.IsType<SectionEditorViewModel>(f.Main.Setup.CurrentStep).Draft);
+        Assert.True(await f.Main.Setup.ConfirmAsync()); f.Main.EditProject();
+        var geometry = Assert.IsType<RectangleSectionGeometry>(Sections(f).Section);
         Assert.Equal(.12345678901234567, geometry.Width.Meters); Assert.Equal(.23456789012345678, geometry.Height.Meters);
     }
 
@@ -472,8 +474,9 @@ public sealed class DesktopProjectSetupWorkflowTests
         f.Files.Data["sections"] = SectionLibraryCodec.Serialize(new([new("Mine", Rectangle())])); await f.Load();
         var m = NewMaterial(f); m.Name = "one-OFF"; m.SaveToLibrary = true;
         Assert.False(m.CanConfirm); m.SaveToLibrary = false; Assert.True(await m.ConfirmAsync());
-        var s = NewSection(f); s.PresetName = "mINE"; s.SaveToLibrary = true;
-        Assert.False(s.CanConfirm); s.SaveToLibrary = false; Assert.True(await s.ConfirmAsync()); Assert.Empty(f.Files.Writes);
+        var s = NewSection(f); s.BeginNameEdit(); s.PendingName = "mINE"; s.CommitName();
+        Assert.False(await s.SaveLibraryAsync()); Assert.True(s.HasLibraryError);
+        Assert.True(await s.ConfirmAsync()); Assert.Empty(f.Files.Writes);
     }
 
     [Fact]
@@ -495,12 +498,15 @@ public sealed class DesktopProjectSetupWorkflowTests
     [Fact]
     public async Task ManualInputUnitsAreProtectedAndTypeSwitchUsesCurrentDimensionUnits()
     {
-        var f = new Fixture(); await f.Load(); var editor = NewSection(f);
-        editor.Type = editor.Types.Single(t => t.Value == SectionEditorType.Manual);
+        var f = new Fixture(); await f.Load(); var editor = Sections(f);
+        editor.SelectForm(SectionEditorType.Manual);
         var profile = UnitProfile.Default.WithUnit(QuantityKind.SectionDimension, UnitCatalog.Inch);
+        // The loaded parametric draft also retains input buffers; protect all affected units.
+        Assert.False(f.Main.SetResultPresentation(profile, PresentationMode.Standard));
+        Assert.False(f.Main.SetResultPresentation(UnitProfile.Default.WithUnit(QuantityKind.Area, UnitCatalog.SquareInch), PresentationMode.Standard));
+        editor.CancelCommand.Execute(null);
         Assert.True(f.Main.SetResultPresentation(profile, PresentationMode.Standard));
-        Assert.False(f.Main.SetResultPresentation(profile.WithUnit(QuantityKind.Area, UnitCatalog.SquareInch), PresentationMode.Standard));
-        editor.Type = editor.Types.Single(t => t.Value == SectionEditorType.Rectangle);
+        editor = Sections(f); editor.SelectForm(SectionEditorType.Rectangle);
         Assert.All(editor.Parameters, p => Assert.Equal(UnitCatalog.Inch, p.Unit));
         Assert.False(f.Main.SetResultPresentation(UnitProfile.Default, PresentationMode.Standard));
     }
@@ -508,15 +514,15 @@ public sealed class DesktopProjectSetupWorkflowTests
     [Fact]
     public async Task ManualConfigurationChangesPreserveIncompleteAndHiddenAxisBuffers()
     {
-        var f = new Fixture(); await f.Load(); var editor = NewSection(f);
-        editor.Type = editor.Types.Single(t => t.Value == SectionEditorType.Manual);
-        var area = editor.Parameters.Single(p => p.Key == "A"); area.Text = "unfinished";
-        var inertia = editor.Parameters.Single(p => p.Key == "IY"); inertia.Text = "1e";
+        var f = new Fixture(); await f.Load(); var editor = Sections(f);
+        editor.SelectForm(SectionEditorType.Manual);
+        var area = editor.Parameters.Single(p => p.Key == "A"); area.PendingText = "unfinished";
+        var inertia = editor.Parameters.Single(p => p.Key == "IY"); inertia.PendingText = "1e";
         editor.Configuration = editor.Configurations.Single(c => c.Value == ManualAxisConfiguration.YZ);
         Assert.Same(area, editor.Parameters.Single(p => p.Key == "A")); Assert.Same(inertia, editor.Parameters.Single(p => p.Key == "IY"));
         editor.Configuration = editor.Configurations.Single(c => c.Value == ManualAxisConfiguration.UV);
         editor.Configuration = editor.Configurations.Single(c => c.Value == ManualAxisConfiguration.Y);
-        Assert.Equal("unfinished", area.Text); Assert.Equal("1e", editor.Parameters.Single(p => p.Key == "IY").Text);
-        Assert.False(editor.IsValid); Assert.Empty(editor.Axes); Assert.False(await editor.ConfirmAsync());
+        Assert.Equal("unfinished", area.PendingText); Assert.Equal("1e", editor.Parameters.Single(p => p.Key == "IY").PendingText);
+        Assert.False(editor.CanConfirm); Assert.False(await editor.ConfirmAsync());
     }
 }

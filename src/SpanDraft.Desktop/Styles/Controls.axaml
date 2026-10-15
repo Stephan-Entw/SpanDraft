@@ -230,6 +230,31 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusM}" />
     <Setter Property="Padding" Value="{DynamicResource Padding24}" />
   </Style>
+  <Style Selector="Border.beamSetupCard">
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="Padding" Value="12" />
+    <Setter Property="MinHeight" Value="115" />
+  </Style>
+  <Style Selector="Button.beamSetupSurface">
+    <Setter Property="Height" Value="NaN" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="16,12" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.beamSetupSurface:pointerover:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+  </Style>
   <Style Selector="svg|Svg.toolbarIcon">
     <Setter Property="Width" Value="{DynamicResource ToolbarIconSize}" />
     <Setter Property="Height" Value="{DynamicResource ToolbarIconSize}" />
@@ -260,7 +285,12 @@
     <Setter Property="AxisBrush" Value="{DynamicResource AxisStroke}" />
   </Style>
   <Style Selector="Menu">
-    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource BottomBorder}" />
+    <!-- Fluent's Menu border renders these setters and leaves its item/popup templates intact. -->
+    <Setter Property="Height" Value="33" />
+    <Setter Property="Padding" Value="0" />
     <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
   </Style>
   <Style Selector="MenuItem">

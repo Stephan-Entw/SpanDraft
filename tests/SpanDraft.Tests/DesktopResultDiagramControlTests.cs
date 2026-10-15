@@ -618,8 +618,8 @@ public sealed class DesktopResultDiagramControlTests
         Assert.All(Diagrams(view), d => Assert.NotNull(d.Projection));
         Assert.True(await app.Main.NewAsync());
         view.DataContext = app.Main.Editor; Arrange(window);
-        Assert.All(Diagrams(view), d => Assert.Null(d.Projection));
-        app.Main.Setup.ApplyCommand.Execute(null);
+        Assert.All(Diagrams(view), d => Assert.NotNull(d.Projection));
+        Assert.True(await app.Main.Setup.ConfirmAsync());
         view.DataContext = app.Main.Editor; Arrange(window);
         Assert.Equal(3, app.Analyses);
         Assert.All(Diagrams(view), d => Assert.Null(d.Projection));

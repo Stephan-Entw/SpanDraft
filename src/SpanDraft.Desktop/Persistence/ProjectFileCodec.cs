@@ -64,7 +64,7 @@ public static class ProjectFileCodec
             Format = Format, FormatVersion = Version,
             Document = new()
             {
-                Length = d.Length.Meters, BendingAxis = AxisToWire(d.BendingAxis),
+                Length = d.Length.Meters, BendingAxis = AxisToWire(d.BendingAxis), SectionDisplayName = d.SectionDisplayName,
                 Material = new() { Name = d.Material.Name, YoungsModulus = d.Material.YoungsModulus.Pascals,
                     YieldStrength = d.Material.YieldStrength.Pascals, Density = d.Material.Density?.KilogramsPerCubicMeter,
                     PoissonRatio = d.Material.PoissonRatio?.Value },
@@ -209,7 +209,7 @@ public static class ProjectFileCodec
                 var x = Required(entry, "distributedLoad");
                 return new EditorUniformDistributedLoad(EntityId(x.Id), L(x.StartPosition, "startPosition"),
                     L(x.EndPosition, "endPosition"), ForcePerLength.FromNewtonsPerMeter(Number(x.Intensity, "intensity")), Name(x.Name));
-            }));
+            }), d.SectionDisplayName);
         var errors = BeamModelValidator.Validate(document.ToBeamModel()).Where(e => e.Code != ValidationErrorCode.MissingSupports).ToArray();
         if (errors.Length > 0) throw new ProjectFormatException(errors[0].Message);
         if (document.Supports.Select(x => x.Position).Distinct().Count() != document.Supports.Count)

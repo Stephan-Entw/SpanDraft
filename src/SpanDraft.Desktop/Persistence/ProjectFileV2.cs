@@ -15,6 +15,7 @@ public sealed record DocumentV2
 {
     public required double Length { get; init; }
     public required string BendingAxis { get; init; }
+    public string? SectionDisplayName { get; init; }
     public required MaterialV2 Material { get; init; }
     public required SectionV2 Section { get; init; }
     public required SupportV2[] Supports { get; init; }

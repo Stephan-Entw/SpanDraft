@@ -75,7 +75,8 @@ public sealed partial class EditorViewModel : ObservableObject
     public bool IsBusy => Session.IsBusy;
     public bool IsFileMenuOpen { get; set; }
     public bool IsSettingsDialogOpen { get; set; }
-    public bool PreserveDrafts => IsBusy || IsFileMenuOpen || IsSettingsDialogOpen;
+    public bool IsProjectSetupOpen { get; set; }
+    public bool PreserveDrafts => IsBusy || IsFileMenuOpen || IsSettingsDialogOpen || IsProjectSetupOpen;
     public event Action? InteractionsCancelling;
     public EditorDocument Document => Session.CurrentRevision.State.Document;
     public AnalysisPresentationState Presentation => _presentation;
@@ -335,14 +336,10 @@ public sealed partial class EditorViewModel : ObservableObject
     private LengthCommitResult ChangeLength(Length length)
     {
         if (IsBusy) return new(false, Strings.ProjectBusy);
-        if (Document.Supports.Any(s => s.Position.Meters > length.Meters)
-            || Document.Loads.Any(l => l.Position.Meters > length.Meters)
-            || Document.DistributedLoads.Any(l => l.EndPosition.Meters > length.Meters))
+        if (BeamLengthConstraints.Error(Document, length) is { } error)
         {
             UpdateConstraintConflict(length);
-            return new(false, Document.Loads.Any(l => l.Position.Meters > length.Meters)
-                || Document.DistributedLoads.Any(l => l.EndPosition.Meters > length.Meters)
-                ? Strings.LengthExcludesEntities : Strings.LengthExcludesSupports);
+            return new(false, error);
         }
         UpdateConstraintConflict(null);
         Commit(Document with { Length = length });
@@ -352,10 +349,8 @@ public sealed partial class EditorViewModel : ObservableObject
     private void UpdateConstraintConflict(Length? requested)
     {
         var ids = requested is { } length
-            ? Document.Supports.Where(s => s.Position.Meters > length.Meters).Select(s => s.Id)
-                .Concat(Document.Loads.Where(l => l.Position.Meters > length.Meters).Select(l => l.Id))
-                .Concat(Document.DistributedLoads.Where(l => l.EndPosition.Meters > length.Meters).Select(l => l.Id)).ToArray() : [];
-        _constraintConflict = requested is { } value && ids.Length > 0 ? new(value, ids) : null;
+            ? BeamLengthConstraints.BlockingEntities(Document, length) : [];
+        _constraintConflict = requested is { } value && ids.Count > 0 ? new(value, ids) : null;
         Notify(nameof(ConstraintConflict));
         Notify(nameof(ConflictEntityIds));
     }
@@ -364,6 +359,14 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public void ApplySetup(ISectionDefinition section, SectionAxisDesignation bendingAxis, Material material) =>
         Commit(Document.WithSection(section, bendingAxis) with { Material = material });
+
+    public bool ApplySetup(Length length, ISectionDefinition section, SectionAxisDesignation bendingAxis,
+        Material material, string? sectionDisplayName)
+    {
+        if (IsBusy || BeamLengthConstraints.Error(Document, length) is not null) return false;
+        Commit(Document.WithSection(section, bendingAxis, sectionDisplayName) with { Length = length, Material = material });
+        return true;
+    }
 
     public bool SetAnnotationOffset(Guid id, AnnotationOffset? offset)
     {

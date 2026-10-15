@@ -5,58 +5,32 @@
   <UserControl.DataTemplates>
     <DataTemplate DataType="{x:Type vm:MaterialSelectionViewModel}"><views:MaterialSelectionView /></DataTemplate>
     <DataTemplate DataType="{x:Type vm:MaterialEditorViewModel}"><views:MaterialEditorView /></DataTemplate>
-    <DataTemplate DataType="{x:Type vm:SectionSelectionViewModel}"><views:SectionSelectionView /></DataTemplate>
-    <DataTemplate DataType="{x:Type vm:SectionEditorViewModel}"><views:SectionEditorView /></DataTemplate>
+    <DataTemplate DataType="{x:Type vm:SectionDefinitionViewModel}"><views:SectionDefinitionView /></DataTemplate>
   </UserControl.DataTemplates>
-  <Grid Background="{DynamicResource AppBackground}" Margin="{DynamicResource Padding32}" RowDefinitions="Auto,*" RowSpacing="16">
-    <TextBlock Text="{Binding Title}" Classes="pageTitle" />
-    <Grid Grid.Row="1" IsVisible="{Binding IsOverview}" RowDefinitions="*,Auto" RowSpacing="16">
-      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="24" MaxWidth="1000">
-          <TextBlock Text="{Binding StartupError}" IsVisible="{Binding HasStartupError}" Classes="validationMessage" TextWrapping="Wrap" />
-          <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
-            <Border Classes="selectionSurface">
-              <StackPanel Spacing="16">
-                <TextBlock Text="{x:Static resources:Strings.Section}" Classes="sectionTitle" />
-                <TextBlock x:Name="SectionDescription" Text="{Binding SectionName}" Classes="bodyStrong" TextWrapping="Wrap" />
-                <Grid ColumnDefinitions="60,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
-                  <TextBlock Text="A" Classes="propertyLabel" /><TextBlock Grid.Column="1" Text="{Binding Area}" Classes="technicalValue" TextWrapping="Wrap" />
-                  <TextBlock Grid.Row="1" Text="{Binding InertiaLabel}" Classes="propertyLabel" /><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Inertia}" Classes="technicalValue" TextWrapping="Wrap" />
-                  <TextBlock Grid.Row="2" Text="{Binding ModulusLabel}" Classes="propertyLabel" IsVisible="{Binding !IsAsymmetric}" /><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PositiveModulus}" Classes="technicalValue" IsVisible="{Binding !IsAsymmetric}" TextWrapping="Wrap" />
-                  <TextBlock Grid.Row="2" Text="W+" Classes="propertyLabel" IsVisible="{Binding IsAsymmetric}" /><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PositiveModulus}" Classes="technicalValue" IsVisible="{Binding IsAsymmetric}" TextWrapping="Wrap" />
-                  <TextBlock Grid.Row="3" Text="W−" Classes="propertyLabel" IsVisible="{Binding IsAsymmetric}" /><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding NegativeModulus}" Classes="technicalValue" IsVisible="{Binding IsAsymmetric}" TextWrapping="Wrap" />
-                </Grid>
-                <Button x:Name="ChangeSectionButton" Content="{x:Static resources:Strings.Change}" Command="{Binding ChangeSectionCommand}" HorizontalAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.SectionSelection}" />
-                <Button x:Name="TestSectionDefinitionButton" Content="{x:Static resources:Strings.SectionDefinitionTest}" IsVisible="{Binding !IsEdit}" IsEnabled="{Binding !IsBusy}" Click="TestSectionDefinition" Classes="ghost" HorizontalAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionTest}" />
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="1" Classes="selectionSurface">
-              <StackPanel Spacing="16">
-                <TextBlock Text="{x:Static resources:Strings.Material}" Classes="sectionTitle" />
-                <TextBlock Text="{Binding MaterialName}" Classes="bodyStrong" TextWrapping="Wrap" />
-                <Grid ColumnDefinitions="60,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
-                  <TextBlock Text="E" Classes="propertyLabel" /><TextBlock Grid.Column="1" Text="{Binding YoungsModulus}" Classes="technicalValue" TextWrapping="Wrap" />
-                  <TextBlock Grid.Row="1" Text="fy" Classes="propertyLabel" /><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding YieldStrength}" Classes="technicalValue" TextWrapping="Wrap" />
-                  <TextBlock Grid.Row="2" Text="ρ" Classes="propertyLabel" IsVisible="{Binding HasDensity}" /><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Density}" Classes="technicalValue" IsVisible="{Binding HasDensity}" />
-                  <TextBlock Grid.Row="3" Text="ν" Classes="propertyLabel" IsVisible="{Binding HasPoissonRatio}" /><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PoissonRatio}" Classes="technicalValue" IsVisible="{Binding HasPoissonRatio}" />
-                </Grid>
-                <Button x:Name="ChangeMaterialButton" Content="{x:Static resources:Strings.Change}" Command="{Binding ChangeMaterialCommand}" HorizontalAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.MaterialSelection}" />
-              </StackPanel>
-            </Border>
-          </Grid>
-          <StackPanel Orientation="Horizontal" Spacing="16">
-            <TextBlock Text="{x:Static resources:Strings.BendingAxis}" VerticalAlignment="Center" Classes="propertyLabel" />
-            <ComboBox x:Name="AxisPicker" ItemsSource="{Binding AvailableAxes}" SelectedItem="{Binding SelectedAxisChoice, Mode=TwoWay}" MinWidth="150" AutomationProperties.Name="{x:Static resources:Strings.BendingAxis}">
-              <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:AxisChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
-            </ComboBox>
+  <Grid Background="{DynamicResource AppBackground}">
+    <Grid IsVisible="{Binding IsOverview}" RowDefinitions="Auto,*">
+      <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="24,16">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+          <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button x:Name="CancelSetupButton" Content="{x:Static resources:Strings.Cancel}" Command="{Binding CancelCommand}"
+                IsVisible="{Binding CanCancel}" Classes="secondary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
+            <Button x:Name="ApplySetupButton" Content="{Binding PrimaryAction}" Command="{Binding ApplyCommand}"
+                Classes="primary" AutomationProperties.Name="{Binding PrimaryAction}" />
           </StackPanel>
+        </Grid>
+      </Border>
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24" Spacing="16">
+          <TextBlock Text="{Binding StartupError}" IsVisible="{Binding HasStartupError}" Classes="validationMessage" TextWrapping="Wrap" />
+          <TextBlock Text="{x:Static resources:Strings.SetupBeam}" Classes="sectionTitle" />
+          <views:BeamSetupCard x:Name="BeamCard" />
         </StackPanel>
       </ScrollViewer>
-      <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-        <Button Content="{x:Static resources:Strings.Cancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsEdit}" Classes="secondary" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
-        <Button x:Name="ApplySetupButton" Content="{Binding PrimaryAction}" Command="{Binding ApplyCommand}" Classes="primary" AutomationProperties.Name="{Binding PrimaryAction}" />
-      </StackPanel>
     </Grid>
-    <ContentControl Grid.Row="1" Content="{Binding CurrentStep}" IsVisible="{Binding !IsOverview}" />
+    <Grid IsVisible="{Binding !IsOverview}" RowDefinitions="Auto,*">
+      <TextBlock Text="{Binding Title}" Classes="pageTitle" Margin="32,24,32,0" IsVisible="{Binding !IsSectionDefinition}" />
+      <ContentControl Grid.Row="1" Content="{Binding CurrentStep}" />
+    </Grid>
   </Grid>
 </UserControl>

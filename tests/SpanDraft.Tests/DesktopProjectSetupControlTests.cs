@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -44,11 +45,13 @@ public sealed class DesktopProjectSetupControlTests
         window.Show();
         Arrange(window, width, height);
         Capture("create");
-        Assert.Equal(2, window.GetVisualDescendants().OfType<Border>().Count(b => b.Classes.Contains("selectionSurface")));
+        Assert.Single(window.GetVisualDescendants().OfType<BeamSetupCard>());
         var setupView = Assert.Single(window.GetVisualDescendants().OfType<ProjectSetupView>());
-        Assert.Equal("y-y", main.Setup.SelectedAxisChoice.Label);
+        Assert.Equal(Strings.BendingAxis + " y-y · " + Strings.SectionDefinitionEquivalent, main.Setup.AxisSummary);
+        Assert.Equal(SectionAxisDesignation.Y, main.Setup.BendingAxis);
         main.Setup.BendingAxis = SectionAxisDesignation.Z; Capture("create-z");
-        Assert.Equal("z-z", setupView.FindControl<ComboBox>("AxisPicker")!.SelectedItem is AxisChoice choice ? choice.Label : "");
+        Assert.Equal(Strings.BendingAxis + " z-z · " + Strings.SectionDefinitionEquivalent, main.Setup.AxisSummary);
+        Assert.Equal(SectionAxisDesignation.Z, main.Setup.BendingAxis);
         main.Setup.ShowMaterials(); Capture("material-selection-builtins");
         ScrollBottom(); Capture("material-selection-user");
         var materials = Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep);
@@ -66,31 +69,22 @@ public sealed class DesktopProjectSetupControlTests
         main.Setup.ShowMaterials(); Capture("current-project-material");
         materials = Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep); materials.EditCurrentCommand.Execute(null);
         Capture("current-material-edit"); main.Setup.Escape();
-        main.Setup.ShowSections(); Capture("section-selection");
-        var sections = Assert.IsType<SectionSelectionViewModel>(main.Setup.CurrentStep);
-        sections.UserEntries.Single().EditCommand.Execute(null); Capture("angle-preset-edit");
-        var editor = Assert.IsType<SectionEditorViewModel>(main.Setup.CurrentStep);
-        Assert.Equal(new[] { "u-u", "v-v" }, editor.Axes.Select(a => a.Label));
-        Assert.Contains(editor.Axes, a => a.IsAsymmetric);
-        main.Setup.Escape(); sections = Assert.IsType<SectionSelectionViewModel>(main.Setup.CurrentStep);
-        sections.UserEntries.Single().UseCommand.Execute(null); main.Setup.BendingAxis = SectionAxisDesignation.V; Capture("overview-v");
-        main.Setup.ShowSections(); sections = Assert.IsType<SectionSelectionViewModel>(main.Setup.CurrentStep);
-        sections.EditCurrentCommand.Execute(null); Capture("rhs-editor");
-        editor = Assert.IsType<SectionEditorViewModel>(main.Setup.CurrentStep);
-        editor.Type = editor.Types.Single(t => t.Value == SectionEditorType.TSection);
-        foreach (var p in editor.Parameters) p.Text = p.Key switch { "h" => "200", "b" => "100", "tw" => "5", "tf" => "10", _ => "0" };
-        Capture("t-section-w-plus-minus");
-        editor.Type = editor.Types.Single(t => t.Value == SectionEditorType.Manual);
+        main.Setup.ShowSections(); Capture("section-definition");
+        var editor=main.Setup.Definition!; editor.SelectForm(SectionEditorType.Angle);
+        editor.LoadPreset(main.UserSections.All.Single()); editor.SelectedAxis=SectionAxisDesignation.V;
+        Capture("angle-preset"); Assert.True(await editor.ConfirmAsync()); Capture("overview-v");
+        main.Setup.ShowSections(); editor=main.Setup.Definition!; editor.SelectForm(SectionEditorType.TSection);
+        Fill(editor); Capture("t-section-w-plus-minus"); editor.SelectForm(SectionEditorType.Manual);
         foreach (var config in new[] { ManualAxisConfiguration.YZ, ManualAxisConfiguration.UV })
         {
-            editor.Configuration = editor.Configurations.Single(c => c.Value == config);
-            foreach (var p in editor.Parameters) p.Text = p.Key == "A" ? "1000" : p.Key.StartsWith('I') ? "1000000" : "20000";
-            Capture("manual-" + config); ScrollBottom(); Capture("manual-" + config + "-bottom");
+            editor.Configuration=editor.Configurations.Single(c=>c.Value==config); Fill(editor);
+            Capture("manual-"+config); ScrollBottom(); Capture("manual-"+config+"-bottom");
         }
-        editor.SaveToLibrary = true; editor.PresetName = "Manual preset"; Capture("manual-preset-save");
-        files.FailWritePath = "sections"; Assert.False(await editor.ConfirmAsync()); Capture("section-save-error");
+        editor.BeginNameEdit(); editor.PendingName="Manual preset"; editor.CommitName(); Capture("manual-preset-save");
+        files.FailWritePath="sections"; Assert.False(await editor.SaveLibraryAsync()); Capture("section-save-error");
         ScrollBottom(); Capture("section-save-error-bottom");
-        editor.Parameters[0].Text = "0"; Assert.False(editor.IsValid); Assert.Empty(editor.Axes); Capture("manual-invalid");
+        editor.Parameters[0].PendingText="0"; editor.Parameters[0].Commit(); Assert.False(editor.HasValidSection); Capture("manual-invalid");
+        editor.CancelCommand.Execute(null);
         main.Setup.ShowMaterials(); Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep).NewCommand.Execute(null);
         Capture("material-new-invalid");
         files.Data["materials"] = [123]; files.Data["sections"] = [123];
@@ -100,7 +94,7 @@ public sealed class DesktopProjectSetupControlTests
         main.Setup.ShowMaterials(); Capture("materials-unavailable");
         Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep).NewCommand.Execute(null); Capture("material-oneoff-unavailable");
         main.Setup.ShowSections(); Capture("sections-unavailable");
-        Assert.IsType<SectionSelectionViewModel>(main.Setup.CurrentStep).NewCommand.Execute(null); Capture("section-oneoff-unavailable");
+        var unavailable=main.Setup.Definition!; unavailable.SelectForm(SectionEditorType.Rectangle); Fill(unavailable); Capture("section-oneoff-unavailable");
 
         void ScrollBottom()
         {
@@ -176,13 +170,139 @@ public sealed class DesktopProjectSetupControlTests
         var editor = Assert.IsType<MaterialEditorViewModel>(main.Setup.CurrentStep);
         editor.Name = "Draft"; editor.Inputs[0].Text = "210"; editor.Inputs[1].Text = "235";
         Press(Key.Enter); Assert.Equal(ProjectSetupPage.Overview, main.Setup.Page); Assert.Null(main.Editor);
-        main.Setup.ShowSections(); Assert.IsType<SectionSelectionViewModel>(main.Setup.CurrentStep).NewCommand.Execute(null);
-        Arrange(window, 1100, 650); Press(Key.Escape); Assert.Equal(ProjectSetupPage.SectionSelection, main.Setup.Page);
-        Press(Key.Escape); Assert.Equal(ProjectSetupPage.Overview, main.Setup.Page);
+        main.Setup.ShowSections();
+        Arrange(window, 1100, 650); Press(Key.Escape); Assert.Equal(ProjectSetupPage.Overview, main.Setup.Page);
         Press(Key.Escape); Assert.Equal(ProjectSetupPage.Overview, main.Setup.Page); Assert.Null(main.Editor);
         await main.Setup.ConfirmAsync(); Assert.NotNull(main.Editor);
         void Press(Key key) => (view.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.IsFocused) ?? view)
             .RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key });
+    }
+
+    [Fact]
+    public async Task CardsAndLengthUseNativeKeyboardActionsWithoutCreatingAProjectOnEnter()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var main = new MainWindowViewModel(); var view = new ProjectSetupView { DataContext = main.Setup };
+        var window = new Window { Content = view }; window.Show(); Arrange(window, 1100, 650);
+        var card = view.FindControl<BeamSetupCard>("BeamCard")!;
+        var length = card.FindControl<TextBox>("SetupLengthInput")!;
+        var section = card.FindControl<Button>("SectionCardButton")!;
+        var material = card.FindControl<Button>("MaterialCardButton")!;
+        length.Focus(); length.Text = "1500"; Press(length, Key.Enter);
+        Assert.Null(main.Session); Assert.Equal(1500, main.Setup.SelectedLength.Millimeters);
+        length.Text = "1750"; Press(length, Key.Enter);
+        Assert.Null(main.Session); Assert.Equal(1750, main.Setup.SelectedLength.Millimeters);
+        Assert.True(DesktopControlEnvironment.MoveFocus(window, length, NavigationDirection.Next)); Assert.True(section.IsFocused);
+        Press(section, Key.Enter); Arrange(window, 1100, 650);
+        Assert.Equal(ProjectSetupPage.SectionDefinition, main.Setup.Page);
+        Assert.Empty(window.OwnedWindows); main.Setup.Escape(); Arrange(window, 1100, 650);
+        Assert.True(section.IsFocused);
+        Assert.True(DesktopControlEnvironment.MoveFocus(window, section, NavigationDirection.Next)); Assert.True(material.IsFocused);
+        material.Focus(); Press(material, Key.Space);
+        material.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyUpEvent, Key = Key.Space });
+        Assert.Equal(ProjectSetupPage.MaterialSelection, main.Setup.Page);
+        main.Setup.Escape(); Arrange(window, 1100, 650);
+        Assert.True(material.IsFocused);
+        // The inert window has no native mouse hit testing; invoke the button's
+        // mouse activation path, which raises Click and executes its command.
+        typeof(Button).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(section, null);
+        Assert.True(main.Setup.IsSectionDefinition);
+        main.Setup.Definition!.BeginNameEdit(); main.Setup.Definition.PendingName = new string('W', 250);
+        main.Setup.Definition.CommitName(); Assert.True(await main.Setup.Definition.ConfirmAsync()); Arrange(window, 1100, 650);
+        var description = card.FindControl<TextBlock>("SectionDescription")!;
+        Assert.Equal(description.Text, ToolTip.GetTip(description)); Assert.Equal(Avalonia.Media.TextTrimming.CharacterEllipsis, description.TextTrimming);
+        Assert.Equal(card.FindControl<Border>("LengthSurface")!.Bounds.Height, section.Bounds.Height);
+        Assert.Equal(section.Bounds.Height, material.Bounds.Height);
+        Assert.InRange(card.FindControl<Border>("BeamCardSurface")!.Bounds.Height, 110, 120);
+        Assert.InRange(section.Bounds.Height, 85, 95);
+        var normal = section.Background;
+        ((IPseudoClasses)section.Classes).Set(":pointerover", true);
+        Assert.NotEqual(normal, section.Background);
+        ((IPseudoClasses)section.Classes).Set(":pointerover", false);
+        section.Focus(NavigationMethod.Tab);
+        Assert.True(Assert.Single(section.GetVisualDescendants().OfType<Border>(), b => b.Name == "FocusRing").IsVisible);
+        window.Close();
+        static void Press(Control control, Key key) => control.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key });
+    }
+
+    [Theory]
+    [InlineData("de-DE", 1100, 650)] [InlineData("en-US", 1100, 650)]
+    [InlineData("de-DE", 1250, 800)] [InlineData("en-US", 1250, 800)]
+    public async Task SingleCompactBeamCardKeepsHorizontalLengthAndLongNamesInsideItsThreeAreas(string culture, double width, double height)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new UiCultureScope(culture);
+        var main = new MainWindowViewModel(); var setup = main.Setup;
+        setup.SelectedSection = new CircleSectionGeometry(M(.1)); setup.BendingAxis = SectionAxisDesignation.Z;
+        setup.ShowSections(); var definition = setup.Definition!;
+        definition.BeginNameEdit(); definition.PendingName = new string('W', 250); definition.CommitName();
+        Assert.True(await definition.ConfirmAsync());
+        setup.SelectedMaterial = new(new string('M', 250), ProjectTemplates.Material.YoungsModulus, ProjectTemplates.Material.YieldStrength);
+        var view = new ProjectSetupView { DataContext = setup };
+        var window = new Window { Content = view, Width = width, Height = height }; window.Show(); Arrange(window, width, height);
+        var card = view.FindControl<BeamSetupCard>("BeamCard")!;
+        var surface = Assert.IsType<Border>(card.Content);
+        Assert.Same(surface, card.FindControl<Border>("BeamCardSurface"));
+        Assert.Equal(new Thickness(1), surface.BorderThickness);
+        Assert.InRange(surface.Bounds.Height, 110, 120);
+        Assert.True(double.IsNaN(surface.Height));
+        var areas = Assert.IsType<Grid>(surface.Child);
+        Assert.Equal(new[] { 2d, 4.3, 3.7 }, areas.ColumnDefinitions.Select(c => c.Width.Value));
+        Assert.Equal(3, areas.Children.Count);
+        var lengthArea = Assert.IsType<Border>(areas.Children[0]);
+        Assert.False(lengthArea.Focusable); Assert.Equal(default, lengthArea.BorderThickness);
+        var section = Assert.IsType<Button>(areas.Children[1]); var material = Assert.IsType<Button>(areas.Children[2]);
+        Assert.True(section.Focusable); Assert.True(material.Focusable);
+        Assert.Same(setup.ChangeSectionCommand, section.Command); Assert.Same(setup.ChangeMaterialCommand, material.Command);
+        Assert.Equal(lengthArea.Bounds.Height, section.Bounds.Height); Assert.Equal(section.Bounds.Height, material.Bounds.Height);
+        Assert.InRange(section.Bounds.Height, 85, 95);
+        foreach (var button in new[] { section, material })
+        {
+            Assert.True(double.IsNaN(button.Height)); Assert.Equal(new Thickness(16, 12), button.Padding);
+            Assert.All(button.GetVisualDescendants().OfType<TextBlock>(), text => Assert.True(text.Bounds.Height >= text.TextLayout.Height));
+        }
+        Assert.True(lengthArea.Bounds.Right < section.Bounds.Left); Assert.True(section.Bounds.Right < material.Bounds.Left);
+        var length = card.FindControl<TextBox>("SetupLengthInput")!;
+        var label = card.FindControl<TextBlock>("SetupLengthLabel")!; var unit = card.FindControl<TextBlock>("SetupLengthUnit")!;
+        Assert.True(label.Bounds.Right < length.Bounds.Left); Assert.True(length.Bounds.Right < unit.Bounds.Left);
+        Assert.InRange(Math.Abs(label.Bounds.Center.Y - length.Bounds.Center.Y), 0, 1);
+        Assert.InRange(Math.Abs(unit.Bounds.Center.Y - length.Bounds.Center.Y), 0, 1);
+        var lengthCenter = length.TranslatePoint(new Point(0, length.Bounds.Height / 2), lengthArea)!.Value.Y;
+        Assert.InRange(Math.Abs(lengthCenter - lengthArea.Bounds.Height / 2), 0, 1);
+        Assert.Equal("1000", length.Text); Assert.Equal("mm", unit.Text); Assert.True(length.Bounds.Width >= 60);
+        foreach (var name in new[] { "SectionDescription", "MaterialDescription", "SectionAxisDescription" })
+        {
+            var text = card.FindControl<TextBlock>(name)!;
+            Assert.Equal(TextTrimming.CharacterEllipsis, text.TextTrimming); Assert.Equal(text.Text, ToolTip.GetTip(text));
+            var button = text.FindAncestorOfType<Button>()!;
+            var position = text.TranslatePoint(default, button)!.Value;
+            Assert.InRange(position.X + text.Bounds.Width, 0, button.Bounds.Width - button.Padding.Right);
+            Assert.True(text.Bounds.Height >= text.TextLayout.Height);
+        }
+        Assert.Equal(Strings.BendingAxis + " z-z · " + Strings.SectionDefinitionEquivalent,
+            card.FindControl<TextBlock>("SectionAxisDescription")!.Text);
+        Assert.Equal(SectionAxisDesignation.Z, setup.BendingAxis);
+        length.Focus(); length.Text = "0";
+        Assert.True(DesktopControlEnvironment.MoveFocus(window, length, NavigationDirection.Next));
+        Arrange(window, width, height);
+        Assert.True(section.IsFocused); Assert.Equal("0", length.Text); Assert.Equal(1000, setup.SelectedLength.Millimeters);
+        var error = card.FindControl<TextBlock>("SetupLengthError")!;
+        Assert.True(error.IsEffectivelyVisible); Assert.True(error.Bounds.Height >= error.TextLayout.Height);
+        Assert.True(error.TranslatePoint(default, surface)!.Value.Y + error.Bounds.Height <= surface.Bounds.Height);
+        Assert.False(setup.CanApply); Assert.False(setup.ApplyCommand.CanExecute(null));
+        Assert.False(view.FindControl<Button>("ApplySetupButton")!.IsEffectivelyEnabled); Assert.Null(main.Session);
+        Assert.True(surface.Bounds.Height <= 130);
+        window.Close();
+    }
+
+    private static void Fill(SectionDefinitionViewModel model)
+    {
+        foreach (var input in model.Parameters)
+        {
+            input.PendingText=input.Key switch { "h"=>"200", "b"=>"100", "tw" or "t"=>"5", "tf"=>"10", "r"=>"0", "A"=>"1000", _ when input.Key.StartsWith('I')=>"1000000", _=>"20000" };
+            input.Commit();
+        }
+        if (model.RequiresAxisSelection) model.SelectedAxis=model.AvailableAxes[0].Value;
     }
 
     private static void Arrange(Window window, double width, double height)

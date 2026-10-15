@@ -5,6 +5,8 @@ using SpanDraft.Desktop.Resources;
 namespace SpanDraft.Desktop.ViewModels;
 
 public enum SetupEditorMode { ProjectDraft, UserLibraryEdit }
+public enum SectionEditorType { Rectangle, RectangularHollow, Circle, CircularHollow, ISection, USection, TSection, Angle, Manual }
+public enum ManualAxisConfiguration { Y, Z, U, V, YZ, UV }
 public abstract record SetupChoiceLabel(string Label);
 public sealed record SetupChoice<T>(T Value, string Label) : SetupChoiceLabel(Label);
 public sealed record AxisChoice(SectionAxisDesignation Value)
@@ -57,19 +59,4 @@ public sealed class SetupNumberInput : ObservableObject
     public string? Error => TryRead(out _) ? null : _signed ? Strings.InvalidLoadValue
         : _nonnegative ? Strings.NonnegativeInput : Strings.PositiveInput;
     public bool HasError => Error is not null;
-}
-
-public sealed record SectionAxisValue(string Label, string Inertia, string Modulus, string PositiveModulus,
-    string NegativeModulus, bool IsAsymmetric)
-{
-    public static IReadOnlyList<SectionAxisValue> From(ISectionDefinition section, ResultPresentationOptions options)
-    {
-        string Format(double si, QuantityKind kind) => QuantityFormatter.Format(si, kind, options.Profile, options.Mode);
-        return section.Axes.Select(a => new SectionAxisValue(new AxisChoice(a.AxisDesignation).Label,
-            Format(a.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea),
-            Format(a.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus),
-            Format(a.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus),
-            Format(a.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus),
-            a.PositiveSectionModulus != a.NegativeSectionModulus)).ToArray();
-    }
 }

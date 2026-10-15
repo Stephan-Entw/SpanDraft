@@ -15,7 +15,7 @@ public sealed class ProjectOverviewState
     private ProjectOverviewState(EditorDocument document, AnalysisPresentationState analysis)
     {
         Analysis = analysis;
-        Section = SectionDisplay.Name(document.Section, analysis.Options.Profile);
+        Section = document.SectionDisplayName ?? SectionDisplay.Name(document.Section, analysis.Options.Profile);
         Material = document.Material.Name;
         Length = string.Format(CultureInfo.CurrentUICulture, Strings.OverviewLength, Position(document.Length),
             analysis.Options.Profile[QuantityKind.BeamLength].Symbol);

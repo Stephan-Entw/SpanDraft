@@ -11,7 +11,8 @@ public sealed record ProjectState(EditorDocument Document, EditorPresentationSta
         && Presentation.ContentEquals(other.Presentation);
 
     public static bool DocumentContentEquals(EditorDocument a, EditorDocument b) => a.Length == b.Length
-        && a.BendingAxis == b.BendingAxis && MaterialContentEquals(a.Material, b.Material) && SectionContentEquals(a.Section, b.Section)
+        && a.BendingAxis == b.BendingAxis && a.SectionDisplayName == b.SectionDisplayName
+        && MaterialContentEquals(a.Material, b.Material) && SectionContentEquals(a.Section, b.Section)
         && a.Supports.SequenceEqual(b.Supports) && a.Loads.SequenceEqual(b.Loads)
         && a.DistributedLoads.SequenceEqual(b.DistributedLoads) && a.NamingState == b.NamingState;
 

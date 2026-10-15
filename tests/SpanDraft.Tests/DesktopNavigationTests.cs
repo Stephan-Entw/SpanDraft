@@ -232,7 +232,7 @@ public sealed class DesktopNavigationTests
         using var environment = new DesktopControlEnvironment();
         var view = new ProjectSetupView();
         view.DataContext = null;
-        Assert.True(string.IsNullOrEmpty(view.FindControl<TextBlock>("SectionDescription")!.Text));
+        Assert.True(string.IsNullOrEmpty(view.FindControl<BeamSetupCard>("BeamCard")!.FindControl<TextBlock>("SectionDescription")!.Text));
     }
 
     [Theory]

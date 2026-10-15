@@ -42,6 +42,17 @@ Ihre stabilen Wire-Werte sind `y`, `z`, `u`, `v`. Der Querschnitt muss die
 gewählte Achse tatsächlich anbieten; es gibt keine Ersatzachse. Die Identität
 bleibt auch bei numerisch gleichen Kennwerten erhalten, etwa Kreis Y und Z.
 
+Das Dokument kann zusätzlich einen optionalen Querschnittsanzeigenamen enthalten.
+Fehlend oder null bedeutet eine automatisch aus der Definition erzeugte Bezeichnung;
+diese folgt der aktuellen Sprache und den Anzeigeeinheiten. Ein gesetzter Name
+ist nichtleer und getrimmt und bleibt auch nach Geometrieänderungen erhalten, bis
+der Anwender ihn ändert oder zur automatischen Bezeichnung zurückkehrt.
+Benutzer- und übernommene Bibliotheksnamen verwenden denselben Metadatenvertrag;
+sie enthalten keine Herkunftsreferenz und sind keine mechanische Eigenschaft.
+Die optionale Erweiterung bleibt in V2; historische Dateien benötigen dieses Feld
+nicht. Namensänderungen gehören zu Projektinhalt, Dirty-State und Undo/Redo,
+lösen jedoch keine mechanische Neuberechnung aus.
+
 ## SI-Vertrag und übriger Projektinhalt
 
 Physikalische Werte stehen ausschließlich in kanonischen SI-Einheiten:

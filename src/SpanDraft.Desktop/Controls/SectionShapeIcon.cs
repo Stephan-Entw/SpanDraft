@@ -14,7 +14,13 @@ public sealed class SectionShapeIcon : Control
     public SectionEditorType Type { get => GetValue(TypeProperty); set => SetValue(TypeProperty,value); }
     public override void Render(DrawingContext context)
     {
-        if (Type == SectionEditorType.Manual) return;
+        if (Type == SectionEditorType.Manual)
+        {
+            var manualBrush = this.TryFindResource("TextPrimary", out var manualResource) && manualResource is IBrush mb ? mb : Brushes.DarkSlateGray;
+            context.DrawRectangle(null, new Pen(manualBrush, 1.5), new Rect(4, 4, Math.Max(0, Bounds.Width - 8), Math.Max(0, Bounds.Height - 8)), 2, 2);
+            context.DrawLine(new Pen(manualBrush, 1.5), new Point(9, Bounds.Height / 2), new Point(Bounds.Width - 9, Bounds.Height / 2));
+            return;
+        }
         var dimensions = new Dictionary<string, double>
         {
             ["h"] = .1, ["b"] = Type == SectionEditorType.Rectangle ? .06 : .1,

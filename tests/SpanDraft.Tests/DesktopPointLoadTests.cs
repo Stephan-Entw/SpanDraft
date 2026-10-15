@@ -422,7 +422,7 @@ public sealed class DesktopPointLoadTests
         {
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("de-DE");
             Assert.Equal("Kraft F", Strings.ForceValueLabel);
-            Assert.Contains("Punktlasten", Strings.LengthExcludesEntities);
+            Assert.Contains("Lasten", Strings.LengthExcludesEntities);
             Assert.NotEmpty(Strings.InvalidLoadValue);
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("fr-FR");
             Assert.Equal("Force F", Strings.ForceValueLabel);
