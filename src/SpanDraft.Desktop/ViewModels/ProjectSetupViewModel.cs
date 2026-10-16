@@ -11,7 +11,7 @@ using SpanDraft.Desktop.State;
 namespace SpanDraft.Desktop.ViewModels;
 
 public enum ProjectSetupMode { Create, Edit }
-public enum ProjectSetupPage { Overview, MaterialSelection, MaterialEditor, SectionDefinition }
+public enum ProjectSetupPage { Overview, MaterialSelection, SectionDefinition }
 
 public sealed class ProjectSetupViewModel : ObservableObject
 {
@@ -164,7 +164,8 @@ public sealed class ProjectSetupViewModel : ObservableObject
         if (IsBusy || IsSectionDefinition) return;
         var library = Libraries is { } main ? new SectionDefinitionLibrary(main) : null;
         var definition = new SectionDefinitionViewModel(ResultPresentation, library,
-            initialState: new(SelectedSection, BendingAxis, SectionDisplayName));
+            initialState: new(SelectedSection, BendingAxis, SectionDisplayName),
+            preserveInputs: () => Libraries?.PreserveSetupInputs == true);
         definition.CloseRequested += FinishDefinition;
         definition.PropertyChanged += DefinitionChanged;
         Navigate(ProjectSetupPage.SectionDefinition, definition);
@@ -183,32 +184,32 @@ public sealed class ProjectSetupViewModel : ObservableObject
     }
     private void DefinitionChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(SectionDefinitionViewModel.CanUndo) or nameof(SectionDefinitionViewModel.CanRedo))
+        { Libraries?.RefreshHistoryState(); return; }
         if (e.PropertyName != nameof(SectionDefinitionViewModel.IsBusy) || _definitionBusy == Definition?.IsBusy) return;
         _definitionBusy = Definition?.IsBusy == true;
         RefreshLibraryState(); Libraries?.RefreshWorkspaceState();
     }
     public void ShowOverview() { if (!IsBusy) Navigate(ProjectSetupPage.Overview, null); }
-    internal void EditMaterial(SpanDraft.Desktop.Libraries.MaterialLibraryEntry? entry, SetupEditorMode mode, Material? snapshot = null)
-    { if (!IsBusy) Navigate(ProjectSetupPage.MaterialEditor, new MaterialEditorViewModel(this, entry, mode, snapshot)); }
     internal void ReturnToMaterials(string? replacement = null)
     {
-        ShowMaterials();
-        if (replacement is not null) _materials?.SelectReplacement(replacement);
+        _materials?.EndEdit(replacement);
     }
     public void Escape()
     {
         if (IsBusy) return;
         switch (Page)
         {
-            case ProjectSetupPage.MaterialEditor: ShowMaterials(); break;
-            case ProjectSetupPage.MaterialSelection: ShowOverview(); break;
+            case ProjectSetupPage.MaterialSelection:
+                if (_materials?.IsEditing == true) _materials.EndEdit(); else ShowOverview();
+                break;
             case ProjectSetupPage.SectionDefinition: Definition?.CancelCommand.Execute(null); break;
             default: CancelCommand.Execute(null); break;
         }
     }
     public async Task<bool> ConfirmAsync()
     {
-        if (CurrentStep is MaterialEditorViewModel material) return await material.ConfirmAsync();
+        if (CurrentStep is MaterialSelectionViewModel { Editor: { } material }) return await material.ConfirmAsync();
         if (Definition is { } definition) return await definition.ConfirmAsync();
         if (!IsOverview || IsBusy || !LengthInput.Confirm() || !CanApply) return false;
         // Read the current buffer even when a caller has not opened an input session.

@@ -1,71 +1,127 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels" xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             xmlns:views="clr-namespace:SpanDraft.Desktop.Views" xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
              x:Class="SpanDraft.Desktop.Views.MaterialSelectionView" x:DataType="vm:MaterialSelectionViewModel">
   <UserControl.Resources>
     <DataTemplate x:Key="MaterialRow" x:DataType="vm:MaterialSelectionItem">
-      <StackPanel Spacing="6">
-        <TextBlock Text="{x:Static resources:Strings.MaterialCurrentEntry}" IsVisible="{Binding IsProject}" Classes="caption" />
-        <Grid ColumnDefinitions="*,88,64,64" ColumnSpacing="8">
-          <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
-          <TextBlock Grid.Column="1" Text="{Binding MaterialNumber}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialNumber}" />
-          <TextBlock Grid.Column="2" Text="{Binding YoungsModulus}" HorizontalAlignment="Right" />
-          <TextBlock Grid.Column="3" Text="{Binding YieldStrength}" HorizontalAlignment="Right" />
-        </Grid>
-      </StackPanel>
+      <controls:MaterialTableColumns Classes="materialColumns">
+        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}" />
+        <TextBlock Grid.Column="1" Text="{Binding MaterialNumber}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialNumber}" />
+        <TextBlock Grid.Column="2" Text="{Binding YoungsModulus}" TextAlignment="Right" />
+        <TextBlock Grid.Column="3" Text="{Binding YieldStrength}" TextAlignment="Right" />
+      </controls:MaterialTableColumns>
     </DataTemplate>
   </UserControl.Resources>
-  <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,*">
-    <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="{DynamicResource BottomBorder}" Padding="24,16">
+  <UserControl.Styles>
+    <Style Selector="ListBox.materialEntries ListBoxItem" x:DataType="vm:MaterialSelectionItem">
+      <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+    </Style>
+  </UserControl.Styles>
+  <Grid Background="{DynamicResource Surface}" RowDefinitions="Auto,*">
+    <Border Classes="workspaceHeader">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-        <TextBlock Text="{x:Static resources:Strings.MaterialSelection}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-          <Button x:Name="NewMaterialButton" Content="{x:Static resources:Strings.NewMaterial}" Command="{Binding NewCommand}" Classes="secondary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.NewMaterial}" />
+        <TextBlock x:Name="MaterialWorkspaceTitle" Text="{Binding Title}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsEditing}" VerticalAlignment="Center">
           <Button Content="{x:Static resources:Strings.Back}" Command="{Binding BackCommand}" Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.Back}" />
           <Button x:Name="UseMaterialButton" Content="{x:Static resources:Strings.Apply}" Command="{Binding UseSelectedCommand}" Classes="primary" AutomationProperties.Name="{x:Static resources:Strings.Apply}" />
         </StackPanel>
+        <StackPanel x:Name="MaterialEditorActions" Grid.Column="1" DataContext="{Binding Editor}" x:DataType="vm:MaterialEditorViewModel" Orientation="Horizontal" Spacing="8" IsVisible="{Binding $parent[UserControl].((vm:MaterialSelectionViewModel)DataContext).IsEditing}" VerticalAlignment="Center">
+          <Button x:Name="CancelMaterialButton" Content="{Binding CancelLabel}" Command="{Binding CancelCommand}" Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{Binding CancelLabel}" />
+          <Button x:Name="AddMaterialLibraryButton" Content="{Binding LibraryActionLabel}" IsVisible="{Binding IsProjectDraft}" Command="{Binding AddLibraryCommand}" Classes="secondary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{Binding LibraryActionLabel}" />
+          <Button x:Name="ConfirmMaterialButton" Content="{Binding PrimaryAction}" Command="{Binding ConfirmCommand}" Classes="primary" AutomationProperties.Name="{Binding PrimaryAction}" />
+        </StackPanel>
       </Grid>
     </Border>
-    <Grid Grid.Row="1" ColumnDefinitions="170,*,280" ColumnSpacing="16" Margin="24" IsEnabled="{Binding !IsBusy}">
-      <ListBox x:Name="MaterialFilters" ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter, Mode=TwoWay}" Classes="materialFilters"
-          VerticalAlignment="Top" AutomationProperties.Name="{x:Static resources:Strings.MaterialFilters}">
-        <ListBox.ItemTemplate><DataTemplate x:DataType="vm:MaterialFilter"><TextBlock Text="{Binding Label}" /></DataTemplate></ListBox.ItemTemplate>
-      </ListBox>
-      <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="12">
-        <TextBox x:Name="MaterialSearchInput" Text="{Binding SearchText, Mode=TwoWay}" PlaceholderText="{x:Static resources:Strings.MaterialSearch}" KeyDown="SearchKeyDown" AutomationProperties.Name="{x:Static resources:Strings.MaterialSearch}" />
-        <Grid Grid.Row="1" ColumnDefinitions="*,88,64,64" ColumnSpacing="8" Margin="9,0">
-          <TextBlock Text="{x:Static resources:Strings.MaterialDesignation}" Classes="caption" />
-          <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.MaterialNumber}" Classes="caption" TextTrimming="CharacterEllipsis" ToolTip.Tip="{x:Static resources:Strings.MaterialNumber}" />
-          <TextBlock Grid.Column="2" Text="E [GPa]" Classes="caption" HorizontalAlignment="Right" />
-          <TextBlock Grid.Column="3" Text="fy [MPa]" Classes="caption" HorizontalAlignment="Right" />
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="200" MinWidth="200" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+      <Border Background="{DynamicResource SurfaceSubtle}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="12,24" Spacing="12" IsEnabled="{Binding CanBrowse}">
+            <TextBlock Text="{x:Static resources:Strings.MaterialCategories}" Classes="sectionTitle" Margin="8,0" />
+            <ListBox x:Name="MaterialFilters" ItemsSource="{Binding CategoryFilters}" SelectedItem="{Binding SelectedFilter, Mode=TwoWay}" Classes="materialFilters" AutomationProperties.Name="{x:Static resources:Strings.MaterialFilters}">
+              <ListBox.ItemTemplate><DataTemplate x:DataType="vm:MaterialFilter"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+            <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="8,16,8,0">
+              <TextBlock Text="{x:Static resources:Strings.MaterialLibrary}" Classes="sectionTitle" />
+            </Border>
+            <Button x:Name="MyMaterialsButton" Content="{x:Static resources:Strings.MyMaterials}" Command="{Binding ShowUserCommand}" Classes="materialNavigation" Classes.selected="{Binding IsUserFilter}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.MyMaterials}" />
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+      <Grid x:Name="MaterialBrowser" Grid.Column="1" IsVisible="{Binding !IsEditing}" IsEnabled="{Binding !IsBusy}">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="550" /><ColumnDefinition Width="310" MinWidth="310" /></Grid.ColumnDefinitions>
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="12,16">
+            <TextBox x:Name="MaterialSearchInput" Text="{Binding SearchText, Mode=TwoWay}" PlaceholderText="{x:Static resources:Strings.MaterialSearch}" KeyDown="SearchKeyDown" AutomationProperties.Name="{x:Static resources:Strings.MaterialSearch}">
+              <TextBox.InnerLeftContent><PathIcon Width="16" Height="16" Margin="8,0,0,0" Foreground="{DynamicResource TextSecondary}" Data="M 6.5,1 A 5.5,5.5 0 1 0 6.5,12 A 5.5,5.5 0 1 0 6.5,1 Z M 6.5,2.5 A 4,4 0 1 1 6.5,10.5 A 4,4 0 1 1 6.5,2.5 Z M 10,9 L 15,14 L 14,15 L 9,10 Z" /></TextBox.InnerLeftContent>
+            </TextBox>
+            <Button x:Name="NewMaterialButton" Grid.Column="1" Content="{x:Static resources:Strings.NewMaterial}" Command="{Binding NewCommand}" Classes="secondary" AutomationProperties.Name="{x:Static resources:Strings.NewMaterial}" />
+          </Grid>
+          <Border Grid.Row="1" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" IsVisible="{Binding HasProjectEntry}" Padding="12,0,12,12">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{x:Static resources:Strings.MaterialCurrentEntry}" Classes="caption" />
+              <Button x:Name="ProjectMaterialEntry" Classes="materialNavigation" Classes.selected="{Binding IsProjectSelected}" Command="{Binding SelectProjectCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.CurrentProjectMaterial}">
+                <TextBlock Text="{Binding CurrentEntry.Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding CurrentEntry.Name}" />
+              </Button>
+            </StackPanel>
+          </Border>
+          <ListBox x:Name="MaterialEntries" Grid.Row="2" ItemsSource="{Binding FilteredEntries}" SelectedItem="{Binding SelectedEntry, Mode=TwoWay}" SelectionMode="Single"
+              ItemTemplate="{StaticResource MaterialRow}" Classes="materialEntries" DoubleTapped="EntriesDoubleTapped" AutomationProperties.Name="{x:Static resources:Strings.MaterialList}">
+            <ListBox.Template>
+              <ControlTemplate>
+                <Grid RowDefinitions="Auto,*">
+                  <!-- The heading uses the actual viewport, including the space reserved by a visible scrollbar. -->
+                  <Border Background="{DynamicResource SurfaceSubtle}" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,1">
+                    <Border Width="{Binding #PART_ScrollViewer.Viewport.Width}" HorizontalAlignment="Left" Padding="12,10">
+                      <controls:MaterialTableColumns x:Name="MaterialTableHeader" Classes="materialColumns materialHeading">
+                        <TextBlock Text="{x:Static resources:Strings.MaterialDesignation}" />
+                        <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.MaterialNumber}" />
+                        <TextBlock Grid.Column="2" Text="E [GPa]" TextAlignment="Right" />
+                        <TextBlock Grid.Column="3" Text="fy [MPa]" TextAlignment="Right" />
+                      </controls:MaterialTableColumns>
+                    </Border>
+                  </Border>
+                  <ScrollViewer x:Name="PART_ScrollViewer" Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" AllowAutoHide="False">
+                    <ItemsPresenter x:Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" />
+                  </ScrollViewer>
+                </Grid>
+              </ControlTemplate>
+            </ListBox.Template>
+          </ListBox>
+          <TextBlock Grid.Row="3" Text="{x:Static resources:Strings.NoMaterialsFound}" IsVisible="{Binding IsEmpty}" Classes="secondary" TextWrapping="Wrap" Margin="12" />
         </Grid>
-        <ListBox x:Name="MaterialEntries" Grid.Row="2" ItemsSource="{Binding VisibleEntries}" SelectedItem="{Binding SelectedEntry, Mode=TwoWay}" SelectionMode="Single"
-            ItemTemplate="{StaticResource MaterialRow}" Classes="materialEntries" DoubleTapped="EntriesDoubleTapped"
-            AutomationProperties.Name="{x:Static resources:Strings.MaterialList}" />
+        <Border Grid.Column="1" Background="{DynamicResource SurfaceSubtle}" BorderBrush="{DynamicResource Border}" BorderThickness="1,0,0,0">
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="16,24" Spacing="16">
+              <TextBlock Text="{x:Static resources:Strings.MaterialDetailsTitle}" Classes="sectionTitle" />
+              <StackPanel x:Name="MaterialDetails" DataContext="{Binding SelectedEntry}" x:DataType="vm:MaterialSelectionItem" IsVisible="{Binding $parent[UserControl].((vm:MaterialSelectionViewModel)DataContext).HasSelection}" Spacing="12">
+                <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding MaterialNumber}" IsVisible="{Binding HasMaterialNumber}" Classes="secondary" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding CategoryLabel}" IsVisible="{Binding HasCategory}" Classes="secondary" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding OtherStandards}" IsVisible="{Binding HasOtherStandards}" Classes="secondary" TextWrapping="Wrap" />
+                <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="0,16,0,0">
+                  <Grid Classes="materialProperties" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
+                    <TextBlock Text="{x:Static resources:Strings.MaterialYoungsModulus}" /><TextBlock Grid.Column="1" TextAlignment="Right"><Run Text="{Binding YoungsModulus}" /><Run Text=" GPa" /></TextBlock>
+                    <TextBlock Grid.Row="1" Text="{x:Static resources:Strings.MaterialYieldStrength}" /><TextBlock Grid.Row="1" Grid.Column="1" TextAlignment="Right"><Run Text="{Binding YieldStrength}" /><Run Text=" MPa" /></TextBlock>
+                    <TextBlock Grid.Row="2" Text="{x:Static resources:Strings.MaterialDensity}" IsVisible="{Binding HasDensity}" /><TextBlock Grid.Row="2" Grid.Column="1" IsVisible="{Binding HasDensity}" TextAlignment="Right"><Run Text="{Binding Density}" /><Run Text=" kg/m³" /></TextBlock>
+                    <TextBlock Grid.Row="3" Text="{x:Static resources:Strings.MaterialPoissonRatio}" IsVisible="{Binding HasPoissonRatio}" /><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PoissonRatio}" IsVisible="{Binding HasPoissonRatio}" TextAlignment="Right" />
+                  </Grid>
+                </Border>
+              </StackPanel>
+              <WrapPanel Orientation="Horizontal" IsVisible="{Binding HasSelection}">
+                <Button x:Name="EditSelectedMaterialButton" Content="{Binding EditLabel}" Command="{Binding EditSelectedCommand}" Classes="ghost" AutomationProperties.Name="{Binding EditLabel}" />
+                <Button x:Name="DeleteSelectedMaterialButton" Content="{x:Static resources:Strings.Delete}" Command="{Binding DeleteSelectedCommand}" IsVisible="{Binding ShowDelete}" Classes="ghost" AutomationProperties.Name="{x:Static resources:Strings.Delete}" />
+              </WrapPanel>
+              <TextBlock Text="{Binding BuiltInError}" IsVisible="{Binding HasBuiltInError}" Classes="validationMessage" />
+              <TextBlock Text="{Binding LibraryError}" IsVisible="{Binding HasLibraryError}" Classes="validationMessage" />
+              <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Classes="validationMessage" />
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
       </Grid>
-      <ScrollViewer Grid.Column="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="16">
-          <StackPanel x:Name="MaterialDetails" DataContext="{Binding SelectedEntry}" x:DataType="vm:MaterialSelectionItem" IsVisible="{Binding $parent[UserControl].((vm:MaterialSelectionViewModel)DataContext).HasSelection}" Spacing="12">
-            <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
-            <TextBlock Text="{Binding MaterialNumber}" IsVisible="{Binding HasMaterialNumber}" Classes="secondary" TextWrapping="Wrap" />
-            <TextBlock Text="{Binding CategoryLabel}" IsVisible="{Binding HasCategory}" Classes="secondary" TextWrapping="Wrap" />
-            <TextBlock Text="{Binding OtherStandards}" IsVisible="{Binding HasOtherStandards}" Classes="secondary" TextWrapping="Wrap" />
-            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="12">
-              <TextBlock Text="E" Classes="propertyLabel" /><TextBlock Grid.Column="1"><Run Text="{Binding YoungsModulus}" /><Run Text=" GPa" /></TextBlock>
-              <TextBlock Grid.Row="1" Text="fy" Classes="propertyLabel" /><TextBlock Grid.Row="1" Grid.Column="1"><Run Text="{Binding YieldStrength}" /><Run Text=" MPa" /></TextBlock>
-              <TextBlock Grid.Row="2" Text="ρ" Classes="propertyLabel" IsVisible="{Binding HasDensity}" /><TextBlock Grid.Row="2" Grid.Column="1" IsVisible="{Binding HasDensity}"><Run Text="{Binding Density}" /><Run Text=" kg/m³" /></TextBlock>
-              <TextBlock Grid.Row="3" Text="ν" Classes="propertyLabel" IsVisible="{Binding HasPoissonRatio}" /><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PoissonRatio}" IsVisible="{Binding HasPoissonRatio}" />
-            </Grid>
-          </StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasSelection}">
-            <Button x:Name="EditSelectedMaterialButton" Content="{Binding EditLabel}" Command="{Binding EditSelectedCommand}" AutomationProperties.Name="{Binding EditLabel}" />
-            <Button x:Name="DeleteSelectedMaterialButton" Content="{x:Static resources:Strings.Delete}" Command="{Binding DeleteSelectedCommand}" IsVisible="{Binding ShowDelete}" AutomationProperties.Name="{x:Static resources:Strings.Delete}" />
-          </StackPanel>
-          <TextBlock Text="{x:Static resources:Strings.NoMaterialsFound}" IsVisible="{Binding IsEmpty}" Classes="secondary" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding BuiltInError}" IsVisible="{Binding HasBuiltInError}" Classes="validationMessage" />
-          <TextBlock Text="{Binding LibraryError}" IsVisible="{Binding HasLibraryError}" Classes="validationMessage" />
-          <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Classes="validationMessage" />
-        </StackPanel>
-      </ScrollViewer>
+      <ContentControl Grid.Column="1" Content="{Binding Editor}" IsVisible="{Binding IsEditing}">
+        <ContentControl.ContentTemplate><DataTemplate x:DataType="vm:MaterialEditorViewModel"><views:MaterialEditorView /></DataTemplate></ContentControl.ContentTemplate>
+      </ContentControl>
     </Grid>
   </Grid>
 </UserControl>

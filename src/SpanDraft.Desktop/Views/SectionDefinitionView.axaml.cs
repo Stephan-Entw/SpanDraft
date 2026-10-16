@@ -14,7 +14,6 @@ public partial class SectionDefinitionView : UserControl
     private SectionDefinitionViewModel? _model;
     private SectionDefinitionLayout? _layoutState;
     private double _inputWidth = double.NaN, _valuesWidth = double.NaN;
-    private AboutWindow? _aboutWindow;
     private bool _observedEditingName;
     private int _nameEditRevision;
     private string? _observedLibraryError;
@@ -149,14 +148,6 @@ public partial class SectionDefinitionView : UserControl
         if (sender is SectionAxisBlock { DataContext: SectionDefinitionAxisValue block } && block.IsSelectable && _model is not null)
             _model.SelectedAxis = block.Axis;
     }
-    private async void ShowAbout(object? sender, RoutedEventArgs e)
-    {
-        if (_aboutWindow is not null || _model?.IsBusy != false || TopLevel.GetTopLevel(this) is not Window owner) return;
-        var dialog = new AboutWindow { Icon = owner.Icon };
-        _aboutWindow = dialog;
-        try { await dialog.ShowDialog(owner); }
-        finally { _aboutWindow = null; }
-    }
     private void SelectForm(object? sender,RoutedEventArgs e) { if (sender is Button { Tag: SectionEditorType type }) _model?.SelectForm(type); }
     private void LoadPreset(object? sender, RoutedEventArgs e)
     { if (sender is Button { DataContext: SectionDefinitionPreset preset }) _model?.LoadPreset(preset.Entry); }
@@ -168,7 +159,7 @@ public partial class SectionDefinitionView : UserControl
     }
     private void InputLostFocus(object? sender,RoutedEventArgs e)
     {
-        if (_model?.IsBusy != false || sender is not TextBox { DataContext: SectionDefinitionInput input }) return;
+        if (_model is null || _model.PreserveInputs || sender is not TextBox { DataContext: SectionDefinitionInput input }) return;
         // Untouched fields must remain neutral; a normal visit followed by blur is an interaction.
         input.Commit(); _model.HighlightedParameter=null;
     }
@@ -189,7 +180,7 @@ public partial class SectionDefinitionView : UserControl
         int revision = _nameEditRevision;
         Dispatcher.UIThread.Post(() =>
         {
-            if (_model == model && revision == _nameEditRevision && model?.IsEditingName == true && !NameEditor.IsKeyboardFocusWithin)
+            if (_model == model && revision == _nameEditRevision && model?.IsEditingName == true && !model.PreserveInputs && !NameEditor.IsKeyboardFocusWithin)
                 model.CommitName();
         });
     }

@@ -34,7 +34,7 @@ public sealed class MaterialWorkflowRegressionTests
         public MaterialEditorViewModel New()
         {
             Select().NewCommand.Execute(null);
-            var editor = Assert.IsType<MaterialEditorViewModel>(Main.Setup.CurrentStep);
+            var editor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(Main.Setup.CurrentStep).Editor);
             editor.Name = "Shop material"; editor.Inputs[0].Text = "210"; editor.Inputs[1].Text = "355";
             return editor;
         }
@@ -127,7 +127,7 @@ public sealed class MaterialWorkflowRegressionTests
     {
         var f = new Fixture(); await f.Load(); var selected = f.Main.Setup.SelectedMaterial; var editor = f.New();
         editor.MaterialNumber = "1.2345"; editor.OtherStandards = " A ; B ; ";
-        Assert.True(await editor.AddLibraryAsync()); Assert.Same(editor, f.Main.Setup.CurrentStep); Assert.Same(selected, f.Main.Setup.SelectedMaterial);
+        Assert.True(await editor.AddLibraryAsync()); Assert.Same(editor, Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor); Assert.Same(selected, f.Main.Setup.SelectedMaterial);
         Assert.True(editor.IsInLibrary); Assert.False(editor.AddLibraryCommand.CanExecute(null));
         var entry = Assert.Single(f.Main.UserMaterials.All); Assert.Equal(new[] { "A", "B" }, entry.OtherStandards);
         editor.CancelCommand.Execute(null); Assert.Same(selected, f.Main.Setup.SelectedMaterial); Assert.Single(f.Main.UserMaterials.All);
@@ -176,7 +176,7 @@ public sealed class MaterialWorkflowRegressionTests
         var f = new Fixture(); await f.Load();
         f.Main.Setup.SelectedMaterial = Entry().Material;
         var selection = f.Select(); Assert.True(selection.SelectedEntry!.IsProject);
-        selection.EditSelectedCommand.Execute(null); var editor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
+        selection.EditSelectedCommand.Execute(null); var editor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
         Assert.Empty(editor.MaterialNumber); Assert.Empty(editor.OtherStandards);
         Assert.True(await editor.AddLibraryAsync()); editor.CancelCommand.Execute(null);
         Assert.Same(selection, f.Main.Setup.CurrentStep); Assert.Null(selection.CurrentEntry);
@@ -200,13 +200,54 @@ public sealed class MaterialWorkflowRegressionTests
         var f = new Fixture(); await f.Load(Entry()); var selection = f.Select();
         selection.SelectedFilter = selection.Filters.Single(c => c.Kind == MaterialFilterKind.User); selection.SearchText = "shop";
         selection.SelectedEntry = Assert.Single(selection.FilteredEntries); selection.EditSelectedCommand.Execute(null);
-        var editor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep); var project = f.Main.Setup.SelectedMaterial;
+        var editor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor); var project = f.Main.Setup.SelectedMaterial;
         editor.Name = "Shop renamed"; editor.Inputs[1].Text = "400";
         if (cancel) editor.CancelCommand.Execute(null); else Assert.True(await editor.ReplaceLibraryAsync());
         Assert.Same(selection, f.Main.Setup.CurrentStep); Assert.Same(project, f.Main.Setup.SelectedMaterial);
         Assert.Equal("shop", selection.SearchText); Assert.Equal(MaterialFilterKind.User, selection.SelectedFilter.Kind);
         Assert.Equal(cancel ? "Shop stainless" : "Shop renamed", selection.SelectedEntry!.Name);
         Assert.Equal(cancel ? 300e6 : 400e6, selection.SelectedEntry.Material.YieldStrength.Pascals);
+    }
+
+    [Theory]
+    [InlineData(false, false)] [InlineData(false, true)]
+    [InlineData(true, false)] [InlineData(true, true)]
+    public async Task ReplacementCorrectsOnlyFiltersThatHideTheRenamedOrRecategorizedEntry(bool rename, bool recategorize)
+    {
+        var f = new Fixture(); await f.Load(Entry()); var selection = f.Select();
+        selection.SearchText = "shop stainless";
+        var filter = selection.Filters.Single(c => c.Category == MaterialCategory.StainlessSteel);
+        selection.SelectedFilter = filter; selection.SelectedEntry = Assert.Single(selection.FilteredEntries);
+        selection.EditSelectedCommand.Execute(null); var editor = Assert.IsType<MaterialEditorViewModel>(selection.Editor);
+        var snapshot = f.Main.Setup.SelectedMaterial;
+        editor.Name = rename ? "Renamed" : "Shop stainless";
+        if (recategorize) editor.Category = editor.Categories.Single(c => c.Value == MaterialCategory.Other);
+        Assert.True(await editor.ReplaceLibraryAsync());
+        Assert.Same(selection, f.Main.Setup.CurrentStep); Assert.False(selection.IsEditing);
+        Assert.Equal(rename ? "" : "shop stainless", selection.SearchText);
+        Assert.Equal(recategorize ? MaterialFilterKind.All : MaterialFilterKind.Category, selection.SelectedFilter.Kind);
+        Assert.Same(Assert.Single(selection.UserEntries), selection.SelectedEntry);
+        Assert.Contains(selection.SelectedEntry, selection.FilteredEntries); Assert.Same(snapshot, f.Main.Setup.SelectedMaterial);
+    }
+
+    [Fact]
+    public async Task EmbeddedDraftFreezesBrowsingAndDiscardPreservesTheExactBrowseState()
+    {
+        var f = new Fixture(); await f.Load(Entry()); var selection = f.Select();
+        selection.SearchText = "shop"; selection.SelectedFilter = selection.UserFilter;
+        var entry = selection.SelectedEntry = Assert.Single(selection.FilteredEntries);
+        var rows = selection.FilteredEntries;
+        selection.EditSelectedCommand.Execute(null);
+        Assert.Same(selection, f.Main.Setup.CurrentStep); Assert.Equal(ProjectSetupPage.MaterialSelection, f.Main.Setup.Page);
+        Assert.False(selection.CanBrowse); Assert.False(selection.NewCommand.CanExecute(null));
+        Assert.False(selection.UseSelectedCommand.CanExecute(null)); Assert.False(selection.BackCommand.CanExecute(null));
+        Assert.False(selection.ShowUserCommand.CanExecute(null));
+        selection.SearchText = "ignored"; selection.SelectedFilter = selection.Filters[0];
+        Assert.Equal("shop", selection.SearchText); Assert.Same(selection.UserFilter, selection.SelectedFilter);
+        selection.Editor!.Name = "Discarded"; f.Main.Setup.Escape();
+        Assert.False(selection.IsEditing); Assert.Same(entry, selection.SelectedEntry); Assert.Same(rows, selection.FilteredEntries);
+        Assert.Equal("Shop stainless", Assert.Single(f.Main.UserMaterials.All).Material.Name); Assert.Empty(f.Files.Writes);
+        f.Main.Setup.Escape(); Assert.True(f.Main.Setup.IsOverview);
     }
 
     [Fact]
@@ -227,7 +268,7 @@ public sealed class MaterialWorkflowRegressionTests
     {
         var f = new Fixture(); await f.Load(Entry("First"), Entry("Second")); var selection = f.Select();
         selection.SelectedEntry = selection.UserEntries[0]; selection.EditSelectedCommand.Execute(null);
-        var editor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
+        var editor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
         var library = f.Main.UserMaterials; var bytes = f.Files.Data["materials"].ToArray();
         editor.Name = "SECOND"; Assert.NotNull(editor.Draft); Assert.False(editor.CanReplaceLibrary);
         Assert.Equal(Strings.LibraryNameConflict, editor.LibraryError); Assert.False(await editor.ReplaceLibraryAsync());

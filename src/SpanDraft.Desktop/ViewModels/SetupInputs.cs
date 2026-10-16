@@ -22,6 +22,7 @@ public sealed class SetupNumberInput : ObservableObject
     private readonly string _originalText;
     private readonly bool _optional, _nonnegative, _signed;
     private string _text;
+    private bool _validationVisible;
     public SetupNumberInput(string key, string label, UnitDefinition unit, Action changed, double? value = null,
         bool optional = false, bool nonnegative = false, bool signed = false, string? hint = null)
     {
@@ -44,8 +45,15 @@ public sealed class SetupNumberInput : ObservableObject
         set
         {
             if (!Set(ref _text, value)) return;
-            Notify(nameof(Error)); Notify(nameof(HasError)); _changed();
+            Notify(nameof(Error)); Notify(nameof(HasError)); Notify(nameof(ShowError)); _changed();
         }
+    }
+    // Validity always gates the actions; field feedback starts after the first completed interaction.
+    public bool ShowError => _validationVisible && HasError;
+    public void CompleteInput()
+    {
+        _validationVisible = true;
+        Notify(nameof(ShowError));
     }
     public bool TryRead(out double? value)
     {

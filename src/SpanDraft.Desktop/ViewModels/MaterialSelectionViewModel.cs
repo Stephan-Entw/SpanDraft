@@ -23,7 +23,9 @@ public sealed class MaterialSelectionItem(Material material, MaterialSelectionKi
     public bool HasMaterialNumber => MaterialNumber is not null;
     public bool HasCategory => Entry is not null;
     public string? CategoryLabel => Entry is null ? null : MaterialSelectionViewModel.Categories().Single(c => c.Value == Entry.Category).Label;
-    public string OtherStandards => string.Join(" · ", Entry?.OtherStandards ?? []);
+    public string OtherStandards => string.Join(" · ", (Entry?.OtherStandards ?? [])
+        .Where(s => !StringComparer.OrdinalIgnoreCase.Equals(s, Name) && !StringComparer.OrdinalIgnoreCase.Equals(s, MaterialNumber))
+        .Distinct(StringComparer.OrdinalIgnoreCase));
     public bool HasOtherStandards => OtherStandards.Length > 0;
     public string YoungsModulus => UiNumbers.Indicator(Material.YoungsModulus.Pascals / 1e9);
     public string YieldStrength => UiNumbers.Indicator(Material.YieldStrength.Megapascals);
@@ -51,6 +53,7 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
     private string _search = "";
     private MaterialFilter _filter;
     private string? _error;
+    private MaterialEditorViewModel? _editor;
 
     public MaterialSelectionViewModel(ProjectSetupViewModel setup) : base(setup)
     {
@@ -60,27 +63,38 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
             .Concat(Categories().Select(c => new MaterialFilter(MaterialFilterKind.Category, c.Label, c.Value)))
             .Append(new(MaterialFilterKind.User, Strings.MyMaterials)).ToArray();
         _filter = Filters[0];
-        BackCommand = new(setup.ShowOverview, () => !IsBusy);
-        NewCommand = new(() => setup.EditMaterial(null, SetupEditorMode.ProjectDraft), () => !IsBusy);
+        BackCommand = new(setup.ShowOverview, () => CanBrowse);
+        NewCommand = new(() => BeginEdit(null, SetupEditorMode.ProjectDraft), () => CanBrowse);
         UseSelectedCommand = new(UseSelected, () => CanUseSelected);
         EditSelectedCommand = new(EditSelected, () => CanEditSelected);
         DeleteSelectedCommand = new(DeleteSelectedAsync, () => CanDeleteSelected);
+        ShowUserCommand = new(() => SelectedFilter = UserFilter, () => CanBrowse);
+        SelectProjectCommand = new(() => SelectedEntry = CurrentEntry, () => CanBrowse && CurrentEntry is not null);
         RebuildEntries();
         Refresh();
     }
     public IReadOnlyList<MaterialFilter> Filters { get; }
+    public IReadOnlyList<MaterialFilter> CategoryFilters => Filters.Where(f => f.Kind != MaterialFilterKind.User).ToArray();
+    public MaterialFilter UserFilter => Filters.Single(f => f.Kind == MaterialFilterKind.User);
+    public bool IsUserFilter => SelectedFilter.Kind == MaterialFilterKind.User;
+    public MaterialEditorViewModel? Editor => _editor;
+    public bool IsEditing => Editor is not null;
+    public bool CanBrowse => !IsBusy && !IsEditing;
+    public string Title => Editor?.Title ?? Strings.MaterialSelection;
     public IReadOnlyList<MaterialSelectionItem> AllEntries => _entries;
     public IReadOnlyList<MaterialSelectionItem> BuiltInEntries => _builtIns;
     public IReadOnlyList<MaterialSelectionItem> UserEntries => _users;
     public MaterialSelectionItem? CurrentEntry => _currentEntry;
+    public bool HasProjectEntry => CurrentEntry is not null;
+    public bool IsProjectSelected => SelectedEntry?.IsProject == true;
     public IReadOnlyList<MaterialSelectionItem> VisibleEntries => _visible;
     public IReadOnlyList<MaterialSelectionItem> FilteredEntries => _filtered;
     public bool IsEmpty => _filtered.Count == 0;
-    public string SearchText { get => _search; set { if (Set(ref _search, value)) RebuildVisible(); } }
+    public string SearchText { get => _search; set { if (CanBrowse && Set(ref _search, value)) RebuildVisible(); } }
     public MaterialFilter SelectedFilter
     {
         get => _filter;
-        set { if (value is not null && Filters.Contains(value) && Set(ref _filter, value)) RebuildVisible(); }
+        set { if (CanBrowse && value is not null && Filters.Contains(value) && Set(ref _filter, value)) RebuildVisible(); }
     }
     public MaterialSelectionItem? SelectedEntry
     {
@@ -92,9 +106,9 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
         }
     }
     public bool HasSelection => SelectedEntry is not null;
-    public bool CanUseSelected => !IsBusy && HasSelection;
-    public bool CanEditSelected => !IsBusy && SelectedEntry is { } selected && (!selected.IsUser || Setup.Libraries?.CanSaveMaterials == true);
-    public bool CanDeleteSelected => !IsBusy && SelectedEntry?.IsUser == true && Setup.Libraries?.CanSaveMaterials == true;
+    public bool CanUseSelected => CanBrowse && HasSelection;
+    public bool CanEditSelected => CanBrowse && SelectedEntry is { } selected && (!selected.IsUser || Setup.Libraries?.CanSaveMaterials == true);
+    public bool CanDeleteSelected => CanBrowse && SelectedEntry?.IsUser == true && Setup.Libraries?.CanSaveMaterials == true;
     public bool ShowDelete => SelectedEntry?.IsUser == true;
     public string EditLabel => SelectedEntry?.IsUser == true ? Strings.EditEntry : Strings.Customize;
     public string? BuiltInError => Setup.Libraries?.BuiltInError;
@@ -108,6 +122,8 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
     public ActionCommand UseSelectedCommand { get; }
     public ActionCommand EditSelectedCommand { get; }
     public AsyncActionCommand DeleteSelectedCommand { get; }
+    public ActionCommand ShowUserCommand { get; }
+    public ActionCommand SelectProjectCommand { get; }
 
     public void UseSelected()
     {
@@ -119,8 +135,28 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
     private void EditSelected()
     {
         if (!CanEditSelected || SelectedEntry is not { } selected) return;
-        Setup.EditMaterial(selected.Entry, selected.IsUser ? SetupEditorMode.UserLibraryEdit : SetupEditorMode.ProjectDraft,
+        BeginEdit(selected.Entry, selected.IsUser ? SetupEditorMode.UserLibraryEdit : SetupEditorMode.ProjectDraft,
             selected.IsProject ? selected.Material : null);
+    }
+    private void BeginEdit(MaterialLibraryEntry? entry, SetupEditorMode mode, Material? snapshot = null)
+    {
+        if (!CanBrowse) return;
+        _editor = new(Setup, entry, mode, snapshot);
+        NotifyMode();
+    }
+    internal void EndEdit(string? replacement = null)
+    {
+        if (IsBusy) return;
+        _editor = null;
+        Refresh();
+        if (replacement is not null) SelectReplacement(replacement);
+        NotifyMode();
+    }
+    private void NotifyMode()
+    {
+        foreach (var name in new[] { nameof(Editor), nameof(IsEditing), nameof(CanBrowse), nameof(Title) }) Notify(name);
+        BackCommand.Refresh(); NewCommand.Refresh(); ShowUserCommand.Refresh(); SelectProjectCommand.Refresh(); NotifySelection();
+        Setup.Libraries?.RefreshWorkspaceState();
     }
     public async Task<bool> DeleteSelectedAsync()
     {
@@ -136,7 +172,12 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
     internal void SelectReplacement(string name)
     {
         Refresh();
-        SelectedEntry = _visible.SingleOrDefault(e => e.IsUser && e.Name == name);
+        var replacement = _users.SingleOrDefault(e => e.Name == name);
+        if (replacement is null) return;
+        if (_filter.Kind == MaterialFilterKind.Category && replacement.Entry?.Category != _filter.Category)
+            SelectedFilter = Filters[0];
+        if (!_filtered.Contains(replacement)) SearchText = "";
+        SelectedEntry = replacement;
     }
     private void RebuildEntries()
     {
@@ -151,7 +192,7 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
             : _entries.FirstOrDefault(e => e.Kind == previous.Kind && e.Entry == previous.Entry)
                 ?? (previous.IsProject ? _currentEntry ?? matches.SingleOrDefault() : null);
         RebuildVisible(preferred);
-        foreach (var name in new[] { nameof(UserEntries), nameof(AllEntries), nameof(CurrentEntry) }) Notify(name);
+        foreach (var name in new[] { nameof(UserEntries), nameof(AllEntries), nameof(CurrentEntry), nameof(HasProjectEntry) }) Notify(name);
     }
     private void RebuildVisible(MaterialSelectionItem? preferred = null)
     {
@@ -164,19 +205,21 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
         if (!_visible.SequenceEqual(visible)) { _visible = visible; Notify(nameof(VisibleEntries)); }
         SelectedEntry = selection is not null && _visible.Contains(selection) ? selection : null;
         Notify(nameof(FilteredEntries)); Notify(nameof(IsEmpty));
+        Notify(nameof(IsUserFilter));
     }
     private bool Contains(string? text) => text?.Contains(SearchText.Trim(), StringComparison.OrdinalIgnoreCase) == true;
     private void NotifySelection()
     {
-        foreach (var name in new[] { nameof(HasSelection), nameof(CanUseSelected), nameof(CanEditSelected), nameof(CanDeleteSelected), nameof(ShowDelete), nameof(EditLabel) }) Notify(name);
+        foreach (var name in new[] { nameof(HasSelection), nameof(IsProjectSelected), nameof(CanUseSelected), nameof(CanEditSelected), nameof(CanDeleteSelected), nameof(ShowDelete), nameof(EditLabel) }) Notify(name);
         UseSelectedCommand.Refresh(); EditSelectedCommand.Refresh(); DeleteSelectedCommand.Refresh();
     }
     public override void Refresh()
     {
         base.Refresh();
+        Editor?.Refresh();
         if (!ReferenceEquals(_shownLibrary, Setup.Libraries?.UserMaterials)) RebuildEntries();
-        foreach (var name in new[] { nameof(BuiltInError), nameof(HasBuiltInError), nameof(LibraryError), nameof(HasLibraryError) }) Notify(name);
-        BackCommand.Refresh(); NewCommand.Refresh(); NotifySelection();
+        foreach (var name in new[] { nameof(BuiltInError), nameof(HasBuiltInError), nameof(LibraryError), nameof(HasLibraryError), nameof(CanBrowse) }) Notify(name);
+        BackCommand.Refresh(); NewCommand.Refresh(); ShowUserCommand.Refresh(); SelectProjectCommand.Refresh(); NotifySelection();
     }
     internal static IReadOnlyList<SetupChoice<MaterialCategory>> Categories() =>
     [

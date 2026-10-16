@@ -39,6 +39,13 @@
     <AvaloniaResource Include="Assets/AppIcon/SpanDraft.ico" />
     <AvaloniaResource Include="Assets/AppIcon/app-icon-1024.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../help/site/**/*">
+      <Link>Help/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
   <Target Name="CreateMacOSDevelopmentBundle" AfterTargets="CopyFilesToOutputDirectory"
           Condition="'$(_MacOSDevelopmentBundle)' == 'true' and '$(DesignTimeBuild)' != 'true'">
     <MakeDir Directories="$(_MacOSDevelopmentBundleRoot)Contents/Resources" />

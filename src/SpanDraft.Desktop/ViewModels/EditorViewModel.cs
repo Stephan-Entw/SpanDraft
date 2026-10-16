@@ -73,10 +73,10 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public ProjectSession Session { get; }
     public bool IsBusy => Session.IsBusy;
-    public bool IsFileMenuOpen { get; set; }
+    public bool IsMainMenuOpen { get; set; }
     public bool IsSettingsDialogOpen { get; set; }
     public bool IsProjectSetupOpen { get; set; }
-    public bool PreserveDrafts => IsBusy || IsFileMenuOpen || IsSettingsDialogOpen || IsProjectSetupOpen;
+    public bool PreserveDrafts => IsBusy || IsMainMenuOpen || IsSettingsDialogOpen || IsProjectSetupOpen;
     public event Action? InteractionsCancelling;
     public EditorDocument Document => Session.CurrentRevision.State.Document;
     public AnalysisPresentationState Presentation => _presentation;

@@ -4,7 +4,6 @@
              x:Class="SpanDraft.Desktop.Views.ProjectSetupView" x:DataType="vm:ProjectSetupViewModel">
   <UserControl.DataTemplates>
     <DataTemplate DataType="{x:Type vm:MaterialSelectionViewModel}"><views:MaterialSelectionView /></DataTemplate>
-    <DataTemplate DataType="{x:Type vm:MaterialEditorViewModel}"><views:MaterialEditorView /></DataTemplate>
     <DataTemplate DataType="{x:Type vm:SectionDefinitionViewModel}"><views:SectionDefinitionView /></DataTemplate>
   </UserControl.DataTemplates>
   <Grid Background="{DynamicResource AppBackground}">

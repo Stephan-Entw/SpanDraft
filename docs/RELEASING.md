@@ -38,3 +38,19 @@ dotnet run --file scripts/generate-third-party-notices.cs -- --check
 After those checks pass, it must build the Windows installer and publish a GitHub
 Release with the matching notes and installer attached. A failed check must
 prevent publication.
+
+## Offline manual before publishing
+
+Before an official Windows desktop publish, activate a Python 3.11+ environment
+and install the pinned dependencies from `help/requirements.txt` (see
+[the help build instructions](../help/README.md)). Build and validate the manual:
+
+```sh
+dotnet run --file scripts/build-help.cs
+```
+
+Then run the normal desktop publish. The existing site is copied to `Help/` in
+the output; the desktop project does not invoke Python or Zensical. Verify the
+published `Help/index.html` opens from the application's Help menu and that
+navigation, search and images work with networking disabled. Generated HTML is
+not committed; the six generated PNG source assets are committed.

@@ -134,10 +134,10 @@ public sealed class DesktopNavigationTests
         var draft = editor.SupportDraft;
         draft.PositionText = "-";
         var other = overview.FindControl<ItemsControl>("LoadTable")!.GetVisualDescendants().OfType<Button>().First();
-        editor.IsFileMenuOpen = true;
+        editor.IsMainMenuOpen = true;
         other.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.Same(draft, editor.SupportDraft);
-        editor.IsFileMenuOpen = false;
+        editor.IsMainMenuOpen = false;
         editor.Session.SetBusy(true);
         Assert.False(other.IsEnabled);
         other.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

@@ -192,7 +192,8 @@ public sealed class ProjectSetupIntegrationTests
         Assert.False(main.OpenCommand.CanExecute(null)); Assert.False(main.UndoCommand.CanExecute(null));
         Assert.False(await main.SaveAsync()); Assert.False(await main.NewAsync()); Assert.False(await main.OpenAsync());
         Assert.True(await main.Setup.Definition!.SaveLibraryAsync()); Assert.Single(main.UserSections.All);
-        main.Setup.Escape(); Assert.False(main.IsSectionWorkspace); Assert.True(main.SaveCommand.CanExecute(null));
+        main.Setup.Escape(); Assert.False(main.IsSectionWorkspace); Assert.False(main.SaveCommand.CanExecute(null));
+        main.Setup.CancelCommand.Execute(null); Assert.True(main.SaveCommand.CanExecute(null));
     }
 
     [Theory]

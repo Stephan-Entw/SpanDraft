@@ -5,6 +5,8 @@ namespace SpanDraft.Desktop.Resources;
 
 public static class Strings
 {
+    public static string UserManual => Get(nameof(UserManual));
+    public static string UserManualOpenError => Get(nameof(UserManualOpenError));
     public static string SectionDefinitionShapeI => Get(nameof(SectionDefinitionShapeI));
     public static string SectionDefinitionArea => Get(nameof(SectionDefinitionArea));
     public static string SectionDefinitionInertia => Get(nameof(SectionDefinitionInertia));
@@ -298,4 +300,10 @@ public static class Strings
     public static string MaterialList => Get(nameof(MaterialList));
     public static string MaterialEditName => Get(nameof(MaterialEditName));
 
+    public static string MaterialDefine => Get(nameof(MaterialDefine));
+    public static string MaterialCustomize => Get(nameof(MaterialCustomize));
+    public static string MaterialUse => Get(nameof(MaterialUse));
+    public static string MaterialCategories => Get(nameof(MaterialCategories));
+    public static string MaterialLibrary => Get(nameof(MaterialLibrary));
+    public static string MaterialDetailsTitle => Get(nameof(MaterialDetailsTitle));
 }

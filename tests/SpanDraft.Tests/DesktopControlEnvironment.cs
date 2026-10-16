@@ -19,7 +19,7 @@ public sealed class DesktopControlEnvironment : IDisposable
     // Access it only here so the product needs no test hooks or headless package.
     private readonly IDisposable _scope = (IDisposable)typeof(AvaloniaLocator).GetMethod("EnterScope")!.Invoke(null, null)!;
 
-    public DesktopControlEnvironment()
+    public DesktopControlEnvironment(double renderScaling = 1)
     {
         // This collection is serialized, but xUnit can choose a different worker for
         // each test. Give each inert window environment its own owning dispatcher.
@@ -29,9 +29,18 @@ public sealed class DesktopControlEnvironment : IDisposable
         Bind((IRenderLoop)typeof(RenderLoop).GetMethod("FromTimer")!.Invoke(null,
             [DispatchProxy.Create<IRenderTimer, DefaultPlatformProxy>()])!);
         Bind(DispatchProxy.Create<IPlatformIconLoader, DefaultPlatformProxy>());
-        Bind(DispatchProxy.Create<IWindowingPlatform, WindowingPlatformProxy>());
+        var windowing = DispatchProxy.Create<IWindowingPlatform, WindowingPlatformProxy>();
+        ((WindowingPlatformProxy)windowing).RenderScaling = renderScaling;
+        Bind(windowing);
         Bind((IPlatformSettings)Activator.CreateInstance(typeof(DefaultPlatformSettings), nonPublic: true)!);
-        Bind((PlatformHotkeyConfiguration)Activator.CreateInstance(typeof(PlatformHotkeyConfiguration), nonPublic: true)!);
+        var primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+        var hotkeys = (PlatformHotkeyConfiguration)Activator.CreateInstance(typeof(PlatformHotkeyConfiguration),
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null,
+            [primary, OperatingSystem.IsMacOS() ? KeyModifiers.Alt : KeyModifiers.Control, KeyModifiers.Shift], null)!;
+        var redo = new List<KeyGesture> { new(Key.Z, primary | KeyModifiers.Shift) };
+        if (OperatingSystem.IsWindows()) redo.Add(new(Key.Y, KeyModifiers.Control));
+        typeof(PlatformHotkeyConfiguration).GetProperty("Redo")!.SetValue(hotkeys, redo);
+        Bind(hotkeys);
         Bind((IFocusManager)Activator.CreateInstance(typeof(FocusManager), nonPublic: true)!);
         Bind((IKeyboardDevice)Activator.CreateInstance(typeof(KeyboardDevice), nonPublic: true)!);
         var mediaType = typeof(Dispatcher).Assembly.GetType("Avalonia.Media.MediaContext")!;
@@ -79,8 +88,14 @@ public sealed class DesktopControlEnvironment : IDisposable
 
     public class WindowingPlatformProxy : DefaultPlatformProxy
     {
-        protected override object? Invoke(MethodInfo? method, object?[]? args) => method!.Name == "CreateWindow"
-            ? DispatchProxy.Create<IWindowImpl, WindowPlatformProxy>() : base.Invoke(method, args);
+        public double RenderScaling { get; set; } = 1;
+        protected override object? Invoke(MethodInfo? method, object?[]? args)
+        {
+            if (method!.Name != "CreateWindow") return base.Invoke(method, args);
+            var window = DispatchProxy.Create<IWindowImpl, WindowPlatformProxy>();
+            ((WindowPlatformProxy)window).RenderScaling = RenderScaling;
+            return window;
+        }
     }
 
     public class CursorFactoryProxy : DefaultPlatformProxy
@@ -91,6 +106,7 @@ public sealed class DesktopControlEnvironment : IDisposable
 
     public class WindowPlatformProxy : DefaultPlatformProxy
     {
+        public double RenderScaling { get; set; } = 1;
         private Compositor? _compositor;
         private Size _clientSize = new(1250, 800);
         private Action? _closed;
@@ -105,7 +121,7 @@ public sealed class DesktopControlEnvironment : IDisposable
             {
                 "get_Compositor" => _compositor ??= (Compositor)Activator.CreateInstance(typeof(Compositor), [null, false])!,
                 "get_ClientSize" => _clientSize,
-                "get_RenderScaling" or "get_DesktopScaling" => 1d,
+                "get_RenderScaling" or "get_DesktopScaling" => RenderScaling,
                 "get_Surfaces" => Array.Empty<object>(),
                 _ => base.Invoke(method, args)
             };

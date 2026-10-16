@@ -46,7 +46,7 @@ public sealed class DesktopProjectSetupWorkflowTests
     private static MaterialEditorViewModel NewMaterial(Fixture f)
     {
         Materials(f).NewCommand.Execute(null);
-        var e = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
+        var e = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
         e.Name = "One-off";
         e.Inputs[0].Text = "210"; e.Inputs[1].Text = "355";
         return e;
@@ -105,7 +105,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         Assert.Null(selection.CurrentEntry.Entry); Assert.Equal(8, selection.BuiltInEntries.Count);
         Assert.Single(selection.UserEntries);
         selection.SelectedEntry = selection.CurrentEntry; selection.EditSelectedCommand.Execute(null);
-        var editor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
+        var editor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
         Assert.Equal(MaterialCategory.Other, editor.Category!.Value);
         Assert.Empty(editor.MaterialNumber); Assert.Empty(editor.OtherStandards);
         Assert.Equal(snapshot.Material.Density, editor.Draft!.Material.Density);
@@ -123,7 +123,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         Assert.Equal("X5CrNi18-10", row.Name); Assert.Equal("1.4301", row.MaterialNumber); Assert.Equal("AISI 304", row.OtherStandards);
         selection.SelectedEntry = row; Assert.True(row.IsBuiltIn); Assert.False(selection.DeleteSelectedCommand.CanExecute(null));
         var original = row.Material;
-        selection.SelectedEntry = row; selection.EditSelectedCommand.Execute(null); var editor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
+        selection.SelectedEntry = row; selection.EditSelectedCommand.Execute(null); var editor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
         Assert.Equal("1.4301", editor.MaterialNumber); Assert.Equal("AISI 304", editor.OtherStandards);
         Assert.NotSame(original, editor.Draft!.Material); editor.Inputs[0].Text = "190";
         Assert.True(await editor.ConfirmAsync()); Assert.Equal(190e9, f.Main.Setup.SelectedMaterial!.YoungsModulus.Pascals);
@@ -166,7 +166,7 @@ public sealed class DesktopProjectSetupWorkflowTests
     {
         var f = new Fixture(); await f.Load(); f.Create(); var document = f.Main.Editor!.Document;
         f.Main.EditProject(); var editor = NewMaterial(f);
-        Assert.True(await editor.AddLibraryAsync()); Assert.Same(editor, f.Main.Setup.CurrentStep);
+        Assert.True(await editor.AddLibraryAsync()); Assert.Same(editor, Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
         Assert.Same(document.Material, f.Main.Setup.SelectedMaterial); Assert.True(await editor.ApplyAsync());
         Assert.Equal("One-off", Assert.Single(MaterialLibraryCodec.Deserialize(f.Files.Data["materials"]).All).Material.Name);
         Assert.Equal("One-off", f.Main.Setup.SelectedMaterial!.Name);
@@ -180,7 +180,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         var f = new Fixture(); f.Files.Data["materials"] = MaterialLibraryCodec.Serialize(new([Entry()])); await f.Load(); f.Create();
         var snapshot = f.Main.Editor!.Document; f.Main.EditProject();
         var selection = Materials(f); selection.SelectedEntry = selection.UserEntries.Single(); selection.EditSelectedCommand.Execute(null);
-        var editor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
+        var editor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
         Assert.True(editor.IsLibraryEdit); editor.Name = "Renamed"; editor.Inputs[1].Text = "400";
         Assert.True(await editor.ConfirmAsync()); Assert.Equal(ProjectSetupPage.MaterialSelection, f.Main.Setup.Page);
         Assert.Same(snapshot.Material, f.Main.Setup.SelectedMaterial); Assert.Same(snapshot, f.Main.Editor.Document);
@@ -231,7 +231,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         if (material)
         {
             var editor = NewMaterial(f); var draft = editor.Draft;
-            Assert.False(await editor.AddLibraryAsync()); Assert.Same(editor, f.Main.Setup.CurrentStep);
+            Assert.False(await editor.AddLibraryAsync()); Assert.Same(editor, Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
             Assert.Same(draft, editor.Draft); Assert.True(editor.HasLibraryError); Assert.Empty(f.Main.UserMaterials.All); Assert.True(await editor.ConfirmAsync());
         }
         else
@@ -264,7 +264,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         }
         finally { release.TrySetResult(); }
         Assert.True(await WaitFor(pending)); Assert.False(f.Main.IsBusy);
-        Assert.Equal(material ? ProjectSetupPage.MaterialEditor : ProjectSetupPage.SectionDefinition, f.Main.Setup.Page);
+        Assert.Equal(material ? ProjectSetupPage.MaterialSelection : ProjectSetupPage.SectionDefinition, f.Main.Setup.Page);
     }
 
     [Theory]
@@ -443,7 +443,7 @@ public sealed class DesktopProjectSetupWorkflowTests
             new(SectionAxisDesignation.V, SecondMomentOfArea.FromMetersToTheFourth(3.4567890123456789e-6), SectionModulus.FromCubicMeters(4.567890123456789e-5)));
         f.Main.Setup.SelectedMaterial = material; f.Main.Setup.SelectedSection = manual; f.Create(); f.Main.EditProject();
         var selection = Materials(f); Assert.True(selection.SelectedEntry!.IsProject); selection.EditSelectedCommand.Execute(null);
-        var materialEditor = Assert.IsType<MaterialEditorViewModel>(f.Main.Setup.CurrentStep);
+        var materialEditor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
         Assert.Equal(material.Name, materialEditor.Name);
         Assert.Equal(material.YoungsModulus, materialEditor.Draft!.Material.YoungsModulus);
         Assert.Equal(material.YieldStrength, materialEditor.Draft.Material.YieldStrength);

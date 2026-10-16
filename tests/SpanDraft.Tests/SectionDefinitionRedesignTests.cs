@@ -113,7 +113,7 @@ public sealed class SectionDefinitionRedesignTests
         finally { window.Close(); }
     }
     [Fact]
-    public void LibraryMenuAndHeaderShareVisibilityAcrossDraftStates()
+    public void HeaderLibraryActionTracksDraftValidity()
     {
         using var environment = new DesktopControlEnvironment();
         var vm = new SectionDefinitionViewModel();
@@ -122,10 +122,9 @@ public sealed class SectionDefinitionRedesignTests
         window.Show();
         try
         {
-            var menu = view.FindControl<MenuItem>("SectionSaveMenuItem")!;
             var header = view.FindControl<Grid>("LibrarySaveAction")!;
             var button = view.FindControl<Button>("SaveLibraryButton")!;
-            Assert.Same(vm.SaveLibraryCommand, menu.Command);
+            Assert.Same(vm.SaveLibraryCommand, button.Command);
             AssertVisibility(false);
             vm.SelectForm(SectionEditorType.ISection); AssertVisibility(false);
             var input = vm.Parameters.Single(p => p.Key == "h");
@@ -147,7 +146,6 @@ public sealed class SectionDefinitionRedesignTests
             {
                 Dispatcher.UIThread.RunJobs();
                 view.Measure(new Size(1100, 650)); view.Arrange(new Rect(0, 0, 1100, 650));
-                Assert.Equal(expected, menu.IsVisible);
                 Assert.Equal(expected, header.IsVisible);
                 Assert.Equal(expected, button.IsEffectivelyVisible);
             }
@@ -251,7 +249,7 @@ public sealed class SectionDefinitionRedesignTests
         Assert.True(libraryError.IsFocused); Assert.True(ToolTip.GetIsOpen(libraryError)); Assert.Single(library.Entries);
         Assert.DoesNotContain(view.FindControl<ItemsControl>("LibraryEntryList")!.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == vm.LibraryError);
         vm.BeginNameEdit(); Layout(); vm.PendingName = new string('W', 120); Press(name, Key.Enter); Layout();
-        view.FindControl<MenuItem>("SectionSaveMenuItem")!.Command!.Execute(null); Layout();
+        save.Command!.Execute(null); Layout();
         Assert.Equal(vm.DisplayName, library.Entries[1].Name); Assert.False(libraryError.IsEffectivelyVisible);
         Assert.Null(save.Flyout); Assert.Empty(window.OwnedWindows);
         Assert.Equal(beforeHeader, header.Bounds); Assert.Equal(beforeColumns, columns.Bounds);
@@ -267,22 +265,17 @@ public sealed class SectionDefinitionRedesignTests
         static void Press(Control control, Key key) => control.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key });
     }
     [Fact]
-    public void ApplicationMenuUsesTheSameDraftCommandsAndExistingAboutWindow()
+    public void SectionWorkspaceHasNoLocalMenuAndKeepsItsHeaderActions()
     {
         using var environment = new DesktopControlEnvironment();
         var vm = new SectionDefinitionViewModel(); var view = new SectionDefinitionView { DataContext = vm };
         var owner = new Window { Content = view }; owner.Show();
-        view.Measure(new Size(1500, 980)); view.Arrange(new Rect(0, 0, 1500, 980));
-        var menu = view.FindControl<Menu>("SectionMenu")!;
-        Assert.Equal(new[] { Strings.File, Strings.Edit, Strings.Help }, menu.Items.OfType<MenuItem>().Select(i => i.Header));
-        Assert.Same(vm.SaveLibraryCommand, view.FindControl<MenuItem>("SectionSaveMenuItem")!.Command);
-        Assert.Same(vm.ChangeFormCommand, view.FindControl<MenuItem>("SectionChangeFormMenuItem")!.Command);
-        var edit = (MenuItem)menu.Items[1]!;
-        Assert.Same(vm.EditNameCommand, ((MenuItem)edit.Items[1]!).Command);
-        Assert.Same(vm.ResetNameCommand, ((MenuItem)edit.Items[2]!).Command);
-        view.FindControl<MenuItem>("SectionAboutMenuItem")!.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
-        var about = Assert.IsType<SpanDraft.Desktop.AboutWindow>(Assert.Single(owner.OwnedWindows)); about.Close();
-        Dispatcher.UIThread.RunJobs(); Assert.Empty(owner.OwnedWindows); owner.Close();
+        view.Measure(new Size(1100, 650)); view.Arrange(new Rect(0, 0, 1100, 650));
+        Assert.Empty(view.GetVisualDescendants().OfType<Menu>());
+        Assert.Same(vm.SaveLibraryCommand, view.FindControl<Button>("SaveLibraryButton")!.Command);
+        Assert.Same(vm.CancelCommand, view.FindControl<Button>("CancelButton")!.Command);
+        Assert.Same(vm.ConfirmCommand, view.FindControl<Button>("ConfirmButton")!.Command);
+        owner.Close();
     }
     [Fact]
     public void QuickAccessFiltersByShapeCapsFiveAndPreservesLibraryOrder()

@@ -90,24 +90,8 @@
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     </Style>
   </UserControl.Styles>
-  <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,Auto,*">
-    <Menu x:Name="SectionMenu">
-      <MenuItem Header="{x:Static resources:Strings.File}">
-        <MenuItem x:Name="SectionSaveMenuItem" Header="{x:Static resources:Strings.SectionDefinitionAddLibrary}" Command="{Binding SaveLibraryCommand}" IsVisible="{Binding ShowLibraryAction}" />
-        <MenuItem Header="{x:Static resources:Strings.Apply}" Command="{Binding ConfirmCommand}" />
-        <Separator />
-        <MenuItem Header="{x:Static resources:Strings.SectionDefinitionDiscard}" Command="{Binding CancelCommand}" />
-      </MenuItem>
-      <MenuItem Header="{x:Static resources:Strings.Edit}">
-        <MenuItem x:Name="SectionChangeFormMenuItem" Header="{x:Static resources:Strings.SectionDefinitionChangeForm}" Command="{Binding ChangeFormCommand}" />
-        <MenuItem Header="{x:Static resources:Strings.SectionDefinitionEditName}" Command="{Binding EditNameCommand}" />
-        <MenuItem Header="{x:Static resources:Strings.SectionDefinitionResetName}" Command="{Binding ResetNameCommand}" />
-      </MenuItem>
-      <MenuItem Header="{x:Static resources:Strings.Help}">
-        <MenuItem x:Name="SectionAboutMenuItem" Header="{x:Static resources:Strings.About}" IsEnabled="{Binding !IsBusy}" Click="ShowAbout" />
-      </MenuItem>
-    </Menu>
-    <Border Grid.Row="1" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="24,16">
+  <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,*">
+    <Border Grid.Row="0" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="24,16">
       <Grid x:Name="CommandHeader" ColumnDefinitions="*,Auto" ColumnSpacing="16" Height="{DynamicResource PrimaryAction}">
         <Grid x:Name="DefinitionHeader" VerticalAlignment="Stretch">
             <Button x:Name="TitleButton" Command="{Binding EditNameCommand}" IsVisible="{Binding !IsEditingName}" Classes="ghost definitionTitleButton"
@@ -159,7 +143,7 @@
         </StackPanel>
       </Grid>
     </Border>
-    <Grid Grid.Row="2">
+    <Grid Grid.Row="1">
       <ScrollViewer x:Name="GalleryScroll" IsVisible="{Binding IsChoosingForm}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel x:Name="FormChooser" Spacing="16" MaxWidth="1090" Margin="32" VerticalAlignment="Center" IsEnabled="{Binding !IsBusy}">
           <TextBlock Text="{x:Static resources:Strings.SectionDefinitionGalleryTitle}" FontSize="24" FontWeight="SemiBold" />

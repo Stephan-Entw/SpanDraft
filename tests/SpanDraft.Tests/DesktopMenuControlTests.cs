@@ -23,7 +23,7 @@ public sealed class DesktopMenuControlTests
     [Theory]
     [InlineData("de-DE", 1100, 650)] [InlineData("en-US", 1100, 650)]
     [InlineData("de-DE", 1250, 800)] [InlineData("en-US", 1250, 800)]
-    public void ProjectSectionAndFutureMenusShareRenderedChromeWithoutLocalDecoration(string culture, double width, double height)
+    public void MainMenuRemainsAtTheSamePositionAcrossEveryWorkspace(string culture, double width, double height)
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
@@ -33,7 +33,7 @@ public sealed class DesktopMenuControlTests
         var window = new Window { DataContext = main, Content = content, Width = width, Height = height };
         foreach (var template in shell.DataTemplates) window.DataTemplates.Add(template);
         window.Show(); Arrange(window, width, height);
-        var project = shell.FindControl<Menu>("ProjectMenu")!;
+        var project = shell.FindControl<Menu>("MainMenu")!;
         Assert.True(project.IsEffectivelyVisible); AssertChrome(project, width);
         Assert.Same(main.NewCommand, shell.FindControl<MenuItem>("NewMenuItem")!.Command);
         Assert.Same(main.OpenCommand, shell.FindControl<MenuItem>("OpenMenuItem")!.Command);
@@ -45,14 +45,31 @@ public sealed class DesktopMenuControlTests
         Assert.Equal(new KeyGesture(Key.Z, primary), shell.FindControl<MenuItem>("UndoMenuItem")!.InputGesture);
         var projectTheme = project.ItemContainerTheme;
 
-        main.Setup.ShowSections(); Arrange(window, width, height);
-        Assert.False(project.IsEffectivelyVisible);
+        double menuTop = project.Bounds.Top;
+        CheckWorkspace(MainWorkspaceKind.ProjectSetup);
+        main.Setup.ShowMaterials(); CheckWorkspace(MainWorkspaceKind.MaterialSelection);
+        var materials = (MaterialSelectionViewModel)main.Setup.CurrentStep!;
+        materials.NewCommand.Execute(null); CheckWorkspace(MainWorkspaceKind.MaterialEditor);
+        main.Setup.Escape(); main.Setup.ShowOverview();
+        main.Setup.ShowSections(); CheckWorkspace(MainWorkspaceKind.SectionDefinition);
         var definition = Assert.Single(window.GetVisualDescendants().OfType<SectionDefinitionView>());
-        var section = definition.FindControl<Menu>("SectionMenu")!;
-        Assert.True(section.IsEffectivelyVisible); Assert.IsType<Grid>(section.Parent);
-        AssertChrome(section, width); Assert.Same(projectTheme, section.ItemContainerTheme);
-        Assert.Same(main.Setup.Definition!.SaveLibraryCommand, definition.FindControl<MenuItem>("SectionSaveMenuItem")!.Command);
-        Assert.Same(main.Setup.Definition.ChangeFormCommand, definition.FindControl<MenuItem>("SectionChangeFormMenuItem")!.Command);
+        Assert.Empty(definition.GetVisualDescendants().OfType<Menu>());
+        main.Setup.Escape(); main.Setup.ApplyCommand.Execute(null); CheckWorkspace(MainWorkspaceKind.BeamEditor);
+
+        void CheckWorkspace(MainWorkspaceKind expected)
+        {
+            Arrange(window, width, height);
+            Assert.Equal(expected, main.Workspace);
+            Assert.True(project.IsEffectivelyVisible); AssertChrome(project, width);
+            Assert.Equal(menuTop, project.Bounds.Top);
+            Assert.Single(window.GetVisualDescendants().OfType<Menu>());
+            Assert.Equal(new[] { Strings.File, Strings.Edit, Strings.View, Strings.Help }, project.Items.OfType<MenuItem>().Select(i => i.Header));
+            Assert.True(shell.FindControl<MenuItem>("UserManualMenuItem")!.IsEnabled);
+            string directory = Path.Combine(AppContext.BaseDirectory, "TestResults", "shell"); Directory.CreateDirectory(directory);
+            using var bitmap = new Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize((int)width, (int)height));
+            bitmap.Render((Control)window.Content!);
+            bitmap.Save(Path.Combine(directory, $"shell-{culture}-{width}x{height}-{expected}.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+        }
 
         // A plain future Menu receives all decoration automatically, without a class or wrapper.
         var future = new Menu(); future.Items.Add(new MenuItem { Header = Strings.File });

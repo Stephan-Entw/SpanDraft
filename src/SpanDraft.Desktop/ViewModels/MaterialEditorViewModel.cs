@@ -9,19 +9,20 @@ namespace SpanDraft.Desktop.ViewModels;
 public sealed class MaterialEditorViewModel : SetupStepViewModel
 {
     private static readonly UnitDefinition GPa = new("GPa", "GPa", UnitDimension.Pressure, PresentationNumber.Parse("1e9"));
-    private string _name, _number, _standards, _nameBeforeEdit;
+    private string _name, _number, _standards;
     private SetupChoice<MaterialCategory>? _category;
-    private bool _editingName;
     private string? _error, _saveError;
     private readonly string? _originalName;
     private MaterialLibraryEntry? _savedEntry;
+    private bool _nameValidationVisible;
 
     public MaterialEditorViewModel(ProjectSetupViewModel setup, MaterialLibraryEntry? entry, SetupEditorMode mode,
         Material? projectSnapshot = null) : base(setup)
     {
         var material = entry?.Material ?? projectSnapshot;
         Mode = mode; _originalName = IsLibraryEdit ? entry?.Material.Name : null;
-        _name = _nameBeforeEdit = material?.Name ?? ""; _editingName = material is null;
+        _name = material?.Name ?? "";
+        Title = IsLibraryEdit ? Strings.EditUserMaterial : material is null ? Strings.MaterialDefine : Strings.MaterialCustomize;
         _number = entry?.MaterialNumber ?? ""; _standards = string.Join("; ", entry?.OtherStandards ?? []);
         Categories = MaterialSelectionViewModel.Categories();
         _category = Categories.Single(c => c.Value == (entry?.Category ?? MaterialCategory.Other));
@@ -36,25 +37,28 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
         AddLibraryCommand = new(AddLibraryAsync, () => CanAddLibrary);
         ReplaceLibraryCommand = new(ReplaceLibraryAsync, () => CanReplaceLibrary);
         CancelCommand = new(() => setup.ReturnToMaterials(), () => !IsBusy);
-        EditNameCommand = new(BeginNameEdit, () => !IsBusy);
         Validate();
     }
     public SetupEditorMode Mode { get; }
     public bool IsLibraryEdit => Mode == SetupEditorMode.UserLibraryEdit;
     public bool IsProjectDraft => !IsLibraryEdit;
-    public string PrimaryAction => IsLibraryEdit ? Strings.Save : Strings.Apply;
-    public string HeaderName => string.IsNullOrWhiteSpace(Name) ? Strings.NewMaterial : Name;
-    public string CancelLabel => IsLibraryEdit ? Strings.Back : Strings.SectionDefinitionDiscard;
+    public string Title { get; }
+    public string PrimaryAction => IsLibraryEdit ? Strings.Save : Strings.MaterialUse;
+    public string CancelLabel => Strings.SectionDefinitionDiscard;
     public string Name { get => _name; set { if (!IsBusy && Set(ref _name, value)) Validate(); } }
     public string MaterialNumber { get => _number; set { if (!IsBusy && Set(ref _number, value)) Validate(); } }
     public string OtherStandards { get => _standards; set { if (!IsBusy && Set(ref _standards, value)) Validate(); } }
     public IReadOnlyList<SetupChoice<MaterialCategory>> Categories { get; }
     public SetupChoice<MaterialCategory>? Category { get => _category; set { if (!IsBusy && Set(ref _category, value)) Validate(); } }
     public IReadOnlyList<SetupNumberInput> Inputs { get; }
-    public bool IsEditingName => _editingName;
-    public bool ShowNameInput => _editingName || string.IsNullOrWhiteSpace(Name);
     public string? NameError => string.IsNullOrWhiteSpace(Name) ? Strings.MaterialNameRequired : null;
     public bool HasNameError => NameError is not null;
+    public bool ShowNameError => _nameValidationVisible && HasNameError;
+    public void CompleteNameInput()
+    {
+        _nameValidationVisible = true;
+        Notify(nameof(ShowNameError));
+    }
     public string? CategoryError => Category is null || !Categories.Contains(Category) ? Strings.MaterialCategoryRequired : null;
     public bool HasCategoryError => CategoryError is not null;
     public bool CanSaveToLibrary => Setup.Libraries?.CanSaveMaterials == true;
@@ -73,28 +77,12 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
     public bool CanConfirm => IsLibraryEdit ? CanReplaceLibrary : CanApply;
     public string? Error => _error ?? (IsLibraryEdit ? LibraryError : null);
     public bool HasError => Error is not null;
+    public bool HasFormError => _error is not null && !HasNameError && !HasCategoryError && Inputs.All(i => !i.HasError);
     public AsyncActionCommand ApplyCommand { get; }
     public AsyncActionCommand AddLibraryCommand { get; }
     public AsyncActionCommand ReplaceLibraryCommand { get; }
     public AsyncActionCommand ConfirmCommand => IsLibraryEdit ? ReplaceLibraryCommand : ApplyCommand;
     public ActionCommand CancelCommand { get; }
-    public ActionCommand EditNameCommand { get; }
-
-    public void BeginNameEdit()
-    {
-        if (IsBusy) return;
-        _nameBeforeEdit = Name; _editingName = true; Refresh();
-    }
-    public bool EndNameEdit()
-    {
-        if (HasNameError) return false;
-        _editingName = false; Refresh(); return true;
-    }
-    public void CancelNameEdit()
-    {
-        if (IsBusy) return;
-        Name = _nameBeforeEdit; _editingName = false; Refresh();
-    }
     private void Validate()
     {
         _saveError = null; _error = null; Draft = null;
@@ -147,9 +135,9 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
     public override void Refresh()
     {
         base.Refresh();
-        foreach (var name in new[] { nameof(Error), nameof(HasError), nameof(Draft), nameof(CanConfirm), nameof(CanApply), nameof(CanAddLibrary), nameof(CanReplaceLibrary),
-            nameof(CanSaveToLibrary), nameof(LibraryError), nameof(HasLibraryError), nameof(IsInLibrary), nameof(LibraryActionLabel), nameof(HeaderName),
-            nameof(IsEditingName), nameof(ShowNameInput), nameof(NameError), nameof(HasNameError), nameof(CategoryError), nameof(HasCategoryError) }) Notify(name);
-        ApplyCommand.Refresh(); AddLibraryCommand.Refresh(); ReplaceLibraryCommand.Refresh(); CancelCommand.Refresh(); EditNameCommand.Refresh();
+        foreach (var name in new[] { nameof(Error), nameof(HasError), nameof(HasFormError), nameof(Draft), nameof(CanConfirm), nameof(CanApply), nameof(CanAddLibrary), nameof(CanReplaceLibrary),
+            nameof(CanSaveToLibrary), nameof(LibraryError), nameof(HasLibraryError), nameof(IsInLibrary), nameof(LibraryActionLabel),
+            nameof(NameError), nameof(HasNameError), nameof(ShowNameError), nameof(CategoryError), nameof(HasCategoryError) }) Notify(name);
+        ApplyCommand.Refresh(); AddLibraryCommand.Refresh(); ReplaceLibraryCommand.Refresh(); CancelCommand.Refresh();
     }
 }

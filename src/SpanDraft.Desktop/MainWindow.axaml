@@ -17,7 +17,7 @@
     </DataTemplate>
   </Window.DataTemplates>
   <Grid RowDefinitions="Auto,*">
-    <Menu x:Name="ProjectMenu" IsVisible="{Binding !IsSectionWorkspace}">
+    <Menu x:Name="MainMenu">
       <MenuItem Header="{x:Static resources:Strings.File}">
         <MenuItem x:Name="NewMenuItem" Header="{x:Static resources:Strings.NewProject}" Command="{Binding NewCommand}" />
         <MenuItem x:Name="OpenMenuItem" Header="{x:Static resources:Strings.Open}" Command="{Binding OpenCommand}" />
@@ -37,6 +37,8 @@
         <MenuItem Header="{x:Static resources:Strings.Zoom}" IsEnabled="False" />
       </MenuItem>
       <MenuItem Header="{x:Static resources:Strings.Help}">
+        <MenuItem x:Name="UserManualMenuItem" Header="{x:Static resources:Strings.UserManual}" Click="ShowUserManual" />
+        <Separator />
         <MenuItem Header="{x:Static resources:Strings.About}" IsEnabled="{Binding !IsWorkspaceBusy}" Click="ShowAbout" />
       </MenuItem>
     </Menu>

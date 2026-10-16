@@ -19,7 +19,7 @@ public sealed record SectionDefinitionPreset(SectionLibraryEntry Entry, string S
 
 public enum SectionDefinitionLayout { FormSelection, ParametricDraft, ParametricSection, Manual }
 
-public sealed class SectionDefinitionViewModel : ObservableObject
+public sealed partial class SectionDefinitionViewModel : ObservableObject
 {
     private sealed class FormDraft
     {
@@ -44,9 +44,10 @@ public sealed class SectionDefinitionViewModel : ObservableObject
     private IReadOnlyList<SectionDefinitionPreset> _libraryEntries = [];
 
     public SectionDefinitionViewModel(ResultPresentationOptions? presentation = null, ISectionDefinitionLibrary? library = null,
-        bool showLibraryOption = true, SectionDefinitionInitialState? initialState = null)
+        bool showLibraryOption = true, SectionDefinitionInitialState? initialState = null, Func<bool>? preserveInputs = null)
     {
         _presentation = presentation ?? ResultPresentationOptions.Default; _library = library;
+        _preserveInputs = preserveInputs;
         ShowLibraryOption = showLibraryOption;
         Forms = new[]
         {
@@ -157,10 +158,12 @@ public sealed class SectionDefinitionViewModel : ObservableObject
         set
         {
             if (!IsManual || value is null || !Configurations.Contains(value) || Current.Configuration == value.Value || IsBusy) return;
+            var before = CaptureHistory();
             Current.ManualAxisSelections[Current.Configuration] = Current.Axis;
             Current.Configuration = value.Value;
             Current.Axis = Current.ManualAxisSelections.GetValueOrDefault(value.Value);
             EnsureInputs(); NormalizeAxis(); RefreshInputs(); Recalculate(null);
+            RecordHistory(before);
         }
     }
     public IReadOnlyList<AxisChoice> AvailableAxes => _type is null ? [] : AxesForCurrent().Select(a => new AxisChoice(a)).ToArray();
@@ -170,9 +173,10 @@ public sealed class SectionDefinitionViewModel : ObservableObject
         set
         {
             if (!HasDefinition || IsBusy || !RequiresAxisSelection || value is null || !AxesForCurrent().Contains(value.Value) || Current.Axis == value) return;
+            var before = CaptureHistory();
             Current.Axis = value;
             if (IsManual) Current.ManualAxisSelections[Current.Configuration] = value;
-            Refresh();
+            Refresh(); RecordHistory(before);
         }
     }
     public SectionAxisDesignation ResultAxis => SelectedAxis is { } selected && AxesForCurrent().Contains(selected)
@@ -245,9 +249,11 @@ public sealed class SectionDefinitionViewModel : ObservableObject
     public void SelectForm(SectionEditorType type)
     {
         if (IsBusy || !Enum.IsDefined(type) || !CommitName()) return;
+        var before = CaptureHistory();
         _type = type; _choosing = false; _highlight = null; _saveError = null;
         if (!_drafts.ContainsKey(type)) _drafts[type] = new();
         EnsureInputs(); NormalizeAxis(); RefreshInputs(); Recalculate(null);
+        RecordHistory(before);
     }
     private void NormalizeAxis() { if (Current.Axis is { } axis && !AxesForCurrent().Contains(axis)) Current.Axis = null; }
     private IReadOnlyList<SectionAxisDesignation> AxesForCurrent() => IsManual ? Current.Configuration switch
@@ -266,6 +272,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
             var quantity = !IsManual ? QuantityKind.SectionDimension : key == "A" ? QuantityKind.Area
                 : key.StartsWith('I') ? QuantityKind.SecondMomentOfArea : QuantityKind.SectionModulus;
             Current.Inputs[key] = new(key, Presentation.Profile[quantity], InputChanged, key == "r", InputLabel(key));
+            Current.Inputs[key].BeforeCommittedValueChange += () => _beforeInputChange = CaptureHistory();
         }
     }
     private string InputLabel(string key)
@@ -289,6 +296,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
     {
         if (committed)
         {
+            var before = _beforeInputChange; _beforeInputChange = null;
             _saveError = null;
             if (input.LastCommitChangedValue)
             {
@@ -298,11 +306,12 @@ public sealed class SectionDefinitionViewModel : ObservableObject
                     if (input.Key == "A" || configuration.ToString().Contains(input.Key[^1])) Current.ManualAxisSelections[configuration] = null;
             }
             Recalculate(input);
+            if (before is not null && !Parameters.Any(p => p.HasError)) RecordHistory(before);
         }
         else
         {
             Notify(nameof(CanConfirm)); Notify(nameof(ShowLibraryAction)); Notify(nameof(CanSaveLibrary));
-            ConfirmCommand.Refresh(); SaveLibraryCommand.Refresh();
+            ConfirmCommand.Refresh(); SaveLibraryCommand.Refresh(); RefreshHistoryAvailability();
         }
     }
     private void Recalculate(SectionDefinitionInput? source)
@@ -387,17 +396,18 @@ public sealed class SectionDefinitionViewModel : ObservableObject
         if (!IsEditingName) return true;
         string name = PendingName.Trim();
         if (string.IsNullOrWhiteSpace(name)) { _nameError = Strings.SectionDefinitionNameRequired; Refresh(); return false; }
-        if (!string.Equals(name, DisplayName, StringComparison.Ordinal))
-            Current.CustomName = name;
-        _editingName = false; _nameError = null; _saveError = null; Refresh(); return true;
+        var before = CaptureHistory();
+        if (!string.Equals(name, DisplayName, StringComparison.Ordinal)) Current.CustomName = name;
+        _editingName = false; _nameError = null; _saveError = null; Refresh(); RecordHistory(before); return true;
     }
     public void CancelNameEdit() { _editingName = false; _nameError = null; Refresh(); }
     public void ResetName()
     {
         if (!HasDefinition || IsBusy) return;
+        var before = CaptureHistory();
         Current.CustomName = null; _editingName = false; _nameError = null; _saveError = null;
         UpdateAutomaticName(Parameters.Where(p => p.ConfirmedValue is not null).ToDictionary(p => p.Key, p => p.ConfirmedValue!.Value));
-        Refresh();
+        Refresh(); RecordHistory(before);
     }
     public Task<bool> ConfirmAsync()
     {
@@ -427,6 +437,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
         if (IsBusy || !HasDefinition || _library?.Entries.Contains(entry) != true) return;
         var section = SectionDefinitionCompatibility.Normalize(entry.Section);
         if (FormOf(section) != _type) return;
+        var before = CaptureHistory();
         var values = PresetValues(section);
         if (IsManual)
         {
@@ -440,7 +451,7 @@ public sealed class SectionDefinitionViewModel : ObservableObject
         Current.CustomName = entry.Name;
         _editingName = false; _nameError = null;
         _highlight = null; _saveError = null;
-        RefreshInputs(); Recalculate(null);
+        RefreshInputs(); Recalculate(null); RecordHistory(before);
     }
     private static ManualAxisConfiguration ManualConfiguration(ISectionDefinition section) => section.Axes.Count == 2
         ? section.Axes[0].AxisDesignation == SectionAxisDesignation.Y ? ManualAxisConfiguration.YZ : ManualAxisConfiguration.UV
@@ -500,5 +511,6 @@ public sealed class SectionDefinitionViewModel : ObservableObject
             nameof(HasCustomName), nameof(ShowResetName), nameof(HeaderTitle), nameof(AxesEquivalent), nameof(RequiresAxisSelection) }) Notify(property);
         ChangeFormCommand.Refresh(); EditNameCommand.Refresh(); ResetNameCommand.Refresh();
         SaveLibraryCommand.Refresh(); ConfirmCommand.Refresh(); CancelCommand.Refresh();
+        RefreshHistoryAvailability();
     }
 }

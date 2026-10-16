@@ -6,6 +6,8 @@ namespace SpanDraft.Desktop.ViewModels;
 /// <summary>Typing is transient. Only Commit can change the confirmed SI value.</summary>
 public sealed class SectionDefinitionInput : ObservableObject
 {
+    internal sealed record Snapshot(double? ConfirmedValue, bool HasInteracted);
+    internal event Action? BeforeCommittedValueChange;
     private readonly Action<SectionDefinitionInput, bool> _changed;
     private readonly bool _nonnegative;
     private string _pendingText = "", _committedText = "";
@@ -31,6 +33,17 @@ public sealed class SectionDefinitionInput : ObservableObject
     public bool HasParseError => _parseError;
     public string? Error => _error;
     public bool HasError => Error is not null;
+    internal Snapshot Capture() => new(ConfirmedValue, HasInteracted);
+    internal void Restore(Snapshot snapshot)
+    {
+        ConfirmedValue = snapshot.ConfirmedValue;
+        HasInteracted = snapshot.HasInteracted;
+        _pendingText = _committedText = ConfirmedValue is { } value ? InputQuantityFormatter.Format(value, Unit) : "";
+        _parseError = false;
+        LastCommitChangedValue = false;
+        SetError(null);
+        Notify(nameof(PendingText)); Notify(nameof(ConfirmedValue)); Notify(nameof(IsPending)); Notify(nameof(HasInteracted));
+    }
     // Loading a preset keeps the original SI value; display-unit round trips must not alter it.
     internal void Load(double value)
     {
@@ -47,9 +60,11 @@ public sealed class SectionDefinitionInput : ObservableObject
         if (HasInteracted && !IsPending) return !HasError;
         LastCommitChangedValue = false;
         var previousValue = ConfirmedValue;
+        bool invalid = !InputQuantityFormatter.TryParse(PendingText, Unit, out var value) || (_nonnegative ? value < 0 : value <= 0);
+        if (!invalid && ConfirmedValue != value) BeforeCommittedValueChange?.Invoke();
         HasInteracted = true;
         _committedText = PendingText;
-        _parseError = !InputQuantityFormatter.TryParse(PendingText, Unit, out var value) || (_nonnegative ? value < 0 : value <= 0);
+        _parseError = invalid;
         if (_parseError) SetError(_nonnegative ? Strings.NonnegativeInput : Strings.PositiveInput);
         else { ConfirmedValue = value; SetError(null); }
         LastCommitChangedValue = previousValue != ConfirmedValue;

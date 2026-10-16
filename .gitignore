@@ -435,3 +435,8 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Offline manual build and local toolchain
+help/site/
+help/.cache/
+help/.venv/

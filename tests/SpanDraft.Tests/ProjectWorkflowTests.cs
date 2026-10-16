@@ -243,10 +243,10 @@ public sealed class ProjectWorkflowTests
         var app = new App(); var editor = app.Main.Editor!;
         var revision = editor.Session.CurrentRevision;
         editor.DimensionLength.Begin(); editor.DimensionLength.Text = "2500";
-        app.Main.SetFileMenuOpen(true); editor.DimensionLength.LoseFocus();
+        app.Main.SetMainMenuOpen(true); editor.DimensionLength.LoseFocus();
         Assert.Same(revision, editor.Session.CurrentRevision); Assert.Equal("2500", editor.DimensionLength.Text);
         Assert.True(editor.DimensionLength.IsEditing);
-        app.Main.SetFileMenuOpen(false); editor.Session.SetBusy(true); editor.DimensionLength.LoseFocus();
+        app.Main.SetMainMenuOpen(false); editor.Session.SetBusy(true); editor.DimensionLength.LoseFocus();
         Assert.Same(revision, editor.Session.CurrentRevision); Assert.True(editor.DimensionLength.IsEditing);
         editor.Session.SetBusy(false); editor.DimensionLength.Cancel(); Assert.Equal(1, app.Analyses);
     }

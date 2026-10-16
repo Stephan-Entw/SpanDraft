@@ -159,7 +159,7 @@
   <data name="MyMaterials" xml:space="preserve"><value>Meine Werkstoffe</value></data>
   <data name="MySections" xml:space="preserve"><value>Meine Querschnitte</value></data>
   <data name="CreateMaterial" xml:space="preserve"><value>Benutzerdefinierter Werkstoff</value></data>
-  <data name="NewMaterial" xml:space="preserve"><value>Neues Material…</value></data>
+  <data name="NewMaterial" xml:space="preserve"><value>Neuer Werkstoff</value></data>
   <data name="EditUserMaterial" xml:space="preserve"><value>Bibliothekswerkstoff bearbeiten</value></data>
   <data name="CreateSection" xml:space="preserve"><value>Querschnitt definieren</value></data>
   <data name="NewSection" xml:space="preserve"><value>Neuen Querschnitt erstellen…</value></data>
@@ -171,8 +171,8 @@
   <data name="CategoryAlloySteel" xml:space="preserve"><value>Legierter Stahl</value></data>
   <data name="CategoryAluminium" xml:space="preserve"><value>Aluminium</value></data>
   <data name="CategoryOther" xml:space="preserve"><value>Sonstige</value></data>
-  <data name="MaterialDesignation" xml:space="preserve"><value>Bezeichnung *</value></data>
-  <data name="MaterialCategory" xml:space="preserve"><value>Kategorie *</value></data>
+  <data name="MaterialDesignation" xml:space="preserve"><value>Bezeichnung</value></data>
+  <data name="MaterialCategory" xml:space="preserve"><value>Kategorie</value></data>
   <data name="MaterialNumber" xml:space="preserve"><value>Werkstoffnummer</value></data>
   <data name="OtherStandards" xml:space="preserve"><value>Andere Normen</value></data>
   <data name="OtherStandardsHint" xml:space="preserve"><value>Mehrere Bezeichnungen mit Semikolon trennen, z. B. AISI 304; UNS S30400.</value></data>
@@ -272,9 +272,9 @@
   <data name="AllMaterials" xml:space="preserve"><value>Alle Werkstoffe</value></data>
   <data name="MaterialSearch" xml:space="preserve"><value>Werkstoffe durchsuchen</value></data>
   <data name="NoMaterialsFound" xml:space="preserve"><value>Keine Bibliothekswerkstoffe entsprechen diesen Filtern.</value></data>
-  <data name="MaterialIdentification" xml:space="preserve"><value>Materialidentifikation</value></data>
-  <data name="MaterialProperties" xml:space="preserve"><value>Werkstoffkennwerte</value></data>
-  <data name="MaterialYoungsModulus" xml:space="preserve"><value>E-Modul E</value></data>
+  <data name="MaterialIdentification" xml:space="preserve"><value>Bezeichnung und Normen</value></data>
+  <data name="MaterialProperties" xml:space="preserve"><value>Mechanische Eigenschaften</value></data>
+  <data name="MaterialYoungsModulus" xml:space="preserve"><value>Elastizitätsmodul E</value></data>
   <data name="MaterialYieldStrength" xml:space="preserve"><value>Streckgrenze fy</value></data>
   <data name="MaterialDensity" xml:space="preserve"><value>Dichte ρ</value></data>
   <data name="MaterialPoissonRatio" xml:space="preserve"><value>Poissonzahl ν</value></data>
@@ -283,4 +283,12 @@
   <data name="MaterialFilters" xml:space="preserve"><value>Werkstofffilter</value></data>
   <data name="MaterialList" xml:space="preserve"><value>Werkstoffe</value></data>
   <data name="MaterialEditName" xml:space="preserve"><value>Werkstoffnamen bearbeiten</value></data>
+  <data name="MaterialDefine" xml:space="preserve"><value>Werkstoff definieren</value></data>
+  <data name="MaterialCustomize" xml:space="preserve"><value>Werkstoff anpassen</value></data>
+  <data name="MaterialUse" xml:space="preserve"><value>Verwenden</value></data>
+  <data name="MaterialCategories" xml:space="preserve"><value>Kategorien</value></data>
+  <data name="MaterialLibrary" xml:space="preserve"><value>Bibliothek</value></data>
+  <data name="MaterialDetailsTitle" xml:space="preserve"><value>Eigenschaften</value></data>
+  <data name="UserManual" xml:space="preserve"><value>Benutzerhandbuch</value></data>
+  <data name="UserManualOpenError" xml:space="preserve"><value>Das Benutzerhandbuch konnte nicht geöffnet werden.</value></data>
 </root>

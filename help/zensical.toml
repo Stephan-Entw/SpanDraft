@@ -1,0 +1,40 @@
+# SpanDraft's German offline user manual. See README.md for the build workflow.
+[project]
+site_name = "SpanDraft – Benutzerhandbuch"
+docs_dir = "docs"
+site_dir = "site"
+use_directory_urls = false
+nav = [
+  { "Startseite" = "index.md" },
+  { "1. Erste Schritte" = [
+    { "SpanDraft kennenlernen" = "erste-schritte/ueberblick.md" },
+    { "Erste Berechnung" = "erste-schritte/erste-berechnung.md" },
+  ] },
+  { "2. Modell erstellen" = [
+    { "Balken, Werkstoff und Querschnitt" = "modell/werkstoff-querschnitt.md" },
+    { "Lager und Randbedingungen" = "modell/lager.md" },
+    { "Kräfte, Momente und Streckenlasten" = "modell/lasten.md" },
+    { "Koordinaten, Vorzeichen und Einheiten" = "modell/koordinaten-einheiten.md" },
+  ] },
+  { "3. Ergebnisse verstehen" = [
+    { "Ergebnisdiagramme und Lagerreaktionen" = "ergebnisse/diagramme-reaktionen.md" },
+    { "Spannung und Sicherheitsfaktor" = "ergebnisse/spannung-sicherheit.md" },
+  ] },
+  { "4. Berechnung und Grenzen" = [
+    { "Berechnungsmodell und Grenzen" = "hintergrund/modellannahmen.md" },
+    { "Häufige Probleme und Hinweise" = "hintergrund/probleme.md" },
+  ] },
+]
+
+# Offline search uses the local iframe-worker polyfill configured below.
+[project.plugins.offline]
+
+[project.theme]
+custom_dir = "overrides"
+language = "de"
+font = false
+
+[project.extra]
+polyfills = [
+  { path = "js/iframe-worker-shim.js", type = "text/javascript", async = false, defer = false },
+]

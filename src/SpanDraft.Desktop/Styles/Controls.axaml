@@ -293,18 +293,57 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
   </Style>
-  <Style Selector="ListBox.materialEntries, ListBox.materialFilters">
+  <Style Selector="Border.workspaceHeader">
     <Setter Property="Background" Value="{DynamicResource Surface}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
-    <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource BottomBorder}" />
+    <Setter Property="Padding" Value="24,16" />
+    <Setter Property="MinHeight" Value="70" />
+  </Style>
+  <Style Selector="ListBox.materialEntries, ListBox.materialFilters">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Padding" Value="0" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
   </Style>
   <Style Selector="ListBox.materialEntries ListBoxItem, ListBox.materialFilters ListBoxItem">
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="Padding" Value="8,6" />
-    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="MinHeight" Value="40" />
     <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+  </Style>
+  <Style Selector="ListBox.materialFilters ListBoxItem">
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="MinHeight" Value="36" />
+  </Style>
+  <Style Selector="ListBox.materialEntries ListBoxItem:pointerover /template/ ContentPresenter, ListBox.materialFilters ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
+  </Style>
+  <Style Selector="ListBox.materialEntries ListBoxItem:selected /template/ ContentPresenter, ListBox.materialFilters ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentSubtle}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="Button.materialNavigation">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="MinHeight" Value="36" />
+  </Style>
+  <Style Selector="Button.materialNavigation.selected, Button.materialNavigation.selected:pointerover">
+    <Setter Property="Background" Value="{DynamicResource AccentSubtle}" />
+  </Style>
+  <Style Selector="controls|MaterialTableColumns.materialColumns TextBlock, Grid.materialProperties TextBlock">
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+  </Style>
+  <Style Selector="controls|MaterialTableColumns.materialHeading TextBlock">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+  </Style>
+  <Style Selector="Grid.materialInputRow">
+    <Setter Property="Margin" Value="0,0,0,12" />
   </Style>
   <Style Selector="MenuItem">
     <Setter Property="Padding" Value="{DynamicResource ControlPadding}" />
