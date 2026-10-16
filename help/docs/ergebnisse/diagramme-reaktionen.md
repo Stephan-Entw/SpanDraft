@@ -51,4 +51,4 @@ SpanDraft zeigt nur Reaktionskomponenten, die der betreffende Lagertyp übertrag
 | [Maximale Biegespannung](spannung-sicherheit.md#biegespannung) | daraus abgeleitete elastische Biegebeanspruchung |
 | [Sicherheitsfaktor](spannung-sicherheit.md#sicherheitsfaktor) | Vergleich mit der hinterlegten Streckgrenze |
 
-Wenn keine Ergebnisse erscheinen, siehe [Häufige Probleme und Hinweise](../hintergrund/probleme.md).
+Wenn keine Ergebnisse erscheinen, siehe [Probleme erkennen und beheben](../hintergrund/probleme.md).

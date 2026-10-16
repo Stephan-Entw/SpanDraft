@@ -20,7 +20,7 @@ Ein Punktmoment `M` wirkt an einer Position `x`, ohne dort eine zusätzliche res
   <img src="../assets/punktmoment-vorzeichen.png" alt="Punktmomente: links gegen den Uhrzeigersinn, rechts im Uhrzeigersinn">
 </figure>
 
-Mehrere Punktlasten dürfen an derselben Position liegen.
+Mehrere Punktkräfte und Punktmomente dürfen an derselben Position liegen.
 
 ## Konstante Streckenlast
 
@@ -40,6 +40,6 @@ Mehrere Streckenlasten dürfen sich überlagern; ihre Intensitäten werden vorze
 
 ## Grenzen des Lastmodells
 
-Die hinterlegte Dichte erzeugt kein automatisches Eigengewicht. Axiale oder schräge Kräfte sowie Torsionsmomente gehören derzeit nicht zum unterstützten Lastmodell. Mehr dazu: [Berechnungsmodell und Grenzen](../hintergrund/modellannahmen.md).
+Die hinterlegte Dichte erzeugt kein automatisches Eigengewicht. Axiale oder schräge Kräfte sowie Torsionsmomente gehören derzeit nicht zum unterstützten Lastmodell. Mehr dazu: [Was SpanDraft berechnet – und was nicht](../hintergrund/modellannahmen.md).
 
 Weiter: [Ergebnisdiagramme und Lagerreaktionen](../ergebnisse/diagramme-reaktionen.md).

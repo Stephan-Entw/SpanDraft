@@ -21,6 +21,6 @@ Die Bewegungen `u`, `w` und `θ` sind auf [Koordinatensystem und Einheiten](koor
 
 Eine Einspannung kann den Balken allein ausreichend halten. Typisch ist auch ein Festlager mit einem Loslager an einer anderen Position; ein Festlager allein lässt die Drehung um seinen Lagerpunkt frei. Mehrere Lager sind möglich, ohne dass dadurch innere Gelenke entstehen. Zwei reine Loslager lassen die axiale Starrkörperbewegung frei – dann kann SpanDraft auch ohne äußere Längslast nicht rechnen.
 
-Die Lager sind idealisiert: Gesperrte Bewegungen werden als null angesetzt; ein Loslager sperrt immer die vertikale Verschiebung `w`. Reibung, Spiel, Nachgiebigkeit und vorgegebene Lagerverschiebungen sind nicht enthalten. Wählen Sie die Lagerart nach den tatsächlichen Bewegungsbeschränkungen; Details stehen unter [Berechnungsmodell und Grenzen](../hintergrund/modellannahmen.md).
+Die Lager sind idealisiert: Gesperrte Bewegungen werden als null angesetzt; ein Loslager sperrt immer die vertikale Verschiebung `w`. Reibung, Spiel, Nachgiebigkeit und vorgegebene Lagerverschiebungen sind nicht enthalten. Wählen Sie die Lagerart nach den tatsächlichen Bewegungsbeschränkungen; Details stehen unter [Was SpanDraft berechnet – und was nicht](../hintergrund/modellannahmen.md).
 
 Weiter: [Kräfte, Momente und Streckenlasten](lasten.md).

@@ -47,7 +47,7 @@ Am Beispiel lässt sich unmittelbar erkennen:
 
 SpanDraft bildet aus Balkengeometrie, Werkstoff, Lagerung und Belastung das Berechnungsmodell und ermittelt daraus Lagerreaktionen, Verformung und Schnittgrößen. Aus Biegemoment und Querschnittskennwerten wird anschließend die elastische Biegespannung bestimmt; der Sicherheitsfaktor beschreibt das Verhältnis der hinterlegten Streckgrenze zu dieser Spannung.
 
-Details erläutern [Ergebnisdiagramme und Lagerreaktionen](../ergebnisse/diagramme-reaktionen.md), [Spannung und Sicherheitsfaktor](../ergebnisse/spannung-sicherheit.md) sowie [Berechnungsmodell und Grenzen](../hintergrund/modellannahmen.md).
+Details erläutern [Ergebnisdiagramme und Lagerreaktionen](../ergebnisse/diagramme-reaktionen.md), [Spannung und Sicherheitsfaktor](../ergebnisse/spannung-sicherheit.md) sowie [Was SpanDraft berechnet – und was nicht](../hintergrund/modellannahmen.md).
 
 ## 5. Projekt speichern
 

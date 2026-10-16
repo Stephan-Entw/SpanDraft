@@ -56,6 +56,6 @@ Angezeigte Werte können gerundet sein; die Berechnung verwendet die ungerundete
 - **Lokale, dynamische und zeitabhängige Effekte:** z. B. Kerben, Verbindungen, Ermüdung oder Stoßbeanspruchung.
 - **Normative und konstruktive Anforderungen:** z. B. zulässige Durchbiegung oder erforderliche Sicherheitsbeiwerte.
 
-Mehr dazu unter [Berechnungsmodell und Grenzen](../hintergrund/modellannahmen.md).
+Mehr dazu unter [Was SpanDraft berechnet – und was nicht](../hintergrund/modellannahmen.md).
 
 Der Sicherheitsfaktor ist nur zusammen mit einem plausiblen Modell, den [Ergebnisdiagrammen und Lagerreaktionen](diagramme-reaktionen.md) und den für das reale Bauteil relevanten weiteren Nachweisen sinnvoll zu bewerten.

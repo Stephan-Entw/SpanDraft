@@ -24,7 +24,7 @@ SpanDraft ist ein visuelles Berechnungsprogramm für einzelne gerade Balken. Ein
   <li class="spandraft-workflow-step">
     <div class="spandraft-workflow-content">
       <span class="spandraft-workflow-title">Automatisch berechnen</span>
-      <span class="spandraft-workflow-description">SpanDraft aktualisiert das Modell nach bestätigten Änderungen automatisch, sobald ein lösbares System vorliegt.</span>
+      <span class="spandraft-workflow-description">SpanDraft aktualisiert die Ergebnisse nach bestätigten Änderungen automatisch, sobald ein berechenbares System vorliegt.</span>
     </div>
   </li>
   <li class="spandraft-workflow-step">
