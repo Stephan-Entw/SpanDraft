@@ -1,66 +1,63 @@
-# Häufige Probleme und Hinweise
+# Probleme erkennen und beheben
 
-Die meisten Probleme lassen sich eingrenzen, indem Sie zuerst die angezeigte Meldung lesen und dann **Lagerung, Positionen und Eingabewerte** prüfen. SpanDraft führt Berechnungen nur für bestätigte, gültige Modelle durch.
+Wenn SpanDraft nicht rechnet oder ein Ergebnis unerwartet aussieht, lassen sich die meisten Ursachen über Lagerung, Lasten, Geometrie, Einheiten und Modellgrenzen eingrenzen.
 
-## Keine Ergebnisse sichtbar
+## Keine Ergebnisse
 
-| Meldung oder Situation | Bedeutung | Was Sie prüfen können |
-| --- | --- | --- |
-| **Berechnung nicht verfügbar · Lagerung fehlt** | Es gibt noch keine Lager. | Zuerst die erforderlichen Lager hinzufügen. |
-| **Berechnung nicht verfügbar · Lagerung nicht ausreichend** | Mindestens eine Starrkörperbewegung ist nicht verhindert. | Gibt es eine axiale Festhaltung? Sind Rotationen beziehungsweise die beiden vertikalen Starrkörperbewegungen ausreichend gesperrt? |
-| **Berechnung nicht verfügbar · Modell unvollständig** | Mindestens eine Modellbedingung ist ungültig. | Positionen, Lastbereiche und andere beanstandete Eingaben kontrollieren. |
-| **Berechnung nicht möglich** | Beispielsweise numerischer Fehler oder zu schlechte Konditionierung. | Sehr kurze Abschnitte, ungewöhnliche Maßstäbe und extreme Steifigkeitsverhältnisse prüfen. |
-| Eine Zahl wurde geändert, das Ergebnis aber noch nicht | Die neue Eingabe ist möglicherweise noch ein offener Bearbeitungsentwurf. | Bearbeitung bestätigen. Erst dann wird neu gerechnet. |
+| Situation | Prüfen |
+| --- | --- |
+| **Berechnung nicht verfügbar · Lagerung fehlt** | Erforderliche Lager hinzufügen. |
+| **Berechnung nicht verfügbar · Lagerung nicht ausreichend** | Sind alle Starrkörperbewegungen verhindert? |
+| **Berechnung nicht verfügbar · Modell unvollständig** | Beanstandete Eingaben prüfen. |
+| **Berechnung nicht möglich** | Geometrie und ungewöhnliche Größenverhältnisse prüfen. Numerisch problematische Modelle können zu einem Berechnungsabbruch führen. |
+| Änderung noch nicht übernommen | Eingabe bestätigen. |
 
-### Typischer Fall: zwei Loslager
+Häufiger Fall: Zwei Loslager an verschiedenen Positionen verhindern zwar die vertikale Starrkörperbewegung, lassen aber die gesamte axiale Verschiebung frei. Eine typische einfache Lagerung verwendet deshalb Festlager + Loslager. Siehe [Lager und Randbedingungen](../modell/lager.md).
 
-Zwei Loslager an verschiedenen Positionen verhindern zwar die vertikale Translation und die Starrkörperrotation, aber **nicht** die axiale Verschiebung des gesamten Balkens. SpanDraft verlangt deshalb auch dann ein Lager, das die axiale Verschiebung sperrt, wenn Sie keine äußere Horizontallast eingegeben haben. Tauschen Sie beispielsweise eines der Loslager gegen ein **Festlager**, sofern diese Idealisierung zum realen System passt.
+## Eingabe wird nicht übernommen
 
-Ein einzelnes Festlager verhindert die Rotation um dieses Lager nicht; es genügt deshalb ebenfalls nicht als alleinige Lagerung. Eine **Einspannung** kann dagegen einen Kragarm allein halten.
+SpanDraft übernimmt nur Eingaben, aus denen ein gültiges Modell entstehen kann. Die konkrete Fehlermeldung zeigt normalerweise, welcher Wert korrigiert werden muss.
 
-## Eingaben lassen sich nicht übernehmen
+<details class="spandraft-details">
+  <summary>Typische ungültige Eingaben</summary>
+  <ul>
+    <li>Position außerhalb <code>0 ≤ x ≤ L</code>.</li>
+    <li>Streckenlast ohne gültigen Bereich <code>xStart &lt; xEnd</code>.</li>
+    <li>Zwei Lager an derselben Position.</li>
+    <li>Balkenverkürzung würde Lasten oder Lager außerhalb des Balkens lassen.</li>
+    <li>Geometrisch ungültiger Querschnitt.</li>
+    <li>Ungültige Werkstoffwerte: Die Kennwerte müssen innerhalb der von SpanDraft akzeptierten physikalischen Bereiche liegen.</li>
+    <li>Doppelter Name.</li>
+  </ul>
+</details>
 
-- **Position außerhalb des Balkens:** Lager und Punktlasten müssen `0 ≤ x ≤ L` erfüllen. Bei einer Streckenlast gilt zusätzlich `xStart < xEnd`.
-- **Zwei Lager am gleichen Ort:** Die aktuelle Bearbeitung lässt dort nur ein Lager zu. Ein vorhandenes Lager stattdessen bearbeiten.
-- **Balkenlänge zu kurz:** Beim Verkürzen dürfen bereits platzierte Lasten oder Lager nicht außerhalb des neuen Balkens landen. Diese Objekte zuerst versetzen oder entfernen.
-- **Ungültiger Querschnitt:** Abmessungen müssen eine geometrisch gültige Form ergeben; beispielsweise müssen Wanddicke, freier Innenraum und Radien zueinander passen. `r = 0` ist bei geeigneten Formen zulässig.
-- **Ungültiger Werkstoffwert:** `E` und `fy` müssen positiv sein; optional eingegebene Dichte muss ebenfalls positiv sein und `ν` muss zwischen `−1` und `0,5` liegen (Grenzen ausgeschlossen).
-- **Name doppelt:** Objektnamen innerhalb eines Projekts beziehungsweise Eintragsnamen innerhalb derselben Benutzerbibliothek müssen eindeutig sein (ohne Unterscheidung der Groß-/Kleinschreibung).
+## Ergebnis wirkt unplausibel
 
-Ungültige oder noch nicht bestätigte Texte werden nicht stillschweigend zu anderen mechanischen Werten umgedeutet. Korrigieren Sie sie im betreffenden Eingabefeld.
+Prüfen Sie das Modell in dieser Reihenfolge:
 
-## Diagramme und Kennwerte wirken widersprüchlich
+1. **Lasten:** Stimmen Betrag, Richtung, Position und belasteter Bereich?
+2. **Lagerung:** Entspricht die idealisierte Lagerung der realen Situation?
+3. **Balken und Querschnitt:** Stimmen Länge, Querschnittsabmessungen und Biegeachse?
+4. **Werkstoff und Einheiten:** Sind Werkstoffwerte und verwendete Anzeigeeinheiten plausibel?
+5. **Modellgrenzen:** Passt die Fragestellung zum [zweidimensionalen Balkenmodell von SpanDraft](modellannahmen.md)?
 
-**Negative Durchbiegung, aber positive „Maximale Durchbiegung“?** Die Kurve zeigt `w` mit Vorzeichen (nach unten negativ). Die Kennzahl zeigt den **Betrag**.
+Bei Bedarf kann ein einfacher Referenzlastfall oder eine unabhängige Gleichgewichtsprüfung helfen, das Modell zusätzlich zu plausibilisieren. Ein Beispiel zeigt die [Erste Berechnung](../erste-schritte/erste-berechnung.md).
 
-**Biegemoment positiv, Kraft nach unten negativ?** Last- und Schnittgrößenvorzeichen sind verschieden definiert. Beim einfach gelagerten Balken mit mittiger Last ist das positive/sagende Moment richtig.
+Die Bedeutung der Ergebnisse erläutern [Ergebnisdiagramme und Lagerreaktionen](../ergebnisse/diagramme-reaktionen.md) sowie [Spannung und Sicherheitsfaktor](../ergebnisse/spannung-sicherheit.md).
 
-**Sprung in der Querkraft oder im Moment?** Eine konzentrierte Punktkraft beziehungsweise ein Punktmoment kann einen **echten Sprung** im jeweiligen Verlauf verursachen. Es ist kein Grafikfehler.
+`≈ 0` bedeutet, dass der ungerundete Wert sehr klein, aber nicht exakt null ist. Die Berechnung selbst verwendet weiterhin den ungerundeten Wert.
 
-**Sicherheitsfaktor `∞`?** Das tritt insbesondere bei verschwindender Biegespannung auf und kann bei extremen Zahlenverhältnissen auch numerische Gründe haben. Es sagt nichts über andere Belastungsarten oder die allgemeine Bauteilsicherheit aus.
-
-**Anzeige `≈ 0`?** Der Wert ist nicht exakt null, wird aber durch die gewählte Darstellungsauflösung zu null gerundet. Ändern Sie gegebenenfalls unter **Einstellungen → Numerische Ergebnisdarstellung** den Modus; die Rechnung selbst bleibt unverändert.
-
-## Gespeichertes Projekt und Bibliothek
-
-Die Datei `.spandraft` speichert Werkstoff- und Querschnittswerte **im Projekt selbst**. Wird ein Eintrag später aus der eigenen Bibliothek gelöscht oder dort geändert, bleiben bestehende Projekte unverändert.
-
-Lässt sich eine **eigene Material- oder Querschnittsbibliothek** wegen einer beschädigten Datei nicht lesen, ersetzt SpanDraft deren Inhalt nicht automatisch durch eine leere Bibliothek und überschreibt die beschädigte Datei nicht beim nächsten Speichern. Die zugehörige Bibliotheksbearbeitung kann eingeschränkt sein. Einmalige Definitionen und bereits gespeicherte Projekte bleiben grundsätzlich möglich.
-
-Bei beschädigten oder unbekannten Projektdateien werden Werte nicht stillschweigend repariert. Verwenden Sie eine intakte Sicherung oder prüfen Sie die Datei auf einem anderen Weg, statt manuell wahllos JSON-Felder zu ändern.
+<details class="spandraft-details">
+  <summary>Probleme mit Projekt- oder Bibliotheksdateien</summary>
+  <ul>
+    <li><code>.spandraft</code> speichert die verwendeten Werkstoff- und Querschnittswerte im Projekt.</li>
+    <li>Spätere Änderungen an eigenen Bibliothekseinträgen verändern bestehende Projekte nicht.</li>
+    <li>Beschädigte Bibliotheksdateien werden nicht stillschweigend durch leere Daten ersetzt.</li>
+    <li>Beschädigte oder unbekannte Projektdateien werden nicht automatisch „repariert“.</li>
+  </ul>
+  <p>Verwenden Sie bei einer beschädigten Projektdatei nach Möglichkeit eine intakte Sicherung.</p>
+</details>
 
 ## Wiederherstellung nach einem Absturz
 
-SpanDraft kann nach einem unerwarteten Abbruch einen lokalen, ungespeicherten Bearbeitungsstand zur Wiederherstellung anbieten. Diese Wiederherstellung ist **kein automatisches Überschreiben der ursprünglichen Projektdatei**. Prüfen Sie die wiederhergestellten Eingaben und speichern Sie das Projekt anschließend bewusst.
-
-## Eine kurze fachliche Prüfroutine
-
-Wenn das Programm rechnet, das Ergebnis aber unplausibel wirkt, überprüfen Sie nacheinander:
-
-1. Stimmt die **Lastwirkung** (Vorzeichen, Betrag, Position, Lastbereich)?
-2. Stimmen die **Lagerbedingungen** mit der realen Situation überein?
-3. Stimmen **Länge, Querschnittsmaße, Biegeachse und Werkstoffwerte**?
-4. Entsprechen die **Einheiten** Ihrer Erwartung?
-5. Ist die Fragestellung innerhalb der [Modellgrenzen](modellannahmen.md)?
-
-Anschließend können Sie den Lastfall über Gleichgewicht und ein einfaches Referenzbeispiel kontrollieren. Die [erste Berechnung](../erste-schritte/erste-berechnung.md) liefert dafür konkrete Vergleichswerte.
+Nach einem unerwarteten Abbruch kann SpanDraft einen lokalen, ungespeicherten Bearbeitungsstand zur Wiederherstellung anbieten. Die ursprüngliche Projektdatei wird dabei nicht automatisch überschrieben. Prüfen Sie den wiederhergestellten Stand und speichern Sie ihn anschließend bewusst.

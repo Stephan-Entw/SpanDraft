@@ -1,0 +1,241 @@
+/* Native MathML supplies fraction bars and script layout without a runtime. */
+.md-typeset math[display="block"] {
+  margin: 1.2em 0;
+  font-size: 1.2em;
+}
+
+/* Conceptual workflows share the article typography and Zensical theme colors. */
+.md-typeset ol.spandraft-workflow {
+  --workflow-marker-size: 1.8em;
+  --workflow-step-gap: 1.2em;
+  counter-reset: spandraft-workflow;
+  list-style: none;
+  width: 100%;
+  margin: 1.5em 0;
+  padding: 0;
+}
+
+.md-typeset .spandraft-workflow > .spandraft-workflow-step {
+  counter-increment: spandraft-workflow;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--workflow-marker-size) minmax(0, 1fr);
+  column-gap: 0.85em;
+  align-items: start;
+  margin: 0;
+  padding: 0 0 var(--workflow-step-gap);
+}
+
+.md-typeset .spandraft-workflow-step::before {
+  content: counter(spandraft-workflow);
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: var(--workflow-marker-size);
+  height: var(--workflow-marker-size);
+  border: 1px solid var(--md-accent-fg-color);
+  border-radius: 50%;
+  background: var(--md-default-bg-color);
+  color: var(--md-accent-fg-color);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.md-typeset .spandraft-workflow-step::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: calc(var(--workflow-marker-size) / 2 - 0.5px);
+  top: var(--workflow-marker-size);
+  bottom: 0;
+  border-inline-start: 1px solid var(--md-default-fg-color--lighter);
+}
+
+.md-typeset .spandraft-workflow > .spandraft-workflow-step:last-child {
+  padding-bottom: 0;
+}
+
+.md-typeset .spandraft-workflow-step:last-child::after {
+  content: none;
+}
+
+.md-typeset .spandraft-workflow-content {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  padding-top: 0.1em;
+}
+
+.md-typeset .spandraft-workflow-title {
+  display: block;
+  color: var(--md-default-fg-color);
+  font-weight: 600;
+}
+
+.md-typeset .spandraft-workflow-description {
+  display: block;
+  margin-top: 0.15em;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset details.spandraft-details {
+  margin: 1em 0;
+  padding: 0;
+  border: 0;
+  border-block: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0;
+  background: none;
+  color: var(--md-default-fg-color);
+  box-shadow: none;
+  font-size: inherit;
+}
+
+.md-typeset details.spandraft-details > summary {
+  display: list-item;
+  margin: 0;
+  padding: 0.6em 0;
+  background: none;
+  color: var(--md-accent-fg-color);
+  font-weight: 600;
+  list-style: revert;
+  list-style-position: inside;
+  cursor: pointer;
+}
+
+.md-typeset details.spandraft-details > summary::before,
+.md-typeset details.spandraft-details > summary::after {
+  content: none;
+}
+
+.md-typeset details.spandraft-details > summary:focus-visible {
+  outline: 2px solid var(--md-accent-fg-color);
+  outline-offset: 3px;
+}
+
+.md-typeset details.spandraft-details > :last-child:not(summary) {
+  margin-bottom: 0.8em;
+}
+
+.md-typeset .spandraft-support-table table:not([class]),
+.md-typeset .spandraft-unit-table table:not([class]) {
+  display: table;
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  font-size: inherit;
+}
+
+.md-typeset .spandraft-support-table .md-typeset__scrollwrap,
+.md-typeset .spandraft-unit-table .md-typeset__scrollwrap {
+  margin: 0;
+}
+
+.md-typeset .spandraft-support-table .md-typeset__table,
+.md-typeset .spandraft-unit-table .md-typeset__table {
+  display: block;
+  width: 100%;
+  padding: 0;
+}
+
+.md-typeset .spandraft-support-table table:not([class]) th,
+.md-typeset .spandraft-support-table table:not([class]) td,
+.md-typeset .spandraft-unit-table table:not([class]) th,
+.md-typeset .spandraft-unit-table table:not([class]) td {
+  min-width: 0;
+  padding: 0.6em 0.4em;
+  vertical-align: middle;
+}
+
+.md-typeset .spandraft-support-table table:not([class]) th:nth-child(1) { width: 25%; }
+.md-typeset .spandraft-support-table table:not([class]) th:nth-child(2) { width: 22%; }
+.md-typeset .spandraft-support-table table:not([class]) th:nth-child(3) { width: 26%; }
+.md-typeset .spandraft-support-table table:not([class]) th:nth-child(4) { width: 27%; }
+
+.md-typeset .spandraft-support-table table:not([class]) img {
+  display: block;
+  width: 96px;
+  max-width: 100%;
+  height: auto;
+  margin: auto;
+}
+
+.md-typeset .spandraft-unit-table table:not([class]) th:first-child { width: 34%; }
+.md-typeset .spandraft-unit-table table:not([class]) th:nth-child(2) { width: 28%; }
+.md-typeset .spandraft-unit-table table:not([class]) th:nth-child(3) { width: 24%; }
+.md-typeset .spandraft-unit-table table:not([class]) th:nth-child(4) { width: 14%; }
+
+.md-typeset .spandraft-unit-table table:not([class]) th {
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.md-typeset .spandraft-unit-table [hidden] {
+  display: none;
+}
+
+.md-typeset .spandraft-unit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  margin-top: 0.6em;
+  padding: 0.2em 0;
+  border: 0;
+  background: none;
+  color: var(--md-accent-fg-color);
+  font: inherit;
+  font-size: 0.85em;
+  text-align: start;
+  cursor: pointer;
+}
+
+.md-typeset .spandraft-unit-toggle:hover .spandraft-unit-toggle-label {
+  text-decoration: underline;
+}
+
+.md-typeset .spandraft-unit-toggle:focus-visible {
+  outline: 2px solid var(--md-accent-fg-color);
+  outline-offset: 3px;
+}
+
+.md-typeset figure.spandraft-load-signs {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 1em 0;
+}
+
+.md-typeset .spandraft-load-sign-labels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  text-align: center;
+}
+
+.md-typeset .spandraft-load-sign-labels > span {
+  padding: 0 0.4em;
+}
+
+.md-typeset .spandraft-load-signs img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media (max-width: 40rem) {
+  .md-typeset .spandraft-support-table table:not([class]),
+  .md-typeset .spandraft-unit-table table:not([class]) {
+    font-size: 0.9em;
+  }
+
+  .md-typeset .spandraft-support-table table:not([class]) th,
+  .md-typeset .spandraft-support-table table:not([class]) td,
+  .md-typeset .spandraft-unit-table table:not([class]) th,
+  .md-typeset .spandraft-unit-table table:not([class]) td {
+    padding: 0.6em 0.3em;
+  }
+
+  .md-typeset .spandraft-support-table table:not([class]) th:nth-child(1) { width: 28%; }
+  .md-typeset .spandraft-support-table table:not([class]) th:nth-child(2) { width: 20%; }
+  .md-typeset .spandraft-support-table table:not([class]) th:nth-child(3) { width: 28%; }
+  .md-typeset .spandraft-support-table table:not([class]) th:nth-child(4) { width: 24%; }
+}

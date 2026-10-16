@@ -53,4 +53,4 @@ Then run the normal desktop publish. The existing site is copied to `Help/` in
 the output; the desktop project does not invoke Python or Zensical. Verify the
 published `Help/index.html` opens from the application's Help menu and that
 navigation, search and images work with networking disabled. Generated HTML is
-not committed; the six generated PNG source assets are committed.
+not committed; the thirteen generated PNG source assets are committed.

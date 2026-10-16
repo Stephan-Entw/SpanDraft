@@ -4,12 +4,13 @@ using System.Text.RegularExpressions;
 
 string root = Path.GetFullPath(Path.Combine(ScriptDirectory(), ".."));
 string help = Path.Combine(root, "help");
-string[] names = ["beispiel-balken", "lagerarten", "lasten-vorzeichen", "koordinaten", "querschnitt-achsen", "ergebnisverlaeufe"];
+string[] names = ["beispiel-lagerung", "beispiel-belastung", "diagramm-durchbiegung", "diagramm-querkraft", "diagramm-biegemoment", "koordinaten", "querschnitt-achsen",
+    "lager-einspannung", "lager-festlager", "lager-loslager", "punktkraft-vorzeichen", "punktmoment-vorzeichen", "streckenlast-vorzeichen"];
 try
 {
     await Run(root, "dotnet", "run", "--project", Path.Combine(root, "tools", "SpanDraft.HelpAssets"),
         "--configuration", "Release", "--", Path.Combine(help, "docs", "assets"));
-    foreach (var name in names) RequireFile(Path.Combine(help, "docs", "assets", name + ".png"));
+    RequirePngAssets(Path.Combine(help, "docs", "assets"), names);
     await Run(help, "zensical", "build", "--clean", "--strict");
     string site = Path.Combine(help, "site"); RequireFile(Path.Combine(site, "index.html"));
     foreach (string file in Directory.EnumerateFiles(Path.Combine(help, "docs"), "*.md", SearchOption.AllDirectories)
@@ -41,10 +42,11 @@ try
             }
         }
     }
-    foreach (var name in names) RequireFile(Path.Combine(site, "assets", name + ".png"));
+    RequirePngAssets(Path.Combine(site, "assets"), names);
+    RequireFile(Path.Combine(site, "js", "spandraft-help.js"));
     RequireFile(Path.Combine(site, "js", "iframe-worker-shim.js"));
     RequireFile(Path.Combine(site, "js", "iframe-worker-LICENSE.txt"));
-    Console.WriteLine("Offline help validated: six PNGs, HTML, local runtime resources, no obsolete SVG references.");
+    Console.WriteLine($"Offline help validated: {names.Length} PNGs, HTML, local runtime resources, no obsolete SVG references.");
     return 0;
 }
 catch (Exception error)
@@ -56,6 +58,13 @@ static string ScriptDirectory([CallerFilePath] string path = "") => Path.GetDire
 static void RequireFile(string path)
 {
     if (!File.Exists(path) || new FileInfo(path).Length == 0) throw new InvalidOperationException($"Missing or empty help file: {path}");
+}
+static void RequirePngAssets(string directory, string[] names)
+{
+    foreach (string name in names) RequireFile(Path.Combine(directory, name + ".png"));
+    foreach (string file in Directory.EnumerateFiles(directory, "*.png"))
+        if (!names.Contains(Path.GetFileNameWithoutExtension(file), StringComparer.Ordinal))
+            throw new InvalidOperationException($"Unexpected help PNG: {file}");
 }
 static async Task Run(string directory, string executable, params string[] arguments)
 {

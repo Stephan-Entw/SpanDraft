@@ -1,81 +1,61 @@
 # Spannung und Sicherheitsfaktor
 
-SpanDraft zeigt eine **maximale elastische Biegespannung** und daraus einen **Sicherheitsfaktor**. Beide Zahlen beziehen sich auf eine klar begrenzte Fragestellung: Wie groß ist die berechnete reine Biegespannung im Vergleich zur hinterlegten Streckgrenze des gewählten Werkstoffs?
+SpanDraft ermittelt aus dem Biegemoment und dem gewählten Querschnitt eine maximale elastische Biegespannung und vergleicht diese mit der im Werkstoff hinterlegten Streckgrenze.
 
 ## Biegespannung
 
-Bei einem Balken mit über die Länge konstantem Querschnitt hängt die größte elastische Biegespannung vom Betrag des Biegemoments `M` und vom elastischen Widerstandsmoment `W` ab.
+Das Biegemoment allein sagt noch nicht, wie stark der Querschnitt beansprucht wird. Bei gleichem Moment führt ein größeres Widerstandsmoment `W` zu einer kleineren elastischen Biegespannung.
 
-Für einen Querschnitt mit auf beiden geometrischen Seiten gleichem Widerstandsmoment gilt:
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Maximale Biegespannung gleich größter Momentbetrag geteilt durch maßgebendes Widerstandsmoment">
+  <mrow>
+    <msub><mi>σ</mi><mtext>b,max</mtext></msub>
+    <mo>=</mo>
+    <mfrac>
+      <msub><mrow><mo>|</mo><mi>M</mi><mo>|</mo></mrow><mtext>max</mtext></msub>
+      <msub><mi>W</mi><mtext>maßgebend</mtext></msub>
+    </mfrac>
+  </mrow>
+</math>
 
-```text
-σb,max = |M|max / W
-```
+Bei unsymmetrischen Querschnitten berücksichtigt SpanDraft für den maximalen Spannungsbetrag die ungünstigere der beiden Profilseiten `W+` und `W−`.
 
-Bei einem **unsymmetrischen** Querschnitt können die elastischen Widerstandsmomente der beiden Randseiten unterschiedlich sein. SpanDraft berücksichtigt für den **maximalen Spannungsbetrag** die ungünstigere der beiden Seiten:
+<details class="spandraft-details">
+  <summary>Unsymmetrische Querschnitte</summary>
+  <p><code>W+</code> und <code>W−</code> gehören zu den beiden geometrischen Profilseiten. Sie bedeuten nicht automatisch Zug- beziehungsweise Druckseite. Für den maximalen Spannungsbetrag wird die ungünstigere Seite berücksichtigt.</p>
+</details>
 
-```text
-Wmaßgebend = min(W+, W−)
-σb,max = |M|max / Wmaßgebend
-```
+## Sicherheitsfaktor
 
-Die Kennwerte beziehen sich auf die **gewählte Biegeachse** und auf die idealisierte reine Biegung. `W+` und `W−` kennzeichnen geometrische Seiten des Profils, **nicht** automatisch Zug- und Druckseite. SpanDraft weist in dieser Version keinen getrennten vorzeichenbehafteten Randfaser-Spannungsverlauf aus.
+SpanDraft vergleicht die maximale elastische Biegespannung mit der hinterlegten Streckgrenze `fy`.
 
-## Sicherheitsfaktor gegenüber der Streckgrenze
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Sicherheitsfaktor gleich Streckgrenze geteilt durch maximale Biegespannung">
+  <mrow>
+    <mi>S</mi>
+    <mo>=</mo>
+    <mfrac>
+      <msub><mi>f</mi><mi>y</mi></msub>
+      <msub><mi>σ</mi><mtext>b,max</mtext></msub>
+    </mfrac>
+  </mrow>
+</math>
 
-Der angezeigte Sicherheitsfaktor ist:
+**S > 1:** Biegespannung liegt unter der hinterlegten Streckgrenze.<br>
+**S = 1:** Die hinterlegte Streckgrenze ist erreicht.<br>
+**S < 1:** Biegespannung liegt über der hinterlegten Streckgrenze.
 
-```text
-S = fy / σb,max
-```
+**S > 1 bedeutet nicht automatisch, dass das reale Bauteil ausreichend dimensioniert ist.** Der Wert bewertet ausschließlich die hier berechnete elastische Biegespannung gegenüber der hinterlegten Streckgrenze.
 
-Dabei ist `fy` die im Projekt hinterlegte Streckgrenze, `σb,max` der **nichtnegative** maximale elastische Biegespannungsbetrag und `S` dimensionslos.
+Bei verschwindender Biegespannung kann mathematisch `S = ∞` erscheinen. Das bedeutet nicht „unendlich sicher“.
 
-| Wert des ungerundeten `S` | Bedeutung für diese einfache Biegebewertung |
-| --- | --- |
-| `S > 1` | Die berechnete maximale reine Biegespannung liegt unter der hinterlegten Streckgrenze. |
-| `S = 1` | Die berechnete maximale reine Biegespannung entspricht der Streckgrenze. |
-| `0 < S < 1` | Die berechnete reine Biegespannung überschreitet die hinterlegte Streckgrenze. |
-| `S = ∞` | Bei verschwindendem Biegespannungsbetrag wird ein unendlicher Faktor ausgegeben; extreme Zahlenverhältnisse können dies auch numerisch verursachen. |
+Angezeigte Werte können gerundet sein; die Berechnung verwendet die ungerundeten Werte. Mehr dazu unter [Ergebnisdarstellung](../modell/koordinaten-einheiten.md#standard-oder-detailliert).
 
-`∞` bedeutet **nicht** „unendlich sicher“. Es erscheint insbesondere, wenn das Modell keine biegende Last enthält. Andere beanspruchende Effekte und Versagensarten werden dadurch nicht bewertet.
+## Was der Sicherheitsfaktor nicht bewertet
 
-Die Anzeige kann runden: Im Standardmodus wird `S` unterhalb von 3 auf Hundertstel, zwischen 3 und 10 auf Zehntel, zwischen 10 und 100 auf ganze Zahlen und darüber mit zwei signifikanten Stellen ausgegeben. Eine sichtbare `1` muss daher **nicht** exakt `S = 1` bedeuten. Für eine Grenzentscheidung ist die gerundete Anzeige allein nicht ausreichend.
+- **Andere Beanspruchungen:** z. B. Schub oder kombinierte Axialkraft und Biegung.
+- **Stabilität:** z. B. Knicken, Beulen oder Kippen.
+- **Lokale, dynamische und zeitabhängige Effekte:** z. B. Kerben, Verbindungen, Ermüdung oder Stoßbeanspruchung.
+- **Normative und konstruktive Anforderungen:** z. B. zulässige Durchbiegung oder erforderliche Sicherheitsbeiwerte.
 
-## Beispiel: Rechteckbalken aus S235JR
+Mehr dazu unter [Berechnungsmodell und Grenzen](../hintergrund/modellannahmen.md).
 
-Für den [einfach gelagerten Beispielbalken](../erste-schritte/erste-berechnung.md) mit `b = 40 mm`, `h = 80 mm`, `Mmax = 500 N·m` und `fy = 235 MPa` gilt:
-
-```text
-W = b · h² / 6 = 42.666,67 mm³
-Mmax = 500 N·m = 500.000 N·mm
-
-σb,max = 500.000 / 42.666,67 ≈ 11,71875 N/mm²
-       = 11,71875 MPa
-
-S = 235 / 11,71875 ≈ 20,0533
-```
-
-Der Wert besagt: Unter den **gewählten Modellannahmen** ist die ermittelte reine elastische Biegespannung deutlich kleiner als die eingetragene Streckgrenze. Daraus folgt **keine automatische Freigabe des realen Balkens**.
-
-## Was dieser Sicherheitsfaktor nicht umfasst
-
-SpanDraft berücksichtigt in dieser Kennzahl **nicht**:
-
-- Schubspannungen und von-Mises- beziehungsweise Vergleichsspannungen;
-- kombinierte Normalspannungen aus Axialkraft und Biegung (`N/A ± M/W`);
-- Knicken, Beulen, Kippen und andere Stabilitätsversagensarten;
-- Kerben, Bohrungen, Schweißnähte, Kontakt- und Lagerpressungen;
-- Ermüdung, Stoß-/Dynamikbeanspruchung, plastisches Tragverhalten;
-- zulässige Durchbiegungen, normativ geforderte Teilsicherheitsbeiwerte oder konstruktive Randbedingungen.
-
-Insbesondere ist **eine kleine Biegespannung kein Nachweis kleiner Durchbiegung**. Die Durchbiegung muss getrennt anhand des jeweiligen Anwendungsfalls bewertet werden. SpanDraft gibt keine allgemein gültige zulässige Durchbiegung vor.
-
-## Wie Sie den Wert sinnvoll verwenden
-
-1. Prüfen Sie die eingegebenen **Lasten und Lager**; ein falsches Modell kann plausible Zahlen liefern.
-2. Kontrollieren Sie Werkstoffkennwerte und insbesondere die **Biegeachse** und `W+`/`W−`.
-3. Sehen Sie auf die **Diagramme**, nicht nur auf den Sicherheitsfaktor.
-4. Beurteilen Sie zusätzlich die für Ihr Bauteil maßgebenden Effekte, die SpanDraft nicht nachweist.
-
-Welche Effekte fehlen, beschreibt [Berechnungsmodell und Grenzen](../hintergrund/modellannahmen.md). Die Interpretation der Diagramme steht auf [Ergebnisdiagramme und Lagerreaktionen](diagramme-reaktionen.md).
+Der Sicherheitsfaktor ist nur zusammen mit einem plausiblen Modell, den [Ergebnisdiagrammen und Lagerreaktionen](diagramme-reaktionen.md) und den für das reale Bauteil relevanten weiteren Nachweisen sinnvoll zu bewerten.

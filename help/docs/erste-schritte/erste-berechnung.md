@@ -1,95 +1,54 @@
 # Erste Berechnung: ein Balken mit mittiger Punktlast
 
-Dieses Beispiel zeigt den vollständigen Weg von der Eingabe bis zur Prüfung der Ergebnisse. Wir verwenden einen einfach gelagerten Balken mit einer nach unten gerichteten Kraft in der Mitte.
+An einem einfach gelagerten Balken mit mittiger Punktkraft wird einmal der vollständige SpanDraft-Ablauf gezeigt.
 
-![Einfach gelagerter Balken, mittige Kraft und die beiden vertikalen Lagerreaktionen](../assets/beispiel-balken.png)
+## 1. Projekt definieren
 
-## 1. Beispieldaten
+Ein neues Balkenprojekt benötigt zunächst seine Länge, einen Werkstoff und einen Querschnitt. Für das Beispiel sind das:
 
-| Größe | Eingabe |
-| --- | --- |
-| Balkenlänge `L` | 2.000 mm |
-| Werkstoff | S235JR (eingebauter Werkstoffkatalog) |
-| E-Modul `E` | 210 GPa |
-| Streckgrenze `fy` | 235 MPa |
-| Querschnitt | Rechteck: Breite `b = 40 mm`, Höhe `h = 80 mm` |
-| Gewählte Biegeachse | `y-y` (Biegung um die zur Breite parallele Querschnittsachse) |
-| Linkes Lager | Festlager bei `x = 0 mm` |
-| Rechtes Lager | Loslager bei `x = 2.000 mm` |
-| Punktkraft | `F = −1.000 N` bei `x = 1.000 mm` |
+- Balkenlänge `L = 2 m`;
+- Werkstoff **S235JR**;
+- Rechteckquerschnitt **40 × 80 mm** mit Breite `b = 40 mm` und Höhe `h = 80 mm`;
+- Biegeachse **y-y**.
 
-Die Zahlen beziehen sich auf das Einheitenprofil **Maschinenbau**. Ist ein anderes Profil aktiv, verwenden Sie die entsprechenden Einheiten, etwa `L = 2 m` und `F = −1 kN`.
+Die Biegeachse gehört zum Modell: Sie legt fest, welche Querschnittskennwerte für Biegesteifigkeit und Biegespannung verwendet werden. Beim Rechteck ist `y-y` die zur Breite parallele Achse.
 
-Die Last wirkt nach unten. Weil die positive Querrichtung in SpanDraft nach oben zeigt, muss die Kraft **negativ** eingegeben werden.
+## 2. Lagerung festlegen
 
-## 2. Projekt anlegen
+![Balken mit Festlager links und Loslager rechts, ohne Lasten und Reaktionspfeile](../assets/beispiel-lagerung.png)
 
-1. Wählen Sie **Datei → Neues Projekt**.
-2. Stellen Sie die Balkenlänge auf **2.000 mm**.
-3. Öffnen Sie die Werkstoffauswahl und wählen Sie **S235JR**. Kontrollieren Sie E-Modul und Streckgrenze.
-4. Öffnen Sie die Querschnittsdefinition. Wählen Sie die Form **Rechteck** und tragen Sie `b = 40 mm` und `h = 80 mm` ein.
-5. Wählen Sie die Biegeachse **y-y** und übernehmen Sie den Querschnitt.
-6. Bestätigen Sie die Projektdefinition über **Projekt erstellen**.
+Im nächsten Schritt wird festgelegt, wie der Balken gehalten wird. Im Beispiel liegt ein **Festlager am linken Ende** und ein **Loslager am rechten Ende**. Diese Kombination verhindert die starre Bewegung des Balkens, lässt aber die Drehung an beiden Lagern zu.
 
-Die Biegeachse ist entscheidend: Die Rechnung in diesem Beispiel verwendet das Flächenträgheitsmoment um `y-y`. Bei `z-z` wäre der Rechteckbalken für diese Biegeebene weniger steif. Mehr dazu steht auf [Balken, Werkstoff und Querschnitt](../modell/werkstoff-querschnitt.md).
+## 3. Belastung hinzufügen
 
-## 3. Lager setzen
+![Dieselbe Lagerung mit einer nach unten gerichteten Punktkraft F in der Balkenmitte bei L/2](../assets/beispiel-belastung.png)
 
-1. Wählen Sie in der Werkzeugleiste **Festlager** und platzieren Sie es links am Balken. Stellen Sie die Position exakt auf `0 mm`.
-2. Wählen Sie **Loslager**, platzieren Sie es rechts und bestätigen Sie `2.000 mm`.
+Im Beispiel wirkt eine Punktkraft von **1 kN** in der Balkenmitte nach unten. SpanDraft verwendet die positive `w`-Richtung nach oben. Deshalb wird die Kraft als **`F = −1 kN`** bei `x = L/2 = 1 m` eingegeben.
 
-Diese Kombination verhindert die Verschiebung des gesamten Balkens in Längs- und Querrichtung, lässt aber die Drehungen an beiden Lagern zu. Eine Einspannung wird **nicht** verwendet.
+## 4. Automatisch berechnen und Ergebnisse beurteilen
 
-## 4. Kraft eingeben
+Sobald Lagerung und Belastung ein berechenbares Modell ergeben, aktualisiert SpanDraft die Ergebnisse nach bestätigten Änderungen automatisch.
 
-Wählen Sie **Punktkraft**, klicken Sie ungefähr in die Balkenmitte und tragen Sie im Bearbeitungsbereich ein:
+![Durchbiegung des Beispielbalkens im SpanDraft-Ergebnisdiagramm](../assets/diagramm-durchbiegung.png)
 
-- Position `x = 1.000 mm`
-- Kraft `F = −1.000 N`
+![Querkraft des Beispielbalkens im SpanDraft-Ergebnisdiagramm](../assets/diagramm-querkraft.png)
 
-Bestätigen Sie die Eingabe. Nach dieser bestätigten Änderung berechnet SpanDraft das Modell neu.
+![Biegemoment des Beispielbalkens im SpanDraft-Ergebnisdiagramm](../assets/diagramm-biegemoment.png)
 
-## 5. Ergebnisse prüfen
+Die Diagramme zeigen die Durchbiegung `w(x)`, die Querkraft `V(x)` und das Biegemoment `M(x)`. Außerdem stehen Lagerreaktionen, maximale Durchbiegung, maßgebendes Moment, maximale elastische Biegespannung und Sicherheitsfaktor zur Verfügung.
 
-Für diesen idealisierten Lastfall lauten die **rechnerischen Werte vor Anzeigerundung**:
+Am Beispiel lässt sich unmittelbar erkennen:
 
-| Ergebnis | Erwarteter Wert | Bedeutung |
-| --- | ---: | --- |
-| Vertikale Reaktion links | `+500 N` | Nach oben gerichtete Lagerkraft |
-| Vertikale Reaktion rechts | `+500 N` | Nach oben gerichtete Lagerkraft |
-| Maximale Durchbiegung (Betrag) | `0,46503 mm` | In der Mitte; die signed Durchbiegung ist `−0,46503 mm` |
-| Maßgebendes Biegemoment (Betrag) | `500 N·m` | In der Balkenmitte; positiv/sagend |
-| Maximale elastische Biegespannung | `11,71875 MPa` | Betrag der Biegespannung |
-| Sicherheitsfaktor | `20,0533` | Verhältnis Streckgrenze / Biegespannung |
+- Die Durchbiegung ist in der Mitte betragsmäßig am größten.
+- Die Querkraft springt an der Punktkraft.
+- Das größte Biegemoment liegt in der Mitte.
 
-Die *Standardanzeige* rundet bewusst. Bei diesen Eingaben sind deshalb beispielsweise **`0,46 mm`** für die maximale Durchbiegung und **`20`** für den Sicherheitsfaktor zu erwarten. Die gerundete Anzeige darf nicht mit dem ungerundeten Rechenwert verwechselt werden.
+## Was SpanDraft daraus berechnet
 
-Die Diagramme zeigen: links der Punktkraft `V = +500 N`, rechts `V = −500 N`; das Biegemoment steigt von links bis zur Mitte auf `+500 N·m` und fällt rechts auf null. Die Durchbiegung ist zwischen den Lagern negativ und in der Mitte betragsmäßig am größten.
+SpanDraft bildet aus Balkengeometrie, Werkstoff, Lagerung und Belastung das Berechnungsmodell und ermittelt daraus Lagerreaktionen, Verformung und Schnittgrößen. Aus Biegemoment und Querschnittskennwerten wird anschließend die elastische Biegespannung bestimmt; der Sicherheitsfaktor beschreibt das Verhältnis der hinterlegten Streckgrenze zu dieser Spannung.
 
-## 6. Warum ergeben sich diese Werte?
+Details erläutern [Ergebnisdiagramme und Lagerreaktionen](../ergebnisse/diagramme-reaktionen.md), [Spannung und Sicherheitsfaktor](../ergebnisse/spannung-sicherheit.md) sowie [Berechnungsmodell und Grenzen](../hintergrund/modellannahmen.md).
 
-Für einen rechteckigen Querschnitt mit Biegung um `y-y` gilt:
+## 5. Projekt speichern
 
-```text
-A  = b · h                         = 3.200 mm²
-Iy = b · h³ / 12                   = 1.706.667 mm⁴
-Wy = b · h² / 6                    = 42.667 mm³
-
-RA = RB = P / 2                    = 500 N
-Mmax = P · L / 4                   = 500 N·m
-|w|max = P · L³ / (48 · E · Iy)     ≈ 0,46503 mm
-σb,max = Mmax / Wy                 = 11,71875 MPa
-S = fy / σb,max                    ≈ 20,0533
-```
-
-Hier ist `P = 1.000 N` der **positive Betrag** der nach unten wirkenden Kraft; in der SpanDraft-Eingabe steht dafür `F = −1.000 N`. Die gerundeten `Iy`-/`Wy`-Tabellenwerte in dieser Darstellung wurden nicht für die Berechnung der Ergebniszahlen verwendet.
-
-Die Gleichungen gelten für genau diesen symmetrischen, einfach gelagerten Lastfall. Sie sind keine allgemeine Berechnungsformel für beliebige Lagerungen oder Lasten.
-
-## 7. Projekt speichern
-
-Wählen Sie **Datei → Speichern**, geben Sie einen Dateinamen wie `Balken_Mittellast.spandraft` an und speichern Sie das Projekt. Öffnen Sie es testweise erneut über **Datei → Öffnen…**. SpanDraft lädt die Eingaben und berechnet die Ergebnisse erneut.
-
-## Was dieses Beispiel bewusst nicht nachweist
-
-Ob der reale Balken als Bauteil geeignet ist, hängt zusätzlich unter anderem von der tatsächlichen Einspannung/Lagerausführung, Knicken oder Beulen, Verbindungen, anderen Spannungsarten und den zulässigen Durchbiegungen ab. Der hier ausgegebene Sicherheitsfaktor bewertet **nur die elastische Biegespannung gegenüber der hinterlegten Streckgrenze**. Mehr dazu: [Spannung und Sicherheitsfaktor](../ergebnisse/spannung-sicherheit.md) und [Berechnungsmodell und Grenzen](../hintergrund/modellannahmen.md).
+Das fertige Modell kann als `.spandraft`-Projekt gespeichert und später wieder geöffnet werden. Die Eingaben werden gespeichert; die Ergebnisse werden beim Öffnen erneut berechnet.

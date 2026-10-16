@@ -1,64 +1,54 @@
 # Ergebnisdiagramme und Lagerreaktionen
 
-Wenn das bestätigte Modell berechenbar ist, zeigt SpanDraft im Arbeitsbereich drei Ergebnisdiagramme sowie in der Projektübersicht die Lagerreaktionen und ausgewählte Kennwerte. Die Diagramme sind **Ergebnisse der Berechnung**, keine zusätzlichen Eingabefelder.
+SpanDraft zeigt die berechnete Durchbiegung, Querkraft und das Biegemoment entlang des Balkens. Die horizontale Achse entspricht dabei der Balkenlängskoordinate `x`. Lagerreaktionen und ausgewählte Kennwerte stehen in der Projektübersicht.
 
-## Die drei Diagramme
+## Durchbiegung `w(x)`
 
-| Diagramm | Was es zeigt | Typische Einheit (Maschinenbau) |
-| --- | --- | --- |
-| **Durchbiegung `w(x)`** | Vertikale Verschiebung der Balkenachse über die Länge | mm |
-| **Querkraft `V(x)`** | Innerer Querkraftverlauf | N |
-| **Biegemoment `M(x)`** | Innerer Biegemomentverlauf | N·m |
+![Durchbiegung des Beispielbalkens mit markiertem Extremwert in der Balkenmitte](../assets/diagramm-durchbiegung.png)
 
-![Typische Diagrammverläufe für eine mittige Punktlast bei einem einfach gelagerten Balken](../assets/ergebnisverlaeufe.png)
+`w(x)` zeigt die Querverschiebung der Balkenachse entlang des Balkens. Positive und negative Werte entsprechen den beiden Richtungen der festgelegten `w`-Achse. Eine typische Durchbiegung nach unten erscheint deshalb negativ.
 
-Die horizontale Richtung der Diagramme entspricht der Balkenlängskoordinate `x`. Positive und negative Werte sind getrennt zu beachten. Eine ausgeprägte positive Momentenspitze und eine negative Durchbiegung können zum **selben** Lastfall gehören – das ist kein Widerspruch.
+Relevant ist häufig, wo die größte Verformung auftritt und wie groß ihr Betrag ist. Die Extremwerte werden im Diagramm markiert. Die Kennzahl **Maximale Durchbiegung** in der Projektübersicht zeigt den größten Betrag der Querverschiebung.
 
-### Durchbiegung
+## Querkraft `V(x)`
 
-Das Durchbiegungsdiagramm zeigt `w(x)` mit seinem Vorzeichen. Eine nach unten gerichtete Verformung ist **negativ**. Für die konstruktive Beurteilung kann die betragsmäßig größte Durchbiegung relevant sein. Die Kennzahl **Maximale Durchbiegung** in der Projektübersicht ist deshalb ein **nichtnegativer Betrag**.
+![Querkraft des Beispielbalkens mit positiven und negativen Werten und einem Sprung an der mittigen Punktkraft](../assets/diagramm-querkraft.png)
 
-Beachten Sie den Unterschied zwischen dem Wert im Diagramm und der Kennzahl: Bei `w = −0,465 mm` am kritischen Ort steht in der Übersicht ein Betrag von ungefähr `0,465 mm` (vor Rundung).
+`V(x)` zeigt die innere Querkraft entlang des Balkens. Punktkräfte und vertikale Lagerreaktionen können sichtbare Sprünge erzeugen. Unter einer konstanten Streckenlast ändert sich die Querkraft kontinuierlich.
 
-### Querkraft
+Positive und negative Werte kennzeichnen unterschiedliche Richtungen nach der verwendeten Vorzeichenkonvention. Das Vorzeichen ist keine Bewertung als „gut“ oder „schlecht“.
 
-Die Querkraft kann an **Punktkräften** oder **Lagerreaktionen** sprunghaft wechseln. Unter einer konstanten Streckenlast verläuft sie **linear**. Ein Querkraftsprung ist daher normalerweise eine Aussage über eine konzentrierte Einwirkung, kein Fehler in der Zeichnung.
+## Biegemoment `M(x)`
 
-### Biegemoment
+![Biegemoment des Beispielbalkens mit markiertem Maximum in der Balkenmitte](../assets/diagramm-biegemoment.png)
 
-Das Biegemoment ist bei Bereichen ohne Streckenlast zwischen konzentrierten Einwirkungen in der Regel **linear**. Unter konstanter Streckenlast hat der Verlauf eine **quadratische** Form. Punktmomente können einen **Momentensprung** erzeugen. Große positive und große negative Werte sind jeweils relevant, weil die Biegespannung vom **Betrag** des Moments abhängt.
+`M(x)` zeigt den inneren Biegemomentverlauf. Große Beträge kennzeichnen Bereiche hoher Biegebeanspruchung. Positive und negative Werte entsprechen unterschiedlichen Biegerichtungen.
 
-## Minima, Maxima und Sprungstellen
+Für die maximale Biegespannung werden beide Richtungen berücksichtigt; maßgebend ist der relevante Momentbetrag. Die Extremwerte werden im Diagramm markiert. Ein aufgebrachtes Punktmoment kann einen Sprung im Momentendiagramm erzeugen.
 
-SpanDraft kennzeichnet Minima und Maxima der Kurven. Bei Punktlasten oder Punktmomenten können die Werte unmittelbar **links** und **rechts** derselben Position verschieden sein:
+<span id="lagerreaktionen-in-der-projektubersicht"></span>
 
-- Eine Punktkraft erzeugt im Querkraftdiagramm einen Sprung.
-- Ein Punktmoment erzeugt im Biegemomentdiagramm einen Sprung.
-- Verformung und Rotation bleiben an diesen Stellen im aktuellen durchgehenden Balkenmodell stetig.
+## Lagerreaktionen
 
-Die Sprungstellen werden nicht durch Mittelwerte geglättet. Die Berechnung der Extremwerte erfolgt aus stückweisen analytischen Verläufen, nicht allein aus wenigen gezeichneten Stützpunkten. Die Darstellung nähert diese Verläufe grafisch an, während die ermittelten Extremwerte aus der Berechnung stammen.
+Lagerreaktionen sind Kräfte beziehungsweise Momente, mit denen die idealisierten Lager die äußeren Lasten im berechneten Modell ausgleichen.
 
-## Lagerreaktionen in der Projektübersicht
+| Positives Ergebnis | Richtung |
+| --- | --- |
+| `Rx > 0` | → nach rechts |
+| `Ry > 0` | ↑ nach oben |
+| Reaktionsmoment > 0 | ↺ gegen den Uhrzeigersinn |
 
-Die **Reaktionen** beschreiben, wie die Lager die äußeren Lasten ausgleichen. Je nach Lagertyp gibt es Horizontalkraft `Rx`, Vertikalkraft `Ry` und/oder Lagermoment. Ein Festlager kann beispielsweise `Rx` und `Ry` übertragen, aber kein Reaktionsmoment; eine Einspannung alle drei Größen.
+Ein negatives Ergebnis wirkt entsprechend in die entgegengesetzte Richtung.
 
-Bei einem einfach gelagerten Balken mit einer mittigen Punktkraft von `−1.000 N` müssen sich die vertikalen Lagerreaktionen zu `+1.000 N` addieren. Bei mittiger Last und symmetrischer Lagerung sind es jeweils `+500 N`.
+SpanDraft zeigt nur Reaktionskomponenten, die der betreffende Lagertyp übertragen kann. Nicht übertragbare Komponenten bleiben in der Übersicht leer; eine berechnete Reaktionskomponente mit dem Wert null wird dagegen angezeigt.
 
-Die Reaktionen werden unter Berücksichtigung der Lagerbedingungen berechnet. Bei statisch unbestimmten Systemen ergeben sie sich **nicht allein aus den Gleichgewichtsbedingungen**, sondern zusätzlich aus der Verformungsverträglichkeit und Steifigkeit.
+## Kennwerte in der Projektübersicht
 
-## Maßgebende Kennwerte
+| Kennwert | Bedeutung |
+| --- | --- |
+| Maximale Durchbiegung | größter Betrag der Querverschiebung |
+| Maßgebendes Moment | größter Betrag des Biegemoments |
+| [Maximale Biegespannung](spannung-sicherheit.md#biegespannung) | daraus abgeleitete elastische Biegebeanspruchung |
+| [Sicherheitsfaktor](spannung-sicherheit.md#sicherheitsfaktor) | Vergleich mit der hinterlegten Streckgrenze |
 
-In der Projektübersicht stehen zusätzlich:
-
-- **Maximale Durchbiegung:** größter **Betrag** der berechneten Querverschiebung;
-- **Maßgebendes Moment:** größter **Betrag** des Biegemoments;
-- **Maximale Biegespannung:** aus maßgebendem Moment und elastischen Widerstandsmomenten ermittelter Spannungsbetrag;
-- **Sicherheitsfaktor:** Verhältnis zwischen hinterlegter Streckgrenze und maximalem elastischem Biegespannungsbetrag.
-
-Bei der Auswahl der maßgebenden Durchbiegung beziehungsweise des Moments werden die positiven und negativen Extremwerte **nach ihrem Betrag** verglichen. Die Vorzeichen bleiben im jeweiligen Diagramm erhalten. Der Sicherheitsfaktor bewertet nicht die Durchbiegung; seine Bedeutung steht auf [Spannung und Sicherheitsfaktor](spannung-sicherheit.md).
-
-## Warum Ergebnisse manchmal fehlen
-
-Ohne ausreichend Lager oder bei ungültigen beziehungsweise numerisch nicht lösbaren Modellen erscheinen **keine gültigen neuen Ergebnisdiagramme**. Das ist kein Nachweis, dass die Belastung harmlos ist. Prüfen Sie dann die Statusmeldung und die Hinweise unter [Häufige Probleme](../hintergrund/probleme.md).
-
-Zum Nachvollziehen aller drei Verläufe eignet sich das [vollständige Beispiel mit mittiger Punktlast](../erste-schritte/erste-berechnung.md). Für die Vorzeichen lesen Sie [Koordinaten, Vorzeichen und Einheiten](../modell/koordinaten-einheiten.md).
+Wenn keine Ergebnisse erscheinen, siehe [Häufige Probleme und Hinweise](../hintergrund/probleme.md).

@@ -1,72 +1,45 @@
 # Kräfte, Momente und Streckenlasten
 
-Lasten beschreiben die Einwirkungen, die Sie dem Balken im Modell vorgeben. SpanDraft unterstützt **Punktkräfte**, **Punktmomente** und **konstante Streckenlasten**. Die Lasten wirken in der ausgewählten zweidimensionalen Biegeebene.
-
-![Vorzeichen für Punktkraft, Punktmoment und konstante Streckenlast](../assets/lasten-vorzeichen.png)
+Lasten beschreiben die vorgegebenen Einwirkungen in der zweidimensionalen Biegeebene.
 
 ## Punktkraft
 
-Eine Punktkraft `F` wirkt an einer einzelnen Position `x`. Sie wird im Modell an dieser Position konzentriert angesetzt, unabhängig davon, über welche reale Kontaktfläche sie tatsächlich eingeleitet wird.
+Eine Punktkraft `F` wirkt an einer Position `x`, auch an einem Balkenende. Das Vorzeichen gibt die Richtung an.
 
-- `F > 0`: Kraft nach **oben**.
-- `F < 0`: Kraft nach **unten**.
-- `F = 0`: keine Kraftwirkung.
-
-Beispiel: `F = −1.000 N` bei `x = 800 mm` bedeutet eine nach unten gerichtete Kraft von 1 kN, die 800 mm vom linken Balkenende angreift. Ein Minuszeichen bezeichnet die **Richtung**, nicht eine ungültige Eingabe.
+<figure class="spandraft-load-signs">
+  <div class="spandraft-load-sign-labels"><span><code>F &gt; 0</code> · nach oben</span><span><code>F &lt; 0</code> · nach unten</span></div>
+  <img src="../assets/punktkraft-vorzeichen.png" alt="Punktkraftpfeile: links aufwärts, rechts abwärts">
+</figure>
 
 ## Punktmoment
 
-Ein Punktmoment `M` wirkt an einer bestimmten Balkenposition, ohne dort zusätzlich eine resultierende Querkraft aufzubringen.
+Ein Punktmoment `M` wirkt an einer Position `x`, ohne dort eine zusätzliche resultierende Querkraft aufzubringen.
 
-- `M > 0`: aufgebrachtes Moment **gegen den Uhrzeigersinn**.
-- `M < 0`: aufgebrachtes Moment **im Uhrzeigersinn**.
+<figure class="spandraft-load-signs">
+  <div class="spandraft-load-sign-labels"><span><code>M &gt; 0</code> · gegen den Uhrzeigersinn</span><span><code>M &lt; 0</code> · im Uhrzeigersinn</span></div>
+  <img src="../assets/punktmoment-vorzeichen.png" alt="Punktmomente: links gegen den Uhrzeigersinn, rechts im Uhrzeigersinn">
+</figure>
 
-Die Vorzeichen eines **aufgebrachten** Moments und des **inneren Biegemomentverlaufs** sind getrennt zu betrachten. Ein positives aufgebrachtes Punktmoment erzeugt am Ort der Einleitung im inneren Momentenverlauf einen Sprung mit **negativem** Vorzeichen. Die vollständige Konvention wird auf [Koordinaten, Vorzeichen und Einheiten](koordinaten-einheiten.md) erläutert.
+Mehrere Punktlasten dürfen an derselben Position liegen.
 
 ## Konstante Streckenlast
 
-Eine Streckenlast `q` wirkt gleichmäßig über einen gewählten Bereich von `xStart` bis `xEnd`:
+Eine konstante Streckenlast `q` wirkt gleichmäßig von `xStart` bis `xEnd`. Sie ist eine **Kraft pro Länge**; Start und Ende definieren den belasteten Bereich mit `0 ≤ xStart < xEnd ≤ L`.
 
-- `q > 0`: entlang dieses Bereichs nach oben.
-- `q < 0`: entlang dieses Bereichs nach unten.
-- Der Bereich muss **innerhalb des Balkens** liegen und eine **positive Länge** besitzen: `0 ≤ xStart < xEnd ≤ L`.
+<figure class="spandraft-load-signs">
+  <div class="spandraft-load-sign-labels"><span><code>q &gt; 0</code> · nach oben</span><span><code>q &lt; 0</code> · nach unten</span></div>
+  <img src="../assets/streckenlast-vorzeichen.png" alt="Streckenlastpfeile: links aufwärts, rechts abwärts">
+</figure>
 
-Die Eingabe `q` ist eine **Kraft pro Länge**, keine Gesamtkraft. Beispiel: Eine gleichmäßige Streckenlast von `q = −500 N/m` über `2 m` entspricht einer nach unten wirkenden resultierenden Kraft von `−1.000 N`.
+Mehrere Streckenlasten dürfen sich überlagern; ihre Intensitäten werden vorzeichenbehaftet addiert. Dreieckige oder veränderliche Streckenlasten gibt es aktuell nicht als eigenen Lasttyp.
 
-```text
-Resultierende einer konstanten Streckenlast:
-Fq = q · (xEnd − xStart)
+<details class="spandraft-details">
+  <summary>Resultierende einer konstanten Streckenlast</summary>
+  <p>Die Resultierende beträgt <code>Fq = q · (xEnd − xStart)</code> und greift in der Mitte des belasteten Bereichs bei <code>xq = (xStart + xEnd) / 2</code> an. Diese Ersatzkraft beschreibt das globale Gleichgewicht. Für Verformung und Schnittgrößen behandelt SpanDraft die Streckenlast weiterhin als verteilte Last.</p>
+</details>
 
-Angriffspunkt der Resultierenden:
-xq = (xStart + xEnd) / 2
-```
+## Grenzen des Lastmodells
 
-Diese Ersatzkraft erklärt das **globale Gleichgewicht** der gleichmäßigen Last. Für Durchbiegung und innere Schnittgrößen behandelt SpanDraft die Streckenlast jedoch als verteilte Einwirkung; sie wird im Rechenkern nicht einfach durch eine einzige Punktkraft ersetzt.
-
-Mehrere Streckenlasten dürfen sich überlagern. Wo ihre Bereiche überlappen, werden die Intensitäten **vorzeichenbehaftet addiert**. Wechselnde oder dreieckförmige Lastverläufe sind als eigener Lasttyp in dieser Version nicht vorhanden.
-
-## Lasten setzen und bearbeiten
-
-1. Aktivieren Sie **Punktkraft**, **Moment** oder **Streckenlast** in der Werkzeugleiste.
-2. Platzieren Sie bei einer Punktlast den Angriffspunkt durch einen Klick. Bei einer Streckenlast wählen Sie nacheinander **beide Bereichsgrenzen**.
-3. Geben Sie anschließend die exakten Werte für Position(en) und Last ein.
-4. Bestätigen Sie die Änderung. Erst dann wird das Modell neu berechnet.
-
-Vorhandene Lasten können über die Skizze oder ihre Namen in der Projektübersicht bearbeitet und gelöscht werden. Positionen beziehungsweise Streckenlastgrenzen lassen sich auch interaktiv verschieben und anschließend numerisch kontrollieren.
-
-Die Balkenenden sind gültige Positionen für Punktlasten. Eine Streckenlast darf am Balkenende beginnen oder enden, ihre Anfangs- und Endposition dürfen jedoch nicht identisch sein. Einzelne Lasten an der gleichen Position und überlappende Streckenlasten sind grundsätzlich möglich.
-
-## Was nicht automatisch als Last entsteht
-
-Die im Werkstoff gespeicherte Dichte erzeugt noch **keine Eigengewichtslast**. Wenn Sie das Eigengewicht in einer passenden Biegeebene betrachten möchten, müssen Sie die entsprechende konstante Streckenlast selbst bestimmen und eingeben. Für einen horizontalen Balken mit vertikal nach unten wirkender Schwerkraft wäre beispielsweise:
-
-```text
-qG = −ρ · A · g
-ρ in kg/m³, A in m², g ≈ 9,81 m/s²  →  qG in N/m
-```
-
-Diese Gleichung setzt voraus, dass die Gewichtskraft in der betrachteten Biegeebene **quer zur Balkenachse** wirkt. Bei anderer Einbaulage, zusätzlichen Gewichtsanteilen oder einer axialen Gewichtskomponente ist diese vereinfachte Eingabe nicht ohne Weiteres geeignet.
-
-Äußere **axiale Punktkräfte**, schräge Kräfte mit einem Winkel und Torsionsmomente sind im aktuellen Lastumfang nicht vorgesehen. Eine schräg wirkende reale Kraft kann nicht einfach als beliebige 3D-Einwirkung eingegeben werden. Prüfen Sie dafür [Berechnungsmodell und Grenzen](../hintergrund/modellannahmen.md).
+Die hinterlegte Dichte erzeugt kein automatisches Eigengewicht. Axiale oder schräge Kräfte sowie Torsionsmomente gehören derzeit nicht zum unterstützten Lastmodell. Mehr dazu: [Berechnungsmodell und Grenzen](../hintergrund/modellannahmen.md).
 
 Weiter: [Ergebnisdiagramme und Lagerreaktionen](../ergebnisse/diagramme-reaktionen.md).

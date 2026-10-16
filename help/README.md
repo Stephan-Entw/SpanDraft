@@ -1,9 +1,10 @@
 # SpanDraft user manual (German)
 
-The Markdown sources in `docs/` are the prepared German V1 manual. The six PNGs
+The Markdown sources in `docs/` are the prepared German V1 manual. The thirteen PNGs
 in `docs/assets/` are generated from SpanDraft's actual Avalonia renderers. Edit
-these illustrations in `tools/SpanDraft.HelpAssets`, then regenerate them; do not
-maintain separate engineering drawings.
+these technical illustrations in `tools/SpanDraft.HelpAssets`, then regenerate
+them; do not maintain separate engineering drawings. Conceptual explanations use
+semantic HTML and local CSS in the manual.
 
 ## Build
 
@@ -23,14 +24,16 @@ From the repository root:
 dotnet run --file scripts/build-help.cs
 ```
 
-The script regenerates the six PNGs, runs `zensical build --clean --strict`, and
-checks the offline output. It never installs Python packages. Commit Markdown,
-configuration, JavaScript and PNGs; `help/site/`, caches and the virtual environment
-are ignored. The HelpAssets project is deliberately outside the product solution.
+The script regenerates the thirteen PNGs, runs `zensical build --clean --strict`, and
+checks the explicit PNG list and offline output. It never installs Python packages.
+Commit Markdown, configuration, CSS, JavaScript and PNGs; `help/site/`, caches and the
+virtual environment are ignored. The HelpAssets project is deliberately outside
+the product solution.
 
 Open `help/site/index.html` directly in a browser, with networking disabled, and
 check navigation, search and images. The manual uses system fonts and a local
-`iframe-worker` polyfill; no web server or runtime CDN is needed. The vendored
+`iframe-worker` polyfill; no web server or runtime CDN is needed. Central
+formulas use native MathML and need no additional runtime. The vendored
 polyfill is iframe-worker 1.0.4 (MIT), from
 https://github.com/squidfunk/iframe-worker; its license is beside the JavaScript.
 

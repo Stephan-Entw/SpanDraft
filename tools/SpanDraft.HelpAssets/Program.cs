@@ -34,10 +34,15 @@ internal static class Program
                 .UseStandardRuntimePlatformSubsystem().UseSkia().UseHarfBuzz().SetupWithoutStarting();
             Application.Current!.RequestedThemeVariant = ThemeVariant.Light;
             string output = Path.GetFullPath(args[0]); Directory.CreateDirectory(output);
-            Save(Example(), "beispiel-balken"); Save(Supports(), "lagerarten");
-            Save(Loads(), "lasten-vorzeichen"); Save(Coordinates(), "koordinaten");
-            Save(Section(), "querschnitt-achsen"); Save(Results(), "ergebnisverlaeufe");
-            Console.WriteLine($"Generated six SpanDraft help PNGs in {output}");
+            Save(Example(withLoad: false), "beispiel-lagerung"); Save(Example(withLoad: true), "beispiel-belastung");
+            Save(Support(SupportType.Fixed), "lager-einspannung");
+            Save(Support(SupportType.Pinned), "lager-festlager"); Save(Support(SupportType.Roller), "lager-loslager");
+            Save(LoadSigns(PointLoadKind.Force), "punktkraft-vorzeichen");
+            Save(LoadSigns(PointLoadKind.Moment), "punktmoment-vorzeichen"); Save(LoadSigns(pointKind: null), "streckenlast-vorzeichen");
+            Save(Coordinates(), "koordinaten");
+            Save(Section(), "querschnitt-achsen");
+            foreach (var (name, diagram) in Results()) Save(diagram, name);
+            Console.WriteLine($"Generated thirteen SpanDraft help PNGs in {output}");
             return 0;
             void Save(Control control, string name)
             {
@@ -89,56 +94,57 @@ internal static class Program
         Add(page, new TextBlock { Text = text, FontSize = size, Foreground = AppBrush("TextPrimary"), TextAlignment = TextAlignment.Center }, x, y, width, 52);
     private static EditorDocument Document() => new(Length.FromMeters(2), MaterialCatalogCodec.LoadBuiltIn().Find("S235JR")!.Material,
         new RectangleSectionGeometry(Length.FromMillimeters(40), Length.FromMillimeters(80)), SectionAxisDesignation.Y);
-    private static BeamCanvas Beam(EditorDocument document, double width, double height, double beamY)
+    private static BeamCanvas Beam(EditorDocument document, double width, double height, double beamY,
+        double leftMargin = 60, double rightMargin = 60)
     {
-        var frame = new BeamLayoutFrame(StationLayout.Compute(document.Length.Meters, 60, width - 60, []), new(width, height, beamY));
+        var frame = new BeamLayoutFrame(StationLayout.Compute(document.Length.Meters, leftMargin, width - rightMargin, []), new(width, height, beamY));
         var scene = BeamRenderState.Create(document, frame, text => SchematicText.Measure(text, Typeface.Default, 13));
         return new() { Scene = scene with { Annotations = [] }, BeamBrush = AppBrush("BeamStroke"), CanvasBackgroundBrush = AppBrush("CanvasBackground"),
             AccentBrush = AppBrush("Accent"), GhostBrush = AppBrush("AxisStroke"), ErrorBrush = AppBrush("Error") };
     }
-    private static Canvas Example()
+    private static Canvas Example(bool withLoad)
     {
-        var page = Page(880, 320);
+        var page = Page(880, 208);
         var document = Document().WithSupports([
             new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Pinned, "A"),
-            new(Guid.NewGuid(), Length.FromMeters(2), SupportType.Roller, "B")])
-            .WithLoads([new EditorPointForce(Guid.NewGuid(), Length.FromMeters(1), Force.FromNewtons(-1), "F")]);
-        Add(page, Beam(document, 760, 190, 110), 60, 30, 760, 190);
-        Text(page, "F", 390, 70, 100);
-        // Reaction arrows reuse the product force glyph, translated below the supports.
-        Add(page, new Glyph(PointLoadKind.Force, 1), 95, 204, 50, 56);
-        Add(page, new Glyph(PointLoadKind.Force, 1), 735, 204, 50, 56);
-        Text(page, "F/2", 70, 255, 100); Text(page, "F/2", 710, 255, 100);
-        Text(page, "0", 70, 170, 100); Text(page, "L/2", 390, 170, 100); Text(page, "L", 710, 170, 100);
-        return page;
-    }
-    private static Canvas Supports()
-    {
-        var page = Page(960, 260);
-        var types = new[] { SupportType.Fixed, SupportType.Pinned, SupportType.Roller };
-        string[] names = ["Einspannung", "Festlager", "Loslager"], dofs = ["u, w, θ gesperrt", "u, w gesperrt", "w gesperrt"];
-        for (int i = 0; i < 3; i++)
+            new(Guid.NewGuid(), Length.FromMeters(2), SupportType.Roller, "B")]);
+        double middle = document.Length.Meters / 2;
+        if (withLoad)
+            document = document.WithLoads([new EditorPointForce(Guid.NewGuid(), Length.FromMeters(middle), Force.FromNewtons(-1000), "F")]);
+        var beam = Beam(document, 760, 176, 86);
+        Add(page, beam, 60, 16, 760, 176);
+        double X(double position) => 60 + beam.Scene!.Frame.Layout.Transform.PhysicalToScreen(position);
+        Text(page, "Festlager", X(0) - 90, 145, 180, 18);
+        Text(page, "Loslager", X(document.Length.Meters) - 90, 145, 180, 18);
+        if (withLoad)
         {
-            var doc = Document().WithSupports([new(Guid.NewGuid(), Length.FromMeters(i == 0 ? 0 : 1), types[i], "A")]);
-            Text(page, names[i], i * 320 + 10, 20, 300, 20);
-            Add(page, Beam(doc, 280, 140, 70), i * 320 + 20, 60, 280, 140);
-            Text(page, dofs[i], i * 320 + 10, 210, 300);
+            Text(page, "F", X(middle) - 50, 24, 100);
+            Text(page, "L/2", X(middle) - 50, 145, 100);
         }
         return page;
     }
-    private static Canvas Loads()
+    private static Canvas Support(SupportType type)
     {
-        var page = Page(960, 270);
-        string[] names = ["Punktkraft", "Punktmoment", "Streckenlast"], signs = ["F < 0 · nach unten", "M > 0 · gegen Uhrzeigersinn", "q < 0 · nach unten"];
-        for (int i = 0; i < 3; i++)
+        var page = Page(96, 76);
+        var doc = Document().WithSupports([new(Guid.NewGuid(), Length.FromMeters(type == SupportType.Fixed ? 0 : 1), type, "A")]);
+        Add(page, Beam(doc, 96, 76, 30, type == SupportType.Fixed ? 48 : 12, 12), 0, 0, 96, 76);
+        return page;
+    }
+    // A null point kind selects the product's distributed-load rendering.
+    private static Canvas LoadSigns(PointLoadKind? pointKind)
+    {
+        var page = Page(640, 112);
+        for (int i = 0; i < 2; i++)
         {
+            double sign = i == 0 ? 1 : -1;
             var doc = Document();
-            if (i == 0) doc = doc.WithLoads([new EditorPointForce(Guid.NewGuid(), Length.FromMeters(1), Force.FromNewtons(-1), "F")]);
-            if (i == 1) doc = doc.WithLoads([new EditorPointMoment(Guid.NewGuid(), Length.FromMeters(1), Moment.FromNewtonMeters(1), "M")]);
-            if (i == 2) doc = doc.WithDistributedLoads([new(Guid.NewGuid(), Length.FromMeters(.3), Length.FromMeters(1.7), ForcePerLength.FromNewtonsPerMeter(-1), "q")]);
-            Text(page, names[i], i * 320 + 5, 22, 310, 20);
-            Add(page, Beam(doc, 300, 160, 100), i * 320 + 10, 65, 300, 160);
-            Text(page, signs[i], i * 320 + 5, 224, 310, i == 1 ? 15 : 17);
+            if (pointKind == PointLoadKind.Force)
+                doc = doc.WithLoads([new EditorPointForce(Guid.NewGuid(), Length.FromMeters(1), Force.FromNewtons(sign), "F")]);
+            else if (pointKind == PointLoadKind.Moment)
+                doc = doc.WithLoads([new EditorPointMoment(Guid.NewGuid(), Length.FromMeters(1), Moment.FromNewtonMeters(sign), "M")]);
+            else
+                doc = doc.WithDistributedLoads([new(Guid.NewGuid(), Length.FromMeters(.5), Length.FromMeters(1.5), ForcePerLength.FromNewtonsPerMeter(sign), "q")]);
+            Add(page, Beam(doc, 280, 100, 62, 24, 24), 20 + i * 320, 6, 280, 100);
         }
         return page;
     }
@@ -162,21 +168,29 @@ internal static class Program
         Add(page, new SectionPreviewControl { Geometry = geometry, SelectedAxis = null }, 40, 20, 570, 460);
         return page;
     }
-    private static Canvas Results()
+    private static IEnumerable<(string Name, Control Diagram)> Results()
     {
-        var page = Page(960, 750);
         var doc = Document().WithSupports([
             new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Pinned, "A"),
             new(Guid.NewGuid(), Length.FromMeters(2), SupportType.Roller, "B")])
             .WithLoads([new EditorPointForce(Guid.NewGuid(), Length.FromMeters(1), Force.FromNewtons(-1000), "F")]);
         var presentation = AnalysisPresentationState.FromOutcome(BeamAnalysis.Analyze(doc.ToBeamModel()));
         if (!presentation.IsSuccess) throw new InvalidOperationException("The help reference model did not solve.");
-        var layout = new BeamLayoutState().Update(doc, 900, 240)!.Layout;
-        foreach (var (kind, index) in Enum.GetValues<ResultDiagramKind>().Select((kind, i) => (kind, i)))
-            Add(page, new ResultDiagram { Kind = kind, Presentation = presentation, StationLayout = layout }, 30, 12 + index * 242, 900, 230);
-        return page;
+        var layout = new BeamLayoutState().Update(doc, 720, 240)!.Layout;
+        (ResultDiagramKind Kind, string Name)[] diagrams =
+        [
+            (ResultDiagramKind.TransverseDisplacement, "diagramm-durchbiegung"),
+            (ResultDiagramKind.ShearForce, "diagramm-querkraft"),
+            (ResultDiagramKind.BendingMoment, "diagramm-biegemoment")
+        ];
+        foreach (var (kind, name) in diagrams)
+        {
+            var page = Page(760, 254);
+            Add(page, new ResultDiagram { Kind = kind, Presentation = presentation, StationLayout = layout }, 20, 12, 720, 230);
+            yield return (name, page);
+        }
     }
-    // Help composes existing engineering glyphs; only the axial annotation has its own small arrow.
+    // Technical illustrations reuse product glyphs; only the axial annotation has its own arrow.
     private sealed class Glyph(PointLoadKind kind, double value, string brushKey = "BeamStroke") : Control
     {
         public override void Render(DrawingContext context)

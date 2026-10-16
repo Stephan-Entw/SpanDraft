@@ -4,6 +4,8 @@ site_name = "SpanDraft – Benutzerhandbuch"
 docs_dir = "docs"
 site_dir = "site"
 use_directory_urls = false
+extra_css = ["stylesheets/spandraft.css"]
+extra_javascript = ["js/spandraft-help.js"]
 nav = [
   { "Startseite" = "index.md" },
   { "1. Erste Schritte" = [
@@ -14,15 +16,15 @@ nav = [
     { "Balken, Werkstoff und Querschnitt" = "modell/werkstoff-querschnitt.md" },
     { "Lager und Randbedingungen" = "modell/lager.md" },
     { "Kräfte, Momente und Streckenlasten" = "modell/lasten.md" },
-    { "Koordinaten, Vorzeichen und Einheiten" = "modell/koordinaten-einheiten.md" },
+    { "Koordinatensystem und Einheiten" = "modell/koordinaten-einheiten.md" },
   ] },
   { "3. Ergebnisse verstehen" = [
     { "Ergebnisdiagramme und Lagerreaktionen" = "ergebnisse/diagramme-reaktionen.md" },
     { "Spannung und Sicherheitsfaktor" = "ergebnisse/spannung-sicherheit.md" },
   ] },
   { "4. Berechnung und Grenzen" = [
-    { "Berechnungsmodell und Grenzen" = "hintergrund/modellannahmen.md" },
-    { "Häufige Probleme und Hinweise" = "hintergrund/probleme.md" },
+    { "Was SpanDraft berechnet – und was nicht" = "hintergrund/modellannahmen.md" },
+    { "Probleme erkennen und beheben" = "hintergrund/probleme.md" },
   ] },
 ]
 
