@@ -306,7 +306,8 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
                     if (input.Key == "A" || configuration.ToString().Contains(input.Key[^1])) Current.ManualAxisSelections[configuration] = null;
             }
             Recalculate(input);
-            if (before is not null && !Parameters.Any(p => p.HasError)) RecordHistory(before);
+            // A confirmed SI-value change is undoable even when its geometry is invalid.
+            if (before is not null) RecordHistory(before);
         }
         else
         {

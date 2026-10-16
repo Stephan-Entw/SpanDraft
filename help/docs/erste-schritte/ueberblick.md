@@ -38,7 +38,7 @@ Bereits vorhandene Objekte können Sie auswählen und bearbeiten. Sie können Po
 
 ## Rückgängig, Einstellungen und Speicherung
 
-- **Bearbeiten → Rückgängig / Wiederholen** nimmt bestätigte Projektänderungen zurück beziehungsweise stellt sie wieder her.
+- **Bearbeiten → Rückgängig / Wiederholen** betrifft im Balkeneditor bestätigte Projektänderungen und im Querschnittseditor bestätigte Änderungen des aktuellen Querschnittsentwurfs. Noch nicht bestätigte Texteingaben verwenden das normale Textfeld-Undo.
 - Unter **Bearbeiten → Einstellungen…** legen Sie Einheiten und die Darstellung numerischer Ergebnisse fest. Das betrifft die Anzeige, nicht die Berechnung.
 - Beim Verlassen eines ungespeicherten Projekts fragt SpanDraft, ob die Änderungen gespeichert werden sollen.
 - Nach einem unerwarteten Abbruch kann SpanDraft eine lokale Wiederherstellung anbieten. Sie ersetzt nicht das normale Speichern Ihrer Projektdatei.

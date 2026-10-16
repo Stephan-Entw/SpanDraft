@@ -22,7 +22,6 @@ using SpanDraft.Desktop.ViewModels;
 
 internal static class Program
 {
-    private static readonly IBrush Ink = new SolidColorBrush(Color.Parse("#1F2937"));
     [STAThread]
     public static int Main(string[] args)
     {
@@ -68,16 +67,18 @@ internal static class Program
     {
         protected override object? Invoke(MethodInfo? method, object?[]? args) => null;
     }
+    private static IBrush AppBrush(string key)
+    {
+        if (Application.Current!.Resources.TryGetResource(key, ThemeVariant.Light, out var value) && value is IBrush brush)
+            return brush;
+        throw new InvalidOperationException($"Missing App drawing brush: {key}");
+    }
     private static Canvas Page(double width, double height)
     {
-        var page = new Canvas { Width = width, Height = height, Background = Brushes.White };
+        var page = new Canvas { Width = width, Height = height, Background = AppBrush("CanvasBackground") };
         // Detached controls have no TopLevel resource host. Supply the App's actual light-theme brushes.
-        foreach (string key in new[] { "CanvasBackground", "TextSecondary", "TextPrimary", "Border", "AxisStroke", "Accent", "SurfacePressed", "AppBackground" })
-        {
-            if (!Application.Current!.Resources.TryGetResource(key, ThemeVariant.Light, out var value))
-                throw new InvalidOperationException($"Missing App drawing resource: {key}");
-            page.Resources.Add(key, value);
-        }
+        foreach (string key in new[] { "CanvasBackground", "TextSecondary", "TextPrimary", "BeamStroke", "Border", "AxisStroke", "Accent", "Error", "SurfacePressed", "AppBackground" })
+            page.Resources.Add(key, AppBrush(key));
         return page;
     }
     private static void Add(Canvas page, Control control, double x, double y, double width, double height)
@@ -85,15 +86,15 @@ internal static class Program
         control.Width = width; control.Height = height; Canvas.SetLeft(control, x); Canvas.SetTop(control, y); page.Children.Add(control);
     }
     private static void Text(Canvas page, string text, double x, double y, double width = 200, double size = 17) =>
-        Add(page, new TextBlock { Text = text, FontSize = size, Foreground = Ink, TextAlignment = TextAlignment.Center }, x, y, width, 52);
+        Add(page, new TextBlock { Text = text, FontSize = size, Foreground = AppBrush("TextPrimary"), TextAlignment = TextAlignment.Center }, x, y, width, 52);
     private static EditorDocument Document() => new(Length.FromMeters(2), MaterialCatalogCodec.LoadBuiltIn().Find("S235JR")!.Material,
         new RectangleSectionGeometry(Length.FromMillimeters(40), Length.FromMillimeters(80)), SectionAxisDesignation.Y);
     private static BeamCanvas Beam(EditorDocument document, double width, double height, double beamY)
     {
         var frame = new BeamLayoutFrame(StationLayout.Compute(document.Length.Meters, 60, width - 60, []), new(width, height, beamY));
         var scene = BeamRenderState.Create(document, frame, text => SchematicText.Measure(text, Typeface.Default, 13));
-        return new() { Scene = scene with { Annotations = [] }, BeamBrush = Ink, CanvasBackgroundBrush = Brushes.White,
-            AccentBrush = Ink, GhostBrush = Ink, ErrorBrush = Ink };
+        return new() { Scene = scene with { Annotations = [] }, BeamBrush = AppBrush("BeamStroke"), CanvasBackgroundBrush = AppBrush("CanvasBackground"),
+            AccentBrush = AppBrush("Accent"), GhostBrush = AppBrush("AxisStroke"), ErrorBrush = AppBrush("Error") };
     }
     private static Canvas Example()
     {
@@ -147,8 +148,8 @@ internal static class Program
         Add(page, Beam(Document(), 760, 160, 105), 60, 90, 760, 160);
         Text(page, "x = 0", 70, 217, 100); Text(page, "x = L", 710, 217, 100);
         Add(page, new AxialArrow(), 260, 210, 180, 25); Text(page, "+x / +u", 290, 245, 120);
-        Add(page, new Glyph(PointLoadKind.Force, 1), 495, 75, 50, 56); Text(page, "+w", 465, 30, 110);
-        Add(page, new Glyph(PointLoadKind.Moment, 1), 615, 100, 60, 60); Text(page, "+θ", 590, 55, 110);
+        Add(page, new Glyph(PointLoadKind.Force, 1, "AxisStroke"), 495, 75, 50, 56); Text(page, "+w", 465, 30, 110);
+        Add(page, new Glyph(PointLoadKind.Moment, 1, "AxisStroke"), 615, 100, 60, 60); Text(page, "+θ", 590, 55, 110);
         return page;
     }
     private static Canvas Section()
@@ -176,20 +177,20 @@ internal static class Program
         return page;
     }
     // Help composes existing engineering glyphs; only the axial annotation has its own small arrow.
-    private sealed class Glyph(PointLoadKind kind, double value) : Control
+    private sealed class Glyph(PointLoadKind kind, double value, string brushKey = "BeamStroke") : Control
     {
         public override void Render(DrawingContext context)
         {
             double y = kind == PointLoadKind.Force ? Bounds.Height : Bounds.Height / 2;
             var visual = new PointLoadVisual(null, new(Length.FromMeters(0), kind, value), "", Bounds.Width / 2, y, false);
-            PointLoadSymbol.Draw(context, new(kind, visual.X, visual.Y, [visual]), Ink);
+            PointLoadSymbol.Draw(context, new(kind, visual.X, visual.Y, [visual]), AppBrush(brushKey));
         }
     }
     private sealed class AxialArrow : Control
     {
         public override void Render(DrawingContext context)
         {
-            var pen = new Pen(Ink, SchematicMetrics.SymbolStrokeWidth);
+            var pen = new Pen(AppBrush("AxisStroke"), SchematicMetrics.SymbolStrokeWidth);
             double y = Bounds.Height / 2, end = Bounds.Width - 2;
             context.DrawLine(pen, new(2, y), new(end, y));
             context.DrawLine(pen, new(end - 8, y - 4), new(end, y));

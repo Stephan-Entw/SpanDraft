@@ -43,6 +43,7 @@ try
     }
     foreach (var name in names) RequireFile(Path.Combine(site, "assets", name + ".png"));
     RequireFile(Path.Combine(site, "js", "iframe-worker-shim.js"));
+    RequireFile(Path.Combine(site, "js", "iframe-worker-LICENSE.txt"));
     Console.WriteLine("Offline help validated: six PNGs, HTML, local runtime resources, no obsolete SVG references.");
     return 0;
 }

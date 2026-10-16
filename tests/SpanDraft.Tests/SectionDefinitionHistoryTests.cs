@@ -38,6 +38,58 @@ public sealed class SectionDefinitionHistoryTests
         Assert.Equal(.015, vm.Section!.Area.SquareMeters, 10);
     }
     [Fact]
+    public void GeometryErrorIsAConfirmedHistoryStepAndCanBeCorrectedAfterRedo()
+    {
+        var vm = new SectionDefinitionViewModel(initialState: new(
+            new RectangularHollowSectionGeometry(M(.1), M(.15), M(.005), M(0)), SectionAxisDesignation.Z, "Tube"));
+        var thickness = Input(vm, "t"); thickness.PendingText = "80";
+        Assert.False(thickness.Commit());
+        AssertGeometryError(); Assert.True(vm.CanUndo);
+
+        Assert.True(vm.Undo()); AssertValid(.005, SectionAxisDesignation.Z); Assert.False(vm.CanUndo);
+        Assert.True(vm.Redo()); AssertGeometryError(); Assert.False(vm.CanRedo);
+
+        Commit(vm, "t", "6"); AssertValid(.006, null);
+        Assert.True(vm.Undo()); AssertGeometryError();
+        Assert.True(vm.Redo()); AssertValid(.006, null);
+        Assert.True(vm.Undo()); AssertGeometryError();
+        Assert.True(vm.Undo()); AssertValid(.005, SectionAxisDesignation.Z); Assert.False(vm.CanUndo);
+
+        void AssertGeometryError()
+        {
+            var input = Input(vm, "t");
+            Assert.Equal(.08, input.ConfirmedValue); Assert.Equal("80", input.PendingText);
+            Assert.True(input.HasError); Assert.False(input.HasParseError); Assert.False(input.IsPending);
+            Assert.Null(vm.Section); Assert.False(vm.HasValidSection); Assert.False(vm.CanConfirm);
+            Assert.Equal("Tube", vm.DisplayName); Assert.Null(vm.SelectedAxis);
+        }
+        void AssertValid(double value, SectionAxisDesignation? axis)
+        {
+            var section = Assert.IsType<RectangularHollowSectionGeometry>(vm.Section);
+            Assert.Equal(.1, section.Width.Meters); Assert.Equal(.15, section.Height.Meters);
+            Assert.Equal(value, section.WallThickness.Meters); Assert.Equal(0, section.OuterRadius.Meters);
+            Assert.Equal("Tube", vm.DisplayName); Assert.Equal(axis, vm.SelectedAxis);
+            Assert.All(vm.Parameters, input => { Assert.False(input.IsPending); Assert.False(input.HasError); Assert.False(input.HasParseError); });
+        }
+    }
+    [Fact]
+    public void NewConfirmedChangeFromGeometryErrorReplacesOnlyTheRedoBranch()
+    {
+        var vm = new SectionDefinitionViewModel(initialState: new(
+            new RectangularHollowSectionGeometry(M(.1), M(.15), M(.005), M(0)), SectionAxisDesignation.Z));
+        Input(vm, "t").PendingText = "80"; Assert.False(Input(vm, "t").Commit());
+        Commit(vm, "t", "6"); Assert.True(vm.Undo());
+        Assert.Null(vm.Section); Assert.Equal(.08, Input(vm, "t").ConfirmedValue); Assert.True(vm.CanRedo);
+
+        Commit(vm, "t", "7"); Assert.False(vm.CanRedo); Assert.False(vm.Redo());
+        Assert.True(vm.Undo()); Assert.Null(vm.Section); Assert.Equal(.08, Input(vm, "t").ConfirmedValue);
+        Assert.False(Input(vm, "t").HasParseError); Assert.True(Input(vm, "t").HasError);
+        Assert.True(vm.Undo()); Assert.Equal(.005, Input(vm, "t").ConfirmedValue); Assert.True(vm.HasValidSection);
+        Assert.False(vm.CanUndo); Assert.True(vm.Redo()); Assert.Null(vm.Section);
+        Assert.True(vm.Redo()); Assert.Equal(.007, Input(vm, "t").ConfirmedValue); Assert.True(vm.HasValidSection);
+        Assert.False(vm.CanRedo);
+    }
+    [Fact]
     public void GalleryNavigationIsNotAHistoryStepAndEmptySelectionCanBeRestored()
     {
         var empty = new SectionDefinitionViewModel(); empty.SelectForm(SectionEditorType.Rectangle);
@@ -103,7 +155,10 @@ public sealed class SectionDefinitionHistoryTests
         var vm = Rectangle(); Commit(vm, "h", "150"); Assert.True(vm.Undo());
         Input(vm, "h").PendingText = "bad"; Assert.False(vm.CanRedo); Assert.False(vm.CanUndo);
         Assert.False(Input(vm, "h").Commit()); Assert.True(vm.CanRedo);
+        Assert.True(Input(vm, "h").HasParseError); Assert.False(Input(vm, "h").LastCommitChangedValue);
+        Assert.Equal(.1, Input(vm, "h").ConfirmedValue); Assert.False(vm.CanUndo);
         Commit(vm, "h", "100"); Assert.False(vm.CanUndo); Assert.True(vm.CanRedo);
+        Assert.False(Input(vm, "h").HasParseError); Assert.True(vm.HasValidSection);
         typeof(SectionDefinitionViewModel).GetMethod("ApplyResultPresentation", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
             .Invoke(vm, [ResultPresentationOptions.Default]);
         vm.HighlightedParameter = "b"; Assert.True(vm.CanRedo); Assert.False(vm.CanUndo);
