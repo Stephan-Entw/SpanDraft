@@ -36,7 +36,8 @@ The current desktop application supports:
 The numerical core provides support reactions and continuous analytical fields
 for displacement, rotation, axial force, shear force and bending moment.
 
-Result diagrams, a dedicated results view and PDF/XLSX export are planned.
+The desktop displays live diagrams for displacement, shear force and bending moment.
+A dedicated results view and PDF/XLSX export are planned.
 
 ## Engineering scope
 
@@ -76,8 +77,8 @@ dotnet test --solution SpanDraft.sln --no-build --no-restore
 dotnet run --project src/SpanDraft.Desktop
 ```
 
-GitHub Actions runs both the product and independent validation gates on pushes
-to `main` and pull requests targeting `main`.
+GitHub Actions runs the product, independent validation and [offline help](help/README.md)
+gates on pushes to all branches and pull requests targeting `main`.
 
 On macOS, Desktop builds also create a development `SpanDraft.app` bundle inside
 the corresponding build output. It uses the locally installed .NET runtime and

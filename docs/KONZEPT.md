@@ -1,6 +1,6 @@
 # SpanDraft – Konzept
 
-Stand: 09.10.2026
+Stand: 16.10.2026
 
 Dieses Dokument legt Produktvision, Scope, Architekturgrundsätze und Roadmap
 von SpanDraft fest. Verbindliche Fach-, API- und Dateiverträge stehen in
@@ -173,8 +173,9 @@ bestehende Projekte nicht verändern.
 
 UI-Texte werden über lokalisierbare Ressourcen verwaltet. Aktuell sind Englisch
 als Default und Deutsch vorhanden; Eingabe und Formatierung folgen der aktuellen
-UI-Kultur. Eine Laufzeit-Sprachumschaltung ist noch nicht implementiert. Öffentliche
-Dokumentation bleibt englisch, interne Fachdokumentation zunächst deutsch.
+UI-Kultur. Eine Laufzeit-Sprachumschaltung ist noch nicht implementiert.
+Projektübersicht und Entwicklungsanleitungen sind englisch, Fachdokumentation
+und Benutzerhandbuch deutsch.
 
 Hintergründe zum Editorzustand stehen in [UI.md](UI.md), der Projektdateivertrag in
 [PROJECT_FORMAT.md](PROJECT_FORMAT.md).
@@ -241,11 +242,8 @@ zuverlässiger machen.
 
 ## 9. Nächste Produktziele
 
-Für den ersten nutzbaren Release steht die Arbeit im Programm selbst im
-Vordergrund.
-
-Als nächster Ausbauschritt folgt das verbleibende App-Shell-Polishing mit
-sinnvollen Menüfunktionen.
+Vor dem ersten nutzbaren Release stehen verbleibende Bedienungsdetails und
+die Release-Vorbereitung im Vordergrund.
 
 Ein eingebauter importierter Normprofilkatalog ist dafür nicht erforderlich.
 Querschnittsbibliotheken dienen zunächst der Wiederverwendung eigener

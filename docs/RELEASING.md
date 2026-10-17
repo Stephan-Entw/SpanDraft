@@ -20,14 +20,14 @@ Pre-release tags are not part of this target process.
 1. Prepare the version and release notes; update user-facing documentation as needed.
    Regenerate `THIRD_PARTY_NOTICES.txt` using the command in the README and include
    it in the release preparation commit.
-2. Commit the changes to `main` and pass the product and independent validation gates.
+2. Commit the changes to `main` and pass all CI gates.
 3. Run the manual package workflow and verify that the Windows installer installs,
    starts and runs the application. This workflow must not publish a tag or release.
 4. Tag the exact tested commit with the matching version and push the tag.
 
 ## Planned release automation
 
-The tag-triggered workflow must run both CI gates and verify that the tag matches
+The tag-triggered workflow must run all CI gates and verify that the tag matches
 the central version and a release-notes section. It must also verify the committed
 third-party notices with this explicit step:
 

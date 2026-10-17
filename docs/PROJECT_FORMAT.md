@@ -14,7 +14,7 @@ Ein Projekt enthält vollständige Snapshots seiner Material- und
 Querschnittsdefinition. Zum Öffnen, Berechnen oder Speichern werden keine
 Bibliotheken, Presets, lokalen JSON-Kataloge oder externen Quellen benötigt.
 Bibliotheks-/Preset-/Quellen-IDs und Herkunfts-/Provenienzverweise gehören nicht
-zum Projektformat. Spätere Bibliotheken dienen ausschließlich zur Auswahl und
+zum Projektformat. Bibliotheken dienen ausschließlich zur Auswahl und
 Wiederverwendung; übernommene Daten bleiben vollständig unabhängig.
 
 ## Material, Querschnitt und Biegeachse
