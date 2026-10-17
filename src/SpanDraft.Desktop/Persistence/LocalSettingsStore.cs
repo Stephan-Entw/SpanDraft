@@ -41,7 +41,7 @@ public static class SettingsCodec
         Converters = { new JsonStringEnumConverter(allowIntegerValues: false) }
     };
 
-    private sealed record SettingsV1
+    private sealed record SettingsData
     {
         public required int Version { get; init; }
         public required UnitProfileKind SelectedProfile { get; init; }
@@ -49,24 +49,30 @@ public static class SettingsCodec
         public required bool HasCustomProfile { get; init; }
         public Dictionary<QuantityKind, string>? CustomUnits { get; init; }
         public required PresentationMode PresentationMode { get; init; }
+        public UiLanguagePreference? UiLanguage { get; init; }
+        public RegionalFormatPreference? RegionalFormat { get; init; }
     }
 
-    public static byte[] Serialize(UserSettings settings) => JsonSerializer.SerializeToUtf8Bytes(new SettingsV1
+    public static byte[] Serialize(UserSettings settings) => JsonSerializer.SerializeToUtf8Bytes(new SettingsData
     {
-        Version = 1, SelectedProfile = settings.Profile.Kind, LastStandardProfile = settings.LastStandardProfile,
+        Version = 2, SelectedProfile = settings.Profile.Kind, LastStandardProfile = settings.LastStandardProfile,
         HasCustomProfile = settings.HasCustomProfile, PresentationMode = settings.Mode,
+        UiLanguage = settings.UiLanguage, RegionalFormat = settings.RegionalFormat,
         CustomUnits = settings.CustomProfile?.Units.ToDictionary(p => p.Key, p => p.Value.Id)
     }, Options);
 
     public static UserSettings Deserialize(byte[] bytes)
     {
-        var dto = JsonSerializer.Deserialize<SettingsV1>(bytes, Options) ?? throw new JsonException("Missing settings.");
-        if (dto.Version != 1 || !Enum.IsDefined(dto.SelectedProfile) || !Enum.IsDefined(dto.PresentationMode)
+        var dto = JsonSerializer.Deserialize<SettingsData>(bytes, Options) ?? throw new JsonException("Missing settings.");
+        if (dto.Version is not (1 or 2) || !Enum.IsDefined(dto.SelectedProfile) || !Enum.IsDefined(dto.PresentationMode)
             || dto.LastStandardProfile == UnitProfileKind.Custom || !Enum.IsDefined(dto.LastStandardProfile)
             || dto.HasCustomProfile != (dto.CustomUnits is not null)
             || dto.SelectedProfile == UnitProfileKind.Custom && !dto.HasCustomProfile
             || dto.SelectedProfile != UnitProfileKind.Custom && dto.SelectedProfile != dto.LastStandardProfile)
             throw new JsonException("Invalid settings version or profile selection.");
+        if (dto.Version == 2 && (dto.UiLanguage is not { } language || !Enum.IsDefined(language)
+            || dto.RegionalFormat is not { } region || !Enum.IsDefined(region)))
+            throw new JsonException("Invalid language or regional format.");
         UnitProfile? custom = null;
         if (dto.CustomUnits is not null)
         {
@@ -77,6 +83,8 @@ public static class SettingsCodec
                 throw new JsonException("A custom profile must be an individual combination.");
         }
         return new UserSettings { CustomProfile = custom, Mode = dto.PresentationMode,
+            UiLanguage = dto.Version == 1 ? UiLanguagePreference.System : dto.UiLanguage!.Value,
+            RegionalFormat = dto.Version == 1 ? RegionalFormatPreference.System : dto.RegionalFormat!.Value,
             LastStandardProfile = dto.LastStandardProfile }.Select(dto.SelectedProfile);
     }
 }

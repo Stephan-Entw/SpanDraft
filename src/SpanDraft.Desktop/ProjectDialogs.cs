@@ -46,7 +46,7 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
         ? ShowAsync(Strings.RecoveryDiscardQuestion,
             [(Strings.Discard, RecoveryDecision.Discard), (Strings.Cancel, RecoveryDecision.Cancel)])
         : ShowAsync(string.Format(CultureInfo.CurrentUICulture, Strings.RecoveryQuestion,
-            writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentUICulture)),
+            writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)),
             [(Strings.Restore, RecoveryDecision.Restore), (Strings.Discard, RecoveryDecision.Discard)]);
 
     public async Task ShowErrorAsync(string message) => await ShowAsync(message, [(Strings.OK, true)]);

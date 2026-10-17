@@ -11,6 +11,22 @@ namespace SpanDraft.Tests;
 public sealed class ProjectFileTests
 {
     [Theory]
+    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)] [InlineData(4)]
+    public void TheSameTechnicalSnapshotSerializesIdenticallyWithGermanAndUsRegionalFormats(int section)
+    {
+        var state = State(section);
+        byte[] german;
+        using (new ResultCultureScope("de-DE", "en-US")) german = ProjectFileCodec.Serialize(state);
+        using (new ResultCultureScope("en-US", "de-DE"))
+        {
+            var english = ProjectFileCodec.Serialize(state);
+            Assert.Equal(german, english);
+            Assert.True(state.ContentEquals(ProjectFileCodec.Deserialize(german)));
+            Assert.True(state.ContentEquals(ProjectFileCodec.Deserialize(english)));
+        }
+    }
+
+    [Theory]
     [InlineData(0, "de-DE")]
     [InlineData(1, "en-US")]
     [InlineData(2, "de-DE")]

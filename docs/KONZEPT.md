@@ -172,8 +172,10 @@ Katalogen unabhängig; das Löschen oder Ändern eines Bibliothekseintrags darf
 bestehende Projekte nicht verändern.
 
 UI-Texte werden über lokalisierbare Ressourcen verwaltet. Aktuell sind Englisch
-als Default und Deutsch vorhanden; Eingabe und Formatierung folgen der aktuellen
-UI-Kultur. Eine Laufzeit-Sprachumschaltung ist noch nicht implementiert.
+als Default und Deutsch vorhanden. UI-Sprache, regionales Format und technische
+Einheiten sind unabhängige globale Einstellungen. Eingabe und Formatierung folgen
+`CurrentCulture`, Ressourcen `CurrentUICulture`. Änderungen an Sprache oder
+regionalem Format werden beim nächsten Prozessstart wirksam.
 Projektübersicht und Entwicklungsanleitungen sind englisch, Fachdokumentation
 und Benutzerhandbuch deutsch.
 

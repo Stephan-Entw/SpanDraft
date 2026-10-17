@@ -31,18 +31,12 @@ public sealed class DesktopUiNumberTests
     [InlineData("de-DE", 0, "0")]
     [InlineData("en-US", -0.0, "0")]
     [InlineData("de-DE", double.PositiveInfinity, "∞")]
-    public void DisplayRulesUseUICultureAndSuperscriptEngineeringGroups(string culture, double value, string expected)
+    public void DisplayRulesUseRegionalCultureAndSuperscriptEngineeringGroups(string culture, double value, string expected)
     {
-        using var scope = new UiCultureScope(culture);
-        var previous = CultureInfo.CurrentCulture;
-        try
-        {
-            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture == "de-DE" ? "en-US" : "de-DE");
-            Assert.Equal(expected, UiNumbers.Compact(value));
-            Assert.Equal(expected, UiNumbers.Indicator(value));
-            Assert.DoesNotContain("E", expected);
-        }
-        finally { CultureInfo.CurrentCulture = previous; }
+        using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
+        Assert.Equal(expected, UiNumbers.Compact(value));
+        Assert.Equal(expected, UiNumbers.Indicator(value));
+        Assert.DoesNotContain("E", expected);
     }
 
     [Theory]

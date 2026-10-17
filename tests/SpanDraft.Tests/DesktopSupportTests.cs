@@ -289,16 +289,10 @@ public sealed class DesktopSupportTests
     [InlineData("en-US", "1000.5", 1000.5)]
     public void PositionParsingSupportsCultureAndInclusiveEndpoints(string culture, string text, double expected)
     {
-        using var scope = new CultureScope(culture);
-        var old = CultureInfo.CurrentCulture;
-        try
-        {
-            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-            Assert.True(UiNumbers.TryParsePosition(text, Mm(1000.5), out var position));
-            Assert.Equal(Mm(expected), position);
-            Assert.Equal(text, UiNumbers.Format(position.Millimeters));
-        }
-        finally { CultureInfo.CurrentCulture = old; }
+        using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
+        Assert.True(UiNumbers.TryParsePosition(text, Mm(1000.5), out var position));
+        Assert.Equal(Mm(expected), position);
+        Assert.Equal(text, UiNumbers.Format(position.Millimeters));
     }
 
     [Theory]

@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.ViewModels;
 
 namespace SpanDraft.Desktop;
@@ -20,11 +21,14 @@ public partial class MainWindow : Window
     private SettingsWindow? _settingsWindow;
     private bool _initializing = true;
 
-    public MainWindow()
+    public MainWindow() : this(null) { }
+
+    public MainWindow(DesktopStartupContext? startup)
     {
         InitializeComponent();
-        var files = new ProjectFileStore();
-        var settingsStore = LocalSettingsStore.Local(files);
+        var files = startup?.Files ?? new ProjectFileStore();
+        var settingsStore = startup?.SettingsStore ?? LocalSettingsStore.Local(files);
+        var settings = startup?.Settings ?? UserSettings.Default;
         NewMenuItem.InputGesture = new(Key.N, _primary);
         OpenMenuItem.InputGesture = new(Key.O, _primary);
         SaveMenuItem.InputGesture = new(Key.S, _primary);
@@ -50,7 +54,6 @@ public partial class MainWindow : Window
         };
         Opened += async (_, _) =>
         {
-            var settings = await settingsStore.LoadAsync();
             _dialogs = new ProjectDialogs(this);
             _model = new(files: files, dialogs: _dialogs, recovery: ProjectRecovery.Local(files),
                 settingsStore: settingsStore, settings: settings,

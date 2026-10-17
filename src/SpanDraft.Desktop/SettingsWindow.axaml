@@ -49,35 +49,51 @@
                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
             <StackPanel Spacing="{StaticResource Space4}">
               <TextBlock Text="{x:Static resources:Strings.PresentationStandard}" Classes="bodyStrong" />
-              <TextBlock Text="{x:Static resources:Strings.PresentationStandardDescription}" Classes="secondary" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding StandardDescription}" Classes="secondary" TextWrapping="Wrap" />
             </StackPanel>
           </RadioButton>
           <RadioButton GroupName="Presentation" IsChecked="{Binding IsDetailed, Mode=TwoWay}"
                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
             <StackPanel Spacing="{StaticResource Space4}">
               <TextBlock Text="{x:Static resources:Strings.PresentationDetailed}" Classes="bodyStrong" />
-              <TextBlock Text="{x:Static resources:Strings.PresentationDetailedDescription}" Classes="secondary" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding DetailedDescription}" Classes="secondary" TextWrapping="Wrap" />
             </StackPanel>
           </RadioButton>
           <TextBlock Text="{x:Static resources:Strings.PresentationCalculationHint}" Classes="caption" TextWrapping="Wrap" />
         </StackPanel>
         <StackPanel Spacing="{StaticResource Space12}">
           <TextBlock Text="{x:Static resources:Strings.SettingsLanguage}" Classes="sectionTitle" />
-          <Grid ColumnDefinitions="Auto,220" ColumnSpacing="{StaticResource Space16}">
+          <Grid ColumnDefinitions="Auto,220" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space16}"
+                RowSpacing="{StaticResource Space12}">
             <TextBlock Text="{x:Static resources:Strings.InterfaceLanguage}" Classes="propertyLabel" VerticalAlignment="Center" />
-            <ComboBox x:Name="LanguagePicker" Grid.Column="1" IsEnabled="False" SelectedIndex="0" HorizontalAlignment="Stretch"
+            <ComboBox x:Name="LanguagePicker" Grid.Column="1" ItemsSource="{Binding UiLanguages}"
+                      SelectedValueBinding="{ReflectionBinding Value}"
+                      SelectedValue="{Binding SelectedUiLanguage, Mode=TwoWay}" Width="220" HorizontalAlignment="Left"
                       AutomationProperties.Name="{x:Static resources:Strings.InterfaceLanguage}">
-              <ComboBoxItem Content="{x:Static resources:Strings.SystemLanguage}" />
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Grid.Row="1" Text="{x:Static resources:Strings.RegionalFormat}" Classes="propertyLabel" VerticalAlignment="Center" />
+            <ComboBox x:Name="RegionalFormatPicker" Grid.Row="1" Grid.Column="1" ItemsSource="{Binding RegionalFormats}"
+                      SelectedValueBinding="{ReflectionBinding Value}"
+                      SelectedValue="{Binding SelectedRegionalFormat, Mode=TwoWay}" Width="220" HorizontalAlignment="Left"
+                      AutomationProperties.Name="{x:Static resources:Strings.RegionalFormat}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
+              </ComboBox.ItemTemplate>
             </ComboBox>
           </Grid>
-          <TextBlock Text="{x:Static resources:Strings.LanguageUnavailable}" Classes="caption" TextWrapping="Wrap" />
+          <TextBlock x:Name="LocaleRestartHint" Text="{x:Static resources:Strings.LocaleRestartHint}" Classes="caption" TextWrapping="Wrap" />
         </StackPanel>
       </StackPanel>
       <TextBlock Text="{Binding ErrorText}" IsVisible="{Binding HasError}" Classes="validationMessage" />
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Space8}">
         <Button x:Name="CancelButton" Content="{x:Static resources:Strings.Cancel}" Classes="secondary"
+                Height="{DynamicResource PrimaryAction}" MinWidth="80" VerticalAlignment="Center"
                 IsEnabled="{Binding !IsSaving}" Click="CancelSettings" />
         <Button x:Name="OkButton" Content="{x:Static resources:Strings.OK}" Classes="primary" IsDefault="True"
+                Height="{DynamicResource PrimaryAction}" MinWidth="80" VerticalAlignment="Center"
                 IsEnabled="{Binding !IsSaving}" Click="ConfirmSettings" />
       </StackPanel>
     </StackPanel>

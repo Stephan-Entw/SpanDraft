@@ -1,3 +1,4 @@
+using System.Globalization;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 
@@ -47,6 +48,18 @@ public sealed class SettingsViewModel : ObservableObject
             Row(QuantityKind.Moment, Strings.Moment), Row(QuantityKind.DistributedLoad, Strings.DistributedLoad),
             Row(QuantityKind.Stress, Strings.UnitStress), Row(QuantityKind.Rotation, Strings.UnitRotation)
         };
+        UiLanguages =
+        [
+            new(UiLanguagePreference.System, Strings.SystemLanguage),
+            new(UiLanguagePreference.German, Strings.GermanLanguage),
+            new(UiLanguagePreference.English, Strings.EnglishLanguage)
+        ];
+        RegionalFormats =
+        [
+            new(RegionalFormatPreference.System, Strings.SystemRegionalFormat),
+            new(RegionalFormatPreference.GermanGermany, Strings.RegionalFormatGermanGermany),
+            new(RegionalFormatPreference.EnglishUnitedStates, Strings.RegionalFormatEnglishUnitedStates)
+        ];
     }
 
     public UserSettings Pending => _pending;
@@ -56,8 +69,22 @@ public sealed class SettingsViewModel : ObservableObject
     public string? ErrorText => _error;
     public bool HasError => ErrorText is not null;
     public bool HasCustomProfile => _pending.HasCustomProfile;
+    public string StandardDescription => string.Format(CultureInfo.CurrentCulture, Strings.PresentationStandardDescription, 12.345m, 12m);
+    public string DetailedDescription => string.Format(CultureInfo.CurrentCulture, Strings.PresentationDetailedDescription, 12.345m, 12.3m);
     public IReadOnlyList<UnitSettingViewModel> LeftUnits { get; }
     public IReadOnlyList<UnitSettingViewModel> RightUnits { get; }
+    public IReadOnlyList<SetupChoice<UiLanguagePreference>> UiLanguages { get; }
+    public IReadOnlyList<SetupChoice<RegionalFormatPreference>> RegionalFormats { get; }
+    public UiLanguagePreference SelectedUiLanguage
+    {
+        get => _pending.UiLanguage;
+        set => Update(_pending with { UiLanguage = value });
+    }
+    public RegionalFormatPreference SelectedRegionalFormat
+    {
+        get => _pending.RegionalFormat;
+        set => Update(_pending with { RegionalFormat = value });
+    }
     public bool IsMechanical { get => Kind == UnitProfileKind.MechanicalEngineering; set { if (value) Select(UnitProfileKind.MechanicalEngineering); } }
     public bool IsStructural { get => Kind == UnitProfileKind.StructuralEngineering; set { if (value) Select(UnitProfileKind.StructuralEngineering); } }
     public bool IsUnitedStates { get => Kind == UnitProfileKind.UnitedStates; set { if (value) Select(UnitProfileKind.UnitedStates); } }
@@ -94,7 +121,7 @@ public sealed class SettingsViewModel : ObservableObject
     {
         foreach (string name in new[] { nameof(Pending), nameof(HasChanges), nameof(IsSaving), nameof(CanApply), nameof(ErrorText),
             nameof(HasError), nameof(HasCustomProfile), nameof(IsMechanical), nameof(IsStructural), nameof(IsUnitedStates),
-            nameof(IsCustom), nameof(IsStandard), nameof(IsDetailed) }) Notify(name);
+            nameof(IsCustom), nameof(IsStandard), nameof(IsDetailed), nameof(SelectedUiLanguage), nameof(SelectedRegionalFormat) }) Notify(name);
         foreach (var row in LeftUnits.Concat(RightUnits)) row.Refresh();
     }
 }

@@ -210,7 +210,13 @@ public static class Strings
     public static string SettingsLanguage => Get(nameof(SettingsLanguage));
     public static string InterfaceLanguage => Get(nameof(InterfaceLanguage));
     public static string SystemLanguage => Get(nameof(SystemLanguage));
-    public static string LanguageUnavailable => Get(nameof(LanguageUnavailable));
+    public static string GermanLanguage => Get(nameof(GermanLanguage));
+    public static string EnglishLanguage => Get(nameof(EnglishLanguage));
+    public static string RegionalFormat => Get(nameof(RegionalFormat));
+    public static string SystemRegionalFormat => Get(nameof(SystemRegionalFormat));
+    public static string RegionalFormatGermanGermany => Get(nameof(RegionalFormatGermanGermany));
+    public static string RegionalFormatEnglishUnitedStates => Get(nameof(RegionalFormatEnglishUnitedStates));
+    public static string LocaleRestartHint => Get(nameof(LocaleRestartHint));
     public static string SettingsDraftBlocked => Get(nameof(SettingsDraftBlocked));
     public static string SettingsSaveError => Get(nameof(SettingsSaveError));
     public static string Use => Get(nameof(Use));

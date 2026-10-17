@@ -11,6 +11,55 @@ namespace SpanDraft.Tests;
 
 public sealed class DesktopSettingsInteractionTests
 {
+    public static IEnumerable<object[]> NonUnitDraftCases() =>
+        from target in new[] { "support", "force", "moment", "distributed", "length" }
+        from preference in new[] { "language", "region", "mode" }
+        select new object[] { target, preference };
+
+    [Theory]
+    [MemberData(nameof(NonUnitDraftCases))]
+    public async Task LocaleAndModeSavesPreserveActiveEditorDrafts(string target, string preference)
+    {
+        var files = new Files(); var main = CreateMain(files); var editor = main.Editor!;
+        Edit(editor, target);
+        var support = editor.SupportDraft; var point = editor.LoadDraft; var distributed = editor.DistributedLoadDraft;
+        string text = editor.DimensionLength.Text; var revision = editor.Session.CurrentRevision;
+        var next = preference switch
+        {
+            "language" => main.Settings with { UiLanguage = UiLanguagePreference.English },
+            "region" => main.Settings with { RegionalFormat = RegionalFormatPreference.GermanGermany },
+            _ => main.Settings with { Mode = PresentationMode.Detailed }
+        };
+        Assert.Null(await main.ApplySettingsAsync(next));
+        Assert.True(next.ContentEquals(SettingsCodec.Deserialize(files.Data["settings"])));
+        Assert.Same(support, editor.SupportDraft); Assert.Same(point, editor.LoadDraft); Assert.Same(distributed, editor.DistributedLoadDraft);
+        Assert.Equal(text, editor.DimensionLength.Text); Assert.Same(revision, editor.Session.CurrentRevision);
+        Assert.True(UserSettings.SameUnits(UnitProfile.Default, main.ResultPresentation.Profile));
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task LocaleAndModeSavesPreserveSetupDraftsWhileChangedInputUnitsRemainBlocked(bool section)
+    {
+        var files = new Files();
+        var main = new MainWindowViewModel(files: files, settingsStore: new(files, "settings"));
+        main.NewCommand.Execute(null);
+        SectionDefinitionInput? input = null;
+        if (section)
+        {
+            main.Setup.ShowSections(); main.Setup.Definition!.SelectForm(SectionEditorType.Rectangle);
+            input = main.Setup.Definition.Parameters.First(); input.PendingText = "unfinished";
+        }
+        else { main.Setup.LengthInput.Begin(); main.Setup.LengthInput.Text = "unfinished"; }
+        var next = main.Settings with { UiLanguage = UiLanguagePreference.English,
+            RegionalFormat = RegionalFormatPreference.GermanGermany, Mode = PresentationMode.Detailed };
+        Assert.Null(await main.ApplySettingsAsync(next));
+        Assert.Equal("unfinished", input?.PendingText ?? main.Setup.LengthInput.Text);
+        Assert.NotNull(await main.ApplySettingsAsync(next.Select(UnitProfileKind.UnitedStates)));
+        Assert.Same(next, main.Settings);
+        Assert.Equal("unfinished", input?.PendingText ?? main.Setup.LengthInput.Text);
+    }
+
     private static MainWindowViewModel CreateMain(Files? files = null)
     {
         var main = new MainWindowViewModel(files: files, settingsStore: files is null ? null : new(files, "settings")); main.NewCommand.Execute(null);
@@ -53,6 +102,8 @@ public sealed class DesktopSettingsInteractionTests
         editor.DimensionLength.LoseFocus();
         var dialog = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
         dialog.Select(UnitProfileKind.UnitedStates);
+        dialog.SelectedUiLanguage = UiLanguagePreference.English;
+        dialog.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         Assert.False(await dialog.ApplyAsync());
         Assert.True(dialog.IsUnitedStates); Assert.True(dialog.CanApply); Assert.True(dialog.HasError);
         Assert.Empty(files.Writes);

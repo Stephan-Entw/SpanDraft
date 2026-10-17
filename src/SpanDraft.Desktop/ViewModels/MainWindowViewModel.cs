@@ -89,12 +89,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         StartPage.SetRecentProjects(_recentStore.Entries);
     }
 
-    public async Task InitializeSettingsAsync()
-    {
-        if (_settingsStore is null) return;
-        ActivateSettings(await _settingsStore.LoadAsync());
-    }
-
     public void SetSettingsDialogOpen(bool open)
     {
         _settingsDialogOpen = open;
@@ -105,7 +99,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public async Task<string?> ApplySettingsAsync(UserSettings settings)
     {
         if (_settingsSaving || IsBusy) return Strings.ProjectBusy;
-        if (Editor?.CanApplyInputUnits(settings.Profile) == false || !Setup.CanApplyInputUnits(settings.Profile)) return Strings.SettingsDraftBlocked;
+        bool unitsChanged = !UserSettings.SameUnits(_settings.Profile, settings.Profile);
+        if (unitsChanged && (Editor?.CanApplyInputUnits(settings.Profile) == false || !Setup.CanApplyInputUnits(settings.Profile)))
+            return Strings.SettingsDraftBlocked;
         _settingsSaving = true;
         try
         {
@@ -130,7 +126,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(profile);
         var options = new ResultPresentationOptions(profile, mode);
-        if (_settingsSaving || IsBusy || Editor?.CanApplyInputUnits(profile) == false || !Setup.CanApplyInputUnits(profile)) return false;
+        bool unitsChanged = !UserSettings.SameUnits(_settings.Profile, profile);
+        if (_settingsSaving || IsBusy || unitsChanged && (Editor?.CanApplyInputUnits(profile) == false || !Setup.CanApplyInputUnits(profile))) return false;
         profile = UserSettings.Recognize(profile);
         options = new(profile, mode);
         _settings = _settings with { Profile = profile, Mode = mode,

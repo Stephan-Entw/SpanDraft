@@ -6,6 +6,11 @@ namespace SpanDraft.Desktop;
 
 public partial class App : Application
 {
+    private readonly DesktopStartupContext? _startup;
+
+    public App() : this(null) { }
+    public App(DesktopStartupContext? startup) => _startup = startup;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -15,7 +20,7 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow();
+            desktop.MainWindow = new MainWindow(_startup);
         }
 
         base.OnFrameworkInitializationCompleted();

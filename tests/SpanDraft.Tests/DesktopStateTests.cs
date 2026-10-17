@@ -252,19 +252,13 @@ public class DesktopStateTests
     [Theory]
     [InlineData("de-DE", "1000,5")]
     [InlineData("en-US", "1000.5")]
-    public void ParsingAndFormattingUseUiCultureEvenWhenNumericCultureDiffers(string culture, string input)
+    public void ParsingAndFormattingUseRegionalCultureEvenWhenUiCultureDiffers(string culture, string input)
     {
-        using var scope = new UiCultureScope(culture);
-        var old = CultureInfo.CurrentCulture;
-        try
-        {
-            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-            Assert.True(UiNumbers.TryParseLength(input, out var length));
-            Assert.Equal(1000.5, length.Millimeters);
-            Assert.Equal(input, UiNumbers.Format(length.Millimeters));
-            Assert.Equal("1000", UiNumbers.Format(1000));
-        }
-        finally { CultureInfo.CurrentCulture = old; }
+        using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
+        Assert.True(UiNumbers.TryParseLength(input, out var length));
+        Assert.Equal(1000.5, length.Millimeters);
+        Assert.Equal(input, UiNumbers.Format(length.Millimeters));
+        Assert.Equal("1000", UiNumbers.Format(1000));
     }
 
     [Theory]

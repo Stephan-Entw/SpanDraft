@@ -36,11 +36,30 @@ public sealed class DesktopSettingsControlTests
         var window = new SettingsWindow(model);
         Arrange(window, width, height);
         var scroll = window.FindControl<ScrollViewer>("SettingsScroll")!;
-        Assert.False(window.FindControl<ComboBox>("LanguagePicker")!.IsEnabled);
+        var language = window.FindControl<ComboBox>("LanguagePicker")!;
+        var region = window.FindControl<ComboBox>("RegionalFormatPicker")!;
+        Assert.True(language.IsEnabled); Assert.True(region.IsEnabled);
+        Assert.Equal(3, language.Items.Count); Assert.Equal(3, region.Items.Count);
+        Assert.Equal(220, language.Bounds.Width, 6); Assert.Equal(220, region.Bounds.Width, 6);
+        Assert.Equal(language.Bounds.Left, region.Bounds.Left, 6);
+        Assert.Equal(UiLanguagePreference.System, language.SelectedValue);
+        Assert.Equal(RegionalFormatPreference.System, region.SelectedValue);
+        var restart = window.FindControl<TextBlock>("LocaleRestartHint")!;
+        Assert.Equal(Strings.LocaleRestartHint, restart.Text);
+        Assert.True(restart.Bounds.Height >= restart.TextLayout.Height);
         Assert.Null(window.FindControl<Button>("ApplyButton"));
         Assert.True(window.FindControl<Button>("OkButton")!.IsEnabled);
         Assert.Equal(Strings.OK, window.FindControl<Button>("OkButton")!.Content);
         Assert.Equal(Strings.Cancel, window.FindControl<Button>("CancelButton")!.Content);
+        var ok = window.FindControl<Button>("OkButton")!;
+        var cancel = window.FindControl<Button>("CancelButton")!;
+        Assert.Equal(ok.Bounds.Height, cancel.Bounds.Height);
+        Assert.Equal(ok.Bounds.Top, cancel.Bounds.Top);
+        Assert.Equal(ok.VerticalAlignment, cancel.VerticalAlignment);
+        Assert.Equal(ok.Padding, cancel.Padding);
+        Assert.Equal(ok.MinWidth, cancel.MinWidth);
+        Assert.True(ok.Bounds.Width >= 80); Assert.True(cancel.Bounds.Width >= 80);
+        Assert.Contains("primary", ok.Classes); Assert.Contains("secondary", cancel.Classes);
         Assert.False(window.FindControl<RadioButton>("CustomProfileOption")!.IsVisible);
         var profiles = window.FindControl<StackPanel>("ProfileRow")!;
         var radios = profiles.Children.OfType<RadioButton>().Where(r => r.IsVisible).ToArray();
@@ -81,6 +100,54 @@ public sealed class DesktopSettingsControlTests
         Export(scroll, $"settings-{culture}-{width}x{height}-custom.png", width, height);
     }
 
+    [Theory]
+    [InlineData("de-DE", "de-DE", "Beispiel: 12,345 mm → 12 mm", "Beispiel: 12,345 mm → 12,3 mm")]
+    [InlineData("en-US", "en-US", "Example: 12.345 mm → 12 mm", "Example: 12.345 mm → 12.3 mm")]
+    [InlineData("en-US", "de-DE", "Example: 12,345 mm → 12 mm", "Example: 12,345 mm → 12,3 mm")]
+    [InlineData("de-DE", "en-US", "Beispiel: 12.345 mm → 12 mm", "Beispiel: 12.345 mm → 12.3 mm")]
+    public void PresentationExamplesUseTheActiveRegionalCultureIndependentlyOfUiLanguageAndPendingSettings(
+        string uiCulture, string culture, string standard, string detailed)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new ResultCultureScope(culture, uiCulture);
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
+        var window = new SettingsWindow(model); Arrange(window, 900, 780);
+        var descriptions = window.GetVisualDescendants().OfType<RadioButton>().Where(r => r.GroupName == "Presentation")
+            .Select(r => r.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Classes.Contains("secondary"))).ToArray();
+        Assert.Equal(2, descriptions.Length);
+        Assert.EndsWith("\n" + standard, descriptions[0].Text);
+        Assert.EndsWith("\n" + detailed, descriptions[1].Text);
+        model.SelectedRegionalFormat = culture == "de-DE" ? RegionalFormatPreference.EnglishUnitedStates : RegionalFormatPreference.GermanGermany;
+        Assert.EndsWith("\n" + standard, model.StandardDescription);
+        Assert.EndsWith("\n" + detailed, model.DetailedDescription);
+    }
+
+    [Fact]
+    public void LocalePickersBindTypedValuesInBothDirectionsAndRestoreDiscardedSelections()
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new ResultCultureScope("de-DE", "en-US");
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
+        var window = new SettingsWindow(model); Arrange(window, 900, 780);
+        var language = window.FindControl<ComboBox>("LanguagePicker")!;
+        var region = window.FindControl<ComboBox>("RegionalFormatPicker")!;
+        language.SelectedItem = model.UiLanguages.Single(o => o.Value == UiLanguagePreference.English);
+        region.SelectedItem = model.RegionalFormats.Single(o => o.Value == RegionalFormatPreference.GermanGermany);
+        Assert.Equal(UiLanguagePreference.English, model.SelectedUiLanguage);
+        Assert.Equal(RegionalFormatPreference.GermanGermany, model.SelectedRegionalFormat);
+        Assert.True(model.HasChanges); Assert.Same(UnitProfile.Default, model.Pending.Profile);
+        model.SelectedUiLanguage = UiLanguagePreference.German;
+        model.SelectedRegionalFormat = RegionalFormatPreference.EnglishUnitedStates;
+        Assert.Equal(UiLanguagePreference.German, language.SelectedValue);
+        Assert.Equal(RegionalFormatPreference.EnglishUnitedStates, region.SelectedValue);
+        model.DiscardPending();
+        Assert.Equal(UiLanguagePreference.System, language.SelectedValue);
+        Assert.Equal(RegionalFormatPreference.System, region.SelectedValue);
+        Assert.False(model.HasChanges);
+        Assert.Equal(new[] { "System language", "Deutsch", "English" }, model.UiLanguages.Select(o => o.Label));
+        Assert.Equal(new[] { "System setting", "German (Germany)", "English (United States)" }, model.RegionalFormats.Select(o => o.Label));
+    }
+
     [Fact]
     public void OkSavesChangesAndClosesTheWindow()
     {
@@ -91,9 +158,13 @@ public sealed class DesktopSettingsControlTests
         var window = new SettingsWindow(model);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
         model.IsDetailed = true;
+        model.SelectedUiLanguage = UiLanguagePreference.English;
+        model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         Click(window, "OkButton");
         Assert.True(closeApproved);
         Assert.Equal(PresentationMode.Detailed, published!.Mode);
+        Assert.Equal(UiLanguagePreference.English, published.UiLanguage);
+        Assert.Equal(RegionalFormatPreference.GermanGermany, published.RegionalFormat);
         Assert.True(model.IsDetailed); Assert.False(model.HasChanges);
     }
 
@@ -123,6 +194,8 @@ public sealed class DesktopSettingsControlTests
         var window = new SettingsWindow(model);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
         model.Select(UnitProfileKind.UnitedStates); model.IsDetailed = true;
+        model.SelectedUiLanguage = UiLanguagePreference.English;
+        model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         if (action == "cancel") Click(window, "CancelButton");
         else if (action == "escape") Escape(window);
         else window.Close();
@@ -149,8 +222,12 @@ public sealed class DesktopSettingsControlTests
         var window = new SettingsWindow(model);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
         model.Select(UnitProfileKind.UnitedStates);
+        model.SelectedUiLanguage = UiLanguagePreference.English;
+        model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         Click(window, "OkButton");
         Assert.False(closeApproved); Assert.True(model.IsUnitedStates); Assert.True(model.HasError);
+        Assert.Equal(UiLanguagePreference.English, model.SelectedUiLanguage);
+        Assert.Equal(RegionalFormatPreference.GermanGermany, model.SelectedRegionalFormat);
         Assert.True(main.Settings.ContentEquals(UserSettings.Default));
         if (activeDraft) main.Editor!.DimensionLength.Cancel();
         else files.FailWritePath = null;

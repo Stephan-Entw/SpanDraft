@@ -285,7 +285,8 @@ public sealed class DesktopResultPresentationTests
         }
         Assert.Equal("∞", QuantityFormatter.FormatNumber(double.PositiveInfinity, QuantityKind.SafetyFactor));
         Assert.Equal("2,5", UiNumbers.AxisTick(1, 2.5, 0, CultureInfo.CurrentCulture));
-        Assert.Equal("2.5", UiNumbers.AxisTick(1, 2.5, 0));
+        Assert.Equal("2,5", UiNumbers.AxisTick(1, 2.5, 0));
+        Assert.Equal("2.5", UiNumbers.AxisTick(1, 2.5, 0, CultureInfo.CurrentUICulture));
     }
 }
 
@@ -293,6 +294,8 @@ internal sealed class ResultCultureScope : IDisposable
 {
     private readonly CultureInfo _culture = CultureInfo.CurrentCulture;
     private readonly CultureInfo _uiCulture = CultureInfo.CurrentUICulture;
+    private readonly CultureInfo? _defaultCulture = CultureInfo.DefaultThreadCurrentCulture;
+    private readonly CultureInfo? _defaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
     public ResultCultureScope(string culture, string uiCulture)
     {
         CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
@@ -300,6 +303,8 @@ internal sealed class ResultCultureScope : IDisposable
     }
     public void Dispose()
     {
+        CultureInfo.DefaultThreadCurrentCulture = _defaultCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = _defaultUiCulture;
         CultureInfo.CurrentCulture = _culture;
         CultureInfo.CurrentUICulture = _uiCulture;
     }

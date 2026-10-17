@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Nodes;
+using SpanDraft.Desktop;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
@@ -11,6 +12,89 @@ namespace SpanDraft.Tests;
 
 public sealed class DesktopSettingsTests
 {
+    [Fact]
+    public void LocaleDefaultsAndContentComparisonKeepAllThreePreferencesIndependent()
+    {
+        var settings = UserSettings.Default;
+        Assert.Equal(UiLanguagePreference.System, settings.UiLanguage);
+        Assert.Equal(RegionalFormatPreference.System, settings.RegionalFormat);
+        Assert.False(settings.ContentEquals(settings with { UiLanguage = UiLanguagePreference.English }));
+        Assert.False(settings.ContentEquals(settings with { RegionalFormat = RegionalFormatPreference.GermanGermany }));
+        var localized = settings with { UiLanguage = UiLanguagePreference.English, RegionalFormat = RegionalFormatPreference.GermanGermany };
+        Assert.Same(settings.Profile, localized.Profile);
+        Assert.Equal(localized.UiLanguage, localized.Select(UnitProfileKind.UnitedStates).UiLanguage);
+        Assert.Equal(localized.RegionalFormat, localized.WithUnit(QuantityKind.BeamLength, UnitCatalog.Foot).RegionalFormat);
+    }
+
+    public static IEnumerable<object[]> LocaleCombinations() =>
+        from language in Enum.GetValues<UiLanguagePreference>()
+        from region in Enum.GetValues<RegionalFormatPreference>()
+        select new object[] { language, region };
+
+    [Theory]
+    [MemberData(nameof(LocaleCombinations))]
+    public void VersionTwoRoundtripPreservesLocalePreferencesAndUnits(UiLanguagePreference language, RegionalFormatPreference region)
+    {
+        var settings = UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Inch)
+            .Select(UnitProfileKind.StructuralEngineering) with { UiLanguage = language, RegionalFormat = region, Mode = PresentationMode.Detailed };
+        var bytes = SettingsCodec.Serialize(settings);
+        var json = JsonNode.Parse(bytes)!;
+        Assert.Equal(2, json["version"]!.GetValue<int>());
+        Assert.Equal(language.ToString(), json["uiLanguage"]!.GetValue<string>());
+        Assert.Equal(region.ToString(), json["regionalFormat"]!.GetValue<string>());
+        Assert.True(settings.ContentEquals(SettingsCodec.Deserialize(bytes)));
+    }
+
+    [Theory]
+    [InlineData(UnitProfileKind.MechanicalEngineering)]
+    [InlineData(UnitProfileKind.StructuralEngineering)]
+    [InlineData(UnitProfileKind.UnitedStates)]
+    [InlineData(UnitProfileKind.Custom)]
+    public async Task VersionOnePreservesEveryExistingPreferenceWithoutRewritingTheFile(UnitProfileKind selected)
+    {
+        var settings = UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Inch)
+            .WithUnit(QuantityKind.Moment, UnitCatalog.KilonewtonMeter).Select(selected) with { Mode = PresentationMode.Detailed };
+        var json = JsonNode.Parse(SettingsCodec.Serialize(settings))!.AsObject();
+        json["version"] = 1; json.Remove("uiLanguage"); json.Remove("regionalFormat");
+        var files = new Files(); var store = new LocalSettingsStore(files, "settings");
+        var original = Encoding.UTF8.GetBytes(json.ToJsonString()); files.Data["settings"] = original;
+        var loaded = await store.LoadAsync();
+        Assert.True(settings.ContentEquals(loaded));
+        Assert.Equal(settings.Profile.Kind, loaded.Profile.Kind);
+        Assert.Equal(settings.LastStandardProfile, loaded.LastStandardProfile);
+        Assert.True(UserSettings.SameUnits(settings.CustomProfile!, loaded.CustomProfile!));
+        Assert.Equal(UiLanguagePreference.System, loaded.UiLanguage);
+        Assert.Equal(RegionalFormatPreference.System, loaded.RegionalFormat);
+        Assert.Same(original, files.Data["settings"]); Assert.Empty(files.Writes);
+    }
+
+    [Fact]
+    public void OriginalVersionOneDefaultFileStillLoads()
+    {
+        var bytes = Encoding.UTF8.GetBytes("""
+            {"version":1,"selectedProfile":"MechanicalEngineering","lastStandardProfile":"MechanicalEngineering",
+             "hasCustomProfile":false,"presentationMode":"Standard"}
+            """);
+        Assert.True(UserSettings.Default.ContentEquals(SettingsCodec.Deserialize(bytes)));
+    }
+
+    [Theory]
+    [InlineData("uiLanguage", "\"Unknown\"")]
+    [InlineData("regionalFormat", "\"Unknown\"")]
+    [InlineData("uiLanguage", "123")]
+    [InlineData("regionalFormat", "0")]
+    [InlineData("uiLanguage", "null")]
+    [InlineData("regionalFormat", "null")]
+    [InlineData("uiLanguage", null)]
+    [InlineData("regionalFormat", null)]
+    public async Task InvalidVersionTwoLocalesFallBackAsAWhole(string field, string? value)
+    {
+        var json = JsonNode.Parse(SettingsCodec.Serialize(UserSettings.Default.Select(UnitProfileKind.UnitedStates)))!.AsObject();
+        if (value is null) json.Remove(field); else json[field] = JsonNode.Parse(value);
+        var files = new Files(); files.Data["settings"] = Encoding.UTF8.GetBytes(json.ToJsonString());
+        Assert.Same(UserSettings.Default, await new LocalSettingsStore(files, "settings").LoadAsync());
+    }
+
     [Theory]
     [InlineData(UnitProfileKind.MechanicalEngineering)]
     [InlineData(UnitProfileKind.StructuralEngineering)]
@@ -55,13 +139,21 @@ public sealed class DesktopSettingsTests
         { published = settings; return Task.FromResult<string?>(null); });
         Assert.False(model.CanApply);
         model.IsDetailed = true;
+        model.SelectedUiLanguage = UiLanguagePreference.English;
+        model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         Assert.True(model.CanApply);
         Assert.True(await model.ApplyAsync());
         Assert.Equal(PresentationMode.Detailed, published!.Mode);
+        Assert.Equal(UiLanguagePreference.English, published.UiLanguage);
+        Assert.Equal(RegionalFormatPreference.GermanGermany, published.RegionalFormat);
         Assert.False(model.CanApply);
         model.Select(UnitProfileKind.StructuralEngineering);
+        model.SelectedUiLanguage = UiLanguagePreference.System;
+        model.SelectedRegionalFormat = RegionalFormatPreference.System;
         model.DiscardPending();
         Assert.True(model.IsMechanical); Assert.True(model.IsDetailed);
+        Assert.Equal(UiLanguagePreference.English, model.SelectedUiLanguage);
+        Assert.Equal(RegionalFormatPreference.GermanGermany, model.SelectedRegionalFormat);
         Assert.False(model.HasChanges);
         model.ChangeUnit(QuantityKind.Moment, UnitCatalog.KilonewtonMeter);
         model.ChangeUnit(QuantityKind.Moment, UnitCatalog.NewtonMeter);
@@ -75,10 +167,14 @@ public sealed class DesktopSettingsTests
         var gate = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var model = new SettingsViewModel(UserSettings.Default, _ => gate.Task);
         model.Select(UnitProfileKind.UnitedStates);
+        model.SelectedUiLanguage = UiLanguagePreference.English;
+        model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         var pending = model.Pending;
         var saving = model.ApplyAsync();
         Assert.True(model.IsSaving); Assert.False(model.CanApply);
         model.Select(UnitProfileKind.MechanicalEngineering); model.DiscardPending();
+        model.SelectedUiLanguage = UiLanguagePreference.German;
+        model.SelectedRegionalFormat = RegionalFormatPreference.EnglishUnitedStates;
         Assert.Same(pending, model.Pending);
         Assert.False(await model.ApplyAsync());
         gate.SetResult("Write failed");
@@ -146,8 +242,9 @@ public sealed class DesktopSettingsTests
         var files = new Files(); var store = new LocalSettingsStore(files, "settings");
         var expected = UserSettings.Default.Select(UnitProfileKind.UnitedStates) with { Mode = PresentationMode.Detailed };
         await store.SaveAsync(expected);
-        var main = new MainWindowViewModel(files: files, settingsStore: store); main.NewCommand.Execute(null);
-        await main.InitializeSettingsAsync();
+        var startup = await DesktopStartupContext.LoadAsync(files, store);
+        var main = new MainWindowViewModel(files: startup.Files, settingsStore: startup.SettingsStore, settings: startup.Settings);
+        main.NewCommand.Execute(null);
         Assert.True(expected.ContentEquals(main.Settings));
         main.Setup.ApplyCommand.Execute(null);
         Assert.True(UserSettings.SameUnits(expected.Profile, main.Editor!.ResultPresentation.Profile));

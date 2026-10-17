@@ -7,6 +7,8 @@ public sealed record UserSettings
     public UnitProfileKind LastStandardProfile { get; init; } = UnitProfileKind.MechanicalEngineering;
     public UnitProfile? CustomProfile { get; init; }
     public PresentationMode Mode { get; init; } = PresentationMode.Standard;
+    public UiLanguagePreference UiLanguage { get; init; } = UiLanguagePreference.System;
+    public RegionalFormatPreference RegionalFormat { get; init; } = RegionalFormatPreference.System;
     public bool HasCustomProfile => CustomProfile is not null;
     public ResultPresentationOptions Presentation => new(Profile, Mode);
     public static UserSettings Default { get; } = new();
@@ -45,6 +47,7 @@ public sealed record UserSettings
     }
 
     public bool ContentEquals(UserSettings other) => Mode == other.Mode && LastStandardProfile == other.LastStandardProfile
+        && UiLanguage == other.UiLanguage && RegionalFormat == other.RegionalFormat
         && SameUnits(Profile, other.Profile) && HasCustomProfile == other.HasCustomProfile
         && (CustomProfile is null || SameUnits(CustomProfile, other.CustomProfile!));
 }

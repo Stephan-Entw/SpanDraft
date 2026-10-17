@@ -133,13 +133,19 @@
   <data name="SettingsNumeric" xml:space="preserve"><value>Numerische Ergebnisdarstellung</value></data>
   <data name="PresentationStandard" xml:space="preserve"><value>Standard</value></data>
   <data name="PresentationDetailed" xml:space="preserve"><value>Detailliert</value></data>
-  <data name="PresentationStandardDescription" xml:space="preserve"><value>Empfohlen für die normale Auswertung. SpanDraft reduziert unnötige Zahlengenauigkeit und passt die Anzeige bei bestimmten Ergebnissen an die Größenordnung des Modells an. Dadurch bleiben die Ergebnisse übersichtlich, ohne eine höhere Genauigkeit vorzutäuschen.</value></data>
-  <data name="PresentationDetailedDescription" xml:space="preserve"><value>Zeigt Ergebnisse mit bis zu drei signifikanten Stellen und ohne die zusätzliche modellabhängige Reduzierung des Standardmodus. Geeignet, wenn kleine Zahlenunterschiede genauer betrachtet werden sollen.</value></data>
-  <data name="PresentationCalculationHint" xml:space="preserve"><value>Der Darstellungsmodus verändert nur die angezeigten Zahlen. Die Berechnung selbst ist in beiden Modi identisch.</value></data>
-  <data name="SettingsLanguage" xml:space="preserve"><value>Sprache</value></data>
+  <data name="PresentationStandardDescription" xml:space="preserve"><value>Empfohlene Darstellung mit sinnvoll reduzierter Zahlengenauigkeit.&#10;Beispiel: {0} mm → {1} mm</value></data>
+  <data name="PresentationDetailedDescription" xml:space="preserve"><value>Zeigt Ergebnisse mit höherer Zahlengenauigkeit.&#10;Beispiel: {0} mm → {1} mm</value></data>
+  <data name="PresentationCalculationHint" xml:space="preserve"><value>Nur die Darstellung ändert sich. Die Berechnung bleibt identisch.</value></data>
+  <data name="SettingsLanguage" xml:space="preserve"><value>Sprache und Region</value></data>
   <data name="InterfaceLanguage" xml:space="preserve"><value>Sprache der Benutzeroberfläche</value></data>
   <data name="SystemLanguage" xml:space="preserve"><value>Systemsprache</value></data>
-  <data name="LanguageUnavailable" xml:space="preserve"><value>Manuelle Sprachauswahl ist noch nicht verfügbar.</value></data>
+  <data name="GermanLanguage" xml:space="preserve"><value>Deutsch</value></data>
+  <data name="EnglishLanguage" xml:space="preserve"><value>English</value></data>
+  <data name="RegionalFormat" xml:space="preserve"><value>Regionales Format</value></data>
+  <data name="SystemRegionalFormat" xml:space="preserve"><value>Systemeinstellung</value></data>
+  <data name="RegionalFormatGermanGermany" xml:space="preserve"><value>Deutsch (Deutschland)</value></data>
+  <data name="RegionalFormatEnglishUnitedStates" xml:space="preserve"><value>Englisch (USA)</value></data>
+  <data name="LocaleRestartHint" xml:space="preserve"><value>Änderungen an Sprache oder regionalem Format werden nach einem Neustart von SpanDraft wirksam.</value></data>
   <data name="SettingsDraftBlocked" xml:space="preserve"><value>Bestätigen oder verwerfen Sie zunächst die aktive Bearbeitung, bevor Sie deren Eingabeeinheiten ändern. Ihre Änderungen in den Einstellungen bleiben erhalten.</value></data>
   <data name="SettingsSaveError" xml:space="preserve"><value>Die Einstellungen konnten nicht gespeichert werden.</value></data>
   <data name="RoundedRectangularHollowSectionName" xml:space="preserve"><value>Rechteckrohr {0} × {1} × {2}, r={3} {4}</value></data>
