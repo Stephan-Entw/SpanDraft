@@ -94,6 +94,7 @@ public static class Strings
     public static string SupportCoordinate => Get(nameof(SupportCoordinate));
 
     public static string SaveAs => Get(nameof(SaveAs));
+    public static string CloseProject => Get(nameof(CloseProject));
     public static string Quit => Get(nameof(Quit));
     public static string Untitled => Get(nameof(Untitled));
     public static string ProjectFileFilter => Get(nameof(ProjectFileFilter));

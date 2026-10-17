@@ -61,6 +61,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OpenCommand = new(() => OpenAsync(), () => CanOpenProject);
         SaveCommand = new(() => SaveAsync(), () => CanSaveProject);
         SaveAsCommand = new(() => SaveAsync(saveAs: true), () => CanSaveProject);
+        CloseProjectCommand = new(() => CloseProjectAsync(), () => CanCloseProject);
         UndoCommand = new(() => Undo(), () => CanUndo);
         RedoCommand = new(() => Redo(), () => CanRedo);
         UserManualCommand = new(async () => { if (openUserManual is not null) await openUserManual(); return true; }, () => true);
@@ -163,6 +164,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool CanOpenProject => !IsWorkspaceBusy && (Workspace is MainWorkspaceKind.Start or MainWorkspaceKind.BeamEditor
         || Workspace == MainWorkspaceKind.ProjectSetup && Session is null);
     public bool CanSaveProject => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Session is not null;
+    public bool CanCloseProject => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Session is not null;
     public bool CanUndo => !IsWorkspaceBusy && (Workspace switch
     {
         MainWorkspaceKind.BeamEditor => Session?.CanUndo == true,
@@ -191,6 +193,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public AsyncActionCommand OpenCommand { get; }
     public AsyncActionCommand SaveCommand { get; }
     public AsyncActionCommand SaveAsCommand { get; }
+    public AsyncActionCommand CloseProjectCommand { get; }
     public ActionCommand UndoCommand { get; }
     public ActionCommand RedoCommand { get; }
     public AsyncActionCommand UserManualCommand { get; }
@@ -313,7 +316,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public Task<bool> SaveAsync(bool saveAs = false) => !CanSaveProject ? Task.FromResult(false)
         : RunOperationAsync(() => SaveCurrentAsync(saveAs));
 
-    private async Task<bool> SaveCurrentAsync(bool saveAs = false)
+    public Task<bool> CloseProjectAsync() => !CanCloseProject ? Task.FromResult(false) : RunOperationAsync(async () =>
+    {
+        if (!await CanLeaveAsync(recordRecent: false)) return false;
+        await CompleteLeaveAsync();
+        _editor = null;
+        Navigate(MainViewMode.Start);
+        return true;
+    });
+
+    private async Task<bool> SaveCurrentAsync(bool saveAs = false, bool recordRecent = true)
     {
         if (Session is not { } session) return false;
         string? path = saveAs ? null : session.FilePath;
@@ -343,7 +355,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
             throw;
         }
-        await RecordRecentAsync(path, saveAs ? previousPath : null);
+        if (recordRecent) await RecordRecentAsync(path, saveAs ? previousPath : null);
         if (_recovery is not null)
         {
             try { await _recovery.DeleteAsync(); }
@@ -355,14 +367,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public static string EnsureProjectExtension(string path) => path.EndsWith(".spandraft", StringComparison.OrdinalIgnoreCase)
         ? path : path + ".spandraft";
 
-    private async Task<bool> CanLeaveAsync()
+    private async Task<bool> CanLeaveAsync(bool recordRecent = true)
     {
         if (Session?.IsDirty != true) return true;
         var decision = _dialogs is null ? LeaveDecision.Cancel : await _dialogs.ConfirmLeaveAsync(ProjectName);
         return decision switch
         {
             LeaveDecision.Discard => true,
-            LeaveDecision.Save => await SaveCurrentAsync(),
+            LeaveDecision.Save => await SaveCurrentAsync(recordRecent: recordRecent),
             _ => false
         };
     }
@@ -372,6 +384,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (_recovery is not null) await _recovery.DeleteAsync();
         Editor?.CancelEditorInteraction();
         DetachSession();
+        Session?.SetBusy(false);
     }
 
     /// <summary>True only once the shared leave workflow has succeeded. The Window handles its one approved Close.</summary>
@@ -473,11 +486,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Notify(nameof(Session));
         Notify(nameof(IsBusy));
         Notify(nameof(IsWorkspaceBusy)); Notify(nameof(Workspace)); Notify(nameof(IsSectionWorkspace));
-        Notify(nameof(CanNewProject)); Notify(nameof(CanOpenProject)); Notify(nameof(CanSaveProject));
+        Notify(nameof(CanNewProject)); Notify(nameof(CanOpenProject)); Notify(nameof(CanSaveProject)); Notify(nameof(CanCloseProject));
         Notify(nameof(CanUndo));
         Notify(nameof(CanRedo));
         Notify(nameof(WindowTitle));
         NewCommand?.Refresh(); OpenCommand?.Refresh(); SaveCommand?.Refresh(); SaveAsCommand?.Refresh();
+        CloseProjectCommand?.Refresh();
         UndoCommand?.Refresh(); RedoCommand?.Refresh();
         StartPage?.Refresh();
     }

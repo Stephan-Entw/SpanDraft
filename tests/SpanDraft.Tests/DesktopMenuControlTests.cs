@@ -38,6 +38,14 @@ public sealed class DesktopMenuControlTests
         Assert.Same(main.NewCommand, shell.FindControl<MenuItem>("NewMenuItem")!.Command);
         Assert.Same(main.OpenCommand, shell.FindControl<MenuItem>("OpenMenuItem")!.Command);
         Assert.Same(main.SaveCommand, shell.FindControl<MenuItem>("SaveMenuItem")!.Command);
+        var closeProject = shell.FindControl<MenuItem>("CloseProjectMenuItem")!;
+        Assert.Same(main.CloseProjectCommand, closeProject.Command);
+        Assert.Equal(culture == "de-DE" ? "Projekt schließen" : "Close Project", closeProject.Header);
+        Assert.Null(closeProject.InputGesture);
+        var file = project.Items.OfType<MenuItem>().Single(i => Equals(i.Header, Strings.File));
+        Assert.Single(file.GetVisualDescendants().OfType<Popup>()).ShouldUseOverlayLayer = true;
+        Assert.Equal(new object?[] { Strings.NewProject, Strings.Open, null, Strings.Save, Strings.SaveAs,
+            Strings.CloseProject, null, Strings.Quit }, file.Items.Select(i => i is MenuItem item ? item.Header : null));
         Assert.Same(main.UndoCommand, shell.FindControl<MenuItem>("UndoMenuItem")!.Command);
         var primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
         Assert.Equal(new KeyGesture(Key.N, primary), shell.FindControl<MenuItem>("NewMenuItem")!.InputGesture);
@@ -56,11 +64,17 @@ public sealed class DesktopMenuControlTests
         var definition = Assert.Single(window.GetVisualDescendants().OfType<SectionDefinitionView>());
         Assert.Empty(definition.GetVisualDescendants().OfType<Menu>());
         main.Setup.Escape(); main.Setup.ApplyCommand.Execute(null); CheckWorkspace(MainWorkspaceKind.BeamEditor);
+        main.Session!.MarkSaved(main.Session.CurrentRevision, TestPath("closed.spandraft"));
+        closeProject.Command!.Execute(null); CheckWorkspace(MainWorkspaceKind.Start);
+        Assert.True(window.IsVisible); Assert.Null(main.Session); Assert.Null(main.Editor);
 
         void CheckWorkspace(MainWorkspaceKind expected)
         {
             Arrange(window, width, height);
             Assert.Equal(expected, main.Workspace);
+            file.IsSubMenuOpen = true; Arrange(window, width, height);
+            Assert.Equal(expected == MainWorkspaceKind.BeamEditor, closeProject.IsEffectivelyEnabled);
+            file.IsSubMenuOpen = false; Arrange(window, width, height);
             Assert.True(project.IsEffectivelyVisible); AssertChrome(project, width);
             Assert.Equal(menuTop, project.Bounds.Top);
             Assert.Single(window.GetVisualDescendants().OfType<Menu>());

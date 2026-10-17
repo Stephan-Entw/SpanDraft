@@ -87,6 +87,7 @@
   <data name="DistributedIntensityLabel" xml:space="preserve"><value>Streckenlast q</value></data>
   <data name="InvalidDistributedRange" xml:space="preserve"><value>Der Bereich muss 0 ≤ Start X &lt; Ende X ≤ Balkenlänge erfüllen.</value></data>
   <data name="SaveAs" xml:space="preserve"><value>Speichern unter…</value></data>
+  <data name="CloseProject" xml:space="preserve"><value>Projekt schließen</value></data>
   <data name="Untitled" xml:space="preserve"><value>Unbenannt</value></data>
   <data name="ProjectFileFilter" xml:space="preserve"><value>SpanDraft-Projekt (*.spandraft)</value></data>
   <data name="ProjectFileError" xml:space="preserve"><value>Die Projektaktion konnte nicht abgeschlossen werden.</value></data>
