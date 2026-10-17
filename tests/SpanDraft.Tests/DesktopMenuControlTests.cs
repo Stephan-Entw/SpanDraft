@@ -46,7 +46,8 @@ public sealed class DesktopMenuControlTests
         var projectTheme = project.ItemContainerTheme;
 
         double menuTop = project.Bounds.Top;
-        CheckWorkspace(MainWorkspaceKind.ProjectSetup);
+        CheckWorkspace(MainWorkspaceKind.Start);
+        main.NewCommand.Execute(null); CheckWorkspace(MainWorkspaceKind.ProjectSetup);
         main.Setup.ShowMaterials(); CheckWorkspace(MainWorkspaceKind.MaterialSelection);
         var materials = (MaterialSelectionViewModel)main.Setup.CurrentStep!;
         materials.NewCommand.Execute(null); CheckWorkspace(MainWorkspaceKind.MaterialEditor);

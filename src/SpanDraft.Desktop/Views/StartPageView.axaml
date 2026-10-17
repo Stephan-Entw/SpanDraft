@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Views.StartPageView" x:DataType="vm:StartPageViewModel">
+  <UserControl.Styles>
+    <Style Selector="Button.recentProject">
+      <Setter Property="Height" Value="56" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+      <Setter Property="BorderThickness" Value="{DynamicResource BottomBorder}" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Padding" Value="12,4" />
+    </Style>
+    <Style Selector="Button.recentProject:pointerover:not(:disabled)">
+      <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    </Style>
+    <Style Selector="Button.recentProject:pressed:not(:disabled)">
+      <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
+    </Style>
+  </UserControl.Styles>
+  <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,*">
+    <Border Classes="workspaceHeader">
+      <TextBlock Text="{x:Static resources:Strings.Start}" FontSize="22" FontWeight="SemiBold"
+                 Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+    </Border>
+    <Grid Grid.Row="1" Margin="{StaticResource Padding24}" ColumnDefinitions="280,48,720" HorizontalAlignment="Left">
+      <StackPanel Spacing="{StaticResource Space16}">
+        <TextBlock Text="{x:Static resources:Strings.Project}" Classes="sectionTitle" />
+        <StackPanel Spacing="{StaticResource Space8}">
+          <Button x:Name="NewProjectButton" Command="{Binding NewCommand}" Classes="primary"
+                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                  AutomationProperties.Name="{x:Static resources:Strings.NewProject}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
+              <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_document_add_16_regular.svg"
+                  Foreground="{Binding Foreground, ElementName=NewProjectButton}" VerticalAlignment="Center" />
+              <TextBlock Text="{x:Static resources:Strings.NewProject}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="OpenProjectButton" Command="{Binding OpenCommand}" Classes="secondary"
+                  Height="{DynamicResource PrimaryAction}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                  AutomationProperties.Name="{x:Static resources:Strings.OpenProject}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
+              <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_folder_open_16_regular.svg"
+                  Foreground="{Binding Foreground, ElementName=OpenProjectButton}" VerticalAlignment="Center" />
+              <TextBlock Text="{x:Static resources:Strings.OpenProject}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+        <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" />
+        <Button x:Name="UserManualButton" Command="{Binding UserManualCommand}" Classes="ghost"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                AutomationProperties.Name="{x:Static resources:Strings.UserManual}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
+            <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_book_open_16_regular.svg"
+                Foreground="{Binding Foreground, ElementName=UserManualButton}" VerticalAlignment="Center" />
+            <TextBlock Text="{x:Static resources:Strings.UserManual}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+      <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="{StaticResource Space16}">
+        <TextBlock Text="{x:Static resources:Strings.RecentProjects}" Classes="sectionTitle" />
+        <Border Grid.Row="1" VerticalAlignment="Top" Background="{DynamicResource Surface}"
+                BorderBrush="{DynamicResource Border}" BorderThickness="{DynamicResource BorderWidth}"
+                CornerRadius="{DynamicResource RadiusXS}" ClipToBounds="True">
+          <Grid RowDefinitions="Auto,*">
+            <Border Background="{DynamicResource SurfaceSubtle}" BorderBrush="{DynamicResource Border}"
+                    BorderThickness="{DynamicResource BottomBorder}" Padding="12,8">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space16}">
+                <TextBlock Text="{x:Static resources:Strings.Project}" Classes="caption" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.LastOpened}" Classes="caption" FontWeight="SemiBold" />
+              </Grid>
+            </Border>
+            <Grid Grid.Row="1" MinHeight="112">
+              <TextBlock x:Name="EmptyRecentProjects" Text="{x:Static resources:Strings.NoRecentProjects}"
+                         IsVisible="{Binding IsEmpty}" Classes="secondary" Margin="12,16" VerticalAlignment="Top" />
+              <ScrollViewer IsVisible="{Binding !IsEmpty}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="RecentProjectsList" ItemsSource="{Binding RecentProjects}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RecentProjectItemViewModel">
+                      <Button Classes="recentProject" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding AutomationName}">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}">
+                          <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_document_16_regular.svg"
+                              Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                          <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space4}" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" Classes="bodyStrong" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Row="1" Text="{Binding FilePath}" Classes="caption" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FilePath}" />
+                          </Grid>
+                          <TextBlock Grid.Column="2" Text="{Binding LastUsedLabel}" Classes="secondary" VerticalAlignment="Center" TextAlignment="Right" />
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Grid>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

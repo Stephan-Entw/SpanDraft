@@ -1,5 +1,5 @@
 Microsoft Fluent UI System Icons — Regular, 16 px
 Source: https://github.com/microsoft/fluentui-system-icons
-Only Edit, Star, Info and Error Circle SVG assets are included.
+Edit, Star, Info, Error Circle, Document Add, Folder Open, Document and Book Open SVG assets are included.
 SVG geometry is unchanged; foreground color is supplied by application resources.
 See LICENSE.txt for the MIT license.

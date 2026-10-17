@@ -100,7 +100,7 @@ public sealed class DesktopResultDiagramControlTests
         using var environment = new DesktopControlEnvironment();
         using var cultures = new ResultCultureScope(culture, uiCulture);
         int analyses = 0;
-        var main = new MainWindowViewModel(b => { analyses++; return BeamAnalysis.Analyze(b); });
+        var main = new MainWindowViewModel(b => { analyses++; return BeamAnalysis.Analyze(b); }); main.NewCommand.Execute(null);
         main.Setup.ApplyCommand.Execute(null);
         var editor = main.Editor!;
         var document = Document().WithLoads([

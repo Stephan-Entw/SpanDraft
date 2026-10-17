@@ -21,9 +21,18 @@ public sealed class MaterialWorkflowRegressionTests
         public Files Files { get; } = new();
         public Dialogs Dialogs { get; } = new();
         private MainWindowViewModel? _main;
-        public MainWindowViewModel Main => _main ??= new(files: Files, dialogs: Dialogs,
-            materialStore: store ? new(Files, "materials") : null,
-            catalogLoader: brokenCatalog ? () => throw new LibraryFormatException("Injected") : null);
+        public MainWindowViewModel Main
+        {
+            get
+            {
+                if (_main is not null) return _main;
+                _main = new(files: Files, dialogs: Dialogs,
+                    materialStore: store ? new(Files, "materials") : null,
+                    catalogLoader: brokenCatalog ? () => throw new LibraryFormatException("Injected") : null);
+                _main.NewCommand.Execute(null);
+                return _main;
+            }
+        }
         public async Task Load(params MaterialLibraryEntry[] entries)
         {
             Files.Data["materials"] = MaterialLibraryCodec.Serialize(new(entries));

@@ -30,6 +30,7 @@ public sealed class DesktopProjectSetupWorkflowTests
             Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, Files, Dialogs,
                 materialStore: new(Files, "materials"), sectionStore: new(Files, "sections"),
                 catalogLoader: brokenCatalog ? () => throw new LibraryFormatException("Injected") : null);
+            Main.NewCommand.Execute(null);
         }
         public async Task Load() => await Main.InitializeLibrariesAsync();
         public void Create() => Main.Setup.ApplyCommand.Execute(null);
@@ -489,7 +490,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         files.Data["materials"] = Encoding.UTF8.GetBytes("{"); files.Data["sections"] = Encoding.UTF8.GetBytes("{");
         var main = new MainWindowViewModel(files: files, dialogs: dialogs, recovery: new(files, slot),
             materialStore: new(files, "materials"), sectionStore: new(files, "sections"),
-            catalogLoader: () => throw new LibraryFormatException("Injected"));
+            catalogLoader: () => throw new LibraryFormatException("Injected")); main.NewCommand.Execute(null);
         await main.InitializeLibrariesAsync(); Assert.True(await main.InitializeRecoveryAsync());
         Assert.True(state.ContentEquals(main.Session!.CurrentRevision.State)); Assert.True(main.Editor!.Presentation.IsSuccess);
         Assert.NotNull(main.BuiltInError); Assert.NotNull(main.MaterialLibraryError); Assert.NotNull(main.SectionLibraryError);

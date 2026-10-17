@@ -162,6 +162,7 @@ public sealed class DesktopResultPresentationTests
     public async Task OptionsSurviveCreationNavigationOpenNewAndRecovery()
     {
         var app = new App(create: false);
+        Assert.True(await app.Main.NewAsync());
         app.Main.SetResultPresentation(Mixed, PresentationMode.Detailed);
         var section = app.Main.Setup.SelectedSection;
         var material = app.Main.Setup.SelectedMaterial;

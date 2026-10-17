@@ -33,7 +33,7 @@ public sealed class DesktopProjectSetupControlTests
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
         var files = new Files(); var dialogs = new Dialogs();
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, materialStore: new(files, "materials"), sectionStore: new(files, "sections"));
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, materialStore: new(files, "materials"), sectionStore: new(files, "sections")); main.NewCommand.Execute(null);
         var builtin = main.BuiltInMaterials!.Find("X5CrNi18-10")!;
         files.Data["materials"] = MaterialLibraryCodec.Serialize(new([new(builtin.Material, builtin.Category, builtin.MaterialNumber, ["AISI 304", "UNS S30400"])]));
         files.Data["sections"] = SectionLibraryCodec.Serialize(new([new("My custom angle", new AngleSectionGeometry(M(.1), M(.2), M(.005), M(0)))]));
@@ -90,7 +90,7 @@ public sealed class DesktopProjectSetupControlTests
         Capture("material-new-invalid");
         files.Data["materials"] = [123]; files.Data["sections"] = [123];
         main = new MainWindowViewModel(files: files, dialogs: dialogs, materialStore: new(files, "materials"), sectionStore: new(files, "sections"),
-            catalogLoader: () => throw new LibraryFormatException("Injected"));
+            catalogLoader: () => throw new LibraryFormatException("Injected")); main.NewCommand.Execute(null);
         await main.InitializeLibrariesAsync(); window.DataContext = main; Capture("create-unavailable");
         main.Setup.ShowMaterials(); Capture("materials-unavailable");
         Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep).NewCommand.Execute(null); Capture("material-oneoff-unavailable");
@@ -156,7 +156,7 @@ public sealed class DesktopProjectSetupControlTests
     public async Task EnterOnlyConfirmsValidDraftAndEscapeReturnsOneSetupLevel()
     {
         using var environment = new DesktopControlEnvironment();
-        var main = new MainWindowViewModel(); var view = new ProjectSetupView { DataContext = main.Setup };
+        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); var view = new ProjectSetupView { DataContext = main.Setup };
         var window = new Window { Content = view, Width = 1100, Height = 650 };
         window.Show();
         main.Setup.ShowMaterials(); Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep).NewCommand.Execute(null);
@@ -176,6 +176,8 @@ public sealed class DesktopProjectSetupControlTests
         main.Setup.ShowSections();
         Arrange(window, 1100, 650); Press(Key.Escape); Assert.Equal(ProjectSetupPage.Overview, main.Setup.Page);
         Press(Key.Escape); Assert.Equal(ProjectSetupPage.Overview, main.Setup.Page); Assert.Null(main.Editor);
+        Assert.Equal(MainViewMode.Start, main.Mode);
+        Assert.True(await main.NewAsync()); view.DataContext = main.Setup;
         await main.Setup.ConfirmAsync(); Assert.NotNull(main.Editor);
         void Press(Key key) => (view.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.IsFocused) ?? view)
             .RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key });
@@ -185,7 +187,7 @@ public sealed class DesktopProjectSetupControlTests
     public async Task CardsAndLengthUseNativeKeyboardActionsWithoutCreatingAProjectOnEnter()
     {
         using var environment = new DesktopControlEnvironment();
-        var main = new MainWindowViewModel(); var view = new ProjectSetupView { DataContext = main.Setup };
+        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); var view = new ProjectSetupView { DataContext = main.Setup };
         var window = new Window { Content = view }; window.Show(); Arrange(window, 1100, 650);
         var card = view.FindControl<BeamSetupCard>("BeamCard")!;
         var length = card.FindControl<TextBox>("SetupLengthInput")!;
@@ -235,7 +237,7 @@ public sealed class DesktopProjectSetupControlTests
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
-        var main = new MainWindowViewModel(); var setup = main.Setup;
+        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); var setup = main.Setup;
         setup.SelectedSection = new CircleSectionGeometry(M(.1)); setup.BendingAxis = SectionAxisDesignation.Z;
         setup.ShowSections(); var definition = setup.Definition!;
         definition.BeginNameEdit(); definition.PendingName = new string('W', 250); definition.CommitName();

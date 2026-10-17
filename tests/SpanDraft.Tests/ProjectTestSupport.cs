@@ -144,7 +144,7 @@ internal static class ProjectTestSupport
         {
             Recovery = new(Files, Slot, Delay.Wait, () => Now);
             Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, Files, Dialogs, Recovery);
-            if (create) Main.Setup.ApplyCommand.Execute(null);
+            if (create) { Main.NewCommand.Execute(null); Main.Setup.ApplyCommand.Execute(null); }
         }
         public void ChangeLength(double meters = 1.5)
         {

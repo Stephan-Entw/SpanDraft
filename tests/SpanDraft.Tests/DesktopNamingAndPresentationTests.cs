@@ -23,6 +23,7 @@ public sealed class DesktopNamingAndPresentationTests
         public Session()
         {
             Main = new(beam => { Calls++; LastBeam = beam; return BeamAnalysis.Analyze(beam); });
+            Main.NewCommand.Execute(null);
             Main.Setup.ApplyCommand.Execute(null);
         }
         public void NewDraft(AutoNameKind kind, double mm = 300)

@@ -146,7 +146,7 @@ public sealed class DesktopSettingsTests
         var files = new Files(); var store = new LocalSettingsStore(files, "settings");
         var expected = UserSettings.Default.Select(UnitProfileKind.UnitedStates) with { Mode = PresentationMode.Detailed };
         await store.SaveAsync(expected);
-        var main = new MainWindowViewModel(files: files, settingsStore: store);
+        var main = new MainWindowViewModel(files: files, settingsStore: store); main.NewCommand.Execute(null);
         await main.InitializeSettingsAsync();
         Assert.True(expected.ContentEquals(main.Settings));
         main.Setup.ApplyCommand.Execute(null);
@@ -161,7 +161,7 @@ public sealed class DesktopSettingsTests
         await store.SaveAsync(UserSettings.Default);
         var bytes = files.Data["settings"].ToArray();
         files.FailWritePath = "settings";
-        var main = new MainWindowViewModel(files: files, settingsStore: store);
+        var main = new MainWindowViewModel(files: files, settingsStore: store); main.NewCommand.Execute(null);
         var dialog = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
         dialog.Select(UnitProfileKind.UnitedStates);
         Assert.False(await dialog.ApplyAsync());
@@ -180,7 +180,7 @@ public sealed class DesktopSettingsTests
         var store = new LocalSettingsStore(files, "settings");
         int analyses = 0;
         var main = new MainWindowViewModel(b => { analyses++; return SpanDraft.Analysis.BeamAnalysis.Analyze(b); },
-            files: files, recovery: recovery, settingsStore: store);
+            files: files, recovery: recovery, settingsStore: store); main.NewCommand.Execute(null);
         main.Setup.ApplyCommand.Execute(null);
         var editor = main.Editor!; var session = editor.Session;
         session.MarkSaved(session.CurrentRevision, Path.Combine(Path.GetTempPath(), "phase3.spandraft"));

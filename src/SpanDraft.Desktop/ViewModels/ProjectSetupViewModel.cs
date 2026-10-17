@@ -27,6 +27,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     private object? _step;
     private MaterialSelectionViewModel? _materials;
     private bool _definitionBusy;
+    private readonly bool _canCancel;
 
     public ProjectSetupViewModel(ProjectSetupMode mode, Section section, Material material,
         Action<ProjectSetupViewModel> apply, Action cancel, ResultPresentationOptions? resultPresentation = null)
@@ -41,12 +42,13 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public ProjectSetupViewModel(ProjectSetupMode mode, ISectionDefinition section, SectionAxisDesignation bendingAxis,
         Material? material, Func<ProjectSetupViewModel, Task<bool>> apply, Action cancel,
         ResultPresentationOptions? resultPresentation = null, MainWindowViewModel? libraries = null,
-        EditorDocument? originalDocument = null)
+        EditorDocument? originalDocument = null, bool canCancel = false)
     {
         ArgumentNullException.ThrowIfNull(section);
         if (mode == ProjectSetupMode.Edit) ArgumentNullException.ThrowIfNull(material);
         section.GetAxis(bendingAxis);
         Mode = mode; _selectedSection = section; _bendingAxis = bendingAxis; _selectedMaterial = material;
+        _canCancel = canCancel;
         _originalDocument = originalDocument;
         _length = originalDocument?.Length ?? Length.FromMillimeters(1000);
         _sectionDisplayName = originalDocument?.SectionDisplayName;
@@ -67,7 +69,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     internal MainWindowViewModel? Libraries { get; }
     public ProjectSetupMode Mode { get; }
     public bool IsEdit => Mode == ProjectSetupMode.Edit;
-    public bool CanCancel => IsEdit || Libraries?.Session is not null;
+    public bool CanCancel => IsEdit || _canCancel;
     public bool IsBusy => Libraries?.IsBusy == true || Definition?.IsBusy == true;
     public ProjectSetupPage Page => _page;
     public object? CurrentStep => _step;

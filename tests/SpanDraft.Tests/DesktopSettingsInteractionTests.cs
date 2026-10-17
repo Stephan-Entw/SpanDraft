@@ -13,7 +13,7 @@ public sealed class DesktopSettingsInteractionTests
 {
     private static MainWindowViewModel CreateMain(Files? files = null)
     {
-        var main = new MainWindowViewModel(files: files, settingsStore: files is null ? null : new(files, "settings"));
+        var main = new MainWindowViewModel(files: files, settingsStore: files is null ? null : new(files, "settings")); main.NewCommand.Execute(null);
         main.Setup.ApplyCommand.Execute(null);
         var document = new EditorDocument(M(1), ProjectTemplates.Material, ProjectTemplates.Section,
             [new(SupportId, M(.1), SupportType.Fixed, "A")],

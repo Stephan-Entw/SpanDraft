@@ -54,12 +54,14 @@ public partial class MainWindow : Window
             _dialogs = new ProjectDialogs(this);
             _model = new(files: files, dialogs: _dialogs, recovery: ProjectRecovery.Local(files),
                 settingsStore: settingsStore, settings: settings,
-                materialStore: MaterialLibraryStore.Local(files), sectionStore: SectionLibraryStore.Local(files));
+                materialStore: MaterialLibraryStore.Local(files), sectionStore: SectionLibraryStore.Local(files),
+                recentStore: RecentProjectsStore.Local(files), openUserManual: OpenUserManualAsync);
             await _model.InitializeLibrariesAsync();
             DataContext = _model;
             _initializing = false;
             quitCommand.Refresh();
             await _model.InitializeRecoveryAsync();
+            await _model.InitializeRecentProjectsAsync();
         };
         Closing += WindowClosing;
     }
@@ -124,7 +126,7 @@ public partial class MainWindow : Window
         return textBox is { IsReadOnly: false };
     }
 
-    private async void ShowUserManual(object? sender, RoutedEventArgs e)
+    private async Task OpenUserManualAsync()
     {
         if (_initializing || _closing) return;
         var manual = new UserManualLauncher(Launcher.LaunchUriAsync);

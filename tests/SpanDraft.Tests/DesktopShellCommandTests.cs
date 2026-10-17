@@ -21,7 +21,8 @@ public sealed class DesktopShellCommandTests
         var files = new Files(); var dialogs = new Dialogs { OpenPath = TestPath("initial.spandraft") };
         files.Data[dialogs.OpenPath] = SpanDraft.Desktop.Persistence.ProjectFileCodec.Serialize(State());
         var main = new MainWindowViewModel(files: files, dialogs: dialogs);
-        Check(false, true, false, false);
+        Check(true, true, false, false);
+        Assert.True(await main.NewAsync()); Check(false, true, false, false);
         Assert.False(await main.NewAsync()); Assert.False(await main.SaveAsync());
         Assert.True(await main.OpenAsync()); Check(true, true, true, false);
         main.EditProject(); Check(false, false, false, false);
@@ -50,7 +51,7 @@ public sealed class DesktopShellCommandTests
     public async Task BusyDisablesFileAndHistoryCommandsAndRestoresThemAfterwards()
     {
         var files = new Files(); var dialogs = new Dialogs();
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs); Assert.True(await main.Setup.ConfirmAsync());
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs); main.NewCommand.Execute(null); Assert.True(await main.Setup.ConfirmAsync());
         var pending = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         files.BeforeWrite = (_, _, _) => pending.Task;
         var save = main.SaveAsync(); Assert.True(main.IsWorkspaceBusy);
@@ -63,7 +64,7 @@ public sealed class DesktopShellCommandTests
     public void KeyboardHistoryRoutesToTheVisibleWorkspaceAndTextBoxesKeepNativeUndo(bool section)
     {
         using var environment = new DesktopControlEnvironment();
-        var main = new MainWindowViewModel(); main.Setup.ApplyCommand.Execute(null);
+        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); main.Setup.ApplyCommand.Execute(null);
         var session = main.Session!;
         if (section)
         {
@@ -106,7 +107,7 @@ public sealed class DesktopShellCommandTests
     public void MainMenuProtectsSectionNumericAndNameDraftsOnFocusLoss()
     {
         using var environment = new DesktopControlEnvironment();
-        var main = new MainWindowViewModel(); main.Setup.ShowSections(); var vm = main.Setup.Definition!;
+        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); main.Setup.ShowSections(); var vm = main.Setup.Definition!;
         var view = new SpanDraft.Desktop.Views.SectionDefinitionView { DataContext = vm };
         var host = new Window { Content = view, Width = 1100, Height = 650 }; host.Show();
         host.Measure(new Size(1100, 650)); host.Arrange(new Rect(0, 0, 1100, 650));

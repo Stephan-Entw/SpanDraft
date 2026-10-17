@@ -291,4 +291,12 @@
   <data name="MaterialDetailsTitle" xml:space="preserve"><value>Properties</value></data>
   <data name="UserManual" xml:space="preserve"><value>User Manual (German)</value></data>
   <data name="UserManualOpenError" xml:space="preserve"><value>The user manual could not be opened.</value></data>
+  <data name="Start" xml:space="preserve"><value>Start</value></data>
+  <data name="Project" xml:space="preserve"><value>Project</value></data>
+  <data name="OpenProject" xml:space="preserve"><value>Open Project</value></data>
+  <data name="RecentProjects" xml:space="preserve"><value>Recently used</value></data>
+  <data name="LastOpened" xml:space="preserve"><value>Last opened</value></data>
+  <data name="NoRecentProjects" xml:space="preserve"><value>No recently used projects yet.</value></data>
+  <data name="Today" xml:space="preserve"><value>Today</value></data>
+  <data name="Yesterday" xml:space="preserve"><value>Yesterday</value></data>
 </root>

@@ -5,6 +5,15 @@ namespace SpanDraft.Desktop.Resources;
 
 public static class Strings
 {
+    public static string Start => Get(nameof(Start));
+    public static string Project => Get(nameof(Project));
+    public static string OpenProject => Get(nameof(OpenProject));
+    public static string RecentProjects => Get(nameof(RecentProjects));
+    public static string LastOpened => Get(nameof(LastOpened));
+    public static string NoRecentProjects => Get(nameof(NoRecentProjects));
+    public static string Today => Get(nameof(Today));
+    public static string Yesterday => Get(nameof(Yesterday));
+
     public static string UserManual => Get(nameof(UserManual));
     public static string UserManualOpenError => Get(nameof(UserManualOpenError));
     public static string SectionDefinitionShapeI => Get(nameof(SectionDefinitionShapeI));

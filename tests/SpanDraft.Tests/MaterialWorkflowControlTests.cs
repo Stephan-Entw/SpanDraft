@@ -34,7 +34,7 @@ public sealed class MaterialWorkflowControlTests
     public async Task SelectionAndEditorKeepActionsVisibleAndUseNativeRowsWithLongNamesAndErrors(string culture, double width, double height, double scaling)
     {
         using var environment = new DesktopControlEnvironment(scaling); using var scope = new UiCultureScope(culture);
-        var files = new Files(); var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials"));
+        var files = new Files(); var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials")); main.NewCommand.Execute(null);
         var longName = new string('W', 200);
         files.Data["materials"] = MaterialLibraryCodec.Serialize(new([new(new Material(longName, Pressure.FromPascals(200e9), Pressure.FromMegapascals(300)), MaterialCategory.Other, "A long number", ["Other standard"])]));
         await main.InitializeLibrariesAsync(); main.Setup.SelectedMaterial = new("Project only", Pressure.FromPascals(210e9), Pressure.FromMegapascals(355));
@@ -110,7 +110,7 @@ public sealed class MaterialWorkflowControlTests
     public async Task NewMaterialStartsNeutralAndShowsFieldErrorsOnlyAfterLeavingTheField(string culture)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
-        var main = new MainWindowViewModel(); main.Setup.ShowMaterials();
+        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); main.Setup.ShowMaterials();
         var selection = Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep);
         selection.NewCommand.Execute(null);
         var setup = new ProjectSetupView { DataContext = main.Setup };
@@ -153,7 +153,7 @@ public sealed class MaterialWorkflowControlTests
     public async Task SearchEnterOnlyFocusesSelectionWhileArrowsClickEnterAndDoubleClickUseNativeSelection()
     {
         using var environment = new DesktopControlEnvironment();
-        var files = new Files(); var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials"));
+        var files = new Files(); var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials")); main.NewCommand.Execute(null);
         files.Data["materials"] = MaterialLibraryCodec.Serialize(new([new(new Material("One user", Pressure.FromPascals(200e9), Pressure.FromMegapascals(300)), MaterialCategory.Other)]));
         await main.InitializeLibrariesAsync(); main.Setup.SelectedMaterial = new("Project only", Pressure.FromPascals(210e9), Pressure.FromMegapascals(355));
         var setup = new ProjectSetupView { DataContext = main.Setup };
@@ -187,7 +187,7 @@ public sealed class MaterialWorkflowControlTests
     public async Task ExplicitLibraryButtonStaysInEditorAndProjectApplyChangesOnlySetup()
     {
         using var environment = new DesktopControlEnvironment(); var files = new Files();
-        var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials")); await main.InitializeLibrariesAsync();
+        var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials")); main.NewCommand.Execute(null); await main.InitializeLibrariesAsync();
         var original = main.Setup.SelectedMaterial; var setup = new ProjectSetupView { DataContext = main.Setup }; var window = new Window { Content = setup };
         window.Show(); main.Setup.ShowMaterials(); Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep).NewCommand.Execute(null); Arrange(window, 1100, 650);
         var editor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep).Editor); editor.Name = "Added from UI"; editor.Inputs[0].Text = "210"; editor.Inputs[1].Text = "355";
@@ -206,7 +206,7 @@ public sealed class MaterialWorkflowControlTests
     public async Task ScrollbarUsesIdenticalHeaderAndRowGeometryAndDiscardRestoresFocusAndScroll(string culture, double width, double height)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
-        var files = new Files(); var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials"));
+        var files = new Files(); var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials")); main.NewCommand.Execute(null);
         files.Data["materials"] = MaterialLibraryCodec.Serialize(new(Enumerable.Range(0, 80).Select(i =>
             new MaterialLibraryEntry(new("Shop " + i, Pressure.FromPascals(200e9), Pressure.FromMegapascals(300)), MaterialCategory.Other))));
         await main.InitializeLibrariesAsync(); main.Setup.ShowMaterials();

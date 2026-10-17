@@ -9,6 +9,9 @@
         Icon="avares://SpanDraft.Desktop/Assets/AppIcon/SpanDraft.ico"
         Width="1250" Height="800" MinWidth="1100" MinHeight="650">
   <Window.DataTemplates>
+    <DataTemplate DataType="{x:Type vm:StartPageViewModel}">
+      <views:StartPageView />
+    </DataTemplate>
     <DataTemplate DataType="{x:Type vm:ProjectSetupViewModel}">
       <views:ProjectSetupView />
     </DataTemplate>
@@ -37,7 +40,7 @@
         <MenuItem Header="{x:Static resources:Strings.Zoom}" IsEnabled="False" />
       </MenuItem>
       <MenuItem Header="{x:Static resources:Strings.Help}">
-        <MenuItem x:Name="UserManualMenuItem" Header="{x:Static resources:Strings.UserManual}" Click="ShowUserManual" />
+        <MenuItem x:Name="UserManualMenuItem" Header="{x:Static resources:Strings.UserManual}" Command="{Binding UserManualCommand}" />
         <Separator />
         <MenuItem Header="{x:Static resources:Strings.About}" IsEnabled="{Binding !IsWorkspaceBusy}" Click="ShowAbout" />
       </MenuItem>

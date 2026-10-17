@@ -212,7 +212,7 @@ public sealed class SectionDefinitionPrototypeTests
     [Fact]
     public async Task LibrarySaveIsExplicitTransactionalAndErrorsPreserveEveryInput()
     {
-        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); await main.InitializeLibrariesAsync();
+        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); main.NewCommand.Execute(null); await main.InitializeLibrariesAsync();
         var vm=new SectionDefinitionViewModel(library:Library(main)); vm.SelectForm(SectionEditorType.Rectangle); Fill(vm);
         SectionDefinitionResult? result=null; vm.CloseRequested+=r=>result=r;
         Assert.True(await vm.ConfirmAsync()); Assert.NotNull(result); Assert.Empty(files.Writes); Assert.Empty(main.UserSections.All);
@@ -233,7 +233,7 @@ public sealed class SectionDefinitionPrototypeTests
     public async Task UnavailableLibraryAllowsOneOffResultButNeverOverwritesDamagedData()
     {
         var files=new Files(); files.Data["sections"]=[123];
-        var main=new MainWindowViewModel(sectionStore:new(files,"sections")); await main.InitializeLibrariesAsync();
+        var main=new MainWindowViewModel(sectionStore:new(files,"sections")); main.NewCommand.Execute(null); await main.InitializeLibrariesAsync();
         var vm=new SectionDefinitionViewModel(library:Library(main)); vm.SelectForm(SectionEditorType.Circle); Fill(vm);
         Assert.True(vm.CanConfirm); Assert.True(vm.CanSaveLibrary); Assert.False(vm.HasLibraryError);
         Assert.False(await vm.SaveLibraryAsync()); Assert.True(vm.HasLibraryError);
@@ -243,7 +243,7 @@ public sealed class SectionDefinitionPrototypeTests
     [InlineData(false)] [InlineData(true)]
     public async Task StandaloneDefinitionPreservesAnExistingProjectRevisionDirtyFlagAndHistory(bool save)
     {
-        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); await main.InitializeLibrariesAsync();
+        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); main.NewCommand.Execute(null); await main.InitializeLibrariesAsync();
         main.Setup.ApplyCommand.Execute(null);
         Assert.NotNull(main.Editor); Assert.NotNull(main.Session);
         var editor=main.Editor; var session=main.Session;
@@ -257,7 +257,7 @@ public sealed class SectionDefinitionPrototypeTests
     [Fact]
     public async Task CancelDoesNotSaveOrReturnADefinition()
     {
-        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); await main.InitializeLibrariesAsync();
+        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); main.NewCommand.Execute(null); await main.InitializeLibrariesAsync();
         var vm=new SectionDefinitionViewModel(library:Library(main)); vm.SelectForm(SectionEditorType.Rectangle); Fill(vm);
         int closed=0; vm.CloseRequested+=r=>{Assert.Null(r);closed++;}; vm.CancelCommand.Execute(null);
         Assert.Equal(1,closed); Assert.Empty(files.Writes); Assert.Empty(main.UserSections.All);
@@ -433,7 +433,7 @@ public sealed class SectionDefinitionPrototypeTests
     public async Task SectionCardUsesExistingWindowAndOnlyUpdatesTheDraftOnAcceptance(bool accept, double width, double height)
     {
         using var environment=new DesktopControlEnvironment();
-        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); await main.InitializeLibrariesAsync();
+        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); main.NewCommand.Execute(null); await main.InitializeLibrariesAsync();
         var setup=main.Setup; var original=setup.SelectedSection; var axis=setup.BendingAxis;
         var view=new ProjectSetupView{DataContext=setup}; var owner=new Window{Content=view}; owner.Show(); Arrange(owner,width,height);
         var decorations=owner.WindowDecorations; var position=owner.Position;
@@ -455,7 +455,7 @@ public sealed class SectionDefinitionPrototypeTests
     public async Task HostedDefinitionProtectsActiveLibrarySaveAndReturnsToSetup()
     {
         using var environment=new DesktopControlEnvironment();
-        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); await main.InitializeLibrariesAsync();
+        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); main.NewCommand.Execute(null); await main.InitializeLibrariesAsync();
         var setup=new ProjectSetupView { DataContext=main.Setup }; var owner=new Window { Content=setup }; owner.Show(); Arrange(owner);
         main.Setup.ShowSections(); var vm=main.Setup.Definition!; vm.SelectForm(SectionEditorType.Circle); Fill(vm);
         var release=new TaskCompletionSource(); var reached=new TaskCompletionSource();
@@ -474,7 +474,7 @@ public sealed class SectionDefinitionPrototypeTests
     [Fact]
     public async Task SavingBlocksWindowCloseAndReturnsRealSectionOnlyAfterPublication()
     {
-        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); await main.InitializeLibrariesAsync();
+        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); main.NewCommand.Execute(null); await main.InitializeLibrariesAsync();
         main.Setup.ShowSections(); var vm=main.Setup.Definition!; vm.SelectForm(SectionEditorType.Circle); Fill(vm);
         var original=main.Setup.SelectedSection; var release=new TaskCompletionSource(); var reached=new TaskCompletionSource();
         files.BeforeWrite=async (_,_,_) => { reached.SetResult(); await release.Task; };

@@ -125,6 +125,7 @@ public sealed class ProjectRecoveryTests
         var app = new App(create: false); var state = State(2);
         app.Files.Data[App.Slot] = ProjectRecovery.Encode(new(state, TestPath("original.spandraft"), Now));
         Assert.True(await app.Main.InitializeRecoveryAsync());
+        Assert.Equal(MainViewMode.Editor, app.Main.Mode);
         Assert.True(app.Main.Session!.IsDirty); Assert.Null(app.Main.Session.SavedRevisionId);
         Assert.Empty(app.Main.Session.UndoHistory); Assert.Empty(app.Main.Session.RedoHistory);
         Assert.Equal(TestPath("original.spandraft"), app.Main.Session.FilePath); Assert.Equal(1, app.Analyses);
@@ -133,12 +134,13 @@ public sealed class ProjectRecoveryTests
     }
 
     [Fact]
-    public async Task DiscardRecoveryStartsInSetupWithoutAnalysisAndWithoutNewRecovery()
+    public async Task DiscardRecoveryStartsOnStartWithoutAnalysisAndWithoutNewRecovery()
     {
         var app = new App(create: false);
         app.Files.Data[App.Slot] = ProjectRecovery.Encode(new(State(), null, Now));
         app.Dialogs.Recovery = RecoveryDecision.Discard;
         Assert.True(await app.Main.InitializeRecoveryAsync());
+        Assert.Equal(MainViewMode.Start, app.Main.Mode);
         Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses); Assert.Null(await app.Recovery.ReadAsync());
         Assert.Empty(app.Delay.Waiters);
     }
@@ -179,6 +181,7 @@ public sealed class ProjectRecoveryTests
     {
         var app = new App(create: false); app.Files.Data[App.Slot] = Encoding.UTF8.GetBytes(json);
         Assert.True(await app.Main.InitializeRecoveryAsync());
+        Assert.Equal(MainViewMode.Start, app.Main.Mode);
         Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses); Assert.Single(app.Dialogs.Errors);
         Assert.Equal(1, app.Dialogs.RecoveryQuestions); Assert.Null(await app.Recovery.ReadAsync());
     }

@@ -43,16 +43,16 @@ public class DesktopStateTests
             });
         }
 
-        public void Create() => Main.Setup.ApplyCommand.Execute(null);
+        public void Create() { Main.NewCommand.Execute(null); Main.Setup.ApplyCommand.Execute(null); }
     }
 
     [Fact]
-    public void StartupHasSetupAndNoDocumentOrAnalysis()
+    public void StartupHasStartAndNoDocumentOrAnalysis()
     {
         var s = new Session();
-        Assert.Equal(MainViewMode.ProjectSetup, s.Main.Mode);
+        Assert.Equal(MainViewMode.Start, s.Main.Mode);
         Assert.Null(s.Main.Editor);
-        Assert.Same(s.Main.Setup, s.Main.CurrentViewModel);
+        Assert.Same(s.Main.StartPage, s.Main.CurrentViewModel);
         Assert.Equal(ProjectSetupMode.Create, s.Main.Setup.Mode);
         Assert.IsType<SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry>(s.Main.Setup.SelectedSection);
         Assert.Same(s.Main.BuiltInMaterials!.Find("S235JR")!.Material, s.Main.Setup.SelectedMaterial);

@@ -15,7 +15,9 @@ public sealed class ProjectWorkflowTests
         Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses);
         Assert.False(app.Main.SaveCommand.CanExecute(null));
         Assert.True(await app.Main.InitializeRecoveryAsync());
+        Assert.Equal(MainViewMode.Start, app.Main.Mode);
         Assert.Empty(app.Files.Writes); Assert.Empty(app.Files.Data); Assert.Empty(app.Delay.Waiters);
+        Assert.True(await app.Main.NewAsync());
         app.Main.Setup.ApplyCommand.Execute(null);
         Assert.True(app.Main.Session!.IsDirty); Assert.Equal(1, app.Analyses);
         Assert.Contains("* — SpanDraft", app.Main.WindowTitle);

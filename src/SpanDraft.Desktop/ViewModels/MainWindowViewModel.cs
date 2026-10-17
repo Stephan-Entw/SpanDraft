@@ -9,8 +9,8 @@ using SpanDraft.Desktop.State;
 
 namespace SpanDraft.Desktop.ViewModels;
 
-public enum MainViewMode { ProjectSetup, Editor }
-public enum MainWorkspaceKind { ProjectSetup, MaterialSelection, MaterialEditor, SectionDefinition, BeamEditor }
+public enum MainViewMode { ProjectSetup, Editor, Start }
+public enum MainWorkspaceKind { ProjectSetup, MaterialSelection, MaterialEditor, SectionDefinition, BeamEditor, Start }
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
@@ -18,7 +18,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IProjectFileStore _files;
     private readonly IProjectDialogs? _dialogs;
     private readonly ProjectRecovery? _recovery;
-    private MainViewMode _mode;
+    private MainViewMode _mode = MainViewMode.Start;
+    private MainViewMode _setupReturnMode = MainViewMode.Start;
+    private readonly RecentProjectsStore? _recentStore;
     private ProjectSetupViewModel _setup;
     private EditorViewModel? _editor;
     private bool _busy;
@@ -34,12 +36,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IProjectFileStore? files = null, IProjectDialogs? dialogs = null, ProjectRecovery? recovery = null,
         LocalSettingsStore? settingsStore = null, UserSettings? settings = null,
         MaterialLibraryStore? materialStore = null, SectionLibraryStore? sectionStore = null,
-        Func<SpanDraft.Desktop.Libraries.BuiltInMaterialCatalog>? catalogLoader = null)
+        Func<SpanDraft.Desktop.Libraries.BuiltInMaterialCatalog>? catalogLoader = null,
+        RecentProjectsStore? recentStore = null, Func<Task>? openUserManual = null)
     {
         _analyze = analyze;
         _files = files ?? new ProjectFileStore();
         _dialogs = dialogs;
         _recovery = recovery;
+        _recentStore = recentStore;
         _settingsStore = settingsStore;
         _settings = settings ?? UserSettings.Default;
         _resultPresentation = _settings.Presentation;
@@ -59,13 +63,30 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SaveAsCommand = new(() => SaveAsync(saveAs: true), () => CanSaveProject);
         UndoCommand = new(() => Undo(), () => CanUndo);
         RedoCommand = new(() => Redo(), () => CanRedo);
+        UserManualCommand = new(async () => { if (openUserManual is not null) await openUserManual(); return true; }, () => true);
+        StartPage = new(NewCommand, OpenCommand, UserManualCommand, OpenRecentAsync, () => CanOpenProject);
     }
 
     public MainViewMode Mode => _mode;
     public ProjectSetupViewModel Setup => _setup;
+    public StartPageViewModel StartPage { get; }
     public EditorViewModel? Editor => _editor;
     public ResultPresentationOptions ResultPresentation => _resultPresentation;
     public UserSettings Settings => _settings;
+
+    public async Task InitializeRecentProjectsAsync()
+    {
+        if (_recentStore is null) return;
+        await _recentStore.LoadAsync();
+        StartPage.SetRecentProjects(_recentStore.Entries);
+    }
+
+    private async Task RecordRecentAsync(string path, string? replacedPath = null)
+    {
+        if (_recentStore is null) return;
+        await _recentStore.RecordUseAsync(path, replacedPath);
+        StartPage.SetRecentProjects(_recentStore.Entries);
+    }
 
     public async Task InitializeSettingsAsync()
     {
@@ -129,7 +150,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ProjectSession? Session => Editor?.Session;
     public bool IsBusy => _busy || _libraryBusy;
     public bool IsWorkspaceBusy => IsBusy || Mode == MainViewMode.ProjectSetup && Setup.IsBusy;
-    public MainWorkspaceKind Workspace => Mode == MainViewMode.Editor ? MainWorkspaceKind.BeamEditor : Setup.Page switch
+    public MainWorkspaceKind Workspace => Mode == MainViewMode.Start ? MainWorkspaceKind.Start
+        : Mode == MainViewMode.Editor ? MainWorkspaceKind.BeamEditor : Setup.Page switch
     {
         ProjectSetupPage.SectionDefinition => MainWorkspaceKind.SectionDefinition,
         ProjectSetupPage.MaterialSelection => Setup.CurrentStep is MaterialSelectionViewModel { IsEditing: true }
@@ -137,8 +159,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _ => MainWorkspaceKind.ProjectSetup
     };
     public bool IsSectionWorkspace => Workspace == MainWorkspaceKind.SectionDefinition;
-    public bool CanNewProject => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor;
-    public bool CanOpenProject => !IsWorkspaceBusy && (Workspace == MainWorkspaceKind.BeamEditor
+    public bool CanNewProject => !IsWorkspaceBusy && Workspace is MainWorkspaceKind.Start or MainWorkspaceKind.BeamEditor;
+    public bool CanOpenProject => !IsWorkspaceBusy && (Workspace is MainWorkspaceKind.Start or MainWorkspaceKind.BeamEditor
         || Workspace == MainWorkspaceKind.ProjectSetup && Session is null);
     public bool CanSaveProject => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Session is not null;
     public bool CanUndo => !IsWorkspaceBusy && (Workspace switch
@@ -154,16 +176,24 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _ => false
     });
     public string ProjectName => Session?.FilePath is { } path ? Path.GetFileName(path) : Strings.Untitled;
-    public string WindowTitle => Mode == MainViewMode.ProjectSetup && Setup.Mode == ProjectSetupMode.Create
+    public string WindowTitle => Mode == MainViewMode.Start ? Strings.ApplicationTitle
+        : Mode == MainViewMode.ProjectSetup && Setup.Mode == ProjectSetupMode.Create
         ? Strings.NewProject + " — " + Strings.ApplicationTitle : Session is null ? Strings.ApplicationTitle
         : ProjectName + (Session.IsDirty ? "*" : "") + " — " + Strings.ApplicationTitle;
-    public object CurrentViewModel => Mode == MainViewMode.ProjectSetup ? Setup : Editor!;
+    public object CurrentViewModel => Mode switch
+    {
+        MainViewMode.Start => StartPage,
+        MainViewMode.ProjectSetup => Setup,
+        MainViewMode.Editor => Editor!,
+        _ => throw new InvalidOperationException("Unknown workspace.")
+    };
     public AsyncActionCommand NewCommand { get; }
     public AsyncActionCommand OpenCommand { get; }
     public AsyncActionCommand SaveCommand { get; }
     public AsyncActionCommand SaveAsCommand { get; }
     public ActionCommand UndoCommand { get; }
     public ActionCommand RedoCommand { get; }
+    public AsyncActionCommand UserManualCommand { get; }
 
     public void SetMainMenuOpen(bool open)
     {
@@ -175,12 +205,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         new SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry(
             Length.FromMillimeters(100), Length.FromMillimeters(100), Length.FromMillimeters(5), Length.FromMillimeters(0)),
         SpanDraft.Core.Sections.SectionAxisDesignation.Y, BuiltInMaterials?.Find("S235JR")?.Material,
-        ApplySetupAsync, CancelSetup, ResultPresentation, this);
+        ApplySetupAsync, CancelSetup, ResultPresentation, this, canCancel: true);
 
     public void EditProject()
     {
         if (!CanSaveProject || Editor is null) return;
         Editor.CancelEditorInteraction();
+        _setupReturnMode = MainViewMode.Editor;
         _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.BendingAxis, Editor.Document.Material,
             ApplySetupAsync, CancelSetup, ResultPresentation, this, Editor.Document);
         Navigate(MainViewMode.ProjectSetup);
@@ -211,7 +242,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void CancelSetup()
     {
-        if (!IsWorkspaceBusy && Session is not null) Navigate(MainViewMode.Editor);
+        if (!IsWorkspaceBusy && Mode == MainViewMode.ProjectSetup) Navigate(_setupReturnMode);
     }
 
     private void Activate(ProjectSession session)
@@ -244,6 +275,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public Task<bool> NewAsync() => !CanNewProject ? Task.FromResult(false) : RunOperationAsync(() =>
     {
+        _setupReturnMode = Mode;
         _setup = NewSetup();
         Navigate(MainViewMode.ProjectSetup);
         return Task.FromResult(true);
@@ -252,7 +284,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public Task<bool> OpenAsync() => !CanOpenProject ? Task.FromResult(false) : RunOperationAsync(async () =>
     {
         string? path = _dialogs is null ? null : await _dialogs.PickOpenPathAsync();
-        if (path is null) return false;
+        return path is not null && await OpenPathAsync(path);
+    });
+
+    public Task<bool> OpenRecentAsync(string path) => !CanOpenProject ? Task.FromResult(false)
+        : RunOperationAsync(() => OpenPathAsync(path));
+
+    private async Task<bool> OpenPathAsync(string path)
+    {
         // Parse and validate before touching the old session or asking its leave question.
         var bytes = await _files.ReadAsync(path) ?? throw new IOException(Strings.ProjectFileMissing);
         var state = ProjectFileCodec.Deserialize(bytes);
@@ -267,8 +306,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             state = previousSession.CurrentRevision.State;
         await CompleteLeaveAsync();
         Activate(ProjectSession.Open(state, Path.GetFullPath(path)));
+        await RecordRecentAsync(Session!.FilePath!);
         return true;
-    });
+    }
 
     public Task<bool> SaveAsync(bool saveAs = false) => !CanSaveProject ? Task.FromResult(false)
         : RunOperationAsync(() => SaveCurrentAsync(saveAs));
@@ -284,6 +324,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             path = EnsureProjectExtension(path);
         }
         path = Path.GetFullPath(path);
+        string? previousPath = session.FilePath;
         var revision = session.CurrentRevision;
         try
         {
@@ -302,6 +343,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
             throw;
         }
+        await RecordRecentAsync(path, saveAs ? previousPath : null);
         if (_recovery is not null)
         {
             try { await _recovery.DeleteAsync(); }
@@ -437,6 +479,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Notify(nameof(WindowTitle));
         NewCommand?.Refresh(); OpenCommand?.Refresh(); SaveCommand?.Refresh(); SaveAsCommand?.Refresh();
         UndoCommand?.Refresh(); RedoCommand?.Refresh();
+        StartPage?.Refresh();
     }
     internal void RefreshWorkspaceState() => NotifySession();
     internal void RefreshHistoryState()

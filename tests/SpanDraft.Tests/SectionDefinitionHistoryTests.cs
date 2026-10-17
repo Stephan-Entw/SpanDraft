@@ -200,7 +200,7 @@ public sealed class SectionDefinitionHistoryTests
     [Fact]
     public async Task ManySectionChangesBecomeOneProjectRevisionOnlyAfterSetupApply()
     {
-        var main = new MainWindowViewModel(); Assert.True(await main.Setup.ConfirmAsync());
+        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); Assert.True(await main.Setup.ConfirmAsync());
         var session = main.Session!; var original = session.CurrentRevision;
         main.EditProject(); main.Setup.ShowSections(); var vm = main.Setup.Definition!;
         Commit(vm, "h", "150"); Commit(vm, "h", "175"); Name(vm, "Changed"); vm.SelectedAxis = SectionAxisDesignation.Y;

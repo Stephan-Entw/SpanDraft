@@ -31,7 +31,7 @@ public sealed class DesktopNavigationTests
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
-        var model = new MainWindowViewModel();
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
         model.Setup.ApplyCommand.Execute(null);
         var state = ProjectTestSupport.State();
@@ -51,7 +51,7 @@ public sealed class DesktopNavigationTests
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
         int analyses = 0;
-        var model = new MainWindowViewModel(beam => { analyses++; return BeamAnalysis.Analyze(beam); });
+        var model = new MainWindowViewModel(beam => { analyses++; return BeamAnalysis.Analyze(beam); }); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
         model.Setup.ApplyCommand.Execute(null);
         var state = ProjectTestSupport.State();
@@ -115,7 +115,7 @@ public sealed class DesktopNavigationTests
     public void OverviewNameActivationCancelsPlacementButRespectsBusyAndPreservedDrafts()
     {
         using var environment = new DesktopControlEnvironment();
-        var model = new MainWindowViewModel();
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
         model.Setup.ApplyCommand.Execute(null);
         var state = ProjectTestSupport.State();
@@ -159,7 +159,7 @@ public sealed class DesktopNavigationTests
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
         int analyses = 0;
-        var model = new MainWindowViewModel(beam => { analyses++; return BeamAnalysis.Analyze(beam); });
+        var model = new MainWindowViewModel(beam => { analyses++; return BeamAnalysis.Analyze(beam); }); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
         model.Setup.ApplyCommand.Execute(null);
         var state = ProjectTestSupport.State();
@@ -246,7 +246,7 @@ public sealed class DesktopNavigationTests
         try
         {
             int analyses = 0;
-            var model = new MainWindowViewModel(beam => { analyses++; return BeamAnalysis.Analyze(beam); });
+            var model = new MainWindowViewModel(beam => { analyses++; return BeamAnalysis.Analyze(beam); }); model.NewCommand.Execute(null);
             // Build the real window/XAML, but never show it or run startup recovery.
             var window = new MainWindow { DataContext = model };
             Layout(window);
@@ -304,7 +304,7 @@ public sealed class DesktopNavigationTests
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
-        var model = new MainWindowViewModel();
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
         model.Setup.ApplyCommand.Execute(null);
         var state = ProjectTestSupport.State();
@@ -376,7 +376,7 @@ public sealed class DesktopNavigationTests
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
-        var model = new MainWindowViewModel();
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
         model.Setup.ApplyCommand.Execute(null);
         var document = new EditorDocument(Length.FromMillimeters(1000), ProjectTemplates.Material, ProjectTemplates.Section,
@@ -440,7 +440,7 @@ public sealed class DesktopNavigationTests
     public void ManualAnnotationOverflowRemainsVisibleAndResetRestoresTheFixedLowerSpace()
     {
         using var environment = new DesktopControlEnvironment();
-        var model = new MainWindowViewModel();
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
         model.Setup.ApplyCommand.Execute(null);
         var load = new EditorPointForce(Guid.NewGuid(), Length.FromMillimeters(500), Force.FromNewtons(-1000), "F1");
@@ -478,7 +478,7 @@ public sealed class DesktopNavigationTests
     public void VerticalOverflowAndScrollingPreserveHorizontalGeometryAndSidebarOffset()
     {
         using var environment = new DesktopControlEnvironment();
-        var model = new MainWindowViewModel();
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
         model.Setup.ApplyCommand.Execute(null);
         Layout(window);
@@ -514,7 +514,7 @@ public sealed class DesktopNavigationTests
     public void EmptyEntityTablesHideTheirHeadersAndKeepTheExistingAnalysisStatus()
     {
         using var environment = new DesktopControlEnvironment();
-        var model = new MainWindowViewModel();
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
         model.Setup.ApplyCommand.Execute(null);
         Layout(window);

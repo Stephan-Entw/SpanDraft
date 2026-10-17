@@ -24,9 +24,9 @@ public sealed class ProjectSetupIntegrationTests
     public async Task LengthDefaultsAndConfirmedInputOnlyChangeTheDraft(string culture, string text)
     {
         using var scope = new UiCultureScope(culture);
-        var app = new App(create: false); var setup = app.Main.Setup;
+        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
         Assert.Equal(1000, setup.SelectedLength.Millimeters); Assert.Equal("1000", setup.LengthInput.Text);
-        Assert.False(setup.CanCancel);
+        Assert.True(setup.CanCancel);
         setup.LengthInput.Begin(); setup.LengthInput.Text = text;
         Assert.True(setup.CanApply); Assert.True(setup.LengthInput.Confirm());
         Assert.Equal(1234.5, setup.SelectedLength.Millimeters); Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses);
@@ -40,7 +40,7 @@ public sealed class ProjectSetupIntegrationTests
     [InlineData("NaN")] [InlineData("Infinity")] [InlineData("1e400")]
     public async Task RejectedLengthSurvivesBlurAndPreventsCreation(string text)
     {
-        var app = new App(create: false); var setup = app.Main.Setup;
+        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
         setup.LengthInput.Begin(); setup.LengthInput.Text = text; setup.LengthInput.LoseFocus();
         Assert.Equal(text, setup.LengthInput.Text); Assert.True(setup.LengthInput.IsEditing);
         Assert.True(setup.HasLengthError); Assert.False(setup.CanApply);
@@ -186,7 +186,7 @@ public sealed class ProjectSetupIntegrationTests
     [Fact]
     public async Task SectionWorkspaceBlocksGlobalActionsButKeepsLibrarySavingFunctional()
     {
-        var files = new Files(); var main = new MainWindowViewModel(files: files, sectionStore: new(files, "sections"));
+        var files = new Files(); var main = new MainWindowViewModel(files: files, sectionStore: new(files, "sections")); main.NewCommand.Execute(null);
         await main.InitializeLibrariesAsync(); Assert.True(await main.Setup.ConfirmAsync()); main.EditProject(); main.Setup.ShowSections();
         Assert.True(main.IsSectionWorkspace); Assert.False(main.NewCommand.CanExecute(null)); Assert.False(main.SaveCommand.CanExecute(null));
         Assert.False(main.OpenCommand.CanExecute(null)); Assert.False(main.UndoCommand.CanExecute(null));
@@ -203,7 +203,7 @@ public sealed class ProjectSetupIntegrationTests
         var files = new Files();
         var ih = new ISectionGeometry(M(.2), M(.1), M(.005), M(.01), M(0));
         files.Data["sections"] = SectionLibraryCodec.Serialize(new([new("HEB 200", ih)]));
-        var main = new MainWindowViewModel(files: files, sectionStore: new(files, "sections"));
+        var main = new MainWindowViewModel(files: files, sectionStore: new(files, "sections")); main.NewCommand.Execute(null);
         await main.InitializeLibrariesAsync(); main.Setup.SelectedSection = ih; main.Setup.BendingAxis = SectionAxisDesignation.Z;
         Assert.True(await main.Setup.ConfirmAsync());
         main.EditProject(); main.Setup.ShowSections(); var vm = main.Setup.Definition!;
