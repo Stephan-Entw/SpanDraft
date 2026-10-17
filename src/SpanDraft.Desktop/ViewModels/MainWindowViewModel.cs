@@ -400,8 +400,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         catch (Exception e) when (IsFileError(e))
         {
             await ShowErrorAsync(Strings.RecoveryDamaged, e);
-            if (_dialogs is not null && await _dialogs.ConfirmRecoveryAsync(true, null) == RecoveryDecision.Discard)
-                await _recovery.DeleteAsync();
+            if (_dialogs is null || await _dialogs.ConfirmRecoveryAsync(true, null) != RecoveryDecision.Discard)
+                return false;
+            await _recovery.DeleteAsync();
             return true;
         }
         if (snapshot is null) return true;
@@ -422,6 +423,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             : await _dialogs.ConfirmRecoveryAsync(false, snapshot.WrittenAtUtc);
         if (choice == RecoveryDecision.Restore) Activate(ProjectSession.Restore(snapshot.State, snapshot.OriginalFilePath));
         else if (choice == RecoveryDecision.Discard) await _recovery.DeleteAsync();
+        else return false;
         return true;
     });
 

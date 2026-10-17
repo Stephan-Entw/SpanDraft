@@ -61,9 +61,15 @@ public partial class MainWindow : Window
                 recentStore: RecentProjectsStore.Local(files), openUserManual: OpenUserManualAsync);
             await _model.InitializeLibrariesAsync();
             DataContext = _model;
+            if (!await _model.InitializeRecoveryAsync())
+            {
+                // An unresolved recovery must bypass the normal leave workflow, which deletes its slot.
+                _closeApproved = true;
+                Close();
+                return;
+            }
             _initializing = false;
             quitCommand.Refresh();
-            await _model.InitializeRecoveryAsync();
             await _model.InitializeRecentProjectsAsync();
         };
         Closing += WindowClosing;

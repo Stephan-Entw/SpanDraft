@@ -4,7 +4,10 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using SpanDraft.Desktop;
+using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
@@ -15,6 +18,49 @@ namespace SpanDraft.Tests;
 [Collection("Schematic text")]
 public sealed class DesktopShellCommandTests
 {
+    [Theory]
+    [InlineData(false, "escape")] [InlineData(false, "close")]
+    [InlineData(true, "escape")] [InlineData(true, "close")] [InlineData(true, "cancel")]
+    public void CancelRecoveryClosesStartupWithoutNormalCloseAndOffersTheSameFileAgain(bool damaged, string action)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files();
+        string slot = ProjectRecovery.Local(files).SlotPath;
+        string recentPath = RecentProjectsStore.Local(files).FilePath;
+        var bytes = damaged ? System.Text.Encoding.UTF8.GetBytes("{") : ProjectRecovery.Encode(new(State(), null, Now));
+        files.Data[slot] = bytes.ToArray();
+        int recentReads = 0;
+        files.BeforeRead = path => { if (path == recentPath) recentReads++; return Task.CompletedTask; };
+        var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, TestPath("settings.json")), UserSettings.Default);
+        for (int attempt = 0; attempt < 2; attempt++)
+        {
+            var window = new MainWindow(startup);
+            bool closed = false;
+            window.Closed += (_, _) => closed = true;
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            if (damaged)
+            {
+                var error = Assert.Single(window.OwnedWindows);
+                Click(error, Strings.OK); Dispatcher.UIThread.RunJobs();
+            }
+            var dialog = Assert.Single(window.OwnedWindows);
+            var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
+            Assert.Null(main.Session); Assert.True(main.IsWorkspaceBusy);
+            Assert.False(window.FindControl<MenuItem>("QuitMenuItem")!.Command!.CanExecute(null));
+            if (action == "escape")
+                dialog.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
+            else if (action == "cancel") Click(dialog, Strings.Cancel);
+            else dialog.Close();
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(closed); Assert.False(window.IsVisible); Assert.Null(main.Session);
+            Assert.Equal(bytes, files.Data[slot]); Assert.Empty(files.Writes);
+            Assert.Equal(0, recentReads);
+        }
+        static void Click(Window dialog, string label) => dialog.GetVisualDescendants().OfType<Button>()
+            .Single(b => Equals(b.Content, label)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+    }
+
     [Fact]
     public async Task FileCommandsFollowWorkspaceAndSessionForCommandsAndDirectCalls()
     {

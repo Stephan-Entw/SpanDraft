@@ -134,6 +134,55 @@ public sealed class ProjectRecoveryTests
     }
 
     [Fact]
+    public async Task CancelRecoveryAbortsStartupAndOffersTheUnchangedSnapshotOnNextStartup()
+    {
+        var app = new App(create: false);
+        var bytes = ProjectRecovery.Encode(new(State(), null, Now));
+        app.Files.Data[App.Slot] = bytes.ToArray();
+        app.Dialogs.Recovery = RecoveryDecision.Cancel;
+        Assert.False(await app.Main.InitializeRecoveryAsync());
+        Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses);
+        Assert.Equal(bytes, app.Files.Data[App.Slot]); Assert.Empty(app.Delay.Waiters);
+        Assert.Equal(1, app.Dialogs.RecoveryQuestions);
+
+        var dialogs = new Dialogs { Recovery = RecoveryDecision.Cancel };
+        var fresh = new MainWindowViewModel(files: app.Files, dialogs: dialogs,
+            recovery: new ProjectRecovery(app.Files, App.Slot));
+        Assert.False(await fresh.InitializeRecoveryAsync());
+        Assert.Equal(1, dialogs.RecoveryQuestions); Assert.Null(fresh.Session);
+        Assert.Equal(bytes, app.Files.Data[App.Slot]); Assert.Empty(app.Files.Writes);
+    }
+
+    [Theory]
+    [InlineData("{")]
+    [InlineData("null")]
+    [InlineData("{}")]
+    [InlineData("{\"recoveryVersion\":2}")]
+    public async Task CancelDamagedRecoveryAbortsStartupWithoutDeletingTheFile(string json)
+    {
+        var app = new App(create: false); var bytes = Encoding.UTF8.GetBytes(json);
+        app.Files.Data[App.Slot] = bytes.ToArray();
+        app.Dialogs.DamagedRecovery = RecoveryDecision.Cancel;
+        Assert.False(await app.Main.InitializeRecoveryAsync());
+        Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses);
+        Assert.Single(app.Dialogs.Errors); Assert.Equal(1, app.Dialogs.RecoveryQuestions);
+        Assert.Equal(bytes, app.Files.Data[App.Slot]); Assert.Empty(app.Files.Writes);
+        Assert.Empty(app.Delay.Waiters);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task RecoveryWithoutDialogAdapterAbortsStartupWithoutChangingTheFile(bool damaged)
+    {
+        var files = new Files();
+        var bytes = damaged ? Encoding.UTF8.GetBytes("{") : ProjectRecovery.Encode(new(State(), null, Now));
+        files.Data[App.Slot] = bytes.ToArray();
+        var main = new MainWindowViewModel(files: files, recovery: new ProjectRecovery(files, App.Slot));
+        Assert.False(await main.InitializeRecoveryAsync()); Assert.Null(main.Session);
+        Assert.Equal(bytes, files.Data[App.Slot]); Assert.Empty(files.Writes);
+    }
+
+    [Fact]
     public async Task DiscardRecoveryStartsOnStartWithoutAnalysisAndWithoutNewRecovery()
     {
         var app = new App(create: false);

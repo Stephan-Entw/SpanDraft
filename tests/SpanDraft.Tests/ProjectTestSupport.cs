@@ -112,6 +112,7 @@ internal static class ProjectTestSupport
         public string? SavePath { get; set; } = TestPath("Beam01.spandraft");
         public LeaveDecision Leave { get; set; } = LeaveDecision.Cancel;
         public RecoveryDecision Recovery { get; set; } = RecoveryDecision.Restore;
+        public RecoveryDecision DamagedRecovery { get; set; } = RecoveryDecision.Discard;
         public List<string> Errors { get; } = [];
         public int LeaveQuestions { get; private set; }
         public int RecoveryQuestions { get; private set; }
@@ -124,7 +125,7 @@ internal static class ProjectTestSupport
         public Task<LeaveDecision> ConfirmLeaveAsync(string projectName)
         { LeaveQuestions++; return LeaveHook?.Invoke() ?? Task.FromResult(Leave); }
         public Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc)
-        { RecoveryQuestions++; return Task.FromResult(damaged ? RecoveryDecision.Discard : Recovery); }
+        { RecoveryQuestions++; return Task.FromResult(damaged ? DamagedRecovery : Recovery); }
         public Task ShowErrorAsync(string message) { Errors.Add(message); return Task.CompletedTask; }
         public bool ConfirmLibraryDelete { get; set; } = true;
         public Task<bool> ConfirmMaterialDeleteAsync(string name) => Task.FromResult(ConfirmLibraryDelete);
