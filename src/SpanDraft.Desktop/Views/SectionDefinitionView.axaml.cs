@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.ViewModels;
 
@@ -18,6 +19,7 @@ public partial class SectionDefinitionView : UserControl
     private int _nameEditRevision;
     private string? _observedLibraryError;
     private bool _libraryVisibilityUpdatePending;
+    private bool _preserveLibraryInputs;
     public SectionDefinitionView()
     {
         InitializeComponent();
@@ -29,6 +31,7 @@ public partial class SectionDefinitionView : UserControl
             _model = null;
         };
         AddHandler(KeyDownEvent, ViewKeyDown, RoutingStrategies.Bubble);
+        AddHandler(PointerPressedEvent, PresetPointerPressed, RoutingStrategies.Tunnel);
         NameEditor.AddHandler(LostFocusEvent, NameLostFocus, RoutingStrategies.Bubble);
         LayoutUpdated += (_,_) => ScheduleLibraryVisibilityUpdate();
     }
@@ -151,6 +154,16 @@ public partial class SectionDefinitionView : UserControl
     private void SelectForm(object? sender,RoutedEventArgs e) { if (sender is Button { Tag: SectionEditorType type }) _model?.SelectForm(type); }
     private void LoadPreset(object? sender, RoutedEventArgs e)
     { if (sender is Button { DataContext: SectionDefinitionPreset preset }) _model?.LoadPreset(preset.Entry); }
+    private async void DeletePreset(object? sender, RoutedEventArgs e)
+    { if (sender is Button { DataContext: SectionDefinitionPreset preset } && _model is { } model) await model.DeletePresetAsync(preset.Entry); }
+    private void PresetPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.Source is not Avalonia.Visual source ||
+            (source as Button ?? source.FindAncestorOfType<Button>()) is not { } button || !button.Classes.Contains("presetDelete")) return;
+        // Focusing Delete must not commit a draft field before the library operation starts.
+        _preserveLibraryInputs = true;
+        Dispatcher.UIThread.Post(() => _preserveLibraryInputs = false);
+    }
     private void SelectManual(object? sender,RoutedEventArgs e) => _model?.SelectForm(SectionEditorType.Manual);
     private void InputKeyDown(object? sender,KeyEventArgs e)
     {
@@ -159,7 +172,7 @@ public partial class SectionDefinitionView : UserControl
     }
     private void InputLostFocus(object? sender,RoutedEventArgs e)
     {
-        if (_model is null || _model.PreserveInputs || sender is not TextBox { DataContext: SectionDefinitionInput input }) return;
+        if (_model is null || _preserveLibraryInputs || _model.PreserveInputs || sender is not TextBox { DataContext: SectionDefinitionInput input }) return;
         // Untouched fields must remain neutral; a normal visit followed by blur is an interaction.
         input.Commit(); _model.HighlightedParameter=null;
     }
@@ -176,6 +189,7 @@ public partial class SectionDefinitionView : UserControl
     }
     private void NameLostFocus(object? sender,RoutedEventArgs e)
     {
+        if (_preserveLibraryInputs || _model?.PreserveInputs == true) return;
         var model = _model;
         int revision = _nameEditRevision;
         Dispatcher.UIThread.Post(() =>

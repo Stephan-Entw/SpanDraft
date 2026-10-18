@@ -219,6 +219,7 @@
   <data name="SelectMaterialRequired" xml:space="preserve"><value>Select a material</value></data>
   <data name="DeleteMaterialQuestion" xml:space="preserve"><value>Delete “{0}” from your material library? Existing projects will remain unchanged.</value></data>
   <data name="DeleteSectionQuestion" xml:space="preserve"><value>Delete “{0}” from your cross-section library? Existing projects will remain unchanged.</value></data>
+  <data name="SectionDefinitionDeleteLibrary" xml:space="preserve"><value>Remove from library</value></data>
   <data name="SectionDefinitionTitle" xml:space="preserve"><value>Section definition</value></data>
   <data name="SetupBeam" xml:space="preserve"><value>Beam</value></data>
   <data name="SetupLength" xml:space="preserve"><value>Length</value></data>

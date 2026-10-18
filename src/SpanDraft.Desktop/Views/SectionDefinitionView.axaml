@@ -122,22 +122,21 @@
         <StackPanel x:Name="HeaderActions" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
           <Button x:Name="CancelButton" Content="{x:Static resources:Strings.SectionDefinitionDiscard}" Command="{Binding CancelCommand}"
               Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionDiscard}" />
-          <Grid x:Name="LibrarySaveAction" ColumnDefinitions="Auto,Auto" IsVisible="{Binding ShowLibraryAction}">
-            <Button x:Name="SaveLibraryButton" Command="{Binding SaveLibraryCommand}" Classes.librarySaveError="{Binding HasLibraryError}"
-                Classes="secondary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionAddLibrary}">
-              <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
-                <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Star}"
-                    Foreground="{Binding Foreground, ElementName=SaveLibraryButton}" VerticalAlignment="Center">
-                  <PathIcon.RenderTransform><TranslateTransform Y="-1" /></PathIcon.RenderTransform>
-                </PathIcon>
-                <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.SectionDefinitionAddLibrary}" VerticalAlignment="Center" />
-              </Grid>
-            </Button>
-            <controls:SectionInputHint x:Name="LibraryErrorHint" Grid.Column="1" Classes="inputHint errorHint" IsVisible="{Binding HasLibraryError}"
-                Message="{Binding LibraryError}" VerticalAlignment="Center" Margin="6,0,0,0">
-              <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
-            </controls:SectionInputHint>
-          </Grid>
+          <Button x:Name="SaveLibraryButton" Command="{Binding SaveLibraryCommand}" Classes.librarySaveError="{Binding HasLibraryError}"
+              IsVisible="{Binding ShowLibraryAction}"
+              Classes="secondary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionAddLibrary}">
+            <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
+              <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Star}"
+                  Foreground="{Binding Foreground, ElementName=SaveLibraryButton}" VerticalAlignment="Center">
+                <PathIcon.RenderTransform><TranslateTransform Y="-1" /></PathIcon.RenderTransform>
+              </PathIcon>
+              <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.SectionDefinitionAddLibrary}" VerticalAlignment="Center" />
+            </Grid>
+          </Button>
+          <controls:SectionInputHint x:Name="LibraryErrorHint" Classes="inputHint errorHint" IsVisible="{Binding HasLibraryError}"
+              Message="{Binding LibraryError}" VerticalAlignment="Center">
+            <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
+          </controls:SectionInputHint>
           <Button x:Name="ConfirmButton" Content="{x:Static resources:Strings.Apply}" Command="{Binding ConfirmCommand}"
               IsVisible="{Binding ShowConfirm}" Classes="primary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.Apply}" />
         </StackPanel>
@@ -215,13 +214,25 @@
                   <ItemsControl x:Name="LibraryEntryList" ItemsSource="{Binding LibraryEntries}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:SectionDefinitionPreset">
-                        <Button Click="LoadPreset" Classes="secondary" Height="NaN" MinHeight="62" Padding="12,10" Margin="0,0,0,8"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
-                          <StackPanel Spacing="4">
-                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding Summary}" Classes="caption" TextWrapping="Wrap" />
-                          </StackPanel>
-                        </Button>
+                        <Border Classes="presetCard" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}"
+                            BorderThickness="{DynamicResource BorderWidth}" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,0,8">
+                          <Grid ColumnDefinitions="*,Auto" MinHeight="62">
+                            <Button Click="LoadPreset" Classes="secondary presetLoad" Height="NaN" Padding="12,10" BorderThickness="0"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
+                              <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Summary}" Classes="caption" TextWrapping="Wrap" />
+                              </StackPanel>
+                            </Button>
+                            <Button Grid.Column="1" Click="DeletePreset" Classes="ghost presetDelete" Width="32" Height="32" Padding="8"
+                                Margin="0,8,8,0" VerticalAlignment="Top"
+                                ToolTip.Tip="{x:Static resources:Strings.SectionDefinitionDeleteLibrary}"
+                                AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionDeleteLibrary}">
+                              <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Delete}"
+                                  Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                            </Button>
+                          </Grid>
+                        </Border>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>

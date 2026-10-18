@@ -197,6 +197,47 @@ public sealed class DesktopProjectSetupWorkflowTests
     }
 
     [Theory]
+    [InlineData("confirm")] [InlineData("cancel")] [InlineData("error")]
+    public async Task SectionEditorDeleteUsesConfirmationAndAtomicStorageWithoutChangingTheProject(string outcome)
+    {
+        var f = new Fixture();
+        f.Files.Data["sections"] = SectionLibraryCodec.Serialize(new([new("Mine", Rectangle())]));
+        await f.Load();
+        var entry = Assert.Single(f.Main.UserSections.All);
+        var vm = Sections(f); vm.SelectForm(SectionEditorType.Rectangle); vm.LoadPreset(entry); vm.SelectedAxis = SectionAxisDesignation.Z;
+        Assert.True(await vm.ConfirmAsync()); f.Create();
+        var session = f.Main.Session!; var revision = session.CurrentRevision; var document = f.Main.Editor!.Document;
+        var undo = session.UndoHistory.ToArray(); var redo = session.RedoHistory.ToArray(); bool dirty = session.IsDirty;
+        f.Main.EditProject(); vm = Sections(f);
+        var draft = vm.Section; var preview = vm.Preview; var bytes = f.Files.Data["sections"].ToArray();
+        f.Dialogs.ConfirmLibraryDelete = outcome != "cancel";
+        if (outcome == "error") f.Files.FailWritePath = "sections";
+
+        await vm.DeletePresetAsync(entry);
+
+        Assert.Same(draft, vm.Section); Assert.Same(preview, vm.Preview);
+        Assert.Equal("Mine", vm.DisplayName); Assert.Equal(SectionAxisDesignation.Z, vm.SelectedAxis);
+        Assert.Same(document, f.Main.Editor.Document); Assert.Same(revision, session.CurrentRevision);
+        Assert.Equal(undo, session.UndoHistory); Assert.Equal(redo, session.RedoHistory); Assert.Equal(dirty, session.IsDirty);
+        if (outcome == "confirm")
+        {
+            Assert.Empty(f.Main.UserSections.All); Assert.Empty(vm.LibraryEntries); Assert.Null(vm.LibraryError);
+            Assert.Empty((await new SectionLibraryStore(f.Files, "sections").LoadAsync()).All);
+            Assert.Single(f.Files.Writes);
+            Assert.True(await vm.SaveLibraryAsync()); Assert.Equal("Mine", Assert.Single(f.Main.UserSections.All).Name);
+        }
+        else
+        {
+            Assert.Same(entry, Assert.Single(f.Main.UserSections.All)); Assert.Single(vm.LibraryEntries);
+            Assert.Equal(bytes, f.Files.Data["sections"]); Assert.Empty(f.Files.Writes);
+            Assert.Equal(outcome == "error" ? Strings.LibrarySaveFailed : null, vm.LibraryError);
+        }
+        Assert.True(await vm.ConfirmAsync()); Assert.True(await f.Main.Setup.ConfirmAsync());
+        Assert.Equal(document.Section.Area, f.Main.Editor.Document.Section.Area);
+        Assert.Equal(document.BendingAxis, f.Main.Editor.Document.BendingAxis);
+    }
+
+    [Theory]
     [InlineData(true, "add")] [InlineData(true, "replace")] [InlineData(true, "remove")]
     [InlineData(false, "add")] [InlineData(false, "replace")] [InlineData(false, "remove")]
     public async Task AllLibraryWriteFailuresPreserveActiveStateAndPersistedBytes(bool material, string operation)

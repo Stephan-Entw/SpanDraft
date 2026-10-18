@@ -20,7 +20,7 @@ namespace SpanDraft.Tests;
 public sealed class DesktopIconTests
 {
     private static readonly string[] Toolbar = ["PointLoad", "PointMoment", "DistributedLoad", "FixedSupport", "PinnedSupport", "RollerSupport"];
-    private static readonly string[] Fluent = ["DocumentAdd", "FolderOpen", "BookOpen", "Document", "Info", "Edit", "Star", "ErrorCircle"];
+    private static readonly string[] Fluent = ["DocumentAdd", "FolderOpen", "BookOpen", "Document", "Info", "Edit", "Star", "ErrorCircle", "Delete"];
 
     [Fact]
     public void NativeArtworkKeepsArtboardsAndRendersInBothThemes()

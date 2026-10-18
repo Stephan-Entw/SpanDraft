@@ -433,6 +433,15 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         }
         finally { _busy = false; Refresh(); }
     }
+    public async Task DeletePresetAsync(SectionLibraryEntry entry)
+    {
+        if (IsBusy || _library?.Entries.Contains(entry) != true) return;
+        _saveError = _library.CanSave ? null : _library.Error ?? Strings.SectionLibraryUnavailable;
+        if (_saveError is not null) { Refresh(); return; }
+        _busy = true; Refresh();
+        try { _saveError = await _library.DeleteAsync(entry.Name); }
+        finally { _busy = false; Refresh(); }
+    }
     public void LoadPreset(SectionLibraryEntry entry)
     {
         if (IsBusy || !HasDefinition || _library?.Entries.Contains(entry) != true) return;
@@ -485,7 +494,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     private void RefreshLibraryEntries()
     {
         var entries = (_library?.Entries ?? []).Where(e => FormOf(SectionDefinitionCompatibility.Normalize(e.Section)) == _type)
-            .Take(5).Select(e =>
+            .Select(e =>
             {
                 var section = SectionDefinitionCompatibility.Normalize(e.Section);
                 var values = PresetValues(section);

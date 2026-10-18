@@ -198,6 +198,22 @@ public sealed class SectionDefinitionHistoryTests
         library.Completion.SetResult(null); Assert.True(await saving); Assert.True(vm.CanUndo);
     }
     [Fact]
+    public async Task DeletingALoadedPresetNeitherAddsUndoNorClearsRedo()
+    {
+        var library = new Library(); var entry = new SectionLibraryEntry("Preset", new RectangleSectionGeometry(M(.2), M(.3)));
+        library.Items.Add(entry);
+        var vm = new SectionDefinitionViewModel(library: library, initialState: new(new RectangleSectionGeometry(M(.1), M(.1)), SectionAxisDesignation.Y));
+        vm.LoadPreset(entry); Name(vm, "Later name"); Assert.True(vm.Undo());
+        Assert.Equal("Preset", vm.DisplayName); Assert.True(vm.CanRedo);
+        var section = vm.Section;
+        await vm.DeletePresetAsync(entry);
+        Assert.Empty(library.Items); Assert.Same(section, vm.Section);
+        Assert.True(vm.Redo()); Assert.Equal("Later name", vm.DisplayName);
+        Assert.True(vm.Undo()); Assert.Equal("Preset", vm.DisplayName);
+        Assert.True(vm.Undo()); Assert.Equal(.1, Input(vm, "h").ConfirmedValue); Assert.False(vm.CanUndo);
+        Assert.Empty(library.Items);
+    }
+    [Fact]
     public async Task ManySectionChangesBecomeOneProjectRevisionOnlyAfterSetupApply()
     {
         var main = new MainWindowViewModel(); main.NewCommand.Execute(null); Assert.True(await main.Setup.ConfirmAsync());
@@ -220,5 +236,7 @@ public sealed class SectionDefinitionHistoryTests
         public bool ContainsName(string name) => Items.Any(i => i.Name == name);
         public async Task<string?> SaveAsync(SectionLibraryEntry entry)
         { if (Completion is not null) await Completion.Task; Items.Add(entry); return null; }
+        public Task<string?> DeleteAsync(string name)
+        { Items.RemoveAll(e => e.Name == name); return Task.FromResult<string?>(null); }
     }
 }

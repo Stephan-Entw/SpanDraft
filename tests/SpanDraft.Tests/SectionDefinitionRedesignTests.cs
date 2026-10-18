@@ -32,11 +32,22 @@ public sealed class SectionDefinitionRedesignTests
         public bool CanSave { get; set; } = true;
         public string? Error { get; set; }
         public string? SaveError { get; set; }
+        public string? DeleteError { get; set; }
+        public bool CancelDelete { get; set; }
+        public int DeleteCalls { get; private set; }
+        public TaskCompletionSource<string?>? DeleteCompletion { get; set; }
         public bool ContainsName(string name) => Source.Find(name) is not null;
         public Task<string?> SaveAsync(SectionLibraryEntry entry)
         {
             if (SaveError is null) Source.Add(entry);
             return Task.FromResult(SaveError);
+        }
+        public async Task<string?> DeleteAsync(string name)
+        {
+            DeleteCalls++;
+            string? error = DeleteCompletion is null ? DeleteError : await DeleteCompletion.Task;
+            if (error is null && !CancelDelete) Source.Remove(name);
+            return error;
         }
     }
     private static void Fill(SectionDefinitionViewModel vm)
@@ -122,7 +133,6 @@ public sealed class SectionDefinitionRedesignTests
         window.Show();
         try
         {
-            var header = view.FindControl<Grid>("LibrarySaveAction")!;
             var button = view.FindControl<Button>("SaveLibraryButton")!;
             Assert.Same(vm.SaveLibraryCommand, button.Command);
             AssertVisibility(false);
@@ -146,7 +156,7 @@ public sealed class SectionDefinitionRedesignTests
             {
                 Dispatcher.UIThread.RunJobs();
                 view.Measure(new Size(1100, 650)); view.Arrange(new Rect(0, 0, 1100, 650));
-                Assert.Equal(expected, header.IsVisible);
+                Assert.Equal(expected, button.IsVisible);
                 Assert.Equal(expected, button.IsEffectivelyVisible);
             }
         }
@@ -278,7 +288,7 @@ public sealed class SectionDefinitionRedesignTests
         owner.Close();
     }
     [Fact]
-    public void QuickAccessFiltersByShapeCapsFiveAndPreservesLibraryOrder()
+    public void QuickAccessIncludesEveryMatchingPresetAndPreservesLibraryOrder()
     {
         var library = new Library();
         for (int i = 0; i < 7; i++)
@@ -287,11 +297,140 @@ public sealed class SectionDefinitionRedesignTests
             library.Source.Add(new("Rectangle " + i, new RectangleSectionGeometry(M(.1), M(.2))));
         }
         var vm = new SectionDefinitionViewModel(library: library); vm.SelectForm(SectionEditorType.Circle);
-        Assert.Equal(Enumerable.Range(0, 5).Select(i => "Circle " + i), vm.LibraryEntries.Select(e => e.Name));
+        Assert.Equal(Enumerable.Range(0, 7).Select(i => "Circle " + i), vm.LibraryEntries.Select(e => e.Name));
         Assert.False(vm.IsLibraryEmpty);
         vm.SelectForm(SectionEditorType.ISection); Assert.Empty(vm.LibraryEntries); Assert.True(vm.IsLibraryEmpty);
         library.Error = "Cannot read library"; vm.SelectForm(SectionEditorType.ISection);
         Assert.False(vm.IsLibraryEmpty); Assert.Null(vm.LibraryError);
+    }
+    [Theory]
+    [InlineData(false, null)] [InlineData(true, null)] [InlineData(false, "Delete failed")]
+    public async Task DeleteOnlyChangesTheLibraryAndAllowsTheNameToBeReused(bool cancel, string? error)
+    {
+        var library = new Library { CancelDelete = cancel, DeleteError = error };
+        var entry = new SectionLibraryEntry("Preset", new RectangleSectionGeometry(M(.12), M(.06)));
+        library.Source.Add(entry);
+        var vm = new SectionDefinitionViewModel(library: library);
+        vm.SelectForm(SectionEditorType.Circle); Fill(vm);
+        vm.BeginNameEdit(); vm.PendingName = "Circle draft"; Assert.True(vm.CommitName());
+        vm.SelectForm(SectionEditorType.Rectangle); vm.LoadPreset(entry); vm.SelectedAxis = SectionAxisDesignation.Z;
+        var section = vm.Section; var preview = vm.Preview;
+        var inputs = vm.Parameters.Select(p => (p.Key, p.PendingText, p.ConfirmedValue, p.HasError)).ToArray();
+        bool undo = vm.CanUndo, redo = vm.CanRedo;
+
+        await vm.DeletePresetAsync(entry);
+
+        Assert.Equal(cancel || error is not null, library.Entries.Contains(entry));
+        Assert.Equal(library.Entries, vm.LibraryEntries.Select(p => p.Entry));
+        Assert.Equal(error, vm.LibraryError); Assert.False(vm.IsBusy);
+        Assert.Same(section, vm.Section); Assert.Same(preview, vm.Preview);
+        Assert.Equal(inputs, vm.Parameters.Select(p => (p.Key, p.PendingText, p.ConfirmedValue, p.HasError)));
+        Assert.Equal(entry.Name, vm.DisplayName); Assert.Equal(SectionAxisDesignation.Z, vm.SelectedAxis);
+        Assert.Equal(undo, vm.CanUndo); Assert.Equal(redo, vm.CanRedo); Assert.True(await vm.ConfirmAsync());
+        if (!cancel && error is null)
+        {
+            Assert.True(await vm.SaveLibraryAsync()); Assert.Null(vm.LibraryError);
+            Assert.Equal(entry.Name, Assert.Single(library.Entries).Name);
+        }
+        vm.SelectForm(SectionEditorType.Circle); Assert.Equal("Circle draft", vm.DisplayName); Assert.True(vm.HasValidSection);
+    }
+    [Fact]
+    public async Task DeleteIgnoresStaleEntriesAndBlocksConcurrentDraftAndLibraryActions()
+    {
+        var library = new Library { DeleteCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously) };
+        var entry = new SectionLibraryEntry("Preset", new CircleSectionGeometry(M(.04)));
+        library.Source.Add(entry);
+        var vm = new SectionDefinitionViewModel(library: library); vm.SelectForm(SectionEditorType.Circle); vm.LoadPreset(entry);
+        await vm.DeletePresetAsync(new(entry.Name, entry.Section)); Assert.Equal(0, library.DeleteCalls);
+        var deleting = vm.DeletePresetAsync(entry);
+        Assert.True(vm.IsBusy); Assert.False(vm.CanUndo); Assert.False(vm.CanRedo); Assert.False(vm.CanConfirm);
+        await vm.DeletePresetAsync(entry); Assert.False(await vm.SaveLibraryAsync());
+        vm.SelectForm(SectionEditorType.Rectangle); Assert.Equal(SectionEditorType.Circle, vm.Type);
+        Assert.Equal(1, library.DeleteCalls); Assert.Single(library.Entries);
+        library.DeleteCompletion.SetResult(null); await deleting;
+        Assert.False(vm.IsBusy); Assert.Empty(vm.LibraryEntries); Assert.True(vm.CanConfirm);
+        await vm.DeletePresetAsync(entry); Assert.Equal(1, library.DeleteCalls);
+    }
+    [Theory]
+    [InlineData(null)] [InlineData("Library unavailable")]
+    public async Task UnavailableLibraryCannotDeleteAndUsesTheExistingError(string? error)
+    {
+        var library = new Library { CanSave = false, Error = error };
+        var entry = new SectionLibraryEntry("Preset", new CircleSectionGeometry(M(.04))); library.Source.Add(entry);
+        var vm = new SectionDefinitionViewModel(library: library); vm.SelectForm(SectionEditorType.Circle);
+        await vm.DeletePresetAsync(entry);
+        Assert.Equal(error ?? Strings.SectionLibraryUnavailable, vm.LibraryError);
+        Assert.Equal(0, library.DeleteCalls); Assert.Single(vm.LibraryEntries); Assert.False(vm.IsBusy);
+    }
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void PresetButtonsKeepLoadingAndDeletionSeparateAndShowDeleteErrorsWithoutAValidDraft(string culture)
+    {
+        using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
+        var library = new Library { DeleteError = "Delete failed" };
+        var entry = new SectionLibraryEntry("Saved circle", new CircleSectionGeometry(M(.04))); library.Source.Add(entry);
+        var vm = new SectionDefinitionViewModel(library: library); vm.SelectForm(SectionEditorType.Circle);
+        var view = new SectionDefinitionView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1250, Height = 800 }; window.Show();
+        try
+        {
+            Dispatcher.UIThread.RunJobs();
+            var buttons = view.FindControl<ItemsControl>("LibraryEntryList")!.GetVisualDescendants().OfType<Button>().ToArray();
+            var load = buttons.Single(b => b.Classes.Contains("presetLoad"));
+            var delete = buttons.Single(b => b.Classes.Contains("presetDelete"));
+            delete.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(1, library.DeleteCalls); Assert.Null(vm.Section); Assert.False(vm.HasCustomName);
+            Assert.Equal(library.DeleteError, vm.LibraryError);
+            Assert.True(view.FindControl<SectionInputHint>("LibraryErrorHint")!.IsEffectivelyVisible);
+            Assert.False(view.FindControl<Button>("SaveLibraryButton")!.IsEffectivelyVisible);
+
+            load.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal(1, library.DeleteCalls); Assert.Equal(entry.Name, vm.DisplayName); Assert.True(vm.CanConfirm);
+            var section = vm.Section;
+            library.DeleteError = null;
+            delete.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(2, library.DeleteCalls); Assert.Empty(vm.LibraryEntries); Assert.Null(vm.LibraryError);
+            Assert.Same(section, vm.Section); Assert.Equal(entry.Name, vm.DisplayName); Assert.True(vm.CanConfirm);
+        }
+        finally { window.Close(); }
+    }
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void ClickingDeletePreservesFocusedPendingInputsAndNames(bool editingName)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var library = new Library { CancelDelete = true };
+        var entry = new SectionLibraryEntry("Saved circle", new CircleSectionGeometry(M(.04))); library.Source.Add(entry);
+        var vm = new SectionDefinitionViewModel(library: library); vm.SelectForm(SectionEditorType.Circle); vm.LoadPreset(entry);
+        var view = new SectionDefinitionView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1250, Height = 800 }; window.Show();
+        try
+        {
+            Dispatcher.UIThread.RunJobs();
+            if (editingName)
+            {
+                vm.BeginNameEdit(); Dispatcher.UIThread.RunJobs();
+                Assert.True(view.FindControl<TextBox>("NameInput")!.IsFocused); vm.PendingName = "Uncommitted name";
+            }
+            else
+            {
+                var input = view.GetVisualDescendants().OfType<TextBox>().Single(t => t.DataContext is SectionDefinitionInput);
+                input.Focus(); vm.Parameters.Single().PendingText = "99";
+            }
+            var section = vm.Section; var preview = vm.Preview;
+            var delete = view.FindControl<ItemsControl>("LibraryEntryList")!.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("presetDelete"));
+            var pointer = new Pointer(72, PointerType.Mouse, true);
+            var position = delete.TranslatePoint(new Point(16, 16), window)!.Value;
+            delete.RaiseEvent(new PointerPressedEventArgs(delete, pointer, window, position, 0,
+                new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed), KeyModifiers.None));
+            delete.Focus(NavigationMethod.Pointer); Dispatcher.UIThread.RunJobs();
+            delete.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(1, library.DeleteCalls); Assert.Single(vm.LibraryEntries); Assert.Null(vm.LibraryError);
+            Assert.Same(section, vm.Section); Assert.Same(preview, vm.Preview); Assert.Equal(entry.Name, vm.DisplayName);
+            if (editingName) { Assert.True(vm.IsEditingName); Assert.Equal("Uncommitted name", vm.PendingName); }
+            else { Assert.True(vm.Parameters.Single().IsPending); Assert.Equal("99", vm.Parameters.Single().PendingText); }
+        }
+        finally { window.Close(); }
     }
     [Theory]
     [InlineData("de-DE", 1500, 980)] [InlineData("en-US", 1500, 980)]
@@ -301,6 +440,7 @@ public sealed class SectionDefinitionRedesignTests
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
         foreach (var units in new[] { UnitProfile.Default, UnitProfile.UnitedStates })
+        foreach (int count in new[] { 1, 5, 8 })
         {
             var library = new Library(); var vm = new SectionDefinitionViewModel(new(units), library);
             var view = new SectionDefinitionView { DataContext = vm }; var window = new Window { Content = view, Width = width, Height = height };
@@ -308,8 +448,9 @@ public sealed class SectionDefinitionRedesignTests
             foreach (var type in vm.Forms.Select(f => f.Value).Append(SectionEditorType.Manual))
             {
                 vm.SelectForm(type); Fill(vm);
-                for (int i = 0; i < 5; i++) library.Source.Add(new(type + " saved " + i, vm.Section!));
+                for (int i = 0; i < count; i++) library.Source.Add(new(type + " saved " + i + " mounting bracket", vm.Section!));
                 vm.SelectForm(type); Layout();
+                Assert.Equal(count, vm.LibraryEntries.Count);
                 var pinned = view.FindControl<StackPanel>("PinnedInputs")!;
                 var heading = view.FindControl<StackPanel>("LibraryHeading")!;
                 var scroll = view.FindControl<ScrollViewer>("LibraryScroll")!;
@@ -340,12 +481,29 @@ public sealed class SectionDefinitionRedesignTests
                 var profile = view.FindControl<Border>("ProfileCard")!;
                 var profileLeft = profile.TranslatePoint(default, view)!.Value.X;
                 var profileRight = profileLeft + profile.Bounds.Width;
-                foreach (var entry in list.GetVisualDescendants().OfType<Button>())
+                var cards = list.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("presetCard")).ToArray();
+                Assert.Equal(count, cards.Length);
+                foreach (var entry in cards)
                 {
                     var left = entry.TranslatePoint(default, view)!.Value.X;
                     Assert.InRange(Math.Abs(left - profileLeft), 0, .5);
                     Assert.InRange(Math.Abs(left + entry.Bounds.Width - profileRight), 0, .5);
+                    var buttons = entry.GetVisualDescendants().OfType<Button>().ToArray();
+                    Assert.Equal(2, buttons.Length);
+                    var load = buttons.Single(b => b.Classes.Contains("presetLoad"));
+                    var delete = buttons.Single(b => b.Classes.Contains("presetDelete"));
+                    Assert.DoesNotContain(delete.GetVisualAncestors(), a => a is Button);
+                    Assert.True(load.TranslatePoint(default, entry)!.Value.X + load.Bounds.Width <= delete.TranslatePoint(default, entry)!.Value.X);
+                    Assert.Equal(Strings.SectionDefinitionDeleteLibrary, Avalonia.Automation.AutomationProperties.GetName(delete));
+                    Assert.Equal(Strings.SectionDefinitionDeleteLibrary, ToolTip.GetTip(delete));
+                    Assert.Same(Application.Current!.FindResource("FluentIcon.Delete"), Assert.IsType<PathIcon>(delete.Content).Data);
+                    foreach (var text in load.GetVisualDescendants().OfType<TextBlock>())
+                    {
+                        Assert.True(text.Bounds.Width + 1 >= text.TextLayout.Width);
+                        Assert.True(text.Bounds.Height + 1 >= text.TextLayout.Height);
+                    }
                 }
+                Assert.True(scroll.Extent.Width <= scroll.Viewport.Width + 1);
                 var bar = scroll.GetVisualDescendants().OfType<ScrollBar>().Single(b => b.Orientation == Avalonia.Layout.Orientation.Vertical);
                 if (bar.IsEffectivelyVisible)
                 {
@@ -358,12 +516,23 @@ public sealed class SectionDefinitionRedesignTests
                 Assert.True(scroll.Viewport.Height >= 96, type + ": insufficient visible library height: " + scroll.Viewport);
                 var fixedInputs = pinned.TranslatePoint(default, view); var fixedHeading = heading.TranslatePoint(default, view);
                 scroll.Offset = default; Layout();
-                var first = list.GetVisualDescendants().OfType<Button>().First();
+                var first = cards[0];
                 var before = first.TranslatePoint(default, view)!.Value;
                 scroll.Offset = new Vector(0, Math.Max(0, scroll.Extent.Height - scroll.Viewport.Height)); Layout();
                 Assert.Equal(fixedInputs, pinned.TranslatePoint(default, view)); Assert.Equal(fixedHeading, heading.TranslatePoint(default, view));
                 if (scroll.Extent.Height > scroll.Viewport.Height + 1)
                     Assert.True(first.TranslatePoint(default, view)!.Value.Y < before.Y);
+                var last = cards[^1];
+                double lastTop = last.TranslatePoint(default, scroll)!.Value.Y;
+                Assert.InRange(lastTop, -.5, scroll.Viewport.Height);
+                Assert.True(lastTop + last.Bounds.Height <= scroll.Viewport.Height + 1);
+                if (units == UnitProfile.Default && type == SectionEditorType.ISection && width == 1250 && height == 800
+                    && Environment.GetEnvironmentVariable("SPANDRAFT_VISUAL_TEST_OUTPUT") is { Length: > 0 } directory)
+                {
+                    Directory.CreateDirectory(directory);
+                    using var bitmap = new RenderTargetBitmap(new PixelSize(width, height), new Vector(96, 96));
+                    bitmap.Render(view); bitmap.Save(Path.Combine(directory, $"section-library-{culture}-{count}.png"), PngBitmapEncoderOptions.Default);
+                }
             }
             window.Close();
             void Layout()

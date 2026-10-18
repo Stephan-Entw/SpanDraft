@@ -219,6 +219,7 @@
   <data name="SelectMaterialRequired" xml:space="preserve"><value>Werkstoff auswählen</value></data>
   <data name="DeleteMaterialQuestion" xml:space="preserve"><value>„{0}“ aus Ihrer Materialbibliothek löschen? Bestehende Projekte bleiben unverändert.</value></data>
   <data name="DeleteSectionQuestion" xml:space="preserve"><value>„{0}“ aus Ihrer Querschnittsbibliothek löschen? Bestehende Projekte bleiben unverändert.</value></data>
+  <data name="SectionDefinitionDeleteLibrary" xml:space="preserve"><value>Aus Bibliothek löschen</value></data>
   <data name="SectionDefinitionTitle" xml:space="preserve"><value>Querschnittdefinition</value></data>
   <data name="SetupBeam" xml:space="preserve"><value>Balken</value></data>
   <data name="SetupLength" xml:space="preserve"><value>Länge</value></data>
