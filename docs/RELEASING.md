@@ -1,20 +1,17 @@
 # Releasing SpanDraft
 
-Windows x64 packaging is available locally and through a manual GitHub Actions
-workflow. Tag-triggered release automation is the next release step and is not
-implemented yet.
+Future Windows x64 releases are automatic after a successful push CI run on
+`main`. The published `v0.1.0` tag, release, notes and history remain unchanged.
 
-## Version and release notes
+## Version and release preparation
 
 The central product version is `<Version>` in `Directory.Build.props`.
-`RELEASE_NOTES.md` contains user-facing notes with the newest version first,
-using headings such as `## 0.1.0`. Do not add a release date before publication.
-Versions use `MAJOR.MINOR.PATCH`; the planned release tags use the `v` prefix.
+`RELEASE_NOTES.md` contains user-facing notes with the newest version first and
+exact headings such as `## 0.1.1`. Versions use `MAJOR.MINOR.PATCH`, without leading
+zeros or suffixes; tags use the `v` prefix. Do not add a release date before
+publication.
 
-## Release-preparation commit
-
-The final commit before a release tag must have this exact subject, with the
-release version substituted:
+The final commit on `main` must have this exact subject:
 
 ```text
 chore: prepare release vX.Y.Z
@@ -22,105 +19,102 @@ chore: prepare release vX.Y.Z
 
 It must change exactly these two files:
 
-- `Directory.Build.props`, setting the central `<Version>` to `X.Y.Z`.
-- `RELEASE_NOTES.md`, containing the matching `## X.Y.Z` section.
+- `Directory.Build.props`, setting the effective Desktop version to `X.Y.Z`.
+- `RELEASE_NOTES.md`, containing exactly one non-empty `## X.Y.Z` section.
 
-Bug fixes, product or UI changes, workflow changes, packaging infrastructure,
-general documentation and dependency changes belong in earlier commits. If
-Desktop dependencies changed, regenerate and commit `THIRD_PARTY_NOTICES.txt`
-before release preparation using the command in the README.
+Product changes, fixes, dependencies, packaging, workflows and general
+documentation belong in earlier commits. If Desktop dependencies changed,
+regenerate and commit `THIRD_PARTY_NOTICES.txt` before release preparation using
+the command in the README.
 
-## Prepare and test a Windows package
+**Pushing this final release-preparation commit to `main` is the deliberate
+authorization to publish. A successful CI and installer smoke test will publish
+automatically, without another approval.**
 
-1. Finish normal feature and fix commits and pass all CI gates.
-2. Commit only the central version and release notes to `main` as
-   `chore: prepare release vX.Y.Z`.
-3. Pass all CI gates again on that release-preparation commit.
-4. Run the manual **Package Windows** workflow (`package-windows.yml`) for that
-   exact commit and download its installer artifact. The workflow checks the
-   commit subject, exact changed-file set, effective MSBuild version and matching
-   release-notes heading before building. It checks out the exact run SHA and
-   does not replace the product and validation gates in `ci.yml`.
-5. Smoke-test the downloaded installer on Windows as described below.
-6. Only after those checks pass, create the matching `vX.Y.Z` tag on exactly that
-   tested release-preparation commit. A GitHub Release follows later. The package
-   workflow itself creates neither tags nor GitHub Releases.
+## Normal release
 
-## Bugs found before publication
+1. Finish features and fixes. Perform targeted manual product or installer checks
+   during development when the change needs them.
+2. Create the final two-file `chore: prepare release vX.Y.Z` commit and push `main`.
+3. The existing CI runs Product, Validation and Help. Only a successful push run
+   on `main` can trigger release processing; PRs and manually started CI cannot
+   publish.
+4. The Release workflow validates the subject, exact changed-file set, effective
+   MSBuild version and matching non-empty notes section. Ordinary commits finish
+   successfully with `is_release=false`; malformed release-preparation subjects
+   fail.
+5. On `windows-2025`, the existing packaging script builds the installer once.
+   The automated smoke test installs that EXE, checks the installed contents and
+   shortcuts, starts the application for five seconds, stops it and uninstalls it.
+6. Only after that test passes, the EXE is hashed with SHA-256 and transferred as
+   an internal Actions artifact. The publish job verifies its exact filename and
+   hash before publishing that same EXE.
+7. GitHub creates `vX.Y.Z` on the tested commit and publishes `SpanDraft vX.Y.Z`.
+   Notes are only the contents under `## X.Y.Z` up to the next `## ` heading or
+   EOF. The installer is the only custom asset; GitHub's source archives are normal.
 
-If a bug is found after release preparation but before tagging or publication:
+The workflow checks that remote `main` still points to the candidate before
+packaging and immediately before publication. Release concurrency cancels older
+release runs when another run starts. A final check detects changes during
+publication. These checks cannot atomically prevent a simultaneous push between
+the last check and GitHub publication; they do not roll back a public release.
 
-1. Do not create the tag.
-2. Fix the bug in a normal fix commit.
-3. Rebase or move the still-unpublished release-preparation commit after the fix,
-   preserving its two-file contract and keeping the same version. Do not add an
-   empty release-preparation commit.
-4. Repeat all CI gates, the package build and the installer smoke test on the new
-   release-preparation SHA. Only then tag that commit.
+No manual package download, VM installation, tag creation, release creation,
+asset upload or notes copying is required for a normal release. The workflow
+defaults to `contents: read`; only the publish job receives `contents: write`.
 
-For example, this order is wrong for the final release:
+## Failures and bugs before publication
 
-```text
-chore: prepare release v0.1.0
-fix: correct something
-```
+A failure before `gh release create` creates neither a tag nor a release.
+Inspect the failed Actions job before retrying. A tag left by a partial publish
+may be reused only if it points to exactly the same release SHA. An existing
+release or a tag on another commit blocks publication; automation never
+overwrites or deletes either. A partial failure during publication may leave a
+tag or draft release that needs investigation. Do not assume a failed run means
+nothing became public.
 
-Before publication, rebuild it as:
+If a product bug is found before publication:
 
-```text
-fix: correct something
-chore: prepare release v0.1.0
-v0.1.0
-```
+1. Stop any still-running release attempt and confirm that no release was
+   published. A later commit on `main` also makes the old candidate stale.
+2. Revert the unpublished release-preparation commit with a normal commit.
+3. Commit the fix normally, then create a new final release-preparation commit
+   with the same two-file contract. The same version may be reused while it has
+   never been publicly released.
+4. Push the new final SHA; the complete CI, packaging and smoke-test path repeats.
 
-History rewrites are allowed only before a public tag or release. Never rewrite
-published release history; a bug found afterward gets a new patch version, such
-as `0.1.1`.
+Do not rewrite history or force-push. After public publication, every bug fix
+requires a new patch version. Never change published tags, assets or release notes.
 
-## Local Windows package
+## Optional Windows package and manual checks
 
-For a local package build, use Windows with PowerShell 7, .NET 10 SDK, Inno Setup 6
-and an activated Python 3.11+ environment containing `help/requirements.txt` (see
-[the help build instructions](../help/README.md)). Make `ISCC.exe` available on
-`PATH` or use its standard `Program Files (x86)` / `Program Files` installation
-directory. From the repository root, run:
+The manual **Package Windows** workflow remains available to build or inspect an
+installer for an exact release-preparation commit. It validates that commit and
+uploads an internal artifact; it creates no tag or GitHub Release and is not a
+required step in the normal release path.
+
+For a local build, use Windows with PowerShell 7, .NET 10 SDK, Inno Setup 6 and
+Python 3.11+ with `help/requirements.txt` installed (see the
+[help build instructions](../help/README.md)). Make `ISCC.exe` available on `PATH`
+or in its standard `Program Files (x86)` / `Program Files` installation directory.
+From the repository root:
 
 ```powershell
 pwsh ./scripts/package-windows.ps1
+pwsh ./scripts/smoke-test-windows-installer.ps1 -InstallerPath artifacts/windows/installer/SpanDraft-X.Y.Z-win-x64-setup.exe
 ```
 
-The script reads the effective version through MSBuild, cleans its own publish
-and installer output, checks third-party notices, builds and validates the offline
-help, publishes the self-contained `win-x64` desktop application and invokes Inno
-Setup. It does not install prerequisites. The result is
-`artifacts/windows/installer/SpanDraft-<Version>-win-x64-setup.exe`.
+The packaging script checks notices, builds and validates offline help, publishes
+the self-contained `win-x64` application and invokes Inno Setup. The smoke test
+requires no existing SpanDraft installation or conflicting shortcuts. It checks
+the default per-user installation under `%LOCALAPPDATA%\Programs\SpanDraft`,
+leaves the optional desktop shortcut disabled and cleans up its own installation
+on failure where possible. User data under `%LOCALAPPDATA%\SpanDraft` is retained.
 
-## Manual Windows smoke test
-
-- Use a fresh Windows user profile or a state without `%LOCALAPPDATA%\SpanDraft`.
-  Install as a standard user without elevation. Verify the per-user installation
-  directory, the SpanDraft Start menu entry and the application icon.
-- Verify the optional desktop shortcut task is offered and unchecked by default.
-  Select it and confirm the installed shortcut starts SpanDraft.
-- Verify the completion page offers to launch SpanDraft, checked by default, and
-  that finishing setup with this option selected starts the application.
-- Create the first project successfully, check the application version and run a
-  simple beam calculation. Also verify starting from the Start menu. Confirm it
-  works without a separately installed .NET runtime.
-- Verify `THIRD_PARTY_NOTICES.txt` and the complete `LICENSE` are installed beside
-  the executable.
-- Open the installed offline manual from the Help menu with networking disabled;
-  check navigation, search and images.
-- Reinstall the same package and verify it remains one installed application.
-  Uninstall through Windows Settings and verify the application and Start menu
-  entry are removed.
-
-## Planned release automation
-
-The next step is a workflow triggered by a matching `vMAJOR.MINOR.PATCH` tag on
-the exact tested commit. It must run all CI gates, verify the tag against the
-central version and release-notes heading, and explicitly check notices with
-`dotnet run --file scripts/generate-third-party-notices.cs -- --check`.
-Only after those checks pass should it use the shared packaging script and
-publish a GitHub Release with the matching notes and installer. Pre-release
-tags and code signing are not part of the current packaging process.
+Manual Windows checks remain useful for visible installer UX, new setup options,
+larger OS integration changes or significant visual UI changes. As appropriate,
+inspect the wizard, optional desktop shortcut, finish-page launch, Start menu
+launch, first project and calculation, offline help, reinstall and Windows
+Settings uninstall. These are checks of the change, not a ritual for every patch
+release. The automated startup check does not evaluate rendering or interactive
+GUI behavior; product and calculation logic remains covered by the existing tests.

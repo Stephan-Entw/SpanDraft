@@ -1,0 +1,274 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+jobs:
+  gate:
+    name: Validate release preparation
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      is_release: ${{ steps.validate.outputs.is_release }}
+      version: ${{ steps.validate.outputs.version }}
+      tag: ${{ steps.validate.outputs.tag }}
+      release_sha: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validate release candidate
+        id: validate
+        shell: python3 {0}
+        env:
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          def command(*args):
+              return subprocess.check_output(args, text=True).rstrip('\r\n')
+
+          subject = command('git', 'show', '-s', '--format=%s', 'HEAD')
+          if not subject.startswith('chore: prepare release v'):
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+                  output.write('is_release=false\n')
+              print('Not a release-preparation commit; is_release=false.')
+              raise SystemExit(0)
+
+          match = re.fullmatch(r'chore: prepare release v((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))', subject)
+          if not match:
+              raise SystemExit('Invalid release-preparation subject.')
+          version = match[1]
+          changed = command('git', 'diff', '--no-renames', '--name-only', 'HEAD^', 'HEAD').splitlines()
+          if sorted(changed) != ['Directory.Build.props', 'RELEASE_NOTES.md']:
+              raise SystemExit('Release preparation must change exactly Directory.Build.props and RELEASE_NOTES.md.')
+          actual = command('dotnet', 'msbuild', 'src/SpanDraft.Desktop/SpanDraft.Desktop.csproj',
+                           '-nologo', '-getProperty:Version', '-property:Configuration=Release',
+                           '-property:RuntimeIdentifier=win-x64')
+          if actual != version:
+              raise SystemExit(f'MSBuild Version {actual!r} does not match {version}.')
+          lines = Path('RELEASE_NOTES.md').read_text(encoding='utf-8').splitlines()
+          headings = [i for i, line in enumerate(lines) if line == f'## {version}']
+          if len(headings) != 1:
+              raise SystemExit('Expected exactly one matching release-notes heading.')
+          start = headings[0] + 1
+          end = next((i for i in range(start, len(lines)) if lines[i].startswith('## ')), len(lines))
+          if not '\n'.join(lines[start:end]).strip():
+              raise SystemExit('Release notes must not be empty.')
+          remote = command('git', 'ls-remote', '--exit-code', 'origin', 'refs/heads/main').split()
+          if remote != [os.environ['RELEASE_SHA'], 'refs/heads/main']:
+              raise SystemExit('main has moved beyond this release candidate.')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'is_release=true\nversion={version}\ntag=v{version}\n')
+
+  package:
+    name: Package and smoke-test Windows installer
+    needs: gate
+    if: needs.gate.outputs.is_release == 'true'
+    runs-on: windows-2025
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_VERSION: ${{ needs.gate.outputs.version }}
+      RELEASE_SHA: ${{ needs.gate.outputs.release_sha }}
+    outputs:
+      version: ${{ needs.gate.outputs.version }}
+      tag: ${{ needs.gate.outputs.tag }}
+      release_sha: ${{ needs.gate.outputs.release_sha }}
+      installer_name: ${{ steps.installer.outputs.installer_name }}
+      installer_sha256: ${{ steps.installer.outputs.installer_sha256 }}
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.release_sha }}
+          persist-credentials: false
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install help generator
+        run: python -m pip install -r help/requirements.txt
+      - name: Check main before packaging
+        run: |
+          $remote = @(git ls-remote --exit-code origin refs/heads/main)
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot read remote main.' }
+          if ($remote.Count -ne 1 -or $remote[0] -cne "$env:RELEASE_SHA`trefs/heads/main") {
+              throw 'main has moved beyond this release candidate.'
+          }
+      - name: Package Windows installer once
+        run: pwsh ./scripts/package-windows.ps1
+      - name: Smoke-test installed application
+        run: |
+          ./scripts/smoke-test-windows-installer.ps1 -InstallerPath "artifacts/windows/installer/SpanDraft-$env:RELEASE_VERSION-win-x64-setup.exe"
+      - name: Identify tested installer
+        id: installer
+        run: |
+          $name = "SpanDraft-$env:RELEASE_VERSION-win-x64-setup.exe"
+          $files = @(Get-ChildItem -LiteralPath artifacts/windows/installer -Force)
+          if ($files.Count -ne 1 -or $files[0].PSIsContainer -or $files[0].Name -cne $name -or $files[0].Length -eq 0) {
+              throw "Expected exactly the tested installer $name."
+          }
+          $hash = (Get-FileHash -LiteralPath $files[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "installer_name=$name" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+          "installer_sha256=$hash" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+      - name: Transfer tested installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpanDraft-release-candidate
+          path: artifacts/windows/installer/${{ steps.installer.outputs.installer_name }}
+          if-no-files-found: error
+
+  publish:
+    name: Publish tested installer
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.package.outputs.release_sha }}
+          persist-credentials: false
+      - name: Download tested installer
+        uses: actions/download-artifact@v4
+        with:
+          name: SpanDraft-release-candidate
+          path: ${{ runner.temp }}/release-candidate
+      - name: Verify and publish release
+        shell: python3 {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.package.outputs.version }}
+          RELEASE_TAG: ${{ needs.package.outputs.tag }}
+          RELEASE_SHA: ${{ needs.package.outputs.release_sha }}
+          INSTALLER_NAME: ${{ needs.package.outputs.installer_name }}
+          INSTALLER_SHA256: ${{ needs.package.outputs.installer_sha256 }}
+        run: |
+          import hashlib
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          version = os.environ['RELEASE_VERSION']
+          tag = os.environ['RELEASE_TAG']
+          sha = os.environ['RELEASE_SHA']
+          expected_hash = os.environ['INSTALLER_SHA256']
+          repo = os.environ['GITHUB_REPOSITORY']
+
+          def check_main():
+              remote = subprocess.check_output(
+                  ['git', 'ls-remote', '--exit-code', 'origin', 'refs/heads/main'], text=True).split()
+              if remote != [sha, 'refs/heads/main']:
+                  raise SystemExit('main has moved beyond this release candidate.')
+
+          def api(path, allow_missing=False):
+              result = subprocess.run(['gh', 'api', '--include', f'repos/{repo}/{path}'],
+                                      capture_output=True, text=True)
+              headers, separator, body = result.stdout.partition('\n\n')
+              if not separator or not headers.startswith('HTTP/'):
+                  raise SystemExit(f'GitHub API failed: {result.stderr}')
+              status = int(headers.splitlines()[0].split()[1])
+              if status == 404 and allow_missing:
+                  return None
+              if result.returncode or status != 200:
+                  raise SystemExit(f'GitHub API failed ({status}): {result.stderr}')
+              return json.loads(body)
+
+          def tag_commit():
+              ref = api(f'git/ref/tags/{tag}', allow_missing=True)
+              if ref is None:
+                  return None
+              obj = ref['object']
+              while obj['type'] == 'tag':
+                  obj = api(f"git/tags/{obj['sha']}")['object']
+              if obj['type'] != 'commit':
+                  raise SystemExit('Release tag does not point to a commit.')
+              return obj['sha']
+
+          check_main()
+          directory = Path(os.environ['RUNNER_TEMP']) / 'release-candidate'
+          files = list(directory.iterdir())
+          name = f'SpanDraft-{version}-win-x64-setup.exe'
+          if (os.environ['INSTALLER_NAME'] != name or len(files) != 1 or
+                  files[0].name != name or not files[0].is_file() or files[0].is_symlink()):
+              raise SystemExit('Expected exactly the tested installer with its original filename.')
+          installer = files[0]
+          if installer.stat().st_size == 0 or hashlib.sha256(installer.read_bytes()).hexdigest() != expected_hash:
+              raise SystemExit('Installer SHA-256 does not match the smoke-tested installer.')
+
+          lines = Path('RELEASE_NOTES.md').read_text(encoding='utf-8').splitlines(keepends=True)
+          headings = [i for i, line in enumerate(lines) if line.rstrip('\r\n') == f'## {version}']
+          if len(headings) != 1:
+              raise SystemExit('Expected exactly one matching release-notes heading.')
+          start = headings[0] + 1
+          end = next((i for i in range(start, len(lines)) if lines[i].startswith('## ')), len(lines))
+          notes = ''.join(lines[start:end])
+          if not notes.strip():
+              raise SystemExit('Release notes must not be empty.')
+          notes_file = Path(os.environ['RUNNER_TEMP']) / 'spandraft-release-notes.md'
+          notes_file.write_text(notes, encoding='utf-8')
+
+          if api(f'releases/tags/{tag}', allow_missing=True) is not None:
+              raise SystemExit('A release already exists; it will not be modified.')
+          existing_sha = tag_commit()
+          if existing_sha is not None and existing_sha != sha:
+              raise SystemExit('An existing release tag points to a different commit.')
+          check_main()
+          subprocess.run(['gh', 'release', 'create', tag, str(installer), '--repo', repo,
+                          '--target', sha, '--title', f'SpanDraft {tag}',
+                          '--notes-file', str(notes_file)], check=True)
+
+          if tag_commit() != sha:
+              raise SystemExit('Published tag does not match the tested release commit.')
+          release = api(f'releases/tags/{tag}')
+          assets = release['assets']
+          if release['draft'] or release['prerelease'] or release['tag_name'] != tag:
+              raise SystemExit('Release must be published and must not be a prerelease.')
+          if len(assets) != 1 or assets[0]['name'] != name or assets[0]['size'] != installer.stat().st_size:
+              raise SystemExit('Published release does not contain exactly the expected installer.')
+          if assets[0].get('digest') and assets[0]['digest'] != f'sha256:{expected_hash}':
+              raise SystemExit('Published asset digest does not match the tested installer.')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(f'- Version: {version}\n- Tag: {tag}\n- Release SHA: {sha}\n'
+                            f'- Installer: {name}\n- SHA-256: {expected_hash}\n'
+                            f"- Release: {release['html_url']}\n")
+          check_main()
