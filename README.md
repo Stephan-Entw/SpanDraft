@@ -84,52 +84,21 @@ On macOS, Desktop builds also create a development `SpanDraft.app` bundle inside
 the corresponding build output. It uses the locally installed .NET runtime and
 is intended for development only.
 
-### Native icon resources
-
-The SVGs in `src/SpanDraft.Desktop/Assets/Icons/Toolbar` and `Fluent` are design
-sources; they are not embedded in the application. After adding or changing a
-source, regenerate and commit the native dictionaries in `Assets/Icons/Generated`:
-
-```sh
-dotnet run --file scripts/update-icons.cs
-dotnet run --file scripts/update-icons.cs -- --check
-```
-
-The explicit generator downloads and builds unmodified
-[SvgToXaml at commit `1beb52777c564c218f460ee0510f73cba21c6d69`](https://github.com/wieslawsoltes/SvgToXaml/tree/1beb52777c564c218f460ee0510f73cba21c6d69),
-verifies its source archive checksum and caches it under `.artifacts/icon-converter`.
-The published `svgxaml` 11.2.0 tool loses solid brushes and pens; this upstream
-revision fixes that issue. The .NET 10 SDK is sufficient; the converter rolls
-forward to the installed runtime. First generation needs GitHub and NuGet access.
-Regular builds use the committed AXAML and require neither the converter nor SVG
-parsing. Fluent sources must convert to one opaque solid filled geometry; other
-artwork needs an explicit representation review. Preserve the Fluent license and
-NOTICE files. Compare rendered icons before committing source or generator changes.
-
 ### Third-party notices
 
-After changing Desktop dependencies, regenerate the committed notices from the
-repository root using the .NET 10 SDK:
+After changing Desktop dependencies, regenerate and commit `THIRD_PARTY_NOTICES.txt`:
 
 ```sh
 dotnet run --file scripts/generate-third-party-notices.cs
 ```
 
-The script restores the pinned local ThirdLicense tool and the Desktop project,
-then updates `THIRD_PARTY_NOTICES.txt` with direct and transitive runtime packages
-for all desktop platforms. Test, validation and build-only packages are excluded.
-The notices contain ThirdLicense's package metadata and license references.
-Generation requires access to the configured NuGet feeds and runs only when
-explicitly requested; regular builds do not generate notices.
-
-To verify the committed file without changing it, use:
+Verify the committed file with:
 
 ```sh
 dotnet run --file scripts/generate-third-party-notices.cs -- --check
 ```
 
-The check returns a nonzero exit code if generation fails or the file is missing
-or outdated. Commit updated notices alongside dependency changes.
+Desktop builds and publishes ship the committed file beside the application.
 
 ## Architecture
 

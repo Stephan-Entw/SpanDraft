@@ -84,7 +84,5 @@ oder Abhängigkeiten auf Avalonia, Desktop oder Reporting. Desktop referenziert
 direkt Core und Analysis und startet Berechnungen ausschließlich über BeamAnalysis.
 Core, Solver und Engineering bleiben unabhängig von Desktop.
 
-Reporting soll später vollständige Analysis-Ergebnisse konsumieren. Es enthält
-derzeit keine Implementierung; eine Analysis-Projektreferenz wird erst bei seiner
-Implementierung ergänzt. Analysis gehört zur normalen Solution und den
-Produkttests, nicht zur separaten unabhängigen Validation-Solution.
+Analysis gehört zur normalen Solution und den Produkttests, nicht zur separaten
+unabhängigen Validation-Solution.

@@ -65,9 +65,9 @@ Bei Rechtecken ist die Höhe die transversale Abmessung und die Biegeachse
 parallel zur Breite. Bei Kreisen ist sie ein Schwerpunktdurchmesser.
 
 Hohlquerschnitte werden über Außenabmessungen und konstante Wandstärke
-definiert. Die Innenabmessungen müssen positiv bleiben. Rechteckrohre haben
-idealisierte scharfe Ecken. Reale Herstellerkennwerte können mit
-`CustomSection` ohne Geometrieapproximation übernommen werden.
+definiert. Die Innenabmessungen müssen positiv bleiben. Tabellen- oder
+Herstellerkennwerte können als manuelle Querschnittsdefinition ohne
+Geometrieapproximation übernommen werden.
 
 ## Allgemeiner Querschnitts-Geometriekern
 

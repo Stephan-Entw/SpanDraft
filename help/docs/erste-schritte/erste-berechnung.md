@@ -43,10 +43,6 @@ Am Beispiel lässt sich unmittelbar erkennen:
 - Die Querkraft springt an der Punktkraft.
 - Das größte Biegemoment liegt in der Mitte.
 
-## Was SpanDraft daraus berechnet
-
-SpanDraft bildet aus Balkengeometrie, Werkstoff, Lagerung und Belastung das Berechnungsmodell und ermittelt daraus Lagerreaktionen, Verformung und Schnittgrößen. Aus Biegemoment und Querschnittskennwerten wird anschließend die elastische Biegespannung bestimmt; der Sicherheitsfaktor beschreibt das Verhältnis der hinterlegten Streckgrenze zu dieser Spannung.
-
 Details erläutern [Ergebnisdiagramme und Lagerreaktionen](../ergebnisse/diagramme-reaktionen.md), [Spannung und Sicherheitsfaktor](../ergebnisse/spannung-sicherheit.md) sowie [Was SpanDraft berechnet – und was nicht](../hintergrund/modellannahmen.md).
 
 ## 5. Projekt speichern

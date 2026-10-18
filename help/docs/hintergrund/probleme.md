@@ -50,10 +50,8 @@ Die Bedeutung der Ergebnisse erläutern [Ergebnisdiagramme und Lagerreaktionen](
 <details class="spandraft-details">
   <summary>Probleme mit Projekt- oder Bibliotheksdateien</summary>
   <ul>
-    <li><code>.spandraft</code> speichert die verwendeten Werkstoff- und Querschnittswerte im Projekt.</li>
-    <li>Spätere Änderungen an eigenen Bibliothekseinträgen verändern bestehende Projekte nicht.</li>
-    <li>Beschädigte Bibliotheksdateien werden nicht stillschweigend durch leere Daten ersetzt.</li>
-    <li>Beschädigte oder unbekannte Projektdateien werden nicht automatisch „repariert“.</li>
+    <li>Projekte enthalten ihre verwendeten Werkstoff- und Querschnittsdaten unabhängig von den Bibliotheken.</li>
+    <li>Beschädigte Dateien werden nicht automatisch repariert.</li>
   </ul>
   <p>Verwenden Sie bei einer beschädigten Projektdatei nach Möglichkeit eine intakte Sicherung.</p>
 </details>

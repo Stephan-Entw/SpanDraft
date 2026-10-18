@@ -9,6 +9,9 @@
   for changes to controls, menus, dialogs or layout.
 - Do not duplicate implementation details, milestone histories or changing test
   counts across documentation. Prefer code and tests for implementation details.
+- SVG files under `src/SpanDraft.Desktop/Assets/Icons/Toolbar` and `Fluent` are
+  design sources. After changes, run `dotnet run --file scripts/update-icons.cs`;
+  add `-- --check` to verify the committed resources.
 - Keep Core independent of UI, numerical libraries, persistence and reporting.
 - Section-definition draft invariant: custom and library display names are
   form-local. Switching the section shape must never carry a name into another

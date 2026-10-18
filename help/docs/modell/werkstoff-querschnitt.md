@@ -46,7 +46,7 @@ Bei **manuellen Kennwerten** geben Sie vorhandene Tabellen- oder Herstellerwerte
 | `I` | Flächenträgheitsmoment in z. B. mm⁴; bestimmt zusammen mit `E` die Biegesteifigkeit |
 | `W+`, `W−` | Werden für die elastische Biegespannung verwendet, z. B. in mm³ |
 
-`W+` und `W−` beziehen sich auf geometrische Profilseiten, nicht auf Zug oder Druck. Eigene Definitionen können in **Meine Querschnitte** wiederverwendet werden; im Projekt bleibt eine unabhängige Kopie gespeichert.
+`W+` und `W−` beziehen sich auf geometrische Profilseiten, nicht auf Zug oder Druck. Eigene Querschnitte können in der Bibliothek gespeichert und wiederverwendet werden. Im Projekt bleibt eine unabhängige Kopie gespeichert.
 
 ## Biegeachse
 

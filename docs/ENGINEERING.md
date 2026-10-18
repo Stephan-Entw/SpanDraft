@@ -1,4 +1,4 @@
-# SpanDraft – Engineering-Auswertung V1
+# SpanDraft – Engineering-Auswertung
 
 ## Zweck und Schnittstelle
 
@@ -61,7 +61,7 @@ beziehungsweise negativ/hoggend. Die Magnitude wird separat nicht-negativ gelief
 
 ## Formeln und Nulllastfall
 
-V1 berechnet ausschließlich reine elastische Biegung:
+Die Engineering-Auswertung berechnet ausschließlich reine elastische Biegung:
 
 ```text
 σ_b,max [Pa] = BendingMomentMagnitude [Nm] / min(W+, W−) [m³]
@@ -105,5 +105,5 @@ Safety-Factor-Auswertung entspricht deshalb unverändert dem bisherigen Verhalte
 Ausdrücklich ausgeschlossen sind kombinierte Normalspannung `N/A ± M/W`,
 von-Mises-Spannung, Schubspannung, Spannungsinteraktionen, Normbeiwerte,
 zulässige Durchbiegung, Knicken/Beulen, Ermüdung sowie Kerb- und
-Schweißnahtbewertungen. Die axiale Solverfähigkeit erweitert diesen V1-Scope
+Schweißnahtbewertungen. Die axiale Solverfähigkeit erweitert diesen Umfang
 nicht. Diese Auswertung ist **kein normativer Festigkeits- oder Sicherheitsnachweis**.

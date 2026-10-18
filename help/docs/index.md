@@ -37,4 +37,4 @@ Die wichtigsten Grenzen stehen auf [Was SpanDraft berechnet – und was nicht](h
 
 Ergebnisse werden nach bestätigten Änderungen neu berechnet; ein noch offenes Eingabefeld oder eine Vorschau verändert das berechnete Projekt nicht.
 
-> Dieses Handbuch beschreibt den Funktionsumfang der ersten SpanDraft-Hilfeversion. Die Formulierungen der Menüs beziehen sich auf die deutsche Benutzeroberfläche; bei englischer Systemsprache können Bezeichnungen abweichen.
+SpanDraft ist auf Deutsch und Englisch verfügbar.

@@ -1,7 +1,7 @@
 # SpanDraft user manual (German)
 
-The Markdown sources in `docs/` are the prepared German V1 manual. The thirteen PNGs
-in `docs/assets/` are generated from SpanDraft's actual Avalonia renderers. Edit
+The Markdown sources in `docs/` are the German manual. The generated PNG assets
+in `docs/assets/` come from SpanDraft's actual Avalonia renderers. Edit
 these technical illustrations in `tools/SpanDraft.HelpAssets`, then regenerate
 them; do not maintain separate engineering drawings. Conceptual explanations use
 semantic HTML and local CSS in the manual.
@@ -24,7 +24,7 @@ From the repository root:
 dotnet run --file scripts/build-help.cs
 ```
 
-The script regenerates the thirteen PNGs, runs `zensical build --clean --strict`, and
+The script regenerates the PNG assets, runs `zensical build --clean --strict`, and
 checks the explicit PNG list and offline output. It never installs Python packages.
 Commit Markdown, configuration, CSS, JavaScript and PNGs; `help/site/`, caches and the
 virtual environment are ignored. The HelpAssets project is deliberately outside

@@ -22,7 +22,9 @@ Pre-release tags are not part of this target process.
    it in the release preparation commit.
 2. Commit the changes to `main` and pass all CI gates.
 3. Run the manual package workflow and verify that the Windows installer installs,
-   starts and runs the application. This workflow must not publish a tag or release.
+   starts and runs the application. Verify that `THIRD_PARTY_NOTICES.txt` is
+   included in the published output and installed product. This workflow must not
+   publish a tag or release.
 4. Tag the exact tested commit with the matching version and push the tag.
 
 ## Planned release automation
@@ -53,4 +55,4 @@ Then run the normal desktop publish. The existing site is copied to `Help/` in
 the output; the desktop project does not invoke Python or Zensical. Verify the
 published `Help/index.html` opens from the application's Help menu and that
 navigation, search and images work with networking disabled. Generated HTML is
-not committed; the thirteen generated PNG source assets are committed.
+not committed; the generated PNG source assets are committed.

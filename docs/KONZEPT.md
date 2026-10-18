@@ -1,6 +1,6 @@
 # SpanDraft – Konzept
 
-Stand: 16.10.2026
+Stand: 18.10.2026
 
 Dieses Dokument legt Produktvision, Scope, Architekturgrundsätze und Roadmap
 von SpanDraft fest. Verbindliche Fach-, API- und Dateiverträge stehen in
@@ -35,19 +35,14 @@ Die grafische Balkendarstellung ist der primäre Editor.
 
 Der Anwender soll:
 
-- mit einem vorhandenen geraden Balken beginnen
-- Länge, Werkstoff und Querschnitt festlegen
+- einen geraden Balken mit Länge, Werkstoff und Querschnitt definieren
 - Lager und Lasten direkt platzieren
 - Positionen und Werte exakt numerisch bearbeiten
-- Objekte anklicken, ziehen und transaktional bearbeiten
+- Lager und Lasten durch Anklicken und Ziehen bearbeiten
 - Ergebnisse unmittelbar nach bestätigten Änderungen sehen
 
 Eine spätere Tabellenansicht darf denselben Projektzustand ergänzend darstellen,
 aber nicht als zweites Modell führen.
-
-Direkte Manipulation und numerische Eingabe folgen demselben Grundsatz:
-Vorschau und Rohtext sind transient; erst eine bestätigte Änderung verändert
-das Projekt und startet gegebenenfalls eine neue Berechnung.
 
 ## 3. Aktueller fachlicher Scope
 
@@ -62,34 +57,12 @@ Fachmodell und Rechenkern unterstützen:
 - Punktkräfte
 - Punktmomente
 - konstante Streckenlasten
-- Rechteck
-- Rechteck-/Vierkantrohr mit optionaler Außenrundung
-- Kreis
-- Rundrohr
-- I-/H-Profil
-- U-Profil
-- T-Profil
-- Winkelprofil
-- manuelle Querschnittskennwerte A/I/W für eine oder zwei explizite Biegeachsen
-- explizite Auswahl der verwendeten Biegeachse
-- Werkstoff mit E-Modul und Streckgrenze sowie optional Dichte und Poissonzahl
+- parametrische und manuelle Querschnitte mit wählbarer Biegeachse
+- Werkstoffe mit den für Berechnung und Bewertung benötigten Kennwerten
 
-Parametrische Querschnitte behalten ihre ursprünglichen Abmessungen und leiten
-Fläche, Schwerpunkt, Flächenträgheits- und Widerstandsmomente aus der gemeinsamen
-analytischen Konturgeometrie ab. Unsymmetrische Querschnitte können für eine
-Biegeachse unterschiedliche positive und negative Widerstandsmomente besitzen.
-
-Diese fachlichen Möglichkeiten sind über das Project Setup im Desktop
-konfigurierbar. Der vollständige Material-, Querschnitts- und Biegeachsenworkflow
-umfasst eingebaute Materialien, eigene Materialien, alle parametrischen Formen
-und manuelle A/I/W-Eingaben. Eigene Materialien und Querschnittspresets können
-in getrennten lokalen Benutzerbibliotheken wiederverwendet werden.
-
-Der Solver verwendet drei Freiheitsgrade je Knoten:
-
-- axiale Verschiebung u
-- transversale Verschiebung w
-- Rotation θ
+Eigene Werkstoffe und Querschnitte können lokal gespeichert und wiederverwendet
+werden. Die vollständigen Formen und fachlichen Verträge stehen in
+[DOMAIN.md](DOMAIN.md).
 
 Der aktuelle Lastumfang enthält noch keine axialen äußeren Lasten.
 
@@ -112,31 +85,20 @@ Die Engineering-Auswertung ergänzt:
 - maximale elastische Biegespannung
 - Sicherheitsfaktor gegenüber der hinterlegten Streckgrenze
 
-Für die maximale elastische Biegespannung wird bei unsymmetrischen
-Querschnitten das kleinere der beiden Widerstandsmomente der ausgewählten
-Biegeachse maßgebend. Der Sicherheitsfaktor ist eine einfache elastische
-Bewertung und kein normativer Festigkeitsnachweis.
+Der Sicherheitsfaktor ist eine einfache elastische Bewertung und kein normativer
+Festigkeitsnachweis. Details stehen in [ENGINEERING.md](ENGINEERING.md).
 
 Im Desktop werden kompakte Ergebniskennwerte und Lagerreaktionen sowie
 Live-Diagramme für Durchbiegung, Querkraft und Biegemoment dargestellt.
 
 ## 5. Rechenmodell
 
-SpanDraft verwendet einen eigenen transparenten Euler-Bernoulli-Balkensolver.
+SpanDraft verwendet einen eigenen transparenten Euler-Bernoulli-Balkensolver
+mit dem direkten Steifigkeitsverfahren. Math.NET Numerics übernimmt ausschließlich
+generische lineare Algebra. Details stehen in [SOLVER.md](SOLVER.md).
 
-Relevante Positionen wie Balkenenden, Lager, Punktlasten und Grenzen von
-Streckenlasten erzeugen automatisch Rechenknoten. Die Lösung erfolgt mit dem
-direkten Steifigkeitsverfahren.
-
-Math.NET Numerics übernimmt ausschließlich generische lineare Algebra.
-Mechanisches Modell, Elementformulierung, Lasten, Randbedingungen und
-Ergebnisinterpretation bleiben Bestandteil von SpanDraft.
-
-Details und numerische Verträge stehen in [SOLVER.md](SOLVER.md).
-
-Der Solver ist für den aktuellen Scope unabhängig gegen analytische Lösungen,
-IndeterminateBeam und PyCBA validiert. Details stehen in
-[VALIDATION.md](VALIDATION.md).
+Der Solver ist unabhängig gegen analytische Lösungen, IndeterminateBeam und PyCBA
+validiert. Die Evidenz steht in [VALIDATION.md](VALIDATION.md).
 
 ## 6. Desktop und Projektmodell
 
@@ -144,40 +106,24 @@ Der Desktop verwendet Avalonia und ist Windows-first ausgelegt. Entwicklung
 unter macOS und Linux bleibt möglich; offizielle Builds für diese Plattformen
 sind für die erste Veröffentlichung nicht erforderlich.
 
-Der Editor besitzt einen einzigen committed Projektzustand. Dazu gehören die
-fachlichen Eingaben sowie persistierbare Darstellungsdaten wie manuelle
-Annotation-Offsets.
-
-Temporäre Eingaben, Hover, Vorschauen und berechnete Ergebnisse gehören nicht
-zum gespeicherten Projektzustand.
+Bestätigte Änderungen bilden den Projektzustand. Offene Eingaben und Vorschauen
+verändern das Projekt noch nicht. Projekte werden als eigenständige
+`.spandraft`-Dateien gespeichert und bleiben von lokalen Bibliotheken unabhängig.
 
 Implementiert sind:
 
-- transaktionales Project Setup für Werkstoff, Querschnitt und Biegeachse
-- eingebaute Materialien und lokale Benutzerbibliotheken für Materialien
-  und parametrische beziehungsweise manuelle Querschnittspresets
+- Project Setup für Balkenlänge, Werkstoff, Querschnitt und Biegeachse
+- eingebaute Werkstoffe sowie lokale Werkstoff- und Querschnittsbibliotheken
 - direkter Balkeneditor
-- Platzieren und Bearbeiten aller aktuellen Lager- und Lasttypen
+- Platzieren und Bearbeiten von Lagern und Lasten
 - Undo/Redo
-- versionierte, eigenständige `.spandraft`-Projektdateien
-- V1-Lesekompatibilität und aktuelles V2-Schreibformat
-- Savepoints und Dirty-State
-- private Crash-Recovery
-- globale Einheitenprofile und benutzerdefinierte Einheitenkombinationen
+- eigenständige Projektdateien
+- Crash-Wiederherstellung
+- konfigurierbare Einheiten
 - einheitliche numerische Eingabe- und Ergebnisdarstellung
 
-Projektdateien enthalten vollständige Snapshots von Werkstoff, Querschnitt und
-ausgewählter Biegeachse. Sie bleiben von lokalen Bibliotheken, Presets oder
-Katalogen unabhängig; das Löschen oder Ändern eines Bibliothekseintrags darf
-bestehende Projekte nicht verändern.
-
-UI-Texte werden über lokalisierbare Ressourcen verwaltet. Aktuell sind Englisch
-als Default und Deutsch vorhanden. UI-Sprache, regionales Format und technische
-Einheiten sind unabhängige globale Einstellungen. Eingabe und Formatierung folgen
-`CurrentCulture`, Ressourcen `CurrentUICulture`. Änderungen an Sprache oder
-regionalem Format werden beim nächsten Prozessstart wirksam.
-Projektübersicht und Entwicklungsanleitungen sind englisch, Fachdokumentation
-und Benutzerhandbuch deutsch.
+Die Oberfläche ist auf Deutsch und Englisch verfügbar. Sprache, regionales
+Zahlenformat und technische Einheiten können unabhängig eingestellt werden.
 
 Hintergründe zum Editorzustand stehen in [UI.md](UI.md), der Projektdateivertrag in
 [PROJECT_FORMAT.md](PROJECT_FORMAT.md).
@@ -193,31 +139,12 @@ Die Schichten bleiben klein und getrennt. Direkte Projektreferenzen:
 | Engineering | Core, Solver |
 | Analysis | Core, Solver, Engineering |
 | Desktop | Core, Analysis |
-| Reporting | derzeit Core; Analysis erst bei Implementierung |
+| Reporting | Core |
 
-Analysis orchestriert Solver und Engineering. Desktop nutzt diesen
-Anwendungseinstieg für Berechnungen.
-
-Verantwortlichkeiten:
-
-- **`SpanDraft.Core`:** Fachmodell, Einheiten, Werkstoffe, Querschnitte, Lager, Lasten und
-  Modellvalidierung. Unabhängig von UI, Numerikbibliotheken, Persistenz und Reporting.
-
-- **`SpanDraft.Solver`:** Mechanik und numerische Lösung. Keine Desktop-Abhängigkeit.
-
-- **`SpanDraft.Engineering`:** Fachliches Postprocessing einer vorhandenen BeamSolution.
-
-- **`SpanDraft.Analysis`:** Anwendungseinstieg, der Solver und Engineering zu einem strukturierten
-  Success-/Failure-Ergebnis verbindet.
-
-- **`SpanDraft.Desktop`:** UI, Interaktion, Projektzustand, Persistenz, lokale Bibliotheken
-  und Darstellung. Keine eigenen mechanischen Formeln.
-
-- **`SpanDraft.Reporting`:** reserviert für spätere Reports und Exporte.
-
-Lokale Material- und Querschnittsbibliotheken sind Anwendungsdaten des Desktops.
-Sie erzeugen Core-Domainobjekte, werden aber selbst nicht Teil von Core und
-erzeugen keine dauerhafte Referenz aus einem Projekt auf einen Bibliothekseintrag.
+Fachmodell, Solver, Engineering, Analysis und Desktop haben klar getrennte
+Verantwortlichkeiten. Core bleibt unabhängig von UI, Numerikbibliotheken,
+Persistenz und Reporting. Analysis verbindet Berechnung und Auswertung für den
+Desktop; dieser enthält keine eigenen mechanischen Formeln.
 
 ## 8. Bewusste Nicht-Ziele
 

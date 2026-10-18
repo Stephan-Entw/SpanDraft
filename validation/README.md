@@ -34,11 +34,8 @@ methods, conventions, acceptance matrix and limitations.
 Recorded acceptance (2026-10-03) is **PASS**: all 18 cases pass. Only V14's six
 IndeterminateBeam extremum-position comparisons are **NOT APPLICABLE**, because
 its native roundoff fields cannot establish the physical zero-field location
-set. All six extremum values remain mandatory and pass. Both solutions are covered
-by their CI gates. The acceptance runner performs 13,472 applicable comparisons;
-six N/A positions are reported separately. Including independent reference
-calibration, the validation basis contains 14,381 comparisons. See
-[VALIDATION.md](../docs/VALIDATION.md) for the exact evidence and scope.
+set. All six extremum values remain mandatory and pass. See
+[VALIDATION.md](../docs/VALIDATION.md) for the full evidence and comparison counts.
 
 The reviewed V14 investigation is recorded in
 [v14-native-fields.json](results/v14-native-fields.json). Its

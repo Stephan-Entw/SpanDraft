@@ -81,8 +81,6 @@ Die Staffelung richtet sich nach dem **ungerundeten** dimensionslosen Wert:
 
 Beispiele: `1,2134 → 1,21`; `2,996 → 3`; `3,456 → 3,5`; `9,96 → 10`; `10,376 → 10`; `25,673 → 26`. Unnötige Endnullen entfallen im Standardmodus.
 
-Falls künftig Grenzwerte bewertet werden, erfolgt der Vergleich ausschließlich mit dem **ungerundeten** Ergebnis. Insbesondere bedeuten zwei identische Anzeigen `1` nicht zwangsläufig denselben Status relativ zur Streckgrenze.
-
 ## 4. Detailliert, Schreibweise und Einheiten
 
 - **Detailliert:** Den ungerundeten SI-Wert zuerst in die Anzeigeeinheit umrechnen und dort einmal auf maximal drei signifikante Stellen runden; keine Standard-Auflösungsgrenzen. `0` bleibt `0`, `+∞` bleibt `∞`.
@@ -91,7 +89,7 @@ Falls künftig Grenzwerte bewertet werden, erfolgt der Vergleich ausschließlich
 - Einheitensymbole sind sprachunabhängig. Dezimaltrennzeichen folgen standardmäßig `CurrentCulture`; eine explizit übergebene Kultur hat Vorrang. `de-DE` und `en-US` sind zu unterstützen, auch wenn `CurrentUICulture` abweicht.
 - Die physikalische modellabhängige Mindestauflösung wird in **SI** bestimmt und in die Anzeigeeinheit übertragen. Signifikante Schrittweite, 1–2–5-Stufung und einmalige Rundung erfolgen in der Anzeigeeinheit, auch bei gemischten Profilen.
 
-Eingebaute Einheitenprofile (später durch weitere erweiterbar; derzeit sehr niedrige Priorität):
+Eingebaute Einheitenprofile:
 
 | Größenart | Metrisch – Maschinenbau (Standard) | Metrisch – Bauwesen | US-amerikanisch |
 | --- | --- | --- | --- |
