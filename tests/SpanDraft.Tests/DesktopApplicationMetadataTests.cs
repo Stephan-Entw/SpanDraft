@@ -10,6 +10,20 @@ namespace SpanDraft.Tests;
 public sealed class DesktopApplicationMetadataTests
 {
     [Fact]
+    public void ThirdPartyNoticesAreShippedAsReadableCompanionFile()
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SpanDraft.sln")))
+            directory = directory.Parent;
+        Assert.NotNull(directory);
+        var expected = File.ReadAllBytes(Path.Combine(directory.FullName, "THIRD_PARTY_NOTICES.txt"));
+        Assert.NotEmpty(expected);
+        Assert.Equal(expected, File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "THIRD_PARTY_NOTICES.txt")));
+        Assert.DoesNotContain(typeof(App).Assembly.GetManifestResourceNames(),
+            name => name.Contains("THIRD_PARTY_NOTICES", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void BundledLicenseMatchesTheCompleteRepositoryFile()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);

@@ -32,6 +32,8 @@
     <AssemblyMetadata Include="LicenseShortName" Value="$(LicenseShortName)" />
     <EmbeddedResource Include="../../LICENSE" LogicalName="SpanDraft.Desktop.LICENSE" />
     <EmbeddedResource Include="Libraries/material-catalog.json" LogicalName="SpanDraft.Desktop.Libraries.material-catalog.json" />
+    <None Include="../../THIRD_PARTY_NOTICES.txt" Link="THIRD_PARTY_NOTICES.txt"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="Assets/Icons/Fluent/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <AvaloniaResource Include="Assets/AppIcon/SpanDraft.ico" />
     <AvaloniaResource Include="Assets/AppIcon/app-icon-1024.png" />
