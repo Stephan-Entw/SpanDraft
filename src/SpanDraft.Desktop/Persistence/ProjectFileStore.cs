@@ -42,5 +42,9 @@ public sealed class ProjectFileStore : IProjectFileStore
         }
     }, cancellationToken);
 
-    public Task DeleteAsync(string path) => Task.Run(() => File.Delete(path));
+    public Task DeleteAsync(string path) => Task.Run(() =>
+    {
+        try { File.Delete(path); }
+        catch (DirectoryNotFoundException) { }
+    });
 }

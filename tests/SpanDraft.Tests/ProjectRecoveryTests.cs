@@ -11,6 +11,41 @@ namespace SpanDraft.Tests;
 public sealed class ProjectRecoveryTests
 {
     [Fact]
+    public async Task FirstProjectCanBeCreatedBeforeTheLocalStateDirectoryExists()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "SpanDraft-tests-" + Guid.NewGuid().ToString("N"));
+        var files = new ProjectFileStore(); var delay = new Delay(); var dialogs = new Dialogs();
+        var recovery = new ProjectRecovery(files, Path.Combine(directory, "recovery.json"), delay.Wait,
+            () => Now, () => Directory.CreateDirectory(directory));
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, recovery: recovery);
+        try
+        {
+            Assert.False(Directory.Exists(directory));
+            await WaitFor(recovery.DeleteAsync());
+            await WaitFor(recovery.DeleteAsync());
+            Assert.False(Directory.Exists(directory));
+            Assert.True(await WaitFor(main.InitializeRecoveryAsync()));
+            Assert.True(await WaitFor(main.NewAsync()));
+            CompleteSetup(main);
+            Assert.True(await WaitFor(main.Setup.ConfirmAsync()));
+            Assert.NotNull(main.Session); Assert.NotNull(main.Editor);
+            Assert.Equal(MainViewMode.Editor, main.Mode);
+            Assert.Empty(dialogs.Errors); Assert.False(Directory.Exists(directory));
+
+            delay.ReleaseAll(); await WaitFor(recovery.DrainAsync());
+            var snapshot = await recovery.ReadAsync();
+            Assert.NotNull(snapshot);
+            Assert.True(main.Session.CurrentRevision.State.ContentEquals(snapshot.State));
+            Assert.Empty(dialogs.Errors);
+        }
+        finally
+        {
+            delay.ReleaseAll(); await WaitFor(recovery.DrainAsync());
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task DebounceCoalescesRapidCommitsAndTracksUndoRedo()
     {
         var app = new App(); app.ChangeLength(1.2); app.ChangeLength(1.4); app.ChangeLength(1.6);
