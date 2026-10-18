@@ -56,20 +56,19 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Equal(new[] { Strings.SelectMaterialRequired, "›" }, materialButton.GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.IsEffectivelyVisible).Select(t => t.Text));
         double emptyHeight = emptyCard.Bounds.Height;
-        Assert.InRange(emptyHeight, 65, 80);
-        Assert.InRange(sectionButton.Bounds.Height, 40, 55);
+        Assert.Equal(emptyCard.FindControl<Border>("LengthSurface")!.Bounds.Height, sectionButton.Bounds.Height);
         Assert.Equal(sectionButton.Bounds.Height, materialButton.Bounds.Height);
         main.Setup.LengthInput.Begin(); main.Setup.LengthInput.Text = "0";
         Assert.False(main.Setup.LengthInput.Confirm()); Capture("create-length-invalid");
         Assert.Equal(emptyHeight, emptyCard.Bounds.Height);
         main.Setup.LengthInput.Cancel(); Capture("create-empty-restored");
         main.Setup.SelectedMaterial = builtin.Material; Arrange(window, width, height); Capture("create-material-selected");
-        Assert.True(emptyCard.Bounds.Height > emptyHeight + 20);
+        Assert.True(emptyCard.Bounds.Height > emptyHeight);
         Assert.True(emptyCard.FindControl<TextBlock>("MaterialDescription")!.IsEffectivelyVisible);
         main.Setup.SelectedMaterial = null; Arrange(window, width, height);
         Assert.Equal(emptyHeight, emptyCard.Bounds.Height);
         main.Setup.SelectedSection = new CircleSectionGeometry(M(.1)); Arrange(window, width, height); Capture("create-section-selected");
-        Assert.True(emptyCard.Bounds.Height > emptyHeight + 20);
+        Assert.True(emptyCard.Bounds.Height > emptyHeight);
         Assert.True(emptyCard.FindControl<TextBlock>("SectionDescription")!.IsEffectivelyVisible);
         Assert.False(Assert.Single(window.GetVisualDescendants().OfType<ProjectSetupView>()).FindControl<Button>("ApplySetupButton")!.IsEffectivelyEnabled);
         CompleteSetup(main); Arrange(window, width, height); Capture("create-complete");
@@ -249,8 +248,9 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Equal(description.Text, ToolTip.GetTip(description)); Assert.Equal(Avalonia.Media.TextTrimming.CharacterEllipsis, description.TextTrimming);
         Assert.Equal(card.FindControl<Border>("LengthSurface")!.Bounds.Height, section.Bounds.Height);
         Assert.Equal(section.Bounds.Height, material.Bounds.Height);
-        Assert.InRange(card.FindControl<Border>("BeamCardSurface")!.Bounds.Height, 100, 110);
-        Assert.InRange(section.Bounds.Height, 75, 85);
+        Assert.True(card.FindControl<Border>("BeamCardSurface")!.Bounds.Height <= 130);
+        foreach (var button in new[] { section, material })
+            Assert.All(button.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible), text => Assert.True(text.Bounds.Height >= text.TextLayout.Height));
         var normal = section.Background;
         ((IPseudoClasses)section.Classes).Set(":pointerover", true);
         Assert.NotEqual(normal, section.Background);
@@ -280,7 +280,7 @@ public sealed class DesktopProjectSetupControlTests
         var surface = Assert.IsType<Border>(card.Content);
         Assert.Same(surface, card.FindControl<Border>("BeamCardSurface"));
         Assert.Equal(new Thickness(1), surface.BorderThickness);
-        Assert.InRange(surface.Bounds.Height, 100, 110);
+        Assert.True(surface.Bounds.Height <= 130);
         Assert.True(double.IsNaN(surface.Height));
         var areas = Assert.IsType<Grid>(surface.Child);
         Assert.Equal(new[] { 2d, 4.3, 3.7 }, areas.ColumnDefinitions.Select(c => c.Width.Value));
@@ -291,7 +291,6 @@ public sealed class DesktopProjectSetupControlTests
         Assert.True(section.Focusable); Assert.True(material.Focusable);
         Assert.Same(setup.ChangeSectionCommand, section.Command); Assert.Same(setup.ChangeMaterialCommand, material.Command);
         Assert.Equal(lengthArea.Bounds.Height, section.Bounds.Height); Assert.Equal(section.Bounds.Height, material.Bounds.Height);
-        Assert.InRange(section.Bounds.Height, 75, 85);
         foreach (var button in new[] { section, material })
         {
             Assert.True(double.IsNaN(button.Height)); Assert.Equal(new Thickness(16, 12), button.Padding);

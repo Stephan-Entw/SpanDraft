@@ -9,6 +9,10 @@
   for changes to controls, menus, dialogs or layout.
 - Do not duplicate implementation details, milestone histories or changing test
   counts across documentation. Prefer code and tests for implementation details.
+- UI layout tests should prefer structural and relative invariants such as
+  alignment, containment, equal sizing and absence of clipping or overflow over
+  narrow absolute pixel ranges. Use absolute bounds only when the size itself is
+  an intentional product constraint.
 - SVG files under `src/SpanDraft.Desktop/Assets/Icons/Toolbar` and `Fluent` are
   design sources. After changes, run `dotnet run --file scripts/update-icons.cs`;
   add `-- --check` to verify the committed resources.
