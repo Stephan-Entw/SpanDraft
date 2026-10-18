@@ -1,0 +1,80 @@
+name: Package Windows
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+jobs:
+  package:
+    name: Windows x64 installer
+    runs-on: windows-2025
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validate release candidate
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $subject = git show -s --format=%s HEAD
+          if ($LASTEXITCODE -ne 0) { throw "Cannot read HEAD commit subject (exit code $LASTEXITCODE)." }
+          $releaseMatch = [regex]::Match($subject, '\Achore: prepare release v(?<version>(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))\z')
+          if (-not $releaseMatch.Success) { throw 'HEAD subject must be exactly chore: prepare release vMAJOR.MINOR.PATCH, without leading zeros or version suffixes.' }
+          $releaseVersion = $releaseMatch.Groups['version'].Value
+
+          $changedFiles = @(git diff --no-renames --name-only HEAD^ HEAD)
+          if ($LASTEXITCODE -ne 0) { throw "Cannot compare HEAD with its parent (exit code $LASTEXITCODE)." }
+          $expectedFiles = @('Directory.Build.props', 'RELEASE_NOTES.md')
+          if ($changedFiles.Count -ne 2 -or (Compare-Object -ReferenceObject $expectedFiles -DifferenceObject $changedFiles -CaseSensitive)) {
+              throw 'HEAD must change exactly Directory.Build.props and RELEASE_NOTES.md.'
+          }
+
+          $versionOutput = dotnet msbuild src/SpanDraft.Desktop/SpanDraft.Desktop.csproj -nologo -getProperty:Version -property:Configuration=Release -property:RuntimeIdentifier=win-x64
+          if ($LASTEXITCODE -ne 0) { throw "MSBuild version query failed (exit code $LASTEXITCODE)." }
+          $version = ($versionOutput -join "`n").Trim()
+          if ([string]::IsNullOrWhiteSpace($version)) { throw 'MSBuild returned an empty product version.' }
+          if ($version -cne $releaseVersion) { throw "HEAD subject version $releaseVersion does not match MSBuild Version $version." }
+          if ((Get-Content -LiteralPath RELEASE_NOTES.md) -cnotcontains "## $version") {
+              throw "RELEASE_NOTES.md must contain the exact heading ## $version."
+          }
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install help generator
+        run: python -m pip install -r help/requirements.txt
+      - name: Package Windows installer
+        run: pwsh ./scripts/package-windows.ps1
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpanDraft-win-x64-setup
+          path: artifacts/windows/installer/SpanDraft-*-win-x64-setup.exe
+          if-no-files-found: error
+      - name: Package summary
+        run: |
+          $versionOutput = dotnet msbuild src/SpanDraft.Desktop/SpanDraft.Desktop.csproj -nologo -getProperty:Version -property:Configuration=Release -property:RuntimeIdentifier=win-x64
+          if ($LASTEXITCODE -ne 0) { throw "MSBuild version query failed (exit code $LASTEXITCODE)." }
+          $version = ($versionOutput -join "`n").Trim()
+          if ([string]::IsNullOrWhiteSpace($version)) { throw 'MSBuild returned an empty product version.' }
+          $installer = Get-Item -LiteralPath "artifacts/windows/installer/SpanDraft-$version-win-x64-setup.exe"
+          @(
+              "- Version: $version"
+              "- Commit: $env:GITHUB_SHA"
+              "- Installer: $($installer.Name)"
+          ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
