@@ -49,6 +49,12 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
             writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)),
             [(Strings.Restore, RecoveryDecision.Restore), (Strings.Discard, RecoveryDecision.Discard)]);
 
+    public Task<RecoveryDecision> ConfirmSetupRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc) => damaged
+        ? ConfirmRecoveryAsync(true, null)
+        : ShowAsync(string.Format(CultureInfo.CurrentUICulture, Strings.SetupRecoveryQuestion,
+            writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)),
+            [(Strings.Restore, RecoveryDecision.Restore), (Strings.Discard, RecoveryDecision.Discard)]);
+
     public async Task ShowErrorAsync(string message) => await ShowAsync(message, [(Strings.OK, true)]);
 
     public Task<bool> ConfirmMaterialDeleteAsync(string name) => ShowAsync(

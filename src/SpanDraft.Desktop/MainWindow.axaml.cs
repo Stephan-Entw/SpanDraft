@@ -56,6 +56,7 @@ public partial class MainWindow : Window
         {
             _dialogs = new ProjectDialogs(this);
             _model = new(files: files, dialogs: _dialogs, recovery: ProjectRecovery.Local(files),
+                setupRecovery: ProjectSetupRecovery.Local(files),
                 settingsStore: settingsStore, settings: settings,
                 materialStore: MaterialLibraryStore.Local(files), sectionStore: SectionLibraryStore.Local(files),
                 recentStore: RecentProjectsStore.Local(files), openUserManual: OpenUserManualAsync);

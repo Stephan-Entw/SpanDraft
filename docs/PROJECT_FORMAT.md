@@ -121,3 +121,14 @@ Nur committed Zustände einer dirty Session werden geschrieben; nach Wiederherst
 bleibt das Projekt dirty. Die Benutzerdatei wird nicht automatisch geändert.
 Recovery wird ohne Nachfrage entfernt, wenn ihr vollständiger Projektinhalt
 mit der ursprünglichen Projektdatei übereinstimmt.
+
+Create-Drafts verwenden unabhängig davon den privaten Slot `setup-recovery.json`
+mit eigener Recovery-Version und UTC-Zeitstempel. Er enthält ausschließlich
+bestätigte, auch unvollständige Setup-Werte in SI sowie einen optionalen expliziten
+Querschnittsnamen; keine Session, Eingabepuffer oder UI-Zustände. Querschnitte und
+Materialien verwenden die bestehenden V2-DTOs. Beim Start wird zuerst die
+Projekt-Recovery bearbeitet, danach der Create-Draft über dem restaurierten Editor
+oder eigenständig ohne Session geöffnet. Cancel im Recovery-Dialog erhält den Slot.
+Bewusstes Abbrechen des Drafts, erfolgreiches Öffnen eines anderen Projekts,
+normales Beenden und erfolgreiche Projekterstellung entfernen die Setup-Recovery;
+eine abgebrochene oder fehlgeschlagene Erstellung erhält sie.

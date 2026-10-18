@@ -104,6 +104,7 @@ public static class Strings
     public static string LocalFilesOnly => Get(nameof(LocalFilesOnly));
     public static string LeaveQuestion => Get(nameof(LeaveQuestion));
     public static string DontSave => Get(nameof(DontSave));
+    public static string SetupRecoveryQuestion => Get(nameof(SetupRecoveryQuestion));
     public static string RecoveryQuestion => Get(nameof(RecoveryQuestion));
     public static string RecoveryDamaged => Get(nameof(RecoveryDamaged));
     public static string RecoveryDiscardQuestion => Get(nameof(RecoveryDiscardQuestion));

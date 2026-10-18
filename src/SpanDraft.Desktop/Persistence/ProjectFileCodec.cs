@@ -65,9 +65,7 @@ public static class ProjectFileCodec
             Document = new()
             {
                 Length = d.Length.Meters, BendingAxis = AxisToWire(d.BendingAxis), SectionDisplayName = d.SectionDisplayName,
-                Material = new() { Name = d.Material.Name, YoungsModulus = d.Material.YoungsModulus.Pascals,
-                    YieldStrength = d.Material.YieldStrength.Pascals, Density = d.Material.Density?.KilogramsPerCubicMeter,
-                    PoissonRatio = d.Material.PoissonRatio?.Value },
+                Material = MaterialToDto(d.Material),
                 Section = SectionToDto(d.Section),
                 Supports = d.Supports.Select(s => new SupportV2 { Id = s.Id, Name = s.Name,
                     Type = s.Type switch { SupportType.Fixed => "fixed", SupportType.Pinned => "pinned",
@@ -87,6 +85,19 @@ public static class ProjectFileCodec
                 new OffsetV2 { EntityId = o.Key, Dx = o.Value.Dx, Dy = o.Value.Dy }).ToArray() }
         };
     }
+
+    internal static MaterialV2 MaterialToDto(Material material) => new()
+    {
+        Name = material.Name, YoungsModulus = material.YoungsModulus.Pascals,
+        YieldStrength = material.YieldStrength.Pascals, Density = material.Density?.KilogramsPerCubicMeter,
+        PoissonRatio = material.PoissonRatio?.Value
+    };
+
+    internal static Material MaterialFromDto(MaterialV2 material) => new(
+        Required(material.Name, "material.name"), Pressure.FromPascals(Number(material.YoungsModulus, "youngsModulus")),
+        Pressure.FromPascals(Number(material.YieldStrength, "yieldStrength")),
+        material.Density is { } rho ? MassDensity.FromKilogramsPerCubicMeter(Number(rho, "density")) : null,
+        material.PoissonRatio is { } nu ? PoissonRatio.FromValue(Number(nu, "poissonRatio")) : null);
 
     internal static SectionV2 SectionToDto(ISectionDefinition section) =>
         SectionDefinitionCompatibility.Normalize(section) switch
@@ -117,7 +128,7 @@ public static class ProjectFileCodec
             _ => throw new ProjectFormatException("Unknown section type.")
         };
 
-    private static ISectionDefinition SectionFromDto(SectionV2 section) => section switch
+    internal static ISectionDefinition SectionFromDto(SectionV2 section) => section switch
     {
         RectangleSectionV2 s => new RectangleSectionGeometry(L(s.Width, "width"), L(s.Height, "height")),
         RectangularHollowSectionV2 s => new RectangularHollowSectionGeometry(L(s.Width, "width"), L(s.Height, "height"), L(s.WallThickness, "wallThickness"), L(s.OuterRadius, "outerRadius")),
@@ -152,7 +163,7 @@ public static class ProjectFileCodec
         _ => throw new ProjectFormatException("Unknown section axis.")
     };
 
-    private static SectionAxisDesignation AxisFromWire(string value) => value switch
+    internal static SectionAxisDesignation AxisFromWire(string value) => value switch
     {
         "y" => SectionAxisDesignation.Y, "z" => SectionAxisDesignation.Z,
         "u" => SectionAxisDesignation.U, "v" => SectionAxisDesignation.V,
@@ -184,10 +195,7 @@ public static class ProjectFileCodec
         }
         var section = SectionFromDto(s);
         var document = new EditorDocument(L(d.Length, "length"),
-            new Material(Required(m.Name, "material.name"), Pressure.FromPascals(Number(m.YoungsModulus, "youngsModulus")),
-                Pressure.FromPascals(Number(m.YieldStrength, "yieldStrength")),
-                m.Density is { } rho ? MassDensity.FromKilogramsPerCubicMeter(Number(rho, "density")) : null,
-                m.PoissonRatio is { } nu ? PoissonRatio.FromValue(Number(nu, "poissonRatio")) : null),
+            MaterialFromDto(m),
             section, AxisFromWire(d.BendingAxis),
             Required(d.Supports, "supports").Select(entry =>
             {

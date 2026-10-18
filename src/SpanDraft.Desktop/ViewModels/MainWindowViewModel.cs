@@ -18,6 +18,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IProjectFileStore _files;
     private readonly IProjectDialogs? _dialogs;
     private readonly ProjectRecovery? _recovery;
+    private readonly ProjectSetupRecovery? _setupRecovery;
     private MainViewMode _mode = MainViewMode.Start;
     private MainViewMode _setupReturnMode = MainViewMode.Start;
     private readonly RecentProjectsStore? _recentStore;
@@ -37,12 +38,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         LocalSettingsStore? settingsStore = null, UserSettings? settings = null,
         MaterialLibraryStore? materialStore = null, SectionLibraryStore? sectionStore = null,
         Func<SpanDraft.Desktop.Libraries.BuiltInMaterialCatalog>? catalogLoader = null,
-        RecentProjectsStore? recentStore = null, Func<Task>? openUserManual = null)
+        RecentProjectsStore? recentStore = null, Func<Task>? openUserManual = null,
+        ProjectSetupRecovery? setupRecovery = null)
     {
         _analyze = analyze;
         _files = files ?? new ProjectFileStore();
         _dialogs = dialogs;
         _recovery = recovery;
+        _setupRecovery = setupRecovery;
         _recentStore = recentStore;
         _settingsStore = settingsStore;
         _settings = settings ?? UserSettings.Default;
@@ -56,6 +59,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception e) when (IsLibraryError(e)) { BuiltInError = Strings.BuiltInUnavailable; BuiltInMaterials = null; }
         if (_recovery is not null) _recovery.Failed += RecoveryFailed;
+        if (_setupRecovery is not null) _setupRecovery.Failed += RecoveryFailed;
         _setup = NewSetup();
         NewCommand = new(() => NewAsync(), () => CanNewProject);
         OpenCommand = new(() => OpenAsync(), () => CanOpenProject);
@@ -201,9 +205,28 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (Editor is { } editor) editor.IsMainMenuOpen = open;
     }
 
-    private ProjectSetupViewModel NewSetup() => new(ProjectSetupMode.Create,
-        null, SpanDraft.Core.Sections.SectionAxisDesignation.Y, null,
-        ApplySetupAsync, CancelSetup, ResultPresentation, this, canCancel: true);
+    private ProjectSetupViewModel NewSetup(ProjectSetupDraft? draft = null)
+    {
+        var setup = new ProjectSetupViewModel(ProjectSetupMode.Create,
+            draft?.Section, draft?.BendingAxis ?? SpanDraft.Core.Sections.SectionAxisDesignation.Y, draft?.Material,
+            ApplySetupAsync, CancelSetup, ResultPresentation, this, canCancel: true, recoveredDraft: draft);
+        setup.ConfirmedDraftChanged += SetupDraftChanged;
+        return setup;
+    }
+
+    private void SetupDraftChanged(ProjectSetupViewModel setup)
+    {
+        if (Mode == MainViewMode.ProjectSetup && setup.Mode == ProjectSetupMode.Create && ReferenceEquals(setup, Setup))
+            _setupRecovery?.Schedule(setup.Draft);
+    }
+
+    private async Task DeleteSetupRecoveryAsync()
+    {
+        Setup.ConfirmedDraftChanged -= SetupDraftChanged;
+        if (_setupRecovery is null) return;
+        try { await _setupRecovery.DeleteAsync(); }
+        catch (Exception e) when (IsFileError(e)) { await ShowErrorAsync(Strings.RecoveryError, e); }
+    }
 
     public void EditProject()
     {
@@ -235,14 +258,20 @@ public sealed partial class MainWindowViewModel : ObservableObject
             if (!await CanLeaveAsync()) return false;
             await CompleteLeaveAsync();
             Activate(ProjectSession.Create(new(document, new())));
+            await DeleteSetupRecoveryAsync();
             return true;
         });
     }
 
-    private void CancelSetup()
+    private async void CancelSetup() => await CancelSetupAsync();
+
+    public Task<bool> CancelSetupAsync() => Mode != MainViewMode.ProjectSetup ? Task.FromResult(false) : RunOperationAsync(async () =>
     {
-        if (!IsWorkspaceBusy && Mode == MainViewMode.ProjectSetup) Navigate(_setupReturnMode);
-    }
+        bool create = Setup.Mode == ProjectSetupMode.Create;
+        Navigate(_setupReturnMode);
+        if (create) await DeleteSetupRecoveryAsync();
+        return true;
+    });
 
     private void Activate(ProjectSession session)
     {
@@ -305,6 +334,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             state = previousSession.CurrentRevision.State;
         await CompleteLeaveAsync();
         Activate(ProjectSession.Open(state, Path.GetFullPath(path)));
+        await DeleteSetupRecoveryAsync();
         await RecordRecentAsync(Session!.FilePath!);
         return true;
     }
@@ -388,10 +418,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         if (!await CanLeaveAsync()) return false;
         await CompleteLeaveAsync();
+        await DeleteSetupRecoveryAsync();
         return true;
     });
 
     public Task<bool> InitializeRecoveryAsync() => RunOperationAsync(async () =>
+        await InitializeProjectRecoveryAsync() && await InitializeSetupRecoveryAsync());
+
+    private async Task<bool> InitializeProjectRecoveryAsync()
     {
         if (_recovery is null || Session is not null) return true;
         RecoverySnapshot? snapshot;
@@ -424,7 +458,34 @@ public sealed partial class MainWindowViewModel : ObservableObject
         else if (choice == RecoveryDecision.Discard) await _recovery.DeleteAsync();
         else return false;
         return true;
-    });
+    }
+
+    private async Task<bool> InitializeSetupRecoveryAsync()
+    {
+        if (_setupRecovery is null) return true;
+        SetupRecoverySnapshot? snapshot;
+        try { snapshot = await _setupRecovery.ReadAsync(); }
+        catch (Exception e) when (IsFileError(e))
+        {
+            await ShowErrorAsync(Strings.RecoveryDamaged, e);
+            if (_dialogs is null || await _dialogs.ConfirmSetupRecoveryAsync(true, null) != RecoveryDecision.Discard)
+                return false;
+            await _setupRecovery.DeleteAsync();
+            return true;
+        }
+        if (snapshot is null) return true;
+        var choice = _dialogs is null ? RecoveryDecision.Cancel
+            : await _dialogs.ConfirmSetupRecoveryAsync(false, snapshot.WrittenAtUtc);
+        if (choice == RecoveryDecision.Restore)
+        {
+            _setupReturnMode = Session is null ? MainViewMode.Start : MainViewMode.Editor;
+            _setup = NewSetup(snapshot.Draft);
+            Navigate(MainViewMode.ProjectSetup);
+        }
+        else if (choice == RecoveryDecision.Discard) await _setupRecovery.DeleteAsync();
+        else return false;
+        return true;
+    }
 
     private async Task<bool> RunOperationAsync(Func<Task<bool>> operation)
     {

@@ -85,6 +85,7 @@ internal static class ProjectTestSupport
         public Func<string, Task>? BeforeRead { get; set; }
         public string? FailWritePath { get; set; }
         public bool FailDelete { get; set; }
+        public string? FailDeletePath { get; set; }
         public bool HonorWriteCancellation { get; set; } = true;
         public async Task<byte[]?> ReadAsync(string path)
         {
@@ -101,7 +102,7 @@ internal static class ProjectTestSupport
         }
         public Task DeleteAsync(string path)
         {
-            if (FailDelete) throw new IOException("Injected delete failure.");
+            if (FailDelete || path == FailDeletePath) throw new IOException("Injected delete failure.");
             Data.TryRemove(path, out _);
             return Task.CompletedTask;
         }
@@ -140,7 +141,12 @@ internal static class ProjectTestSupport
         public Task<LeaveDecision> ConfirmLeaveAsync(string projectName)
         { LeaveQuestions++; return LeaveHook?.Invoke() ?? Task.FromResult(Leave); }
         public Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc)
-        { RecoveryQuestions++; return Task.FromResult(damaged ? DamagedRecovery : Recovery); }
+        { RecoveryOrder.Add("project"); RecoveryQuestions++; return Task.FromResult(damaged ? DamagedRecovery : Recovery); }
+        public RecoveryDecision SetupRecovery { get; set; } = RecoveryDecision.Restore;
+        public RecoveryDecision DamagedSetupRecovery { get; set; } = RecoveryDecision.Discard;
+        public List<string> RecoveryOrder { get; } = [];
+        public Task<RecoveryDecision> ConfirmSetupRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc)
+        { RecoveryOrder.Add("setup"); return Task.FromResult(damaged ? DamagedSetupRecovery : SetupRecovery); }
         public Task ShowErrorAsync(string message) { Errors.Add(message); return Task.CompletedTask; }
         public bool ConfirmLibraryDelete { get; set; } = true;
         public Task<bool> ConfirmMaterialDeleteAsync(string name) => Task.FromResult(ConfirmLibraryDelete);

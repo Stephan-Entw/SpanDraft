@@ -96,6 +96,7 @@
   <data name="LocalFilesOnly" xml:space="preserve"><value>Please choose a local project file.</value></data>
   <data name="LeaveQuestion" xml:space="preserve"><value>Save changes to “{0}” before leaving?</value></data>
   <data name="DontSave" xml:space="preserve"><value>Don’t Save</value></data>
+  <data name="SetupRecoveryQuestion" xml:space="preserve"><value>A new project draft from {0} is available. Restore it?</value></data>
   <data name="RecoveryQuestion" xml:space="preserve"><value>An unsaved project from {0} is available. Restore it?</value></data>
   <data name="RecoveryDamaged" xml:space="preserve"><value>The recovery file could not be read. The application can continue.</value></data>
   <data name="RecoveryDiscardQuestion" xml:space="preserve"><value>Discard the unreadable recovery file?</value></data>

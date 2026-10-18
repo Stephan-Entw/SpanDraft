@@ -96,6 +96,7 @@
   <data name="LocalFilesOnly" xml:space="preserve"><value>Bitte eine lokale Projektdatei auswählen.</value></data>
   <data name="LeaveQuestion" xml:space="preserve"><value>Änderungen an „{0}“ vor dem Verlassen speichern?</value></data>
   <data name="DontSave" xml:space="preserve"><value>Nicht speichern</value></data>
+  <data name="SetupRecoveryQuestion" xml:space="preserve"><value>Ein Entwurf für ein neues Projekt vom {0} ist verfügbar. Wiederherstellen?</value></data>
   <data name="RecoveryQuestion" xml:space="preserve"><value>Ein ungespeichertes Projekt vom {0} ist verfügbar. Wiederherstellen?</value></data>
   <data name="RecoveryDamaged" xml:space="preserve"><value>Die Wiederherstellungsdatei konnte nicht gelesen werden. Die Anwendung kann weiter verwendet werden.</value></data>
   <data name="RecoveryDiscardQuestion" xml:space="preserve"><value>Die nicht lesbare Wiederherstellungsdatei verwerfen?</value></data>

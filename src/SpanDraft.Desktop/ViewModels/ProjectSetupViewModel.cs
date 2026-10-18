@@ -28,6 +28,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     private MaterialSelectionViewModel? _materials;
     private bool _definitionBusy;
     private readonly bool _canCancel;
+    private ProjectSetupDraft _confirmedDraft;
 
     public ProjectSetupViewModel(ProjectSetupMode mode, Section section, Material material,
         Action<ProjectSetupViewModel> apply, Action cancel, ResultPresentationOptions? resultPresentation = null)
@@ -42,7 +43,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public ProjectSetupViewModel(ProjectSetupMode mode, ISectionDefinition? section, SectionAxisDesignation bendingAxis,
         Material? material, Func<ProjectSetupViewModel, Task<bool>> apply, Action cancel,
         ResultPresentationOptions? resultPresentation = null, MainWindowViewModel? libraries = null,
-        EditorDocument? originalDocument = null, bool canCancel = false)
+        EditorDocument? originalDocument = null, bool canCancel = false, ProjectSetupDraft? recoveredDraft = null)
     {
         if (mode == ProjectSetupMode.Edit)
         {
@@ -53,8 +54,9 @@ public sealed class ProjectSetupViewModel : ObservableObject
         Mode = mode; _selectedSection = section; _bendingAxis = bendingAxis; _selectedMaterial = material;
         _canCancel = canCancel;
         _originalDocument = originalDocument;
-        _length = originalDocument?.Length ?? (mode == ProjectSetupMode.Edit ? Length.FromMillimeters(1000) : null);
-        _sectionDisplayName = originalDocument?.SectionDisplayName;
+        _length = recoveredDraft?.Length ?? originalDocument?.Length ?? (mode == ProjectSetupMode.Edit ? Length.FromMillimeters(1000) : null);
+        _sectionDisplayName = recoveredDraft?.SectionDisplayName ?? originalDocument?.SectionDisplayName;
+        _confirmedDraft = Draft;
         OriginalMaterial = IsEdit ? material : null;
         _resultPresentation = resultPresentation ?? ResultPresentationOptions.Default;
         Libraries = libraries; _apply = apply;
@@ -69,6 +71,16 @@ public sealed class ProjectSetupViewModel : ObservableObject
         CancelCommand = new(cancel, () => CanCancel && !IsBusy);
         ChangeMaterialCommand = new(ShowMaterials, () => !IsBusy);
         ChangeSectionCommand = new(ShowSections, () => !IsBusy);
+    }
+    public event Action<ProjectSetupViewModel>? ConfirmedDraftChanged;
+    public ProjectSetupDraft Draft => new(SelectedLength, SelectedMaterial, SelectedSection, BendingAxis, SectionDisplayName);
+    private void DraftCommitted()
+    {
+        if (IsEdit) return;
+        var draft = Draft;
+        if (_confirmedDraft.ContentEquals(draft)) return;
+        _confirmedDraft = draft;
+        ConfirmedDraftChanged?.Invoke(this);
     }
     internal MainWindowViewModel? Libraries { get; }
     public ProjectSetupMode Mode { get; }
@@ -100,13 +112,13 @@ public sealed class ProjectSetupViewModel : ObservableObject
             ArgumentNullException.ThrowIfNull(value);
             _selectedSection = value;
             if (!value.Axes.Any(a => a.AxisDesignation == _bendingAxis)) _bendingAxis = value.Axes[0].AxisDesignation;
-            Notify(nameof(SelectedSection)); RefreshSection();
+            Notify(nameof(SelectedSection)); RefreshSection(); DraftCommitted();
         }
     }
     public SectionAxisDesignation BendingAxis
     {
         get => _bendingAxis;
-        set { SelectedSection?.GetAxis(value); if (Set(ref _bendingAxis, value)) RefreshSection(); }
+        set { SelectedSection?.GetAxis(value); if (Set(ref _bendingAxis, value)) { RefreshSection(); DraftCommitted(); } }
     }
     private SectionAxisProperties? SelectedAxis => SelectedSection?.GetAxis(BendingAxis);
     public Material? SelectedMaterial
@@ -117,7 +129,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
             if (!Set(ref _selectedMaterial, value)) return;
             foreach (var name in new[] { nameof(HasMaterial), nameof(MaterialName), nameof(MaterialSummary), nameof(YoungsModulus), nameof(YieldStrength),
                 nameof(Density), nameof(PoissonRatio), nameof(HasDensity), nameof(HasPoissonRatio), nameof(CanApply) }) Notify(name);
-            ApplyCommand.Refresh();
+            ApplyCommand.Refresh(); DraftCommitted();
         }
     }
     public bool HasMaterial => SelectedMaterial is not null;
@@ -155,7 +167,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     {
         if (IsBusy) return new(false, Strings.ProjectBusy);
         if (_originalDocument is { } document && BeamLengthConstraints.Error(document, length) is { } error) return new(false, error);
-        _length = length; Notify(nameof(SelectedLength)); RefreshLength();
+        _length = length; Notify(nameof(SelectedLength)); RefreshLength(); DraftCommitted();
         return LengthCommitResult.Success;
     }
     private void RefreshLength()
@@ -188,7 +200,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
             result.Section.GetAxis(result.BendingAxis);
             _selectedSection = result.Section; _bendingAxis = result.BendingAxis;
             _sectionDisplayName = result.IsAutomaticName ? null : result.DisplayName;
-            Notify(nameof(SelectedSection)); RefreshSection();
+            Notify(nameof(SelectedSection)); RefreshSection(); DraftCommitted();
         }
         ShowOverview();
     }

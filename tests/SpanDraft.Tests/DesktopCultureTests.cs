@@ -1,6 +1,7 @@
 using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -146,9 +147,11 @@ public sealed class DesktopCultureTests
     }
 
     [Theory]
-    [InlineData("en-US", "de-DE")]
-    [InlineData("de-DE", "en-US")]
-    public async Task RecoveryPromptUsesTheRegionalDateInsideTheSelectedUiLanguage(string uiCulture, string culture)
+    [InlineData("en-US", "de-DE", false)]
+    [InlineData("de-DE", "en-US", false)]
+    [InlineData("en-US", "de-DE", true)]
+    [InlineData("de-DE", "en-US", true)]
+    public async Task RecoveryPromptUsesTheRegionalDateInsideTheSelectedUiLanguage(string uiCulture, string culture, bool setup)
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new ResultCultureScope(culture, uiCulture);
@@ -156,14 +159,44 @@ public sealed class DesktopCultureTests
         var type = typeof(MainWindow).Assembly.GetType("SpanDraft.Desktop.ProjectDialogs")!;
         var dialogs = (IProjectDialogs)Activator.CreateInstance(type, [owner])!;
         var time = new DateTimeOffset(2026, 10, 16, 15, 42, 0, TimeSpan.Zero);
-        var pending = dialogs.ConfirmRecoveryAsync(false, time);
+        var pending = setup ? dialogs.ConfirmSetupRecoveryAsync(false, time) : dialogs.ConfirmRecoveryAsync(false, time);
         var dialog = Assert.Single(owner.OwnedWindows);
         var text = Assert.Single(dialog.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.Contains("2026") == true);
-        Assert.Equal(string.Format(CultureInfo.CurrentCulture, Strings.RecoveryQuestion,
+        Assert.Equal(string.Format(CultureInfo.CurrentCulture, setup ? Strings.SetupRecoveryQuestion : Strings.RecoveryQuestion,
             time.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)), text.Text);
         dialog.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Strings.Discard))
             .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.Equal(RecoveryDecision.Discard, await WaitFor(pending));
         owner.Close();
+    }
+
+    [Theory]
+    [InlineData(false, false)] [InlineData(false, true)]
+    [InlineData(true, false)] [InlineData(true, true)]
+    public async Task SetupRecoveryEscapeAbortsWindowStartupWithoutDeletingEitherSlot(bool restoreProject, bool damaged)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files(); var setupSlot = ProjectSetupRecovery.Local(files).SlotPath;
+        var setupBytes = damaged ? System.Text.Encoding.UTF8.GetBytes("{")
+            : ProjectSetupRecovery.Encode(new(new(Length: M(1.2345678901234567)), Now));
+        files.Data[setupSlot] = setupBytes;
+        var projectSlot = ProjectRecovery.Local(files).SlotPath;
+        if (restoreProject) files.Data[projectSlot] = ProjectRecovery.Encode(new(State(), null, Now));
+        var window = new MainWindow(new(files, new(files, "settings"), UserSettings.Default));
+        window.Show(); Dispatcher.UIThread.RunJobs();
+        if (restoreProject)
+        {
+            Click(Strings.Restore); Dispatcher.UIThread.RunJobs();
+            Assert.NotNull(Assert.IsType<MainWindowViewModel>(window.DataContext).Session);
+        }
+        if (damaged) { Click(Strings.OK); Dispatcher.UIThread.RunJobs(); }
+        var dialog = Assert.Single(window.OwnedWindows);
+        dialog.RaiseEvent(new KeyEventArgs { RoutedEvent = Avalonia.Input.InputElement.KeyDownEvent, Key = Key.Escape });
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(window.IsVisible); Assert.Equal(setupBytes, files.Data[setupSlot]);
+        if (restoreProject) Assert.True(files.Data.ContainsKey(projectSlot));
+
+        void Click(string label) => Assert.Single(window.OwnedWindows).GetVisualDescendants().OfType<Button>()
+            .Single(b => Equals(b.Content, label)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
     }
 }

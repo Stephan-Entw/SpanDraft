@@ -16,11 +16,11 @@ public sealed record ProjectState(EditorDocument Document, EditorPresentationSta
         && a.Supports.SequenceEqual(b.Supports) && a.Loads.SequenceEqual(b.Loads)
         && a.DistributedLoads.SequenceEqual(b.DistributedLoads) && a.NamingState == b.NamingState;
 
-    private static bool MaterialContentEquals(Material a, Material b) => a.Name == b.Name
+    internal static bool MaterialContentEquals(Material a, Material b) => a.Name == b.Name
         && a.YoungsModulus == b.YoungsModulus && a.YieldStrength == b.YieldStrength
         && a.Density == b.Density && a.PoissonRatio == b.PoissonRatio;
 
-    private static bool SectionContentEquals(ISectionDefinition a, ISectionDefinition b)
+    internal static bool SectionContentEquals(ISectionDefinition a, ISectionDefinition b)
     {
         if (ReferenceEquals(a, b)) return true;
         return (SectionDefinitionCompatibility.Normalize(a), SectionDefinitionCompatibility.Normalize(b)) switch
