@@ -18,7 +18,8 @@ public sealed class ProjectWorkflowTests
         Assert.Equal(MainViewMode.Start, app.Main.Mode);
         Assert.Empty(app.Files.Writes); Assert.Empty(app.Files.Data); Assert.Empty(app.Delay.Waiters);
         Assert.True(await app.Main.NewAsync());
-        app.Main.Setup.ApplyCommand.Execute(null);
+        Assert.False(await app.Main.Setup.ConfirmAsync()); Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses);
+        CompleteSetup(app.Main); app.Main.Setup.ApplyCommand.Execute(null);
         Assert.True(app.Main.Session!.IsDirty); Assert.Equal(1, app.Analyses);
         Assert.Contains("* — SpanDraft", app.Main.WindowTitle);
     }
@@ -121,7 +122,7 @@ public sealed class ProjectWorkflowTests
         var session = app.Main.Session; var recovery = app.Files.Data[App.Slot].ToArray();
         app.Main.Editor!.DimensionLength.Begin(); app.Main.Editor.DimensionLength.Text = "bad draft";
         app.Dialogs.OpenPath = TestPath("target.spandraft"); app.Files.Data[app.Dialogs.OpenPath] = ProjectFileCodec.Serialize(State());
-        if (action == "new") Assert.True(await app.Main.NewAsync());
+        if (action == "new") { Assert.True(await app.Main.NewAsync()); CompleteSetup(app.Main); }
         Task<bool> Leave() => action switch { "new" => app.Main.Setup.ConfirmAsync(), "open" => app.Main.OpenAsync(), _ => app.Main.RequestCloseAsync() };
         Assert.False(await Leave());
         app.Dialogs.Leave = LeaveDecision.Save; app.Dialogs.SavePath = null;
@@ -140,7 +141,7 @@ public sealed class ProjectWorkflowTests
     {
         var app = new App(); app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         app.Dialogs.Leave = save ? LeaveDecision.Save : LeaveDecision.Discard;
-        if (action == "new") Assert.True(await app.Main.NewAsync());
+        if (action == "new") { Assert.True(await app.Main.NewAsync()); CompleteSetup(app.Main); }
         bool result = action == "new" ? await app.Main.Setup.ConfirmAsync() : await app.Main.RequestCloseAsync();
         Assert.True(result); Assert.False(app.Files.Data.ContainsKey(App.Slot));
         Assert.Equal(save, app.Files.Data.ContainsKey(app.Dialogs.SavePath!));
@@ -154,7 +155,7 @@ public sealed class ProjectWorkflowTests
     {
         var app = new App(); app.Dialogs.Leave = LeaveDecision.Save;
         app.Files.FailWritePath = app.Dialogs.SavePath;
-        Assert.True(await app.Main.NewAsync()); Assert.False(await app.Main.Setup.ConfirmAsync());
+        Assert.True(await app.Main.NewAsync()); CompleteSetup(app.Main); Assert.False(await app.Main.Setup.ConfirmAsync());
         Assert.NotNull(app.Main.Session); Assert.True(app.Main.Session!.IsDirty);
         app.Files.FailWritePath = App.Slot;
         Assert.False(await app.Main.SaveAsync());

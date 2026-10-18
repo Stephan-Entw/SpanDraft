@@ -17,11 +17,11 @@ public sealed class ProjectSetupViewModel : ObservableObject
 {
     private readonly Func<ProjectSetupViewModel, Task<bool>> _apply;
     private readonly EditorDocument? _originalDocument;
-    private ISectionDefinition _selectedSection;
+    private ISectionDefinition? _selectedSection;
     private Material? _selectedMaterial;
     private SectionAxisDesignation _bendingAxis;
     private string? _sectionDisplayName;
-    private Length _length;
+    private Length? _length;
     private ResultPresentationOptions _resultPresentation;
     private ProjectSetupPage _page;
     private object? _step;
@@ -33,24 +33,27 @@ public sealed class ProjectSetupViewModel : ObservableObject
         Action<ProjectSetupViewModel> apply, Action cancel, ResultPresentationOptions? resultPresentation = null)
         : this(mode, section, SectionAxisDesignation.Y, material, apply, cancel, resultPresentation) { }
 
-    public ProjectSetupViewModel(ProjectSetupMode mode, ISectionDefinition section, SectionAxisDesignation bendingAxis,
+    public ProjectSetupViewModel(ProjectSetupMode mode, ISectionDefinition? section, SectionAxisDesignation bendingAxis,
         Material? material, Action<ProjectSetupViewModel> apply, Action cancel,
         ResultPresentationOptions? resultPresentation = null, MainWindowViewModel? libraries = null)
         : this(mode, section, bendingAxis, material, setup => { apply(setup); return Task.FromResult(true); },
             cancel, resultPresentation, libraries) { }
 
-    public ProjectSetupViewModel(ProjectSetupMode mode, ISectionDefinition section, SectionAxisDesignation bendingAxis,
+    public ProjectSetupViewModel(ProjectSetupMode mode, ISectionDefinition? section, SectionAxisDesignation bendingAxis,
         Material? material, Func<ProjectSetupViewModel, Task<bool>> apply, Action cancel,
         ResultPresentationOptions? resultPresentation = null, MainWindowViewModel? libraries = null,
         EditorDocument? originalDocument = null, bool canCancel = false)
     {
-        ArgumentNullException.ThrowIfNull(section);
-        if (mode == ProjectSetupMode.Edit) ArgumentNullException.ThrowIfNull(material);
-        section.GetAxis(bendingAxis);
+        if (mode == ProjectSetupMode.Edit)
+        {
+            ArgumentNullException.ThrowIfNull(section);
+            ArgumentNullException.ThrowIfNull(material);
+        }
+        section?.GetAxis(bendingAxis);
         Mode = mode; _selectedSection = section; _bendingAxis = bendingAxis; _selectedMaterial = material;
         _canCancel = canCancel;
         _originalDocument = originalDocument;
-        _length = originalDocument?.Length ?? Length.FromMillimeters(1000);
+        _length = originalDocument?.Length ?? (mode == ProjectSetupMode.Edit ? Length.FromMillimeters(1000) : null);
         _sectionDisplayName = originalDocument?.SectionDisplayName;
         OriginalMaterial = IsEdit ? material : null;
         _resultPresentation = resultPresentation ?? ResultPresentationOptions.Default;
@@ -59,7 +62,8 @@ public sealed class ProjectSetupViewModel : ObservableObject
             () => ResultPresentation.Profile[QuantityKind.BeamLength], retainRejectedOnBlur: true);
         LengthInput.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName is nameof(LengthInputViewModel.Text) or nameof(LengthInputViewModel.IsEditing)) RefreshLength();
+            if (e.PropertyName is nameof(LengthInputViewModel.Text) or nameof(LengthInputViewModel.IsEditing)
+                or nameof(LengthInputViewModel.HasError) or nameof(LengthInputViewModel.ErrorText)) RefreshLength();
         };
         ApplyCommand = new(ConfirmAsync, () => CanApply);
         CancelCommand = new(cancel, () => CanCancel && !IsBusy);
@@ -79,14 +83,16 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public string Title => IsEdit ? Strings.EditProject : Strings.NewProject;
     public string PrimaryAction => IsEdit ? Strings.Apply : Strings.CreateProject;
     public Material? OriginalMaterial { get; }
-    public Length SelectedLength => _length;
+    public Length? SelectedLength => _length;
     public LengthInputViewModel LengthInput { get; }
-    public string? LengthError => !LengthInput.TryGetLength(out var length) ? Strings.InvalidLength
-        : _originalDocument is { } document ? BeamLengthConstraints.Error(document, length) : null;
+    public string? LengthError => LengthInput.HasError ? LengthInput.ErrorText : null;
     public bool HasLengthError => LengthError is not null;
-    public bool CanApply => IsOverview && !IsBusy && SelectedMaterial is not null && !HasLengthError;
+    public bool CanApply => IsOverview && !IsBusy && HasSection && SelectedMaterial is not null
+        && LengthInput.TryGetLength(out var length) && !HasLengthError
+        && (_originalDocument is not { } document || BeamLengthConstraints.Error(document, length) is null);
     public string? SectionDisplayName => _sectionDisplayName;
-    public ISectionDefinition SelectedSection
+    public bool HasSection => SelectedSection is not null;
+    public ISectionDefinition? SelectedSection
     {
         get => _selectedSection;
         set
@@ -100,38 +106,40 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public SectionAxisDesignation BendingAxis
     {
         get => _bendingAxis;
-        set { SelectedSection.GetAxis(value); if (Set(ref _bendingAxis, value)) RefreshSection(); }
+        set { SelectedSection?.GetAxis(value); if (Set(ref _bendingAxis, value)) RefreshSection(); }
     }
-    private SectionAxisProperties SelectedAxis => SelectedSection.GetAxis(BendingAxis);
+    private SectionAxisProperties? SelectedAxis => SelectedSection?.GetAxis(BendingAxis);
     public Material? SelectedMaterial
     {
         get => _selectedMaterial;
         set
         {
             if (!Set(ref _selectedMaterial, value)) return;
-            foreach (var name in new[] { nameof(MaterialName), nameof(MaterialSummary), nameof(YoungsModulus), nameof(YieldStrength),
+            foreach (var name in new[] { nameof(HasMaterial), nameof(MaterialName), nameof(MaterialSummary), nameof(YoungsModulus), nameof(YieldStrength),
                 nameof(Density), nameof(PoissonRatio), nameof(HasDensity), nameof(HasPoissonRatio), nameof(CanApply) }) Notify(name);
             ApplyCommand.Refresh();
         }
     }
+    public bool HasMaterial => SelectedMaterial is not null;
     public string MaterialName => SelectedMaterial?.Name ?? Strings.SelectMaterialRequired;
     internal void SelectMaterial(SpanDraft.Desktop.Libraries.MaterialLibraryEntry entry) => SelectedMaterial = entry.Material;
     public string MaterialSummary => SelectedMaterial is null ? "" : "E " + YoungsModulus + " · fy " + YieldStrength;
     public string? StartupError => Libraries?.BuiltInError;
     public bool HasStartupError => StartupError is not null;
-    public string SectionName => SectionDisplayName ?? SectionDisplay.Name(SelectedSection, ResultPresentation.Profile);
-    public string AxisSummary => Strings.BendingAxis + " " + new AxisChoice(BendingAxis).Label
-        + (SelectedSection.Axes.Count == 2 && SectionDefinitionViewModel.HaveEquivalentProperties(SelectedSection.Axes[0], SelectedSection.Axes[1])
+    public string SectionName => SelectedSection is { } section
+        ? SectionDisplayName ?? SectionDisplay.Name(section, ResultPresentation.Profile) : Strings.SectionSelection;
+    public string AxisSummary => SelectedSection is not { } section ? "" : Strings.BendingAxis + " " + new AxisChoice(BendingAxis).Label
+        + (section.Axes.Count == 2 && SectionDefinitionViewModel.HaveEquivalentProperties(section.Axes[0], section.Axes[1])
             ? " · " + Strings.SectionDefinitionEquivalent : "");
-    public SectionEditorType SectionType => SectionDefinitionCompatibility.Normalize(SelectedSection) is IParametricSectionDefinition p
+    public SectionEditorType SectionType => SelectedSection is { } section && SectionDefinitionCompatibility.Normalize(section) is IParametricSectionDefinition p
         ? Enum.Parse<SectionEditorType>(p.ShapeKind.ToString()) : SectionEditorType.Manual;
     public ResultPresentationOptions ResultPresentation => _resultPresentation;
-    public string Area => Format(SelectedSection.Area.SquareMeters, QuantityKind.Area);
-    public string Inertia => Format(SelectedAxis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea);
+    public string Area => SelectedSection is { } section ? Format(section.Area.SquareMeters, QuantityKind.Area) : "";
+    public string Inertia => SelectedAxis is { } axis ? Format(axis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea) : "";
     public string Modulus => !IsAsymmetric ? PositiveModulus : "W+ = " + PositiveModulus + "; W− = " + NegativeModulus;
-    public bool IsAsymmetric => SelectedAxis.PositiveSectionModulus != SelectedAxis.NegativeSectionModulus;
-    public string PositiveModulus => Format(SelectedAxis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus);
-    public string NegativeModulus => Format(SelectedAxis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus);
+    public bool IsAsymmetric => SelectedAxis is { } axis && axis.PositiveSectionModulus != axis.NegativeSectionModulus;
+    public string PositiveModulus => SelectedAxis is { } axis ? Format(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus) : "";
+    public string NegativeModulus => SelectedAxis is { } axis ? Format(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus) : "";
     public string YoungsModulus => SelectedMaterial is { } m ? UiNumbers.Indicator(m.YoungsModulus.Pascals / 1e9) + " GPa" : "";
     public string YieldStrength => SelectedMaterial is { } m ? UiNumbers.Indicator(m.YieldStrength.Megapascals) + " MPa" : "";
     public bool HasDensity => SelectedMaterial?.Density is not null;
@@ -166,7 +174,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         if (IsBusy || IsSectionDefinition) return;
         var library = Libraries is { } main ? new SectionDefinitionLibrary(main) : null;
         var definition = new SectionDefinitionViewModel(ResultPresentation, library,
-            initialState: new(SelectedSection, BendingAxis, SectionDisplayName),
+            initialState: SelectedSection is { } section ? new(section, BendingAxis, SectionDisplayName) : null,
             preserveInputs: () => Libraries?.PreserveSetupInputs == true);
         definition.CloseRequested += FinishDefinition;
         definition.PropertyChanged += DefinitionChanged;
@@ -239,8 +247,9 @@ public sealed class ProjectSetupViewModel : ObservableObject
     }
     private void RefreshSection()
     {
-        foreach (var name in new[] { nameof(SectionName), nameof(SectionDisplayName), nameof(BendingAxis), nameof(AxisSummary), nameof(SectionType),
+        foreach (var name in new[] { nameof(HasSection), nameof(CanApply), nameof(SectionName), nameof(SectionDisplayName), nameof(BendingAxis), nameof(AxisSummary), nameof(SectionType),
             nameof(Area), nameof(Inertia), nameof(Modulus), nameof(IsAsymmetric), nameof(PositiveModulus), nameof(NegativeModulus) }) Notify(name);
+        ApplyCommand.Refresh();
     }
     internal void RefreshLibraryState()
     {

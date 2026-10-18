@@ -222,6 +222,25 @@
     <Setter Property="BorderThickness" Value="{DynamicResource FocusWidth}" />
   </Style>
 
+  <Style Selector="Button.inputHint">
+    <Setter Property="Width" Value="18" />
+    <Setter Property="Height" Value="18" />
+    <Setter Property="MinWidth" Value="18" />
+    <Setter Property="MinHeight" Value="18" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.inputHint:pointerover, Button.inputHint:pressed">
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
   <Style Selector="Border.selectionSurface">
     <Setter Property="Background" Value="{DynamicResource Surface}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
@@ -235,7 +254,6 @@
     <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
     <Setter Property="Padding" Value="12" />
-    <Setter Property="MinHeight" Value="115" />
   </Style>
   <Style Selector="Button.beamSetupSurface">
     <Setter Property="Height" Value="NaN" />

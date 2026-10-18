@@ -20,31 +20,161 @@ namespace SpanDraft.Tests;
 public sealed class ProjectSetupIntegrationTests
 {
     [Theory]
-    [InlineData("de-DE", "1234,5")] [InlineData("en-US", "1234.5")]
-    public async Task LengthDefaultsAndConfirmedInputOnlyChangeTheDraft(string culture, string text)
+    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)]
+    [InlineData(4)] [InlineData(5)] [InlineData(6)] [InlineData(7)]
+    public async Task CreateRequiresEveryValueAndOnlyCreatesACompleteDocument(int fields)
+    {
+        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
+        if ((fields & 1) != 0) { setup.LengthInput.Begin(); setup.LengthInput.Text = "1500"; }
+        if ((fields & 2) != 0) setup.SelectedSection = new RectangleSectionGeometry(M(.1), M(.2));
+        if ((fields & 4) != 0) setup.SelectedMaterial = ProjectTemplates.Material;
+        Assert.Equal(fields == 7, setup.CanApply); Assert.Equal(fields == 7, setup.ApplyCommand.CanExecute(null));
+        Assert.Equal(fields == 7, await setup.ConfirmAsync());
+        if (fields == 7) Assert.Equal(M(1.5), app.Main.Editor!.Document.Length);
+        else { Assert.Null(app.Main.Editor); Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses); }
+    }
+
+    [Theory]
+    [InlineData(0)] [InlineData(1)] [InlineData(2)]
+    public async Task LastRequiredValueRefreshesTheCreateCommand(int last)
+    {
+        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
+        void SetField(int field)
+        {
+            if (field == 0) { setup.LengthInput.Begin(); setup.LengthInput.Text = "1500"; }
+            else if (field == 1) setup.SelectedSection = ProjectTemplates.Section;
+            else setup.SelectedMaterial = ProjectTemplates.Material;
+        }
+        foreach (int field in Enumerable.Range(0, 3).Where(i => i != last)) SetField(field);
+        Assert.False(setup.CanApply); bool enabled = false;
+        setup.ApplyCommand.CanExecuteChanged += (_, _) => enabled = setup.ApplyCommand.CanExecute(null);
+        SetField(last); Assert.True(enabled); Assert.True(setup.CanApply);
+    }
+
+    [Fact]
+    public async Task CompleteCreateDraftIsBlockedOnSubpagesAndWhileLibrariesAreBusy()
+    {
+        var files = new Files(); var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials"));
+        Assert.True(await main.NewAsync()); CompleteSetup(main); var setup = main.Setup;
+        Assert.True(setup.CanApply);
+        setup.ShowMaterials(); Assert.False(setup.CanApply); setup.Escape(); Assert.True(setup.CanApply);
+        setup.ShowSections(); Assert.False(setup.CanApply); setup.Escape(); Assert.True(setup.CanApply);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        files.BeforeRead = _ => release.Task;
+        var loading = main.InitializeLibrariesAsync();
+        try
+        {
+            Assert.True(setup.IsBusy); Assert.False(setup.CanApply); Assert.False(setup.ApplyCommand.CanExecute(null));
+            Assert.False(await setup.ConfirmAsync()); Assert.Null(main.Session);
+        }
+        finally { release.TrySetResult(); await loading; }
+        Assert.True(setup.CanApply); Assert.True(await setup.ConfirmAsync()); Assert.NotNull(main.Session);
+    }
+
+    [Fact]
+    public async Task EmptySelectionsStayEmptyOnCancelAndOnlyConfirmedSectionIsTransferred()
+    {
+        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
+        Assert.Null(setup.SelectedLength); Assert.Empty(setup.LengthInput.Text); Assert.False(setup.HasLengthError);
+        Assert.Null(setup.SelectedSection); Assert.Null(setup.SelectedMaterial); Assert.False(setup.HasSection);
+        Assert.Equal(Strings.SectionSelection, setup.SectionName); Assert.Empty(setup.AxisSummary);
+        Assert.Empty(setup.Area); Assert.Empty(setup.Inertia); Assert.Empty(setup.Modulus);
+        Assert.Equal(Strings.SelectMaterialRequired, setup.MaterialName); Assert.Empty(setup.MaterialSummary);
+        setup.ShowSections(); Assert.True(setup.Definition!.IsChoosingForm); Assert.False(setup.CanApply);
+        setup.Definition.SelectForm(SectionEditorType.Rectangle);
+        foreach (var input in setup.Definition.Parameters) { input.PendingText = "100"; Assert.True(input.Commit()); }
+        Assert.Null(setup.SelectedSection); setup.Escape(); Assert.Null(setup.SelectedSection);
+        setup.ShowMaterials(); setup.Escape(); Assert.Null(setup.SelectedMaterial);
+        setup.ShowSections(); Assert.True(setup.Definition!.IsChoosingForm);
+        setup.Definition.SelectForm(SectionEditorType.Rectangle);
+        foreach (var input in setup.Definition.Parameters) { input.PendingText = "100"; Assert.True(input.Commit()); }
+        Assert.True(await setup.Definition.ConfirmAsync()); Assert.True(setup.HasSection);
+        Assert.IsType<RectangleSectionGeometry>(setup.SelectedSection); Assert.NotEmpty(setup.AxisSummary);
+        Assert.False(setup.CanApply); Assert.Null(app.Main.Session);
+    }
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public async Task EmptyLengthRemainsAbsentAcrossRefreshUnitChangesAndCancel(string culture)
     {
         using var scope = new UiCultureScope(culture);
         var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
-        Assert.Equal(1000, setup.SelectedLength.Millimeters); Assert.Equal("1000", setup.LengthInput.Text);
+        foreach (var profile in new[] { UnitProfile.UnitedStates, UnitProfile.StructuralEngineering, UnitProfile.Default })
+        {
+            Assert.True(app.Main.SetResultPresentation(profile, PresentationMode.Standard));
+            setup.LengthInput.Refresh(); Assert.Empty(setup.LengthInput.Text); Assert.Empty(setup.LengthInput.DisplayText);
+            Assert.Null(setup.SelectedLength); Assert.False(setup.LengthInput.TryGetLength(out _));
+            Assert.False(setup.HasLengthError); Assert.False(setup.CanApply);
+        }
+        setup.LengthInput.Begin(); Assert.False(setup.LengthInput.TryGetLength(out _));
+        setup.LengthInput.Text = "-"; Assert.False(setup.HasLengthError);
+        Assert.False(setup.LengthInput.Confirm()); Assert.True(setup.HasLengthError);
+        setup.LengthInput.Cancel(); Assert.Empty(setup.LengthInput.Text); Assert.Null(setup.SelectedLength);
+        Assert.False(setup.HasLengthError);
+    }
+
+    [Theory]
+    [InlineData("de-DE", "1234,5")] [InlineData("en-US", "1234.5")]
+    public async Task EmptyLengthAndConfirmedInputOnlyChangeTheDraft(string culture, string text)
+    {
+        using var scope = new UiCultureScope(culture);
+        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
+        Assert.Null(setup.SelectedLength); Assert.Empty(setup.LengthInput.Text);
+        Assert.False(setup.HasLengthError); Assert.False(setup.CanApply);
+        setup.SelectedSection = ProjectTemplates.Section; setup.SelectedMaterial = ProjectTemplates.Material;
         Assert.True(setup.CanCancel);
         setup.LengthInput.Begin(); setup.LengthInput.Text = text;
         Assert.True(setup.CanApply); Assert.True(setup.LengthInput.Confirm());
-        Assert.Equal(1234.5, setup.SelectedLength.Millimeters); Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses);
+        Assert.Equal(1234.5, setup.SelectedLength!.Value.Millimeters); Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses);
         Assert.True(await setup.ConfirmAsync()); Assert.Equal(setup.SelectedLength, app.Main.Editor!.Document.Length);
         Assert.Null(app.Main.Session!.FilePath); Assert.True(app.Main.Session.IsDirty);
         Assert.Equal(0, app.Dialogs.SaveQuestions);
     }
 
     [Theory]
-    [InlineData("")] [InlineData("-")] [InlineData("0")] [InlineData("-1")]
+    [InlineData("-")] [InlineData("0")] [InlineData("-1")]
     [InlineData("NaN")] [InlineData("Infinity")] [InlineData("1e400")]
     public async Task RejectedLengthSurvivesBlurAndPreventsCreation(string text)
     {
         var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
-        setup.LengthInput.Begin(); setup.LengthInput.Text = text; setup.LengthInput.LoseFocus();
+        setup.SelectedSection = ProjectTemplates.Section; setup.SelectedMaterial = ProjectTemplates.Material;
+        setup.LengthInput.Begin(); setup.LengthInput.Text = text;
+        Assert.False(setup.HasLengthError); Assert.False(setup.CanApply);
+        setup.LengthInput.LoseFocus();
         Assert.Equal(text, setup.LengthInput.Text); Assert.True(setup.LengthInput.IsEditing);
         Assert.True(setup.HasLengthError); Assert.False(setup.CanApply);
         Assert.False(await setup.ConfirmAsync()); Assert.Null(app.Main.Session);
+        setup.LengthInput.Cancel(); Assert.False(setup.HasLengthError); Assert.False(setup.CanApply);
+        Assert.Null(setup.SelectedLength); Assert.Empty(setup.LengthInput.Text);
+    }
+
+    [Theory]
+    [InlineData("")] [InlineData(" ")] [InlineData("\t")]
+    public async Task MissingCreateLengthStaysNeutralAfterBlurAndConfirmation(string text)
+    {
+        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
+        setup.SelectedSection = ProjectTemplates.Section; setup.SelectedMaterial = ProjectTemplates.Material;
+        setup.LengthInput.Begin(); setup.LengthInput.Text = text; setup.LengthInput.LoseFocus();
+        Assert.False(setup.HasLengthError); Assert.False(setup.LengthInput.HasError); Assert.Null(setup.LengthError);
+        Assert.Null(setup.SelectedLength); Assert.Empty(setup.LengthInput.Text); Assert.False(setup.LengthInput.IsEditing);
+        Assert.False(setup.CanApply); Assert.False(await setup.ConfirmAsync()); Assert.False(setup.HasLengthError);
+        Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses);
+        setup.LengthInput.Begin(); Assert.False(setup.LengthInput.Confirm()); Assert.False(setup.HasLengthError);
+        Assert.True(setup.LengthInput.IsEditing); setup.LengthInput.LoseFocus();
+        Assert.True(app.Main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Standard));
+        Assert.Empty(setup.LengthInput.Text); Assert.Null(setup.SelectedLength);
+    }
+
+    [Theory]
+    [InlineData("")] [InlineData("0")] [InlineData("-")]
+    public async Task ExistingLengthOnlyShowsErrorsAfterValidationAndKeepsTheDocument(string text)
+    {
+        var app = new App(); var document = app.Main.Editor!.Document;
+        app.Main.EditProject(); var setup = app.Main.Setup;
+        setup.LengthInput.Begin(); setup.LengthInput.Text = text;
+        Assert.False(setup.HasLengthError); Assert.False(setup.CanApply);
+        Assert.False(await setup.ConfirmAsync()); Assert.True(setup.HasLengthError);
+        Assert.Same(document, app.Main.Editor.Document); Assert.Equal(document.Length, setup.SelectedLength);
         setup.LengthInput.Cancel(); Assert.False(setup.HasLengthError); Assert.True(setup.CanApply);
     }
 
@@ -63,7 +193,8 @@ public sealed class ProjectSetupIntegrationTests
         Assert.True(app.Main.Session!.Commit(new(d, new())));
         var revision = app.Main.Session.CurrentRevision; var analysis = app.Main.Editor.Presentation;
         app.Main.EditProject(); var setup = app.Main.Setup;
-        setup.LengthInput.Begin(); setup.LengthInput.Text = "799"; setup.LengthInput.LoseFocus();
+        setup.LengthInput.Begin(); setup.LengthInput.Text = "799";
+        Assert.False(setup.HasLengthError); Assert.False(setup.CanApply); setup.LengthInput.LoseFocus();
         Assert.True(setup.HasLengthError); Assert.Contains(entity == 0 ? Strings.LengthExcludesSupports : Strings.LengthExcludesEntities, setup.LengthError!);
         Assert.False(await setup.ConfirmAsync()); Assert.Same(revision, app.Main.Session.CurrentRevision); Assert.Same(analysis, app.Main.Editor.Presentation);
         setup.LengthInput.Text = "800"; Assert.True(await setup.ConfirmAsync());
@@ -178,7 +309,8 @@ public sealed class ProjectSetupIntegrationTests
         editor.DimensionLength.LoseFocus(); Assert.Equal("2500", editor.DimensionLength.Text); Assert.Same(revision, session.CurrentRevision);
         Assert.Equal(recovery, app.Files.Data[App.Slot]); app.Main.Setup.CancelCommand.Execute(null);
         Assert.Same(editor, app.Main.Editor); Assert.Same(analysis, editor.Presentation); Assert.Same(revision, session.CurrentRevision);
-        Assert.True(await app.Main.NewAsync()); Assert.False(await app.Main.Setup.ConfirmAsync()); Assert.Same(session, app.Main.Session);
+        Assert.True(await app.Main.NewAsync()); CompleteSetup(app.Main);
+        Assert.False(await app.Main.Setup.ConfirmAsync()); Assert.Same(session, app.Main.Session);
         app.Dialogs.Leave = LeaveDecision.Discard; Assert.True(await app.Main.Setup.ConfirmAsync());
         Assert.NotSame(session, app.Main.Session); Assert.Null(app.Main.Session!.FilePath); Assert.True(app.Main.Session.IsDirty);
     }
@@ -187,7 +319,7 @@ public sealed class ProjectSetupIntegrationTests
     public async Task SectionWorkspaceBlocksGlobalActionsButKeepsLibrarySavingFunctional()
     {
         var files = new Files(); var main = new MainWindowViewModel(files: files, sectionStore: new(files, "sections")); main.NewCommand.Execute(null);
-        await main.InitializeLibrariesAsync(); Assert.True(await main.Setup.ConfirmAsync()); main.EditProject(); main.Setup.ShowSections();
+        await main.InitializeLibrariesAsync(); CompleteSetup(main); Assert.True(await main.Setup.ConfirmAsync()); main.EditProject(); main.Setup.ShowSections();
         Assert.True(main.IsSectionWorkspace); Assert.False(main.NewCommand.CanExecute(null)); Assert.False(main.SaveCommand.CanExecute(null));
         Assert.False(main.OpenCommand.CanExecute(null)); Assert.False(main.UndoCommand.CanExecute(null));
         Assert.False(await main.SaveAsync()); Assert.False(await main.NewAsync()); Assert.False(await main.OpenAsync());
@@ -205,7 +337,7 @@ public sealed class ProjectSetupIntegrationTests
         files.Data["sections"] = SectionLibraryCodec.Serialize(new([new("HEB 200", ih)]));
         var main = new MainWindowViewModel(files: files, sectionStore: new(files, "sections")); main.NewCommand.Execute(null);
         await main.InitializeLibrariesAsync(); main.Setup.SelectedSection = ih; main.Setup.BendingAxis = SectionAxisDesignation.Z;
-        Assert.True(await main.Setup.ConfirmAsync());
+        CompleteSetup(main); Assert.True(await main.Setup.ConfirmAsync());
         main.EditProject(); main.Setup.ShowSections(); var vm = main.Setup.Definition!;
         if (fromLibrary) vm.LoadPreset(main.UserSections.All.Single());
         else { vm.BeginNameEdit(); vm.PendingName = "HEB 200"; Assert.True(vm.CommitName()); }

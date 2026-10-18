@@ -10,13 +10,13 @@ public readonly record struct LengthCommitResult(bool Accepted, string? ErrorTex
 }
 
 /// <summary>Transient input session for the single inline dimension editor.</summary>
-public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthCommitResult> commit,
+public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, LengthCommitResult> commit,
     Func<bool>? preserveBuffer = null, Func<UnitDefinition>? readUnit = null,
     bool retainRejectedOnBlur = false) : ObservableObject
 {
-    private string _text = InputQuantityFormatter.Format(read().Meters, readUnit?.Invoke() ?? UnitCatalog.Millimeter);
+    private string _text = Format(read(), readUnit?.Invoke() ?? UnitCatalog.Millimeter);
     private UnitDefinition _editUnit = UnitCatalog.Millimeter;
-    private Length _referenceLength;
+    private Length? _referenceLength;
     private string _referenceText = "";
     private bool _isEditing;
     private bool _hasError;
@@ -42,12 +42,12 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
     public string ErrorText => _commitError ?? Strings.InvalidLength;
     private UnitDefinition CurrentUnit => IsEditing ? _editUnit : readUnit?.Invoke() ?? UnitCatalog.Millimeter;
     public string Unit => CurrentUnit.Symbol;
-    public string DisplayText => InputQuantityFormatter.WithUnit(read().Meters, CurrentUnit);
+    public string DisplayText => read() is { } length ? InputQuantityFormatter.WithUnit(length.Meters, CurrentUnit) : "";
 
     public bool TryGetLength(out Length length)
     {
-        if (IsEditing && Text == _referenceText) { length = _referenceLength; return true; }
-        if (!IsEditing && Text == InputQuantityFormatter.Format(read().Meters, CurrentUnit)) { length = read(); return true; }
+        if (IsEditing && _referenceLength is { } reference && Text == _referenceText) { length = reference; return true; }
+        if (!IsEditing && read() is { } current && Text == Format(current, CurrentUnit)) { length = current; return true; }
         return InputQuantityFormatter.TryParseLength(Text, CurrentUnit, out length);
     }
 
@@ -56,7 +56,7 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
         if (IsEditing) return;
         _editUnit = readUnit?.Invoke() ?? UnitCatalog.Millimeter;
         _referenceLength = read();
-        Text = _referenceText = InputQuantityFormatter.Format(_referenceLength.Meters, _editUnit);
+        Text = _referenceText = Format(_referenceLength, _editUnit);
         ClearError();
         IsEditing = true;
         Notify(nameof(Unit));
@@ -66,9 +66,13 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
     public bool Confirm()
     {
         if (!IsEditing || _isConfirming) return true;
-        if (!TryGetLength(out Length length))
+        if (read() is null && string.IsNullOrWhiteSpace(Text))
         {
             ClearError();
+            return false;
+        }
+        if (!TryGetLength(out Length length))
+        {
             HasError = true;
             return false;
         }
@@ -108,16 +112,19 @@ public sealed class LengthInputViewModel(Func<Length> read, Func<Length, LengthC
     {
         if (preserveBuffer?.Invoke() == true || _isConfirming || !IsEditing || Confirm()) return;
         // Leaving a rejected edit discards its request, conflict and feedback together.
-        if (!retainRejectedOnBlur) Cancel();
+        if (!retainRejectedOnBlur || (read() is null && string.IsNullOrWhiteSpace(Text))) Cancel();
     }
 
     public void Refresh(bool preserveError = false)
     {
-        if (!IsEditing) Text = InputQuantityFormatter.Format(read().Meters, CurrentUnit);
+        if (!IsEditing) Text = Format(read(), CurrentUnit);
         if (!preserveError) ClearError();
         Notify(nameof(DisplayText));
         Notify(nameof(Unit));
     }
+
+    private static string Format(Length? length, UnitDefinition unit) =>
+        length is { } value ? InputQuantityFormatter.Format(value.Meters, unit) : "";
 
     private void ClearError()
     {

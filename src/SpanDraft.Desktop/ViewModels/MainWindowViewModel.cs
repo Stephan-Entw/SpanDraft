@@ -202,9 +202,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     private ProjectSetupViewModel NewSetup() => new(ProjectSetupMode.Create,
-        new SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry(
-            Length.FromMillimeters(100), Length.FromMillimeters(100), Length.FromMillimeters(5), Length.FromMillimeters(0)),
-        SpanDraft.Core.Sections.SectionAxisDesignation.Y, BuiltInMaterials?.Find("S235JR")?.Material,
+        null, SpanDraft.Core.Sections.SectionAxisDesignation.Y, null,
         ApplySetupAsync, CancelSetup, ResultPresentation, this, canCancel: true);
 
     public void EditProject()
@@ -220,16 +218,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private Task<bool> ApplySetupAsync(ProjectSetupViewModel setup)
     {
         if (Mode != MainViewMode.ProjectSetup || !ReferenceEquals(setup, Setup)
-            || IsWorkspaceBusy || !setup.CanApply || setup.SelectedMaterial is not { } material)
+            || IsWorkspaceBusy || !setup.CanApply || setup.SelectedMaterial is not { } material
+            || setup.SelectedLength is not { Meters: > 0 } length || setup.SelectedSection is not { } section)
             return Task.FromResult(false);
         if (setup.Mode == ProjectSetupMode.Edit)
         {
-            if (Editor?.ApplySetup(setup.SelectedLength, setup.SelectedSection, setup.BendingAxis, material, setup.SectionDisplayName) != true)
+            if (Editor?.ApplySetup(length, section, setup.BendingAxis, material, setup.SectionDisplayName) != true)
                 return Task.FromResult(false);
             Navigate(MainViewMode.Editor);
             return Task.FromResult(true);
         }
-        var document = new EditorDocument(setup.SelectedLength, material, setup.SelectedSection, setup.BendingAxis,
+        var document = new EditorDocument(length, material, section, setup.BendingAxis,
             sectionDisplayName: setup.SectionDisplayName);
         return RunOperationAsync(async () =>
         {

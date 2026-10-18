@@ -85,7 +85,7 @@ public sealed class ProjectSectionStateTests
         reopened.Dialogs.OpenPath = savedPath; Assert.True(await reopened.Main.OpenAsync());
         Assert.True(after.ContentEquals(reopened.Main.Session!.CurrentRevision.State));
         Assert.False(reopened.Main.Session.IsDirty); Assert.Empty(reopened.Main.Session.UndoHistory);
-        Assert.True(await app.Main.NewAsync()); app.Main.Setup.ApplyCommand.Execute(null);
+        Assert.True(await app.Main.NewAsync()); ProjectTestSupport.CompleteSetup(app.Main); app.Main.Setup.ApplyCommand.Execute(null);
         Assert.True(app.Main.Session!.IsDirty); Assert.Empty(app.Main.Session.UndoHistory); Assert.Null(app.Main.Session.FilePath);
         Assert.Equal(SectionAxisDesignation.Y, app.Main.Editor!.Document.BendingAxis);
         Assert.Equal(7850, app.Main.Editor.Document.Material.Density!.Value.KilogramsPerCubicMeter);

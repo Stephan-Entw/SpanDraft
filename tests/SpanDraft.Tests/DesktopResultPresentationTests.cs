@@ -68,7 +68,7 @@ public sealed class DesktopResultPresentationTests
         Assert.Equal($"M [{profile[QuantityKind.Moment].Symbol}]", editor.Overview.ReactionMomentHeader);
         var setup = new ProjectSetupViewModel(ProjectSetupMode.Edit, state.Document.Section, state.Document.BendingAxis, state.Document.Material,
             _ => { }, () => { }, options);
-        Assert.Equal(Format(setup.SelectedSection.Area.SquareMeters, QuantityKind.Area), setup.Area);
+        Assert.Equal(Format(setup.SelectedSection!.Area.SquareMeters, QuantityKind.Area), setup.Area);
         Assert.Equal(Format(setup.SelectedSection.GetAxis(setup.BendingAxis).SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea), setup.Inertia);
         Assert.Equal(Format(setup.SelectedSection.GetAxis(setup.BendingAxis).PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus), setup.Modulus);
         Assert.Equal(UiNumbers.Indicator(state.Document.Material.YoungsModulus.Pascals / 1e9) + " GPa", setup.YoungsModulus);
@@ -168,7 +168,7 @@ public sealed class DesktopResultPresentationTests
         var material = app.Main.Setup.SelectedMaterial;
         Assert.Same(section, app.Main.Setup.SelectedSection);
         Assert.Same(material, app.Main.Setup.SelectedMaterial);
-        app.Main.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(app.Main); app.Main.Setup.ApplyCommand.Execute(null);
         Assert.Equal(app.Main.ResultPresentation, app.Main.Editor!.ResultPresentation);
         app.Dialogs.Leave = LeaveDecision.Discard;
         app.Dialogs.OpenPath = Path.Combine(Path.GetTempPath(), "presentation-open.spandraft");
@@ -192,7 +192,7 @@ public sealed class DesktopResultPresentationTests
         Assert.Equal(analyses, app.Analyses);
         Assert.True(await app.Main.NewAsync());
         Assert.Equal(app.Main.ResultPresentation, app.Main.Setup.ResultPresentation);
-        app.Main.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(app.Main); app.Main.Setup.ApplyCommand.Execute(null);
         Assert.Equal(app.Main.ResultPresentation, app.Main.Editor!.ResultPresentation);
         var restored = new App(create: false);
         restored.Main.SetResultPresentation(Mixed, PresentationMode.Detailed);

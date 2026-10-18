@@ -34,7 +34,7 @@ public sealed class DesktopSupportTests
         {
             Main = new(beam => { Calls++; Beam = beam; return BeamAnalysis.Analyze(beam); });
             Main.NewCommand.Execute(null);
-            Main.Setup.ApplyCommand.Execute(null);
+            ProjectTestSupport.CompleteSetup(Main); Main.Setup.ApplyCommand.Execute(null);
         }
         public EditorSupport Add(double mm, SupportType type = SupportType.Fixed)
         {

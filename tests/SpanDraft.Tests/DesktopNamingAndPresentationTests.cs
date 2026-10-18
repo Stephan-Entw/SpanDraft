@@ -24,7 +24,7 @@ public sealed class DesktopNamingAndPresentationTests
         {
             Main = new(beam => { Calls++; LastBeam = beam; return BeamAnalysis.Analyze(beam); });
             Main.NewCommand.Execute(null);
-            Main.Setup.ApplyCommand.Execute(null);
+            ProjectTestSupport.CompleteSetup(Main); Main.Setup.ApplyCommand.Execute(null);
         }
         public void NewDraft(AutoNameKind kind, double mm = 300)
         {
@@ -406,7 +406,7 @@ public sealed class DesktopNamingAndPresentationTests
         s.Main.Session!.MarkSaved(s.Main.Session.CurrentRevision, ProjectTestSupport.TestPath("old-project.spandraft"));
         Assert.True(await s.Main.NewAsync());
         Assert.Same(previous, s.Editor);
-        Assert.True(await s.Main.Setup.ConfirmAsync());
+        ProjectTestSupport.CompleteSetup(s.Main); Assert.True(await s.Main.Setup.ConfirmAsync());
         Assert.NotSame(previous, s.Editor);
         Assert.Empty(s.Editor.EditorPresentation.AnnotationOffsets);
         Assert.Empty(s.Editor.Document.NamedEntities);

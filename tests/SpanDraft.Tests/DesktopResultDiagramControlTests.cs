@@ -101,7 +101,7 @@ public sealed class DesktopResultDiagramControlTests
         using var cultures = new ResultCultureScope(culture, uiCulture);
         int analyses = 0;
         var main = new MainWindowViewModel(b => { analyses++; return BeamAnalysis.Analyze(b); }); main.NewCommand.Execute(null);
-        main.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
         var editor = main.Editor!;
         var document = Document().WithLoads([
             new EditorPointForce(Guid.NewGuid(), Length.FromMeters(.03), Force.FromNewtons(-1234567.89), "F1"),
@@ -619,7 +619,7 @@ public sealed class DesktopResultDiagramControlTests
         Assert.True(await app.Main.NewAsync());
         view.DataContext = app.Main.Editor; Arrange(window);
         Assert.All(Diagrams(view), d => Assert.NotNull(d.Projection));
-        Assert.True(await app.Main.Setup.ConfirmAsync());
+        ProjectTestSupport.CompleteSetup(app.Main); Assert.True(await app.Main.Setup.ConfirmAsync());
         view.DataContext = app.Main.Editor; Arrange(window);
         Assert.Equal(3, app.Analyses);
         Assert.All(Diagrams(view), d => Assert.Null(d.Projection));

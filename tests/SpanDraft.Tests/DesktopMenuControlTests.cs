@@ -63,7 +63,7 @@ public sealed class DesktopMenuControlTests
         main.Setup.ShowSections(); CheckWorkspace(MainWorkspaceKind.SectionDefinition);
         var definition = Assert.Single(window.GetVisualDescendants().OfType<SectionDefinitionView>());
         Assert.Empty(definition.GetVisualDescendants().OfType<Menu>());
-        main.Setup.Escape(); main.Setup.ApplyCommand.Execute(null); CheckWorkspace(MainWorkspaceKind.BeamEditor);
+        main.Setup.Escape(); ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null); CheckWorkspace(MainWorkspaceKind.BeamEditor);
         main.Session!.MarkSaved(main.Session.CurrentRevision, TestPath("closed.spandraft"));
         closeProject.Command!.Execute(null); CheckWorkspace(MainWorkspaceKind.Start);
         Assert.True(window.IsVisible); Assert.Null(main.Session); Assert.Null(main.Editor);

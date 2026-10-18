@@ -43,7 +43,7 @@ public class DesktopStateTests
             });
         }
 
-        public void Create() { Main.NewCommand.Execute(null); Main.Setup.ApplyCommand.Execute(null); }
+        public void Create() { Main.NewCommand.Execute(null); ProjectTestSupport.CompleteSetup(Main); Main.Setup.ApplyCommand.Execute(null); }
     }
 
     [Fact]
@@ -54,8 +54,9 @@ public class DesktopStateTests
         Assert.Null(s.Main.Editor);
         Assert.Same(s.Main.StartPage, s.Main.CurrentViewModel);
         Assert.Equal(ProjectSetupMode.Create, s.Main.Setup.Mode);
-        Assert.IsType<SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry>(s.Main.Setup.SelectedSection);
-        Assert.Same(s.Main.BuiltInMaterials!.Find("S235JR")!.Material, s.Main.Setup.SelectedMaterial);
+        Assert.Null(s.Main.Setup.SelectedLength); Assert.Empty(s.Main.Setup.LengthInput.Text);
+        Assert.Null(s.Main.Setup.SelectedSection); Assert.Null(s.Main.Setup.SelectedMaterial);
+        Assert.False(s.Main.Setup.CanApply);
         Assert.Equal(0, s.Calls);
     }
 

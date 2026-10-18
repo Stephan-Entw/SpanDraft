@@ -62,6 +62,21 @@ internal static class ProjectTestSupport
         return new(document, new([new(SupportId, new(12.345678901234567, -75)), new(LoadId, new(0, 0))]));
     }
 
+    public static void CompleteSetup(MainWindowViewModel main)
+    {
+        var setup = main.Setup;
+        if (setup.SelectedLength is null)
+        {
+            setup.LengthInput.Begin();
+            setup.LengthInput.Text = SpanDraft.Desktop.Presentation.InputQuantityFormatter.Format(1,
+                setup.ResultPresentation.Profile[SpanDraft.Desktop.Presentation.QuantityKind.BeamLength]);
+            if (!setup.LengthInput.Confirm()) throw new InvalidOperationException(setup.LengthInput.ErrorText);
+        }
+        setup.SelectedSection ??= new SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry(
+            M(.1), M(.1), M(.005), M(0));
+        setup.SelectedMaterial ??= main.BuiltInMaterials!.Find("S235JR")!.Material;
+    }
+
     public sealed class Files : IProjectFileStore
     {
         public ConcurrentDictionary<string, byte[]> Data { get; } = new();
@@ -145,7 +160,7 @@ internal static class ProjectTestSupport
         {
             Recovery = new(Files, Slot, Delay.Wait, () => Now);
             Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, Files, Dialogs, Recovery);
-            if (create) { Main.NewCommand.Execute(null); Main.Setup.ApplyCommand.Execute(null); }
+            if (create) { Main.NewCommand.Execute(null); CompleteSetup(Main); Main.Setup.ApplyCommand.Execute(null); }
         }
         public void ChangeLength(double meters = 1.5)
         {

@@ -124,7 +124,7 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task ReopeningSelectionUsesTheMaterialAlreadyAppliedToTheSetupDraft()
     {
-        var f = new Fixture(); await f.Load(); Assert.True(await f.Main.Setup.ConfirmAsync());
+        var f = new Fixture(); await f.Load(); CompleteSetup(f.Main); Assert.True(await f.Main.Setup.ConfirmAsync());
         var committed = f.Main.Editor!.Document.Material; f.Main.EditProject(); var editor = f.New();
         Assert.True(await editor.ApplyAsync()); var changed = f.Main.Setup.SelectedMaterial;
         var selection = f.Select(); Assert.Same(changed, selection.CurrentEntry!.Material); Assert.Same(selection.CurrentEntry, selection.SelectedEntry);
@@ -289,7 +289,7 @@ public sealed class MaterialWorkflowRegressionTests
     public async Task SelectionAndEditorPersistOnlyCoreMaterialSnapshotFields()
     {
         var f = new Fixture(); await f.Load(Entry()); var selection = f.Select(); selection.SelectedEntry = selection.UserEntries.Single(); selection.UseSelected();
-        Assert.True(await f.Main.Setup.ConfirmAsync()); var before = f.Main.Session!.CurrentRevision.State;
+        CompleteSetup(f.Main); Assert.True(await f.Main.Setup.ConfirmAsync()); var before = f.Main.Session!.CurrentRevision.State;
         var bytes = ProjectFileCodec.Serialize(before); var material = JsonNode.Parse(bytes)!["document"]!["material"]!.AsObject();
         Assert.Equal(new[] { "name", "youngsModulus", "yieldStrength" }, material.Select(p => p.Key));
         foreach (var key in new[] { "materialNumber", "category", "otherStandards", "libraryId", "provenance" }) Assert.DoesNotContain("\"" + key + "\"", Encoding.UTF8.GetString(bytes));
@@ -304,12 +304,12 @@ public sealed class MaterialWorkflowRegressionTests
     {
         using var scope = new UiCultureScope(culture); var f = new Fixture(); await f.Load();
         string newTitle = Strings.NewProject + " — " + Strings.ApplicationTitle; Assert.Equal(newTitle, f.Main.WindowTitle);
-        Assert.True(await f.Main.Setup.ConfirmAsync()); f.Dialogs.SavePath = TestPath("Maschine.spandraft"); Assert.True(await f.Main.SaveAsync());
+        CompleteSetup(f.Main); Assert.True(await f.Main.Setup.ConfirmAsync()); f.Dialogs.SavePath = TestPath("Maschine.spandraft"); Assert.True(await f.Main.SaveAsync());
         var session = f.Main.Session!; var revision = session.CurrentRevision; var title = f.Main.WindowTitle;
         Assert.True(await f.Main.NewAsync()); Assert.Equal(newTitle, f.Main.WindowTitle); Assert.Same(session, f.Main.Session); Assert.Same(revision, session.CurrentRevision); Assert.False(session.IsDirty);
         f.Main.Setup.CancelCommand.Execute(null); Assert.Equal(title, f.Main.WindowTitle);
         f.Main.EditProject(); Assert.Equal(title, f.Main.WindowTitle); f.Main.Setup.CancelCommand.Execute(null);
-        Assert.True(await f.Main.NewAsync()); Assert.True(await f.Main.Setup.ConfirmAsync());
+        Assert.True(await f.Main.NewAsync()); CompleteSetup(f.Main); Assert.True(await f.Main.Setup.ConfirmAsync());
         Assert.NotSame(session, f.Main.Session); Assert.Null(f.Main.Session!.FilePath); Assert.True(f.Main.Session.IsDirty);
         Assert.Equal(Strings.Untitled + "* — " + Strings.ApplicationTitle, f.Main.WindowTitle);
     }

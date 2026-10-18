@@ -33,7 +33,7 @@ public sealed class DesktopNavigationTests
         using var scope = new UiCultureScope(culture);
         var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
-        model.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
         var state = ProjectTestSupport.State();
         Assert.True(model.Editor!.Session.Commit(new(state.Document with { Length = Length.FromMeters(1) }, state.Presentation)));
         Layout(window, width, height);
@@ -53,7 +53,7 @@ public sealed class DesktopNavigationTests
         int analyses = 0;
         var model = new MainWindowViewModel(beam => { analyses++; return BeamAnalysis.Analyze(beam); }); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
-        model.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
         var state = ProjectTestSupport.State();
         Assert.True(model.Editor!.Session.Commit(new(state.Document with { Length = Length.FromMeters(1) }, state.Presentation)));
         var editor = model.Editor;
@@ -117,7 +117,7 @@ public sealed class DesktopNavigationTests
         using var environment = new DesktopControlEnvironment();
         var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
-        model.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
         var state = ProjectTestSupport.State();
         Assert.True(model.Editor!.Session.Commit(new(state.Document with { Length = Length.FromMeters(1) }, state.Presentation)));
         Layout(window);
@@ -161,7 +161,7 @@ public sealed class DesktopNavigationTests
         int analyses = 0;
         var model = new MainWindowViewModel(beam => { analyses++; return BeamAnalysis.Analyze(beam); }); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
-        model.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
         var state = ProjectTestSupport.State();
         Assert.True(model.Editor!.Session.Commit(new(state.Document with { Length = Length.FromMeters(1) }, state.Presentation)));
         Layout(window);
@@ -254,7 +254,7 @@ public sealed class DesktopNavigationTests
             var host = Assert.Single(((Grid)window.Content!).Children.OfType<ContentControl>());
             Assert.Same(model.Setup, host.Content);
 
-            model.Setup.ApplyCommand.Execute(null);
+            ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
             Layout(window);
 
             var editor = Assert.IsType<EditorViewModel>(model.CurrentViewModel);
@@ -306,7 +306,7 @@ public sealed class DesktopNavigationTests
         using var scope = new UiCultureScope(culture);
         var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
-        model.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
         var state = ProjectTestSupport.State();
         var loads = Enumerable.Range(1, 35).Select(i => (EditorPointLoad)new EditorPointForce(Guid.NewGuid(),
             Length.FromMillimeters(500), Force.FromNewtons(-i), "Long committed load name " + i));
@@ -378,7 +378,7 @@ public sealed class DesktopNavigationTests
         using var scope = new UiCultureScope(culture);
         var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
-        model.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
         var document = new EditorDocument(Length.FromMillimeters(1000), ProjectTemplates.Material, ProjectTemplates.Section,
             [new(Guid.NewGuid(), Length.FromMillimeters(0), SupportType.Fixed, "A")],
             [new EditorPointForce(Guid.NewGuid(), Length.FromMillimeters(500), Force.FromNewtons(-13300), "F1")]);
@@ -442,7 +442,7 @@ public sealed class DesktopNavigationTests
         using var environment = new DesktopControlEnvironment();
         var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
-        model.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
         var load = new EditorPointForce(Guid.NewGuid(), Length.FromMillimeters(500), Force.FromNewtons(-1000), "F1");
         var document = new EditorDocument(Length.FromMillimeters(1000), ProjectTemplates.Material, ProjectTemplates.Section,
             [new(Guid.NewGuid(), Length.FromMillimeters(0), SupportType.Fixed, "A")], [load]);
@@ -480,7 +480,7 @@ public sealed class DesktopNavigationTests
         using var environment = new DesktopControlEnvironment();
         var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
-        model.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
         Layout(window);
         var view = Assert.Single(window.GetVisualDescendants().OfType<EditorView>());
         var editorScroll = view.FindControl<ScrollViewer>("EditorScroll")!;
@@ -516,7 +516,7 @@ public sealed class DesktopNavigationTests
         using var environment = new DesktopControlEnvironment();
         var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
-        model.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
         Layout(window);
         var overview = Assert.Single(window.GetVisualDescendants().OfType<ProjectOverviewView>());
         foreach (string tableName in new[] { "SupportTable", "LoadTable" })

@@ -72,22 +72,15 @@ public sealed class DesktopProjectSetupWorkflowTests
     }
 
     [Fact]
-    public async Task NewProjectUsesCompleteBuiltInAndModernGeometrySnapshot()
+    public async Task NewProjectStartsWithoutModelDataEvenAfterLibrariesLoad()
     {
-        var f = new Fixture(); await f.Load(); Assert.Null(f.Main.Editor);
-        var s = Assert.IsType<RectangularHollowSectionGeometry>(f.Main.Setup.SelectedSection);
-        Assert.Equal(100, s.Width.Millimeters); Assert.Equal(100, s.Height.Millimeters);
-        Assert.Equal(5, s.WallThickness.Millimeters); Assert.Equal(0, s.OuterRadius.Millimeters);
-        Assert.Same(f.Main.BuiltInMaterials!.Find("S235JR")!.Material, f.Main.Setup.SelectedMaterial);
-        Assert.Null(Materials(f).CurrentEntry); Assert.True(Sections(f).HasValidSection);
-        f.Main.Setup.ShowOverview(); f.Create();
-        var d = f.Main.Editor!.Document;
-        Assert.Same(s, d.Section); Assert.Equal(SectionAxisDesignation.Y, d.BendingAxis);
-        Assert.Equal(210e9, d.Material.YoungsModulus.Pascals); Assert.Equal(235e6, d.Material.YieldStrength.Pascals);
-        Assert.Equal(7850, d.Material.Density!.Value.KilogramsPerCubicMeter); Assert.Equal(.3, d.Material.PoissonRatio!.Value.Value);
-        Assert.True(ProjectFileCodec.Deserialize(ProjectFileCodec.Serialize(f.Main.Session!.CurrentRevision.State))
-            .ContentEquals(f.Main.Session.CurrentRevision.State));
-        Assert.Equal(1, f.Analyses);
+        var f = new Fixture(); await f.Load(); var setup = f.Main.Setup;
+        Assert.Null(setup.SelectedLength); Assert.Empty(setup.LengthInput.Text); Assert.False(setup.HasLengthError);
+        Assert.Null(setup.SelectedSection); Assert.Null(setup.SelectedMaterial); Assert.False(setup.CanApply);
+        Assert.False(setup.ApplyCommand.CanExecute(null)); Assert.Null(f.Main.Editor); Assert.Null(f.Main.Session);
+        Assert.Null(Materials(f).CurrentEntry); f.Main.Setup.Escape();
+        Assert.True(Sections(f).IsChoosingForm); f.Main.Setup.Escape();
+        Assert.False(await setup.ConfirmAsync()); Assert.Equal(0, f.Analyses);
     }
 
     [Fact]
@@ -165,7 +158,7 @@ public sealed class DesktopProjectSetupWorkflowTests
     [Fact]
     public async Task MaterialSaveIsPersistentBeforeUseAndSurvivesSetupCancel()
     {
-        var f = new Fixture(); await f.Load(); f.Create(); var document = f.Main.Editor!.Document;
+        var f = new Fixture(); await f.Load(); CompleteSetup(f.Main); f.Create(); var document = f.Main.Editor!.Document;
         f.Main.EditProject(); var editor = NewMaterial(f);
         Assert.True(await editor.AddLibraryAsync()); Assert.Same(editor, Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
         Assert.Same(document.Material, f.Main.Setup.SelectedMaterial); Assert.True(await editor.ApplyAsync());
@@ -178,7 +171,7 @@ public sealed class DesktopProjectSetupWorkflowTests
     [Fact]
     public async Task MaterialLibraryEditAndDeleteRequireExplicitProjectUse()
     {
-        var f = new Fixture(); f.Files.Data["materials"] = MaterialLibraryCodec.Serialize(new([Entry()])); await f.Load(); f.Create();
+        var f = new Fixture(); f.Files.Data["materials"] = MaterialLibraryCodec.Serialize(new([Entry()])); await f.Load(); CompleteSetup(f.Main); f.Create();
         var snapshot = f.Main.Editor!.Document; f.Main.EditProject();
         var selection = Materials(f); selection.SelectedEntry = selection.UserEntries.Single(); selection.EditSelectedCommand.Execute(null);
         var editor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
@@ -205,7 +198,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         await f.Load();
         var entry = Assert.Single(f.Main.UserSections.All);
         var vm = Sections(f); vm.SelectForm(SectionEditorType.Rectangle); vm.LoadPreset(entry); vm.SelectedAxis = SectionAxisDesignation.Z;
-        Assert.True(await vm.ConfirmAsync()); f.Create();
+        Assert.True(await vm.ConfirmAsync()); CompleteSetup(f.Main); f.Create();
         var session = f.Main.Session!; var revision = session.CurrentRevision; var document = f.Main.Editor!.Document;
         var undo = session.UndoHistory.ToArray(); var redo = session.RedoHistory.ToArray(); bool dirty = session.IsDirty;
         f.Main.EditProject(); vm = Sections(f);
@@ -368,7 +361,7 @@ public sealed class DesktopProjectSetupWorkflowTests
     [Fact]
     public async Task SectionPresetSaveAndSelectionOnlyChangeProjectOnExplicitApply()
     {
-        var f = new Fixture(); await f.Load(); f.Create(); var snapshot = f.Main.Editor!.Document;
+        var f = new Fixture(); await f.Load(); CompleteSetup(f.Main); f.Create(); var snapshot = f.Main.Editor!.Document;
         f.Main.EditProject(); var editor = NewSection(f);
         editor.BeginNameEdit(); editor.PendingName = "My preset"; Assert.True(editor.CommitName());
         Assert.True(await editor.SaveLibraryAsync()); Assert.Single(SectionLibraryCodec.Deserialize(f.Files.Data["sections"]).All);
@@ -412,7 +405,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         var f = new Fixture(brokenCatalog: true); await f.Load();
         Assert.Null(f.Main.Setup.SelectedMaterial); Assert.True(f.Main.Setup.HasStartupError);
         Assert.False(f.Main.Setup.CanApply); f.Create(); Assert.Null(f.Main.Editor);
-        Assert.True(await NewMaterial(f).ConfirmAsync()); f.Create(); Assert.NotNull(f.Main.Editor);
+        Assert.True(await NewMaterial(f).ConfirmAsync()); CompleteSetup(f.Main); f.Create(); Assert.NotNull(f.Main.Editor);
         var path = TestPath("independent.spandraft"); f.Files.Data[path] = ProjectFileCodec.Serialize(State()); f.Dialogs.OpenPath = path;
         f.Dialogs.Leave = LeaveDecision.Discard;
         Assert.True(await f.Main.OpenAsync()); Assert.Equal("Test steel", f.Main.Editor!.Document.Material.Name);
@@ -421,7 +414,7 @@ public sealed class DesktopProjectSetupWorkflowTests
     [Fact]
     public async Task CancelPreservesDocumentDirtyHistoryAndAnalysisWhileApplyCommitsTogether()
     {
-        var f = new Fixture(); await f.Load(); f.Create(); var session = f.Main.Session!;
+        var f = new Fixture(); await f.Load(); CompleteSetup(f.Main); f.Create(); var session = f.Main.Session!;
         session.Commit(session.CurrentRevision.State with { Document = f.Main.Editor!.Document with { Length = M(2) } });
         session.Undo();
         var document = f.Main.Editor!.Document; var revision = session.CurrentRevision;
@@ -445,7 +438,7 @@ public sealed class DesktopProjectSetupWorkflowTests
     [Fact]
     public async Task SavedProjectLoadsAndAnalyzesWhenAllLibrariesAndCatalogAreUnavailable()
     {
-        var f = new Fixture(); await f.Load(); f.Create();
+        var f = new Fixture(); await f.Load(); CompleteSetup(f.Main); f.Create();
         var state = State() with { Document = State().Document.WithSection(Rectangle(), SectionAxisDesignation.Z) with { Length = M(1), Material = Entry().Material } };
         f.Main.Session!.Commit(state); Assert.True(await f.Main.SaveAsync()); var path = f.Main.Session.FilePath!;
         Assert.True(await f.Main.RequestCloseAsync());
@@ -483,7 +476,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         var manual = new ManualSectionDefinition(Area.FromSquareMeters(.0012345678901234567),
             new(SectionAxisDesignation.U, SecondMomentOfArea.FromMetersToTheFourth(1.2345678901234567e-6), SectionModulus.FromCubicMeters(2.3456789012345678e-5)),
             new(SectionAxisDesignation.V, SecondMomentOfArea.FromMetersToTheFourth(3.4567890123456789e-6), SectionModulus.FromCubicMeters(4.567890123456789e-5)));
-        f.Main.Setup.SelectedMaterial = material; f.Main.Setup.SelectedSection = manual; f.Create(); f.Main.EditProject();
+        f.Main.Setup.SelectedMaterial = material; f.Main.Setup.SelectedSection = manual; CompleteSetup(f.Main); f.Create(); f.Main.EditProject();
         var selection = Materials(f); Assert.True(selection.SelectedEntry!.IsProject); selection.EditSelectedCommand.Execute(null);
         var materialEditor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor);
         Assert.Equal(material.Name, materialEditor.Name);
@@ -541,7 +534,7 @@ public sealed class DesktopProjectSetupWorkflowTests
     [Fact]
     public async Task ManualInputUnitsAreProtectedAndTypeSwitchUsesCurrentDimensionUnits()
     {
-        var f = new Fixture(); await f.Load(); var editor = Sections(f);
+        var f = new Fixture(); await f.Load(); CompleteSetup(f.Main); var editor = Sections(f);
         editor.SelectForm(SectionEditorType.Manual);
         var profile = UnitProfile.Default.WithUnit(QuantityKind.SectionDimension, UnitCatalog.Inch);
         // The loaded parametric draft also retains input buffers; protect all affected units.

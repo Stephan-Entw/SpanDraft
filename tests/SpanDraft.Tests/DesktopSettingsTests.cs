@@ -246,7 +246,7 @@ public sealed class DesktopSettingsTests
         var main = new MainWindowViewModel(files: startup.Files, settingsStore: startup.SettingsStore, settings: startup.Settings);
         main.NewCommand.Execute(null);
         Assert.True(expected.ContentEquals(main.Settings));
-        main.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
         Assert.True(UserSettings.SameUnits(expected.Profile, main.Editor!.ResultPresentation.Profile));
         Assert.Equal(PresentationMode.Detailed, main.Editor.ResultPresentation.Mode);
     }
@@ -278,7 +278,7 @@ public sealed class DesktopSettingsTests
         int analyses = 0;
         var main = new MainWindowViewModel(b => { analyses++; return SpanDraft.Analysis.BeamAnalysis.Analyze(b); },
             files: files, recovery: recovery, settingsStore: store); main.NewCommand.Execute(null);
-        main.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
         var editor = main.Editor!; var session = editor.Session;
         session.MarkSaved(session.CurrentRevision, Path.Combine(Path.GetTempPath(), "phase3.spandraft"));
         editor.SetAnnotationOffset(Guid.NewGuid(), new(2, 3));

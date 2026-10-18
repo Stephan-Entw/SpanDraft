@@ -25,7 +25,7 @@ public sealed class StartWorkspaceTests
             Main = new(files: Files, dialogs: Dialogs, recentStore: Store);
         }
         public async Task Create()
-        { Assert.True(await Main.NewAsync()); Assert.True(await Main.Setup.ConfirmAsync()); }
+        { Assert.True(await Main.NewAsync()); ProjectTestSupport.CompleteSetup(Main); Assert.True(await Main.Setup.ConfirmAsync()); }
         public string Project(string name = "beam")
         {
             string path = TestPath(name + ".spandraft");

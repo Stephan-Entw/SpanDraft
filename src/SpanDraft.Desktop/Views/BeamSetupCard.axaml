@@ -5,24 +5,26 @@
   <Border x:Name="BeamCardSurface" Classes="beamSetupCard" VerticalAlignment="Top">
     <Grid x:Name="BeamAreas" ColumnDefinitions="2*,4.3*,3.7*" ColumnSpacing="8">
       <Border x:Name="LengthSurface" Padding="8">
-        <StackPanel Spacing="8" VerticalAlignment="Center">
-          <Grid x:Name="SetupLengthRow" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-            <TextBlock x:Name="SetupLengthLabel" Text="{x:Static resources:Strings.SetupLength}" Classes="bodyStrong" VerticalAlignment="Center" />
-            <TextBox x:Name="SetupLengthInput" Grid.Column="1" Text="{Binding LengthInput.Text, Mode=TwoWay}" Classes="inlineDimension"
-                Classes.error="{Binding HasLengthError}" HorizontalContentAlignment="Right"
-                GotFocus="LengthGotFocus" LostFocus="LengthLostFocus" KeyDown="LengthKeyDown"
-                AutomationProperties.Name="{x:Static resources:Strings.BeamLength}" />
-            <TextBlock x:Name="SetupLengthUnit" Grid.Column="2" Text="{Binding LengthInput.Unit}" VerticalAlignment="Center" Classes="propertyLabel" />
-          </Grid>
-          <TextBlock x:Name="SetupLengthError" Text="{Binding LengthError}" IsVisible="{Binding HasLengthError}"
-              Classes="validationMessage" TextWrapping="Wrap" />
-        </StackPanel>
+        <Grid x:Name="SetupLengthRow" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalAlignment="Center">
+          <TextBlock x:Name="SetupLengthLabel" Text="{x:Static resources:Strings.SetupLength}" Classes="bodyStrong" VerticalAlignment="Center" />
+          <TextBox x:Name="SetupLengthInput" Grid.Column="1" Text="{Binding LengthInput.Text, Mode=TwoWay}" Classes="inlineDimension"
+              Classes.error="{Binding HasLengthError}" HorizontalContentAlignment="Right" Padding="8,0,24,0"
+              GotFocus="LengthGotFocus" LostFocus="LengthLostFocus" KeyDown="LengthKeyDown"
+              AutomationProperties.Name="{x:Static resources:Strings.BeamLength}" />
+          <controls:SectionInputHint x:Name="SetupLengthErrorHint" Grid.Column="1" Classes="inputHint errorHint"
+              IsVisible="{Binding HasLengthError}" Message="{Binding LengthError}"
+              HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+            <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
+          </controls:SectionInputHint>
+          <TextBlock x:Name="SetupLengthUnit" Grid.Column="2" Text="{Binding LengthInput.Unit}" VerticalAlignment="Center" Classes="propertyLabel" />
+        </Grid>
       </Border>
       <Button x:Name="SectionCardButton" Grid.Column="1" Classes="beamSetupSurface" Command="{Binding ChangeSectionCommand}"
           AutomationProperties.Name="{x:Static resources:Strings.SectionSelection}">
         <Grid RowDefinitions="Auto,*" RowSpacing="8" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-          <TextBlock Text="{x:Static resources:Strings.Section}" Classes="bodyStrong" />
-          <Grid Grid.Row="1" ColumnDefinitions="32,*" ColumnSpacing="12" VerticalAlignment="Center">
+          <TextBlock Text="{x:Static resources:Strings.Section}" Classes="bodyStrong" IsVisible="{Binding HasSection}" />
+          <TextBlock Text="{x:Static resources:Strings.SectionSelection}" Classes="bodyStrong" IsVisible="{Binding !HasSection}" VerticalAlignment="Center" Grid.RowSpan="2" />
+          <Grid Grid.Row="1" IsVisible="{Binding HasSection}" ColumnDefinitions="32,*" ColumnSpacing="12" VerticalAlignment="Center">
             <controls:SectionShapeIcon Type="{Binding SectionType}" Width="32" Height="32" VerticalAlignment="Center" />
             <StackPanel Grid.Column="1" Spacing="6">
               <TextBlock x:Name="SectionDescription" Text="{Binding SectionName}" Classes="bodyStrong" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SectionName}" />
@@ -35,8 +37,9 @@
       <Button x:Name="MaterialCardButton" Grid.Column="2" Classes="beamSetupSurface" Command="{Binding ChangeMaterialCommand}"
           AutomationProperties.Name="{x:Static resources:Strings.MaterialSelection}">
         <Grid RowDefinitions="Auto,*" RowSpacing="8" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-          <TextBlock Text="{x:Static resources:Strings.Material}" Classes="bodyStrong" />
-          <StackPanel Grid.Row="1" Spacing="6" VerticalAlignment="Center">
+          <TextBlock Text="{x:Static resources:Strings.Material}" Classes="bodyStrong" IsVisible="{Binding HasMaterial}" />
+          <TextBlock Text="{x:Static resources:Strings.SelectMaterialRequired}" Classes="bodyStrong" IsVisible="{Binding !HasMaterial}" VerticalAlignment="Center" Grid.RowSpan="2" />
+          <StackPanel Grid.Row="1" IsVisible="{Binding HasMaterial}" Spacing="6" VerticalAlignment="Center">
             <TextBlock x:Name="MaterialDescription" Text="{Binding MaterialName}" Classes="bodyStrong" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialName}" />
             <TextBlock Text="{Binding MaterialSummary}" Classes="propertyLabel" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialSummary}" />
           </StackPanel>

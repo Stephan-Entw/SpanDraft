@@ -244,7 +244,7 @@ public sealed class SectionDefinitionPrototypeTests
     public async Task StandaloneDefinitionPreservesAnExistingProjectRevisionDirtyFlagAndHistory(bool save)
     {
         var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); main.NewCommand.Execute(null); await main.InitializeLibrariesAsync();
-        main.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
         Assert.NotNull(main.Editor); Assert.NotNull(main.Session);
         var editor=main.Editor; var session=main.Session;
         editor.DimensionLength.Begin(); editor.DimensionLength.Text="1500"; editor.DimensionLength.Confirm();
@@ -440,7 +440,8 @@ public sealed class SectionDefinitionPrototypeTests
         main.Setup.ChangeSectionCommand.Execute(null); Arrange(owner,width,height);
         var preview=Assert.Single(view.GetVisualDescendants().OfType<SectionDefinitionView>());
         Assert.Same(view,owner.Content); Assert.Empty(owner.OwnedWindows);
-        var vm=Assert.IsType<SectionDefinitionViewModel>(preview.DataContext); Assert.False(vm.IsChoosingForm);
+        var vm=Assert.IsType<SectionDefinitionViewModel>(preview.DataContext); Assert.True(vm.IsChoosingForm);
+        Assert.Null(original);
         Assert.Same(setup.ResultPresentation,vm.Presentation);
         if (accept) { vm.SelectForm(SectionEditorType.Rectangle); Fill(vm); Assert.True(await vm.ConfirmAsync()); }
         else vm.CancelCommand.Execute(null);

@@ -97,7 +97,7 @@ public sealed class DesktopShellCommandTests
     public async Task BusyDisablesFileAndHistoryCommandsAndRestoresThemAfterwards()
     {
         var files = new Files(); var dialogs = new Dialogs();
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs); main.NewCommand.Execute(null); Assert.True(await main.Setup.ConfirmAsync());
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs); main.NewCommand.Execute(null); ProjectTestSupport.CompleteSetup(main); Assert.True(await main.Setup.ConfirmAsync());
         var pending = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         files.BeforeWrite = (_, _, _) => pending.Task;
         var save = main.SaveAsync(); Assert.True(main.IsWorkspaceBusy);
@@ -110,7 +110,7 @@ public sealed class DesktopShellCommandTests
     public void KeyboardHistoryRoutesToTheVisibleWorkspaceAndTextBoxesKeepNativeUndo(bool section)
     {
         using var environment = new DesktopControlEnvironment();
-        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); main.Setup.ApplyCommand.Execute(null);
+        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
         var session = main.Session!;
         if (section)
         {
@@ -153,7 +153,7 @@ public sealed class DesktopShellCommandTests
     public void MainMenuProtectsSectionNumericAndNameDraftsOnFocusLoss()
     {
         using var environment = new DesktopControlEnvironment();
-        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); main.Setup.ShowSections(); var vm = main.Setup.Definition!;
+        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); ProjectTestSupport.CompleteSetup(main); main.Setup.ShowSections(); var vm = main.Setup.Definition!;
         var view = new SpanDraft.Desktop.Views.SectionDefinitionView { DataContext = vm };
         var host = new Window { Content = view, Width = 1100, Height = 650 }; host.Show();
         host.Measure(new Size(1100, 650)); host.Arrange(new Rect(0, 0, 1100, 650));

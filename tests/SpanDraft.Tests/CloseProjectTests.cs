@@ -30,7 +30,7 @@ public sealed class CloseProjectTests
         public async Task Create()
         {
             Assert.True(await Main.NewAsync());
-            Assert.True(await Main.Setup.ConfirmAsync());
+            ProjectTestSupport.CompleteSetup(Main); Assert.True(await Main.Setup.ConfirmAsync());
         }
         public void AssertClosed()
         {
@@ -60,7 +60,7 @@ public sealed class CloseProjectTests
         f.Main.Setup.ShowSections(); await Disabled();
         f.Main.Setup.Escape();
         if (editExisting) f.Main.Setup.CancelCommand.Execute(null);
-        else Assert.True(await f.Main.Setup.ConfirmAsync());
+        else { ProjectTestSupport.CompleteSetup(f.Main); Assert.True(await f.Main.Setup.ConfirmAsync()); }
         Assert.Equal(MainWorkspaceKind.BeamEditor, f.Main.Workspace);
         Assert.NotNull(f.Main.Session); Assert.True(f.Main.CanCloseProject);
         Assert.True(f.Main.CloseProjectCommand.CanExecute(null)); Assert.True(refreshes > 0);

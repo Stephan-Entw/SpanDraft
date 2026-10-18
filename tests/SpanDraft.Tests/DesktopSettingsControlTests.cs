@@ -215,7 +215,7 @@ public sealed class DesktopSettingsControlTests
             settingsStore: new SpanDraft.Desktop.Persistence.LocalSettingsStore(files, "settings")); main.NewCommand.Execute(null);
         if (activeDraft)
         {
-            main.Setup.ApplyCommand.Execute(null);
+            ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
             main.Editor!.DimensionLength.Begin(); main.Editor.DimensionLength.Text = "1200";
         }
         var model = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
@@ -270,7 +270,7 @@ public sealed class DesktopSettingsControlTests
              new EditorPointMoment(Guid.NewGuid(), Length.FromMeters(.6), Moment.FromNewtonMeters(50), "M1")],
             distributedLoads: [new(Guid.NewGuid(), Length.FromMeters(.2), Length.FromMeters(.8), ForcePerLength.FromNewtonsPerMeter(-500), "q1")]);
         var main = new MainWindowViewModel(b => { analyses++; return SpanDraft.Analysis.BeamAnalysis.Analyze(b); }); main.NewCommand.Execute(null);
-        main.Setup.ApplyCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
         var editor = main.Editor!;
         editor.Session.Commit(new(document, new()));
         int initialAnalyses = analyses;
