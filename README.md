@@ -84,6 +84,28 @@ On macOS, Desktop builds also create a development `SpanDraft.app` bundle inside
 the corresponding build output. It uses the locally installed .NET runtime and
 is intended for development only.
 
+### Native icon resources
+
+The SVGs in `src/SpanDraft.Desktop/Assets/Icons/Toolbar` and `Fluent` are design
+sources; they are not embedded in the application. After adding or changing a
+source, regenerate and commit the native dictionaries in `Assets/Icons/Generated`:
+
+```sh
+dotnet run --file scripts/update-icons.cs
+dotnet run --file scripts/update-icons.cs -- --check
+```
+
+The explicit generator downloads and builds unmodified
+[SvgToXaml at commit `1beb52777c564c218f460ee0510f73cba21c6d69`](https://github.com/wieslawsoltes/SvgToXaml/tree/1beb52777c564c218f460ee0510f73cba21c6d69),
+verifies its source archive checksum and caches it under `.artifacts/icon-converter`.
+The published `svgxaml` 11.2.0 tool loses solid brushes and pens; this upstream
+revision fixes that issue. The .NET 10 SDK is sufficient; the converter rolls
+forward to the installed runtime. First generation needs GitHub and NuGet access.
+Regular builds use the committed AXAML and require neither the converter nor SVG
+parsing. Fluent sources must convert to one opaque solid filled geometry; other
+artwork needs an explicit representation review. Preserve the Fluent license and
+NOTICE files. Compare rendered icons before committing source or generator changes.
+
 ### Third-party notices
 
 After changing Desktop dependencies, regenerate the committed notices from the

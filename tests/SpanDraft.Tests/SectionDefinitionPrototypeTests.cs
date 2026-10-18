@@ -1131,7 +1131,7 @@ public sealed class SectionDefinitionPrototypeTests
                 Assert.DoesNotContain(changeForm, view.FindControl<StackPanel>("HeaderActions")!.Children);
                 Assert.Equal(70, view.FindControl<Border>("ProfileCard")!.MinHeight);
                 Assert.True(header.Bounds.Width <= width - 48);
-                var title = view.FindControl<TextBlock>("DefinitionTitle")!; var edit = view.FindControl<SectionFluentIcon>("TitleEditIcon")!;
+                var title = view.FindControl<TextBlock>("DefinitionTitle")!; var edit = view.FindControl<PathIcon>("TitleEditIcon")!;
                 Assert.InRange(edit.Bounds.Left - title.Bounds.Right, 7.5, 8.5);
                 Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible),
                     t => t.Text is { } text && (text.StartsWith("1. ") || text.StartsWith("2. ") || text.StartsWith("3. ")));

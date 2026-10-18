@@ -579,10 +579,10 @@ public sealed class SectionDefinitionRedesignTests
         var radiusHint = view.GetVisualDescendants().OfType<SectionInputHint>().Single(h => h.IsEffectivelyVisible && h.DataContext is SectionDefinitionInput { Key: "r" });
         Assert.Equal(new Size(18, 18), radiusHint.Bounds.Size);
         Assert.Equal(new CornerRadius(9), radiusHint.CornerRadius);
-        var infoIcon = Assert.IsType<SectionFluentIcon>(radiusHint.Content);
-        Assert.EndsWith("ic_fluent_info_16_regular.svg", infoIcon.Path);
+        var infoIcon = Assert.IsType<PathIcon>(radiusHint.Content);
+        Assert.Same(Application.Current!.FindResource("FluentIcon.Info"), infoIcon.Data);
         Assert.Equal(new Thickness(0), radiusHint.BorderThickness);
-        Assert.EndsWith("ic_fluent_edit_16_regular.svg", view.FindControl<SectionFluentIcon>("TitleEditIcon")!.Path);
+        Assert.Same(Application.Current!.FindResource("FluentIcon.Edit"), view.FindControl<PathIcon>("TitleEditIcon")!.Data);
         Assert.DoesNotContain(view.FindControl<StackPanel>("HeaderActions")!.Children, c => c == view.FindControl<Button>("ChangeFormButton"));
         var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, new Size(724, 700), UnitCatalog.Millimeter, _ => new Size(80, 14));
         Assert.Equal(310, Math.Max(layout.ProfileBounds.Width, layout.ProfileBounds.Height), 6);
@@ -590,7 +590,7 @@ public sealed class SectionDefinitionRedesignTests
         ToolTip.SetIsOpen(radiusHint, false);
         var input = vm.Parameters.Single(p => p.Key == "tw"); input.PendingText = "invalid"; input.Commit(); Layout();
         var errorHint = view.GetVisualDescendants().OfType<SectionInputHint>().Single(h => h.IsEffectivelyVisible && h.Classes.Contains("errorHint"));
-        Assert.EndsWith("ic_fluent_error_circle_16_regular.svg", Assert.IsType<SectionFluentIcon>(errorHint.Content).Path);
+        Assert.Same(Application.Current!.FindResource("FluentIcon.ErrorCircle"), Assert.IsType<PathIcon>(errorHint.Content).Data);
         errorHint.Focus(); Dispatcher.UIThread.RunJobs(); Assert.True(ToolTip.GetIsOpen(errorHint)); Capture("error-focus"); CaptureTip(errorHint, "error-tooltip");
         ToolTip.SetIsOpen(errorHint, false);
         input.PendingText = "10"; input.Commit(); vm.BeginNameEdit(); vm.PendingName = new string('W', 80); vm.CommitName(); Capture("long-name");

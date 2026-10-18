@@ -9,7 +9,7 @@
           <TextBlock Text="{Binding DisplayLabel}" Classes="definitionLabel" TextWrapping="Wrap" VerticalAlignment="Center" />
           <controls:SectionInputHint Grid.Column="1" Classes="inputHint" IsVisible="{Binding HasRadiusHint}"
               Message="{x:Static resources:Strings.SectionDefinitionRadiusHint}">
-            <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_info_16_regular.svg" Foreground="{DynamicResource TextSecondary}" />
+            <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Info}" Foreground="{DynamicResource TextSecondary}" />
           </controls:SectionInputHint>
         </Grid>
         <TextBox Grid.Column="1" Width="88" Height="36" FontSize="14" Classes.error="{Binding HasError}"
@@ -18,7 +18,7 @@
             AutomationProperties.Name="{Binding Label}" />
         <controls:SectionInputHint Grid.Column="1" Classes="inputHint errorHint" IsVisible="{Binding HasError}"
             Message="{Binding Error}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
-          <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_error_circle_16_regular.svg" Foreground="{DynamicResource Error}" />
+          <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
         </controls:SectionInputHint>
         <TextBlock Grid.Column="2" MinWidth="24" Text="{Binding Unit.Symbol}" VerticalAlignment="Center" Classes="definitionLabel" />
       </Grid>
@@ -100,7 +100,7 @@
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <TextBlock x:Name="DefinitionTitle" Text="{Binding HeaderTitle}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
                     TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding HeaderTitle}" />
-                <controls:SectionFluentIcon x:Name="TitleEditIcon" Grid.Column="1" Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_edit_16_regular.svg"
+                <PathIcon Classes="fluentIcon" x:Name="TitleEditIcon" Grid.Column="1" Data="{StaticResource FluentIcon.Edit}"
                     IsVisible="{Binding HasDefinition}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
               </Grid>
             </Button>
@@ -111,7 +111,7 @@
                     KeyDown="NameKeyDown" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionEditName}" />
                 <controls:SectionInputHint x:Name="NameErrorHint" Classes="inputHint errorHint" IsVisible="{Binding HasNameError}"
                     Message="{Binding NameError}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
-                  <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_error_circle_16_regular.svg" Foreground="{DynamicResource Error}" />
+                  <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
                 </controls:SectionInputHint>
               </Grid>
               <Button x:Name="ResetNameButton" Grid.Column="1" Content="{x:Static resources:Strings.SectionDefinitionAutomatic}" Command="{Binding ResetNameCommand}"
@@ -126,16 +126,16 @@
             <Button x:Name="SaveLibraryButton" Command="{Binding SaveLibraryCommand}" Classes.librarySaveError="{Binding HasLibraryError}"
                 Classes="secondary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionAddLibrary}">
               <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
-                <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_star_16_regular.svg"
+                <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Star}"
                     Foreground="{Binding Foreground, ElementName=SaveLibraryButton}" VerticalAlignment="Center">
-                  <controls:SectionFluentIcon.RenderTransform><TranslateTransform Y="-1" /></controls:SectionFluentIcon.RenderTransform>
-                </controls:SectionFluentIcon>
+                  <PathIcon.RenderTransform><TranslateTransform Y="-1" /></PathIcon.RenderTransform>
+                </PathIcon>
                 <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.SectionDefinitionAddLibrary}" VerticalAlignment="Center" />
               </Grid>
             </Button>
             <controls:SectionInputHint x:Name="LibraryErrorHint" Grid.Column="1" Classes="inputHint errorHint" IsVisible="{Binding HasLibraryError}"
                 Message="{Binding LibraryError}" VerticalAlignment="Center" Margin="6,0,0,0">
-              <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_error_circle_16_regular.svg" Foreground="{DynamicResource Error}" />
+              <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
             </controls:SectionInputHint>
           </Grid>
           <Button x:Name="ConfirmButton" Content="{x:Static resources:Strings.Apply}" Command="{Binding ConfirmCommand}"

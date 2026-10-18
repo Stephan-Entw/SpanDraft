@@ -35,7 +35,7 @@
                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                   AutomationProperties.Name="{x:Static resources:Strings.NewProject}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
-              <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_document_add_16_regular.svg"
+              <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.DocumentAdd}"
                   Foreground="{Binding Foreground, ElementName=NewProjectButton}" VerticalAlignment="Center" />
               <TextBlock Text="{x:Static resources:Strings.NewProject}" VerticalAlignment="Center" />
             </StackPanel>
@@ -44,7 +44,7 @@
                   Height="{DynamicResource PrimaryAction}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                   AutomationProperties.Name="{x:Static resources:Strings.OpenProject}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
-              <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_folder_open_16_regular.svg"
+              <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.FolderOpen}"
                   Foreground="{Binding Foreground, ElementName=OpenProjectButton}" VerticalAlignment="Center" />
               <TextBlock Text="{x:Static resources:Strings.OpenProject}" VerticalAlignment="Center" />
             </StackPanel>
@@ -55,7 +55,7 @@
                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                 AutomationProperties.Name="{x:Static resources:Strings.UserManual}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
-            <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_book_open_16_regular.svg"
+            <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.BookOpen}"
                 Foreground="{Binding Foreground, ElementName=UserManualButton}" VerticalAlignment="Center" />
             <TextBlock Text="{x:Static resources:Strings.UserManual}" VerticalAlignment="Center" />
           </StackPanel>
@@ -83,7 +83,7 @@
                     <DataTemplate x:DataType="vm:RecentProjectItemViewModel">
                       <Button Classes="recentProject" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding AutomationName}">
                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}">
-                          <controls:SectionFluentIcon Path="avares://SpanDraft.Desktop/Assets/Icons/Fluent/ic_fluent_document_16_regular.svg"
+                          <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Document}"
                               Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
                           <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space4}" VerticalAlignment="Center">
                             <TextBlock Text="{Binding Name}" Classes="bodyStrong" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" />

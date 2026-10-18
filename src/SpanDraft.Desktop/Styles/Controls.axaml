@@ -1,6 +1,5 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
-        xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Svg.Controls.Skia.Avalonia">
+        xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls">
   <!-- Fluent scrollbars, radio buttons and checkboxes retain their native control templates. -->
   <!-- One button template for all variants, including future ToggleButton tools.
        Focus is a separate overlay: borders never move the content. -->
@@ -255,13 +254,29 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
   </Style>
-  <Style Selector="svg|Svg.toolbarIcon">
+  <!-- Keep Fluent artwork on its original artboard instead of stretching its ink bounds. -->
+  <Style Selector="PathIcon.fluentIcon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Viewbox Stretch="Uniform">
+          <Canvas Width="16" Height="16">
+            <Path Width="16" Height="16" Stretch="None" Data="{TemplateBinding Data}" Fill="{TemplateBinding Foreground}" />
+          </Canvas>
+        </Viewbox>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Image.toolbarIcon">
     <Setter Property="Width" Value="{DynamicResource ToolbarIconSize}" />
     <Setter Property="Height" Value="{DynamicResource ToolbarIconSize}" />
     <Setter Property="Focusable" Value="False" />
     <Setter Property="IsHitTestVisible" Value="False" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar:disabled svg|Svg.toolbarIcon">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar:disabled Image.toolbarIcon">
     <Setter Property="Opacity" Value="0.45" />
   </Style>
   <Style Selector="controls|EngineeringIcon">
