@@ -1,2 +1,5 @@
 # Keep the generated notices byte-identical for --check on every platform.
 THIRD_PARTY_NOTICES.txt text eol=lf
+
+# The icon generator also checks its committed resources byte-for-byte.
+src/SpanDraft.Desktop/Assets/Icons/Generated/*.axaml text eol=lf
