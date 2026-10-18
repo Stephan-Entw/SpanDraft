@@ -97,12 +97,16 @@ Setup. It does not install prerequisites. The result is
 
 ## Manual Windows smoke test
 
-- Install as a standard user without elevation. Verify the per-user installation
-  directory, the SpanDraft Start menu entry, the application icon and the absence
-  of a desktop shortcut.
-- Start the installed application from the Start menu, check its version and run
-  a simple beam calculation. Confirm it works without a separately installed
-  .NET runtime.
+- Use a fresh Windows user profile or a state without `%LOCALAPPDATA%\SpanDraft`.
+  Install as a standard user without elevation. Verify the per-user installation
+  directory, the SpanDraft Start menu entry and the application icon.
+- Verify the optional desktop shortcut task is offered and unchecked by default.
+  Select it and confirm the installed shortcut starts SpanDraft.
+- Verify the completion page offers to launch SpanDraft, checked by default, and
+  that finishing setup with this option selected starts the application.
+- Create the first project successfully, check the application version and run a
+  simple beam calculation. Also verify starting from the Start menu. Confirm it
+  works without a separately installed .NET runtime.
 - Verify `THIRD_PARTY_NOTICES.txt` and the complete `LICENSE` are installed beside
   the executable.
 - Open the installed offline manual from the Help menu with networking disabled;

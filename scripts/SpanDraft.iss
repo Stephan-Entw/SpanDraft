@@ -18,7 +18,6 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-SetupIconFile={#RepoRoot}\src\SpanDraft.Desktop\Assets\AppIcon\SpanDraft.ico
 UninstallDisplayIcon={app}\SpanDraft.Desktop.exe
 Compression=lzma2
 SolidCompression=yes
@@ -27,5 +26,12 @@ SolidCompression=yes
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#RepoRoot}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+
 [Icons]
 Name: "{autoprograms}\SpanDraft"; Filename: "{app}\SpanDraft.Desktop.exe"; WorkingDir: "{app}"
+Name: "{autodesktop}\SpanDraft"; Filename: "{app}\SpanDraft.Desktop.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+
+[Run]
+Filename: "{app}\SpanDraft.Desktop.exe"; Description: "{cm:LaunchProgram,SpanDraft}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
