@@ -32,7 +32,7 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
         using var file = await owner.StorageProvider.SaveFilePickerAsync(new()
         {
             Title = Strings.SaveAs, FileTypeChoices = [ProjectType], DefaultExtension = "spandraft",
-            SuggestedFileName = currentFilePath is null ? Strings.Untitled + ".spandraft" : Path.GetFileName(currentFilePath),
+            SuggestedFileName = currentFilePath is null ? Strings.Untitled : Path.GetFileNameWithoutExtension(currentFilePath),
             SuggestedStartLocation = folder, ShowOverwritePrompt = true
         });
         return file is null ? null : file.TryGetLocalPath() ?? throw new IOException(Strings.LocalFilesOnly);

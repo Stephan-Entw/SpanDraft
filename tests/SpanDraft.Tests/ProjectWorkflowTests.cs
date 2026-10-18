@@ -54,6 +54,8 @@ public sealed class ProjectWorkflowTests
     [InlineData("beam", "beam.spandraft")]
     [InlineData("beam.spandraft", "beam.spandraft")]
     [InlineData("beam.SpanDraft", "beam.SpanDraft")]
+    [InlineData("beam.revision.2", "beam.revision.2.spandraft")]
+    [InlineData("beam.revision.2.spandraft", "beam.revision.2.spandraft")]
     public void SaveAsExtensionIsAddedOnlyWhenMissing(string chosen, string expected) =>
         Assert.Equal(TestPath(expected), MainWindowViewModel.EnsureProjectExtension(TestPath(chosen)));
 
