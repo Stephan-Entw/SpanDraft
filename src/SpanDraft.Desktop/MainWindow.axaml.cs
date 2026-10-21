@@ -23,7 +23,7 @@ public partial class MainWindow : Window
 
     public MainWindow() : this(null) { }
 
-    public MainWindow(DesktopStartupContext? startup)
+    public MainWindow(DesktopStartupContext? startup, string[]? args = null)
     {
         InitializeComponent();
         var files = startup?.Files ?? new ProjectFileStore();
@@ -72,6 +72,10 @@ public partial class MainWindow : Window
             _initializing = false;
             quitCommand.Refresh();
             await _model.InitializeRecentProjectsAsync();
+            // A restored setup draft takes precedence over the shell's open request.
+            if (_model.Mode != MainViewMode.ProjectSetup && args is [var path]
+                && string.Equals(Path.GetExtension(path), ".spandraft", StringComparison.OrdinalIgnoreCase))
+                await _model.OpenAsync(path);
         };
         Closing += WindowClosing;
     }

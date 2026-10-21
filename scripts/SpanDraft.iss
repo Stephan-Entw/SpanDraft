@@ -21,10 +21,18 @@ ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\SpanDraft.Desktop.exe
 Compression=lzma2
 SolidCompression=yes
+ChangesAssociations=yes
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#RepoRoot}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#RepoRoot}\src\SpanDraft.Desktop\Assets\ProjectFileIcon\spandraft-project.ico"; DestDir: "{app}"; Flags: ignoreversion
+
+[Registry]
+Root: HKCU; Subkey: "Software\Classes\.spandraft"; ValueType: string; ValueData: "SpanDraft.Project"; Flags: uninsdeletevalue uninsdeletekeyifempty
+Root: HKCU; Subkey: "Software\Classes\SpanDraft.Project"; ValueType: string; ValueData: "SpanDraft Project"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\SpanDraft.Project\DefaultIcon"; ValueType: string; ValueData: """{app}\spandraft-project.ico"",0"
+Root: HKCU; Subkey: "Software\Classes\SpanDraft.Project\shell\open\command"; ValueType: string; ValueData: """{app}\SpanDraft.Desktop.exe"" ""%1"""
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked

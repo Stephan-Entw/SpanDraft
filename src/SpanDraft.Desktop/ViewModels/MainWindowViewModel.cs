@@ -69,7 +69,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         UndoCommand = new(() => Undo(), () => CanUndo);
         RedoCommand = new(() => Redo(), () => CanRedo);
         UserManualCommand = new(async () => { if (openUserManual is not null) await openUserManual(); return true; }, () => true);
-        StartPage = new(NewCommand, OpenCommand, UserManualCommand, OpenRecentAsync, () => CanOpenProject);
+        StartPage = new(NewCommand, OpenCommand, UserManualCommand, OpenAsync, () => CanOpenProject);
     }
 
     public MainViewMode Mode => _mode;
@@ -315,7 +315,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return path is not null && await OpenPathAsync(path);
     });
 
-    public Task<bool> OpenRecentAsync(string path) => !CanOpenProject ? Task.FromResult(false)
+    public Task<bool> OpenAsync(string path) => !CanOpenProject ? Task.FromResult(false)
         : RunOperationAsync(() => OpenPathAsync(path));
 
     private async Task<bool> OpenPathAsync(string path)

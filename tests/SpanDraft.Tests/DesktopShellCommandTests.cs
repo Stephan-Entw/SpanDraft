@@ -9,6 +9,7 @@ using SpanDraft.Desktop;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
 using static SpanDraft.Tests.ProjectTestSupport;
@@ -19,6 +20,85 @@ namespace SpanDraft.Tests;
 public sealed class DesktopShellCommandTests
 {
     [Theory]
+    [InlineData("none")] [InlineData("empty")] [InlineData("other")] [InlineData("multiple")]
+    [InlineData("valid")] [InlineData("uppercase")]
+    public void StartupOpensOnlyOneProjectArgumentAfterLibrariesRecoveryAndRecents(string arguments)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files();
+        string path = TestPath(Path.Combine("Folder with spaces", arguments == "uppercase" ? "Shell project.SPANDRAFT" : "Shell project.spandraft"));
+        files.Data[path] = ProjectFileCodec.Serialize(State(4));
+        string[]? args = arguments switch
+        {
+            "none" => null, "empty" => [], "other" => [TestPath("other.txt")],
+            "multiple" => [path, path], _ => [path]
+        };
+        var reads = new List<string>();
+        files.BeforeRead = p => { reads.Add(p); return Task.CompletedTask; };
+        var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default);
+        var window = new MainWindow(startup, args);
+        window.Show(); Dispatcher.UIThread.RunJobs();
+        var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
+        var expectedReads = new List<string>
+        {
+            MaterialLibraryStore.Local(files).FilePath, SectionLibraryStore.Local(files).FilePath,
+            ProjectRecovery.Local(files).SlotPath, ProjectSetupRecovery.Local(files).SlotPath,
+            RecentProjectsStore.Local(files).FilePath
+        };
+        if (arguments is "valid" or "uppercase")
+        {
+            expectedReads.Add(path);
+            Assert.Equal(path, main.Session!.FilePath);
+            Assert.True(State(4).ContentEquals(main.Session.CurrentRevision.State));
+            Assert.Equal(Path.GetFileName(path) + " — SpanDraft", window.Title);
+            Assert.Equal(path, Assert.Single(main.StartPage.RecentProjects).FilePath);
+        }
+        else { Assert.Null(main.Session); Assert.Equal(MainViewMode.Start, main.Mode); }
+        Assert.Equal(expectedReads, reads);
+        Assert.Empty(window.OwnedWindows);
+        window.Close(); Dispatcher.UIThread.RunJobs();
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void RestoredSetupDraftTakesPrecedenceOverStartupFileWithOrWithoutRestoredSession(bool restoreProject)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files();
+        string target = TestPath("shell.spandraft"), setupSlot = ProjectSetupRecovery.Local(files).SlotPath;
+        string projectSlot = ProjectRecovery.Local(files).SlotPath, recents = RecentProjectsStore.Local(files).FilePath;
+        var draft = new ProjectSetupDraft(Length: M(3));
+        var setupBytes = ProjectSetupRecovery.Encode(new(draft, Now));
+        var projectBytes = ProjectRecovery.Encode(new(State(), null, Now));
+        files.Data[setupSlot] = setupBytes;
+        if (restoreProject) files.Data[projectSlot] = projectBytes;
+        files.Data[target] = ProjectFileCodec.Serialize(State(4));
+        var reads = new List<string>();
+        files.BeforeRead = path => { reads.Add(path); return Task.CompletedTask; };
+        var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default);
+        var window = new MainWindow(startup, [target]);
+        window.Show(); Dispatcher.UIThread.RunJobs();
+        if (restoreProject) { Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs(); }
+        Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs();
+
+        var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
+        Assert.Equal(MainViewMode.ProjectSetup, main.Mode);
+        Assert.True(draft.ContentEquals(main.Setup.Draft));
+        Assert.Equal(restoreProject, main.Session is not null);
+        if (restoreProject)
+        {
+            Assert.True(State().ContentEquals(main.Session!.CurrentRevision.State));
+            Assert.Equal(projectBytes, files.Data[projectSlot]);
+        }
+        Assert.Equal(setupBytes, files.Data[setupSlot]); Assert.Empty(files.Writes);
+        Assert.DoesNotContain(target, reads); Assert.Equal(recents, reads[^1]);
+        Assert.Empty(window.OwnedWindows);
+        // Dispose the test window without starting another modal leave workflow.
+        typeof(MainWindow).GetField("_closeApproved", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, true);
+        window.Close(); Dispatcher.UIThread.RunJobs();
+    }
+
+    [Theory]
     [InlineData(false, "escape")] [InlineData(false, "close")]
     [InlineData(true, "escape")] [InlineData(true, "close")] [InlineData(true, "cancel")]
     public void CancelRecoveryClosesStartupWithoutNormalCloseAndOffersTheSameFileAgain(bool damaged, string action)
@@ -27,14 +107,21 @@ public sealed class DesktopShellCommandTests
         var files = new Files();
         string slot = ProjectRecovery.Local(files).SlotPath;
         string recentPath = RecentProjectsStore.Local(files).FilePath;
+        string target = TestPath("startup.spandraft");
+        files.Data[target] = ProjectFileCodec.Serialize(State(4));
         var bytes = damaged ? System.Text.Encoding.UTF8.GetBytes("{") : ProjectRecovery.Encode(new(State(), null, Now));
         files.Data[slot] = bytes.ToArray();
-        int recentReads = 0;
-        files.BeforeRead = path => { if (path == recentPath) recentReads++; return Task.CompletedTask; };
+        int recentReads = 0, targetReads = 0;
+        files.BeforeRead = path =>
+        {
+            if (path == recentPath) recentReads++;
+            if (path == target) targetReads++;
+            return Task.CompletedTask;
+        };
         var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, TestPath("settings.json")), UserSettings.Default);
         for (int attempt = 0; attempt < 2; attempt++)
         {
-            var window = new MainWindow(startup);
+            var window = new MainWindow(startup, [target]);
             bool closed = false;
             window.Closed += (_, _) => closed = true;
             window.Show(); Dispatcher.UIThread.RunJobs();
@@ -55,11 +142,12 @@ public sealed class DesktopShellCommandTests
 
             Assert.True(closed); Assert.False(window.IsVisible); Assert.Null(main.Session);
             Assert.Equal(bytes, files.Data[slot]); Assert.Empty(files.Writes);
-            Assert.Equal(0, recentReads);
+            Assert.Equal(0, recentReads); Assert.Equal(0, targetReads);
         }
-        static void Click(Window dialog, string label) => dialog.GetVisualDescendants().OfType<Button>()
-            .Single(b => Equals(b.Content, label)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
     }
+
+    private static void Click(Window dialog, string label) => dialog.GetVisualDescendants().OfType<Button>()
+        .Single(b => Equals(b.Content, label)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
     [Fact]
     public async Task FileCommandsFollowWorkspaceAndSessionForCommandsAndDirectCalls()

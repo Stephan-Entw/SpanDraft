@@ -104,7 +104,7 @@ public sealed class StartWorkspaceTests
         await f.Store.RecordUseAsync(path); await f.Main.InitializeRecentProjectsAsync();
         if (invalid) f.Files.Data[path] = Encoding.UTF8.GetBytes("{}");
         var entries = f.Store.Entries; int writes = f.Files.Writes.Count;
-        Assert.False(await f.Main.OpenRecentAsync(path));
+        Assert.False(await f.Main.OpenAsync(path));
         Assert.Equal(MainViewMode.Start, f.Main.Mode); Assert.Null(f.Main.Session);
         Assert.Same(entries, f.Store.Entries); Assert.Equal(writes, f.Files.Writes.Count);
         Assert.StartsWith(Strings.ProjectFileError, Assert.Single(f.Dialogs.Errors));
@@ -124,7 +124,7 @@ public sealed class StartWorkspaceTests
     {
         var f = new Fixture(); await f.Create(); var session = f.Main.Session;
         string path = f.Project(); f.Dialogs.Leave = decision;
-        Assert.Equal(decision != LeaveDecision.Cancel, await f.Main.OpenRecentAsync(path));
+        Assert.Equal(decision != LeaveDecision.Cancel, await f.Main.OpenAsync(path));
         Assert.Equal(1, f.Dialogs.LeaveQuestions);
         if (decision == LeaveDecision.Cancel) { Assert.Same(session, f.Main.Session); Assert.Empty(f.Store.Entries); }
         else { Assert.NotSame(session, f.Main.Session); Assert.Equal(path, f.Store.Entries[0].Path); }
@@ -171,7 +171,7 @@ public sealed class StartWorkspaceTests
     {
         var f = new Fixture(); f.Files.FailWritePath = Fixture.Slot;
         if (save) { await f.Create(); Assert.True(await f.Main.SaveAsync()); }
-        else Assert.True(await f.Main.OpenRecentAsync(f.Project()));
+        else Assert.True(await f.Main.OpenAsync(f.Project()));
         Assert.False(f.Main.Session!.IsDirty); Assert.Empty(f.Dialogs.Errors);
         Assert.Equal(f.Main.Session.FilePath, Assert.Single(f.Store.Entries).Path);
         Assert.Equal(f.Main.Session.FilePath, Assert.Single(f.Main.StartPage.RecentProjects).FilePath);
