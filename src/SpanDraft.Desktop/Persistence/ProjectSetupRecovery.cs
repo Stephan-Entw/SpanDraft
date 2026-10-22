@@ -4,15 +4,19 @@ using SpanDraft.Desktop.State;
 
 namespace SpanDraft.Desktop.Persistence;
 
-public sealed record SetupRecoveryEnvelopeV1
+public sealed record SetupRecoveryEnvelope
 {
     public required int RecoveryVersion { get; init; }
     public required DateTimeOffset WrittenAtUtc { get; init; }
-    public required SetupDraftV1 Draft { get; init; }
+    public required SetupDraftData Draft { get; init; }
 }
 
-public sealed record SetupDraftV1
+public sealed record SetupDraftData
 {
+    public string? CalculationTitle { get; init; }
+    public string? ProjectTitle { get; init; }
+    public string? Reference { get; init; }
+    public string? Author { get; init; }
     public double? Length { get; init; }
     public MaterialV2? Material { get; init; }
     public SectionV2? Section { get; init; }
@@ -106,9 +110,9 @@ public sealed class ProjectSetupRecovery
         if (bytes is null) return null;
         try
         {
-            var envelope = JsonSerializer.Deserialize<SetupRecoveryEnvelopeV1>(bytes, ProjectFileCodec.JsonOptions)
+            var envelope = JsonSerializer.Deserialize<SetupRecoveryEnvelope>(bytes, ProjectFileCodec.JsonOptions)
                 ?? throw new ProjectFormatException("Setup recovery root must be an object.");
-            if (envelope.RecoveryVersion != 1 || envelope.WrittenAtUtc == default || envelope.WrittenAtUtc.Offset != TimeSpan.Zero)
+            if (envelope.RecoveryVersion is not (1 or 2) || envelope.WrittenAtUtc == default || envelope.WrittenAtUtc.Offset != TimeSpan.Zero)
                 throw new ProjectFormatException("Invalid setup recovery version or UTC timestamp.");
             var d = ProjectFileCodec.Required(envelope.Draft, "draft");
             var length = d.Length is { } meters ? Length.FromMeters(ProjectFileCodec.Number(meters, "length")) : (Length?)null;
@@ -120,17 +124,23 @@ public sealed class ProjectSetupRecovery
                 throw new ProjectFormatException("The section does not provide the selected bending axis.");
             if (d.SectionDisplayName is { } name && (section is null || string.IsNullOrWhiteSpace(name) || name != name.Trim()))
                 throw new ProjectFormatException("Invalid setup section display name.");
-            return new(new(length, material, section, axis, d.SectionDisplayName), envelope.WrittenAtUtc);
+            return new(new(length, material, section, axis, d.SectionDisplayName,
+                envelope.RecoveryVersion >= 2 ? ProjectInfo.Optional(d.CalculationTitle) : null,
+                envelope.RecoveryVersion >= 2 ? ProjectInfo.Optional(d.ProjectTitle) : null,
+                envelope.RecoveryVersion >= 2 ? ProjectInfo.Optional(d.Reference) : null,
+                envelope.RecoveryVersion >= 2 ? ProjectInfo.Optional(d.Author) : null), envelope.WrittenAtUtc);
         }
         catch (Exception e) when (e is JsonException or ArgumentException or OverflowException)
         { throw new ProjectFormatException("Invalid setup recovery data: " + e.Message, e); }
     }
 
-    public static byte[] Encode(SetupRecoverySnapshot snapshot) => JsonSerializer.SerializeToUtf8Bytes(new SetupRecoveryEnvelopeV1
+    public static byte[] Encode(SetupRecoverySnapshot snapshot) => JsonSerializer.SerializeToUtf8Bytes(new SetupRecoveryEnvelope
     {
-        RecoveryVersion = 1, WrittenAtUtc = snapshot.WrittenAtUtc,
+        RecoveryVersion = 2, WrittenAtUtc = snapshot.WrittenAtUtc,
         Draft = new()
         {
+            CalculationTitle = snapshot.Draft.CalculationTitle, ProjectTitle = snapshot.Draft.ProjectTitle,
+            Reference = snapshot.Draft.Reference, Author = snapshot.Draft.Author,
             Length = snapshot.Draft.Length?.Meters,
             Material = snapshot.Draft.Material is { } m ? ProjectFileCodec.MaterialToDto(m) : null,
             Section = snapshot.Draft.Section is { } s ? ProjectFileCodec.SectionToDto(s) : null,

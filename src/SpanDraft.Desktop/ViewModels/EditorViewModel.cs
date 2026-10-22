@@ -361,10 +361,18 @@ public sealed partial class EditorViewModel : ObservableObject
         Commit(Document.WithSection(section, bendingAxis) with { Material = material });
 
     public bool ApplySetup(Length length, ISectionDefinition section, SectionAxisDesignation bendingAxis,
-        Material material, string? sectionDisplayName)
+        Material material, string? sectionDisplayName) =>
+        ApplySetup(length, section, bendingAxis, material, sectionDisplayName, Session.CurrentRevision.State.Info);
+
+    public bool ApplySetup(Length length, ISectionDefinition section, SectionAxisDesignation bendingAxis,
+        Material material, string? sectionDisplayName, ProjectInfo? info)
     {
         if (IsBusy || BeamLengthConstraints.Error(Document, length) is not null) return false;
-        Commit(Document.WithSection(section, bendingAxis, sectionDisplayName) with { Length = length, Material = material });
+        var document = Document.WithSection(section, bendingAxis, sectionDisplayName) with { Length = length, Material = material };
+        Session.Commit(Session.CurrentRevision.State with
+        {
+            Document = document, Presentation = EditorPresentation.RetainEntities(document), Info = info
+        });
         return true;
     }
 
@@ -404,7 +412,8 @@ public sealed partial class EditorViewModel : ObservableObject
     }
 
     private void Commit(EditorDocument document, EditorPresentationState? presentation = null) =>
-        Session.Commit(new(document, (presentation ?? EditorPresentation).RetainEntities(document)));
+        Session.Commit(Session.CurrentRevision.State with
+        { Document = document, Presentation = (presentation ?? EditorPresentation).RetainEntities(document) });
 
     private void ApplyState(ProjectState previous, ProjectState next, EditorChangeKind change)
     {

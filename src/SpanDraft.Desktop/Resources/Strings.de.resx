@@ -308,4 +308,11 @@
   <data name="NoRecentProjects" xml:space="preserve"><value>Noch keine zuletzt verwendeten Projekte.</value></data>
   <data name="Today" xml:space="preserve"><value>Heute</value></data>
   <data name="Yesterday" xml:space="preserve"><value>Gestern</value></data>
+  <data name="ProjectInformation" xml:space="preserve"><value>Projektangaben</value></data>
+  <data name="CalculationTitle" xml:space="preserve"><value>Berechnung</value></data>
+  <data name="Author" xml:space="preserve"><value>Ersteller</value></data>
+  <data name="Reference" xml:space="preserve"><value>Referenz</value></data>
+  <data name="RequiredProjectInfo" xml:space="preserve"><value>Eine Angabe ist erforderlich.</value></data>
+  <data name="SettingsGeneral" xml:space="preserve"><value>Allgemein</value></data>
+  <data name="DefaultAuthor" xml:space="preserve"><value>Standard-Ersteller</value></data>
 </root>

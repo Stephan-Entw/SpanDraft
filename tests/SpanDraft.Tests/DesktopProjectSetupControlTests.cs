@@ -343,7 +343,8 @@ public sealed class DesktopProjectSetupControlTests
         var length = card.FindControl<TextBox>("SetupLengthInput")!;
         var hint = card.FindControl<SpanDraft.Desktop.Controls.SectionInputHint>("SetupLengthErrorHint")!;
         var before = card.Bounds; var inputBounds = length.Bounds; var padding = length.Padding;
-        Assert.True(length.IsFocused); Assert.False(hint.IsEffectivelyVisible);
+        Assert.True(view.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "CalculationTitleInput").IsFocused);
+        length.Focus(); Assert.False(hint.IsEffectivelyVisible);
         card.FindControl<Button>("SectionCardButton")!.Focus(); Arrange(window, width, height);
         Assert.False(setup.HasLengthError); Assert.False(hint.IsEffectivelyVisible); Assert.False(setup.CanApply);
         Assert.Null(setup.SelectedLength); Assert.Empty(length.Text!);
@@ -396,4 +397,68 @@ public sealed class DesktopProjectSetupControlTests
             Dispatcher.UIThread.RunJobs();
         }
     }
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public async Task InfoCardKeepsRowsAlignedAndConfirmsOnlyThroughKeyboardOrBlur(string culture)
+    {
+        using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
+        var main = new MainWindowViewModel(); Assert.True(await main.NewAsync()); var setup = main.Setup;
+        var view = new ProjectSetupView { DataContext = setup };
+        var window = new Window { Content = view, Width = 1100, Height = 650 };
+        window.Show(); Arrange(window, 1100, 650);
+        var card = Assert.Single(view.GetVisualDescendants().OfType<ProjectInfoSetupCard>());
+        var title = card.FindControl<TextBox>("CalculationTitleInput")!;
+        var author = card.FindControl<TextBox>("AuthorInput")!;
+        var project = card.FindControl<TextBox>("ProjectTitleInput")!;
+        var reference = card.FindControl<TextBox>("ReferenceInput")!;
+        Assert.True(title.IsFocused);
+        var inputs = new[] { title, author, project, reference };
+        Point Position(Control c) => c.TranslatePoint(default, card)!.Value;
+        Assert.Equal(Position(title).Y, Position(author).Y);
+        Assert.Equal(Position(project).Y, Position(reference).Y);
+        Assert.Equal(Position(title).X, Position(project).X);
+        Assert.Equal(Position(author).X, Position(reference).X);
+        Assert.True(Position(title).Y + title.Bounds.Height < Position(project).Y);
+        Assert.True(Position(title).X + title.Bounds.Width < Position(author).X);
+        Assert.All(inputs, input =>
+        {
+            Assert.Equal(title.Bounds.Height, input.Bounds.Height);
+            Assert.InRange(Math.Abs(title.Bounds.Width - input.Bounds.Width), 0, 1);
+        });
+        Assert.All(inputs, input => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(input))));
+        var beam = view.FindControl<BeamSetupCard>("BeamCard")!;
+        Assert.True(Position(card).Y + card.Bounds.Height < beam.TranslatePoint(default, card)!.Value.Y);
+        title.Text = " Beam "; Assert.Null(setup.Draft.CalculationTitle);
+        Press(title, Key.Enter); Assert.Equal("Beam", setup.Draft.CalculationTitle); Assert.Null(main.Session);
+        Assert.True(DesktopControlEnvironment.MoveFocus(window, title, NavigationDirection.Next)); Assert.True(author.IsFocused);
+        author.Text = " Author "; Assert.Null(setup.Draft.Author);
+        Assert.True(DesktopControlEnvironment.MoveFocus(window, author, NavigationDirection.Next)); Assert.True(project.IsFocused);
+        Assert.Equal("Author", setup.Draft.Author);
+        Assert.True(DesktopControlEnvironment.MoveFocus(window, project, NavigationDirection.Next)); Assert.True(reference.IsFocused);
+        Assert.True(DesktopControlEnvironment.MoveFocus(window, reference, NavigationDirection.Next));
+        Assert.True(beam.FindControl<TextBox>("SetupLengthInput")!.IsFocused);
+        title.Focus(); title.Text = " "; var bounds = card.Bounds;
+        Press(title, Key.Enter); Arrange(window, 1100, 650);
+        Assert.True(setup.CalculationTitleInput.HasError); Assert.False(setup.CanApply); Assert.Equal(bounds, card.Bounds);
+        Assert.Equal("Beam", setup.Draft.CalculationTitle);
+        Press(title, Key.Escape); Assert.Equal("Beam", title.Text); Assert.False(setup.CalculationTitleInput.HasError);
+        Assert.Equal(MainViewMode.ProjectSetup, main.Mode);
+        title.Text = "Retyped beam"; author.Focus(); Assert.Equal("Retyped beam", setup.Draft.CalculationTitle);
+        author.Text = "Pending author"; main.SetMainMenuOpen(true); project.Focus();
+        Assert.Equal("Author", setup.Draft.Author); Assert.Equal("Pending author", author.Text);
+        main.SetMainMenuOpen(false); author.Focus(); main.SetSettingsDialogOpen(true); project.Focus();
+        Assert.Equal("Author", setup.Draft.Author); main.SetSettingsDialogOpen(false);
+        author.Focus(); project.Focus(); Assert.Equal("Pending author", setup.Draft.Author);
+        project.Text = new string('W', 1000); reference.Text = new string('R', 1000);
+        Arrange(window, 1100, 650);
+        foreach (var input in inputs)
+            Assert.True(Position(input).X + input.Bounds.Width <= card.Bounds.Width);
+        foreach (var scroll in view.GetVisualDescendants().OfType<ScrollViewer>().Where(v => v.FindAncestorOfType<TextBox>() is null))
+            Assert.True(scroll.Extent.Width <= scroll.Viewport.Width + 1);
+        CompleteSetup(main); Assert.True(await setup.ConfirmAsync());
+        Assert.Equal("Pending author", main.Session!.CurrentRevision.State.Info!.Author);
+        window.Close();
+        static void Press(Control control, Key key) => control.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key });
+    }
+
 }

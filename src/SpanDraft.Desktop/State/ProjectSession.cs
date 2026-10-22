@@ -37,7 +37,7 @@ public sealed class ProjectSession
     {
         if (IsBusy) return false;
         var previous = CurrentRevision.State;
-        var change = EditorChangeClassifier.Classify(previous.Document, next.Document, previous.Presentation, next.Presentation);
+        var change = EditorChangeClassifier.Classify(previous, next);
         if (change == EditorChangeKind.None) return false;
         var a = previous.Document.NamingState;
         var b = next.Document.NamingState;
@@ -60,8 +60,7 @@ public sealed class ProjectSession
         source.RemoveAt(source.Count - 1);
         destination.Add(CurrentRevision);
         var previous = CurrentRevision.State;
-        Apply(next, EditorChangeClassifier.Classify(previous.Document, next.State.Document,
-            previous.Presentation, next.State.Presentation));
+        Apply(next, EditorChangeClassifier.Classify(previous, next.State));
         return true;
     }
 

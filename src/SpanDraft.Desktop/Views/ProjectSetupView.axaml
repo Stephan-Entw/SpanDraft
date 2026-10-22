@@ -22,6 +22,8 @@
       <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="24" Spacing="16">
           <TextBlock Text="{Binding StartupError}" IsVisible="{Binding HasStartupError}" Classes="validationMessage" TextWrapping="Wrap" />
+          <TextBlock Text="{x:Static resources:Strings.ProjectInformation}" Classes="sectionTitle" />
+          <views:ProjectInfoSetupCard />
           <TextBlock Text="{x:Static resources:Strings.SetupBeam}" Classes="sectionTitle" />
           <views:BeamSetupCard x:Name="BeamCard" />
         </StackPanel>

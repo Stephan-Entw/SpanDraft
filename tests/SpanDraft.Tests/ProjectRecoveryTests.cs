@@ -317,4 +317,23 @@ public sealed class ProjectRecoveryTests
         app.Files.FailWritePath = null; app.ChangeLength(); app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         Assert.NotNull(await app.Recovery.ReadAsync());
     }
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task RecoveryIsOnlyRedundantWhenProjectInformationAlsoMatches(bool sameInfo)
+    {
+        var app = new App(create: false); var path = TestPath("original.spandraft");
+        var saved = State() with { Info = new("Beam", null, null, "Author") };
+        var recovered = sameInfo ? saved : saved with { Info = new("Beam", null, "Unsaved drawing", "Author") };
+        app.Files.Data[path] = ProjectFileCodec.Serialize(saved);
+        app.Files.Data[App.Slot] = ProjectRecovery.Encode(new(recovered, path, Now));
+        Assert.True(await app.Main.InitializeRecoveryAsync());
+        Assert.Equal(sameInfo ? 0 : 1, app.Dialogs.RecoveryQuestions);
+        if (sameInfo) { Assert.Null(app.Main.Session); Assert.Null(await app.Recovery.ReadAsync()); }
+        else
+        {
+            Assert.Equal(recovered.Info, app.Main.Session!.CurrentRevision.State.Info);
+            Assert.True(app.Main.Session.IsDirty); Assert.Equal(saved.Info, ProjectFileCodec.Deserialize(app.Files.Data[path]).Info);
+        }
+    }
+
 }

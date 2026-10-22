@@ -134,19 +134,15 @@ public sealed class DesktopMechanicalComparerTests
         var support = new EditorSupport(Guid.NewGuid(), M(0), SupportType.Fixed, "A");
         var document = new EditorDocument(M(1), Material(), Section(), [support]);
         var presentation = new EditorPresentationState();
-        Assert.Equal(EditorChangeKind.None, EditorChangeClassifier.Classify(document,
-            document.WithSupports([support with { }]), presentation, new()));
-        Assert.Equal(EditorChangeKind.MetadataOnly, EditorChangeClassifier.Classify(document,
-            document.WithSupports([support with { Name = "Bearing" }]), presentation, presentation));
-        Assert.Equal(EditorChangeKind.MetadataOnly, EditorChangeClassifier.Classify(document,
-            document with { Material = Material(name: "Other template") }, presentation, presentation));
-        Assert.Equal(EditorChangeKind.MetadataOnly, EditorChangeClassifier.Classify(document, document,
-            presentation, presentation.WithOffset(support.Id, new(10, 20))));
-        Assert.Equal(EditorChangeKind.Mechanical, EditorChangeClassifier.Classify(document,
-            document.WithSupports([support with { Name = "Bearing", Position = M(.1) }]), presentation, presentation));
-        Assert.Equal(EditorChangeKind.Mechanical, EditorChangeClassifier.Classify(document,
-            document with { Material = Material(re: 355e6) }, presentation, presentation));
-        Assert.Equal(EditorChangeKind.Mechanical, EditorChangeClassifier.Classify(document,
-            document.WithSection(Section(w: .002), SectionAxisDesignation.Y), presentation, presentation));
+        ProjectState Before() => new(document, presentation);
+        EditorChangeKind Classify(EditorDocument next, EditorPresentationState? view = null) =>
+            EditorChangeClassifier.Classify(Before(), new(next, view ?? presentation));
+        Assert.Equal(EditorChangeKind.None, Classify(document.WithSupports([support with { }]), new()));
+        Assert.Equal(EditorChangeKind.MetadataOnly, Classify(document.WithSupports([support with { Name = "Bearing" }])));
+        Assert.Equal(EditorChangeKind.MetadataOnly, Classify(document with { Material = Material(name: "Other template") }));
+        Assert.Equal(EditorChangeKind.MetadataOnly, Classify(document, presentation.WithOffset(support.Id, new(10, 20))));
+        Assert.Equal(EditorChangeKind.Mechanical, Classify(document.WithSupports([support with { Name = "Bearing", Position = M(.1) }])));
+        Assert.Equal(EditorChangeKind.Mechanical, Classify(document with { Material = Material(re: 355e6) }));
+        Assert.Equal(EditorChangeKind.Mechanical, Classify(document.WithSection(Section(w: .002), SectionAxisDesignation.Y)));
     }
 }

@@ -25,7 +25,8 @@ public sealed class ProjectSetupRecoveryTests
         (fields & 1) != 0 ? M(1.0000000000000002) : null,
         (fields & 2) != 0 ? PreciseMaterial : null,
         (fields & 4) != 0 ? new RectangleSectionGeometry(M(.12345678901234567), M(.23456789012345678)) : null,
-        SectionAxisDesignation.Z, (fields & 4) != 0 ? "My section" : null);
+        SectionAxisDesignation.Z, (fields & 4) != 0 ? "My section" : null,
+        CalculationTitle: fields == 7 ? "Calculation" : null, Author: fields == 7 ? "Author" : null);
 
     private sealed class Fixture(bool honorCancellation = true)
     {
@@ -83,7 +84,7 @@ public sealed class ProjectSetupRecoveryTests
     }
 
     [Theory]
-    [InlineData("recoveryVersion", "2")]
+    [InlineData("recoveryVersion", "3")]
     [InlineData("writtenAtUtc", "\"2026-10-07T10:00:00+01:00\"")]
     [InlineData("writtenAtUtc", "\"0001-01-01T00:00:00+00:00\"")]
     [InlineData("draft", "null")]
@@ -437,4 +438,59 @@ public sealed class ProjectSetupRecoveryTests
         Assert.Single(f.Dialogs.Errors); Assert.True(await f.Main.SaveAsync()); Assert.False(f.Main.Session.IsDirty);
         Assert.NotNull(f.Main.Session.SavedRevisionId); Assert.NotNull(f.Main.Session.FilePath);
     }
+    [Theory]
+    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)]
+    [InlineData(4)] [InlineData(5)] [InlineData(6)] [InlineData(7)]
+    [InlineData(8)] [InlineData(9)] [InlineData(10)] [InlineData(11)]
+    [InlineData(12)] [InlineData(13)] [InlineData(14)] [InlineData(15)]
+    public async Task VersionTwoRestoresEveryCombinationOfConfirmedInfoWithoutDefaults(int fields)
+    {
+        var draft = new ProjectSetupDraft(CalculationTitle: (fields & 1) != 0 ? "Beam 1" : null,
+            Author: (fields & 2) != 0 ? "Original author" : null,
+            ProjectTitle: (fields & 4) != 0 ? "Project" : null, Reference: (fields & 8) != 0 ? "Drawing" : null);
+        var f = new Fixture(); f.Seed(draft); f.Start(UserSettings.Default with { DefaultAuthor = "Current default" });
+        var bytes = f.Files.Data[Slot]; Assert.Equal(2, JsonNode.Parse(bytes)!["recoveryVersion"]!.GetValue<int>());
+        Assert.True(await f.Main.InitializeRecoveryAsync()); Assert.True(draft.ContentEquals(f.Main.Setup.Draft));
+        Assert.Equal(draft.Author ?? "", f.Main.Setup.AuthorInput.Text); Assert.Empty(f.Delay.Waiters);
+        Assert.Equal(bytes, f.Files.Data[Slot]); Assert.Null(f.Main.Session);
+    }
+
+    [Fact]
+    public async Task VersionOneRecoveryRestoresNoInfoAndNeverMergesTheCurrentDefaultAuthor()
+    {
+        var f = new Fixture(); f.Seed();
+        var json = JsonNode.Parse(f.Files.Data[Slot])!; json["recoveryVersion"] = 1;
+        foreach (var key in new[] { "calculationTitle", "projectTitle", "reference", "author" }) json["draft"]!.AsObject().Remove(key);
+        f.Files.Data[Slot] = Encoding.UTF8.GetBytes(json.ToJsonString());
+        f.Start(UserSettings.Default with { DefaultAuthor = "Default author" });
+        Assert.True(await f.Main.InitializeRecoveryAsync());
+        var draft = f.Main.Setup.Draft;
+        Assert.Null(draft.CalculationTitle); Assert.Null(draft.ProjectTitle); Assert.Null(draft.Reference); Assert.Null(draft.Author);
+        Assert.False(f.Main.Setup.CanApply); Assert.Empty(f.Main.Setup.AuthorInput.Text);
+        Assert.Equal(Draft().Length, draft.Length); Assert.Empty(f.Delay.Waiters);
+    }
+
+    [Fact]
+    public async Task OnlyConfirmedInfoSchedulesRecoveryAndMenuAndSettingsPreserveBuffers()
+    {
+        var f = new Fixture(); f.Start(); Assert.True(await f.Main.NewAsync()); var setup = f.Main.Setup;
+        setup.CalculationTitleInput.Begin(); setup.CalculationTitleInput.Text = " Beam ";
+        Assert.Null(setup.Draft.CalculationTitle); Assert.Empty(f.Delay.Waiters);
+        f.Main.SetMainMenuOpen(true); setup.CalculationTitleInput.LoseFocus();
+        Assert.Null(setup.Draft.CalculationTitle); Assert.Equal(" Beam ", setup.CalculationTitleInput.Text);
+        f.Main.SetMainMenuOpen(false); f.Main.SetSettingsDialogOpen(true); setup.CalculationTitleInput.LoseFocus();
+        Assert.Null(setup.Draft.CalculationTitle); Assert.Empty(f.Delay.Waiters);
+        f.Main.SetSettingsDialogOpen(false); setup.CalculationTitleInput.LoseFocus(); await f.Publish();
+        Assert.Equal("Beam", (await f.Recovery.ReadAsync())!.Draft.CalculationTitle);
+        Assert.Null((await f.Recovery.ReadAsync())!.Draft.Author);
+        int waits = f.Delay.Waiters.Count;
+        setup.AuthorInput.Begin(); setup.AuthorInput.Text = " "; Assert.False(setup.AuthorInput.Confirm());
+        Assert.True(setup.AuthorInput.HasError); Assert.Equal(waits, f.Delay.Waiters.Count);
+        setup.AuthorInput.Text = "Author"; setup.AuthorInput.Cancel();
+        Assert.Null(setup.Draft.Author); Assert.Empty(setup.AuthorInput.Text); Assert.Equal(waits, f.Delay.Waiters.Count);
+        setup.AuthorInput.Text = " Author "; Assert.True(setup.AuthorInput.Confirm()); await f.Publish();
+        Assert.Equal("Author", (await f.Recovery.ReadAsync())!.Draft.Author);
+        Assert.Null(f.Main.Session);
+    }
+
 }

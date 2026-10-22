@@ -50,7 +50,7 @@ public sealed class ProjectFileV2Tests
         var state = State() with { Document = State().Document.WithSection(section, axis) };
         var bytes = ProjectFileCodec.Serialize(state);
         var root = JsonNode.Parse(bytes)!;
-        Assert.Equal(2, root["formatVersion"]!.GetValue<int>());
+        Assert.Equal(3, root["formatVersion"]!.GetValue<int>());
         Assert.Equal(axis.ToString().ToLowerInvariant(), root["document"]!["bendingAxis"]!.GetValue<string>());
         var wireSection = root["document"]!["section"]!.AsObject();
         Assert.Equal(WireTypes[kind], wireSection["type"]!.GetValue<string>());

@@ -178,11 +178,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MainWorkspaceKind.SectionDefinition => Setup.Definition?.CanRedo == true,
         _ => false
     });
-    public string ProjectName => Session?.FilePath is { } path ? Path.GetFileName(path) : Strings.Untitled;
+    public string ProjectFileName => Session?.FilePath is { } path ? Path.GetFileName(path) : Strings.Untitled;
     public string WindowTitle => Mode == MainViewMode.Start ? Strings.ApplicationTitle
         : Mode == MainViewMode.ProjectSetup && Setup.Mode == ProjectSetupMode.Create
         ? Strings.NewProject + " — " + Strings.ApplicationTitle : Session is null ? Strings.ApplicationTitle
-        : ProjectName + (Session.IsDirty ? "*" : "") + " — " + Strings.ApplicationTitle;
+        : ProjectFileName + (Session.IsDirty ? "*" : "") + " — " + Strings.ApplicationTitle;
     public object CurrentViewModel => Mode switch
     {
         MainViewMode.Start => StartPage,
@@ -209,7 +209,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         var setup = new ProjectSetupViewModel(ProjectSetupMode.Create,
             draft?.Section, draft?.BendingAxis ?? SpanDraft.Core.Sections.SectionAxisDesignation.Y, draft?.Material,
-            ApplySetupAsync, CancelSetup, ResultPresentation, this, canCancel: true, recoveredDraft: draft);
+            ApplySetupAsync, CancelSetup, ResultPresentation, this, canCancel: true, recoveredDraft: draft, defaultAuthor: Settings.DefaultAuthor);
         setup.ConfirmedDraftChanged += SetupDraftChanged;
         return setup;
     }
@@ -234,7 +234,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Editor.CancelEditorInteraction();
         _setupReturnMode = MainViewMode.Editor;
         _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.BendingAxis, Editor.Document.Material,
-            ApplySetupAsync, CancelSetup, ResultPresentation, this, Editor.Document);
+            ApplySetupAsync, CancelSetup, ResultPresentation, this, Editor.Document, originalInfo: Session!.CurrentRevision.State.Info);
         Navigate(MainViewMode.ProjectSetup);
     }
 
@@ -246,7 +246,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return Task.FromResult(false);
         if (setup.Mode == ProjectSetupMode.Edit)
         {
-            if (Editor?.ApplySetup(length, section, setup.BendingAxis, material, setup.SectionDisplayName) != true)
+            if (Editor?.ApplySetup(length, section, setup.BendingAxis, material, setup.SectionDisplayName, setup.Info) != true)
                 return Task.FromResult(false);
             Navigate(MainViewMode.Editor);
             return Task.FromResult(true);
@@ -257,7 +257,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             if (!await CanLeaveAsync()) return false;
             await CompleteLeaveAsync();
-            Activate(ProjectSession.Create(new(document, new())));
+            Activate(ProjectSession.Create(new(document, new(), setup.Info)));
             await DeleteSetupRecoveryAsync();
             return true;
         });
@@ -396,7 +396,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task<bool> CanLeaveAsync(bool recordRecent = true)
     {
         if (Session?.IsDirty != true) return true;
-        var decision = _dialogs is null ? LeaveDecision.Cancel : await _dialogs.ConfirmLeaveAsync(ProjectName);
+        var decision = _dialogs is null ? LeaveDecision.Cancel : await _dialogs.ConfirmLeaveAsync(ProjectFileName);
         return decision switch
         {
             LeaveDecision.Discard => true,
@@ -548,6 +548,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Notify(nameof(CanNewProject)); Notify(nameof(CanOpenProject)); Notify(nameof(CanSaveProject)); Notify(nameof(CanCloseProject));
         Notify(nameof(CanUndo));
         Notify(nameof(CanRedo));
+        Notify(nameof(ProjectFileName));
         Notify(nameof(WindowTitle));
         NewCommand?.Refresh(); OpenCommand?.Refresh(); SaveCommand?.Refresh(); SaveAsCommand?.Refresh();
         CloseProjectCommand?.Refresh();

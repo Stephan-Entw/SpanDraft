@@ -38,8 +38,8 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
         return file is null ? null : file.TryGetLocalPath() ?? throw new IOException(Strings.LocalFilesOnly);
     }
 
-    public Task<LeaveDecision> ConfirmLeaveAsync(string projectName) => ShowAsync(
-        string.Format(CultureInfo.CurrentUICulture, Strings.LeaveQuestion, projectName),
+    public Task<LeaveDecision> ConfirmLeaveAsync(string projectFileName) => ShowAsync(
+        string.Format(CultureInfo.CurrentUICulture, Strings.LeaveQuestion, projectFileName),
         [(Strings.Save, LeaveDecision.Save), (Strings.DontSave, LeaveDecision.Discard), (Strings.Cancel, LeaveDecision.Cancel)]);
 
     public Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc) => damaged

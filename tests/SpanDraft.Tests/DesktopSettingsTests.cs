@@ -33,13 +33,13 @@ public sealed class DesktopSettingsTests
 
     [Theory]
     [MemberData(nameof(LocaleCombinations))]
-    public void VersionTwoRoundtripPreservesLocalePreferencesAndUnits(UiLanguagePreference language, RegionalFormatPreference region)
+    public void CurrentVersionRoundtripPreservesLocalePreferencesAndUnits(UiLanguagePreference language, RegionalFormatPreference region)
     {
         var settings = UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Inch)
             .Select(UnitProfileKind.StructuralEngineering) with { UiLanguage = language, RegionalFormat = region, Mode = PresentationMode.Detailed };
         var bytes = SettingsCodec.Serialize(settings);
         var json = JsonNode.Parse(bytes)!;
-        Assert.Equal(2, json["version"]!.GetValue<int>());
+        Assert.Equal(3, json["version"]!.GetValue<int>());
         Assert.Equal(language.ToString(), json["uiLanguage"]!.GetValue<string>());
         Assert.Equal(region.ToString(), json["regionalFormat"]!.GetValue<string>());
         Assert.True(settings.ContentEquals(SettingsCodec.Deserialize(bytes)));
@@ -87,7 +87,7 @@ public sealed class DesktopSettingsTests
     [InlineData("regionalFormat", "null")]
     [InlineData("uiLanguage", null)]
     [InlineData("regionalFormat", null)]
-    public async Task InvalidVersionTwoLocalesFallBackAsAWhole(string field, string? value)
+    public async Task InvalidCurrentLocalesFallBackAsAWhole(string field, string? value)
     {
         var json = JsonNode.Parse(SettingsCodec.Serialize(UserSettings.Default.Select(UnitProfileKind.UnitedStates)))!.AsObject();
         if (value is null) json.Remove(field); else json[field] = JsonNode.Parse(value);
@@ -300,4 +300,46 @@ public sealed class DesktopSettingsTests
         Assert.True(UserSettings.SameUnits(settings.Profile, editor.ResultPresentation.Profile));
         delay.ReleaseAll(); await recovery.DrainAsync();
     }
+    [Theory]
+    [InlineData(null, null)] [InlineData("", null)] [InlineData("  ", null)]
+    [InlineData(" Ada Lovelace ", "Ada Lovelace")]
+    public void VersionThreeRoundtripNormalizesDefaultAuthor(string? value, string? expected)
+    {
+        var settings = UserSettings.Default with { DefaultAuthor = value };
+        Assert.Equal(expected, settings.DefaultAuthor);
+        var bytes = SettingsCodec.Serialize(settings);
+        Assert.Equal(3, JsonNode.Parse(bytes)!["version"]!.GetValue<int>());
+        Assert.Equal(expected, SettingsCodec.Deserialize(bytes).DefaultAuthor);
+        Assert.True(settings.ContentEquals(SettingsCodec.Deserialize(bytes)));
+        Assert.Equal(expected is not null, !settings.ContentEquals(UserSettings.Default));
+    }
+
+    [Theory]
+    [InlineData(1)] [InlineData(2)]
+    public void HistoricalSettingsNeverSupplyADefaultAuthor(int version)
+    {
+        var json = JsonNode.Parse(SettingsCodec.Serialize(UserSettings.Default))!;
+        json["version"] = version;
+        // Unknown fields in historical versions must not acquire new semantics.
+        json["defaultAuthor"] = "Ignored";
+        var loaded = SettingsCodec.Deserialize(Encoding.UTF8.GetBytes(json.ToJsonString()));
+        Assert.Null(loaded.DefaultAuthor); Assert.True(UserSettings.Default.ContentEquals(loaded));
+    }
+
+    [Fact]
+    public async Task DefaultAuthorEditingPreservesSpacesAndUsesTheSettingsTransaction()
+    {
+        UserSettings? saved = null;
+        var model = new SettingsViewModel(UserSettings.Default, settings => { saved = settings; return Task.FromResult<string?>(null); });
+        model.DefaultAuthor = "Ada "; Assert.Equal("Ada ", model.DefaultAuthor);
+        model.DefaultAuthor += "Lovelace "; Assert.Equal("Ada Lovelace", model.Pending.DefaultAuthor);
+        Assert.True(model.HasChanges); model.DiscardPending(); Assert.Null(model.Pending.DefaultAuthor);
+        Assert.Empty(model.DefaultAuthor!); Assert.Null(saved);
+        model.DefaultAuthor = " Ada Lovelace "; Assert.True(await model.ApplyAsync());
+        Assert.Equal("Ada Lovelace", saved!.DefaultAuthor); Assert.False(model.HasChanges);
+        var failing = new SettingsViewModel(saved, _ => Task.FromResult<string?>("Injected"));
+        failing.DefaultAuthor = "New author"; Assert.False(await failing.ApplyAsync());
+        Assert.Equal("New author", failing.Pending.DefaultAuthor); Assert.True(failing.HasChanges);
+    }
+
 }

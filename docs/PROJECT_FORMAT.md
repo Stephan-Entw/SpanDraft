@@ -4,8 +4,8 @@
 
 Dateiendung: `.spandraft` (beim Speichern ohne Beachtung der Groß-/Kleinschreibung).
 Projektdateien sind lesbares, eingerücktes UTF-8-JSON mit `format = "SpanDraft.Project"`,
-`formatVersion`, `document` und `presentation`. **V2 ist das einzige aktuelle
-Schreibformat; V1 bleibt über seinen eingefrorenen Vertrag lesbar.**
+`formatVersion`, optionalem `info`, `document` und `presentation`. **V3 ist das einzige
+aktuelle Schreibformat; V1 und V2 bleiben historische Leseverträge.**
 DTOs und Codec-Tests definieren die technischen Felder und Typen; dieser Text
 beschreibt die dauerhaften fachlichen Regeln. Core- und Editorobjekte werden
 nicht direkt serialisiert. Es gibt weder CLR-Typnamen noch numerische Enumwerte.
@@ -26,8 +26,8 @@ keine Wirkung auf Solver oder Engineering.
 
 Parametrische Querschnitte speichern ausschließlich die Form und ihre
 ursprünglichen Abmessungen einschließlich der unabhängigen Radiusparameter.
-V2 kennt `rectangle`, `rectangularHollow`, `circle`, `circularHollow`, `iSection`,
-`uSection`, `tSection` und `angle`. Fläche, Schwerpunkt, Flächen-/Hauptmomente,
+Der seit V2 unveränderte Dokumentvertrag kennt `rectangle`, `rectangularHollow`,
+`circle`, `circularHollow`, `iSection`, `uSection`, `tSection` und `angle`. Fläche, Schwerpunkt, Flächen-/Hauptmomente,
 Hauptachsenwinkel und Widerstandsmomente werden beim Laden durch den Geometriekern
 neu berechnet. Auch abgeleitete Radien werden nicht zur zweiten Datenquelle.
 
@@ -52,8 +52,9 @@ Grundformen sind transienter UI-Zustand und besitzen getrennte Namen; nur der
 Anzeigename des aktuell übernommenen Querschnitts wird im Projekt gespeichert.
 Benutzer- und übernommene Bibliotheksnamen verwenden denselben Metadatenvertrag;
 sie enthalten keine Herkunftsreferenz und sind keine mechanische Eigenschaft.
-Die optionale Erweiterung bleibt in V2; historische Dateien benötigen dieses Feld
-nicht. Namensänderungen gehören zu Projektinhalt, Dirty-State und Undo/Redo,
+Der optionale Anzeigename ist bereits Teil des historischen V2-Vertrags;
+ältere Dateien benötigen dieses Feld nicht. Namensänderungen gehören zu
+Projektinhalt, Dirty-State und Undo/Redo,
 lösen jedoch keine mechanische Neuberechnung aus.
 
 ## SI-Vertrag und übriger Projektinhalt
@@ -78,8 +79,27 @@ RevisionIds/Savepoint, Dateipfad, Hover/Selection/Werkzeuge, Draft-/Textbuffer,
 Placement-/Drag-Vorschauen, Fehler-/Konfliktzustände sowie Canvas-/Viewport- und
 Stationslayout. Öffnen beginnt mit leerer History und berechnet Analysis neu.
 
-## V1-Migration und Legacy-Kompatibilität
+## Projektangaben
 
+V3 ergänzt `info` außerhalb von Dokument und Presentation. Es enthält
+`calculationTitle` (Berechnung des konkreten Bauteils/Modells), `author`
+(Ersteller als natürliche Person), optional `projectTitle` (übergeordnetes
+Projekt) und `reference` (freie externe Zuordnung, etwa Zeichnungs- oder
+Auftragsnummer). Berechnung und Ersteller sind nach Trim nichtleer; optionale
+Leerwerte werden null. Alle gespeicherten Angaben sind getrimmt. Es gibt keine
+weiteren Dokumentmanagement-Felder oder Ableitungen aus dem Dateinamen.
+
+Neue Projekte besitzen vollständige Angaben. Bei migrierten Legacy-Projekten
+darf `info` fehlen oder null sein, auch nach erneutem Speichern als V3. Ein
+vorhandenes `info` muss beide Pflichtwerte gültig enthalten. Legacy-Bearbeitung
+mit vier leeren Angaben erhält null; bei angelegten Angaben werden beide
+Pflichtwerte verlangt. Projektangaben gehören zu Inhaltsvergleich, Dirty-State,
+Undo/Redo und Recovery. Ihre Änderung allein löst keine Analysis aus.
+
+## V1-/V2-Migration und Legacy-Kompatibilität
+
+V1 und V2 werden mit fehlenden Projektangaben (`Info == null`) gelesen.
+Der Dokument-/Presentation-Vertrag aus V2 bleibt in V3 unverändert.
 V1 wird beim Laden unmittelbar ins aktuelle In-Memory-Modell migriert:
 Rechteck, Rechteckrohr, Kreis und Rundrohr werden parametrische Definitionen;
 Rechteckrohre erhalten Außenradius 0. V1-`custom` wird Manual mit originalem
@@ -88,8 +108,8 @@ bleiben null. Ihre mechanischen Kennwerte und Berechnungsergebnisse bleiben erha
 
 Bloßes Öffnen verändert keine Benutzerdatei und macht das geöffnete Projekt
 nicht allein wegen der Migration dirty. Erst ein tatsächliches Speichern
-schreibt V2; ursprünglicher Dateipfad und normales Save-/Save-As-Verhalten bleiben erhalten.
-Es gibt keinen V1-Writer. Noch verwendete Legacy-Sections werden beim V2-Schreiben
+schreibt V3; ursprünglicher Dateipfad und normales Save-/Save-As-Verhalten bleiben erhalten.
+Es gibt keinen V1-/V2-Writer. Noch verwendete Legacy-Sections werden beim V3-Schreiben
 auf dieselben kanonischen Formen normalisiert; es gibt keinen Legacy-Wiretyp.
 
 `Load → Save → Load` erhält den fachlichen Inhalt. Der Inhaltsvergleich verwendet
@@ -116,19 +136,31 @@ Lagerung bleiben persistierbar; Analysis beschreibt ihre Berechenbarkeit.
 Recovery ist ein privater lokaler Slot, kein Autosave der Benutzerdatei.
 Das bestehende interne Envelope bleibt bei `recoveryVersion = 1`, optionalem
 Originalpfad und UTC-Zeitstempel. Sein eingebettetes Projekt verwendet genau
-denselben Codec: neue Recovery schreibt V2, historische V1-Projekte bleiben lesbar.
+denselben Codec: neue Recovery schreibt V3; historische V1-/V2-Projekte bleiben lesbar.
 Nur committed Zustände einer dirty Session werden geschrieben; nach Wiederherstellen
 bleibt das Projekt dirty. Die Benutzerdatei wird nicht automatisch geändert.
 Recovery wird ohne Nachfrage entfernt, wenn ihr vollständiger Projektinhalt
 mit der ursprünglichen Projektdatei übereinstimmt.
 
 Create-Drafts verwenden unabhängig davon den privaten Slot `setup-recovery.json`
-mit eigener Recovery-Version und UTC-Zeitstempel. Er enthält ausschließlich
+mit `recoveryVersion = 2` und UTC-Zeitstempel; Version 1 bleibt ohne
+Projektangaben lesbar. Er enthält ausschließlich
 bestätigte, auch unvollständige Setup-Werte in SI sowie einen optionalen expliziten
-Querschnittsnamen; keine Session, Eingabepuffer oder UI-Zustände. Querschnitte und
-Materialien verwenden die bestehenden V2-DTOs. Beim Start wird zuerst die
+Querschnittsnamen sowie die vier einzeln bestätigten Projektangaben, auch wenn
+Berechnung oder Ersteller noch fehlen; keine Session, Eingabepuffer oder UI-Zustände.
+Querschnitte und Materialien verwenden die bestehenden V2-DTOs. Beim Start wird zuerst die
 Projekt-Recovery bearbeitet, danach der Create-Draft über dem restaurierten Editor
 oder eigenständig ohne Session geöffnet. Cancel im Recovery-Dialog erhält den Slot.
 Bewusstes Abbrechen des Drafts, erfolgreiches Öffnen eines anderen Projekts,
 normales Beenden und erfolgreiche Projekterstellung entfernen die Setup-Recovery;
 eine abgebrochene oder fehlgeschlagene Erstellung erhält sie.
+
+## Lokaler Standard-Ersteller
+
+User Settings schreiben Version 3 mit optionalem `defaultAuthor`. V1/V2 bleiben
+lesbar und liefern keinen Standard-Ersteller. Leerwerte werden null, andere Werte
+getrimmt. Diese lokale Benutzereinstellung gehört niemals zur Projektrevision.
+Ein frischer Create-Draft erhält einmalig eine eigene Kopie; offene Drafts und
+bestehende Projekte ändern sich bei späteren Settings-Änderungen nicht. Bei
+Create-Recovery haben die gespeicherten Werte vollständig Vorrang, auch ein
+fehlender Ersteller. Ein Betriebssystem-Benutzername wird nicht übernommen.

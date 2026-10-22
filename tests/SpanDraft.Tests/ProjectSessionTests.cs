@@ -171,4 +171,24 @@ public sealed class ProjectSessionTests
         }
         Assert.Same(revision, editor.Session.CurrentRevision); Assert.Empty(editor.Session.UndoHistory);
     }
+    [Fact]
+    public void InfoChangesAreMetadataAndAllEditorCommitsPreserveThem()
+    {
+        int calls = 0;
+        var original = State(); var info = new ProjectInfo("Beam", "Project", "Drawing", "Author");
+        var state = original with { Info = info };
+        Assert.Equal(EditorChangeKind.MetadataOnly, EditorChangeClassifier.Classify(original, state));
+        Assert.Equal(EditorChangeKind.None, EditorChangeClassifier.Classify(state, state with { Info = new("Beam", "Project", "Drawing", "Author") }));
+        var session = ProjectSession.Open(original, TestPath("legacy.spandraft"));
+        var editor = EditorViewModel.ForSession(session, () => { }, b => { calls++; return BeamAnalysis.Analyze(b); });
+        Assert.True(session.Commit(state)); Assert.True(session.IsDirty); Assert.Equal(1, calls);
+        editor.SetAnnotationOffset(SupportId, new(77, 88)); Assert.Equal(info, session.CurrentRevision.State.Info);
+        editor.ApplySetup(M(2), state.Document.Section, state.Document.BendingAxis, state.Document.Material, null);
+        Assert.Equal(info, session.CurrentRevision.State.Info); Assert.Equal(2, calls);
+        editor.Undo(); Assert.Equal(info, session.CurrentRevision.State.Info); Assert.Equal(3, calls);
+        editor.Undo(); Assert.Equal(3, calls); editor.Undo();
+        Assert.False(session.IsDirty); Assert.Null(session.CurrentRevision.State.Info); Assert.Equal(3, calls);
+        editor.Redo(); Assert.Equal(info, session.CurrentRevision.State.Info); Assert.Equal(3, calls);
+    }
+
 }

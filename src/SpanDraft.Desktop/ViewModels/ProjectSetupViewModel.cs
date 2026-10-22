@@ -17,6 +17,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
 {
     private readonly Func<ProjectSetupViewModel, Task<bool>> _apply;
     private readonly EditorDocument? _originalDocument;
+    private readonly ProjectInfo? _originalInfo;
     private ISectionDefinition? _selectedSection;
     private Material? _selectedMaterial;
     private SectionAxisDesignation _bendingAxis;
@@ -43,7 +44,8 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public ProjectSetupViewModel(ProjectSetupMode mode, ISectionDefinition? section, SectionAxisDesignation bendingAxis,
         Material? material, Func<ProjectSetupViewModel, Task<bool>> apply, Action cancel,
         ResultPresentationOptions? resultPresentation = null, MainWindowViewModel? libraries = null,
-        EditorDocument? originalDocument = null, bool canCancel = false, ProjectSetupDraft? recoveredDraft = null)
+        EditorDocument? originalDocument = null, bool canCancel = false, ProjectSetupDraft? recoveredDraft = null,
+        ProjectInfo? originalInfo = null, string? defaultAuthor = null)
     {
         if (mode == ProjectSetupMode.Edit)
         {
@@ -56,6 +58,11 @@ public sealed class ProjectSetupViewModel : ObservableObject
         _originalDocument = originalDocument;
         _length = recoveredDraft?.Length ?? originalDocument?.Length ?? (mode == ProjectSetupMode.Edit ? Length.FromMillimeters(1000) : null);
         _sectionDisplayName = recoveredDraft?.SectionDisplayName ?? originalDocument?.SectionDisplayName;
+        _originalInfo = originalInfo;
+        CalculationTitleInput = new(this, recoveredDraft is not null ? recoveredDraft.CalculationTitle : originalInfo?.CalculationTitle, required: true);
+        ProjectTitleInput = new(this, recoveredDraft is not null ? recoveredDraft.ProjectTitle : originalInfo?.ProjectTitle);
+        ReferenceInput = new(this, recoveredDraft is not null ? recoveredDraft.Reference : originalInfo?.Reference);
+        AuthorInput = new(this, recoveredDraft is not null ? recoveredDraft.Author : IsEdit ? originalInfo?.Author : defaultAuthor, required: true);
         _confirmedDraft = Draft;
         OriginalMaterial = IsEdit ? material : null;
         _resultPresentation = resultPresentation ?? ResultPresentationOptions.Default;
@@ -73,7 +80,21 @@ public sealed class ProjectSetupViewModel : ObservableObject
         ChangeSectionCommand = new(ShowSections, () => !IsBusy);
     }
     public event Action<ProjectSetupViewModel>? ConfirmedDraftChanged;
-    public ProjectSetupDraft Draft => new(SelectedLength, SelectedMaterial, SelectedSection, BendingAxis, SectionDisplayName);
+    public ProjectSetupDraft Draft => new(SelectedLength, SelectedMaterial, SelectedSection, BendingAxis, SectionDisplayName,
+        CalculationTitleInput.ConfirmedValue, ProjectTitleInput.ConfirmedValue, ReferenceInput.ConfirmedValue, AuthorInput.ConfirmedValue);
+    public ProjectInfoInput CalculationTitleInput { get; }
+    public ProjectInfoInput ProjectTitleInput { get; }
+    public ProjectInfoInput ReferenceInput { get; }
+    public ProjectInfoInput AuthorInput { get; }
+    public bool RequiresProjectInfo => !IsEdit || _originalInfo is not null
+        || InfoInputs.Any(i => !string.IsNullOrWhiteSpace(i.Text));
+    private IEnumerable<ProjectInfoInput> InfoInputs => [CalculationTitleInput, AuthorInput, ProjectTitleInput, ReferenceInput];
+    public ProjectInfo? Info => CalculationTitleInput.ConfirmedValue is { } title && AuthorInput.ConfirmedValue is { } author
+        ? new(title, ProjectTitleInput.ConfirmedValue, ReferenceInput.ConfirmedValue, author) : null;
+    internal void RefreshInfo() { Notify(nameof(CanApply)); ApplyCommand?.Refresh(); }
+    internal void InfoCommitted() { RefreshInfo(); DraftCommitted(); }
+    private bool HasValidInfoInput => !RequiresProjectInfo
+        || !string.IsNullOrWhiteSpace(CalculationTitleInput.Text) && !string.IsNullOrWhiteSpace(AuthorInput.Text);
     private void DraftCommitted()
     {
         if (IsEdit) return;
@@ -99,7 +120,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public LengthInputViewModel LengthInput { get; }
     public string? LengthError => LengthInput.HasError ? LengthInput.ErrorText : null;
     public bool HasLengthError => LengthError is not null;
-    public bool CanApply => IsOverview && !IsBusy && HasSection && SelectedMaterial is not null
+    public bool CanApply => IsOverview && !IsBusy && HasValidInfoInput && HasSection && SelectedMaterial is not null
         && LengthInput.TryGetLength(out var length) && !HasLengthError
         && (_originalDocument is not { } document || BeamLengthConstraints.Error(document, length) is null);
     public string? SectionDisplayName => _sectionDisplayName;
@@ -233,7 +254,10 @@ public sealed class ProjectSetupViewModel : ObservableObject
     {
         if (CurrentStep is MaterialSelectionViewModel { Editor: { } material }) return await material.ConfirmAsync();
         if (Definition is { } definition) return await definition.ConfirmAsync();
-        if (!IsOverview || IsBusy || !LengthInput.Confirm() || !CanApply) return false;
+        if (!IsOverview || IsBusy) return false;
+        bool infoAccepted = true;
+        foreach (var input in InfoInputs) infoAccepted &= input.Confirm();
+        if (!infoAccepted || !LengthInput.Confirm() || !CanApply) return false;
         // Read the current buffer even when a caller has not opened an input session.
         if (!LengthInput.TryGetLength(out var length) || !CommitLength(length).Accepted) return false;
         return await _apply(this);

@@ -57,7 +57,7 @@ public sealed class ProjectSectionStateTests
         Assert.False(before.ContentEquals(after));
         Assert.Equal(!mechanical, BeamModelMechanicalComparer.AreEquivalent(before.Document.ToBeamModel(), after.Document.ToBeamModel()));
         Assert.Equal(mechanical ? EditorChangeKind.Mechanical : EditorChangeKind.MetadataOnly,
-            EditorChangeClassifier.Classify(before.Document, after.Document, before.Presentation, after.Presentation));
+            EditorChangeClassifier.Classify(before, after));
         Assert.True(session.Commit(after));
         Assert.True(session.IsDirty); Assert.Equal(calls + (mechanical ? 1 : 0), app.Analyses);
         Assert.Single(session.UndoHistory);
@@ -65,13 +65,13 @@ public sealed class ProjectSectionStateTests
         var recovered = (await app.Recovery.ReadAsync())!;
         Assert.True(after.ContentEquals(recovered.State));
         Assert.Equal(path, recovered.OriginalFilePath);
-        Assert.Equal(2, JsonNode.Parse(app.Files.Data[App.Slot])!["project"]!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(3, JsonNode.Parse(app.Files.Data[App.Slot])!["project"]!["formatVersion"]!.GetValue<int>());
         Assert.True(ProjectSession.Restore(recovered.State, recovered.OriginalFilePath).IsDirty);
         Assert.True(await app.Main.SaveAsync(saveAs: true));
         var savedPath = app.Dialogs.SavePath!;
         Assert.Equal(savedPath, session.FilePath); Assert.False(session.IsDirty);
         Assert.Equal(original, app.Files.Data[path]);
-        Assert.Equal(2, JsonNode.Parse(app.Files.Data[savedPath])!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(3, JsonNode.Parse(app.Files.Data[savedPath])!["formatVersion"]!.GetValue<int>());
         Assert.True(after.ContentEquals(ProjectFileCodec.Deserialize(app.Files.Data[savedPath])));
         Assert.Null(await app.Recovery.ReadAsync());
         Assert.True(app.Main.Undo()); Assert.True(session.IsDirty); Assert.True(before.ContentEquals(session.CurrentRevision.State));
@@ -148,7 +148,7 @@ public sealed class ProjectSectionStateTests
         var after = before with { Document = d.WithSection(manual, d.BendingAxis) };
         Assert.False(before.ContentEquals(after));
         Assert.True(BeamModelMechanicalComparer.AreEquivalent(d.ToBeamModel(), after.Document.ToBeamModel()));
-        Assert.Equal(EditorChangeKind.MetadataOnly, EditorChangeClassifier.Classify(d, after.Document, before.Presentation, after.Presentation));
+        Assert.Equal(EditorChangeKind.MetadataOnly, EditorChangeClassifier.Classify(before, after));
     }
 
     public static IEnumerable<object[]> ParameterChanges()

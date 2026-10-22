@@ -65,6 +65,7 @@ internal static class ProjectTestSupport
     public static void CompleteSetup(MainWindowViewModel main)
     {
         var setup = main.Setup;
+        CompleteProjectInfo(setup);
         if (setup.SelectedLength is null)
         {
             setup.LengthInput.Begin();
@@ -75,6 +76,14 @@ internal static class ProjectTestSupport
         setup.SelectedSection ??= new SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry(
             M(.1), M(.1), M(.005), M(0));
         setup.SelectedMaterial ??= main.BuiltInMaterials!.Find("S235JR")!.Material;
+    }
+
+    public static void CompleteProjectInfo(ProjectSetupViewModel setup)
+    {
+        if (setup.CalculationTitleInput.ConfirmedValue is null)
+        { setup.CalculationTitleInput.Text = "Test calculation"; setup.CalculationTitleInput.Confirm(); }
+        if (setup.AuthorInput.ConfirmedValue is null)
+        { setup.AuthorInput.Text = "Test author"; setup.AuthorInput.Confirm(); }
     }
 
     public sealed class Files : IProjectFileStore
@@ -138,7 +147,7 @@ internal static class ProjectTestSupport
         public Task<string?> PickOpenPathAsync() => Task.FromResult(OpenPath);
         public Task<string?> PickSavePathAsync(string? currentFilePath)
         { SaveQuestions++; return SaveHook?.Invoke() ?? Task.FromResult(SavePath); }
-        public Task<LeaveDecision> ConfirmLeaveAsync(string projectName)
+        public Task<LeaveDecision> ConfirmLeaveAsync(string projectFileName)
         { LeaveQuestions++; return LeaveHook?.Invoke() ?? Task.FromResult(Leave); }
         public Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc)
         { RecoveryOrder.Add("project"); RecoveryQuestions++; return Task.FromResult(damaged ? DamagedRecovery : Recovery); }

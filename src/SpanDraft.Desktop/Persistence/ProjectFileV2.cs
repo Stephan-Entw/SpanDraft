@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace SpanDraft.Desktop.Persistence;
 
-// Current wire contract. Domain and editor objects are never serialized directly.
+// Historical V2 wire contract; also supplies the unchanged document and presentation DTOs. Domain and editor objects are never serialized directly.
 public sealed record ProjectFileV2
 {
     public required string Format { get; init; }

@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels" xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Views.ProjectInfoSetupCard" x:DataType="vm:ProjectSetupViewModel" KeyboardNavigation.TabNavigation="Local">
+  <Border Classes="beamSetupCard" Padding="16" IsEnabled="{Binding !IsBusy}">
+    <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="12">
+      <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static resources:Strings.CalculationTitle}" Classes="bodyStrong" VerticalAlignment="Center" />
+      <Grid Grid.Row="0" Grid.Column="1" DataContext="{Binding CalculationTitleInput}">
+        <TextBox x:Name="CalculationTitleInput" x:DataType="vm:ProjectInfoInput" Text="{Binding Text, Mode=TwoWay}"
+                 Classes.error="{Binding HasError}" Padding="8,0,24,0" TabIndex="1"
+                 GotFocus="InputGotFocus" LostFocus="InputLostFocus" KeyDown="InputKeyDown"
+                 AutomationProperties.Name="{x:Static resources:Strings.CalculationTitle}" />
+        <controls:SectionInputHint x:DataType="vm:ProjectInfoInput" Classes="inputHint errorHint"
+                 IsVisible="{Binding HasError}" Message="{Binding ErrorText}"
+                 HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+          <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
+        </controls:SectionInputHint>
+      </Grid>
+      <TextBlock Grid.Row="0" Grid.Column="2" Text="{x:Static resources:Strings.Author}" Classes="bodyStrong" VerticalAlignment="Center" />
+      <Grid Grid.Row="0" Grid.Column="3" DataContext="{Binding AuthorInput}">
+        <TextBox x:Name="AuthorInput" x:DataType="vm:ProjectInfoInput" Text="{Binding Text, Mode=TwoWay}"
+                 Classes.error="{Binding HasError}" Padding="8,0,24,0" TabIndex="2"
+                 GotFocus="InputGotFocus" LostFocus="InputLostFocus" KeyDown="InputKeyDown"
+                 AutomationProperties.Name="{x:Static resources:Strings.Author}" />
+        <controls:SectionInputHint x:DataType="vm:ProjectInfoInput" Classes="inputHint errorHint"
+                 IsVisible="{Binding HasError}" Message="{Binding ErrorText}"
+                 HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+          <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
+        </controls:SectionInputHint>
+      </Grid>
+      <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static resources:Strings.Project}" Classes="bodyStrong" VerticalAlignment="Center" />
+      <Grid Grid.Row="1" Grid.Column="1" DataContext="{Binding ProjectTitleInput}">
+        <TextBox x:Name="ProjectTitleInput" x:DataType="vm:ProjectInfoInput" Text="{Binding Text, Mode=TwoWay}"
+                 Classes.error="{Binding HasError}" Padding="8,0,24,0" TabIndex="3"
+                 GotFocus="InputGotFocus" LostFocus="InputLostFocus" KeyDown="InputKeyDown"
+                 AutomationProperties.Name="{x:Static resources:Strings.Project}" />
+        <controls:SectionInputHint x:DataType="vm:ProjectInfoInput" Classes="inputHint errorHint"
+                 IsVisible="{Binding HasError}" Message="{Binding ErrorText}"
+                 HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+          <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
+        </controls:SectionInputHint>
+      </Grid>
+      <TextBlock Grid.Row="1" Grid.Column="2" Text="{x:Static resources:Strings.Reference}" Classes="bodyStrong" VerticalAlignment="Center" />
+      <Grid Grid.Row="1" Grid.Column="3" DataContext="{Binding ReferenceInput}">
+        <TextBox x:Name="ReferenceInput" x:DataType="vm:ProjectInfoInput" Text="{Binding Text, Mode=TwoWay}"
+                 Classes.error="{Binding HasError}" Padding="8,0,24,0" TabIndex="4"
+                 GotFocus="InputGotFocus" LostFocus="InputLostFocus" KeyDown="InputKeyDown"
+                 AutomationProperties.Name="{x:Static resources:Strings.Reference}" />
+        <controls:SectionInputHint x:DataType="vm:ProjectInfoInput" Classes="inputHint errorHint"
+                 IsVisible="{Binding HasError}" Message="{Binding ErrorText}"
+                 HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+          <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
+        </controls:SectionInputHint>
+      </Grid>
+    </Grid>
+  </Border>
+</UserControl>

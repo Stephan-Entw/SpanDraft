@@ -44,7 +44,7 @@ public sealed class ProjectFileTests
             var bytes = ProjectFileCodec.Serialize(state);
             var loaded = ProjectFileCodec.Deserialize(bytes);
             Assert.True(state.ContentEquals(loaded));
-            Assert.Equal(2, JsonNode.Parse(bytes)!["formatVersion"]!.GetValue<int>());
+            Assert.Equal(3, JsonNode.Parse(bytes)!["formatVersion"]!.GetValue<int>());
             Assert.Equal(BitConverter.DoubleToInt64Bits(state.Document.Length.Meters), BitConverter.DoubleToInt64Bits(loaded.Document.Length.Meters));
             Assert.Equal(state.Document.NamedEntities, loaded.Document.NamedEntities);
             Assert.Equal(state.Document.NamingState, loaded.Document.NamingState);
@@ -107,7 +107,7 @@ public sealed class ProjectFileTests
     [Theory]
     [InlineData("format", "Other")]
     [InlineData("formatVersion", 0)]
-    [InlineData("formatVersion", 3)]
+    [InlineData("formatVersion", 4)]
     [InlineData("document.length", 0)]
     [InlineData("document.length", -1)]
     [InlineData("document.material.youngsModulus", 0)]
@@ -259,4 +259,79 @@ public sealed class ProjectFileTests
         var (parent, key) = Parent(root, path);
         if (parent is JsonArray array) array[int.Parse(key)] = value; else parent[key] = value;
     }
+    [Theory]
+    [InlineData(null, null)] [InlineData("", "  ")]
+    [InlineData(" Bridge A ", " Drawing 12 ")]
+    public void VersionThreeRoundtripNormalizesProjectInformation(string? project, string? reference)
+    {
+        var info = new ProjectInfo(" Beam 1 ", project, reference, " Ada Lovelace ");
+        var state = State() with { Info = info };
+        var bytes = ProjectFileCodec.Serialize(state);
+        var loaded = ProjectFileCodec.Deserialize(bytes);
+        Assert.True(state.ContentEquals(loaded)); Assert.Equal(info, loaded.Info);
+        Assert.Equal("Beam 1", loaded.Info!.CalculationTitle); Assert.Equal("Ada Lovelace", loaded.Info.Author);
+        Assert.Equal(string.IsNullOrWhiteSpace(project) ? null : project.Trim(), loaded.Info.ProjectTitle);
+        Assert.Equal(string.IsNullOrWhiteSpace(reference) ? null : reference.Trim(), loaded.Info.Reference);
+        var json = JsonNode.Parse(bytes)!;
+        Assert.Equal(3, json["formatVersion"]!.GetValue<int>());
+        Assert.Equal("Beam 1", json["info"]!["calculationTitle"]!.GetValue<string>());
+    }
+
+    [Theory]
+    [InlineData("calculationTitle", null)] [InlineData("calculationTitle", "null")]
+    [InlineData("calculationTitle", "\" \\t\"")] [InlineData("calculationTitle", "123")]
+    [InlineData("author", null)] [InlineData("author", "null")]
+    [InlineData("author", "\"\"")] [InlineData("author", "true")]
+    public void InvalidPresentInfoNeverLoadsAsLegacy(string field, string? value)
+    {
+        var root = JsonNode.Parse(ProjectFileCodec.Serialize(State() with { Info = new("Beam", null, null, "Author") }))!;
+        if (value is null) root["info"]!.AsObject().Remove(field);
+        else root["info"]![field] = JsonNode.Parse(value);
+        Assert.Throws<ProjectFormatException>(() => ProjectFileCodec.Deserialize(Encoding.UTF8.GetBytes(root.ToJsonString())));
+    }
+
+    [Theory]
+    [InlineData(null, "Author")] [InlineData("", "Author")] [InlineData(" ", "Author")]
+    [InlineData("Beam", null)] [InlineData("Beam", "")] [InlineData("Beam", "\t")]
+    public void ProjectInfoRequiresBothTitleAndNaturalPerson(string? title, string? author) =>
+        Assert.Throws<ArgumentException>(() => new ProjectInfo(title!, null, null, author!));
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void VersionThreeAllowsMissingOrNullInfoForLegacy(bool explicitNull)
+    {
+        var root = JsonNode.Parse(ProjectFileCodec.Serialize(State()))!;
+        if (explicitNull) root["info"] = null;
+        var loaded = ProjectFileCodec.Deserialize(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        Assert.Null(loaded.Info); Assert.True(State().ContentEquals(loaded));
+    }
+
+    [Fact]
+    public void HistoricalVersionTwoDocumentIsReadWithoutInventedInformation()
+    {
+        var bytes = Encoding.UTF8.GetBytes("""
+            {"format":"SpanDraft.Project","formatVersion":2,
+             "document":{"length":2,"bendingAxis":"y",
+               "material":{"name":"Steel","youngsModulus":210000000000,"yieldStrength":235000000},
+               "section":{"type":"rectangle","width":0.1,"height":0.2},
+               "supports":[],"pointLoads":[],"distributedLoads":[],
+               "namingState":{"nextSupportOrdinal":1,"nextForceNumber":1,"nextMomentNumber":1,"nextDistributedLoadNumber":1}},
+             "presentation":{"annotationOffsets":[]}}
+            """);
+        var state = ProjectFileCodec.Deserialize(bytes);
+        Assert.Null(state.Info); Assert.Equal(2, state.Document.Length.Meters);
+        Assert.True(state.ContentEquals(ProjectFileCodec.Deserialize(ProjectFileCodec.Serialize(state))));
+    }
+
+    [Fact]
+    public void IncomingVersionThreeInfoIsTrimmedBeforeItBecomesProjectState()
+    {
+        var root = JsonNode.Parse(ProjectFileCodec.Serialize(State()))!;
+        root["info"] = new JsonObject { ["calculationTitle"] = " Beam ", ["author"] = " Author ",
+            ["projectTitle"] = "  ", ["reference"] = " Drawing " };
+        var loaded = ProjectFileCodec.Deserialize(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        Assert.Equal(new ProjectInfo("Beam", null, "Drawing", "Author"), loaded.Info);
+        Assert.Equal("Drawing", JsonNode.Parse(ProjectFileCodec.Serialize(loaded))!["info"]!["reference"]!.GetValue<string>());
+    }
+
 }

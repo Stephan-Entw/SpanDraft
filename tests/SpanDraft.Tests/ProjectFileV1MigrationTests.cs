@@ -40,6 +40,7 @@ public sealed class ProjectFileV1MigrationTests
     {
         var bytes = HistoricalBytes(kind);
         var loaded = ProjectFileCodec.Deserialize(bytes);
+        Assert.Null(loaded.Info);
         var doc = loaded.Document;
         var expectedType = kind switch { 0 => typeof(RectangleSectionGeometry), 1 => typeof(RectangularHollowSectionGeometry),
             2 => typeof(CircleSectionGeometry), 3 => typeof(CircularHollowSectionGeometry), _ => typeof(ManualSectionDefinition) };
@@ -64,13 +65,13 @@ public sealed class ProjectFileV1MigrationTests
         var engineering = BeamEngineeringAnalysis.Analyze(solution);
         NumericAssert.Close(stress, engineering.MaximumBendingStress.Pascals);
         NumericAssert.Close(safety, engineering.SafetyFactor);
-        var v2 = ProjectFileCodec.Serialize(loaded);
-        var again = ProjectFileCodec.Deserialize(v2);
+        var v3 = ProjectFileCodec.Serialize(loaded);
+        var again = ProjectFileCodec.Deserialize(v3);
         Assert.True(loaded.ContentEquals(again));
         Assert.True(BeamModelMechanicalComparer.AreEquivalent(doc.ToBeamModel(), again.Document.ToBeamModel()));
         SolverTestSupport.SameResults(solution, SolverTestSupport.Solve(again.Document.ToBeamModel()));
-        var wire = JsonNode.Parse(v2)!;
-        Assert.Equal(2, wire["formatVersion"]!.GetValue<int>());
+        var wire = JsonNode.Parse(v3)!;
+        Assert.Equal(3, wire["formatVersion"]!.GetValue<int>());
         Assert.Equal(kind == 4 ? "manual" : Types[kind], wire["document"]!["section"]!["type"]!.GetValue<string>());
         Assert.Null(wire["document"]!["material"]!["density"]);
         Assert.Null(wire["document"]!["material"]!["poissonRatio"]);
@@ -83,7 +84,7 @@ public sealed class ProjectFileV1MigrationTests
     [InlineData(2)]
     [InlineData(3)]
     [InlineData(4)]
-    public void LegacyWriterUsesOnlyCanonicalV2Types(int kind)
+    public void CurrentWriterUsesOnlyCanonicalSectionTypes(int kind)
     {
         var migrated = ProjectFileCodec.Deserialize(HistoricalBytes(kind));
         var legacy = migrated with { Document = migrated.Document.WithSection(Legacy(kind), SectionAxisDesignation.Y) };
@@ -114,7 +115,7 @@ public sealed class ProjectFileV1MigrationTests
         Assert.False(app.Main.Session.IsDirty); Assert.Empty(app.Main.Session.UndoHistory);
         Assert.True(await app.Main.SaveAsync());
         Assert.Equal(path, app.Main.Session.FilePath);
-        Assert.Equal(2, JsonNode.Parse(app.Files.Data[path])!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(3, JsonNode.Parse(app.Files.Data[path])!["formatVersion"]!.GetValue<int>());
         Assert.True(ProjectFileCodec.Deserialize(original).ContentEquals(ProjectFileCodec.Deserialize(app.Files.Data[path])));
         Assert.False(app.Main.Session.IsDirty);
     }
@@ -142,7 +143,7 @@ public sealed class ProjectFileV1MigrationTests
         await recovery.FlushAsync(session.CurrentRevision.State, session.FilePath);
         var root = JsonNode.Parse(files.Data[path])!;
         Assert.Equal(1, root["recoveryVersion"]!.GetValue<int>());
-        Assert.Equal(2, root["project"]!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(3, root["project"]!["formatVersion"]!.GetValue<int>());
         Assert.True(snapshot.State.ContentEquals((await recovery.ReadAsync())!.State));
     }
 

@@ -38,7 +38,7 @@ internal static class ProjectFileV1Reader
                 if (value is { } v) Number(v, "section");
             return new()
             {
-                Format = Format, FormatVersion = ProjectFileCodec.Version,
+                Format = Format, FormatVersion = 2,
                 Document = new()
                 {
                     Length = d.Length, BendingAxis = "y", Section = SectionToDto(legacy),

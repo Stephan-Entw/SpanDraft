@@ -51,11 +51,12 @@ public static class SettingsCodec
         public required PresentationMode PresentationMode { get; init; }
         public UiLanguagePreference? UiLanguage { get; init; }
         public RegionalFormatPreference? RegionalFormat { get; init; }
+        public string? DefaultAuthor { get; init; }
     }
 
     public static byte[] Serialize(UserSettings settings) => JsonSerializer.SerializeToUtf8Bytes(new SettingsData
     {
-        Version = 2, SelectedProfile = settings.Profile.Kind, LastStandardProfile = settings.LastStandardProfile,
+        Version = 3, DefaultAuthor = settings.DefaultAuthor, SelectedProfile = settings.Profile.Kind, LastStandardProfile = settings.LastStandardProfile,
         HasCustomProfile = settings.HasCustomProfile, PresentationMode = settings.Mode,
         UiLanguage = settings.UiLanguage, RegionalFormat = settings.RegionalFormat,
         CustomUnits = settings.CustomProfile?.Units.ToDictionary(p => p.Key, p => p.Value.Id)
@@ -64,13 +65,13 @@ public static class SettingsCodec
     public static UserSettings Deserialize(byte[] bytes)
     {
         var dto = JsonSerializer.Deserialize<SettingsData>(bytes, Options) ?? throw new JsonException("Missing settings.");
-        if (dto.Version is not (1 or 2) || !Enum.IsDefined(dto.SelectedProfile) || !Enum.IsDefined(dto.PresentationMode)
+        if (dto.Version is not (1 or 2 or 3) || !Enum.IsDefined(dto.SelectedProfile) || !Enum.IsDefined(dto.PresentationMode)
             || dto.LastStandardProfile == UnitProfileKind.Custom || !Enum.IsDefined(dto.LastStandardProfile)
             || dto.HasCustomProfile != (dto.CustomUnits is not null)
             || dto.SelectedProfile == UnitProfileKind.Custom && !dto.HasCustomProfile
             || dto.SelectedProfile != UnitProfileKind.Custom && dto.SelectedProfile != dto.LastStandardProfile)
             throw new JsonException("Invalid settings version or profile selection.");
-        if (dto.Version == 2 && (dto.UiLanguage is not { } language || !Enum.IsDefined(language)
+        if (dto.Version >= 2 && (dto.UiLanguage is not { } language || !Enum.IsDefined(language)
             || dto.RegionalFormat is not { } region || !Enum.IsDefined(region)))
             throw new JsonException("Invalid language or regional format.");
         UnitProfile? custom = null;
@@ -82,7 +83,7 @@ public static class SettingsCodec
             if (UserSettings.Recognize(custom).Kind != UnitProfileKind.Custom)
                 throw new JsonException("A custom profile must be an individual combination.");
         }
-        return new UserSettings { CustomProfile = custom, Mode = dto.PresentationMode,
+        return new UserSettings { DefaultAuthor = dto.Version >= 3 ? dto.DefaultAuthor : null, CustomProfile = custom, Mode = dto.PresentationMode,
             UiLanguage = dto.Version == 1 ? UiLanguagePreference.System : dto.UiLanguage!.Value,
             RegionalFormat = dto.Version == 1 ? RegionalFormatPreference.System : dto.RegionalFormat!.Value,
             LastStandardProfile = dto.LastStandardProfile }.Select(dto.SelectedProfile);

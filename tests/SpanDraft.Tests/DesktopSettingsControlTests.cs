@@ -36,6 +36,11 @@ public sealed class DesktopSettingsControlTests
         var window = new SettingsWindow(model);
         Arrange(window, width, height);
         var scroll = window.FindControl<ScrollViewer>("SettingsScroll")!;
+        var defaultAuthor = window.FindControl<TextBox>("DefaultAuthorInput")!;
+        Assert.Equal(Strings.DefaultAuthor, Avalonia.Automation.AutomationProperties.GetName(defaultAuthor));
+        Assert.True(defaultAuthor.IsEnabled); defaultAuthor.Text = " Ada Lovelace ";
+        Assert.Equal("Ada Lovelace", model.Pending.DefaultAuthor);
+        Assert.True(defaultAuthor.Bounds.Width <= scroll.Bounds.Width);
         var language = window.FindControl<ComboBox>("LanguagePicker")!;
         var region = window.FindControl<ComboBox>("RegionalFormatPicker")!;
         Assert.True(language.IsEnabled); Assert.True(region.IsEnabled);

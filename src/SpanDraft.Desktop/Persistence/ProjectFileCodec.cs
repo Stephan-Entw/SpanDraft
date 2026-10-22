@@ -15,7 +15,7 @@ public sealed class ProjectFormatException(string message, Exception? inner = nu
 public static class ProjectFileCodec
 {
     public const string Format = "SpanDraft.Project";
-    public const int Version = 2;
+    public const int Version = 3;
     internal static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -44,6 +44,7 @@ public static class ProjectFileCodec
             {
                 1 => FromDto(root.Deserialize<ProjectFileV1>(JsonOptions)!),
                 2 => FromDto(root.Deserialize<ProjectFileV2>(JsonOptions)!),
+                3 => FromDto(root.Deserialize<ProjectFileV3>(JsonOptions)!),
                 _ => throw new ProjectFormatException("Unsupported project format version.")
             };
         }
@@ -55,13 +56,15 @@ public static class ProjectFileCodec
 
     public static ProjectState FromDto(ProjectFileV1 file) => FromDto(ProjectFileV1Reader.Migrate(file));
 
-    public static ProjectFileV2 ToDto(ProjectState state)
+    public static ProjectFileV3 ToDto(ProjectState state)
     {
         var d = state.Document;
         var n = d.NamingState;
         return new()
         {
             Format = Format, FormatVersion = Version,
+            Info = state.Info is { } info ? new() { CalculationTitle = info.CalculationTitle,
+                ProjectTitle = info.ProjectTitle, Reference = info.Reference, Author = info.Author } : null,
             Document = new()
             {
                 Length = d.Length.Meters, BendingAxis = AxisToWire(d.BendingAxis), SectionDisplayName = d.SectionDisplayName,
@@ -172,21 +175,38 @@ public static class ProjectFileCodec
 
     public static ProjectState FromDto(ProjectFileV2 file)
     {
-        try { return MapValidated(file); }
+        try
+        {
+            Required(file, "project");
+            if (file.Format != Format || file.FormatVersion != 2)
+                throw new ProjectFormatException("Invalid V2 project format or version.");
+            return MapValidated(file.Document, file.Presentation);
+        }
         catch (Exception e) when (e is ArgumentException or OverflowException)
         { throw new ProjectFormatException("Invalid project data: " + e.Message, e); }
     }
 
-    private static ProjectState MapValidated(ProjectFileV2 file)
+    public static ProjectState FromDto(ProjectFileV3 file)
     {
-        Required(file, "project");
-        if (file.Format != Format) throw new ProjectFormatException("Not a SpanDraft project.");
-        if (file.FormatVersion != Version) throw new ProjectFormatException("Unsupported project format version.");
-        var d = Required(file.Document, "document");
+        try
+        {
+            Required(file, "project");
+            if (file.Format != Format || file.FormatVersion != Version)
+                throw new ProjectFormatException("Invalid V3 project format or version.");
+            var info = file.Info is { } i ? new ProjectInfo(i.CalculationTitle, i.ProjectTitle, i.Reference, i.Author) : null;
+            return MapValidated(file.Document, file.Presentation) with { Info = info };
+        }
+        catch (Exception e) when (e is ArgumentException or OverflowException)
+        { throw new ProjectFormatException("Invalid project data: " + e.Message, e); }
+    }
+
+    private static ProjectState MapValidated(DocumentV2 documentDto, PresentationV2 presentationDto)
+    {
+        var d = Required(documentDto, "document");
         var m = Required(d.Material, "material");
         var s = Required(d.Section, "section");
         var n = Required(d.NamingState, "namingState");
-        var p = Required(file.Presentation, "presentation");
+        var p = Required(presentationDto, "presentation");
         var ids = new HashSet<Guid>();
         Guid EntityId(Guid id)
         {

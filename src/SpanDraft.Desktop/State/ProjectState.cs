@@ -5,10 +5,10 @@ using SpanDraft.Core.Sections.Parametric;
 namespace SpanDraft.Desktop.State;
 
 /// <summary>The complete immutable, persistent project. Interaction and analysis are deliberately absent.</summary>
-public sealed record ProjectState(EditorDocument Document, EditorPresentationState Presentation)
+public sealed record ProjectState(EditorDocument Document, EditorPresentationState Presentation, ProjectInfo? Info = null)
 {
     public bool ContentEquals(ProjectState other) => DocumentContentEquals(Document, other.Document)
-        && Presentation.ContentEquals(other.Presentation);
+        && Presentation.ContentEquals(other.Presentation) && Info == other.Info;
 
     public static bool DocumentContentEquals(EditorDocument a, EditorDocument b) => a.Length == b.Length
         && a.BendingAxis == b.BendingAxis && a.SectionDisplayName == b.SectionDisplayName

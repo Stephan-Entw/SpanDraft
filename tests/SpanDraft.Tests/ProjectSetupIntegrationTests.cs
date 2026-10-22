@@ -19,23 +19,30 @@ namespace SpanDraft.Tests;
 [Collection("Schematic text")]
 public sealed class ProjectSetupIntegrationTests
 {
+    public static IEnumerable<object[]> CreateFields() => Enumerable.Range(0, 32).Select(i => new object[] { i });
+
     [Theory]
-    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)]
-    [InlineData(4)] [InlineData(5)] [InlineData(6)] [InlineData(7)]
+    [MemberData(nameof(CreateFields))]
     public async Task CreateRequiresEveryValueAndOnlyCreatesACompleteDocument(int fields)
     {
         var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
         if ((fields & 1) != 0) { setup.LengthInput.Begin(); setup.LengthInput.Text = "1500"; }
         if ((fields & 2) != 0) setup.SelectedSection = new RectangleSectionGeometry(M(.1), M(.2));
         if ((fields & 4) != 0) setup.SelectedMaterial = ProjectTemplates.Material;
-        Assert.Equal(fields == 7, setup.CanApply); Assert.Equal(fields == 7, setup.ApplyCommand.CanExecute(null));
-        Assert.Equal(fields == 7, await setup.ConfirmAsync());
-        if (fields == 7) Assert.Equal(M(1.5), app.Main.Editor!.Document.Length);
+        if ((fields & 8) != 0) setup.CalculationTitleInput.Text = "Calculation";
+        if ((fields & 16) != 0) setup.AuthorInput.Text = "Author";
+        Assert.Equal(fields == 31, setup.CanApply); Assert.Equal(fields == 31, setup.ApplyCommand.CanExecute(null));
+        Assert.Equal(fields == 31, await setup.ConfirmAsync());
+        if (fields == 31)
+        {
+            Assert.Equal(M(1.5), app.Main.Editor!.Document.Length);
+            Assert.Equal(new ProjectInfo("Calculation", null, null, "Author"), app.Main.Session!.CurrentRevision.State.Info);
+        }
         else { Assert.Null(app.Main.Editor); Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses); }
     }
 
     [Theory]
-    [InlineData(0)] [InlineData(1)] [InlineData(2)]
+    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)] [InlineData(4)]
     public async Task LastRequiredValueRefreshesTheCreateCommand(int last)
     {
         var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
@@ -43,9 +50,11 @@ public sealed class ProjectSetupIntegrationTests
         {
             if (field == 0) { setup.LengthInput.Begin(); setup.LengthInput.Text = "1500"; }
             else if (field == 1) setup.SelectedSection = ProjectTemplates.Section;
-            else setup.SelectedMaterial = ProjectTemplates.Material;
+            else if (field == 2) setup.SelectedMaterial = ProjectTemplates.Material;
+            else if (field == 3) setup.CalculationTitleInput.Text = "Calculation";
+            else setup.AuthorInput.Text = "Author";
         }
-        foreach (int field in Enumerable.Range(0, 3).Where(i => i != last)) SetField(field);
+        foreach (int field in Enumerable.Range(0, 5).Where(i => i != last)) SetField(field);
         Assert.False(setup.CanApply); bool enabled = false;
         setup.ApplyCommand.CanExecuteChanged += (_, _) => enabled = setup.ApplyCommand.CanExecute(null);
         SetField(last); Assert.True(enabled); Assert.True(setup.CanApply);
@@ -118,7 +127,7 @@ public sealed class ProjectSetupIntegrationTests
     public async Task EmptyLengthAndConfirmedInputOnlyChangeTheDraft(string culture, string text)
     {
         using var scope = new UiCultureScope(culture);
-        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
+        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup; CompleteProjectInfo(setup);
         Assert.Null(setup.SelectedLength); Assert.Empty(setup.LengthInput.Text);
         Assert.False(setup.HasLengthError); Assert.False(setup.CanApply);
         setup.SelectedSection = ProjectTemplates.Section; setup.SelectedMaterial = ProjectTemplates.Material;
@@ -136,7 +145,7 @@ public sealed class ProjectSetupIntegrationTests
     [InlineData("NaN")] [InlineData("Infinity")] [InlineData("1e400")]
     public async Task RejectedLengthSurvivesBlurAndPreventsCreation(string text)
     {
-        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
+        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup; CompleteProjectInfo(setup);
         setup.SelectedSection = ProjectTemplates.Section; setup.SelectedMaterial = ProjectTemplates.Material;
         setup.LengthInput.Begin(); setup.LengthInput.Text = text;
         Assert.False(setup.HasLengthError); Assert.False(setup.CanApply);
@@ -152,7 +161,7 @@ public sealed class ProjectSetupIntegrationTests
     [InlineData("")] [InlineData(" ")] [InlineData("\t")]
     public async Task MissingCreateLengthStaysNeutralAfterBlurAndConfirmation(string text)
     {
-        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
+        var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup; CompleteProjectInfo(setup);
         setup.SelectedSection = ProjectTemplates.Section; setup.SelectedMaterial = ProjectTemplates.Material;
         setup.LengthInput.Begin(); setup.LengthInput.Text = text; setup.LengthInput.LoseFocus();
         Assert.False(setup.HasLengthError); Assert.False(setup.LengthInput.HasError); Assert.Null(setup.LengthError);
@@ -385,4 +394,88 @@ public sealed class ProjectSetupIntegrationTests
         wire["document"]!["sectionDisplayName"] = null;
         Assert.Null(ProjectFileCodec.Deserialize(Encoding.UTF8.GetBytes(wire.ToJsonString())).Document.SectionDisplayName);
     }
+    [Fact]
+    public async Task SetupCommitsInfoAndBeamTogetherAndInfoOnlyDoesNotAnalyze()
+    {
+        var app = new App(); Assert.True(await app.Main.SaveAsync());
+        var session = app.Main.Session!; var before = session.CurrentRevision.State; int calls = app.Analyses;
+        Assert.Equal("Beam01.spandraft", app.Main.ProjectFileName);
+        Assert.Equal("Test calculation", before.Info!.CalculationTitle);
+        app.Main.EditProject(); var setup = app.Main.Setup;
+        Assert.Equal(before.Info!.CalculationTitle, setup.CalculationTitleInput.Text);
+        setup.CalculationTitleInput.Text = " Beam 2 "; setup.AuthorInput.Text = " New author ";
+        setup.ProjectTitleInput.Text = " Project A "; setup.ReferenceInput.Text = " Drawing 2 ";
+        setup.LengthInput.Begin(); setup.LengthInput.Text = "2000";
+        Assert.Same(before, session.CurrentRevision.State);
+        Assert.True(await setup.ConfirmAsync()); Assert.Single(session.UndoHistory); Assert.Equal(calls + 1, app.Analyses);
+        var after = session.CurrentRevision.State;
+        Assert.Equal(new ProjectInfo("Beam 2", "Project A", "Drawing 2", "New author"), after.Info);
+        Assert.Equal(M(2), after.Document.Length);
+        Assert.True(app.Main.Undo()); Assert.Same(before, session.CurrentRevision.State); Assert.False(session.IsDirty);
+        Assert.True(app.Main.Redo()); Assert.Same(after, session.CurrentRevision.State);
+        calls = app.Analyses; app.Main.EditProject(); setup = app.Main.Setup;
+        setup.ReferenceInput.Text = "Drawing 3"; Assert.True(await setup.ConfirmAsync());
+        Assert.Equal(calls, app.Analyses); Assert.Equal(2, session.UndoHistory.Count);
+        app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
+        Assert.Equal(session.CurrentRevision.State.Info, (await app.Recovery.ReadAsync())!.State.Info);
+        Assert.True(app.Main.Undo()); Assert.True(app.Main.Redo()); Assert.Equal(calls, app.Analyses);
+    }
+
+    [Theory]
+    [InlineData("calculationTitle")] [InlineData("author")]
+    public async Task ExistingInfoCannotBeClearedAndCancelPreservesTheRevision(string field)
+    {
+        var app = new App(); var revision = app.Main.Session!.CurrentRevision;
+        app.Main.EditProject(); var setup = app.Main.Setup;
+        var input = field == "author" ? setup.AuthorInput : setup.CalculationTitleInput;
+        input.Begin(); input.Text = " "; Assert.False(setup.CanApply);
+        Assert.False(await setup.ConfirmAsync()); Assert.True(input.HasError);
+        Assert.Same(revision, app.Main.Session.CurrentRevision);
+        setup.CancelCommand.Execute(null); Assert.Same(revision, app.Main.Session.CurrentRevision);
+    }
+
+    [Fact]
+    public async Task LegacyCanBeOpenedEditedAndSavedWithoutInfoButPartialInfoIsRejected()
+    {
+        var app = new App(create: false); var path = TestPath("legacy.spandraft");
+        var json = JsonNode.Parse(ProjectFileCodec.Serialize(State()))!; json["formatVersion"] = 2;
+        app.Files.Data[path] = Encoding.UTF8.GetBytes(json.ToJsonString());
+        Assert.True(await app.Main.OpenAsync(path)); Assert.False(app.Main.Session!.IsDirty);
+        Assert.Null(app.Main.Session.CurrentRevision.State.Info); app.Main.EditProject();
+        var setup = app.Main.Setup;
+        Assert.Empty(setup.CalculationTitleInput.Text); Assert.Empty(setup.AuthorInput.Text);
+        setup.LengthInput.Begin(); setup.LengthInput.Text = "2000";
+        Assert.True(await setup.ConfirmAsync()); Assert.Null(app.Main.Session.CurrentRevision.State.Info);
+        Assert.True(await app.Main.SaveAsync()); Assert.False(app.Main.Session.IsDirty);
+        Assert.Equal(3, JsonNode.Parse(app.Files.Data[path])!["formatVersion"]!.GetValue<int>());
+        app.Main.EditProject(); setup = app.Main.Setup;
+        setup.ReferenceInput.Text = "Drawing"; Assert.False(setup.CanApply);
+        Assert.False(await setup.ConfirmAsync()); Assert.True(setup.CalculationTitleInput.HasError); Assert.True(setup.AuthorInput.HasError);
+        Assert.Null(app.Main.Session.CurrentRevision.State.Info);
+        setup.ReferenceInput.Text = " "; Assert.True(await setup.ConfirmAsync()); Assert.False(app.Main.Session.IsDirty);
+        app.Main.EditProject(); setup = app.Main.Setup;
+        setup.CalculationTitleInput.Text = "Beam"; setup.AuthorInput.Text = "Author";
+        Assert.True(await setup.ConfirmAsync()); Assert.NotNull(app.Main.Session.CurrentRevision.State.Info);
+        Assert.True(app.Main.Undo()); Assert.Null(app.Main.Session.CurrentRevision.State.Info);
+        Assert.False(app.Main.Session.IsDirty);
+    }
+
+    [Fact]
+    public async Task DefaultAuthorIsOnlyCopiedIntoFreshCreateDrafts()
+    {
+        var main = new MainWindowViewModel(settings: UserSettings.Default with { DefaultAuthor = " First author " });
+        Assert.True(await main.NewAsync()); var setup = main.Setup;
+        Assert.Equal("First author", setup.AuthorInput.Text); Assert.Equal("First author", setup.Draft.Author);
+        Assert.Null(await main.ApplySettingsAsync(main.Settings with { DefaultAuthor = "Second author" }));
+        Assert.Equal("First author", setup.AuthorInput.Text);
+        CompleteSetup(main); Assert.True(await setup.ConfirmAsync());
+        var revision = main.Session!.CurrentRevision;
+        Assert.Equal("First author", revision.State.Info!.Author);
+        main.EditProject(); Assert.Equal("First author", main.Setup.AuthorInput.Text);
+        Assert.Null(await main.ApplySettingsAsync(main.Settings with { DefaultAuthor = "Third author" }));
+        Assert.Same(revision, main.Session.CurrentRevision); Assert.Equal("First author", main.Setup.AuthorInput.Text);
+        main.Setup.CancelCommand.Execute(null); Assert.True(await main.NewAsync());
+        Assert.Equal("Third author", main.Setup.AuthorInput.Text);
+    }
+
 }
