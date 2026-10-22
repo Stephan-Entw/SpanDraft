@@ -36,11 +36,9 @@ public sealed class DesktopSettingsControlTests
         var window = new SettingsWindow(model);
         Arrange(window, width, height);
         var scroll = window.FindControl<ScrollViewer>("SettingsScroll")!;
-        var defaultAuthor = window.FindControl<TextBox>("DefaultAuthorInput")!;
-        Assert.Equal(Strings.DefaultAuthor, Avalonia.Automation.AutomationProperties.GetName(defaultAuthor));
-        Assert.True(defaultAuthor.IsEnabled); defaultAuthor.Text = " Ada Lovelace ";
-        Assert.Equal("Ada Lovelace", model.Pending.DefaultAuthor);
-        Assert.True(defaultAuthor.Bounds.Width <= scroll.Bounds.Width);
+        Assert.Null(window.FindControl<TextBox>("DefaultAuthorInput"));
+        var headings = window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Classes.Contains("sectionTitle"));
+        Assert.Equal(Strings.SettingsUnits, headings.First().Text);
         var language = window.FindControl<ComboBox>("LanguagePicker")!;
         var region = window.FindControl<ComboBox>("RegionalFormatPicker")!;
         Assert.True(language.IsEnabled); Assert.True(region.IsEnabled);
@@ -223,6 +221,7 @@ public sealed class DesktopSettingsControlTests
             ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
             main.Editor!.DimensionLength.Begin(); main.Editor.DimensionLength.Text = "1200";
         }
+        var applied = main.Settings;
         var model = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
         var window = new SettingsWindow(model);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
@@ -233,7 +232,7 @@ public sealed class DesktopSettingsControlTests
         Assert.False(closeApproved); Assert.True(model.IsUnitedStates); Assert.True(model.HasError);
         Assert.Equal(UiLanguagePreference.English, model.SelectedUiLanguage);
         Assert.Equal(RegionalFormatPreference.GermanGermany, model.SelectedRegionalFormat);
-        Assert.True(main.Settings.ContentEquals(UserSettings.Default));
+        Assert.Same(applied, main.Settings);
         if (activeDraft) main.Editor!.DimensionLength.Cancel();
         else files.FailWritePath = null;
         Click(window, "OkButton");

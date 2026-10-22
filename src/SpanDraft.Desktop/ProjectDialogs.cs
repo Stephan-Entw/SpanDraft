@@ -25,14 +25,14 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
         return file.TryGetLocalPath() ?? throw new IOException(Strings.LocalFilesOnly);
     }
 
-    public async Task<string?> PickSavePathAsync(string? currentFilePath)
+    public async Task<string?> PickSavePathAsync(string? currentFilePath, string? calculationTitle)
     {
         using var folder = currentFilePath is null ? null
             : await owner.StorageProvider.TryGetFolderFromPathAsync(Path.GetDirectoryName(currentFilePath)!);
         using var file = await owner.StorageProvider.SaveFilePickerAsync(new()
         {
             Title = Strings.SaveAs, FileTypeChoices = [ProjectType], DefaultExtension = "spandraft",
-            SuggestedFileName = currentFilePath is null ? Strings.Untitled : Path.GetFileNameWithoutExtension(currentFilePath),
+            SuggestedFileName = ProjectSaveFileName.Suggest(currentFilePath, calculationTitle, Strings.Untitled),
             SuggestedStartLocation = folder, ShowOverwritePrompt = true
         });
         return file is null ? null : file.TryGetLocalPath() ?? throw new IOException(Strings.LocalFilesOnly);

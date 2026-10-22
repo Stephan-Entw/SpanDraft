@@ -26,14 +26,6 @@
                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="{DynamicResource Padding24}" Spacing="{StaticResource Space16}">
       <StackPanel x:Name="EditableSettings" Spacing="{StaticResource Space16}" IsEnabled="{Binding !IsSaving}">
-        <StackPanel Spacing="{StaticResource Space12}">
-          <TextBlock Text="{x:Static resources:Strings.SettingsGeneral}" Classes="sectionTitle" />
-          <StackPanel Spacing="{StaticResource Space4}">
-            <TextBlock Text="{x:Static resources:Strings.DefaultAuthor}" Classes="propertyLabel" />
-            <TextBox x:Name="DefaultAuthorInput" Text="{Binding DefaultAuthor, Mode=TwoWay}"
-                     AutomationProperties.Name="{x:Static resources:Strings.DefaultAuthor}" />
-          </StackPanel>
-        </StackPanel>
         <StackPanel Spacing="{StaticResource Space16}">
           <TextBlock Text="{x:Static resources:Strings.SettingsUnits}" Classes="sectionTitle" />
           <StackPanel x:Name="ProfileRow" Orientation="Horizontal" Spacing="{StaticResource Space16}">

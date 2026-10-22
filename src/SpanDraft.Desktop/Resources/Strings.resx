@@ -309,10 +309,9 @@
   <data name="Today" xml:space="preserve"><value>Today</value></data>
   <data name="Yesterday" xml:space="preserve"><value>Yesterday</value></data>
   <data name="ProjectInformation" xml:space="preserve"><value>Project information</value></data>
-  <data name="CalculationTitle" xml:space="preserve"><value>Calculation</value></data>
-  <data name="Author" xml:space="preserve"><value>Author</value></data>
+  <data name="CalculationTitle" xml:space="preserve"><value>Title</value></data>
+  <data name="Author" xml:space="preserve"><value>Created by</value></data>
   <data name="Reference" xml:space="preserve"><value>Reference</value></data>
   <data name="RequiredProjectInfo" xml:space="preserve"><value>A value is required.</value></data>
-  <data name="SettingsGeneral" xml:space="preserve"><value>General</value></data>
-  <data name="DefaultAuthor" xml:space="preserve"><value>Default author</value></data>
+  <data name="Optional" xml:space="preserve"><value>(optional)</value></data>
 </root>

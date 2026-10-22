@@ -20,12 +20,19 @@
         </Grid>
       </Border>
       <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="24" Spacing="16">
-          <TextBlock Text="{Binding StartupError}" IsVisible="{Binding HasStartupError}" Classes="validationMessage" TextWrapping="Wrap" />
-          <TextBlock Text="{x:Static resources:Strings.ProjectInformation}" Classes="sectionTitle" />
-          <views:ProjectInfoSetupCard />
-          <TextBlock Text="{x:Static resources:Strings.SetupBeam}" Classes="sectionTitle" />
-          <views:BeamSetupCard x:Name="BeamCard" />
+        <StackPanel>
+          <Border x:Name="ProjectInfoSurface" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}"
+                  BorderThickness="{DynamicResource BottomBorder}" Padding="{DynamicResource Padding24}">
+            <StackPanel Spacing="{StaticResource Space16}">
+              <TextBlock Text="{Binding StartupError}" IsVisible="{Binding HasStartupError}" Classes="validationMessage" TextWrapping="Wrap" />
+              <TextBlock Text="{x:Static resources:Strings.ProjectInformation}" Classes="sectionTitle" />
+              <views:ProjectInfoSetupCard />
+            </StackPanel>
+          </Border>
+          <StackPanel Margin="{DynamicResource Padding24}" Spacing="{StaticResource Space16}">
+            <TextBlock Text="{x:Static resources:Strings.SetupBeam}" Classes="sectionTitle" />
+            <views:BeamSetupCard x:Name="BeamCard" />
+          </StackPanel>
         </StackPanel>
       </ScrollViewer>
     </Grid>

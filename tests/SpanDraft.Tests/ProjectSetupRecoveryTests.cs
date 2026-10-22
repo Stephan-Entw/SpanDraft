@@ -46,10 +46,10 @@ public sealed class ProjectSetupRecoveryTests
         public void Seed(ProjectSetupDraft? draft = null) => Files.Data[Slot] = ProjectSetupRecovery.Encode(new(draft ?? Draft(), Now));
         public async Task Publish()
         { Delay.ReleaseAll(); await WaitFor(Recovery.DrainAsync()); }
-        public async Task RestoreBoth()
+        public async Task RestoreBoth(UserSettings? settings = null)
         {
             Files.Data[ProjectSlot] = ProjectRecovery.Encode(new(State(), null, Now));
-            Seed(); Start(); Assert.True(await Main.InitializeRecoveryAsync());
+            Seed(); Start(settings); Assert.True(await Main.InitializeRecoveryAsync());
         }
     }
 
@@ -403,12 +403,13 @@ public sealed class ProjectSetupRecoveryTests
     [InlineData("leaveCancel")] [InlineData("saveCancel")] [InlineData("saveFailure")] [InlineData("leaveCleanupFailure")]
     public async Task IncompleteCreationAndCloseKeepDraftAndPreviousSession(string failure)
     {
-        var f = new Fixture(); await f.RestoreBoth(); var session = f.Main.Session;
+        var f = new Fixture(); await f.RestoreBoth(UserSettings.Default with { LastAuthor = "Local author" }); var session = f.Main.Session;
         f.Dialogs.Leave = failure == "leaveCancel" ? LeaveDecision.Cancel : LeaveDecision.Save;
         if (failure == "saveCancel") f.Dialogs.SavePath = null;
         if (failure == "saveFailure") f.Files.FailWritePath = f.Dialogs.SavePath;
         if (failure == "leaveCleanupFailure") { f.Dialogs.Leave = LeaveDecision.Discard; f.Files.FailDelete = true; }
         Assert.False(await f.Main.Setup.ConfirmAsync()); Assert.Same(session, f.Main.Session);
+        Assert.Equal("Local author", f.Main.Settings.LastAuthor);
         Assert.Equal(MainViewMode.ProjectSetup, f.Main.Mode); Assert.NotNull(await f.Recovery.ReadAsync());
         Assert.False(await f.Main.RequestCloseAsync()); Assert.NotNull(await f.Recovery.ReadAsync());
     }
@@ -448,21 +449,22 @@ public sealed class ProjectSetupRecoveryTests
         var draft = new ProjectSetupDraft(CalculationTitle: (fields & 1) != 0 ? "Beam 1" : null,
             Author: (fields & 2) != 0 ? "Original author" : null,
             ProjectTitle: (fields & 4) != 0 ? "Project" : null, Reference: (fields & 8) != 0 ? "Drawing" : null);
-        var f = new Fixture(); f.Seed(draft); f.Start(UserSettings.Default with { DefaultAuthor = "Current default" });
+        var f = new Fixture(); f.Seed(draft); f.Start(UserSettings.Default with { LastAuthor = "Current default" });
         var bytes = f.Files.Data[Slot]; Assert.Equal(2, JsonNode.Parse(bytes)!["recoveryVersion"]!.GetValue<int>());
         Assert.True(await f.Main.InitializeRecoveryAsync()); Assert.True(draft.ContentEquals(f.Main.Setup.Draft));
         Assert.Equal(draft.Author ?? "", f.Main.Setup.AuthorInput.Text); Assert.Empty(f.Delay.Waiters);
         Assert.Equal(bytes, f.Files.Data[Slot]); Assert.Null(f.Main.Session);
+        Assert.Equal("Current default", f.Main.Settings.LastAuthor);
     }
 
     [Fact]
-    public async Task VersionOneRecoveryRestoresNoInfoAndNeverMergesTheCurrentDefaultAuthor()
+    public async Task VersionOneRecoveryRestoresNoInfoAndNeverMergesTheCurrentLastAuthor()
     {
         var f = new Fixture(); f.Seed();
         var json = JsonNode.Parse(f.Files.Data[Slot])!; json["recoveryVersion"] = 1;
         foreach (var key in new[] { "calculationTitle", "projectTitle", "reference", "author" }) json["draft"]!.AsObject().Remove(key);
         f.Files.Data[Slot] = Encoding.UTF8.GetBytes(json.ToJsonString());
-        f.Start(UserSettings.Default with { DefaultAuthor = "Default author" });
+        f.Start(UserSettings.Default with { LastAuthor = "Default author" });
         Assert.True(await f.Main.InitializeRecoveryAsync());
         var draft = f.Main.Setup.Draft;
         Assert.Null(draft.CalculationTitle); Assert.Null(draft.ProjectTitle); Assert.Null(draft.Reference); Assert.Null(draft.Author);

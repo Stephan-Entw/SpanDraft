@@ -155,12 +155,19 @@ Bewusstes Abbrechen des Drafts, erfolgreiches Öffnen eines anderen Projekts,
 normales Beenden und erfolgreiche Projekterstellung entfernen die Setup-Recovery;
 eine abgebrochene oder fehlgeschlagene Erstellung erhält sie.
 
-## Lokaler Standard-Ersteller
+## Lokal zuletzt verwendeter Ersteller
 
-User Settings schreiben Version 3 mit optionalem `defaultAuthor`. V1/V2 bleiben
-lesbar und liefern keinen Standard-Ersteller. Leerwerte werden null, andere Werte
-getrimmt. Diese lokale Benutzereinstellung gehört niemals zur Projektrevision.
-Ein frischer Create-Draft erhält einmalig eine eigene Kopie; offene Drafts und
-bestehende Projekte ändern sich bei späteren Settings-Änderungen nicht. Bei
-Create-Recovery haben die gespeicherten Werte vollständig Vorrang, auch ein
-fehlender Ersteller. Ein Betriebssystem-Benutzername wird nicht übernommen.
+User Settings schreiben Version 3 mit optionalem `lastAuthor`. V1/V2 bleiben
+lesbar und liefern keinen zuletzt verwendeten Ersteller. Bisheriges Entwicklungs-V3
+mit `defaultAuthor` bleibt lesbar; ist `lastAuthor` vorhanden, hat es auch bei null
+Vorrang. Neue Dateien schreiben ausschließlich `lastAuthor`. Leerwerte werden null,
+andere Werte getrimmt. Der Wert ist ein lokaler Komfortwert, keine sichtbare
+Benutzereinstellung und niemals Teil einer Projektrevision.
+
+Ausschließlich erfolgreiche Neuanlagen aktualisieren den Wert mit dem normalisierten
+Ersteller des aktivierten Projekts. Die lokale Persistierung erfolgt best-effort;
+ein Schreibfehler beeinflusst weder das erstellte Projekt noch den laufenden
+Komfortwert. Eingaben, Abbruch, Edit, Öffnen, Speichern, Undo/Redo und normale
+Projekt-Recovery ändern ihn nicht. Ein frischer Create-Draft erhält einmalig eine
+eigene Kopie. Bei Create-Recovery gelten ausschließlich die gespeicherten Werte,
+auch ein fehlender Ersteller. Ein Betriebssystem-Benutzername wird nicht übernommen.

@@ -98,6 +98,7 @@ public sealed class DesktopSettingsInteractionTests
         var draft = (object?)editor.SupportDraft ?? (object?)editor.LoadDraft ?? editor.DistributedLoadDraft;
         var originalText = editor.DimensionLength.Text;
         var revision = main.Session!.CurrentRevision;
+        var writes = files.Writes.ToArray();
         main.SetSettingsDialogOpen(true);
         editor.DimensionLength.LoseFocus();
         var dialog = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
@@ -106,7 +107,7 @@ public sealed class DesktopSettingsInteractionTests
         dialog.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         Assert.False(await dialog.ApplyAsync());
         Assert.True(dialog.IsUnitedStates); Assert.True(dialog.CanApply); Assert.True(dialog.HasError);
-        Assert.Empty(files.Writes);
+        Assert.Equal(writes, files.Writes.ToArray());
         Assert.Same(revision, main.Session.CurrentRevision);
         Assert.Same(UnitProfile.Default, main.ResultPresentation.Profile);
         Assert.Same(draft, (object?)editor.SupportDraft ?? (object?)editor.LoadDraft ?? editor.DistributedLoadDraft);

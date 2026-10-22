@@ -45,6 +45,10 @@ public sealed class DesktopProjectSetupControlTests
         window.Show();
         Arrange(window, width, height);
         Capture("create-empty");
+        Assert.False(main.Setup.CalculationTitleInput.HasError); Assert.False(main.Setup.AuthorInput.HasError);
+        Assert.False(main.Setup.CalculationTitleInput.Confirm()); Assert.False(main.Setup.AuthorInput.Confirm());
+        Capture("create-info-invalid");
+        main.Setup.CalculationTitleInput.Cancel(); main.Setup.AuthorInput.Cancel();
         var emptyCard = Assert.Single(window.GetVisualDescendants().OfType<BeamSetupCard>());
         Assert.Empty(emptyCard.FindControl<TextBox>("SetupLengthInput")!.Text!);
         Assert.False(emptyCard.FindControl<SpanDraft.Desktop.Controls.SectionInputHint>("SetupLengthErrorHint")!.IsEffectivelyVisible);
@@ -71,7 +75,10 @@ public sealed class DesktopProjectSetupControlTests
         Assert.True(emptyCard.Bounds.Height > emptyHeight);
         Assert.True(emptyCard.FindControl<TextBlock>("SectionDescription")!.IsEffectivelyVisible);
         Assert.False(Assert.Single(window.GetVisualDescendants().OfType<ProjectSetupView>()).FindControl<Button>("ApplySetupButton")!.IsEffectivelyEnabled);
-        CompleteSetup(main); Arrange(window, width, height); Capture("create-complete");
+        CompleteSetup(main);
+        main.Setup.CalculationTitleInput.Text = culture == "de-DE" ? "Träger 1" : "Beam 1";
+        main.Setup.CalculationTitleInput.Confirm(); main.Setup.AuthorInput.Text = culture == "de-DE" ? "Alex Beispiel" : "Alex Example"; main.Setup.AuthorInput.Confirm();
+        Arrange(window, width, height); Capture("create-complete");
         Assert.Single(window.GetVisualDescendants().OfType<BeamSetupCard>());
         var setupView = Assert.Single(window.GetVisualDescendants().OfType<ProjectSetupView>());
         Assert.Equal(Strings.BendingAxis + " y-y · " + Strings.SectionDefinitionEquivalent, main.Setup.AxisSummary);
@@ -398,15 +405,24 @@ public sealed class DesktopProjectSetupControlTests
         }
     }
     [Theory]
-    [InlineData("de-DE")] [InlineData("en-US")]
-    public async Task InfoCardKeepsRowsAlignedAndConfirmsOnlyThroughKeyboardOrBlur(string culture)
+    [InlineData("de-DE", 1100, 650)] [InlineData("en-US", 1100, 650)]
+    [InlineData("de-DE", 1250, 800)] [InlineData("en-US", 1250, 800)]
+    public async Task InfoSurfaceKeepsRowsAlignedAndConfirmsOnlyThroughKeyboardOrBlur(string culture, double width, double height)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
         var main = new MainWindowViewModel(); Assert.True(await main.NewAsync()); var setup = main.Setup;
         var view = new ProjectSetupView { DataContext = setup };
-        var window = new Window { Content = view, Width = 1100, Height = 650 };
-        window.Show(); Arrange(window, 1100, 650);
+        var window = new Window { Content = view, Width = width, Height = height };
+        window.Show(); Arrange(window, width, height);
+        var surface = view.FindControl<Border>("ProjectInfoSurface")!;
+        Assert.Equal(default, surface.CornerRadius);
+        Assert.Equal(Application.Current!.FindResource("BottomBorder"), surface.BorderThickness);
+        Assert.Equal(Application.Current!.FindResource("Border"), surface.BorderBrush);
+        Assert.Equal(Application.Current!.FindResource("Surface"), surface.Background);
+        Assert.Equal(view.Bounds.Width, surface.Bounds.Width);
+        Assert.Equal(0, surface.TranslatePoint(default, view)!.Value.X);
         var card = Assert.Single(view.GetVisualDescendants().OfType<ProjectInfoSetupCard>());
+        Assert.DoesNotContain(card.GetVisualDescendants().OfType<Border>(), b => b.Classes.Contains("beamSetupCard"));
         var title = card.FindControl<TextBox>("CalculationTitleInput")!;
         var author = card.FindControl<TextBox>("AuthorInput")!;
         var project = card.FindControl<TextBox>("ProjectTitleInput")!;
@@ -423,7 +439,35 @@ public sealed class DesktopProjectSetupControlTests
         Assert.All(inputs, input =>
         {
             Assert.Equal(title.Bounds.Height, input.Bounds.Height);
-            Assert.InRange(Math.Abs(title.Bounds.Width - input.Bounds.Width), 0, 1);
+        });
+        Assert.Equal(title.Bounds.Width, project.Bounds.Width);
+        Assert.Equal(author.Bounds.Width, reference.Bounds.Width);
+        Assert.True(title.Bounds.Width > author.Bounds.Width);
+        var initialWidths = inputs.Select(i => i.Bounds.Width).ToArray();
+        window.Width = width == 1100 ? 1250 : 1100; window.Height = height == 650 ? 800 : 650;
+        Arrange(window, window.Width, window.Height);
+        Assert.Equal(initialWidths, inputs.Select(i => i.Bounds.Width));
+        window.Width = width; window.Height = height; Arrange(window, width, height);
+        Assert.True(string.IsNullOrEmpty(title.PlaceholderText));
+        Assert.Equal(culture == "de-DE" ? "Titel" : "Title", AutomationProperties.GetName(title));
+        Assert.Equal(culture == "de-DE" ? "Erstellt von" : "Created by", AutomationProperties.GetName(author));
+        foreach (var pair in new[] { ("TitleLabel", title), ("AuthorLabel", author), ("ProjectLabel", project), ("ReferenceLabel", reference) })
+        {
+            var label = card.FindControl<TextBlock>(pair.Item1)!;
+            Assert.True(Position(label).X + label.Bounds.Width < Position(pair.Item2).X);
+            Assert.True(Position(label).Y >= Position(pair.Item2).Y);
+            Assert.True(Position(label).Y + label.Bounds.Height <= Position(pair.Item2).Y + pair.Item2.Bounds.Height);
+            Assert.True(label.Bounds.Width + 1 >= label.TextLayout.WidthIncludingTrailingWhitespace);
+        }
+        var optionalLabels = card.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Text == Strings.Optional).ToArray();
+        Assert.Equal(2, optionalLabels.Length);
+        Assert.All(optionalLabels, label =>
+        {
+            Assert.Contains("caption", label.Classes);
+            Assert.True(label.FontSize < title.FontSize);
+            Assert.Equal(Application.Current!.FindResource("TextSecondary"), label.Foreground);
+            Assert.True(Position(label).Y >= Position(project).Y);
+            Assert.True(Position(label).Y + label.Bounds.Height <= Position(project).Y + project.Bounds.Height);
         });
         Assert.All(inputs, input => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(input))));
         var beam = view.FindControl<BeamSetupCard>("BeamCard")!;
@@ -436,10 +480,16 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Equal("Author", setup.Draft.Author);
         Assert.True(DesktopControlEnvironment.MoveFocus(window, project, NavigationDirection.Next)); Assert.True(reference.IsFocused);
         Assert.True(DesktopControlEnvironment.MoveFocus(window, reference, NavigationDirection.Next));
-        Assert.True(beam.FindControl<TextBox>("SetupLengthInput")!.IsFocused);
-        title.Focus(); title.Text = " "; var bounds = card.Bounds;
-        Press(title, Key.Enter); Arrange(window, 1100, 650);
+        var lengthInput = beam.FindControl<TextBox>("SetupLengthInput")!;
+        Assert.True(lengthInput.IsFocused);
+        Assert.True(DesktopControlEnvironment.MoveFocus(window, lengthInput, NavigationDirection.Next));
+        var sectionButton = beam.FindControl<Button>("SectionCardButton")!; Assert.True(sectionButton.IsFocused);
+        Assert.True(DesktopControlEnvironment.MoveFocus(window, sectionButton, NavigationDirection.Next));
+        Assert.True(beam.FindControl<Button>("MaterialCardButton")!.IsFocused);
+        title.Focus(); title.Text = " "; var bounds = card.Bounds; var surfaceBounds = surface.Bounds;
+        Press(title, Key.Enter); Arrange(window, width, height);
         Assert.True(setup.CalculationTitleInput.HasError); Assert.False(setup.CanApply); Assert.Equal(bounds, card.Bounds);
+        Assert.Equal(surfaceBounds, surface.Bounds);
         Assert.Equal("Beam", setup.Draft.CalculationTitle);
         Press(title, Key.Escape); Assert.Equal("Beam", title.Text); Assert.False(setup.CalculationTitleInput.HasError);
         Assert.Equal(MainViewMode.ProjectSetup, main.Mode);
@@ -449,12 +499,16 @@ public sealed class DesktopProjectSetupControlTests
         main.SetMainMenuOpen(false); author.Focus(); main.SetSettingsDialogOpen(true); project.Focus();
         Assert.Equal("Author", setup.Draft.Author); main.SetSettingsDialogOpen(false);
         author.Focus(); project.Focus(); Assert.Equal("Pending author", setup.Draft.Author);
+        title.Text = new string('T', 1000); author.Text = new string('A', 1000);
         project.Text = new string('W', 1000); reference.Text = new string('R', 1000);
-        Arrange(window, 1100, 650);
+        Arrange(window, width, height);
+        Assert.Equal(initialWidths, inputs.Select(i => i.Bounds.Width));
         foreach (var input in inputs)
             Assert.True(Position(input).X + input.Bounds.Width <= card.Bounds.Width);
         foreach (var scroll in view.GetVisualDescendants().OfType<ScrollViewer>().Where(v => v.FindAncestorOfType<TextBox>() is null))
             Assert.True(scroll.Extent.Width <= scroll.Viewport.Width + 1);
+        Assert.Null(main.Settings.LastAuthor);
+        title.Text = "Retyped beam"; author.Text = "Pending author";
         CompleteSetup(main); Assert.True(await setup.ConfirmAsync());
         Assert.Equal("Pending author", main.Session!.CurrentRevision.State.Info!.Author);
         window.Close();

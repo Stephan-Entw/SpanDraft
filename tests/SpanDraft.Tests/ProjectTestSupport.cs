@@ -4,6 +4,7 @@ using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
@@ -145,8 +146,12 @@ internal static class ProjectTestSupport
         public Func<Task<LeaveDecision>>? LeaveHook { get; set; }
         public Func<Task<string?>>? SaveHook { get; set; }
         public Task<string?> PickOpenPathAsync() => Task.FromResult(OpenPath);
-        public Task<string?> PickSavePathAsync(string? currentFilePath)
-        { SaveQuestions++; return SaveHook?.Invoke() ?? Task.FromResult(SavePath); }
+        public string? SuggestedFileName { get; private set; }
+        public Task<string?> PickSavePathAsync(string? currentFilePath, string? calculationTitle)
+        {
+            SuggestedFileName = ProjectSaveFileName.Suggest(currentFilePath, calculationTitle, SpanDraft.Desktop.Resources.Strings.Untitled);
+            SaveQuestions++; return SaveHook?.Invoke() ?? Task.FromResult(SavePath);
+        }
         public Task<LeaveDecision> ConfirmLeaveAsync(string projectFileName)
         { LeaveQuestions++; return LeaveHook?.Invoke() ?? Task.FromResult(Leave); }
         public Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc)

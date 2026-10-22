@@ -9,6 +9,10 @@
   for changes to controls, menus, dialogs or layout.
 - Do not duplicate implementation details, milestone histories or changing test
   counts across documentation. Prefer code and tests for implementation details.
+- For UI changes, follow the existing compact Windows-desktop/Fluent design,
+  especially the section editor and material library. Inspect and reuse their
+  controls, design tokens and layout patterns; avoid web-app styling such as
+  dashboard cards, oversized forms or responsive stacking.
 - UI layout tests should prefer structural and relative invariants such as
   alignment, containment, equal sizing and absence of clipping or overflow over
   narrow absolute pixel ranges. Use absolute bounds only when the size itself is

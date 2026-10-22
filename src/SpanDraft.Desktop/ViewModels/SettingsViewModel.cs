@@ -30,14 +30,12 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly Func<UserSettings, Task<string?>> _apply;
     private UserSettings _applied;
     private UserSettings _pending;
-    private string _defaultAuthorText;
     private bool _saving;
     private string? _error;
 
     public SettingsViewModel(UserSettings settings, Func<UserSettings, Task<string?>> apply)
     {
         _applied = _pending = settings; _apply = apply;
-        _defaultAuthorText = settings.DefaultAuthor ?? "";
         LeftUnits = new[]
         {
             Row(QuantityKind.BeamLength, Strings.UnitBeamLength), Row(QuantityKind.SectionDimension, Strings.UnitSectionDimension),
@@ -64,11 +62,6 @@ public sealed class SettingsViewModel : ObservableObject
         ];
     }
 
-    public string? DefaultAuthor
-    {
-        get => _defaultAuthorText;
-        set { if (!IsSaving && Set(ref _defaultAuthorText, value ?? "")) Update(_pending with { DefaultAuthor = value }); }
-    }
     public UserSettings Pending => _pending;
     public bool HasChanges => !_pending.ContentEquals(_applied);
     public bool IsSaving => _saving;
@@ -105,7 +98,7 @@ public sealed class SettingsViewModel : ObservableObject
     public void DiscardPending()
     {
         if (IsSaving) return;
-        _defaultAuthorText = _applied.DefaultAuthor ?? ""; Update(_applied); Notify(nameof(DefaultAuthor));
+        Update(_applied);
     }
 
     private void Update(UserSettings settings)
@@ -130,7 +123,7 @@ public sealed class SettingsViewModel : ObservableObject
 
     private void Refresh()
     {
-        foreach (string name in new[] { nameof(DefaultAuthor), nameof(Pending), nameof(HasChanges), nameof(IsSaving), nameof(CanApply), nameof(ErrorText),
+        foreach (string name in new[] { nameof(Pending), nameof(HasChanges), nameof(IsSaving), nameof(CanApply), nameof(ErrorText),
             nameof(HasError), nameof(HasCustomProfile), nameof(IsMechanical), nameof(IsStructural), nameof(IsUnitedStates),
             nameof(IsCustom), nameof(IsStandard), nameof(IsDetailed), nameof(SelectedUiLanguage), nameof(SelectedRegionalFormat) }) Notify(name);
         foreach (var row in LeftUnits.Concat(RightUnits)) row.Refresh();

@@ -303,43 +303,60 @@ public sealed class DesktopSettingsTests
     [Theory]
     [InlineData(null, null)] [InlineData("", null)] [InlineData("  ", null)]
     [InlineData(" Ada Lovelace ", "Ada Lovelace")]
-    public void VersionThreeRoundtripNormalizesDefaultAuthor(string? value, string? expected)
+    public void VersionThreeRoundtripNormalizesLastAuthor(string? value, string? expected)
     {
-        var settings = UserSettings.Default with { DefaultAuthor = value };
-        Assert.Equal(expected, settings.DefaultAuthor);
+        var settings = UserSettings.Default with { LastAuthor = value };
+        Assert.Equal(expected, settings.LastAuthor);
         var bytes = SettingsCodec.Serialize(settings);
         Assert.Equal(3, JsonNode.Parse(bytes)!["version"]!.GetValue<int>());
-        Assert.Equal(expected, SettingsCodec.Deserialize(bytes).DefaultAuthor);
+        Assert.Equal(expected, SettingsCodec.Deserialize(bytes).LastAuthor);
         Assert.True(settings.ContentEquals(SettingsCodec.Deserialize(bytes)));
         Assert.Equal(expected is not null, !settings.ContentEquals(UserSettings.Default));
     }
 
     [Theory]
     [InlineData(1)] [InlineData(2)]
-    public void HistoricalSettingsNeverSupplyADefaultAuthor(int version)
+    public void HistoricalSettingsNeverSupplyLastAuthor(int version)
     {
         var json = JsonNode.Parse(SettingsCodec.Serialize(UserSettings.Default))!;
         json["version"] = version;
         // Unknown fields in historical versions must not acquire new semantics.
-        json["defaultAuthor"] = "Ignored";
+        json["lastAuthor"] = "Ignored"; json["defaultAuthor"] = "Also ignored";
         var loaded = SettingsCodec.Deserialize(Encoding.UTF8.GetBytes(json.ToJsonString()));
-        Assert.Null(loaded.DefaultAuthor); Assert.True(UserSettings.Default.ContentEquals(loaded));
+        Assert.Null(loaded.LastAuthor); Assert.True(UserSettings.Default.ContentEquals(loaded));
+    }
+
+    [Theory]
+    [InlineData(false, null, "Legacy author")]
+    [InlineData(true, "New author", "New author")]
+    [InlineData(true, null, null)]
+    [InlineData(true, "  ", null)]
+    public void DevelopmentVersionThreeMigratesDefaultAuthorOnlyWhenLastAuthorIsAbsent(bool hasLastAuthor, string? value, string? expected)
+    {
+        var json = JsonNode.Parse(SettingsCodec.Serialize(UserSettings.Default))!.AsObject();
+        json["defaultAuthor"] = " Legacy author ";
+        if (hasLastAuthor) json["lastAuthor"] = value; else json.Remove("lastAuthor");
+        var loaded = SettingsCodec.Deserialize(Encoding.UTF8.GetBytes(json.ToJsonString()));
+        Assert.Equal(expected, loaded.LastAuthor);
+        var rewritten = JsonNode.Parse(SettingsCodec.Serialize(loaded))!.AsObject();
+        Assert.Equal(expected, rewritten["lastAuthor"]?.GetValue<string>());
+        Assert.False(rewritten.ContainsKey("defaultAuthor"));
+        Assert.Equal(3, rewritten["version"]!.GetValue<int>());
     }
 
     [Fact]
-    public async Task DefaultAuthorEditingPreservesSpacesAndUsesTheSettingsTransaction()
+    public async Task VisibleSettingsTransactionPreservesTheInternalLastAuthor()
     {
-        UserSettings? saved = null;
-        var model = new SettingsViewModel(UserSettings.Default, settings => { saved = settings; return Task.FromResult<string?>(null); });
-        model.DefaultAuthor = "Ada "; Assert.Equal("Ada ", model.DefaultAuthor);
-        model.DefaultAuthor += "Lovelace "; Assert.Equal("Ada Lovelace", model.Pending.DefaultAuthor);
-        Assert.True(model.HasChanges); model.DiscardPending(); Assert.Null(model.Pending.DefaultAuthor);
-        Assert.Empty(model.DefaultAuthor!); Assert.Null(saved);
-        model.DefaultAuthor = " Ada Lovelace "; Assert.True(await model.ApplyAsync());
-        Assert.Equal("Ada Lovelace", saved!.DefaultAuthor); Assert.False(model.HasChanges);
-        var failing = new SettingsViewModel(saved, _ => Task.FromResult<string?>("Injected"));
-        failing.DefaultAuthor = "New author"; Assert.False(await failing.ApplyAsync());
-        Assert.Equal("New author", failing.Pending.DefaultAuthor); Assert.True(failing.HasChanges);
+        var files = new Files(); var store = new LocalSettingsStore(files, "settings");
+        var main = new MainWindowViewModel(files: files, settingsStore: store,
+            settings: UserSettings.Default with { LastAuthor = "Local author" });
+        var model = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
+        model.IsDetailed = true;
+        Assert.True(await model.ApplyAsync());
+        Assert.Equal("Local author", main.Settings.LastAuthor);
+        Assert.Equal("Local author", (await store.LoadAsync()).LastAuthor);
+        Assert.Null(await main.ApplySettingsAsync(main.Settings with { LastAuthor = "Stale snapshot" }));
+        Assert.Equal("Local author", main.Settings.LastAuthor);
     }
 
 }

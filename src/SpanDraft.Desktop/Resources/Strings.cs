@@ -6,12 +6,11 @@ namespace SpanDraft.Desktop.Resources;
 public static class Strings
 {
     public static string ProjectInformation => Get(nameof(ProjectInformation));
+    public static string Optional => Get(nameof(Optional));
     public static string CalculationTitle => Get(nameof(CalculationTitle));
     public static string Author => Get(nameof(Author));
     public static string Reference => Get(nameof(Reference));
     public static string RequiredProjectInfo => Get(nameof(RequiredProjectInfo));
-    public static string SettingsGeneral => Get(nameof(SettingsGeneral));
-    public static string DefaultAuthor => Get(nameof(DefaultAuthor));
 
     public static string Start => Get(nameof(Start));
     public static string Project => Get(nameof(Project));

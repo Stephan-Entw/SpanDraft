@@ -1,6 +1,6 @@
 namespace SpanDraft.Desktop.Presentation;
 
-/// <summary>Global preferences, never part of a project revision.</summary>
+/// <summary>Global preferences and local convenience values, never part of a project revision.</summary>
 public sealed record UserSettings
 {
     public UnitProfile Profile { get; init; } = UnitProfile.Default;
@@ -9,11 +9,11 @@ public sealed record UserSettings
     public PresentationMode Mode { get; init; } = PresentationMode.Standard;
     public UiLanguagePreference UiLanguage { get; init; } = UiLanguagePreference.System;
     public RegionalFormatPreference RegionalFormat { get; init; } = RegionalFormatPreference.System;
-    private string? _defaultAuthor;
-    public string? DefaultAuthor
+    private string? _lastAuthor;
+    public string? LastAuthor
     {
-        get => _defaultAuthor;
-        init => _defaultAuthor = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        get => _lastAuthor;
+        init => _lastAuthor = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
     public bool HasCustomProfile => CustomProfile is not null;
     public ResultPresentationOptions Presentation => new(Profile, Mode);
@@ -53,7 +53,7 @@ public sealed record UserSettings
     }
 
     public bool ContentEquals(UserSettings other) => Mode == other.Mode && LastStandardProfile == other.LastStandardProfile
-        && DefaultAuthor == other.DefaultAuthor && UiLanguage == other.UiLanguage && RegionalFormat == other.RegionalFormat
+        && LastAuthor == other.LastAuthor && UiLanguage == other.UiLanguage && RegionalFormat == other.RegionalFormat
         && SameUnits(Profile, other.Profile) && HasCustomProfile == other.HasCustomProfile
         && (CustomProfile is null || SameUnits(CustomProfile, other.CustomProfile!));
 }

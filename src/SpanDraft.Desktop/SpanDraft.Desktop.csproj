@@ -19,6 +19,7 @@
     <UseAppHost>true</UseAppHost>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="SpanDraft.Tests" />
     <ProjectReference Include="../SpanDraft.Core/SpanDraft.Core.csproj" />
     <ProjectReference Include="../SpanDraft.Analysis/SpanDraft.Analysis.csproj" />
   </ItemGroup>

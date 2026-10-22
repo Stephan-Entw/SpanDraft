@@ -51,12 +51,12 @@ public static class SettingsCodec
         public required PresentationMode PresentationMode { get; init; }
         public UiLanguagePreference? UiLanguage { get; init; }
         public RegionalFormatPreference? RegionalFormat { get; init; }
-        public string? DefaultAuthor { get; init; }
+        public string? LastAuthor { get; init; }
     }
 
     public static byte[] Serialize(UserSettings settings) => JsonSerializer.SerializeToUtf8Bytes(new SettingsData
     {
-        Version = 3, DefaultAuthor = settings.DefaultAuthor, SelectedProfile = settings.Profile.Kind, LastStandardProfile = settings.LastStandardProfile,
+        Version = 3, LastAuthor = settings.LastAuthor, SelectedProfile = settings.Profile.Kind, LastStandardProfile = settings.LastStandardProfile,
         HasCustomProfile = settings.HasCustomProfile, PresentationMode = settings.Mode,
         UiLanguage = settings.UiLanguage, RegionalFormat = settings.RegionalFormat,
         CustomUnits = settings.CustomProfile?.Units.ToDictionary(p => p.Key, p => p.Value.Id)
@@ -83,7 +83,14 @@ public static class SettingsCodec
             if (UserSettings.Recognize(custom).Kind != UnitProfileKind.Custom)
                 throw new JsonException("A custom profile must be an individual combination.");
         }
-        return new UserSettings { DefaultAuthor = dto.Version >= 3 ? dto.DefaultAuthor : null, CustomProfile = custom, Mode = dto.PresentationMode,
+        string? lastAuthor = null;
+        if (dto.Version == 3)
+        {
+            using var json = JsonDocument.Parse(bytes);
+            lastAuthor = json.RootElement.TryGetProperty("lastAuthor", out _) ? dto.LastAuthor
+                : json.RootElement.TryGetProperty("defaultAuthor", out var legacy) ? legacy.GetString() : null;
+        }
+        return new UserSettings { LastAuthor = lastAuthor, CustomProfile = custom, Mode = dto.PresentationMode,
             UiLanguage = dto.Version == 1 ? UiLanguagePreference.System : dto.UiLanguage!.Value,
             RegionalFormat = dto.Version == 1 ? RegionalFormatPreference.System : dto.RegionalFormat!.Value,
             LastStandardProfile = dto.LastStandardProfile }.Select(dto.SelectedProfile);

@@ -103,6 +103,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public async Task<string?> ApplySettingsAsync(UserSettings settings)
     {
         if (_settingsSaving || IsBusy) return Strings.ProjectBusy;
+        if (settings.LastAuthor != Settings.LastAuthor) settings = settings with { LastAuthor = Settings.LastAuthor };
         bool unitsChanged = !UserSettings.SameUnits(_settings.Profile, settings.Profile);
         if (unitsChanged && (Editor?.CanApplyInputUnits(settings.Profile) == false || !Setup.CanApplyInputUnits(settings.Profile)))
             return Strings.SettingsDraftBlocked;
@@ -209,7 +210,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         var setup = new ProjectSetupViewModel(ProjectSetupMode.Create,
             draft?.Section, draft?.BendingAxis ?? SpanDraft.Core.Sections.SectionAxisDesignation.Y, draft?.Material,
-            ApplySetupAsync, CancelSetup, ResultPresentation, this, canCancel: true, recoveredDraft: draft, defaultAuthor: Settings.DefaultAuthor);
+            ApplySetupAsync, CancelSetup, ResultPresentation, this, canCancel: true, recoveredDraft: draft, lastAuthor: Settings.LastAuthor);
         setup.ConfirmedDraftChanged += SetupDraftChanged;
         return setup;
     }
@@ -258,6 +259,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
             if (!await CanLeaveAsync()) return false;
             await CompleteLeaveAsync();
             Activate(ProjectSession.Create(new(document, new(), setup.Info)));
+            ActivateSettings(Settings with { LastAuthor = Session!.CurrentRevision.State.Info!.Author });
+            try
+            {
+                if (_settingsStore is not null) await _settingsStore.SaveAsync(Settings);
+            }
+            catch (Exception e) when (IsFileError(e))
+            { /* Remembering the author is best-effort; creation has already succeeded. */ }
             await DeleteSetupRecoveryAsync();
             return true;
         });
@@ -357,7 +365,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         string? path = saveAs ? null : session.FilePath;
         if (path is null)
         {
-            path = _dialogs is null ? null : await _dialogs.PickSavePathAsync(session.FilePath);
+            path = _dialogs is null ? null : await _dialogs.PickSavePathAsync(session.FilePath, session.CurrentRevision.State.Info?.CalculationTitle);
             if (path is null) return false;
             path = EnsureProjectExtension(path);
         }

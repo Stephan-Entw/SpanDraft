@@ -7,7 +7,7 @@ public enum RecoveryDecision { Cancel, Restore, Discard }
 public interface IProjectDialogs
 {
     Task<string?> PickOpenPathAsync();
-    Task<string?> PickSavePathAsync(string? currentFilePath);
+    Task<string?> PickSavePathAsync(string? currentFilePath, string? calculationTitle);
     Task<LeaveDecision> ConfirmLeaveAsync(string projectFileName);
     Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc);
     Task<RecoveryDecision> ConfirmSetupRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc);

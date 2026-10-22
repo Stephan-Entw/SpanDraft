@@ -461,21 +461,104 @@ public sealed class ProjectSetupIntegrationTests
     }
 
     [Fact]
-    public async Task DefaultAuthorIsOnlyCopiedIntoFreshCreateDrafts()
+    public async Task SuccessfulCreationRemembersOnlyTheFinalAuthorAndPrefillsTheNextFreshDraft()
     {
-        var main = new MainWindowViewModel(settings: UserSettings.Default with { DefaultAuthor = " First author " });
-        Assert.True(await main.NewAsync()); var setup = main.Setup;
-        Assert.Equal("First author", setup.AuthorInput.Text); Assert.Equal("First author", setup.Draft.Author);
-        Assert.Null(await main.ApplySettingsAsync(main.Settings with { DefaultAuthor = "Second author" }));
-        Assert.Equal("First author", setup.AuthorInput.Text);
-        CompleteSetup(main); Assert.True(await setup.ConfirmAsync());
-        var revision = main.Session!.CurrentRevision;
-        Assert.Equal("First author", revision.State.Info!.Author);
-        main.EditProject(); Assert.Equal("First author", main.Setup.AuthorInput.Text);
-        Assert.Null(await main.ApplySettingsAsync(main.Settings with { DefaultAuthor = "Third author" }));
-        Assert.Same(revision, main.Session.CurrentRevision); Assert.Equal("First author", main.Setup.AuthorInput.Text);
-        main.Setup.CancelCommand.Execute(null); Assert.True(await main.NewAsync());
-        Assert.Equal("Third author", main.Setup.AuthorInput.Text);
+        var files = new Files(); var store = new LocalSettingsStore(files, "settings");
+        var dialogs = new Dialogs { Leave = LeaveDecision.Discard };
+        var main = new MainWindowViewModel(files: files, settingsStore: store, dialogs: dialogs);
+        Assert.True(await main.NewAsync()); Assert.Empty(main.Setup.AuthorInput.Text);
+        CompleteSetup(main); main.Setup.AuthorInput.Text = " First author ";
+        Assert.Null(main.Settings.LastAuthor); Assert.True(await main.Setup.ConfirmAsync());
+        Assert.Equal("First author", main.Session!.CurrentRevision.State.Info!.Author);
+        Assert.Equal("First author", main.Settings.LastAuthor);
+        Assert.Equal("First author", (await store.LoadAsync()).LastAuthor);
+        Assert.True(await main.NewAsync()); Assert.Equal("First author", main.Setup.AuthorInput.Text);
+        CompleteSetup(main); main.Setup.AuthorInput.Text = " Second author ";
+        Assert.True(await main.Setup.ConfirmAsync());
+        Assert.Equal("Second author", main.Settings.LastAuthor);
+        Assert.Equal("Second author", (await store.LoadAsync()).LastAuthor);
+        Assert.True(await main.NewAsync()); Assert.Equal("Second author", main.Setup.AuthorInput.Text);
+    }
+
+    [Fact]
+    public async Task AuthorInputConfirmationInvalidCreationAndCancelDoNotRememberTheAuthor()
+    {
+        var files = new Files();
+        var main = new MainWindowViewModel(files: files, settingsStore: new(files, "settings"),
+            settings: UserSettings.Default with { LastAuthor = "Previous author" });
+        Assert.True(await main.NewAsync());
+        var setup = main.Setup; setup.AuthorInput.Begin(); setup.AuthorInput.Text = " Changed author ";
+        Assert.Equal("Previous author", main.Settings.LastAuthor);
+        Assert.True(setup.AuthorInput.Confirm()); Assert.Equal("Changed author", setup.Draft.Author);
+        setup.AuthorInput.Begin(); setup.AuthorInput.Text = "Another author"; setup.AuthorInput.LoseFocus();
+        Assert.Equal("Previous author", main.Settings.LastAuthor);
+        Assert.False(await setup.ConfirmAsync()); Assert.Equal("Previous author", main.Settings.LastAuthor);
+        Assert.True(await main.CancelSetupAsync()); Assert.Equal("Previous author", main.Settings.LastAuthor);
+        Assert.Empty(files.Writes); Assert.True(await main.NewAsync()); Assert.Equal("Previous author", main.Setup.AuthorInput.Text);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task LastAuthorPersistenceFailureKeepsTheCreatedSessionAndItsNormalRecovery(bool unauthorized)
+    {
+        var files = new Files(); var dialogs = new Dialogs(); var delay = new Delay();
+        var recovery = new ProjectRecovery(files, "project-recovery", delay.Wait, () => Now);
+        var setupRecovery = new ProjectSetupRecovery(files, "setup-recovery", delay.Wait, () => Now);
+        var store = new LocalSettingsStore(files, "settings", () =>
+        {
+            if (unauthorized) throw new UnauthorizedAccessException("Injected");
+        });
+        var main = new MainWindowViewModel(files: files, settingsStore: store, dialogs: dialogs,
+            recovery: recovery, setupRecovery: setupRecovery);
+        Assert.True(await main.NewAsync()); CompleteSetup(main);
+        delay.ReleaseAll(); await WaitFor(setupRecovery.DrainAsync());
+        if (!unauthorized) files.FailWritePath = "settings";
+        main.Setup.AuthorInput.Text = " New author ";
+        Assert.True(await main.Setup.ConfirmAsync());
+        var session = main.Session!;
+        Assert.Equal(MainViewMode.Editor, main.Mode); Assert.True(session.IsDirty);
+        Assert.Equal("New author", session.CurrentRevision.State.Info!.Author);
+        Assert.Equal("New author", main.Settings.LastAuthor); Assert.Empty(dialogs.Errors);
+        Assert.Null(await setupRecovery.ReadAsync()); Assert.False(files.Data.ContainsKey("settings"));
+        delay.ReleaseAll(); await WaitFor(recovery.DrainAsync());
+        Assert.True(session.CurrentRevision.State.ContentEquals((await recovery.ReadAsync())!.State));
+        Assert.True(await main.NewAsync()); Assert.Equal("New author", main.Setup.AuthorInput.Text);
+    }
+
+    [Fact]
+    public async Task ForeignProjectsEditHistoryAndSaveNeverChangeTheLocalLastAuthor()
+    {
+        var files = new Files(); var dialogs = new Dialogs();
+        var store = new LocalSettingsStore(files, "settings");
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, settingsStore: store,
+            settings: UserSettings.Default with { LastAuthor = "Local author" });
+        var path = TestPath("foreign.spandraft");
+        files.Data[path] = ProjectFileCodec.Serialize(State() with { Info = new("Foreign beam", null, null, "Foreign author") });
+        Assert.True(await main.OpenAsync(path)); Assert.Equal("Local author", main.Settings.LastAuthor);
+        main.EditProject(); main.Setup.AuthorInput.Text = "Edited author";
+        Assert.True(await main.Setup.ConfirmAsync()); Assert.Equal("Local author", main.Settings.LastAuthor);
+        Assert.True(main.Undo()); Assert.True(main.Redo());
+        Assert.True(await main.SaveAsync()); Assert.True(await main.SaveAsync(saveAs: true));
+        Assert.Equal("Local author", main.Settings.LastAuthor); Assert.False(files.Data.ContainsKey("settings"));
+        Assert.True(await main.NewAsync()); Assert.Equal("Local author", main.Setup.AuthorInput.Text);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task NormalProjectRecoveryNeitherLearnsNorInjectsTheLocalAuthor(bool hasInfo)
+    {
+        var files = new Files();
+        var info = hasInfo ? new ProjectInfo("Recovered beam", null, null, "Recovered author") : null;
+        var state = State() with { Info = info };
+        files.Data["project-recovery"] = ProjectRecovery.Encode(new(state, null, Now));
+        var main = new MainWindowViewModel(files: files, dialogs: new Dialogs(),
+            recovery: new(files, "project-recovery"), settingsStore: new(files, "settings"),
+            settings: UserSettings.Default with { LastAuthor = "Local author" });
+        Assert.True(await main.InitializeRecoveryAsync());
+        Assert.Equal(info, main.Session!.CurrentRevision.State.Info);
+        Assert.Equal("Local author", main.Settings.LastAuthor);
+        Assert.False(files.Data.ContainsKey("settings"));
+        Assert.True(await main.NewAsync()); Assert.Equal("Local author", main.Setup.AuthorInput.Text);
     }
 
 }
