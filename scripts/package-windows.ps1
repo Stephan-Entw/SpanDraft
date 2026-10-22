@@ -21,6 +21,12 @@ try {
             }
         }
     }
+    if (-not $compilerPath -and -not [string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+        $candidate = Join-Path $env:LOCALAPPDATA 'Programs/Inno Setup 6/ISCC.exe'
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            $compilerPath = $candidate
+        }
+    }
     if (-not $compilerPath) {
         throw 'ISCC.exe was not found. Install Inno Setup 6 outside this script or add its directory to PATH.'
     }
@@ -45,7 +51,7 @@ try {
     dotnet run --file scripts/generate-third-party-notices.cs -- --check
     if ($LASTEXITCODE -ne 0) { throw "Third-party notices check failed (exit code $LASTEXITCODE)." }
 
-    dotnet run --file scripts/build-help.cs
+    dotnet run --file scripts/build-help.cs -- --no-regenerate-assets
     if ($LASTEXITCODE -ne 0) { throw "Offline help build failed (exit code $LASTEXITCODE)." }
 
     dotnet publish $project --configuration Release --runtime win-x64 --self-contained true --output $publishDirectory

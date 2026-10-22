@@ -9,7 +9,7 @@ semantic HTML and local CSS in the manual.
 ## Build
 
 Install .NET 10 and Python 3.11 or newer. Create and activate a Python virtual
-environment, then install the pinned generator once:
+environment to install the pinned generator once:
 
 ```sh
 python -m venv help/.venv
@@ -18,6 +18,8 @@ python -m venv help/.venv
 python -m pip install -r help/requirements.txt
 ```
 
+The build automatically uses Zensical from `help/.venv` when present, with `PATH`
+as a fallback. Activating the environment is not required for the build.
 From the repository root:
 
 ```sh
@@ -26,6 +28,8 @@ dotnet run --file scripts/build-help.cs
 
 The script regenerates the PNG assets, runs `zensical build --clean --strict`, and
 checks the explicit PNG list and offline output. It never installs Python packages.
+Windows packaging uses `--no-regenerate-assets` to build and validate the complete
+offline help with the existing committed PNGs instead of regenerating them.
 Commit Markdown, configuration, CSS, JavaScript and PNGs; `help/site/`, caches and the
 virtual environment are ignored. The HelpAssets project is deliberately outside
 the product solution.

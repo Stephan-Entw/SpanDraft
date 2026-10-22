@@ -2,16 +2,24 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
+if (args.Length > 1 || (args.Length == 1 && args[0] != "--no-regenerate-assets"))
+{
+    Console.Error.WriteLine("Usage: dotnet run --file scripts/build-help.cs [-- --no-regenerate-assets]");
+    return 1;
+}
+
 string root = Path.GetFullPath(Path.Combine(ScriptDirectory(), ".."));
 string help = Path.Combine(root, "help");
 string[] names = ["beispiel-lagerung", "beispiel-belastung", "diagramm-durchbiegung", "diagramm-querkraft", "diagramm-biegemoment", "koordinaten", "querschnitt-achsen",
     "lager-einspannung", "lager-festlager", "lager-loslager", "punktkraft-vorzeichen", "punktmoment-vorzeichen", "streckenlast-vorzeichen"];
 try
 {
-    await Run(root, "dotnet", "run", "--project", Path.Combine(root, "tools", "SpanDraft.HelpAssets"),
-        "--configuration", "Release", "--", Path.Combine(help, "docs", "assets"));
+    string zensical = ResolveZensical(help);
+    if (args.Length == 0)
+        await Run(root, "dotnet", "run", "--project", Path.Combine(root, "tools", "SpanDraft.HelpAssets"),
+            "--configuration", "Release", "--", Path.Combine(help, "docs", "assets"));
     RequirePngAssets(Path.Combine(help, "docs", "assets"), names);
-    await Run(help, "zensical", "build", "--clean", "--strict");
+    await Run(help, zensical, "build", "--clean", "--strict");
     string site = Path.Combine(help, "site"); RequireFile(Path.Combine(site, "index.html"));
     foreach (string file in Directory.EnumerateFiles(Path.Combine(help, "docs"), "*.md", SearchOption.AllDirectories)
         .Concat(Directory.EnumerateFiles(site, "*.html", SearchOption.AllDirectories)))
@@ -51,10 +59,24 @@ try
 }
 catch (Exception error)
 {
-    Console.Error.WriteLine($"Help build failed: {error.Message}\nInstall Python 3.11+ and run pip install -r help/requirements.txt in your activated environment.");
+    Console.Error.WriteLine($"Help build failed: {error.Message}");
     return 1;
 }
 static string ScriptDirectory([CallerFilePath] string path = "") => Path.GetDirectoryName(path)!;
+static string ResolveZensical(string help)
+{
+    string executable = OperatingSystem.IsWindows() ? "zensical.exe" : "zensical";
+    string local = Path.Combine(help, ".venv", OperatingSystem.IsWindows() ? "Scripts" : "bin", executable);
+    if (File.Exists(local)) return local;
+    foreach (string directory in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
+    {
+        if (string.IsNullOrWhiteSpace(directory)) continue;
+        string candidate = Path.GetFullPath(Path.Combine(directory, executable));
+        if (File.Exists(candidate)) return candidate;
+    }
+    throw new InvalidOperationException($"Zensical was not found at {local} or on PATH. " +
+        "Install Python 3.11+ and run pip install -r help/requirements.txt in your Python environment.");
+}
 static void RequireFile(string path)
 {
     if (!File.Exists(path) || new FileInfo(path).Length == 0) throw new InvalidOperationException($"Missing or empty help file: {path}");
