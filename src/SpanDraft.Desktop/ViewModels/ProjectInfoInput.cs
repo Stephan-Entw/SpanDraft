@@ -1,4 +1,3 @@
-using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 
 namespace SpanDraft.Desktop.ViewModels;
@@ -7,12 +6,11 @@ namespace SpanDraft.Desktop.ViewModels;
 public sealed class ProjectInfoInput : ObservableObject
 {
     private readonly ProjectSetupViewModel _owner;
-    private readonly bool _required;
     private string _text;
     private bool _hasError;
-    public ProjectInfoInput(ProjectSetupViewModel owner, string? value, bool required = false)
+    public ProjectInfoInput(ProjectSetupViewModel owner, string? value, string? requiredMessage = null)
     {
-        _owner = owner; _required = required;
+        _owner = owner; ErrorText = requiredMessage;
         ConfirmedValue = ProjectInfo.Optional(value); _text = ConfirmedValue ?? "";
     }
     public string? ConfirmedValue { get; private set; }
@@ -28,12 +26,12 @@ public sealed class ProjectInfoInput : ObservableObject
         }
     }
     public bool HasError { get => _hasError; private set => Set(ref _hasError, value); }
-    public string ErrorText => Strings.RequiredProjectInfo;
+    public string? ErrorText { get; }
     public void Begin() { if (!_owner.IsBusy) IsEditing = true; }
     public bool Confirm()
     {
         if (_owner.IsBusy) return false;
-        if (_required && _owner.RequiresProjectInfo && string.IsNullOrWhiteSpace(Text))
+        if (ErrorText is not null && _owner.RequiresProjectInfo && string.IsNullOrWhiteSpace(Text))
         { HasError = true; return false; }
         var value = ProjectInfo.Optional(Text);
         bool changed = value != ConfirmedValue;

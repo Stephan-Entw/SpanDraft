@@ -490,6 +490,11 @@ public sealed class DesktopProjectSetupControlTests
         Press(title, Key.Enter); Arrange(window, width, height);
         Assert.True(setup.CalculationTitleInput.HasError); Assert.False(setup.CanApply); Assert.Equal(bounds, card.Bounds);
         Assert.Equal(surfaceBounds, surface.Bounds);
+        Assert.Equal(culture == "de-DE" ? "Titel fehlt noch." : "Title is missing.", setup.CalculationTitleInput.ErrorText);
+        Assert.Equal(culture == "de-DE" ? "Name fehlt noch." : "Name is missing.", setup.AuthorInput.ErrorText);
+        Assert.True(setup.ProjectTitleInput.Confirm()); Assert.True(setup.ReferenceInput.Confirm());
+        Assert.All(card.GetVisualDescendants().OfType<SpanDraft.Desktop.Controls.SectionInputHint>()
+            .Where(h => h.IsEffectivelyVisible), hint => Assert.Equal(setup.CalculationTitleInput.ErrorText, hint.Message));
         Assert.Equal("Beam", setup.Draft.CalculationTitle);
         Press(title, Key.Escape); Assert.Equal("Beam", title.Text); Assert.False(setup.CalculationTitleInput.HasError);
         Assert.Equal(MainViewMode.ProjectSetup, main.Mode);

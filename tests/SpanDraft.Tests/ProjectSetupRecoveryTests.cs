@@ -37,11 +37,11 @@ public sealed class ProjectSetupRecoveryTests
         public ProjectSetupRecovery Recovery { get; private set; } = null!;
         public ProjectRecovery NormalRecovery { get; private set; } = null!;
         public MainWindowViewModel Main { get; private set; } = null!;
-        public void Start(UserSettings? settings = null)
+        public void Start(UserSettings? settings = null, Func<string?>? userNameProvider = null)
         {
             Recovery = new(Files, Slot, Delay.Wait, () => Now);
             NormalRecovery = new(Files, ProjectSlot, ProjectDelay.Wait, () => Now);
-            Main = new(files: Files, dialogs: Dialogs, recovery: NormalRecovery, setupRecovery: Recovery, settings: settings);
+            Main = new(files: Files, dialogs: Dialogs, recovery: NormalRecovery, setupRecovery: Recovery, settings: settings, userNameProvider: userNameProvider);
         }
         public void Seed(ProjectSetupDraft? draft = null) => Files.Data[Slot] = ProjectSetupRecovery.Encode(new(draft ?? Draft(), Now));
         public async Task Publish()
@@ -455,6 +455,21 @@ public sealed class ProjectSetupRecoveryTests
         Assert.Equal(draft.Author ?? "", f.Main.Setup.AuthorInput.Text); Assert.Empty(f.Delay.Waiters);
         Assert.Equal(bytes, f.Files.Data[Slot]); Assert.Null(f.Main.Session);
         Assert.Equal("Current default", f.Main.Settings.LastAuthor);
+    }
+
+    [Theory]
+    [InlineData(null)] [InlineData("Recovered author")]
+    public async Task CreateRecoveryNeverMergesTheWindowsUserName(string? author)
+    {
+        var draft = new ProjectSetupDraft(Author: author);
+        var f = new Fixture(); f.Seed(draft); f.Start(userNameProvider: () => "windows.user");
+        var bytes = f.Files.Data[Slot];
+        Assert.True(await f.Main.InitializeRecoveryAsync());
+        Assert.True(draft.ContentEquals(f.Main.Setup.Draft));
+        Assert.Equal(author ?? "", f.Main.Setup.AuthorInput.Text);
+        Assert.Null(f.Main.Settings.LastAuthor); Assert.Equal(bytes, f.Files.Data[Slot]);
+        Assert.True(await f.Main.CancelSetupAsync());
+        Assert.True(await f.Main.NewAsync()); Assert.Equal("windows.user", f.Main.Setup.AuthorInput.Text);
     }
 
     [Fact]

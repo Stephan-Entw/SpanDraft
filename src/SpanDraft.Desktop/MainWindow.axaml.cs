@@ -59,7 +59,8 @@ public partial class MainWindow : Window
                 setupRecovery: ProjectSetupRecovery.Local(files),
                 settingsStore: settingsStore, settings: settings,
                 materialStore: MaterialLibraryStore.Local(files), sectionStore: SectionLibraryStore.Local(files),
-                recentStore: RecentProjectsStore.Local(files), openUserManual: OpenUserManualAsync);
+                recentStore: RecentProjectsStore.Local(files), openUserManual: OpenUserManualAsync,
+                userNameProvider: static () => OperatingSystem.IsWindows() ? Environment.UserName : null);
             await _model.InitializeLibrariesAsync();
             DataContext = _model;
             if (!await _model.InitializeRecoveryAsync())

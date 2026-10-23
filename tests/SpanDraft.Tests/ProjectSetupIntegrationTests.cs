@@ -561,4 +561,89 @@ public sealed class ProjectSetupIntegrationTests
         Assert.True(await main.NewAsync()); Assert.Equal("Local author", main.Setup.AuthorInput.Text);
     }
 
+    [Fact]
+    public async Task WindowsUserNameIsAnEditableSuggestionUntilSuccessfulCreation()
+    {
+        var files = new Files(); var store = new LocalSettingsStore(files, "settings");
+        string windowsUserName = " windows.user ";
+        var main = new MainWindowViewModel(files: files, settingsStore: store,
+            dialogs: new Dialogs { Leave = LeaveDecision.Discard }, userNameProvider: () => windowsUserName);
+        Assert.True(await main.NewAsync());
+        Assert.Equal("windows.user", main.Setup.AuthorInput.Text);
+        Assert.Equal("windows.user", main.Setup.Draft.Author);
+        Assert.Null(main.Settings.LastAuthor); Assert.Empty(files.Writes);
+        Assert.False(await main.Setup.ConfirmAsync()); Assert.Null(main.Settings.LastAuthor);
+        Assert.True(await main.CancelSetupAsync()); Assert.Null(main.Settings.LastAuthor); Assert.Empty(files.Writes);
+        Assert.True(await main.NewAsync());
+        CompleteSetup(main); Assert.True(await main.Setup.ConfirmAsync());
+        Assert.Equal("windows.user", main.Session!.CurrentRevision.State.Info!.Author);
+        Assert.Equal("windows.user", main.Settings.LastAuthor);
+        Assert.Equal("windows.user", (await store.LoadAsync()).LastAuthor);
+        windowsUserName = "another.login";
+        Assert.True(await main.NewAsync()); Assert.Equal("windows.user", main.Setup.AuthorInput.Text);
+        main.Setup.AuthorInput.Text = " Changed author "; CompleteSetup(main);
+        Assert.True(await main.Setup.ConfirmAsync());
+        Assert.Equal("Changed author", main.Session!.CurrentRevision.State.Info!.Author);
+        Assert.Equal("Changed author", main.Settings.LastAuthor);
+        Assert.Equal("Changed author", (await store.LoadAsync()).LastAuthor);
+    }
+
+    [Fact]
+    public async Task LastAuthorHasPriorityWithoutReadingTheWindowsUserName()
+    {
+        int lookups = 0;
+        var main = new MainWindowViewModel(settings: UserSettings.Default with { LastAuthor = "Local author" },
+            userNameProvider: () => { lookups++; return "windows.user"; });
+        Assert.True(await main.NewAsync());
+        Assert.Equal("Local author", main.Setup.AuthorInput.Text); Assert.Equal(0, lookups);
+    }
+
+    [Theory]
+    [InlineData(null)] [InlineData("")] [InlineData("  ")]
+    public async Task UnavailableWindowsUserNameLeavesTheAuthorEmpty(string? userName)
+    {
+        var main = new MainWindowViewModel(userNameProvider: () => userName);
+        Assert.True(await main.NewAsync()); Assert.Empty(main.Setup.AuthorInput.Text);
+        Assert.Null(main.Setup.Draft.Author); Assert.Null(main.Settings.LastAuthor);
+    }
+
+    [Theory]
+    [InlineData("lookup")] [InlineData("security")] [InlineData("access")] [InlineData("win32")]
+    public async Task WindowsUserNameLookupFailureDoesNotPreventNewProjects(string failure)
+    {
+        var dialogs = new Dialogs();
+        var main = new MainWindowViewModel(dialogs: dialogs, userNameProvider: () => throw (failure switch
+        {
+            "lookup" => new InvalidOperationException("Injected"),
+            "security" => new System.Security.SecurityException("Injected"),
+            "access" => new UnauthorizedAccessException("Injected"),
+            _ => (Exception)new System.ComponentModel.Win32Exception()
+        }));
+        Assert.True(await main.NewAsync()); Assert.Empty(main.Setup.AuthorInput.Text);
+        Assert.Null(main.Settings.LastAuthor); Assert.Empty(dialogs.Errors);
+    }
+
+    [Theory]
+    [InlineData(false, false)] [InlineData(false, true)]
+    [InlineData(true, false)] [InlineData(true, true)]
+    public async Task WindowsUserNameNeverEntersExistingOrRecoveredProjectInfo(bool recover, bool hasInfo)
+    {
+        var files = new Files(); var dialogs = new Dialogs();
+        var info = hasInfo ? new ProjectInfo("Existing beam", null, null, "Original author") : null;
+        var state = State() with { Info = info };
+        var path = TestPath("existing.spandraft");
+        files.Data[path] = ProjectFileCodec.Serialize(state);
+        var recovery = new ProjectRecovery(files, "project-recovery");
+        if (recover) files.Data["project-recovery"] = ProjectRecovery.Encode(new(state, path, Now));
+        if (recover) files.Data.TryRemove(path, out _);
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, recovery: recovery,
+            userNameProvider: () => "windows.user");
+        Assert.True(recover ? await main.InitializeRecoveryAsync() : await main.OpenAsync(path));
+        Assert.Equal(info, main.Session!.CurrentRevision.State.Info);
+        main.EditProject(); Assert.Equal(info?.Author ?? "", main.Setup.AuthorInput.Text);
+        Assert.True(await main.CancelSetupAsync()); Assert.True(await main.SaveAsync());
+        Assert.Null(main.Settings.LastAuthor);
+        Assert.True(await main.NewAsync()); Assert.Equal("windows.user", main.Setup.AuthorInput.Text);
+    }
+
 }

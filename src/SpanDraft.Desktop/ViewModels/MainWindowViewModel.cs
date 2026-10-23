@@ -29,6 +29,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private Exception? _pendingRecoveryError;
     private ResultPresentationOptions _resultPresentation = ResultPresentationOptions.Default;
     private readonly LocalSettingsStore? _settingsStore;
+    private readonly Func<string?>? _userNameProvider;
     private bool _settingsSaving;
     private bool _settingsDialogOpen;
     private UserSettings _settings = UserSettings.Default;
@@ -39,7 +40,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MaterialLibraryStore? materialStore = null, SectionLibraryStore? sectionStore = null,
         Func<SpanDraft.Desktop.Libraries.BuiltInMaterialCatalog>? catalogLoader = null,
         RecentProjectsStore? recentStore = null, Func<Task>? openUserManual = null,
-        ProjectSetupRecovery? setupRecovery = null)
+        ProjectSetupRecovery? setupRecovery = null, Func<string?>? userNameProvider = null)
     {
         _analyze = analyze;
         _files = files ?? new ProjectFileStore();
@@ -48,6 +49,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _setupRecovery = setupRecovery;
         _recentStore = recentStore;
         _settingsStore = settingsStore;
+        _userNameProvider = userNameProvider;
         _settings = settings ?? UserSettings.Default;
         _resultPresentation = _settings.Presentation;
         _materialStore = materialStore;
@@ -210,9 +212,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         var setup = new ProjectSetupViewModel(ProjectSetupMode.Create,
             draft?.Section, draft?.BendingAxis ?? SpanDraft.Core.Sections.SectionAxisDesignation.Y, draft?.Material,
-            ApplySetupAsync, CancelSetup, ResultPresentation, this, canCancel: true, recoveredDraft: draft, lastAuthor: Settings.LastAuthor);
+            ApplySetupAsync, CancelSetup, ResultPresentation, this, canCancel: true, recoveredDraft: draft,
+            suggestedAuthor: draft is null ? SuggestAuthor() : null);
         setup.ConfirmedDraftChanged += SetupDraftChanged;
         return setup;
+    }
+
+    private string? SuggestAuthor()
+    {
+        if (Settings.LastAuthor is { } author) return author;
+        try { return _userNameProvider?.Invoke(); }
+        catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception
+            or System.Security.SecurityException or UnauthorizedAccessException)
+        { return null; }
     }
 
     private void SetupDraftChanged(ProjectSetupViewModel setup)

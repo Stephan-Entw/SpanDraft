@@ -169,5 +169,8 @@ Ersteller des aktivierten Projekts. Die lokale Persistierung erfolgt best-effort
 ein Schreibfehler beeinflusst weder das erstellte Projekt noch den laufenden
 Komfortwert. Eingaben, Abbruch, Edit, Öffnen, Speichern, Undo/Redo und normale
 Projekt-Recovery ändern ihn nicht. Ein frischer Create-Draft erhält einmalig eine
-eigene Kopie. Bei Create-Recovery gelten ausschließlich die gespeicherten Werte,
-auch ein fehlender Ersteller. Ein Betriebssystem-Benutzername wird nicht übernommen.
+eigene Kopie. Fehlt der lokale Komfortwert, wird unter Windows der aktuelle
+Anmeldename als bearbeitbarer Vorschlag verwendet; ist er nicht verfügbar, bleibt
+das Feld leer. Auch dieser Vorschlag wird erst nach erfolgreicher Neuanlage als
+`lastAuthor` gespeichert. Bei Create-Recovery gelten ausschließlich die gespeicherten
+Werte, auch ein fehlender Ersteller; bestehende Projekte erhalten keine Vorbelegung.

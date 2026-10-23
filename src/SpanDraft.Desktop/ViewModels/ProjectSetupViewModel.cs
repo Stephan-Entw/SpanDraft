@@ -45,7 +45,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         Material? material, Func<ProjectSetupViewModel, Task<bool>> apply, Action cancel,
         ResultPresentationOptions? resultPresentation = null, MainWindowViewModel? libraries = null,
         EditorDocument? originalDocument = null, bool canCancel = false, ProjectSetupDraft? recoveredDraft = null,
-        ProjectInfo? originalInfo = null, string? lastAuthor = null)
+        ProjectInfo? originalInfo = null, string? suggestedAuthor = null)
     {
         if (mode == ProjectSetupMode.Edit)
         {
@@ -59,10 +59,10 @@ public sealed class ProjectSetupViewModel : ObservableObject
         _length = recoveredDraft?.Length ?? originalDocument?.Length ?? (mode == ProjectSetupMode.Edit ? Length.FromMillimeters(1000) : null);
         _sectionDisplayName = recoveredDraft?.SectionDisplayName ?? originalDocument?.SectionDisplayName;
         _originalInfo = originalInfo;
-        CalculationTitleInput = new(this, recoveredDraft is not null ? recoveredDraft.CalculationTitle : originalInfo?.CalculationTitle, required: true);
+        CalculationTitleInput = new(this, recoveredDraft is not null ? recoveredDraft.CalculationTitle : originalInfo?.CalculationTitle, Strings.CalculationTitleRequired);
         ProjectTitleInput = new(this, recoveredDraft is not null ? recoveredDraft.ProjectTitle : originalInfo?.ProjectTitle);
         ReferenceInput = new(this, recoveredDraft is not null ? recoveredDraft.Reference : originalInfo?.Reference);
-        AuthorInput = new(this, recoveredDraft is not null ? recoveredDraft.Author : IsEdit ? originalInfo?.Author : lastAuthor, required: true);
+        AuthorInput = new(this, recoveredDraft is not null ? recoveredDraft.Author : IsEdit ? originalInfo?.Author : suggestedAuthor, Strings.ProjectAuthorRequired);
         _confirmedDraft = Draft;
         OriginalMaterial = IsEdit ? material : null;
         _resultPresentation = resultPresentation ?? ResultPresentationOptions.Default;

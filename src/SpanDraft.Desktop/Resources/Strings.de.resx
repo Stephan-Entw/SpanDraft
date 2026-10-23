@@ -312,6 +312,7 @@
   <data name="CalculationTitle" xml:space="preserve"><value>Titel</value></data>
   <data name="Author" xml:space="preserve"><value>Erstellt von</value></data>
   <data name="Reference" xml:space="preserve"><value>Referenz</value></data>
-  <data name="RequiredProjectInfo" xml:space="preserve"><value>Eine Angabe ist erforderlich.</value></data>
+  <data name="CalculationTitleRequired" xml:space="preserve"><value>Titel fehlt noch.</value></data>
+  <data name="ProjectAuthorRequired" xml:space="preserve"><value>Name fehlt noch.</value></data>
   <data name="Optional" xml:space="preserve"><value>(optional)</value></data>
 </root>
