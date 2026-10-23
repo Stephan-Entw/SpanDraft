@@ -24,7 +24,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         PointLoadPreview? loadPreview = null, Guid? hiddenLoadId = null, string? loadName = null,
         EditorPresentationState? presentation = null, DistributedLoadPreview? distributedPreview = null,
         Guid? hiddenDistributedId = null, string? distributedName = null, UnitProfile? profile = null,
-        bool reserveUnitWidths = false)
+        bool reserveUnitWidths = false, double loadSymbolScale = 1)
     {
         var supports = new List<SupportVisual>();
         foreach (var support in document.Supports)
@@ -38,8 +38,8 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         void AddSupport(Guid? id, SupportPreview preview, string name, bool draft) => supports.Add(
             new(id, preview, name.Trim(), frame.Layout.Transform.PhysicalToScreen(preview.Position.Meters), draft,
                 preview.Type == SupportType.Fixed && FixedSupportGeometry.AtPosition(preview.Position.Meters, document.Length.Meters).IsMirrored));
-        var loads = PointLoadSymbol.Layout(document.Loads, frame, loadPreview, hiddenLoadId, loadName);
-        var distributed = DistributedLoadSymbol.Layout(document.DistributedLoads, frame, distributedPreview, hiddenDistributedId, distributedName);
+        var loads = PointLoadSymbol.Layout(document.Loads, frame, loadPreview, hiddenLoadId, loadName, loadSymbolScale);
+        var distributed = DistributedLoadSymbol.Layout(document.DistributedLoads, frame, distributedPreview, hiddenDistributedId, distributedName, loadSymbolScale);
         if (reserveUnitWidths)
         {
             var originalMeasure = measure;
@@ -107,7 +107,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
                 do
                 {
                     double y = support ? frame.Viewport.BeamY + SchematicMetrics.SupportLabelTopOffset + lane * line
-                        : frame.Viewport.BeamY - SchematicMetrics.ForceTopOffset - 8 - label.AutoBounds.Height - lane * line;
+                        : frame.Viewport.BeamY - SchematicMetrics.ForceTopOffset * loadSymbolScale - 8 - label.AutoBounds.Height - lane * line;
                     candidate = new(label.AutoBounds.X, y, label.AutoBounds.Width, label.AutoBounds.Height);
                     lane++;
                 }
@@ -131,7 +131,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
                 if (lane < 0) { lane = ends.Count; ends.Add(left + item.Size.Width); }
                 else ends[lane] = left + item.Size.Width;
                 double y = support ? frame.Viewport.BeamY + SchematicMetrics.SupportLabelTopOffset + lane * line
-                    : frame.Viewport.BeamY - SchematicMetrics.ForceTopOffset - 8 - item.Size.Height - lane * line;
+                    : frame.Viewport.BeamY - SchematicMetrics.ForceTopOffset * loadSymbolScale - 8 - item.Size.Height - lane * line;
                 var bounds = new Rect(left, y, item.Size.Width, item.Size.Height);
                 annotations.Add(new(item.Value.Id, support, item.Value.Text, bounds, bounds, item.Value.IsPreview, item.Value.IsInvalid));
             }
@@ -140,7 +140,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             if (support)
                 return SchematicMetrics.SupportLabelTopOffset + rowHeight + Math.Max(0, ends.Count - 1) * line;
             // Always reserve a load preview row. Hover/leave cannot change the beam height.
-            return SchematicMetrics.ForceTopOffset + 16 + (ends.Count + 1) * line;
+            return SchematicMetrics.ForceTopOffset * loadSymbolScale + 16 + (ends.Count + 1) * line;
         }
         double Left(double x, double width) => Math.Clamp(x - width / 2, 8, Math.Max(8, frame.Viewport.Width - width - 8));
     }

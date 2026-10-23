@@ -315,4 +315,29 @@
   <data name="CalculationTitleRequired" xml:space="preserve"><value>Titel fehlt noch.</value></data>
   <data name="ProjectAuthorRequired" xml:space="preserve"><value>Name fehlt noch.</value></data>
   <data name="Optional" xml:space="preserve"><value>(optional)</value></data>
+  <data name="ReportCommand" xml:space="preserve"><value>Bericht…</value></data>
+  <data name="ReportHeading" xml:space="preserve"><value>Berechnungsbericht</value></data>
+  <data name="ReportContinuation" xml:space="preserve"><value>Fortsetzung</value></data>
+  <data name="ReportPage" xml:space="preserve"><value>Seite {0} von {1}</value></data>
+  <data name="ReportNotes" xml:space="preserve"><value>Berechnungsgrundlagen / Hinweise</value></data>
+  <data name="ReportTheory" xml:space="preserve"><value>Euler-Bernoulli · linear elastisch · kleine Verformungen · konstanter Werkstoff und Querschnitt.</value></data>
+  <data name="ReportLimits" xml:space="preserve"><value>Schubverformung und Eigengewicht sind nicht berücksichtigt. S = Re / σb,max ist eine elastische Bewertung, kein normativer Festigkeits- oder Sicherheitsnachweis.</value></data>
+  <data name="ReportPosition" xml:space="preserve"><value>bei x = {0} {1}{2}</value></data>
+  <data name="ReportSavePdf" xml:space="preserve"><value>PDF speichern…</value></data>
+  <data name="ReportPrint" xml:space="preserve"><value>Drucken…</value></data>
+  <data name="ReportFit" xml:space="preserve"><value>Ganze Seite</value></data>
+  <data name="ReportPrevious" xml:space="preserve"><value>Vorherige Seite</value></data>
+  <data name="ReportNext" xml:space="preserve"><value>Nächste Seite</value></data>
+  <data name="ReportError" xml:space="preserve"><value>Der Bericht konnte nicht erstellt oder ausgegeben werden.</value></data>
+  <data name="ReportProjectTarget" xml:space="preserve"><value>Die Projektdatei darf nicht als PDF-Exportziel verwendet werden.</value></data>
+  <data name="ReportManualSection" xml:space="preserve"><value>Für einen manuellen Querschnitt ist keine Geometriedarstellung vorhanden.</value></data>
+  <data name="ReportClose" xml:space="preserve"><value>Schließen</value></data>
+  <data name="ReportSummary" xml:space="preserve"><value>Maßgebende Kennwerte</value></data>
+  <data name="ReportMaterial" xml:space="preserve"><value>Material</value></data>
+  <data name="ReportDeflection" xml:space="preserve"><value>Maximale Durchbiegung |w|max</value></data>
+  <data name="ReportMoment" xml:space="preserve"><value>Maßgebendes Biegemoment |M|max</value></data>
+  <data name="ReportStress" xml:space="preserve"><value>Max. elastische Biegespannung σb,max</value></data>
+  <data name="ReportSafety" xml:space="preserve"><value>Sicherheitsfaktor S = Re / σb,max</value></data>
+  <data name="ReportPdfTarget" xml:space="preserve"><value>Bitte ein Exportziel mit der Dateiendung .pdf wählen.</value></data>
+  <data name="Report" xml:space="preserve"><value>Bericht</value></data>
 </root>

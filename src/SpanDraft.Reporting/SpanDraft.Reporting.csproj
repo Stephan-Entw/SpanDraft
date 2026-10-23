@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="../SpanDraft.Core/SpanDraft.Core.csproj" />
+    <InternalsVisibleTo Include="SpanDraft.Tests" />
+    <InternalsVisibleTo Include="SpanDraft.Desktop" />
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
   </ItemGroup>
 </Project>

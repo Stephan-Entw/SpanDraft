@@ -6,21 +6,25 @@ using SpanDraft.Desktop.Layout;
 
 namespace SpanDraft.Desktop.Controls;
 
-public sealed record PointLoadVisual(Guid? Id, PointLoadPreview Preview, string Name, double X, double Y, bool IsPreview);
+public sealed record PointLoadVisual(Guid? Id, PointLoadPreview Preview, string Name, double X, double Y, bool IsPreview)
+{
+    public double SymbolScale { get; init; } = 1;
+}
 public sealed record PointLoadGlyph(PointLoadKind Kind, double X, double Y, IReadOnlyList<PointLoadVisual> Entities)
 {
     public bool Positive => Entities.Any(e => e.Preview.Value > 0);
     public bool Negative => Entities.Any(e => e.Preview.Value < 0);
     public bool IsPreview => Entities.Any(e => e.IsPreview);
+    public double SymbolScale => Entities.Count > 0 ? Entities[0].SymbolScale : 1;
     public Rect Bounds => Kind == PointLoadKind.Force
-        ? new(X - PointLoadSymbol.HitPadding - SchematicMetrics.ForceArrowHalfWidth,
-            Y - SchematicMetrics.ForceTopOffset - PointLoadSymbol.HitPadding,
-            2 * (PointLoadSymbol.HitPadding + SchematicMetrics.ForceArrowHalfWidth),
-            SchematicMetrics.ForceHeight + 2 * PointLoadSymbol.HitPadding)
-        : new(X - PointLoadSymbol.HalfSize - PointLoadSymbol.HitPadding,
-            Y - PointLoadSymbol.HalfSize - PointLoadSymbol.HitPadding,
-            2 * (PointLoadSymbol.HalfSize + PointLoadSymbol.HitPadding),
-            2 * (PointLoadSymbol.HalfSize + PointLoadSymbol.HitPadding));
+        ? new(X - PointLoadSymbol.HitPadding - SchematicMetrics.ForceArrowHalfWidth * SymbolScale,
+            Y - SchematicMetrics.ForceTopOffset * SymbolScale - PointLoadSymbol.HitPadding,
+            2 * (PointLoadSymbol.HitPadding + SchematicMetrics.ForceArrowHalfWidth * SymbolScale),
+            SchematicMetrics.ForceHeight * SymbolScale + 2 * PointLoadSymbol.HitPadding)
+        : new(X - PointLoadSymbol.HalfSize * SymbolScale - PointLoadSymbol.HitPadding,
+            Y - PointLoadSymbol.HalfSize * SymbolScale - PointLoadSymbol.HitPadding,
+            2 * (PointLoadSymbol.HalfSize * SymbolScale + PointLoadSymbol.HitPadding),
+            2 * (PointLoadSymbol.HalfSize * SymbolScale + PointLoadSymbol.HitPadding));
 }
 
 /// <summary>Station-based technical glyph geometry; labels and physical values stay per entity.</summary>
@@ -37,8 +41,9 @@ public static class PointLoadSymbol
     private const int CombinedMomentArcSegments = 59;
 
     public static IReadOnlyList<PointLoadVisual> Layout(IReadOnlyList<EditorPointLoad> loads, BeamLayoutFrame frame,
-        PointLoadPreview? preview = null, Guid? hiddenId = null, string? previewName = null)
+        PointLoadPreview? preview = null, Guid? hiddenId = null, string? previewName = null, double symbolScale = 1)
     {
+        LayoutNumbers.Positive(symbolScale, nameof(symbolScale));
         var visuals = new List<PointLoadVisual>();
         foreach (var load in loads)
         {
@@ -49,7 +54,8 @@ public static class PointLoadSymbol
         if (preview is not null && !loads.Any(l => l.Id == hiddenId)) Add(null, preview, previewName ?? "", true);
         return visuals.AsReadOnly();
         void Add(Guid? id, PointLoadPreview p, string name, bool draft) =>
-            visuals.Add(new(id, p, name, frame.Layout.Transform.PhysicalToScreen(p.Position.Meters), frame.Viewport.BeamY, draft));
+            visuals.Add(new(id, p, name, frame.Layout.Transform.PhysicalToScreen(p.Position.Meters), frame.Viewport.BeamY, draft)
+                { SymbolScale = symbolScale });
     }
 
     public static IReadOnlyList<PointLoadGlyph> Group(IReadOnlyList<PointLoadVisual> visuals) =>
@@ -96,7 +102,7 @@ public static class PointLoadSymbol
         return new(direction.X, direction.Y);
     }
 
-    private static StreamGeometry CreateMomentArc(Point origin, bool positive, bool negative)
+    private static StreamGeometry CreateMomentArc(Point origin, bool positive, bool negative, double symbolScale)
     {
         bool combined = positive && negative;
         bool mirror = negative && !positive;
@@ -108,7 +114,7 @@ public static class PointLoadSymbol
         Point At(double degrees)
         {
             var point = MirrorMomentPoint(MomentPoint(degrees), mirror);
-            return new(origin.X + point.X, origin.Y + point.Y);
+            return new(origin.X + point.X * symbolScale, origin.Y + point.Y * symbolScale);
         }
         var geometry = new StreamGeometry();
         using (var path = geometry.Open())
@@ -123,8 +129,8 @@ public static class PointLoadSymbol
 
     public static void Draw(DrawingContext context, PointLoadGlyph glyph, IBrush? brush)
     {
-        var pen = new Pen(brush, SchematicMetrics.SymbolStrokeWidth, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
-        Point At(Point point) => new(glyph.X + point.X, glyph.Y + point.Y);
+        var pen = new Pen(brush, SchematicMetrics.SymbolStrokeWidth * glyph.SymbolScale, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
+        Point At(Point point) => new(glyph.X + point.X * glyph.SymbolScale, glyph.Y + point.Y * glyph.SymbolScale);
         void Line(Point start, Point end) => context.DrawLine(pen, At(start), At(end));
         void Arrow(Point tip, Vector direction, double halfWidth)
         {
@@ -147,7 +153,7 @@ public static class PointLoadSymbol
         }
         else
         {
-            context.DrawGeometry(null, pen, CreateMomentArc(new(glyph.X, glyph.Y), glyph.Positive, glyph.Negative));
+            context.DrawGeometry(null, pen, CreateMomentArc(new(glyph.X, glyph.Y), glyph.Positive, glyph.Negative, glyph.SymbolScale));
             if (glyph.Positive) Arrow(MomentTip(true), MomentArrowDirection(true), SchematicMetrics.MomentArrowHalfWidth);
             if (glyph.Negative) Arrow(MomentTip(false), MomentArrowDirection(false), SchematicMetrics.MomentArrowHalfWidth);
         }

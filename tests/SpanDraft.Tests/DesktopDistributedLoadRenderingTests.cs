@@ -15,6 +15,31 @@ public sealed class DesktopDistributedLoadRenderingTests
         new(Guid.NewGuid(), new(Length.FromMeters(.2), Length.FromMeters(.8), q), "q1", 50, 50 + width, 100, false);
 
     [Theory]
+    [InlineData(-500)]
+    [InlineData(500)]
+    public void ExplicitScaleShrinksArrowsAndStrokesWithoutMovingLoadEndpoints(double q)
+    {
+        const double scale = .85, tolerance = 1e-4; // Skia records contour bounds as floats.
+        var visual = Visual(q: q);
+        var compact = visual with { SymbolScale = scale };
+        Assert.Equal(DistributedLoadSymbol.ArrowPositions(visual), DistributedLoadSymbol.ArrowPositions(compact));
+        Assert.Equal(visual.Preview, compact.Preview);
+        var original = Geometry(Draw(visual)).ToArray();
+        var scaled = Geometry(Draw(compact)).ToArray();
+        Assert.Equal(original.Length, scaled.Length);
+        foreach (var (before, after) in original.Zip(scaled))
+        {
+            var bounds = before.Geometry!.Bounds;
+            var smaller = after.Geometry!.Bounds;
+            Assert.Equal(bounds.Center.X, smaller.Center.X, tolerance);
+            Assert.Equal(visual.BeamY + (bounds.Y - visual.BeamY) * scale, smaller.Y, tolerance);
+            Assert.Equal(bounds.Height * scale, smaller.Height, tolerance);
+            Assert.Equal(before.Brush is null ? bounds.Width : bounds.Width * scale, smaller.Width, tolerance);
+            Assert.Equal(before.Pen!.Thickness * scale, after.Pen!.Thickness, 10);
+        }
+    }
+
+    [Theory]
     [InlineData(0, 1)]
     [InlineData(10, 1)]
     [InlineData(24, 1)]

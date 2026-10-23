@@ -17,6 +17,8 @@ public sealed class BeamCanvas : Control
     public static readonly StyledProperty<IReadOnlyList<Guid>?> ConflictEntityIdsProperty = AvaloniaProperty.Register<BeamCanvas, IReadOnlyList<Guid>?>(nameof(ConflictEntityIds));
     public static readonly StyledProperty<ConstraintConflictState?> ConstraintConflictProperty = AvaloniaProperty.Register<BeamCanvas, ConstraintConflictState?>(nameof(ConstraintConflict));
     public static readonly StyledProperty<double> LabelFontSizeProperty = AvaloniaProperty.Register<BeamCanvas, double>(nameof(LabelFontSize), 13);
+    public static readonly StyledProperty<double> SupportSymbolScaleProperty = AvaloniaProperty.Register<BeamCanvas, double>(nameof(SupportSymbolScale), 1,
+        validate: value => double.IsFinite(value) && value > 0);
     public static readonly StyledProperty<IBrush?> BeamBrushProperty = AvaloniaProperty.Register<BeamCanvas, IBrush?>(nameof(BeamBrush));
     public static readonly StyledProperty<IBrush?> CanvasBackgroundBrushProperty = AvaloniaProperty.Register<BeamCanvas, IBrush?>(nameof(CanvasBackgroundBrush));
     public static readonly StyledProperty<IBrush?> GhostBrushProperty = AvaloniaProperty.Register<BeamCanvas, IBrush?>(nameof(GhostBrush));
@@ -29,6 +31,7 @@ public sealed class BeamCanvas : Control
     public IReadOnlyList<Guid>? ConflictEntityIds { get => GetValue(ConflictEntityIdsProperty); set => SetValue(ConflictEntityIdsProperty, value); }
     public ConstraintConflictState? ConstraintConflict { get => GetValue(ConstraintConflictProperty); set => SetValue(ConstraintConflictProperty, value); }
     public double LabelFontSize { get => GetValue(LabelFontSizeProperty); set => SetValue(LabelFontSizeProperty, value); }
+    public double SupportSymbolScale { get => GetValue(SupportSymbolScaleProperty); set => SetValue(SupportSymbolScaleProperty, value); }
     public IBrush? BeamBrush { get => GetValue(BeamBrushProperty); set => SetValue(BeamBrushProperty, value); }
     public IBrush? CanvasBackgroundBrush { get => GetValue(CanvasBackgroundBrushProperty); set => SetValue(CanvasBackgroundBrushProperty, value); }
     public IBrush? GhostBrush { get => GetValue(GhostBrushProperty); set => SetValue(GhostBrushProperty, value); }
@@ -36,7 +39,7 @@ public sealed class BeamCanvas : Control
     public IBrush? ErrorBrush { get => GetValue(ErrorBrushProperty); set => SetValue(ErrorBrushProperty, value); }
     static BeamCanvas() => AffectsRender<BeamCanvas>(SceneProperty, BeamBrushProperty, CanvasBackgroundBrushProperty, GhostBrushProperty,
         AccentBrushProperty, ErrorBrushProperty, HighlightedLoadIdProperty, HighlightedSupportIdProperty,
-        ConflictEntityIdsProperty, ConstraintConflictProperty, LabelFontSizeProperty, HighlightedDistributedLoadIdProperty);
+        ConflictEntityIdsProperty, ConstraintConflictProperty, LabelFontSizeProperty, HighlightedDistributedLoadIdProperty, SupportSymbolScaleProperty);
 
     public override void Render(DrawingContext context)
     {
@@ -55,7 +58,9 @@ public sealed class BeamCanvas : Control
         }
         foreach (var support in scene.Supports)
             using (context.PushOpacity(support.IsPreview ? 0.75 : 1))
-                DrawSupport(context, support.X, y, support.Preview.Type, support.IsMirrored,
+            using (context.PushTransform(Matrix.CreateScale(SupportSymbolScale, SupportSymbolScale)
+                * Matrix.CreateTranslation(support.X, y)))
+                DrawSupport(context, 0, 0, support.Preview.Type, support.IsMirrored,
                     Brush(support.Id, true, support.IsPreview, support.Preview.IsInvalid), CanvasBackgroundBrush);
         foreach (var glyph in DistributedLoadSymbol.InnerGlyphs(scene.DistributedLoads))
         {

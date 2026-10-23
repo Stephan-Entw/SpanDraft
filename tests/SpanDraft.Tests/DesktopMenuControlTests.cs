@@ -38,6 +38,8 @@ public sealed class DesktopMenuControlTests
         Assert.Same(main.NewCommand, shell.FindControl<MenuItem>("NewMenuItem")!.Command);
         Assert.Same(main.OpenCommand, shell.FindControl<MenuItem>("OpenMenuItem")!.Command);
         Assert.Same(main.SaveCommand, shell.FindControl<MenuItem>("SaveMenuItem")!.Command);
+        var report = shell.FindControl<MenuItem>("ReportMenuItem")!;
+        Assert.Same(main.ReportCommand, report.Command);
         var closeProject = shell.FindControl<MenuItem>("CloseProjectMenuItem")!;
         Assert.Same(main.CloseProjectCommand, closeProject.Command);
         Assert.Equal(culture == "de-DE" ? "Projekt schließen" : "Close Project", closeProject.Header);
@@ -45,12 +47,13 @@ public sealed class DesktopMenuControlTests
         var file = project.Items.OfType<MenuItem>().Single(i => Equals(i.Header, Strings.File));
         Assert.Single(file.GetVisualDescendants().OfType<Popup>()).ShouldUseOverlayLayer = true;
         Assert.Equal(new object?[] { Strings.NewProject, Strings.Open, null, Strings.Save, Strings.SaveAs,
-            Strings.CloseProject, null, Strings.Quit }, file.Items.Select(i => i is MenuItem item ? item.Header : null));
+            Strings.ReportCommand, Strings.CloseProject, null, Strings.Quit }, file.Items.Select(i => i is MenuItem item ? item.Header : null));
         Assert.Same(main.UndoCommand, shell.FindControl<MenuItem>("UndoMenuItem")!.Command);
         var primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
         Assert.Equal(new KeyGesture(Key.N, primary), shell.FindControl<MenuItem>("NewMenuItem")!.InputGesture);
         Assert.Equal(new KeyGesture(Key.S, primary | KeyModifiers.Shift), shell.FindControl<MenuItem>("SaveAsMenuItem")!.InputGesture);
         Assert.Equal(new KeyGesture(Key.Z, primary), shell.FindControl<MenuItem>("UndoMenuItem")!.InputGesture);
+        Assert.Equal(new KeyGesture(Key.P, primary), report.InputGesture);
         var projectTheme = project.ItemContainerTheme;
 
         double menuTop = project.Bounds.Top;

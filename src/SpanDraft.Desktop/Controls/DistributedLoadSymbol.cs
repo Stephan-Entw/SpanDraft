@@ -9,8 +9,9 @@ namespace SpanDraft.Desktop.Controls;
 public sealed record DistributedLoadVisual(Guid? Id, DistributedLoadPreview Preview, string Name,
     double StartX, double EndX, double BeamY, bool IsPreview)
 {
-    public double TopY => BeamY - SchematicMetrics.DistributedTopOffset;
-    public double BottomY => BeamY - SchematicMetrics.ForceBeamOffset;
+    public double SymbolScale { get; init; } = 1;
+    public double TopY => BeamY - SchematicMetrics.DistributedTopOffset * SymbolScale;
+    public double BottomY => BeamY - SchematicMetrics.ForceBeamOffset * SymbolScale;
     public double CenterX => StartX + (EndX - StartX) / 2;
     public Rect FillBounds => new(StartX, TopY, EndX - StartX, BeamY - SchematicMetrics.BeamStrokeWidth / 2 - TopY);
     public Rect Bounds => new Rect(StartX, TopY, EndX - StartX, BottomY - TopY).Inflate(DistributedLoadSymbol.HitPadding);
@@ -30,8 +31,9 @@ public static class DistributedLoadSymbol
     public const double HitPadding = PointLoadSymbol.HitPadding;
 
     public static IReadOnlyList<DistributedLoadVisual> Layout(IReadOnlyList<EditorUniformDistributedLoad> loads,
-        BeamLayoutFrame frame, DistributedLoadPreview? preview = null, Guid? hiddenId = null, string? name = null)
+        BeamLayoutFrame frame, DistributedLoadPreview? preview = null, Guid? hiddenId = null, string? name = null, double symbolScale = 1)
     {
+        LayoutNumbers.Positive(symbolScale, nameof(symbolScale));
         var visuals = new List<DistributedLoadVisual>();
         foreach (var load in loads)
         {
@@ -43,7 +45,7 @@ public static class DistributedLoadSymbol
         return visuals.AsReadOnly();
         void Add(Guid? id, DistributedLoadPreview p, string label, bool draft) => visuals.Add(new(id, p, label.Trim(),
             frame.Layout.Transform.PhysicalToScreen(p.StartPosition.Meters),
-            frame.Layout.Transform.PhysicalToScreen(p.EndPosition.Meters), frame.Viewport.BeamY, draft));
+            frame.Layout.Transform.PhysicalToScreen(p.EndPosition.Meters), frame.Viewport.BeamY, draft) { SymbolScale = symbolScale });
     }
 
     public static int IntervalCount(double width)
@@ -90,8 +92,8 @@ public static class DistributedLoadSymbol
 
     public static DistributedLoadEndpoint? HitEndpoint(DistributedLoadVisual visual, double x, double y)
     {
-        bool Contains(double anchor) => new Rect(anchor - SchematicMetrics.DistributedArrowHeadHalfWidth,
-            visual.TopY, 2 * SchematicMetrics.DistributedArrowHeadHalfWidth, SchematicMetrics.DistributedArrowHeight)
+        bool Contains(double anchor) => new Rect(anchor - SchematicMetrics.DistributedArrowHeadHalfWidth * visual.SymbolScale,
+            visual.TopY, 2 * SchematicMetrics.DistributedArrowHeadHalfWidth * visual.SymbolScale, SchematicMetrics.DistributedArrowHeight * visual.SymbolScale)
             .Inflate(HitPadding).Contains(new Point(x, y));
         bool start = Contains(visual.StartX), end = Contains(visual.EndX);
         return start && (!end || Math.Abs(x - visual.StartX) <= Math.Abs(x - visual.EndX)) ? DistributedLoadEndpoint.Start
@@ -123,7 +125,7 @@ public static class DistributedLoadSymbol
 
     public static void Draw(DrawingContext context, DistributedLoadVisual visual, IBrush? brush)
     {
-        var pen = SymbolPen(brush);
+        var pen = SymbolPen(brush, visual.SymbolScale);
         context.DrawLine(pen, new(visual.StartX, visual.TopY), new(visual.EndX, visual.TopY));
         foreach (double x in ArrowPositions(visual))
             DrawArrow(context, x, visual, visual.Preview.Intensity > 0, visual.Preview.Intensity < 0, brush);
@@ -131,7 +133,7 @@ public static class DistributedLoadSymbol
 
     public static void DrawEndpoints(DrawingContext context, DistributedLoadVisual visual, IBrush? brush)
     {
-        context.DrawLine(SymbolPen(brush), new(visual.StartX, visual.TopY), new(visual.EndX, visual.TopY));
+        context.DrawLine(SymbolPen(brush, visual.SymbolScale), new(visual.StartX, visual.TopY), new(visual.EndX, visual.TopY));
         DrawArrow(context, visual.StartX, visual, visual.Preview.Intensity > 0, visual.Preview.Intensity < 0, brush);
         DrawArrow(context, visual.EndX, visual, visual.Preview.Intensity > 0, visual.Preview.Intensity < 0, brush);
     }
@@ -139,13 +141,13 @@ public static class DistributedLoadSymbol
     public static void DrawInner(DrawingContext context, DistributedLoadInnerGlyph glyph, IBrush? brush) =>
         DrawArrow(context, glyph.X, glyph.Entities[0], glyph.Positive, glyph.Negative, brush);
 
-    private static Pen SymbolPen(IBrush? brush) => new(brush, SchematicMetrics.SymbolStrokeWidth,
+    private static Pen SymbolPen(IBrush? brush, double scale) => new(brush, SchematicMetrics.SymbolStrokeWidth * scale,
         lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
 
     private static void DrawArrow(DrawingContext context, double x, DistributedLoadVisual visual,
         bool positive, bool negative, IBrush? brush)
     {
-        var pen = SymbolPen(brush);
+        var pen = SymbolPen(brush, visual.SymbolScale);
         context.DrawLine(pen, new(x, visual.TopY), new(x, visual.BottomY));
         if (positive) Head(-1);
         if (negative) Head(1);
@@ -156,10 +158,10 @@ public static class DistributedLoadSymbol
             using (var path = geometry.Open())
             {
                 path.BeginFigure(new(x, tip), true);
-                path.LineTo(new(x - SchematicMetrics.DistributedArrowHeadHalfWidth,
-                    tip - direction * SchematicMetrics.DistributedArrowHeadLength));
-                path.LineTo(new(x + SchematicMetrics.DistributedArrowHeadHalfWidth,
-                    tip - direction * SchematicMetrics.DistributedArrowHeadLength));
+                path.LineTo(new(x - SchematicMetrics.DistributedArrowHeadHalfWidth * visual.SymbolScale,
+                    tip - direction * SchematicMetrics.DistributedArrowHeadLength * visual.SymbolScale));
+                path.LineTo(new(x + SchematicMetrics.DistributedArrowHeadHalfWidth * visual.SymbolScale,
+                    tip - direction * SchematicMetrics.DistributedArrowHeadLength * visual.SymbolScale));
                 path.EndFigure(true);
             }
             context.DrawGeometry(brush, pen, geometry);

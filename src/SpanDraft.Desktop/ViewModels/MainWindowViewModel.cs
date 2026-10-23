@@ -32,6 +32,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly Func<string?>? _userNameProvider;
     private bool _settingsSaving;
     private bool _settingsDialogOpen;
+    private readonly Func<EditorViewModel, Task>? _showReport;
     private UserSettings _settings = UserSettings.Default;
 
     public MainWindowViewModel(Func<BeamModel, BeamAnalysisOutcome>? analyze = null,
@@ -40,7 +41,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MaterialLibraryStore? materialStore = null, SectionLibraryStore? sectionStore = null,
         Func<SpanDraft.Desktop.Libraries.BuiltInMaterialCatalog>? catalogLoader = null,
         RecentProjectsStore? recentStore = null, Func<Task>? openUserManual = null,
-        ProjectSetupRecovery? setupRecovery = null, Func<string?>? userNameProvider = null)
+        ProjectSetupRecovery? setupRecovery = null, Func<string?>? userNameProvider = null,
+        Func<EditorViewModel, Task>? showReport = null)
     {
         _analyze = analyze;
         _files = files ?? new ProjectFileStore();
@@ -50,6 +52,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _recentStore = recentStore;
         _settingsStore = settingsStore;
         _userNameProvider = userNameProvider;
+        _showReport = showReport;
         _settings = settings ?? UserSettings.Default;
         _resultPresentation = _settings.Presentation;
         _materialStore = materialStore;
@@ -67,6 +70,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OpenCommand = new(() => OpenAsync(), () => CanOpenProject);
         SaveCommand = new(() => SaveAsync(), () => CanSaveProject);
         SaveAsCommand = new(() => SaveAsync(saveAs: true), () => CanSaveProject);
+        ReportCommand = new(ReportAsync, () => CanReport);
         CloseProjectCommand = new(() => CloseProjectAsync(), () => CanCloseProject);
         UndoCommand = new(() => Undo(), () => CanUndo);
         RedoCommand = new(() => Redo(), () => CanRedo);
@@ -169,6 +173,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         || Workspace == MainWorkspaceKind.ProjectSetup && Session is null);
     public bool CanSaveProject => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Session is not null;
     public bool CanCloseProject => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Session is not null;
+    public bool CanReport => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Editor?.Presentation.IsSuccess == true;
+    public Task<bool> ReportAsync() => !CanReport || _showReport is null ? Task.FromResult(false)
+        : RunOperationAsync(async () => { await _showReport(Editor!); return true; });
     public bool CanUndo => !IsWorkspaceBusy && (Workspace switch
     {
         MainWorkspaceKind.BeamEditor => Session?.CanUndo == true,
@@ -197,6 +204,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public AsyncActionCommand OpenCommand { get; }
     public AsyncActionCommand SaveCommand { get; }
     public AsyncActionCommand SaveAsCommand { get; }
+    public AsyncActionCommand ReportCommand { get; }
     public AsyncActionCommand CloseProjectCommand { get; }
     public ActionCommand UndoCommand { get; }
     public ActionCommand RedoCommand { get; }
@@ -298,6 +306,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         DetachSession();
         _editor = EditorViewModel.ForSession(session, EditProject, _analyze, ResultPresentation);
         _editor.IsMainMenuOpen = _mainMenuOpen;
+        _editor.PropertyChanged += EditorReportStateChanged;
         session.SetBusy(IsBusy);
         session.Changed += SessionChanged;
         session.StateApplied += CommittedStateChanged;
@@ -310,6 +319,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (Session is not { } session) return;
         session.Changed -= SessionChanged;
         session.StateApplied -= CommittedStateChanged;
+        Editor!.PropertyChanged -= EditorReportStateChanged;
+    }
+
+    private void EditorReportStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(EditorViewModel.Presentation)) return;
+        Notify(nameof(CanReport)); ReportCommand.Refresh();
     }
 
     private void CommittedStateChanged(ProjectState previous, ProjectState next, EditorChangeKind change) => _recovery?.Schedule(Session!);
@@ -567,6 +583,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Notify(nameof(IsWorkspaceBusy)); Notify(nameof(Workspace)); Notify(nameof(IsSectionWorkspace));
         Notify(nameof(CanNewProject)); Notify(nameof(CanOpenProject)); Notify(nameof(CanSaveProject)); Notify(nameof(CanCloseProject));
         Notify(nameof(CanUndo));
+        Notify(nameof(CanReport)); ReportCommand?.Refresh();
         Notify(nameof(CanRedo));
         Notify(nameof(ProjectFileName));
         Notify(nameof(WindowTitle));

@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Desktop.Resources;
 
 namespace SpanDraft.Desktop.Controls;
 
@@ -89,13 +90,16 @@ public partial class CoordinateAxisPane : UserControl
 
 public sealed class CoordinateAxisCanvas : Control
 {
+    public static readonly StyledProperty<bool> IsStandaloneProperty = AvaloniaProperty.Register<CoordinateAxisCanvas, bool>(nameof(IsStandalone));
     public static readonly StyledProperty<CoordinateAxisLayout?> AxisLayoutProperty = AvaloniaProperty.Register<CoordinateAxisCanvas, CoordinateAxisLayout?>(nameof(AxisLayout));
     public static readonly StyledProperty<IBrush?> AxisBrushProperty = AvaloniaProperty.Register<CoordinateAxisCanvas, IBrush?>(nameof(AxisBrush));
     public static readonly StyledProperty<double> LabelFontSizeProperty = AvaloniaProperty.Register<CoordinateAxisCanvas, double>(nameof(LabelFontSize), 13);
     public CoordinateAxisLayout? AxisLayout { get => GetValue(AxisLayoutProperty); set => SetValue(AxisLayoutProperty, value); }
     public IBrush? AxisBrush { get => GetValue(AxisBrushProperty); set => SetValue(AxisBrushProperty, value); }
     public double LabelFontSize { get => GetValue(LabelFontSizeProperty); set => SetValue(LabelFontSizeProperty, value); }
-    static CoordinateAxisCanvas() => AffectsRender<CoordinateAxisCanvas>(AxisLayoutProperty, AxisBrushProperty, LabelFontSizeProperty);
+    /// <summary>Draw the end value and schematic hint when no interactive axis pane surrounds the canvas.</summary>
+    public bool IsStandalone { get => GetValue(IsStandaloneProperty); set => SetValue(IsStandaloneProperty, value); }
+    static CoordinateAxisCanvas() => AffectsRender<CoordinateAxisCanvas>(AxisLayoutProperty, AxisBrushProperty, LabelFontSizeProperty, IsStandaloneProperty);
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -105,9 +109,12 @@ public sealed class CoordinateAxisCanvas : Control
             new(axis.StationLayout.Stations[^1].ScreenX, CoordinateAxisLayout.AxisY));
         foreach (var station in axis.StationLayout.Stations)
             context.DrawLine(pen, new(station.ScreenX, CoordinateAxisLayout.AxisY - 4), new(station.ScreenX, CoordinateAxisLayout.AxisY + 4));
-        foreach (var label in axis.Labels.Where(l => l.Role != AxisEndpointRole.End))
+        foreach (var label in axis.Labels.Where(l => IsStandalone || l.Role != AxisEndpointRole.End))
             context.DrawText(SchematicText.Format(label.Text, Typeface.Default, LabelFontSize, AxisBrush), label.Bounds.Position);
         context.DrawText(SchematicText.Format("x [" + axis.UnitSymbol + "]", Typeface.Default, LabelFontSize, AxisBrush),
             new(axis.StationLayout.Stations[^1].ScreenX + 8, 0));
+        if (IsStandalone && axis.StationLayout.IsDistorted)
+            context.DrawText(SchematicText.Format(Strings.SchematicDrawing, Typeface.Default, 12, AxisBrush),
+                new(axis.StationLayout.Stations[0].ScreenX, axis.Packing.PaneHeight));
     }
 }

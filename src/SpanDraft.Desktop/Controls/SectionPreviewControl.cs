@@ -11,6 +11,8 @@ namespace SpanDraft.Desktop.Controls;
 /// <summary>Cross-section drawing only. All geometry and authoritative axis data arrive as drawing data.</summary>
 public sealed class SectionPreviewControl : Control
 {
+    public static readonly StyledProperty<bool> CompactProperty = AvaloniaProperty.Register<SectionPreviewControl, bool>(nameof(Compact));
+    public bool Compact { get => GetValue(CompactProperty); set => SetValue(CompactProperty, value); }
     public const double AxisDashLength = 20, AxisDashGap = 4, AxisDotLength = 1.6;
     public const double AxisSolidEndLength = 26;
     public static readonly StyledProperty<bool> ShowCanvasBoundsProperty = AvaloniaProperty.Register<SectionPreviewControl, bool>(nameof(ShowCanvasBounds));
@@ -18,7 +20,7 @@ public sealed class SectionPreviewControl : Control
     public static readonly StyledProperty<SectionAxisDesignation?> SelectedAxisProperty = AvaloniaProperty.Register<SectionPreviewControl, SectionAxisDesignation?>(nameof(SelectedAxis));
     public static readonly StyledProperty<string?> HighlightedParameterProperty = AvaloniaProperty.Register<SectionPreviewControl, string?>(nameof(HighlightedParameter));
     public static readonly StyledProperty<UnitProfile> UnitProfileProperty = AvaloniaProperty.Register<SectionPreviewControl, UnitProfile>(nameof(UnitProfile), UnitProfile.Default);
-    static SectionPreviewControl() => AffectsRender<SectionPreviewControl>(GeometryProperty, SelectedAxisProperty, HighlightedParameterProperty, UnitProfileProperty, ShowCanvasBoundsProperty);
+    static SectionPreviewControl() => AffectsRender<SectionPreviewControl>(GeometryProperty, SelectedAxisProperty, HighlightedParameterProperty, UnitProfileProperty, ShowCanvasBoundsProperty, CompactProperty);
     public bool ShowCanvasBounds { get => GetValue(ShowCanvasBoundsProperty); set => SetValue(ShowCanvasBoundsProperty, value); }
     public SectionPreviewGeometry? Geometry { get => GetValue(GeometryProperty); set => SetValue(GeometryProperty, value); }
     public SectionAxisDesignation? SelectedAxis { get => GetValue(SelectedAxisProperty); set => SetValue(SelectedAxisProperty, value); }
@@ -41,7 +43,7 @@ public sealed class SectionPreviewControl : Control
         {
             var formatted = SchematicText.Format(text, Typeface.Default, 12, foreground);
             return new Size(formatted.Width, formatted.Height);
-        });
+        }, Compact);
         double scale = layout.Scale;
         Point Project(Point p) => layout.Project(p);
         var path = new StreamGeometry();
@@ -74,7 +76,13 @@ public sealed class SectionPreviewControl : Control
             foreach (var line in dimension.Lines) context.DrawLine(pen, line.Start, line.End);
             foreach (var arrow in dimension.Arrows)
                 FilledArrow(context, brush, arrow.Points);
-            Text(context, dimension.Text, dimension.TextBounds.TopLeft, brush);
+            if (dimension.Rotated)
+            {
+                using var rotation = context.PushTransform(Matrix.CreateRotation(-Math.PI / 2)
+                    * Matrix.CreateTranslation(dimension.TextBounds.Left, dimension.TextBounds.Bottom));
+                Text(context, dimension.Text, new(0, 0), brush);
+            }
+            else Text(context, dimension.Text, dimension.TextBounds.TopLeft, brush);
         }
         foreach (var axis in layout.Axes)
         {

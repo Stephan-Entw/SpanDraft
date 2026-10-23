@@ -33,6 +33,7 @@ public partial class MainWindow : Window
         OpenMenuItem.InputGesture = new(Key.O, _primary);
         SaveMenuItem.InputGesture = new(Key.S, _primary);
         SaveAsMenuItem.InputGesture = new(Key.S, _primary | KeyModifiers.Shift);
+        ReportMenuItem.InputGesture = new(Key.P, _primary);
         var quitCommand = new ActionCommand(Close, () => !_initializing && !_model.IsWorkspaceBusy && !_closing);
         QuitMenuItem.Command = quitCommand;
         QuitMenuItem.InputGesture = new(Key.Q, _primary);
@@ -41,6 +42,23 @@ public partial class MainWindow : Window
         AddHandler(KeyDownEvent, ProjectKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(PointerPressedEvent, (_, e) =>
         {
+            if (e.Source is Control source && (source as Button ?? source.FindAncestorOfType<Button>())
+                is { Name: "ReportToolbarButton", IsEffectivelyEnabled: true } reportButton
+                && !_initializing && _model.Editor is { } editor && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            {
+                // Protect buffers before focus and the editor's outside-press handlers run.
+                editor.IsReportOpen = true;
+                AddHandler(PointerReleasedEvent, EndReportPress, RoutingStrategies.Tunnel, handledEventsToo: true);
+                reportButton.AddHandler(PointerCaptureLostEvent, EndReportPress, RoutingStrategies.Direct, handledEventsToo: true);
+                Deactivated += EndReportPress;
+                void EndReportPress(object? sender, EventArgs args)
+                {
+                    RemoveHandler(PointerReleasedEvent, EndReportPress);
+                    reportButton.RemoveHandler(PointerCaptureLostEvent, EndReportPress);
+                    Deactivated -= EndReportPress;
+                    Dispatcher.UIThread.Post(() => editor.IsReportOpen = false, DispatcherPriority.Background);
+                }
+            }
             if (e.Source is Control control && (control is Menu or MenuItem
                 || control.FindAncestorOfType<Menu>() is not null) && !_initializing) _model.SetMainMenuOpen(true);
         }, RoutingStrategies.Tunnel);
@@ -60,7 +78,8 @@ public partial class MainWindow : Window
                 settingsStore: settingsStore, settings: settings,
                 materialStore: MaterialLibraryStore.Local(files), sectionStore: SectionLibraryStore.Local(files),
                 recentStore: RecentProjectsStore.Local(files), openUserManual: OpenUserManualAsync,
-                userNameProvider: static () => OperatingSystem.IsWindows() ? Environment.UserName : null);
+                userNameProvider: static () => OperatingSystem.IsWindows() ? Environment.UserName : null,
+                showReport: ShowReportAsync);
             await _model.InitializeLibrariesAsync();
             DataContext = _model;
             if (!await _model.InitializeRecoveryAsync())
@@ -96,6 +115,20 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task ShowReportAsync(EditorViewModel editor)
+    {
+        editor.IsReportOpen = true;
+        try
+        {
+            using var report = Reporting.ProjectReport.Capture(editor);
+            var preview = new ReportPreviewWindow(report, editor.Session.FilePath, new ProjectFileStore()) { Icon = Icon };
+            await preview.ShowDialog(this);
+        }
+        catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException)
+        { await _dialogs.ShowErrorAsync(SpanDraft.Desktop.Resources.Strings.ReportError + "\n" + error.Message); }
+        finally { Dispatcher.UIThread.Post(() => editor.IsReportOpen = false, DispatcherPriority.Background); }
+    }
+
     private async void ShowAbout(object? sender, RoutedEventArgs e)
     {
         if (_initializing || _model.IsWorkspaceBusy || _closing || _aboutWindow is not null || _settingsWindow is not null) return;
@@ -123,6 +156,7 @@ public partial class MainWindow : Window
             (Key.O, var m) when m == _primary => _model.OpenCommand,
             (Key.S, var m) when m == _primary => _model.SaveCommand,
             (Key.S, var m) when m == (_primary | KeyModifiers.Shift) => _model.SaveAsCommand,
+            (Key.P, var m) when m == _primary => _model.ReportCommand,
             (Key.Q, var m) when m == _primary => QuitMenuItem.Command,
             (Key.Z, var m) when m == _primary => _model.UndoCommand,
             (Key.Z, var m) when m == (_primary | KeyModifiers.Shift) => _model.RedoCommand,

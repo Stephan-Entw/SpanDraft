@@ -138,8 +138,8 @@ Die Schichten bleiben klein und getrennt. Direkte Projektreferenzen:
 | Solver | Core |
 | Engineering | Core, Solver |
 | Analysis | Core, Solver, Engineering |
-| Desktop | Core, Analysis |
-| Reporting | Core |
+| Desktop | Core, Analysis, Reporting |
+| Reporting | keine andere Schicht |
 
 Fachmodell, Solver, Engineering, Analysis und Desktop haben klar getrennte
 Verantwortlichkeiten. Core bleibt unabhängig von UI, Numerikbibliotheken,
@@ -178,9 +178,13 @@ Ein eingebauter importierter Normprofilkatalog ist dafür nicht erforderlich.
 Querschnittsbibliotheken dienen zunächst der Wiederverwendung eigener
 parametrischer Definitionen und manueller Tabellenkennwerte.
 
-PDF-, XLSX- und Druckexport sind für den ersten Release keine Voraussetzung.
-Reports sollen später Eingaben, Ergebnisse und Rechenannahmen nachvollziehbar
-dokumentieren.
+Berichte dokumentieren bestätigte Projekteingaben, vorhandene Analysis-/Engineering-
+Ergebnisse und Rechenannahmen. Vorschau, PDF und Windows-Druck verwenden dieselbe
+beim Öffnen eingefrorene Komposition einschließlich Sprache, Anzeigeeinheiten,
+Version und Berichtsdatum. Reporting enthält keine Berechnung oder Persistenz;
+Desktop liefert formatierte Inhalte und Vektorgrafiken der vorhandenen Controls.
+Die Ausgabe verändert weder Projektinhalt noch gespeicherte Projektdateien.
+XLSX-Export bleibt eine mögliche spätere Erweiterung.
 
 Danach mögliche Erweiterungen:
 

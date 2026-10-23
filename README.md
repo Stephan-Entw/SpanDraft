@@ -111,7 +111,7 @@ The application is split into small layers with explicit responsibilities:
 | `SpanDraft.Engineering` | elastic engineering assessment |
 | `SpanDraft.Analysis` | application-facing analysis orchestration |
 | `SpanDraft.Desktop` | Avalonia desktop application |
-| `SpanDraft.Reporting` | reserved for future reports and exports |
+| `SpanDraft.Reporting` | frozen A4 report composition for preview, PDF export and Windows printing |
 | `SpanDraft.Tests` | product and regression tests |
 
 Core is independent of UI, numerical libraries, persistence and reporting. Desktop consumes the analysis

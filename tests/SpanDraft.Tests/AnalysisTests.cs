@@ -172,9 +172,9 @@ public class AnalysisTests
     }
 
     [Fact]
-    public void DesktopDirectlyReferencesOnlyCoreAndAnalysis()
+    public void DesktopDirectlyReferencesCoreAnalysisAndReporting()
     {
-        Assert.Equal(new[] { "SpanDraft.Analysis", "SpanDraft.Core" }, ProjectReferences("SpanDraft.Desktop"));
+        Assert.Equal(new[] { "SpanDraft.Analysis", "SpanDraft.Core", "SpanDraft.Reporting" }, ProjectReferences("SpanDraft.Desktop"));
     }
 
     [Fact]

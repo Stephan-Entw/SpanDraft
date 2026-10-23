@@ -14,7 +14,7 @@ public sealed record PreviewDrawingArrow(Point Tip, Vector TailDirection)
     public Rect Bounds => new(Points.Min(p => p.X), Points.Min(p => p.Y), Points.Max(p => p.X) - Points.Min(p => p.X), Points.Max(p => p.Y) - Points.Min(p => p.Y));
 }
 public sealed record PreviewDrawingDimension(string Key, string Text, Rect TextBounds,
-    IReadOnlyList<PreviewDrawingLine> Lines, IReadOnlyList<PreviewDrawingArrow> Arrows);
+    IReadOnlyList<PreviewDrawingLine> Lines, IReadOnlyList<PreviewDrawingArrow> Arrows, bool Rotated = false);
 public sealed record PreviewDrawingAxis(SectionAxisDesignation Axis, Point Start, Point End, Rect LabelBounds, bool IsReference = false)
 {
     public Point LabelPosition => LabelBounds.TopLeft;
@@ -36,7 +36,7 @@ public sealed class SectionPreviewDrawingLayout
     public IReadOnlyList<PreviewDrawingAxis> Axes { get; private set; } = [];
     public Point Project(Point point) => new(ProfileBounds.Left + point.X * Scale, ProfileBounds.Top + (_height - point.Y) * Scale);
 
-    public static SectionPreviewDrawingLayout Create(SectionPreviewGeometry geometry, Size size, UnitDefinition unit, Func<string, Size> measure)
+    public static SectionPreviewDrawingLayout Create(SectionPreviewGeometry geometry, Size size, UnitDefinition unit, Func<string, Size> measure, bool compact = false)
     {
         string Label(PreviewDimension dimension) => (dimension.Key is "d" or "D" ? "Ø" : dimension.Key)
             + (dimension.IsConfirmed ? " = " + InputQuantityFormatter.WithUnit(dimension.Value, unit) : "");
@@ -45,9 +45,9 @@ public sealed class SectionPreviewDrawingLayout
         // Preserve the physical drawing envelope when changing the radius caption.
         double detailWidth = geometry.Dimensions.Values.Where(IsDetail).Select(d => d.Key == "r" && d.IsConfirmed
             ? measure("R" + InputQuantityFormatter.WithUnit(d.Value, unit)).Width : textSizes[d.Key].Width).DefaultIfEmpty(48).Max();
-        double left = geometry.Dimensions.ContainsKey("h") ? Math.Max(58, textSizes["h"].Width + 34) : 58;
-        double right = Math.Max(100, detailWidth + 52);
-        const double top = 52, bottom = 90;
+        double left = compact ? 48 : geometry.Dimensions.ContainsKey("h") ? Math.Max(58, textSizes["h"].Width + 34) : 58;
+        double right = compact ? Math.Max(60, detailWidth + 12) : Math.Max(100, detailWidth + 52);
+        double top = compact ? 25 : 52, bottom = compact ? 48 : 90;
         double width = Math.Max(1, size.Width - left - right), height = Math.Max(1, size.Height - top - bottom);
         // Match the reference's generous drawing space without enlarging the physical profile indefinitely.
         double scale = Math.Min(Math.Min(width / geometry.Width, height / geometry.Height),
@@ -86,7 +86,13 @@ public sealed class SectionPreviewDrawingLayout
             var caption = Caption(dimension.Key, vertical
                 ? new(a.X - textSizes[dimension.Key].Width - 8, (a.Y + b.Y - textSizes[dimension.Key].Height) / 2)
                 : new((a.X + b.X) / 2, a.Y + 16), !vertical);
-            dimensions.Add(new(dimension.Key, labels[dimension.Key], caption, lines, arrows));
+            if (compact && vertical)
+            {
+                var textSize = textSizes[dimension.Key];
+                caption = FitText(new Rect(a.X - textSize.Height - 6,
+                    (a.Y + b.Y - textSize.Width) / 2, textSize.Height, textSize.Width), size);
+            }
+            dimensions.Add(new(dimension.Key, labels[dimension.Key], caption, lines, arrows, compact && vertical));
         }
         {
             // Incomplete drawings use the envelope's center as a drawing reference,

@@ -20,7 +20,7 @@ public sealed class DesktopPointLoadRenderingTests
     [InlineData(0, 0, 0)]
     public void ForceContourClearsTheUpperBeamEdgeAndArrowheadsStayFilled(double first, double second, int arrowheads)
     {
-        var drawings = DrawLoad(PointLoadKind.Force, first, second);
+        var drawings = DrawLoad(PointLoadKind.Force, [first, second]);
         var shaft = Assert.Single(drawings, d => d.Brush is null);
         Assert.Equal(arrowheads, drawings.Count(d => d.Brush is not null));
         Assert.Equal(SchematicMetrics.ForceHeight, shaft.Geometry!.Bounds.Height, 10);
@@ -28,6 +28,30 @@ public sealed class DesktopPointLoadRenderingTests
         double paintedBottom = drawings.Max(d => d.Geometry!.GetRenderBounds(d.Pen!).Bottom);
         Assert.Equal(SchematicMetrics.ForceBeamGap, beamTop - paintedBottom, 6);
         Assert.All(drawings, d => Assert.Equal(SchematicMetrics.SymbolStrokeWidth, d.Pen!.Thickness));
+    }
+
+    [Theory]
+    [InlineData(PointLoadKind.Force, 100)]
+    [InlineData(PointLoadKind.Force, -100)]
+    [InlineData(PointLoadKind.Moment, 100)]
+    [InlineData(PointLoadKind.Moment, -100)]
+    public void ExplicitScaleShrinksContoursAndStrokesAroundTheSameLoadAnchor(PointLoadKind kind, double value)
+    {
+        const double scale = .85, tolerance = 1e-4; // Skia records contour bounds as floats.
+        var original = DrawLoad(kind, [value]);
+        var scaled = DrawLoad(kind, [value], scale);
+        Assert.Equal(original.Length, scaled.Length);
+        foreach (var (before, after) in original.Zip(scaled))
+        {
+            var bounds = before.Geometry!.Bounds;
+            var smaller = after.Geometry!.Bounds;
+            Assert.Equal(Center + (bounds.X - Center) * scale, smaller.X, tolerance);
+            Assert.Equal(Center + (bounds.Y - Center) * scale, smaller.Y, tolerance);
+            Assert.Equal(bounds.Width * scale, smaller.Width, tolerance);
+            Assert.Equal(bounds.Height * scale, smaller.Height, tolerance);
+            Assert.Equal(before.Pen!.Thickness * scale, after.Pen!.Thickness, 10);
+            Assert.Equal(before.Brush is null, after.Brush is null);
+        }
     }
 
     [Fact]
@@ -96,10 +120,10 @@ public sealed class DesktopPointLoadRenderingTests
 
     private static GeometryDrawing[] Draw(params double[] values) => DrawLoad(PointLoadKind.Moment, values);
 
-    private static GeometryDrawing[] DrawLoad(PointLoadKind kind, params double[] values)
+    private static GeometryDrawing[] DrawLoad(PointLoadKind kind, double[] values, double scale = 1)
     {
         var entities = values.Select(value => new PointLoadVisual(Guid.NewGuid(),
-            new(Length.FromMillimeters(500), kind, value), "Load", Center, Center, false)).ToArray();
+            new(Length.FromMillimeters(500), kind, value), "Load", Center, Center, false) { SymbolScale = scale }).ToArray();
         var drawing = new DrawingGroup();
         using (var context = drawing.Open())
             PointLoadSymbol.Draw(context, new(kind, Center, Center, entities), Brushes.Black);

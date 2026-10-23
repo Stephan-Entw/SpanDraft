@@ -1,5 +1,6 @@
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.State;
 using Xunit;
@@ -8,6 +9,77 @@ namespace SpanDraft.Tests;
 
 public sealed class DesktopStationLayoutTests
 {
+    [Theory]
+    [InlineData(.75, 1)]
+    [InlineData(1, .85)]
+    public void ExplicitSymbolScalesRefreshTheCacheAndLeaveDesktopDefaultsIntact(double supportScale, double loadScale)
+    {
+        var document = DesktopLayoutFixture.Document().WithSupports([
+            new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Pinned, "A"),
+            new(Guid.NewGuid(), Length.FromMeters(1), SupportType.Roller, "B")])
+            .WithLoads([new EditorPointMoment(Guid.NewGuid(), Length.FromMeters(.5), Moment.FromNewtonMeters(100), "M1")]);
+        var state = new BeamLayoutState();
+        var original = state.Update(document, 600, 300)!;
+        var scaled = state.Update(document, 600, 300, supportSymbolScale: supportScale, loadSymbolScale: loadScale)!;
+        Assert.NotSame(original.Layout, scaled.Layout);
+        Assert.Same(scaled.Layout, state.Update(document, 600, 350,
+            supportSymbolScale: supportScale, loadSymbolScale: loadScale)!.Layout);
+        Assert.Equal(original.Layout.Stations[0].LeftExtent * supportScale, scaled.Layout.Stations[0].LeftExtent, 10);
+        Assert.Equal(original.Layout.Stations[1].LeftExtent * loadScale, scaled.Layout.Stations[1].LeftExtent, 10);
+        Assert.Equal(original.Layout.Stations[^1].RightExtent * supportScale, scaled.Layout.Stations[^1].RightExtent, 10);
+        Assert.Equal(original.Layout.Stations, state.Update(document, 600, 300)!.Layout.Stations);
+        Assert.Equal(1, new BeamCanvas().SupportSymbolScale);
+        Assert.Equal(13, new BeamCanvas().LabelFontSize);
+        Assert.Equal(13, new CoordinateAxisCanvas().LabelFontSize);
+    }
+
+    [Fact]
+    public void OptionalOuterMarginsRefreshTheCacheAndKeepDesktopDefaults()
+    {
+        var document = DesktopLayoutFixture.Document();
+        var state = new BeamLayoutState();
+        var original = state.Update(document, 600, 300)!;
+        Assert.Equal(72, original.Layout.Stations[0].ScreenX);
+        Assert.Equal(528, original.Layout.Stations[^1].ScreenX);
+        Assert.Same(original.Layout, state.Update(document, 600, 350)!.Layout);
+
+        var margins = new StationOuterMargins(40, 55);
+        var compact = state.Update(document, 600, 300, outerMargins: margins)!;
+        Assert.NotSame(original.Layout, compact.Layout);
+        Assert.Equal(40, compact.Layout.Stations[0].ScreenX);
+        Assert.Equal(545, compact.Layout.Stations[^1].ScreenX);
+        Assert.Same(compact.Layout, state.Update(document, 600, 350, outerMargins: margins)!.Layout);
+        Assert.NotSame(compact.Layout, state.Update(document, 600, 350, outerMargins: new(41, 55))!.Layout);
+        var restored = state.Update(document, 600, 300)!;
+        Assert.Equal(original.Layout.Stations, restored.Layout.Stations);
+
+        state.BeginInteraction(BeamPointerInteraction.LabelDrag);
+        Assert.Same(restored, state.Update(document, 600, 300, outerMargins: margins));
+        state.EndInteraction();
+        Assert.Equal(compact.Layout.Stations, state.Update(document, 600, 300, outerMargins: margins)!.Layout.Stations);
+    }
+
+    [Fact]
+    public void CompactMarginsStillProtectEndpointSymbolExtents()
+    {
+        var document = DesktopLayoutFixture.Document().WithSupports([
+            new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Pinned, "A"),
+            new(Guid.NewGuid(), Length.FromMeters(1), SupportType.Fixed, "B")]);
+        var requirements = StationRequirementBuilder.FromDocument(document);
+        var minimum = StationOuterMargins.Calculate(requirements[0], requirements[^1], baseSideMargin: 0);
+        var frame = new BeamLayoutState().Update(document, 600, 300, outerMargins: new(0, 0))!;
+        Assert.Equal(minimum.Left, frame.Layout.Stations[0].ScreenX);
+        Assert.Equal(600 - minimum.Right, frame.Layout.Stations[^1].ScreenX);
+    }
+
+    [Theory]
+    [InlineData(-1, 40)]
+    [InlineData(double.NaN, 40)]
+    [InlineData(40, double.PositiveInfinity)]
+    public void InvalidExplicitOuterMarginsAreRejected(double left, double right) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BeamLayoutState().Update(
+            DesktopLayoutFixture.Document(), 600, 300, outerMargins: new(left, right)));
+
     [Fact]
     public void SufficientSpaceRemainsLinearAndKeepsExactEndAnchors()
     {

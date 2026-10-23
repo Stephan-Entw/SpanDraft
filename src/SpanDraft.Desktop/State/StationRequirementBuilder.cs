@@ -6,8 +6,10 @@ namespace SpanDraft.Desktop.State;
 /// <summary>The Entity-aware boundary; only committed glyph extents enter the pure layout.</summary>
 public static class StationRequirementBuilder
 {
-    public static IReadOnlyList<StationRequirement> FromDocument(EditorDocument document)
+    public static IReadOnlyList<StationRequirement> FromDocument(EditorDocument document, double supportSymbolScale = 1, double loadSymbolScale = 1)
     {
+        LayoutNumbers.Positive(supportSymbolScale, nameof(supportSymbolScale));
+        LayoutNumbers.Positive(loadSymbolScale, nameof(loadSymbolScale));
         const double stroke = SchematicMetrics.SymbolStrokeWidth / 2;
         var requirements = new List<StationRequirement> { new(0, 0, 0), new(document.Length.Meters, 0, 0) };
         foreach (var support in document.Supports)
@@ -15,7 +17,7 @@ public static class StationRequirementBuilder
             if (support.Type == SupportType.Fixed)
             {
                 var geometry = FixedSupportGeometry.AtPosition(support.Position.Meters, document.Length.Meters);
-                requirements.Add(new(support.Position.Meters, geometry.LeftExtent, geometry.RightExtent));
+                requirements.Add(new(support.Position.Meters, geometry.LeftExtent * supportSymbolScale, geometry.RightExtent * supportSymbolScale));
                 continue;
             }
             var hinged = support.Type switch
@@ -24,7 +26,7 @@ public static class StationRequirementBuilder
                 SupportType.Roller => new HingedSupportGeometry(true),
                 _ => throw new ArgumentOutOfRangeException(nameof(document))
             };
-            requirements.Add(new(support.Position.Meters, hinged.LeftExtent, hinged.RightExtent));
+            requirements.Add(new(support.Position.Meters, hinged.LeftExtent * supportSymbolScale, hinged.RightExtent * supportSymbolScale));
         }
         foreach (var load in document.Loads)
         {
@@ -34,11 +36,11 @@ public static class StationRequirementBuilder
                 PointLoadKind.Moment => SchematicMetrics.PointLoadHalfSize,
                 _ => throw new ArgumentOutOfRangeException(nameof(document))
             };
-            requirements.Add(new(load.Position.Meters, extent + stroke, extent + stroke));
+            requirements.Add(new(load.Position.Meters, (extent + stroke) * loadSymbolScale, (extent + stroke) * loadSymbolScale));
         }
         foreach (var load in document.DistributedLoads)
         {
-            double extent = (load.Intensity.NewtonsPerMeter == 0 ? 0 : SchematicMetrics.DistributedArrowHeadHalfWidth) + stroke;
+            double extent = ((load.Intensity.NewtonsPerMeter == 0 ? 0 : SchematicMetrics.DistributedArrowHeadHalfWidth) + stroke) * loadSymbolScale;
             requirements.Add(new(load.StartPosition.Meters, extent, extent));
             requirements.Add(new(load.EndPosition.Meters, extent, extent));
         }

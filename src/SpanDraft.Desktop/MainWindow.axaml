@@ -27,6 +27,7 @@
         <Separator />
         <MenuItem x:Name="SaveMenuItem" Header="{x:Static resources:Strings.Save}" Command="{Binding SaveCommand}" />
         <MenuItem x:Name="SaveAsMenuItem" Header="{x:Static resources:Strings.SaveAs}" Command="{Binding SaveAsCommand}" />
+        <MenuItem x:Name="ReportMenuItem" Header="{x:Static resources:Strings.ReportCommand}" Command="{Binding ReportCommand}" />
         <MenuItem x:Name="CloseProjectMenuItem" Header="{x:Static resources:Strings.CloseProject}" Command="{Binding CloseProjectCommand}" />
         <Separator />
         <MenuItem x:Name="QuitMenuItem" Header="{x:Static resources:Strings.Quit}" IsEnabled="{Binding !IsWorkspaceBusy}" />

@@ -466,9 +466,9 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     private static ManualAxisConfiguration ManualConfiguration(ISectionDefinition section) => section.Axes.Count == 2
         ? section.Axes[0].AxisDesignation == SectionAxisDesignation.Y ? ManualAxisConfiguration.YZ : ManualAxisConfiguration.UV
         : Enum.Parse<ManualAxisConfiguration>(section.Axes[0].AxisDesignation.ToString());
-    private static SectionEditorType FormOf(ISectionDefinition section) => section is IParametricSectionDefinition p
+    internal static SectionEditorType FormOf(ISectionDefinition section) => section is IParametricSectionDefinition p
         ? Enum.Parse<SectionEditorType>(p.ShapeKind.ToString()) : SectionEditorType.Manual;
-    private static Dictionary<string, double> PresetValues(ISectionDefinition section)
+    internal static Dictionary<string, double> PresetValues(ISectionDefinition section)
     {
         (string Key, double Value)[] values = section switch
         {

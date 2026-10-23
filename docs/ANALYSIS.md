@@ -81,7 +81,7 @@ Details stehen in [DOMAIN.md](DOMAIN.md), [SOLVER.md](SOLVER.md) und
 
 Analysis referenziert direkt Core, Solver und Engineering, ohne eigene NuGet-Pakete
 oder Abhängigkeiten auf Avalonia, Desktop oder Reporting. Desktop referenziert
-direkt Core und Analysis und startet Berechnungen ausschließlich über BeamAnalysis.
+direkt Core, Analysis und Reporting und startet Berechnungen ausschließlich über BeamAnalysis.
 Core, Solver und Engineering bleiben unabhängig von Desktop.
 
 Analysis gehört zur normalen Solution und den Produkttests, nicht zur separaten

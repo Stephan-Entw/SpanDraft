@@ -5,6 +5,33 @@ namespace SpanDraft.Desktop.Resources;
 
 public static class Strings
 {
+    public static string Report => Get(nameof(Report));
+    public static string ReportPdfTarget => Get(nameof(ReportPdfTarget));
+    public static string ReportSummary => Get(nameof(ReportSummary));
+    public static string ReportMaterial => Get(nameof(ReportMaterial));
+    public static string ReportDeflection => Get(nameof(ReportDeflection));
+    public static string ReportMoment => Get(nameof(ReportMoment));
+    public static string ReportStress => Get(nameof(ReportStress));
+    public static string ReportSafety => Get(nameof(ReportSafety));
+
+    public static string ReportClose => Get(nameof(ReportClose));
+    public static string ReportCommand => Get(nameof(ReportCommand));
+    public static string ReportHeading => Get(nameof(ReportHeading));
+    public static string ReportContinuation => Get(nameof(ReportContinuation));
+    public static string ReportPage => Get(nameof(ReportPage));
+    public static string ReportNotes => Get(nameof(ReportNotes));
+    public static string ReportTheory => Get(nameof(ReportTheory));
+    public static string ReportLimits => Get(nameof(ReportLimits));
+    public static string ReportPosition => Get(nameof(ReportPosition));
+    public static string ReportSavePdf => Get(nameof(ReportSavePdf));
+    public static string ReportPrint => Get(nameof(ReportPrint));
+    public static string ReportFit => Get(nameof(ReportFit));
+    public static string ReportPrevious => Get(nameof(ReportPrevious));
+    public static string ReportNext => Get(nameof(ReportNext));
+    public static string ReportError => Get(nameof(ReportError));
+    public static string ReportProjectTarget => Get(nameof(ReportProjectTarget));
+    public static string ReportManualSection => Get(nameof(ReportManualSection));
+
     public static string ProjectInformation => Get(nameof(ProjectInformation));
     public static string Optional => Get(nameof(Optional));
     public static string CalculationTitle => Get(nameof(CalculationTitle));
