@@ -5,12 +5,13 @@ using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Desktop.Reporting;
 using SpanDraft.Desktop.State;
 
 namespace SpanDraft.Desktop.ViewModels;
 
-public enum MainViewMode { ProjectSetup, Editor, Start }
-public enum MainWorkspaceKind { ProjectSetup, MaterialSelection, MaterialEditor, SectionDefinition, BeamEditor, Start }
+public enum MainViewMode { ProjectSetup, Editor, Start, ReportPreview }
+public enum MainWorkspaceKind { ProjectSetup, MaterialSelection, MaterialEditor, SectionDefinition, BeamEditor, Start, ReportPreview }
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
@@ -32,7 +33,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly Func<string?>? _userNameProvider;
     private bool _settingsSaving;
     private bool _settingsDialogOpen;
-    private readonly Func<EditorViewModel, Task>? _showReport;
+    private ReportPreviewViewModel? _reportPreview;
     private UserSettings _settings = UserSettings.Default;
 
     public MainWindowViewModel(Func<BeamModel, BeamAnalysisOutcome>? analyze = null,
@@ -41,8 +42,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MaterialLibraryStore? materialStore = null, SectionLibraryStore? sectionStore = null,
         Func<SpanDraft.Desktop.Libraries.BuiltInMaterialCatalog>? catalogLoader = null,
         RecentProjectsStore? recentStore = null, Func<Task>? openUserManual = null,
-        ProjectSetupRecovery? setupRecovery = null, Func<string?>? userNameProvider = null,
-        Func<EditorViewModel, Task>? showReport = null)
+        ProjectSetupRecovery? setupRecovery = null, Func<string?>? userNameProvider = null)
     {
         _analyze = analyze;
         _files = files ?? new ProjectFileStore();
@@ -52,7 +52,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _recentStore = recentStore;
         _settingsStore = settingsStore;
         _userNameProvider = userNameProvider;
-        _showReport = showReport;
         _settings = settings ?? UserSettings.Default;
         _resultPresentation = _settings.Presentation;
         _materialStore = materialStore;
@@ -82,6 +81,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ProjectSetupViewModel Setup => _setup;
     public StartPageViewModel StartPage { get; }
     public EditorViewModel? Editor => _editor;
+    public ReportPreviewViewModel? ReportPreview => _reportPreview;
     public ResultPresentationOptions ResultPresentation => _resultPresentation;
     public UserSettings Settings => _settings;
 
@@ -157,9 +157,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Notify(nameof(ResultPresentation));
     }
     public ProjectSession? Session => Editor?.Session;
-    public bool IsBusy => _busy || _libraryBusy;
+    public bool IsBusy => _busy || _libraryBusy || ReportPreview?.IsBusy == true;
     public bool IsWorkspaceBusy => IsBusy || Mode == MainViewMode.ProjectSetup && Setup.IsBusy;
-    public MainWorkspaceKind Workspace => Mode == MainViewMode.Start ? MainWorkspaceKind.Start
+    public MainWorkspaceKind Workspace => Mode == MainViewMode.ReportPreview ? MainWorkspaceKind.ReportPreview
+        : Mode == MainViewMode.Start ? MainWorkspaceKind.Start
         : Mode == MainViewMode.Editor ? MainWorkspaceKind.BeamEditor : Setup.Page switch
     {
         ProjectSetupPage.SectionDefinition => MainWorkspaceKind.SectionDefinition,
@@ -174,8 +175,46 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool CanSaveProject => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Session is not null;
     public bool CanCloseProject => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Session is not null;
     public bool CanReport => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Editor?.Presentation.IsSuccess == true;
-    public Task<bool> ReportAsync() => !CanReport || _showReport is null ? Task.FromResult(false)
-        : RunOperationAsync(async () => { await _showReport(Editor!); return true; });
+    public Task<bool> ReportAsync() => !CanReport ? Task.FromResult(false) : RunOperationAsync(async () =>
+    {
+        var editor = Editor!;
+        editor.IsReportOpen = true;
+        try
+        {
+            var report = ProjectReport.Capture(editor);
+            try { _reportPreview = new(report, Session!.FilePath, _files, () => CloseReport()); }
+            catch { report.Dispose(); throw; }
+            _reportPreview.PropertyChanged += ReportStateChanged;
+            Notify(nameof(ReportPreview)); Navigate(MainViewMode.ReportPreview);
+            return true;
+        }
+        catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            editor.IsReportOpen = false;
+            await ShowErrorAsync(Strings.ReportError, error);
+            return false;
+        }
+    });
+
+    public bool CloseReport()
+    {
+        if (Workspace != MainWorkspaceKind.ReportPreview || IsWorkspaceBusy) return false;
+        ReleaseReport(); return true;
+    }
+
+    internal void ReleaseReport()
+    {
+        if (_reportPreview is null) return;
+        _reportPreview.PropertyChanged -= ReportStateChanged;
+        _reportPreview.Dispose(); _reportPreview = null;
+        Notify(nameof(ReportPreview)); Navigate(MainViewMode.Editor);
+    }
+
+    private void ReportStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ReportPreviewViewModel.IsBusy)) return;
+        Session?.SetBusy(IsBusy); NotifySession();
+    }
     public bool CanUndo => !IsWorkspaceBusy && (Workspace switch
     {
         MainWorkspaceKind.BeamEditor => Session?.CanUndo == true,
@@ -198,6 +237,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MainViewMode.Start => StartPage,
         MainViewMode.ProjectSetup => Setup,
         MainViewMode.Editor => Editor!,
+        MainViewMode.ReportPreview => ReportPreview!,
         _ => throw new InvalidOperationException("Unknown workspace.")
     };
     public AsyncActionCommand NewCommand { get; }
@@ -453,6 +493,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public Task<bool> RequestCloseAsync() => RunOperationAsync(async () =>
     {
         if (!await CanLeaveAsync()) return false;
+        ReleaseReport();
         await CompleteLeaveAsync();
         await DeleteSetupRecoveryAsync();
         return true;
@@ -566,7 +607,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void Navigate(MainViewMode mode)
     {
         // Protect hidden editor buffers before changing the visible workspace.
-        if (Editor is { } editor) editor.IsProjectSetupOpen = mode == MainViewMode.ProjectSetup;
+        if (Editor is { } editor)
+        {
+            editor.IsProjectSetupOpen = mode == MainViewMode.ProjectSetup;
+            editor.IsReportOpen = mode == MainViewMode.ReportPreview;
+        }
         _mode = mode;
         Notify(nameof(Mode));
         Notify(nameof(Setup));

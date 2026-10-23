@@ -60,9 +60,9 @@
                 Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ReportCommand}"
                 AutomationProperties.Name="{x:Static resources:Strings.Report}"
                 ToolTip.Tip="{x:Static resources:Strings.ReportHeading}">
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
             <Grid Width="{DynamicResource ToolbarIconSize}" Height="{DynamicResource ToolbarIconSize}">
-              <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Document}" Width="20" Height="20"
+              <PathIcon Classes="fluentIcon fluentIcon24" Data="{StaticResource FluentIcon.DocumentData}"
                         Foreground="{Binding Foreground, ElementName=ReportToolbarButton}"
                         HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Grid>

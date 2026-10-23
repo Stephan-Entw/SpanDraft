@@ -3,8 +3,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Rendering.SceneGraph;
+using Avalonia.Skia.Helpers;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -22,6 +26,7 @@ using SpanDraft.Desktop.Reporting;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
+using SpanDraft.Desktop.Views;
 using SpanDraft.Reporting;
 using Xunit;
 
@@ -44,13 +49,13 @@ public sealed class ProjectReportTests : IDisposable
     private static readonly DateTimeOffset Now = new(2026, 10, 23, 12, 34, 56, TimeSpan.FromHours(2));
 
     private static (MainWindowViewModel Main, Files Files) Open(ProjectState state,
-        ResultPresentationOptions? presentation = null, Action? analyzed = null, Func<EditorViewModel, Task>? show = null)
+        ResultPresentationOptions? presentation = null, Action? analyzed = null)
     {
         var files = new Files();
         string path = Path.GetFullPath("report-input.spandraft"); files.Data[path] = ProjectFileCodec.Serialize(state);
         var main = new MainWindowViewModel(files: files, settings: UserSettings.Default with
             { Profile = presentation?.Profile ?? UnitProfile.Default, Mode = presentation?.Mode ?? PresentationMode.Standard },
-            analyze: beam => { analyzed?.Invoke(); return BeamAnalysis.Analyze(beam); }, showReport: show);
+            analyze: beam => { analyzed?.Invoke(); return BeamAnalysis.Analyze(beam); });
         Assert.True(main.OpenAsync(path).GetAwaiter().GetResult());
         return (main, files);
     }
@@ -393,23 +398,33 @@ public sealed class ProjectReportTests : IDisposable
     }
 
     [Fact]
-    public void ShellGuardsReportAndPreservesDirtyStateAndDraftsThroughoutCallback()
+    public void ShellReportWorkspacePreservesSnapshotDirtyStateAndDraftsWithoutStayingBusy()
     {
-        var state = ReportTestProjects.Create(); int calls = 0;
-        var (main, files) = Open(state, show: editor =>
-        {
-            calls++; Assert.True(editor.IsBusy); Assert.True(editor.PreserveDrafts);
-            editor.DimensionLength.LoseFocus();
-            Assert.True(editor.DimensionLength.IsEditing); Assert.Equal("9000", editor.DimensionLength.Text);
-            using var report = ProjectReport.Capture(editor, Now); return Task.CompletedTask;
-        });
+        var state = ReportTestProjects.Create(); int analyses = 0;
+        var (main, files) = Open(state, analyzed: () => analyses++);
         main.Editor!.SetAnnotationOffset(state.Document.Loads[0].Id, new(20, 10));
         main.Editor.DimensionLength.Begin(); main.Editor.DimensionLength.Text = "9000";
-        var revision = main.Session!.CurrentRevision; Assert.True(main.Session.IsDirty);
-        Assert.True(main.ReportAsync().GetAwaiter().GetResult()); Assert.Equal(1, calls);
+        var revision = main.Session!.CurrentRevision; var editor = main.Editor;
+        Assert.True(main.ReportAsync().GetAwaiter().GetResult());
+        var preview = Assert.IsType<ReportPreviewViewModel>(main.CurrentViewModel);
+        Assert.Equal(MainWorkspaceKind.ReportPreview, main.Workspace);
+        Assert.False(main.IsWorkspaceBusy); Assert.False(editor.IsBusy); Assert.True(editor.PreserveDrafts);
+        editor.DimensionLength.LoseFocus();
         Assert.Same(revision, main.Session.CurrentRevision); Assert.True(main.Session.IsDirty); Assert.Empty(files.Writes);
-        Assert.Equal(state.Document.Length, main.Editor.Document.Length);
-        Assert.True(main.Editor.DimensionLength.IsEditing); Assert.Equal("9000", main.Editor.DimensionLength.Text);
+        Assert.Equal(state.Document.Length, main.Editor.Document.Length); Assert.Equal(1, analyses);
+        Assert.True(editor.DimensionLength.IsEditing); Assert.Equal("9000", editor.DimensionLength.Text);
+        Assert.False(main.CanNewProject); Assert.False(main.CanOpenProject); Assert.False(main.CanSaveProject);
+        Assert.False(main.CanCloseProject); Assert.False(main.CanReport); Assert.False(main.CanUndo); Assert.False(main.CanRedo);
+        Assert.False(main.NewAsync().GetAwaiter().GetResult()); Assert.False(main.OpenAsync("missing.spandraft").GetAwaiter().GetResult());
+        Assert.False(main.SaveAsync().GetAwaiter().GetResult()); Assert.False(main.CloseProjectAsync().GetAwaiter().GetResult());
+        Assert.False(main.ReportAsync().GetAwaiter().GetResult()); Assert.False(main.Undo()); Assert.False(main.Redo());
+        Assert.Same(preview, main.ReportPreview);
+        Assert.True(main.CloseReport()); Assert.Same(editor, main.CurrentViewModel); Assert.False(editor.IsReportOpen);
+        Assert.Null(preview.Picture); Assert.Same(revision, main.Session.CurrentRevision);
+        Assert.True(editor.DimensionLength.IsEditing); Assert.Equal("9000", editor.DimensionLength.Text);
+        Assert.True(main.ReportAsync().GetAwaiter().GetResult()); Assert.NotSame(preview, main.ReportPreview);
+        Assert.Equal(0, main.ReportPreview!.PageIndex); Assert.True(main.ReportPreview.IsPageFit);
+        main.CloseReport();
         var unavailable = state with { Document = state.Document.WithSupports([]) };
         var (invalid, _) = Open(unavailable); Assert.False(invalid.CanReport); Assert.False(invalid.ReportAsync().GetAwaiter().GetResult());
         Assert.Throws<InvalidOperationException>(() => ProjectReport.Capture(invalid.Editor!, Now));
@@ -418,49 +433,520 @@ public sealed class ProjectReportTests : IDisposable
     [Fact]
     public void PreviewNavigationAndPdfExportDoNotTouchProjectAndProtectProjectTargets()
     {
-        var (main, files) = Open(ReportTestProjects.Create(true)); using var report = ProjectReport.Capture(main.Editor!, Now);
-        var window = new ReportPreviewWindow(report, main.Session!.FilePath, files);
-        window.ShowPage(1);
-        Assert.Equal("Seite 2 von 2", window.FindControl<TextBlock>("PageLabel")!.Text);
-        Assert.False(window.FindControl<Button>("NextButton")!.IsEnabled);
+        var (main, files) = Open(ReportTestProjects.Create(true));
+        Assert.True(main.ReportAsync().GetAwaiter().GetResult());
+        var preview = main.ReportPreview!;
+        preview.ShowPage(1);
+        Assert.Equal("Seite 2 von 2", preview.PageLabel); Assert.False(preview.NextCommand.CanExecute(null));
         string destination = Path.GetFullPath("export.pdf");
-        window.SavePdfAsync(destination).GetAwaiter().GetResult(); Assert.True(files.Data.ContainsKey(destination));
+        preview.SavePdfAsync(destination).GetAwaiter().GetResult(); Assert.True(files.Data.ContainsKey(destination));
         Assert.Equal(new[] { destination }, files.Writes);
-        Assert.Throws<IOException>(() => window.SavePdfAsync(main.Session.FilePath!).GetAwaiter().GetResult());
-        Assert.Throws<IOException>(() => window.SavePdfAsync(Path.GetFullPath("export.txt")).GetAwaiter().GetResult());
+        Assert.Throws<IOException>(() => preview.SavePdfAsync(main.Session!.FilePath!).GetAwaiter().GetResult());
+        Assert.Throws<IOException>(() => preview.SavePdfAsync(Path.GetFullPath("export.txt")).GetAwaiter().GetResult());
         Assert.Equal(new[] { destination }, files.Writes);
         byte[] exported = files.Data[destination].ToArray(); files.FailWrites = true;
-        Assert.Throws<IOException>(() => window.SavePdfAsync(destination).GetAwaiter().GetResult());
+        Assert.Throws<IOException>(() => preview.SavePdfAsync(destination).GetAwaiter().GetResult());
         Assert.Equal(exported, files.Data[destination]);
-        Assert.False(main.Session.IsDirty); window.Close();
+        Assert.False(main.Session!.IsDirty); main.CloseReport();
     }
 
     [Theory]
-    [InlineData("de-DE", 740, 520)] [InlineData("en-US", 960, 820)]
-    public void PreviewControlsFitAndRenderAtMinimumAndNormalWindowSizes(string language, int width, int height)
+    [InlineData("de-DE", false, 1100, 650)] [InlineData("en-US", true, 1100, 650)]
+    [InlineData("de-DE", true, 1250, 800)] [InlineData("en-US", false, 1250, 800)]
+    public void PreviewToolbarFitsTheMainWorkspaceInBothThemes(string language, bool dark, int width, int height)
     {
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language);
-        var (main, files) = Open(ReportTestProjects.Create(true)); using var report = ProjectReport.Capture(main.Editor!, Now);
-        var window = new ReportPreviewWindow(report, main.Session!.FilePath, files) { Width = width, Height = height, WindowStartupLocation = WindowStartupLocation.Manual };
-        window.Show();
-        window.Measure(new(width, height)); window.Arrange(new Rect(0, 0, width, height)); Dispatcher.UIThread.RunJobs();
-        var buttons = new[] { "PreviousButton", "NextButton", "SavePdfButton", "PrintButton", "CloseButton" }
-            .Select(n => window.FindControl<Button>(n)!).ToArray();
-        Assert.All(buttons, button =>
+        Application.Current!.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+        var (main, files) = Open(ReportTestProjects.Create(true));
+        var (window, view) = ShowReportWorkspace(main, files, width, height);
+        try
         {
-            var top = button.TranslatePoint(default, window)!.Value;
-            Assert.True(new Rect(0, 0, width, height).Contains(new Rect(top, button.Bounds.Size)), button.Name);
-        });
-        var save = buttons[2]; var zoom = window.FindControl<ComboBox>("ZoomPicker")!;
-        Assert.True(zoom.TranslatePoint(new(zoom.Bounds.Width, 0), window)!.Value.X
-            <= save.TranslatePoint(default, window)!.Value.X);
-        Assert.True(window.FindControl<Image>("PageImage")!.Bounds.Height <= window.FindControl<ScrollViewer>("PageScroll")!.Bounds.Height);
-        Assert.Equal(OperatingSystem.IsWindows(), buttons[3].IsEnabled);
-        string directory = Path.Combine(RepositoryRoot(), "output", "pdf", "production"); Directory.CreateDirectory(directory);
-        using var image = new RenderTargetBitmap(new(width, height), new Vector(96, 96));
-        image.Render(window);
-        image.Save(Path.Combine(directory, $"preview-{language}.png"), PngBitmapEncoderOptions.Default);
-        window.Close();
+            window.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(window.RequestedThemeVariant, view.ActualThemeVariant);
+            var bar = view.FindControl<Border>("ReportToolbar")!;
+            var buttons = new[] { "PreviousButton", "NextButton", "ZoomOutButton", "ZoomInButton", "PageFitButton", "PageWidthButton", "SavePdfButton", "PrintButton", "CloseButton" }
+                .Select(n => view.FindControl<Button>(n)!).ToArray();
+            Assert.All(buttons, button =>
+            {
+                var top = button.TranslatePoint(default, bar)!.Value;
+                Assert.True(new Rect(bar.Bounds.Size).Contains(new Rect(top, button.Bounds.Size)), button.Name);
+                Assert.Equal(buttons[0].Bounds.Height, button.Bounds.Height);
+            });
+            Assert.All(buttons.Take(6), button =>
+            {
+                Assert.Equal(new Size(36, 36), button.Bounds.Size);
+                Assert.False(string.IsNullOrWhiteSpace(Avalonia.Automation.AutomationProperties.GetName(button)));
+                Assert.NotNull(ToolTip.GetTip(button));
+                var icon = Assert.Single(button.GetVisualDescendants().OfType<PathIcon>());
+                Assert.Same(button.Foreground, icon.Foreground);
+                int size = button.Name is "PreviousButton" or "NextButton" ? 28
+                    : button.Name is "PageFitButton" or "PageWidthButton" ? 24 : 20;
+                Assert.Equal(new Size(size, size), icon.Bounds.Size);
+            });
+            Assert.False(buttons[0].IsEffectivelyEnabled); Assert.True(buttons[1].IsEffectivelyEnabled);
+            Assert.Equal(OperatingSystem.IsWindows(), buttons[7].IsEnabled);
+            Assert.All(buttons.Skip(4).Take(2), button =>
+            {
+                Assert.IsType<Button>(button); Assert.DoesNotContain("selected", button.Classes);
+            });
+            Assert.DoesNotContain("…", Strings.ReportSavePdf); Assert.DoesNotContain("…", Strings.ReportPrint);
+            var navigationSeparator = view.FindControl<Avalonia.Controls.Shapes.Rectangle>("NavigationSeparator")!;
+            Assert.True(buttons[1].Bounds.Right <= navigationSeparator.Bounds.Left && navigationSeparator.Bounds.Right <= buttons[2].Bounds.Left);
+            Assert.True(buttons[4].TranslatePoint(new(buttons[4].Bounds.Width, 0), bar)!.Value.X
+                < view.FindControl<Avalonia.Controls.Shapes.Rectangle>("OutputSeparator")!.TranslatePoint(default, bar)!.Value.X);
+            Assert.DoesNotContain(view.GetVisualDescendants(), c => c is ComboBox or TextBox);
+            Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == Strings.ReportHeading);
+            Assert.Empty(window.OwnedWindows); Assert.Equal(main.WindowTitle, window.Title);
+            var page = view.FindControl<ReportPageControl>("PageView")!;
+            var scroll = view.FindControl<ScrollViewer>("PageScroll")!;
+            Assert.True(page.Bounds.Width + 32 <= scroll.Viewport.Width + 1);
+            Assert.True(page.Bounds.Height + 32 <= scroll.Viewport.Height + 1);
+            string directory = Path.Combine(RepositoryRoot(), "output", "pdf", "production"); Directory.CreateDirectory(directory);
+            using var image = new RenderTargetBitmap(new(width, height), new Vector(96, 96)); image.Render(window);
+            image.Save(Path.Combine(directory, $"workspace-{language}-{dark}-{width}.png"), PngBitmapEncoderOptions.Default);
+        }
+        finally { window.Close(); }
+    }
+
+    [Theory]
+    [InlineData(0, 0, 1)] [InlineData(1, 0, 1)]
+    [InlineData(0, 1, 1)] [InlineData(1, 1, 2)]
+    public void PreviewSkiaRenderingMatchesTheComposedPageAtFitAndFullSize(int page, int zoom, int scaling)
+    {
+        var (main, files) = Open(ReportTestProjects.Create(true));
+        var (window, view) = ShowReportWorkspace(main, files);
+        var preview = main.ReportPreview!; var report = preview.Report;
+        try
+        {
+            if (zoom == 1) while (preview.Zoom < 1) preview.ZoomInCommand.Execute(null);
+            preview.ShowPage(page); Dispatcher.UIThread.RunJobs();
+            var control = view.FindControl<ReportPageControl>("PageView")!;
+            var size = control.Bounds.Size;
+            Assert.Equal(ReportDocument.PageWidth / (double)ReportDocument.PageHeight, size.Width / size.Height, .003);
+            if (zoom == 1)
+            {
+                Assert.Equal(ReportDocument.PageWidth * 96d / 72, control.Width, .001);
+                Assert.Equal(ReportDocument.PageHeight * 96d / 72, control.Height, .001);
+            }
+            using var actual = new RenderTargetBitmap(new((int)Math.Ceiling(size.Width * scaling), (int)Math.Ceiling(size.Height * scaling)),
+                new(96 * scaling, 96 * scaling));
+            actual.Render(control);
+            using var pixels = new WriteableBitmap(actual.PixelSize, actual.Dpi, PixelFormat.Bgra8888, AlphaFormat.Premul);
+            using var buffer = pixels.Lock(); actual.CopyPixels(buffer);
+            var bytes = new byte[buffer.RowBytes * buffer.Size.Height];
+            System.Runtime.InteropServices.Marshal.Copy(buffer.Address, bytes, 0, bytes.Length);
+            using var expected = new SKBitmap(new SKImageInfo(actual.PixelSize.Width, actual.PixelSize.Height, SKColorType.Bgra8888, SKAlphaType.Premul));
+            using (var canvas = new SKCanvas(expected))
+            {
+                canvas.Scale((float)(size.Width * scaling / ReportDocument.PageWidth), (float)(size.Height * scaling / ReportDocument.PageHeight));
+                report.DrawPage(canvas, page);
+            }
+            var expectedBytes = expected.Bytes;
+            int ink = 0, different = 0;
+            for (int y = 0; y < expected.Height; y++)
+            for (int x = 0; x < expected.Width; x++)
+            {
+                int a = y * buffer.RowBytes + x * 4, b = y * expected.RowBytes + x * 4;
+                if (expectedBytes[b] < 240 || expectedBytes[b + 1] < 240 || expectedBytes[b + 2] < 240) ink++;
+                if (Math.Abs(bytes[a] - expectedBytes[b]) > 24 || Math.Abs(bytes[a + 1] - expectedBytes[b + 1]) > 24
+                    || Math.Abs(bytes[a + 2] - expectedBytes[b + 2]) > 24 || Math.Abs(bytes[a + 3] - expectedBytes[b + 3]) > 24) different++;
+            }
+            Assert.True(ink > 1000);
+            Assert.True(different < ink * .05, $"{different} differing pixels for {ink} ink pixels, page {page}, zoom {zoom}, scaling {scaling}.");
+        }
+        finally { window.Close(); }
+    }
+
+    [Fact]
+    public void PreviewCachesVisitedPagesAcrossZoomAndReleasesThemOnClose()
+    {
+        var (main, files) = Open(ReportTestProjects.Create(true)); using var original = ProjectReport.Capture(main.Editor!, Now);
+        int draws = 0;
+        var report = new ReportDocument(original.Data, new(130, (_, _, _) => draws++));
+        using var preview = new ReportPreviewViewModel(report, main.Session!.FilePath, files, () => { });
+        var view = new ReportPreviewView { DataContext = preview };
+        var window = new Window { Content = view, Width = 1100, Height = 650 };
+        window.Show(); Dispatcher.UIThread.RunJobs();
+        var control = view.FindControl<ReportPageControl>("PageView")!;
+        var first = Assert.IsType<ReportPagePicture>(control.Page); int recordedDraws = draws;
+        preview.ShowPage(1); var second = Assert.IsType<ReportPagePicture>(control.Page);
+        Assert.NotSame(first, second); Assert.Equal(report.TechnicalAreas(0).Count, recordedDraws);
+        var delayed = new ReportPageControl.PageDrawOperation(first, new Rect(control.Bounds.Size));
+        for (int i = 0; i < 20; i++)
+        {
+            (i % 2 == 0 ? preview.ZoomInCommand : preview.PageFitCommand).Execute(null);
+            preview.ShowPage(0); Assert.Same(first, control.Page);
+            preview.ShowPage(1); Assert.Same(second, control.Page);
+            Dispatcher.UIThread.RunJobs();
+        }
+        Assert.Equal(recordedDraws, draws);
+        preview.ShowPage(-1); preview.ShowPage(report.Pages.Count); Assert.Same(second, control.Page);
+        preview.Dispose(); window.Close(); Assert.Null(control.Page);
+        preview.ShowPage(0); Assert.Null(control.Page);
+        using var bitmap = new SKBitmap(400, 600);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(SKColors.Magenta);
+        first.Draw(canvas); second.Draw(canvas);
+        var pending = new PendingReportDraw(delayed);
+        pending.Measure(new(400, 600)); pending.Arrange(new Rect(0, 0, 400, 600));
+        DrawingContextHelper.RenderAsync(canvas, pending).GetAwaiter().GetResult();
+        Assert.All(bitmap.Pixels, pixel => Assert.Equal(SKColors.Magenta, pixel));
+        first.Dispose(); second.Dispose(); delayed.Dispose();
+    }
+
+    [Fact]
+    public void PreviewPictureOwnerDisposesItsNativePictureExactlyOnce()
+    {
+        using var recorder = new SKPictureRecorder();
+        recorder.BeginRecording(SKRect.Create(20, 20)).Clear(SKColors.White);
+        var picture = recorder.EndRecording();
+        var owner = new ReportPagePicture(picture);
+        Assert.NotEqual(IntPtr.Zero, picture.Handle);
+        owner.Dispose(); owner.Dispose();
+        Assert.Equal(IntPtr.Zero, picture.Handle);
+    }
+
+    [Fact]
+    public void PreviewZoomUsesFixedStepsAndFitFollowsOnlyViewportChanges()
+    {
+        var (main, _) = Open(ReportTestProjects.Create(true));
+        Assert.True(main.ReportAsync().GetAwaiter().GetResult());
+        var preview = main.ReportPreview!;
+        preview.UpdateViewport(400, 600); double fit = preview.Zoom;
+        Assert.True(preview.IsPageFit); Assert.True(fit > .25 && fit < .5);
+        preview.ZoomInCommand.Execute(null); Assert.Equal(.5, preview.Zoom); Assert.False(preview.IsPageFit);
+        preview.UpdateViewport(1200, 800); Assert.Equal(.5, preview.Zoom);
+        preview.ShowPage(1); Assert.Equal(.5, preview.Zoom);
+        preview.ZoomOutCommand.Execute(null); Assert.Equal(.25, preview.Zoom); Assert.False(preview.ZoomOutCommand.CanExecute(null));
+        foreach (double step in new[] { .5, .75, 1, 1.25, 1.5, 2, 3, 4 })
+        { preview.ZoomInCommand.Execute(null); Assert.Equal(step, preview.Zoom); }
+        Assert.False(preview.ZoomInCommand.CanExecute(null));
+        foreach (double step in new[] { 3, 2, 1.5, 1.25, 1, .75, .5, .25 })
+        { preview.ZoomOutCommand.Execute(null); Assert.Equal(step, preview.Zoom); }
+        preview.PageFitCommand.Execute(null); Assert.True(preview.IsPageFit); Assert.NotEqual(fit, preview.Zoom);
+        preview.UpdateViewport(80, 100); Assert.True(preview.Zoom < .25); Assert.False(preview.ZoomOutCommand.CanExecute(null));
+        preview.ZoomInCommand.Execute(null); Assert.Equal(.25, preview.Zoom);
+        preview.UpdateViewport(5000, 7000); preview.PageFitCommand.Execute(null);
+        Assert.True(preview.Zoom > 4); Assert.False(preview.ZoomInCommand.CanExecute(null));
+        preview.ZoomOutCommand.Execute(null); Assert.Equal(4, preview.Zoom);
+        main.CloseReport();
+        Assert.True(main.ReportAsync().GetAwaiter().GetResult());
+        Assert.Equal(0, main.ReportPreview!.PageIndex); Assert.True(main.ReportPreview.IsPageFit);
+        main.CloseReport();
+    }
+
+    [Fact]
+    public void SinglePagePreviewDisablesBothNavigationCommands()
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        Assert.True(main.ReportAsync().GetAwaiter().GetResult());
+        var preview = main.ReportPreview!;
+        Assert.Single(preview.Report.Pages);
+        Assert.False(preview.PreviousCommand.CanExecute(null)); Assert.False(preview.NextCommand.CanExecute(null));
+        preview.PreviousCommand.Execute(null); preview.NextCommand.Execute(null); Assert.Equal(0, preview.PageIndex);
+        main.CloseReport();
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void FitTracksMainWindowResizingWhileManualZoomStaysFixed(bool widthFit)
+    {
+        var (main, files) = Open(ReportTestProjects.Create(true));
+        var (window, view) = ShowReportWorkspace(main, files, 1100, 650);
+        try
+        {
+            var preview = main.ReportPreview!;
+            var fitCommand = widthFit ? preview.PageWidthCommand : preview.PageFitCommand;
+            fitCommand.Execute(null); Dispatcher.UIThread.RunJobs(); double initial = preview.Zoom;
+            Resize(1250, 800); Assert.True(preview.Zoom > initial);
+            Assert.Equal(widthFit, preview.IsPageWidthFit); Assert.Equal(!widthFit, preview.IsPageFit);
+            preview.ShowPage(1); Assert.Equal(widthFit, preview.IsPageWidthFit);
+            preview.ZoomInCommand.Execute(null); double manual = preview.Zoom;
+            Assert.False(preview.IsPageFit); Assert.False(preview.IsPageWidthFit);
+            Resize(1100, 650); Assert.Equal(manual, preview.Zoom);
+            fitCommand.Execute(null); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(initial, preview.Zoom, .002);
+            var scroll = view.FindControl<ScrollViewer>("PageScroll")!;
+            Assert.True(preview.PageWidth + 32 <= scroll.Viewport.Width + 1);
+            if (widthFit)
+            {
+                Assert.Equal(scroll.Viewport.Width - 32, preview.PageWidth, 1.0);
+                Assert.True(scroll.Extent.Height > scroll.Viewport.Height);
+                Assert.True(scroll.Extent.Width <= scroll.Viewport.Width + 1);
+            }
+            else Assert.True(preview.PageHeight + 32 <= scroll.Viewport.Height + 1);
+            Assert.All(new[] { "PageFitButton", "PageWidthButton" }, name =>
+                Assert.DoesNotContain("selected", view.FindControl<Button>(name)!.Classes));
+        }
+        finally { window.Close(); }
+
+        void Resize(int width, int height)
+        {
+            window.Width = width; window.Height = height;
+            window.Measure(new(width, height)); window.Arrange(new Rect(0, 0, width, height));
+            var content = (Control)window.Content!;
+            content.InvalidateMeasure(); content.Measure(new(width, height));
+            content.InvalidateArrange(); content.Arrange(new Rect(0, 0, width, height));
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    [Fact]
+    public void WidthFitUsesOnlyTheAvailableWidthAndRetainsItsModeAcrossPages()
+    {
+        var (main, _) = Open(ReportTestProjects.Create(true));
+        Assert.True(main.ReportAsync().GetAwaiter().GetResult());
+        var preview = main.ReportPreview!;
+        preview.UpdateViewport(800, 600); preview.PageWidthCommand.Execute(null);
+        double zoom = preview.Zoom;
+        Assert.Equal(768, preview.PageWidth, .001); Assert.True(preview.PageHeight > 600);
+        preview.UpdateViewport(800, 1000); Assert.Equal(zoom, preview.Zoom);
+        preview.ShowPage(1); Assert.True(preview.IsPageWidthFit); Assert.Equal(zoom, preview.Zoom);
+        preview.UpdateViewport(600, 1000); Assert.Equal(568, preview.PageWidth, .001);
+        preview.ZoomOutCommand.Execute(null); Assert.False(preview.IsPageWidthFit);
+        main.CloseReport();
+    }
+
+    [Fact]
+    public void WheelScrollsVerticallyAndShiftScrollsHorizontallyWithoutChangingZoomOrPage()
+    {
+        var (main, files) = Open(ReportTestProjects.Create(true));
+        var (window, view) = ShowReportWorkspace(main, files);
+        try
+        {
+            var preview = main.ReportPreview!;
+            while (preview.Zoom < 2) preview.ZoomInCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+            var scroll = view.FindControl<ScrollViewer>("PageScroll")!;
+            scroll.Offset = new(100, 150); Dispatcher.UIThread.RunJobs();
+            Wheel(window, view, new(200, 200), KeyModifiers.None, -1);
+            Assert.Equal(100, scroll.Offset.X); Assert.True(scroll.Offset.Y > 150);
+            double y = scroll.Offset.Y;
+            Wheel(window, view, new(200, 200), KeyModifiers.Shift, -1);
+            Assert.True(scroll.Offset.X > 100); Assert.Equal(y, scroll.Offset.Y);
+            Assert.Equal(2, preview.Zoom); Assert.Equal(0, preview.PageIndex);
+        }
+        finally { window.Close(); }
+    }
+
+    [Theory]
+    [InlineData(1)] [InlineData(1.5)] [InlineData(2)]
+    public void ControlWheelKeepsThePaperPointUnderTheMouseAcrossRapidZooms(double scaling)
+    {
+        using var scaled = new DesktopControlEnvironment(scaling);
+        var (main, files) = Open(ReportTestProjects.Create(true));
+        var (window, view) = ShowReportWorkspace(main, files);
+        try
+        {
+            var preview = main.ReportPreview!;
+            while (preview.Zoom < 2) preview.ZoomInCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+            var scroll = view.FindControl<ScrollViewer>("PageScroll")!;
+            var page = view.FindControl<ReportPageControl>("PageView")!;
+            var picture = page.Page;
+            scroll.Offset = new(100, 200); Dispatcher.UIThread.RunJobs();
+            var pointer = new Point(300, 250);
+            var local = scroll.TranslatePoint(pointer, page)!.Value;
+            var relative = new Point(local.X / page.Bounds.Width, local.Y / page.Bounds.Height);
+            Wheel(window, view, pointer, KeyModifiers.Control, 1, false);
+            Wheel(window, view, pointer, KeyModifiers.Control | KeyModifiers.Shift, 1, false);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(4, preview.Zoom); Assert.Same(picture, page.Page); Assert.Equal(0, preview.PageIndex);
+            AssertAnchor();
+            Wheel(window, view, pointer, KeyModifiers.Control, -1);
+            Assert.Equal(3, preview.Zoom); AssertAnchor();
+
+            void AssertAnchor()
+            {
+                var actual = page.TranslatePoint(new(relative.X * page.Bounds.Width, relative.Y * page.Bounds.Height), scroll)!.Value;
+                Assert.Equal(pointer.X, actual.X, 1 / scaling + .01);
+                Assert.Equal(pointer.Y, actual.Y, 1 / scaling + .01);
+            }
+        }
+        finally { window.Close(); }
+    }
+
+    [Fact]
+    public void ControlWheelAccumulatesFractionsHonorsLimitsAndDropsPendingAnchorsOnPageChanges()
+    {
+        var (main, files) = Open(ReportTestProjects.Create(true));
+        var (window, view) = ShowReportWorkspace(main, files);
+        try
+        {
+            var preview = main.ReportPreview!;
+            while (preview.Zoom < 1) preview.ZoomInCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+            var scroll = view.FindControl<ScrollViewer>("PageScroll")!;
+            var pointer = new Point(500, 250);
+            Wheel(window, view, pointer, KeyModifiers.Control, .4); Assert.Equal(1, preview.Zoom);
+            Wheel(window, view, pointer, KeyModifiers.Control, .4); Assert.Equal(1, preview.Zoom);
+            Wheel(window, view, pointer, KeyModifiers.Control, .2); Assert.Equal(1.25, preview.Zoom);
+            Wheel(window, view, pointer, KeyModifiers.Control, 20); Assert.Equal(4, preview.Zoom);
+            var offset = scroll.Offset;
+            Wheel(window, view, pointer, KeyModifiers.Control, 1); Assert.Equal(offset, scroll.Offset);
+            Wheel(window, view, pointer, KeyModifiers.Control, .4);
+            Wheel(window, view, pointer, KeyModifiers.Control, -1); Assert.Equal(3, preview.Zoom);
+            Wheel(window, view, pointer, KeyModifiers.Control, -20); Assert.Equal(.25, preview.Zoom);
+            offset = scroll.Offset;
+            Wheel(window, view, pointer, KeyModifiers.Control, -1); Assert.Equal(offset, scroll.Offset);
+            Wheel(window, view, pointer, KeyModifiers.Control, -.4);
+            Wheel(window, view, pointer, KeyModifiers.Control, 1); Assert.Equal(.5, preview.Zoom);
+            Wheel(window, view, pointer, KeyModifiers.Control, 4, false);
+            preview.ShowPage(1); Dispatcher.UIThread.RunJobs(); Assert.Equal(default, scroll.Offset);
+            Wheel(window, view, pointer, KeyModifiers.Control, 1, false);
+            var pending = new TaskCompletionSource(); var output = preview.OutputAsync(() => pending.Task);
+            double zoom = preview.Zoom;
+            Wheel(window, view, pointer, KeyModifiers.Control, 1); Assert.Equal(zoom, preview.Zoom);
+            Assert.Equal(default, scroll.Offset);
+            pending.SetResult(); Dispatcher.UIThread.RunJobs(); output.GetAwaiter().GetResult();
+            Wheel(window, view, pointer, KeyModifiers.Control, 1, false);
+            main.CloseReport(); Dispatcher.UIThread.RunJobs(); Assert.Null(main.ReportPreview);
+        }
+        finally { window.Close(); }
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void ControlWheelFromFitAccountsForAppearingScrollbarsAndCenteredPaper(bool widthFit)
+    {
+        var (main, files) = Open(ReportTestProjects.Create(true));
+        var (window, view) = ShowReportWorkspace(main, files);
+        try
+        {
+            var preview = main.ReportPreview!;
+            if (widthFit) preview.PageWidthCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+            var page = view.FindControl<ReportPageControl>("PageView")!;
+            var scroll = view.FindControl<ScrollViewer>("PageScroll")!;
+            if (widthFit) { scroll.Offset = new(0, 100); Dispatcher.UIThread.RunJobs(); }
+            var pointer = new Point(scroll.Viewport.Width / 2, 250);
+            var local = scroll.TranslatePoint(pointer, page)!.Value;
+            var relative = new Point(local.X / page.Bounds.Width, local.Y / page.Bounds.Height);
+            var picture = preview.Picture;
+            Wheel(window, view, pointer, KeyModifiers.Control, 1);
+            var actual = page.TranslatePoint(new(relative.X * page.Bounds.Width, relative.Y * page.Bounds.Height), scroll)!.Value;
+            Assert.False(preview.IsPageFit); Assert.False(preview.IsPageWidthFit);
+            Assert.Same(picture, preview.Picture); Assert.True(scroll.Extent.Height > scroll.Viewport.Height);
+            Assert.Equal(pointer.Y, actual.Y, 1.0);
+            if (widthFit)
+            {
+                Assert.True(scroll.Extent.Width > scroll.Viewport.Width);
+                Assert.Equal(pointer.X, actual.X, 1.0);
+            }
+            else
+            {
+                Assert.Equal(0, scroll.Offset.X);
+                Assert.Equal(scroll.Viewport.Width / 2, actual.X, 1.0);
+            }
+        }
+        finally { window.Close(); }
+    }
+
+    private static PointerWheelEventArgs Wheel(MainWindow window, ReportPreviewView view, Point position, KeyModifiers modifiers,
+        double delta, bool layout = true)
+    {
+        var scroll = view.FindControl<ScrollViewer>("PageScroll")!;
+        var page = view.FindControl<ReportPageControl>("PageView")!;
+        var root = scroll.TranslatePoint(position, window)!.Value;
+        var e = new PointerWheelEventArgs(page, new Pointer(1, PointerType.Mouse, true), window, root, 0, default, modifiers, new(0, delta));
+        page.RaiseEvent(e);
+        if (modifiers.HasFlag(KeyModifiers.Control)) Assert.True(e.Handled);
+        if (layout) Dispatcher.UIThread.RunJobs();
+        return e;
+    }
+
+    [Fact]
+    public void OutputGuardsWorkspaceAndRecoversAfterErrorsAndCancellation()
+    {
+        var (main, files) = Open(ReportTestProjects.Create(true));
+        var (window, view) = ShowReportWorkspace(main, files);
+        try
+        {
+            var preview = main.ReportPreview!; var original = preview.Picture;
+            var pending = new TaskCompletionSource();
+            var output = preview.OutputAsync(() => pending.Task);
+            Assert.True(main.IsWorkspaceBusy); Assert.True(preview.IsBusy); Assert.True(main.Session!.IsBusy);
+            Assert.False(main.CloseReport()); Assert.False(main.RequestCloseAsync().GetAwaiter().GetResult());
+            Assert.False(preview.CloseCommand.CanExecute(null)); Assert.False(preview.ZoomInCommand.CanExecute(null));
+            Assert.False(preview.NextCommand.CanExecute(null));
+            Assert.False(view.FindControl<Button>("SavePdfButton")!.IsEffectivelyEnabled);
+            Assert.False(window.FindControl<MenuItem>("QuitMenuItem")!.IsEffectivelyEnabled);
+            preview.ShowPage(1); Assert.Same(original, preview.Picture);
+            bool duplicate = false; preview.OutputAsync(() => { duplicate = true; return Task.CompletedTask; }).GetAwaiter().GetResult();
+            Assert.False(duplicate);
+            pending.SetException(new IOException("Output failed")); Dispatcher.UIThread.RunJobs(); output.GetAwaiter().GetResult();
+            Assert.False(main.IsWorkspaceBusy); Assert.False(main.Session.IsBusy);
+            Assert.True(preview.HasError); Assert.Contains("Output failed", preview.Error);
+            Assert.True(view.FindControl<TextBlock>("ErrorText")!.IsVisible);
+            preview.OutputAsync(() => Task.CompletedTask).GetAwaiter().GetResult();
+            Assert.False(preview.HasError); Assert.False(view.FindControl<TextBlock>("ErrorText")!.IsVisible);
+            Assert.True(preview.CloseCommand.CanExecute(null)); Assert.Same(original, preview.Picture);
+        }
+        finally { window.Close(); }
+    }
+
+    [Theory]
+    [InlineData(LeaveDecision.Cancel)] [InlineData(LeaveDecision.Save)] [InlineData(LeaveDecision.Discard)]
+    public void ApplicationCloseKeepsOrDisposesPreviewOnlyAfterTheLeaveDecision(LeaveDecision decision)
+    {
+        var state = ReportTestProjects.Create(); var files = new Files();
+        var dialogs = new ProjectTestSupport.Dialogs { Leave = decision };
+        string path = Path.GetFullPath("close-report.spandraft"); files.Data[path] = ProjectFileCodec.Serialize(state);
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs);
+        Assert.True(main.OpenAsync(path).GetAwaiter().GetResult());
+        main.Editor!.SetAnnotationOffset(state.Document.Loads[0].Id, new(20, 10));
+        Assert.True(main.ReportAsync().GetAwaiter().GetResult());
+        var preview = main.ReportPreview!; var picture = preview.Picture;
+        Assert.Equal(decision != LeaveDecision.Cancel, main.RequestCloseAsync().GetAwaiter().GetResult());
+        Assert.Equal(1, dialogs.LeaveQuestions);
+        if (decision == LeaveDecision.Cancel)
+        {
+            Assert.Same(preview, main.CurrentViewModel); Assert.Same(picture, preview.Picture);
+            Assert.True(main.Editor.IsReportOpen); Assert.True(main.Session!.IsDirty);
+            Assert.Empty(files.Writes); main.CloseReport();
+        }
+        else
+        {
+            Assert.Null(main.ReportPreview); Assert.Null(preview.Picture);
+            Assert.Equal(decision == LeaveDecision.Save, files.Writes.Count == 1);
+            Assert.False(main.Editor.IsReportOpen);
+        }
+    }
+
+    [Fact]
+    public void PreviewRetriesFailedRecordingsWithoutReplacingTheCurrentPage()
+    {
+        var (main, files) = Open(ReportTestProjects.Create()); using var original = ProjectReport.Capture(main.Editor!, Now);
+        bool fail = true; int attempts = 0;
+        var report = new ReportDocument(original.Data with
+        {
+            Metadata = Enumerable.Range(0, 10).Select(i => ($"Field {i}", "Value")).ToArray()
+        }, new(130, (_, _, _) => { attempts++; if (fail) throw new InvalidOperationException("Recording failed"); }));
+        using var preview = new ReportPreviewViewModel(report, main.Session!.FilePath, files, () => { });
+        var first = Assert.IsType<ReportPagePicture>(preview.Picture);
+        int graphicsPage = report.Pages.Select((p, i) => (p, i)).First(p => p.p.HasGraphics).i;
+        Assert.Throws<InvalidOperationException>(() => preview.ShowPage(graphicsPage));
+        Assert.Same(first, preview.Picture); Assert.Equal(1, attempts);
+        fail = false; preview.ShowPage(graphicsPage);
+        Assert.NotSame(first, preview.Picture); Assert.Equal(1 + report.TechnicalAreas(graphicsPage).Count, attempts);
+    }
+
+    private static (MainWindow Window, ReportPreviewView View) ShowReportWorkspace(MainWindowViewModel main, Files files, int width = 1250, int height = 800)
+    {
+        var window = new MainWindow(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default))
+            { Width = width, Height = height };
+        window.Show(); Dispatcher.UIThread.RunJobs();
+        typeof(MainWindow).GetField("_model", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, main);
+        window.DataContext = main;
+        Assert.True(main.ReportAsync().GetAwaiter().GetResult());
+        window.Measure(new(width, height)); window.Arrange(new Rect(0, 0, width, height)); Dispatcher.UIThread.RunJobs();
+        return (window, Assert.Single(window.GetVisualDescendants().OfType<ReportPreviewView>()));
+    }
+
+    private sealed class PendingReportDraw(ICustomDrawOperation operation) : Control
+    {
+        public override void Render(DrawingContext context) => context.Custom(operation);
     }
 
     [Fact]

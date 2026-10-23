@@ -323,15 +323,18 @@
   <data name="ReportTheory" xml:space="preserve"><value>Euler-Bernoulli · linear elastisch · kleine Verformungen · konstanter Werkstoff und Querschnitt.</value></data>
   <data name="ReportLimits" xml:space="preserve"><value>Schubverformung und Eigengewicht sind nicht berücksichtigt. S = Re / σb,max ist eine elastische Bewertung, kein normativer Festigkeits- oder Sicherheitsnachweis.</value></data>
   <data name="ReportPosition" xml:space="preserve"><value>bei x = {0} {1}{2}</value></data>
-  <data name="ReportSavePdf" xml:space="preserve"><value>PDF speichern…</value></data>
-  <data name="ReportPrint" xml:space="preserve"><value>Drucken…</value></data>
+  <data name="ReportSavePdf" xml:space="preserve"><value>PDF speichern</value></data>
+  <data name="ReportPrint" xml:space="preserve"><value>Drucken</value></data>
   <data name="ReportFit" xml:space="preserve"><value>Ganze Seite</value></data>
+  <data name="ReportPageWidth" xml:space="preserve"><value>Seitenbreite</value></data>
+  <data name="ReportZoomIn" xml:space="preserve"><value>Vergrößern</value></data>
+  <data name="ReportZoomOut" xml:space="preserve"><value>Verkleinern</value></data>
   <data name="ReportPrevious" xml:space="preserve"><value>Vorherige Seite</value></data>
   <data name="ReportNext" xml:space="preserve"><value>Nächste Seite</value></data>
   <data name="ReportError" xml:space="preserve"><value>Der Bericht konnte nicht erstellt oder ausgegeben werden.</value></data>
   <data name="ReportProjectTarget" xml:space="preserve"><value>Die Projektdatei darf nicht als PDF-Exportziel verwendet werden.</value></data>
   <data name="ReportManualSection" xml:space="preserve"><value>Für einen manuellen Querschnitt ist keine Geometriedarstellung vorhanden.</value></data>
-  <data name="ReportClose" xml:space="preserve"><value>Schließen</value></data>
+  <data name="ReportClose" xml:space="preserve"><value>Bericht schließen</value></data>
   <data name="ReportSummary" xml:space="preserve"><value>Maßgebende Kennwerte</value></data>
   <data name="ReportMaterial" xml:space="preserve"><value>Material</value></data>
   <data name="ReportDeflection" xml:space="preserve"><value>Maximale Durchbiegung |w|max</value></data>

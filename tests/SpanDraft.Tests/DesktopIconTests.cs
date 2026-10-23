@@ -20,7 +20,9 @@ namespace SpanDraft.Tests;
 public sealed class DesktopIconTests
 {
     private static readonly string[] Toolbar = ["PointLoad", "PointMoment", "DistributedLoad", "FixedSupport", "PinnedSupport", "RollerSupport"];
-    private static readonly string[] Fluent = ["DocumentAdd", "FolderOpen", "BookOpen", "Document", "Info", "Edit", "Star", "ErrorCircle", "Delete"];
+    private static readonly string[] Fluent = ["DocumentAdd", "FolderOpen", "BookOpen", "Document", "Info", "Edit", "Star", "ErrorCircle", "Delete",
+        "ZoomIn", "ZoomOut", "Print", "DocumentPdf", "ChevronLeft", "ChevronRight"];
+    private static readonly string[] Fluent24 = ["DocumentFit", "DocumentWidth", "DocumentData"];
 
     [Fact]
     public void NativeArtworkKeepsArtboardsAndRendersInBothThemes()
@@ -37,17 +39,17 @@ public sealed class DesktopIconTests
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
             Application.Current!.RequestedThemeVariant = theme;
-            foreach (string key in Fluent)
+            foreach (var (key, size) in Fluent.Select(key => (key, 16)).Concat(Fluent24.Select(key => (key, 24))))
                 foreach (var (state, color) in new[] { ("primary", "TextPrimary"), ("secondary", "TextSecondary"), ("disabled", "TextDisabled"), ("error", "Error") })
                 {
                     Assert.True(Application.Current.TryFindResource(color, theme, out var brush));
-                    var icon = Icon(key); icon.Foreground = (IBrush)brush!;
-                    Render(icon, $"fluent-{Slug(key, '_')}-{theme}-{state}", 16, 16);
+                    var icon = Icon(key, size); icon.Foreground = (IBrush)brush!;
+                    Render(icon, $"fluent-{Slug(key, '_')}-{theme}-{state}", size, size);
                     var path = Assert.Single(icon.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>());
                     Assert.Same(icon.Foreground, path.Fill);
                     Assert.Equal(Stretch.None, path.Stretch);
-                    Assert.Equal(new Size(16, 16), path.Bounds.Size);
-                    Assert.Equal(new Size(16, 16), Assert.IsType<Canvas>(path.Parent).Bounds.Size);
+                    Assert.Equal(new Size(size, size), path.Bounds.Size);
+                    Assert.Equal(new Size(size, size), Assert.IsType<Canvas>(path.Parent).Bounds.Size);
                 }
             var view = new EditorView { DataContext = new EditorViewModel(DesktopLayoutFixture.Document(), () => { }) };
             var window = new Window { Content = view };
@@ -104,7 +106,12 @@ public sealed class DesktopIconTests
         Assert.DoesNotContain(assets, uri => uri.AbsolutePath.EndsWith(".svg", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static PathIcon Icon(string key) => new() { Data = Resource<Geometry>("FluentIcon." + key), Classes = { "fluentIcon" } };
+    private static PathIcon Icon(string key, int size = 16)
+    {
+        var icon = new PathIcon { Data = Resource<Geometry>("FluentIcon." + key), Classes = { "fluentIcon" } };
+        if (size == 24) icon.Classes.Add("fluentIcon24");
+        return icon;
+    }
     private static T Resource<T>(string key) => Assert.IsAssignableFrom<T>(Application.Current!.FindResource(key));
 
     private static void Render(Control control, string? name, int width, int height)

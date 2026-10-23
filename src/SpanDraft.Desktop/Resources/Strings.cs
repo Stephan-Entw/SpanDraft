@@ -26,6 +26,9 @@ public static class Strings
     public static string ReportSavePdf => Get(nameof(ReportSavePdf));
     public static string ReportPrint => Get(nameof(ReportPrint));
     public static string ReportFit => Get(nameof(ReportFit));
+    public static string ReportPageWidth => Get(nameof(ReportPageWidth));
+    public static string ReportZoomIn => Get(nameof(ReportZoomIn));
+    public static string ReportZoomOut => Get(nameof(ReportZoomOut));
     public static string ReportPrevious => Get(nameof(ReportPrevious));
     public static string ReportNext => Get(nameof(ReportNext));
     public static string ReportError => Get(nameof(ReportError));

@@ -63,7 +63,7 @@ try
             string name = Path.GetFileNameWithoutExtension(file);
             var drawing = new XElement(converted.Single(e => ((string?)e.Attribute(x + "Key"))?.TrimStart('_') == name.Replace('-', '_')));
             drawing.Attribute(x + "Key")!.Remove();
-            string shortName = family == "Fluent" ? name.Replace("ic_fluent_", "").Replace("_16_regular", "") : name;
+            string shortName = family == "Fluent" ? name.Replace("ic_fluent_", "").Replace("_16_regular", "").Replace("_24_regular", "") : name;
             string key = (family == "Toolbar" ? "ToolbarIcon." : "FluentIcon.") +
                 string.Concat(shortName.Split('-', '_').Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
             if (!keys.Add(key)) throw new InvalidOperationException($"Duplicate resource key: {key}");

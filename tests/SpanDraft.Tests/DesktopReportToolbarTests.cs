@@ -56,8 +56,8 @@ public sealed class DesktopReportToolbarTests
         var bounds = new Rect(button.TranslatePoint(default, bar)!.Value, button.Bounds.Size);
         Assert.True(new Rect(bar.Bounds.Size).Contains(bounds));
         var icon = Assert.Single(button.GetVisualDescendants().OfType<PathIcon>());
-        Assert.Equal(new Size(20, 20), icon.Bounds.Size);
-        Assert.Same(Application.Current.FindResource("FluentIcon.Document"), icon.Data);
+        Assert.Equal(new Size(24, 24), icon.Bounds.Size);
+        Assert.Same(Application.Current.FindResource("FluentIcon.DocumentData"), icon.Data);
         Assert.Same(button.Foreground, icon.Foreground);
         var slot = Assert.IsType<Grid>(icon.Parent);
         var existingIcon = bar.GetVisualDescendants().OfType<Image>().First(i => i.Classes.Contains("toolbarIcon"));
@@ -85,13 +85,7 @@ public sealed class DesktopReportToolbarTests
     public void ReportPointerPressProtectsDraftsAndAlwaysReleasesTemporaryProtection(string gesture)
     {
         using var environment = new DesktopControlEnvironment(); using var culture = new UiCultureScope("de-DE");
-        var pending = new TaskCompletionSource(); int calls = 0;
-        var (window, main) = OpenWindow(editor =>
-        {
-            calls++; Assert.True(editor.IsBusy); Assert.True(editor.PreserveDrafts);
-            Assert.True(editor.DimensionLength.IsEditing); Assert.Equal("9000", editor.DimensionLength.Text);
-            return pending.Task;
-        });
+        var (window, main) = OpenWindow();
         Layout(window, 1100, 650);
         var button = window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ReportToolbarButton");
         var source = Assert.Single(button.GetVisualDescendants().OfType<TextBlock>());
@@ -121,29 +115,88 @@ public sealed class DesktopReportToolbarTests
             pointer.Capture(null);
             // The inert window does not hit-test the native pointer; invoke the button's normal click path.
             typeof(Button).GetMethod("OnClick", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(button, null);
-            Assert.Equal(1, calls); Assert.True(main.IsBusy);
+            Assert.Equal(MainWorkspaceKind.ReportPreview, main.Workspace); Assert.False(main.IsBusy);
         }
-        Dispatcher.UIThread.RunJobs(); Assert.False(editor.IsReportOpen);
+        Dispatcher.UIThread.RunJobs(); Assert.Equal(gesture == "click", editor.IsReportOpen);
         if (gesture == "click")
         {
             Assert.True(editor.PreserveDrafts);
-            pending.SetResult(); Dispatcher.UIThread.RunJobs(); Assert.False(main.IsBusy);
+            Assert.Empty(window.OwnedWindows);
+            Assert.Single(window.GetVisualDescendants().OfType<ReportPreviewView>());
+            Assert.True(main.CloseReport()); Dispatcher.UIThread.RunJobs(); Assert.False(main.IsBusy);
         }
-        else Assert.Equal(0, calls);
+        else Assert.Equal(MainWorkspaceKind.BeamEditor, main.Workspace);
         Assert.False(editor.PreserveDrafts);
         Assert.Same(revision, main.Session.CurrentRevision); Assert.False(main.Session.IsDirty);
         Assert.True(editor.DimensionLength.IsEditing); Assert.Equal("9000", editor.DimensionLength.Text);
         window.Close();
     }
 
-    private static (MainWindow Window, MainWindowViewModel Main) OpenWindow(Func<EditorViewModel, Task>? showReport = null)
+    [Theory]
+    [InlineData("menu", "dimension", false)] [InlineData("keyboard", "support", true)]
+    [InlineData("menu", "load", true)] [InlineData("keyboard", "distributed", false)]
+    public void WorkspaceNavigationRetainsEditorDraftsAndClosesByButtonOrEscape(string route, string draft, bool escape)
+    {
+        using var environment = new DesktopControlEnvironment(); using var culture = new UiCultureScope("de-DE");
+        var (window, main) = OpenWindow(); Layout(window, 1100, 650);
+        var editor = main.Editor!; var session = main.Session!; var revision = session.CurrentRevision;
+        object buffer;
+        if (draft == "support")
+        {
+            Assert.True(editor.EditSupport(editor.Document.Supports[0].Id));
+            buffer = editor.SupportDraft!; editor.SupportDraft!.PositionText = "unconfirmed";
+        }
+        else if (draft == "load")
+        {
+            Assert.True(editor.EditLoad(editor.Document.Loads[0].Id));
+            buffer = editor.LoadDraft!; editor.LoadDraft!.PositionText = "unconfirmed";
+        }
+        else if (draft == "distributed")
+        {
+            Assert.True(editor.EditDistributedLoad(editor.Document.DistributedLoads[0].Id));
+            buffer = editor.DistributedLoadDraft!; editor.DistributedLoadDraft!.IntensityText = "unconfirmed";
+        }
+        else
+        {
+            editor.DimensionLength.Begin(); editor.DimensionLength.Text = "9000"; buffer = editor.DimensionLength;
+        }
+        if (route == "menu") window.FindControl<MenuItem>("ReportMenuItem")!.Command!.Execute(null);
+        else
+        {
+            var primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+            var key = new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.P, KeyModifiers = primary };
+            window.RaiseEvent(key); Assert.True(key.Handled);
+        }
+        Dispatcher.UIThread.RunJobs(); Layout(window, 1100, 650);
+        Assert.Equal(MainWorkspaceKind.ReportPreview, main.Workspace); Assert.False(main.IsWorkspaceBusy);
+        Assert.Empty(window.OwnedWindows); Assert.Same(session, main.Session);
+        var reportView = Assert.Single(window.GetVisualDescendants().OfType<ReportPreviewView>());
+        if (escape)
+        {
+            var key = new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape };
+            reportView.FindControl<Button>("PageFitButton")!.RaiseEvent(key); Assert.True(key.Handled);
+        }
+        else typeof(Button).GetMethod("OnClick", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(reportView.FindControl<Button>("CloseButton"), null);
+        Dispatcher.UIThread.RunJobs(); Layout(window, 1100, 650);
+        Assert.Equal(MainWorkspaceKind.BeamEditor, main.Workspace); Assert.Same(editor, main.CurrentViewModel);
+        Assert.Same(revision, session.CurrentRevision); Assert.False(session.IsDirty);
+        Assert.Single(window.GetVisualDescendants().OfType<EditorView>());
+        if (draft == "support") { Assert.Same(buffer, editor.SupportDraft); Assert.Equal("unconfirmed", editor.SupportDraft!.PositionText); }
+        else if (draft == "load") { Assert.Same(buffer, editor.LoadDraft); Assert.Equal("unconfirmed", editor.LoadDraft!.PositionText); }
+        else if (draft == "distributed") { Assert.Same(buffer, editor.DistributedLoadDraft); Assert.Equal("unconfirmed", editor.DistributedLoadDraft!.IntensityText); }
+        else { Assert.True(editor.DimensionLength.IsEditing); Assert.Equal("9000", editor.DimensionLength.Text); }
+        window.Close();
+    }
+
+    private static (MainWindow Window, MainWindowViewModel Main) OpenWindow()
     {
         var files = new Files(); string path = TestPath("toolbar.spandraft");
         var state = State();
         files.Data[path] = ProjectFileCodec.Serialize(state with { Document = state.Document with { Length = M(1) } });
         var window = new MainWindow(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default));
         window.Show(); Dispatcher.UIThread.RunJobs();
-        var main = new MainWindowViewModel(files: files, showReport: showReport);
+        var main = new MainWindowViewModel(files: files);
         Assert.True(main.OpenAsync(path).GetAwaiter().GetResult());
         typeof(MainWindow).GetField("_model", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, main);
         window.DataContext = main;

@@ -56,7 +56,8 @@ public partial class MainWindow : Window
                     RemoveHandler(PointerReleasedEvent, EndReportPress);
                     reportButton.RemoveHandler(PointerCaptureLostEvent, EndReportPress);
                     Deactivated -= EndReportPress;
-                    Dispatcher.UIThread.Post(() => editor.IsReportOpen = false, DispatcherPriority.Background);
+                    Dispatcher.UIThread.Post(() => editor.IsReportOpen = ReferenceEquals(editor, _model.Editor)
+                        && _model.Workspace == MainWorkspaceKind.ReportPreview, DispatcherPriority.Background);
                 }
             }
             if (e.Source is Control control && (control is Menu or MenuItem
@@ -78,8 +79,7 @@ public partial class MainWindow : Window
                 settingsStore: settingsStore, settings: settings,
                 materialStore: MaterialLibraryStore.Local(files), sectionStore: SectionLibraryStore.Local(files),
                 recentStore: RecentProjectsStore.Local(files), openUserManual: OpenUserManualAsync,
-                userNameProvider: static () => OperatingSystem.IsWindows() ? Environment.UserName : null,
-                showReport: ShowReportAsync);
+                userNameProvider: static () => OperatingSystem.IsWindows() ? Environment.UserName : null);
             await _model.InitializeLibrariesAsync();
             DataContext = _model;
             if (!await _model.InitializeRecoveryAsync())
@@ -98,6 +98,7 @@ public partial class MainWindow : Window
                 await _model.OpenAsync(path);
         };
         Closing += WindowClosing;
+        Closed += (_, _) => _model?.ReleaseReport();
     }
 
     private async void ShowSettings(object? sender, RoutedEventArgs e)
@@ -113,20 +114,6 @@ public partial class MainWindow : Window
             // Leave the protection in place through activation and deferred focus events.
             Dispatcher.UIThread.Post(() => _model.SetSettingsDialogOpen(false), DispatcherPriority.Background);
         }
-    }
-
-    private async Task ShowReportAsync(EditorViewModel editor)
-    {
-        editor.IsReportOpen = true;
-        try
-        {
-            using var report = Reporting.ProjectReport.Capture(editor);
-            var preview = new ReportPreviewWindow(report, editor.Session.FilePath, new ProjectFileStore()) { Icon = Icon };
-            await preview.ShowDialog(this);
-        }
-        catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException)
-        { await _dialogs.ShowErrorAsync(SpanDraft.Desktop.Resources.Strings.ReportError + "\n" + error.Message); }
-        finally { Dispatcher.UIThread.Post(() => editor.IsReportOpen = false, DispatcherPriority.Background); }
     }
 
     private async void ShowAbout(object? sender, RoutedEventArgs e)

@@ -52,7 +52,8 @@ public partial class BeamEditorSurface : UserControl
             ReleaseGesture();
             if (_editor is not null)
             {
-                _editor.CancelEditorInteraction();
+                if (_editor.IsReportOpen) _editor.CancelPointerDrag();
+                else _editor.CancelEditorInteraction();
                 _editor.PropertyChanged -= EditorChanged;
                 _editor.InteractionsCancelling -= CancelSurfaceInteractions;
             }

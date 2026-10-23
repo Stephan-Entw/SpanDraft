@@ -18,6 +18,9 @@
     <DataTemplate DataType="{x:Type vm:EditorViewModel}">
       <views:EditorView />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:ReportPreviewViewModel}">
+      <views:ReportPreviewView />
+    </DataTemplate>
   </Window.DataTemplates>
   <Grid RowDefinitions="Auto,*">
     <Menu x:Name="MainMenu">
