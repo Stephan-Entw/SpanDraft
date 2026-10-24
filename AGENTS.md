@@ -13,6 +13,10 @@
   especially the section editor and material library. Inspect and reuse their
   controls, design tokens and layout patterns; avoid web-app styling such as
   dashboard cards, oversized forms or responsive stacking.
+- For manual UI checks, build the current checkout and launch a fresh instance
+  from the resulting executable/app bundle by absolute path. Verify its process
+  path and that it started after the build before taking screenshots or reporting
+  visual results.
 - UI layout tests should prefer structural and relative invariants such as
   alignment, containment, equal sizing and absence of clipping or overflow over
   narrow absolute pixel ranges. Use absolute bounds only when the size itself is
