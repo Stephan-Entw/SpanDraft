@@ -16,7 +16,7 @@ namespace SpanDraft.Tests;
 public class AnalysisTests
 {
     private static BeamModel CenterLoad(double sectionModulus = 0.001) => Beam(loads: [Point(1, -1000)],
-        material: new Material("Analysis test steel", Pressure.FromPascals(200e9), Pressure.FromPascals(250e6)),
+        material: new Material("Analysis test steel", Pressure.FromPascals(200e9), Pressure.FromPascals(250e6), MaterialStrengthType.Re),
         section: new CustomSection(Area.FromSquareMeters(0.01), SecondMomentOfArea.FromMetersToTheFourth(1e-6),
             SectionModulus.FromCubicMeters(sectionModulus)));
 

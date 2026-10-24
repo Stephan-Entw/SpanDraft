@@ -32,6 +32,7 @@ internal sealed class NamedLibraryEntries<T> where T : class
     internal void Add(T entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        LibraryNames.Validate(name(entry));
         if (Index(name(entry)) >= 0) throw new ArgumentException("Library names must be unique.", nameof(entry));
         entries.Add(entry);
     }
@@ -39,6 +40,7 @@ internal sealed class NamedLibraryEntries<T> where T : class
     internal void Replace(string oldName, T entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        LibraryNames.Validate(name(entry));
         int index = Index(oldName);
         if (index < 0) throw new KeyNotFoundException("Library entry not found: " + oldName);
         int collision = Index(name(entry));

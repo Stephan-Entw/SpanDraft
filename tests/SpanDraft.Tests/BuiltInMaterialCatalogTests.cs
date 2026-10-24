@@ -1,3 +1,4 @@
+using SpanDraft.Core.Materials;
 using System.Text.Json;
 using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Persistence;
@@ -25,15 +26,16 @@ public sealed class BuiltInMaterialCatalogTests
         string materialNumber, string? otherStandard, double youngsModulus, double yieldStrength,
         double density, double poissonRatio)
     {
-        var entry = Assert.Single(MaterialCatalogCodec.LoadBuiltIn().All, entry => entry.Material.Name == name);
+        var entry = Assert.Single(MaterialCatalogCodec.LoadBuiltIn().All, entry => entry.Name == name);
         Assert.Equal(category, entry.Category);
-        Assert.Equal(name, entry.Material.Name);
+        Assert.Equal(name, entry.Name);
         Assert.Equal(materialNumber, entry.MaterialNumber);
         Assert.Equal(otherStandard is null ? Array.Empty<string>() : [otherStandard], entry.OtherStandards);
-        Assert.Equal(youngsModulus, entry.Material.YoungsModulus.Pascals);
-        Assert.Equal(yieldStrength, entry.Material.YieldStrength.Pascals);
-        Assert.Equal(density, entry.Material.Density?.KilogramsPerCubicMeter);
-        Assert.Equal(poissonRatio, entry.Material.PoissonRatio?.Value);
+        Assert.Equal(youngsModulus, entry.YoungsModulus.Pascals);
+        Assert.Equal(yieldStrength, entry.YieldStrength.Pascals);
+        Assert.Equal(name is "S235JR" or "S355JR" ? MaterialStrengthType.Re : MaterialStrengthType.Rp02, entry.StrengthType);
+        Assert.Equal(density, entry.Density?.KilogramsPerCubicMeter);
+        Assert.Equal(poissonRatio, entry.PoissonRatio?.Value);
     }
 
     [Fact]
@@ -42,7 +44,7 @@ public sealed class BuiltInMaterialCatalogTests
         var catalog = MaterialCatalogCodec.LoadBuiltIn();
         Assert.Equal(8, catalog.All.Count);
         Assert.Equal(StartMaterials().Select(row => (string)row[1]).Order(),
-            catalog.All.Select(entry => entry.Material.Name).Order());
+            catalog.All.Select(entry => entry.Name).Order());
     }
 
     [Fact]
@@ -63,13 +65,14 @@ public sealed class BuiltInMaterialCatalogTests
             bool hasStandards = expected[3] is not null;
             Assert.Equal(hasStandards ? new[] { "category", "material", "materialNumber", "otherStandards" }
                 : ["category", "material", "materialNumber"], entry.EnumerateObject().Select(p => p.Name).Order());
-            Assert.Equal(new[] { "density", "name", "poissonRatio", "yieldStrength", "youngsModulus" },
+            Assert.Equal(new[] { "density", "name", "poissonRatio", "strengthType", "yieldStrength", "youngsModulus" },
                 material.EnumerateObject().Select(p => p.Name).Order());
             Assert.Equal((string)expected[2], entry.GetProperty("materialNumber").GetString());
             if (hasStandards)
                 Assert.Equal((string)expected[3], Assert.Single(entry.GetProperty("otherStandards").EnumerateArray()).GetString());
             Assert.Equal((double)expected[4], material.GetProperty("youngsModulus").GetDouble());
             Assert.Equal((double)expected[5], material.GetProperty("yieldStrength").GetDouble());
+            Assert.Equal((string)expected[1] is "S235JR" or "S355JR" ? "re" : "rp02", material.GetProperty("strengthType").GetString());
             Assert.Equal((double)expected[6], material.GetProperty("density").GetDouble());
             Assert.Equal((double)expected[7], material.GetProperty("poissonRatio").GetDouble());
         }

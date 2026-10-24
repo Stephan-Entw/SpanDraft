@@ -1,5 +1,6 @@
 namespace SpanDraft.Desktop.ViewModels;
 
+public enum MaterialNameConflictDecision { Cancel, Replace, Rename }
 public enum LeaveDecision { Cancel, Save, Discard }
 public enum RecoveryDecision { Cancel, Restore, Discard }
 
@@ -12,6 +13,9 @@ public interface IProjectDialogs
     Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc);
     Task<RecoveryDecision> ConfirmSetupRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc);
     Task ShowErrorAsync(string message);
+    Task ShowMaterialEditorAsync(MaterialEditorViewModel editor);
+    Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string name);
+    Task<bool> ConfirmMaterialReplaceAsync(string name);
     Task<bool> ConfirmMaterialDeleteAsync(string name);
     Task<bool> ConfirmSectionDeleteAsync(string name);
 }

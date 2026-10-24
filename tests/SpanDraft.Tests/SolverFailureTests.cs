@@ -161,7 +161,7 @@ public class SolverFailureTests
     public void UnrepresentableRigidityReturnsNumericalFailure(double modulus, double area)
     {
         BeamModel beam = Beam([SupportAt(0, SupportType.Fixed)], material:
-            new Material("Extreme", Pressure.FromPascals(modulus), Pressure.FromPascals(1)), section:
+            new Material("Extreme", Pressure.FromPascals(modulus), Pressure.FromPascals(1), MaterialStrengthType.Re), section:
             new CustomSection(Area.FromSquareMeters(area), SecondMomentOfArea.FromMetersToTheFourth(1),
                 SectionModulus.FromCubicMeters(1)));
         BeamSolverException exception = Assert.Throws<BeamSolverException>(() => Solve(beam));
@@ -189,7 +189,7 @@ public class SolverFailureTests
     [InlineData(1e100)]
     public void ScalingModulusAndLoadsTogetherPreservesDisplacements(double factor)
     {
-        var material = new Material("Scaled", Pressure.FromPascals(E * factor), Pressure.FromPascals(1));
+        var material = new Material("Scaled", Pressure.FromPascals(E * factor), Pressure.FromPascals(1), MaterialStrengthType.Re);
         BeamSolution solution = Solve(Beam([SupportAt(0, SupportType.Fixed)], [Point(L, -1000 * factor)], material));
         DisplacementClose(-1000 * Math.Pow(L, 3) / (3 * EI), At(solution, L).TransverseDisplacement);
         RotationClose(-1000 * L * L / (2 * EI), At(solution, L).RotationRadians);

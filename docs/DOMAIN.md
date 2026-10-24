@@ -24,7 +24,7 @@ Alle gespeicherten Werte müssen endlich sein. Abstände, Flächen sowie
 Flächenträgheits- und Widerstandsmomente sind nichtnegativ.
 Der Standardwert eines Werttyps ist 0, damit insbesondere
 Positionen am Ursprung gültig sind. Balkenlänge, Querschnittsabmessungen,
-Querschnittskennwerte, E und Streckgrenze müssen im jeweiligen Fachobjekt
+Querschnittskennwerte, E und Festigkeitskennwert müssen im jeweiligen Fachobjekt
 streng positiv sein. Kraft, Moment und Linienlast dürfen auch negativ oder
 null sein. `Pressure` ist als Größe vorzeichenbehaftet; das Material setzt
 die zusätzliche Positivitätsbedingung durch.
@@ -36,10 +36,22 @@ Objekte haben ausschließlich lesbare Properties.
 ## Materialien
 
 `Material` enthält verpflichtend einen nichtleeren Namen, einen positiven
-endlichen Elastizitätsmodul E und eine positive endliche Streckgrenze fy.
+endlichen Elastizitätsmodul E und einen positiven endlichen Festigkeitskennwert
+(`YieldStrength`) mit `MaterialStrengthType.Re` oder `MaterialStrengthType.Rp02`.
+Der Typ ist unabhängig von einer Bibliothekskategorie. Öffentliche Konstruktoren
+verlangen ihn; nur historische Reader können einen ungeklärten Legacy-Zustand
+mit `StrengthType == null` erzeugen. Es gibt keinen dritten auswählbaren Typ.
 Optional sind `MassDensity? Density` und `PoissonRatio? PoissonRatio`.
-Beide können unabhängig fehlen; null bedeutet unbekannt. Der bestehende
-Drei-Parameter-Konstruktor setzt beide auf null.
+Beide können unabhängig fehlen; null bedeutet unbekannt. Ohne Angabe setzt
+der Materialkonstruktor beide auf null.
+
+Zum selben unveränderlichen Datensatz gehören `MaterialCategory`, die optionale
+Werkstoffnummer `MaterialNumber` und die geordnete Liste `OtherStandards`.
+Die Kategorien sind `StructuralSteel`, `StainlessSteel`, `AlloySteel`,
+`Aluminium` und `Other`; unbekannte Enumwerte sind ungültig. Ohne Kategorie gilt
+`Other`. Werkstoffnummer und Normbezeichnungen werden getrimmt, leere Werte
+entfallen. Die Normliste wird defensiv kopiert und nur lesbar angeboten; fehlend
+bedeutet leer. Die Kategorie bestimmt weder Kennwerttyp noch mechanische Werte.
 
 `MassDensity` speichert kg/m³ über `FromKilogramsPerCubicMeter` und
 `KilogramsPerCubicMeter`. Ein angegebener Wert muss endlich und streng positiv
@@ -48,10 +60,11 @@ abgewiesen. `PoissonRatio` ist ein kleiner dimensionsloser Werttyp mit
 `FromValue` und `Value`; es gilt strikt −1 < ν < 0,5. Seine Grenzen und
 nicht endliche Werte sind ungültig; der Zahlenwert 0 ist zulässig.
 
-Der Solver verwendet E, Engineering verwendet fy. Dichte und Poissonzahl
+Der Solver verwendet E, Engineering den numerischen Festigkeitskennwert. Dichte und Poissonzahl
 werden derzeit ausschließlich validiert, gehalten und persistiert; sie
 aktivieren weder Eigengewicht noch Schubverformung. Materialname und Änderungen
-nur an ρ/ν ändern den Projektinhalt, erfordern aber keine Neuberechnung.
+nur an Kategorie, Werkstoffnummer, Normbezeichnungen oder Kennwerttyp/ρ/ν ändern
+den Projektinhalt, erfordern aber keine Neuberechnung.
 Die vollständigen Materialdaten gehören zum eigenständigen Projektsnapshot.
 
 ## Querschnitte

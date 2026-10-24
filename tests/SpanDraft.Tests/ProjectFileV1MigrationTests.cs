@@ -1,3 +1,4 @@
+using SpanDraft.Core.Materials;
 using System.Text;
 using System.Text.Json.Nodes;
 using SpanDraft.Core.Sections;
@@ -13,6 +14,12 @@ namespace SpanDraft.Tests;
 
 public sealed class ProjectFileV1MigrationTests
 {
+    private static ProjectState ConfirmStrength(ProjectState state)
+    {
+        var m = state.Document.Material;
+        return state with { Document = state.Document with { Material = new Material(m.Name, m.YoungsModulus, m.YieldStrength, MaterialStrengthType.Re, m.Density, m.PoissonRatio) } };
+    }
+
     private static readonly string[] Types = ["rectangle", "rectangularHollow", "circle", "circularHollow", "custom"];
 
     internal static byte[] HistoricalBytes(int kind) => File.ReadAllBytes(
@@ -35,7 +42,7 @@ public sealed class ProjectFileV1MigrationTests
     [InlineData(2, -.02744588475815559, -.019960643460476796, 141471060.52612922, 1.6611171155856028)]
     [InlineData(3, -.06297352773212586, -.0457989292597279, 324599911.12832147, .7239681587808549)]
     [InlineData(4, -.0021825396825396826, -.0015873015873015873, 15000000.000000002, 15.666666666666664)]
-    public void HistoricalV1AndSavedV2PreserveFrozenMechanicalResults(int kind, double endW, double endTheta,
+    public void HistoricalV1AndConfirmedSavedProjectPreserveFrozenMechanicalResults(int kind, double endW, double endTheta,
         double stress, double safety)
     {
         var bytes = HistoricalBytes(kind);
@@ -65,9 +72,12 @@ public sealed class ProjectFileV1MigrationTests
         var engineering = BeamEngineeringAnalysis.Analyze(solution);
         NumericAssert.Close(stress, engineering.MaximumBendingStress.Pascals);
         NumericAssert.Close(safety, engineering.SafetyFactor);
-        var v3 = ProjectFileCodec.Serialize(loaded);
+        Assert.Null(doc.Material.StrengthType);
+        Assert.Throws<ProjectFormatException>(() => ProjectFileCodec.Serialize(loaded));
+        var confirmed = ConfirmStrength(loaded);
+        var v3 = ProjectFileCodec.Serialize(confirmed);
         var again = ProjectFileCodec.Deserialize(v3);
-        Assert.True(loaded.ContentEquals(again));
+        Assert.True(confirmed.ContentEquals(again));
         Assert.True(BeamModelMechanicalComparer.AreEquivalent(doc.ToBeamModel(), again.Document.ToBeamModel()));
         SolverTestSupport.SameResults(solution, SolverTestSupport.Solve(again.Document.ToBeamModel()));
         var wire = JsonNode.Parse(v3)!;
@@ -87,7 +97,7 @@ public sealed class ProjectFileV1MigrationTests
     public void CurrentWriterUsesOnlyCanonicalSectionTypes(int kind)
     {
         var migrated = ProjectFileCodec.Deserialize(HistoricalBytes(kind));
-        var legacy = migrated with { Document = migrated.Document.WithSection(Legacy(kind), SectionAxisDesignation.Y) };
+        var legacy = ConfirmStrength(migrated with { Document = migrated.Document.WithSection(Legacy(kind), SectionAxisDesignation.Y) });
         var bytes = ProjectFileCodec.Serialize(legacy);
         var loaded = ProjectFileCodec.Deserialize(bytes);
         Assert.True(legacy.ContentEquals(loaded));
@@ -113,10 +123,22 @@ public sealed class ProjectFileV1MigrationTests
         Assert.Equal(original, app.Files.Data[path]);
         Assert.Equal(path, app.Main.Session!.FilePath);
         Assert.False(app.Main.Session.IsDirty); Assert.Empty(app.Main.Session.UndoHistory);
+        Assert.False(await app.Main.SaveAsync());
+        Assert.Empty(app.Files.Writes);
+        Assert.Equal(original, app.Files.Data[path]);
+        app.Main.EditProject();
+        app.Main.Setup.ShowMaterials();
+        var selection = Assert.IsType<SpanDraft.Desktop.ViewModels.MaterialSelectionViewModel>(app.Main.Setup.CurrentStep);
+        selection.EditSelectedCommand.Execute(null);
+        var editor = selection.Editor!;
+        Assert.Null(editor.StrengthType);
+        editor.StrengthType = editor.StrengthTypes[0];
+        Assert.True(await editor.ConfirmAsync()); selection.UseSelected();
+        Assert.True(await app.Main.Setup.ConfirmAsync());
         Assert.True(await app.Main.SaveAsync());
         Assert.Equal(path, app.Main.Session.FilePath);
         Assert.Equal(3, JsonNode.Parse(app.Files.Data[path])!["formatVersion"]!.GetValue<int>());
-        Assert.True(ProjectFileCodec.Deserialize(original).ContentEquals(ProjectFileCodec.Deserialize(app.Files.Data[path])));
+        Assert.True(ConfirmStrength(ProjectFileCodec.Deserialize(original)).ContentEquals(ProjectFileCodec.Deserialize(app.Files.Data[path])));
         Assert.False(app.Main.Session.IsDirty);
     }
 

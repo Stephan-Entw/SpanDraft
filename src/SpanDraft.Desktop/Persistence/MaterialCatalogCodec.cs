@@ -19,6 +19,9 @@ public static class MaterialCatalogCodec
             ?? throw new LibraryFormatException("Missing built-in material catalog resource.");
         using var buffer = new MemoryStream();
         resource.CopyTo(buffer);
-        return Deserialize(buffer.ToArray());
+        var catalog = Deserialize(buffer.ToArray());
+        if (catalog.All.Any(e => e.StrengthType is null))
+            throw new LibraryFormatException("Built-in materials require an explicit strength type.");
+        return catalog;
     }
 }

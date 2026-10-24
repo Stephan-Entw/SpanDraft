@@ -349,10 +349,20 @@ public static class Strings
     public static string MaterialIdentification => Get(nameof(MaterialIdentification));
     public static string MaterialProperties => Get(nameof(MaterialProperties));
     public static string MaterialYoungsModulus => Get(nameof(MaterialYoungsModulus));
-    public static string MaterialYieldStrength => Get(nameof(MaterialYieldStrength));
+    public static string MaterialStrength => Get(nameof(MaterialStrength));
+    public static string MaterialStrengthColumn => Get(nameof(MaterialStrengthColumn));
+    public static string MaterialStrengthType => Get(nameof(MaterialStrengthType));
+    public static string MaterialStrengthRe => Get(nameof(MaterialStrengthRe));
+    public static string MaterialStrengthRp02 => Get(nameof(MaterialStrengthRp02));
+    public static string MaterialStrengthUnspecified => Get(nameof(MaterialStrengthUnspecified));
+    public static string MaterialStrengthRequired => Get(nameof(MaterialStrengthRequired));
+    public static string MaterialStrengthResolve => Get(nameof(MaterialStrengthResolve));
     public static string MaterialDensity => Get(nameof(MaterialDensity));
     public static string MaterialPoissonRatio => Get(nameof(MaterialPoissonRatio));
     public static string MaterialCurrentEntry => Get(nameof(MaterialCurrentEntry));
+    public static string MaterialSource => Get(nameof(MaterialSource));
+    public static string MaterialProjectSuffix => Get(nameof(MaterialProjectSuffix));
+    public static string BuiltInMaterialReadOnly => Get(nameof(BuiltInMaterialReadOnly));
     public static string MaterialFilters => Get(nameof(MaterialFilters));
     public static string MaterialList => Get(nameof(MaterialList));
     public static string MaterialEditName => Get(nameof(MaterialEditName));
@@ -362,4 +372,10 @@ public static class Strings
     public static string MaterialCategories => Get(nameof(MaterialCategories));
     public static string MaterialLibrary => Get(nameof(MaterialLibrary));
     public static string MaterialDetailsTitle => Get(nameof(MaterialDetailsTitle));
+    public static string CopyMaterial => Get(nameof(CopyMaterial));
+    public static string SaveProjectMaterial => Get(nameof(SaveProjectMaterial));
+    public static string ReplaceMaterial => Get(nameof(ReplaceMaterial));
+    public static string RenameMaterial => Get(nameof(RenameMaterial));
+    public static string MaterialNameConflictQuestion => Get(nameof(MaterialNameConflictQuestion));
+    public static string ReplaceMaterialQuestion => Get(nameof(ReplaceMaterialQuestion));
 }

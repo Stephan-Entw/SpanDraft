@@ -27,6 +27,6 @@ public sealed class BeamEngineeringResult
     public Pressure MaximumBendingStress { get; }
     public Length BendingStressPosition => CriticalBendingMoment.Position;
     public EvaluationSide? BendingStressSide => CriticalBendingMoment.Side;
-    /// <summary>Dimensionless Re/σ. Positive infinity denotes zero bending stress (or floating-point overflow).</summary>
+    /// <summary>Dimensionless material strength/σ. Positive infinity denotes zero bending stress (or floating-point overflow).</summary>
     public double SafetyFactor { get; }
 }

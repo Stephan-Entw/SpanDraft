@@ -1,6 +1,6 @@
 # Spannung und Sicherheitsfaktor
 
-SpanDraft ermittelt aus dem Biegemoment und dem gewählten Querschnitt eine maximale elastische Biegespannung und vergleicht diese mit der im Werkstoff hinterlegten Streckgrenze.
+SpanDraft ermittelt aus dem Biegemoment und dem gewählten Querschnitt eine maximale elastische Biegespannung und vergleicht diese mit dem im Werkstoff hinterlegten Festigkeitskennwert.
 
 ## Biegespannung
 
@@ -26,24 +26,25 @@ Bei unsymmetrischen Querschnitten berücksichtigt SpanDraft für den maximalen S
 
 ## Sicherheitsfaktor
 
-SpanDraft vergleicht die maximale elastische Biegespannung mit der hinterlegten Streckgrenze `fy`.
+SpanDraft vergleicht die maximale elastische Biegespannung mit dem hinterlegten Festigkeitskennwert: Streckgrenze `Re` oder
+0,2-%-Dehngrenze `Rp0,2`. Die konkrete Formel im Bericht zeigt den gewählten Typ.
 
-<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Sicherheitsfaktor gleich Streckgrenze geteilt durch maximale Biegespannung">
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Sicherheitsfaktor gleich gewählter Festigkeitskennwert geteilt durch maximale Biegespannung">
   <mrow>
     <mi>S</mi>
     <mo>=</mo>
     <mfrac>
-      <msub><mi>f</mi><mi>y</mi></msub>
+      <mtext>Re oder Rp0,2</mtext>
       <msub><mi>σ</mi><mtext>b,max</mtext></msub>
     </mfrac>
   </mrow>
 </math>
 
-**S > 1:** Biegespannung liegt unter der hinterlegten Streckgrenze.<br>
-**S = 1:** Die hinterlegte Streckgrenze ist erreicht.<br>
-**S < 1:** Biegespannung liegt über der hinterlegten Streckgrenze.
+**S > 1:** Biegespannung liegt unter dem hinterlegten Festigkeitskennwert.<br>
+**S = 1:** Der hinterlegte Festigkeitskennwert ist erreicht.<br>
+**S < 1:** Biegespannung liegt über dem hinterlegten Festigkeitskennwert.
 
-**S > 1 bedeutet nicht automatisch, dass das reale Bauteil ausreichend dimensioniert ist.** Der Wert bewertet ausschließlich die hier berechnete elastische Biegespannung gegenüber der hinterlegten Streckgrenze.
+**S > 1 bedeutet nicht automatisch, dass das reale Bauteil ausreichend dimensioniert ist.** Der Wert bewertet ausschließlich die hier berechnete elastische Biegespannung gegenüber dem hinterlegten Festigkeitskennwert.
 
 Bei verschwindender Biegespannung kann mathematisch `S = ∞` erscheinen. Das bedeutet nicht „unendlich sicher“.
 

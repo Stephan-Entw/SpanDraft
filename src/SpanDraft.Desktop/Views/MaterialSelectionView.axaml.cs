@@ -40,15 +40,13 @@ public partial class MaterialSelectionView : UserControl
         Dispatcher.UIThread.Post(() =>
         {
             if (_model != model || TopLevel.GetTopLevel(this) is null) return;
-            if (model.IsEditing)
-                this.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(t => t.Name == "MaterialNameInput")?.Focus(NavigationMethod.Tab);
-            else
+            if (!model.IsEditing)
             {
                 if (ReferenceEquals(_browseSelection, model.SelectedEntry) && ListScroll is { } scroll) scroll.Offset = _browseOffset;
                 if (model.SelectedEntry is { } selected)
                 {
-                    if (!ReferenceEquals(_browseSelection, selected) && !selected.IsProject) MaterialEntries.ScrollIntoView(selected);
-                    (selected.IsProject ? ProjectMaterialEntry : MaterialEntries.ContainerFromItem(selected) ?? MaterialEntries).Focus(NavigationMethod.Tab);
+                    if (!ReferenceEquals(_browseSelection, selected)) MaterialEntries.ScrollIntoView(selected);
+                    (MaterialEntries.ContainerFromItem(selected) ?? MaterialEntries).Focus(NavigationMethod.Tab);
                 }
                 else MaterialSearchInput.Focus(NavigationMethod.Tab);
             }

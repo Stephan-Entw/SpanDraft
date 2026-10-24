@@ -121,6 +121,7 @@ public sealed class DesktopControlEnvironment : IDisposable
             {
                 "get_Compositor" => _compositor ??= (Compositor)Activator.CreateInstance(typeof(Compositor), [null, false])!,
                 "get_ClientSize" => _clientSize,
+                "get_MaxAutoSizeHint" => new Size(1250, 800),
                 "get_RenderScaling" or "get_DesktopScaling" => RenderScaling,
                 "get_Surfaces" => Array.Empty<object>(),
                 _ => base.Invoke(method, args)

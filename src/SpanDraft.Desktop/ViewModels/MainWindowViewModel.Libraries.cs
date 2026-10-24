@@ -1,3 +1,4 @@
+using SpanDraft.Core.Materials;
 using System.Text.Json;
 using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Persistence;
@@ -40,9 +41,15 @@ public sealed partial class MainWindowViewModel
         if (BuiltInError is { } error && _dialogs is not null) await _dialogs.ShowErrorAsync(error);
     }
 
-    public Task<string?> SaveMaterialAsync(MaterialLibraryEntry entry, string? oldName = null) => LibraryOperationAsync(async () =>
+    internal Task ShowMaterialEditorAsync(MaterialEditorViewModel editor) => _dialogs?.ShowMaterialEditorAsync(editor) ?? Task.CompletedTask;
+    internal Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string name) =>
+        _dialogs?.ResolveMaterialNameConflictAsync(name) ?? Task.FromResult(MaterialNameConflictDecision.Cancel);
+    internal Task<bool> ConfirmMaterialReplaceAsync(string name) => _dialogs?.ConfirmMaterialReplaceAsync(name) ?? Task.FromResult(false);
+
+    public Task<string?> SaveMaterialAsync(Material entry, string? oldName = null) => LibraryOperationAsync(async () =>
     {
         if (!CanSaveMaterials) return Strings.MaterialLibraryUnavailable;
+        if (entry.StrengthType is null) return Strings.MaterialStrengthRequired;
         var next = new UserMaterialLibrary(UserMaterials.All);
         if (oldName is null) next.Add(entry); else next.Replace(oldName, entry);
         await _materialStore!.SaveAsync(next);

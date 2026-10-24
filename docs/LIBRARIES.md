@@ -5,8 +5,8 @@
 Material- und Querschnittsbibliotheken sind Anwendungsdaten von
 `SpanDraft.Desktop`. Library-Modelle und Verhalten liegen in `Libraries`,
 JSON-Verträge, Ressourcenladen und Datei-I/O in `Persistence`. Core kennt nur
-die fachlichen Objekte `Material` und `ISectionDefinition`, keine Bibliotheken,
-Kategorien oder Persistenz.
+die fachlichen Objekte `Material` einschließlich seiner Kategorie und
+`ISectionDefinition`, keine Bibliotheken oder Persistenz.
 
 Der eingebaute Materialkatalog ist eine unveränderliche, eingebettete,
 versionierte JSON-Ressource. Benutzer-Materialien und Benutzer-Querschnitte
@@ -35,31 +35,30 @@ Core-Objekt. Die vorhandenen Material- und Querschnittsdefinitionen sind
 unveränderlich; ihre Übernahme benötigt keine Verbindung zum Library-Eintrag.
 Ersetzen, Umbenennen oder Löschen eines Eintrags verändert keine bereits
 übernommenen Projektwerte. Der verbindliche eigenständige Projektdateivertrag
-steht in [PROJECT_FORMAT.md](PROJECT_FORMAT.md); Bibliotheksmetadaten werden
-nicht in das Projekt übernommen.
+steht in [PROJECT_FORMAT.md](PROJECT_FORMAT.md). Kategorie, Werkstoffnummer und
+Normbezeichnungen gehören zum Material und werden vollständig übernommen.
+Herkunft und Bibliotheksschlüssel werden nicht als Referenzen gespeichert.
 
 ## Materialeinträge
 
-`MaterialLibraryEntry` enthält das bestehende Core-`Material` als einzigen
-Träger von E, fy, optionaler Dichte und optionaler Poissonzahl. `Material.Name`
-ist zugleich die primäre technische Bezeichnung; es gibt keine zweite
-Designation-Property.
+Katalog, Benutzerbibliothek und Projekt verwenden unmittelbar dasselbe
+Core-`Material`. Sein vollständiger Vertrag steht in [DOMAIN.md](DOMAIN.md).
+`Material.Name` ist zugleich die primäre technische Bezeichnung; es gibt keine
+zweite Designation-Property und kein zusätzliches Laufzeitmodell für Metadaten.
+Werkstoffnummern sind Strings, keine Zahlen oder Schlüssel. Andere Normen sind
+alternative Bezeichnungen, beispielsweise `AISI 304`, ohne spezielles AISI-Feld.
 
-Zusätzliche Library-Metadaten:
+Eine Dublette besitzt in sämtlichen Materialfeldern dieselben normalisierten
+Werte. Namen werden dafür getrimmt; Großschreibung, Normreihenfolge und exakte
+SI-Werte bleiben relevant. Dieser Vergleich ist vom lokalen, ohne Beachtung der
+Großschreibung eindeutigen Bibliotheksschlüssel und vom mechanischen Vergleich
+getrennt. Gleicher Name mit anderen Daten erlaubt kein stilles Überschreiben.
+Ersetzen benötigt eine ausdrückliche Bestätigung; alternativ wird ein neuer
+eindeutiger eigener Name vergeben oder die Speicherung abgebrochen.
 
-- `MaterialCategory`: stabile interne Kategorien `StructuralSteel`,
-  `StainlessSteel`, `AlloySteel`, `Aluminium` und `Other`.
-- `MaterialNumber`: optionaler String, beispielsweise `1.0038` oder `1.4301`;
-  keine Zahl und kein Schlüssel.
-- `OtherStandards`: optionale Liste alternativer Bezeichnungen aus anderen
-  Normsystemen, beispielsweise `AISI 304`; keine besondere AISI-Property.
-
-Fehlende Metadaten erhalten keine Platzhalter. MaterialNumber und alternative
-Bezeichnungen werden getrimmt, leere Werte entfallen. Eine fehlende Liste wird
-im Modell als leere unveränderliche Sammlung angeboten. Unbekannte Dichte und
-Poissonzahl bleiben unabhängig voneinander null; es werden keine Werte ergänzt.
-Kategorien und Metadaten beeinflussen keine mechanischen Vergleiche oder
-Berechnungen.
+Bestätigte Bibliotheksänderungen sind von Projektentwürfen unabhängig. Ein
+späterer Projektabbruch nimmt sie nicht zurück. Umgekehrt verändert eine
+Projektanpassung ohne ausdrückliche Bibliotheksoperation keinen Bibliothekseintrag.
 
 ## Querschnittspresets
 
@@ -97,10 +96,20 @@ Versionen. Benutzer-Materialien und eingebauter Katalog teilen nur ihr
 Library-internes Materialmapping. DTOs und Codec-Tests definieren die Felder.
 Core-Objekte werden nicht direkt serialisiert.
 
+`strengthType` erweitert den Materialvertrag kompatibel um `re` oder `rp02`,
+ohne Versionswechsel. Im eingebetteten Katalog ist der Typ für jeden Eintrag
+explizit gesetzt; Kategorien bestimmen ihn nicht. Fehlende oder null gesetzte
+Typen historischer Benutzerdateien bleiben ungeklärt. Neue und ersetzte Einträge
+benötigen einen Typ. Unveränderte Legacy-Einträge dürfen beim Speichern der
+gesamten Bibliothek erhalten bleiben; der Store vergleicht sie vollständig mit
+der vorhandenen Datei und verweigert neue oder geänderte ungeklärte Einträge.
+Unbekannte Typwerte sind Formatfehler. Beim Bearbeiten muss der Benutzer den Typ
+explizit festlegen; beim Übernehmen eines ungeklärten Eintrags öffnet der Editor.
+
 Dateien enthalten eingerücktes UTF-8-JSON mit camelCase-Feldern, stabilen
 Stringwerten für Kategorien, Formen und Achsen, ohne CLR-Typnamen oder
 numerische Enumwerte. Physikalische Werte stehen in kanonischen SI-Einheiten:
-Längen in m, A in m², I in m⁴, W in m³, E/fy in Pa, Dichte in kg/m³ und
+Längen in m, A in m², I in m⁴, W in m³, E/Festigkeitskennwert in Pa, Dichte in kg/m³ und
 Poissonzahl dimensionslos. Kultur und Anzeigeeinheiten spielen keine Rolle.
 Unbekannte optionale Materialwerte und leere optionale Metadaten werden beim
 Schreiben weggelassen; fehlende oder null gesetzte optionale Werte bleiben

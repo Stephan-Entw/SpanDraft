@@ -367,7 +367,7 @@ public sealed class DesktopPointLoadTests
         if (apply)
         {
             // The Apply branch exercises a real mechanical setup change; an unchanged Apply is a no-op.
-            s.Main.Setup.SelectedMaterial = new("Alternative", Pressure.FromPascals(200e9), Pressure.FromMegapascals(355));
+            s.Main.Setup.SelectedMaterial = new("Alternative", Pressure.FromPascals(200e9), Pressure.FromMegapascals(355), SpanDraft.Core.Materials.MaterialStrengthType.Re);
             s.Main.Setup.ApplyCommand.Execute(null);
         }
         else s.Main.Setup.CancelCommand.Execute(null);

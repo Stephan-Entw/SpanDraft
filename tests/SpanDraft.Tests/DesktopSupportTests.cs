@@ -412,7 +412,7 @@ public sealed class DesktopSupportTests
         s.Editor.ToggleSupportTool(SupportType.Pinned);
         s.Editor.ChangeProjectCommand.Execute(null);
         Assert.Equal(SupportInteraction.Neutral, s.Editor.Interaction);
-        var material = new Material("Alternative", Pressure.FromPascals(100e9), Pressure.FromMegapascals(100));
+        var material = new Material("Alternative", Pressure.FromPascals(100e9), Pressure.FromMegapascals(100), MaterialStrengthType.Re);
         var section = new RectangleSection(Mm(30), Mm(40));
         s.Main.Setup.SelectedMaterial = material;
         s.Main.Setup.SelectedSection = section;

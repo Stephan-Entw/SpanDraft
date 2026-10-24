@@ -16,6 +16,8 @@ internal static class ProjectReport
         Dispatcher.UIThread.VerifyAccess();
         if (!editor.Presentation.IsSuccess) throw new InvalidOperationException(Strings.CalculationUnavailable);
         var state = editor.Session.CurrentRevision.State;
+        if (state.Document.Material.StrengthType is null) throw new InvalidOperationException(Strings.MaterialStrengthResolve);
+        var strengthSymbol = MaterialStrengthDisplay.Symbol(state.Document.Material.StrengthType);
         var presentation = editor.Presentation;
         var overview = ProjectOverviewState.From(state.Document, presentation);
         var analysis = presentation.Result!;
@@ -52,7 +54,7 @@ internal static class ProjectReport
             ApplicationMetadata.Version, timestamp, timestamp.ToLocalTime().ToString("d", CultureInfo.CurrentCulture), metadata,
             (state.Document.SectionDisplayName ?? ShapeName(state.Document.Section)) + " · " + axisName + "-" + axisName, sectionProperties, overview.Material,
             ["E = " + InputQuantityFormatter.WithUnit(state.Document.Material.YoungsModulus.Pascals, profile[QuantityKind.Stress]),
-             "Re = " + InputQuantityFormatter.WithUnit(state.Document.Material.YieldStrength.Pascals, profile[QuantityKind.Stress])],
+             MaterialStrengthDisplay.Label(state.Document.Material.StrengthType) + " = " + InputQuantityFormatter.WithUnit(state.Document.Material.YieldStrength.Pascals, profile[QuantityKind.Stress])],
             [
                 new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, "x [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.17f, .48f, .35f],
                     overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Type, s.Position }).ToArray()),
@@ -68,7 +70,7 @@ internal static class ProjectReport
                 new(Strings.ReportMoment, presentation.Moment,
                     Location(engineering.CriticalBendingMoment.Position.Meters, engineering.CriticalBendingMoment.Side)),
                 new(Strings.ReportStress, presentation.Stress, null),
-                new(Strings.ReportSafety, presentation.SafetyFactor, null)
+                new(string.Format(CultureInfo.CurrentUICulture, Strings.ReportSafety, strengthSymbol), presentation.SafetyFactor, null)
             ], new(Strings.ReportHeading, Strings.ReportContinuation, Strings.ReportPage, Strings.Section, Strings.ReportMaterial,
                 Strings.ReportSummary, Strings.ReportNotes, [Strings.ReportTheory, Strings.ReportLimits]));
         var visuals = new ReportVisuals(state, presentation, data);

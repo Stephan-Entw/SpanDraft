@@ -22,9 +22,16 @@ internal static class LibraryTestSupport
         }
         """;
 
-    internal static MaterialLibraryEntry MaterialEntry(string name = "Fixture A", double modulus = 123456789.01234567) =>
-        new(new Material(name, Pressure.FromPascals(modulus), Pressure.FromPascals(2345678.901234567)),
-            MaterialCategory.Other);
+    internal static Material MaterialEntry(string name = "Fixture A", double modulus = 123456789.01234567) =>
+        new(name, Pressure.FromPascals(modulus), Pressure.FromPascals(2345678.901234567), MaterialStrengthType.Re);
+
+    internal static Material WithMetadata(Material material, MaterialCategory category,
+        string? number = null, IEnumerable<string>? standards = null)
+    {
+        ArgumentNullException.ThrowIfNull(material);
+        return SpanDraft.Desktop.Persistence.MaterialStrengthWire.Read(material.Name, material.YoungsModulus, material.YieldStrength,
+            SpanDraft.Desktop.Persistence.MaterialStrengthWire.Write(material.StrengthType), material.Density, material.PoissonRatio, category, number, standards);
+    }
 
     internal static byte[] Bytes(JsonNode json) => Encoding.UTF8.GetBytes(json.ToJsonString());
 

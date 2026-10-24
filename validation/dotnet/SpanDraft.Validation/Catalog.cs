@@ -22,7 +22,7 @@ public sealed record ValidationCase(int SchemaVersion, int CaseVersion, string C
     public BeamModel ToBeam()
     {
         // Yield strength and W are required by Core but play no role in this scope.
-        var material = new Material("Validation only", Pressure.FromPascals(E), Pressure.FromPascals(235e6));
+        var material = new Material("Validation only", Pressure.FromPascals(E), Pressure.FromPascals(235e6), MaterialStrengthType.Re);
         var section = new CustomSection(Area.FromSquareMeters(A),
             SecondMomentOfArea.FromMetersToTheFourth(I), SectionModulus.FromCubicMeters(1));
         return new BeamModel(M(Length), material, section,

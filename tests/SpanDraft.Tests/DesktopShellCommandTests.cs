@@ -164,7 +164,7 @@ public sealed class DesktopShellCommandTests
         main.Setup.ShowMaterials(); Assert.Equal(MainWorkspaceKind.MaterialSelection, main.Workspace); Check(false, false, false, false);
         var selection = (MaterialSelectionViewModel)main.Setup.CurrentStep!;
         int workspaceNotifications = 0; main.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(main.Workspace)) workspaceNotifications++; };
-        selection.NewCommand.Execute(null); Assert.Equal(MainWorkspaceKind.MaterialEditor, main.Workspace);
+        selection.EditSelectedCommand.Execute(null); Assert.Equal(MainWorkspaceKind.MaterialSelection, main.Workspace);
         Assert.True(workspaceNotifications > 0); Check(false, false, false, false);
         Assert.False(await main.OpenAsync()); Assert.False(await main.SaveAsync());
         main.Setup.Escape(); main.Setup.ShowOverview(); main.Setup.ShowSections();

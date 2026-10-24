@@ -28,46 +28,31 @@ public static class MaterialLibraryCodec
 
 internal static class MaterialLibraryMapping
 {
-    internal static MaterialLibraryEntryV1 ToDto(MaterialLibraryEntry entry) => new()
+    internal static MaterialLibraryEntryV1 ToDto(Material entry) => new()
     {
         Material = new()
         {
-            Name = entry.Material.Name,
-            YoungsModulus = entry.Material.YoungsModulus.Pascals,
-            YieldStrength = entry.Material.YieldStrength.Pascals,
-            Density = entry.Material.Density?.KilogramsPerCubicMeter,
-            PoissonRatio = entry.Material.PoissonRatio?.Value
+            Name = entry.Name,
+            YoungsModulus = entry.YoungsModulus.Pascals,
+            YieldStrength = entry.YieldStrength.Pascals,
+            StrengthType = MaterialStrengthWire.Write(entry.StrengthType),
+            Density = entry.Density?.KilogramsPerCubicMeter,
+            PoissonRatio = entry.PoissonRatio?.Value
         },
-        Category = entry.Category switch
-        {
-            MaterialCategory.StructuralSteel => "structuralSteel",
-            MaterialCategory.StainlessSteel => "stainlessSteel",
-            MaterialCategory.AlloySteel => "alloySteel",
-            MaterialCategory.Aluminium => "aluminium",
-            MaterialCategory.Other => "other",
-            _ => throw new LibraryFormatException("Unknown material category.")
-        },
+        Category = MaterialCategoryWire.Write(entry.Category),
         MaterialNumber = entry.MaterialNumber,
         OtherStandards = entry.OtherStandards.Count == 0 ? null : entry.OtherStandards.ToArray()
     };
 
-    internal static MaterialLibraryEntry FromDto(MaterialLibraryEntryV1 entry)
+    internal static Material FromDto(MaterialLibraryEntryV1 entry)
     {
         Required(entry, "entry");
         var m = Required(entry.Material, "material");
-        return new(new Material(Required(m.Name, "name"),
+        return MaterialStrengthWire.Read(Required(m.Name, "name"),
             Pressure.FromPascals(Number(m.YoungsModulus, "youngsModulus")),
-            Pressure.FromPascals(Number(m.YieldStrength, "yieldStrength")),
+            Pressure.FromPascals(Number(m.YieldStrength, "yieldStrength")), m.StrengthType,
             m.Density is { } rho ? MassDensity.FromKilogramsPerCubicMeter(Number(rho, "density")) : null,
-            m.PoissonRatio is { } nu ? PoissonRatio.FromValue(Number(nu, "poissonRatio")) : null),
-            entry.Category switch
-            {
-                "structuralSteel" => MaterialCategory.StructuralSteel,
-                "stainlessSteel" => MaterialCategory.StainlessSteel,
-                "alloySteel" => MaterialCategory.AlloySteel,
-                "aluminium" => MaterialCategory.Aluminium,
-                "other" => MaterialCategory.Other,
-                _ => throw new LibraryFormatException("Unknown material category.")
-            }, entry.MaterialNumber, entry.OtherStandards);
+            m.PoissonRatio is { } nu ? PoissonRatio.FromValue(Number(nu, "poissonRatio")) : null,
+            MaterialCategoryWire.Read(entry.Category), entry.MaterialNumber, entry.OtherStandards);
     }
 }

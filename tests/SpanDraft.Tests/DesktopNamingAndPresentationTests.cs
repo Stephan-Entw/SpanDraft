@@ -384,7 +384,7 @@ public sealed class DesktopNamingAndPresentationTests
         var presentation = editor.EditorPresentation;
         s.Main.EditProject();
         Assert.Same(editor, s.Editor);
-        s.Main.Setup.SelectedMaterial = new("Other", Pressure.FromPascals(200e9), Pressure.FromMegapascals(355));
+        s.Main.Setup.SelectedMaterial = new("Other", Pressure.FromPascals(200e9), Pressure.FromMegapascals(355), MaterialStrengthType.Re);
         if (apply) s.Main.Setup.ApplyCommand.Execute(null); else s.Main.Setup.CancelCommand.Execute(null);
         Assert.Same(editor, s.Editor);
         Assert.Same(presentation, s.Editor.EditorPresentation);
@@ -457,7 +457,7 @@ public sealed class DesktopNamingAndPresentationTests
     {
         var s = new Session();
         var document = s.Editor.Document;
-        var material = new Material("Alternate name", document.Material.YoungsModulus, document.Material.YieldStrength,
+        var material = new Material("Alternate name", document.Material.YoungsModulus, document.Material.YieldStrength, MaterialStrengthType.Re,
             document.Material.Density, document.Material.PoissonRatio);
         var original = Assert.IsType<SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry>(document.Section);
         var section = new SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry(

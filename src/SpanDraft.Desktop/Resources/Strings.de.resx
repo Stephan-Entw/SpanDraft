@@ -163,7 +163,7 @@
   <data name="SectionSelection" xml:space="preserve"><value>Querschnitt auswählen</value></data>
   <data name="CurrentProjectMaterial" xml:space="preserve"><value>Aktuelles Projektmaterial</value></data>
   <data name="CurrentProjectSection" xml:space="preserve"><value>Aktueller Projektquerschnitt</value></data>
-  <data name="BuiltInMaterials" xml:space="preserve"><value>Eingebaute Materialien</value></data>
+  <data name="BuiltInMaterials" xml:space="preserve"><value>Built-in-Werkstoffe</value></data>
   <data name="MyMaterials" xml:space="preserve"><value>Meine Werkstoffe</value></data>
   <data name="MySections" xml:space="preserve"><value>Meine Querschnitte</value></data>
   <data name="CreateMaterial" xml:space="preserve"><value>Benutzerdefinierter Werkstoff</value></data>
@@ -174,8 +174,8 @@
   <data name="EditUserSection" xml:space="preserve"><value>Querschnittspreset bearbeiten</value></data>
   <data name="EmptyMaterialLibrary" xml:space="preserve"><value>Noch keine Materialien gespeichert.</value></data>
   <data name="EmptySectionLibrary" xml:space="preserve"><value>Noch keine Querschnitte gespeichert.</value></data>
-  <data name="CategoryStructuralSteel" xml:space="preserve"><value>Baustahl</value></data>
-  <data name="CategoryStainlessSteel" xml:space="preserve"><value>Nichtrostender Stahl</value></data>
+  <data name="CategoryStructuralSteel" xml:space="preserve"><value>Konstruktionsstahl</value></data>
+  <data name="CategoryStainlessSteel" xml:space="preserve"><value>Edelstahl</value></data>
   <data name="CategoryAlloySteel" xml:space="preserve"><value>Legierter Stahl</value></data>
   <data name="CategoryAluminium" xml:space="preserve"><value>Aluminium</value></data>
   <data name="CategoryOther" xml:space="preserve"><value>Sonstige</value></data>
@@ -282,13 +282,15 @@
   <data name="MaterialIdentification" xml:space="preserve"><value>Bezeichnung und Normen</value></data>
   <data name="MaterialProperties" xml:space="preserve"><value>Mechanische Eigenschaften</value></data>
   <data name="MaterialYoungsModulus" xml:space="preserve"><value>Elastizitätsmodul E</value></data>
-  <data name="MaterialYieldStrength" xml:space="preserve"><value>Streckgrenze fy</value></data>
   <data name="MaterialDensity" xml:space="preserve"><value>Dichte ρ</value></data>
   <data name="MaterialPoissonRatio" xml:space="preserve"><value>Poissonzahl ν</value></data>
   <data name="InLibrary" xml:space="preserve"><value>In Bibliothek</value></data>
   <data name="LibraryNameTaken" xml:space="preserve"><value>Name bereits vergeben</value></data>
   <data name="LibrarySaveFailedShort" xml:space="preserve"><value>Bibliothek konnte nicht gespeichert werden.</value></data>
   <data name="MaterialCurrentEntry" xml:space="preserve"><value>Aktuell im Projekt</value></data>
+  <data name="MaterialSource" xml:space="preserve"><value>Quelle</value></data>
+  <data name="MaterialProjectSuffix" xml:space="preserve"><value>(aktuell im Projekt)</value></data>
+  <data name="BuiltInMaterialReadOnly" xml:space="preserve"><value>Built-in-Werkstoff – schreibgeschützt</value></data>
   <data name="MaterialFilters" xml:space="preserve"><value>Werkstofffilter</value></data>
   <data name="MaterialList" xml:space="preserve"><value>Werkstoffe</value></data>
   <data name="MaterialEditName" xml:space="preserve"><value>Werkstoffnamen bearbeiten</value></data>
@@ -320,7 +322,7 @@
   <data name="ReportPage" xml:space="preserve"><value>Seite {0} von {1}</value></data>
   <data name="ReportNotes" xml:space="preserve"><value>Berechnungsgrundlagen / Hinweise</value></data>
   <data name="ReportTheory" xml:space="preserve"><value>Euler-Bernoulli · linear elastisch · kleine Verformungen · konstanter Werkstoff und Querschnitt.</value></data>
-  <data name="ReportLimits" xml:space="preserve"><value>Schubverformung und Eigengewicht sind nicht berücksichtigt. S = Re / σb,max ist eine elastische Bewertung, kein normativer Festigkeits- oder Sicherheitsnachweis.</value></data>
+  <data name="ReportLimits" xml:space="preserve"><value>Schubverformung und Eigengewicht sind nicht berücksichtigt. Das Verhältnis des gewählten Festigkeitskennwerts zu σb,max ist eine elastische Bewertung, kein normativer Festigkeits- oder Sicherheitsnachweis.</value></data>
   <data name="ReportPosition" xml:space="preserve"><value>bei x = {0} {1}{2}</value></data>
   <data name="ReportSavePdf" xml:space="preserve"><value>PDF speichern</value></data>
   <data name="ReportPrint" xml:space="preserve"><value>Drucken</value></data>
@@ -340,7 +342,21 @@
   <data name="ReportDeflection" xml:space="preserve"><value>Maximale Durchbiegung |w|max</value></data>
   <data name="ReportMoment" xml:space="preserve"><value>Maßgebendes Biegemoment |M|max</value></data>
   <data name="ReportStress" xml:space="preserve"><value>Max. elastische Biegespannung σb,max</value></data>
-  <data name="ReportSafety" xml:space="preserve"><value>Sicherheitsfaktor S = Re / σb,max</value></data>
+  <data name="ReportSafety" xml:space="preserve"><value>Sicherheitsfaktor S = {0} / σb,max</value></data>
   <data name="ReportPdfTarget" xml:space="preserve"><value>Bitte ein Exportziel mit der Dateiendung .pdf wählen.</value></data>
   <data name="Report" xml:space="preserve"><value>Bericht</value></data>
+  <data name="MaterialStrength" xml:space="preserve"><value>Festigkeitskennwert</value></data>
+  <data name="MaterialStrengthColumn" xml:space="preserve"><value>Kennwert [MPa]</value></data>
+  <data name="MaterialStrengthType" xml:space="preserve"><value>Kennwerttyp</value></data>
+  <data name="MaterialStrengthRe" xml:space="preserve"><value>Streckgrenze Re</value></data>
+  <data name="MaterialStrengthRp02" xml:space="preserve"><value>0,2-%-Dehngrenze Rp0,2</value></data>
+  <data name="MaterialStrengthUnspecified" xml:space="preserve"><value>Typ nicht festgelegt</value></data>
+  <data name="MaterialStrengthRequired" xml:space="preserve"><value>Re oder Rp0,2 auswählen.</value></data>
+  <data name="MaterialStrengthResolve" xml:space="preserve"><value>Vor dem Speichern oder Erstellen eines Berichts den Kennwerttyp im Werkstoffeditor auf Re oder Rp0,2 festlegen.</value></data>
+  <data name="CopyMaterial" xml:space="preserve"><value>Kopie erstellen…</value></data>
+  <data name="SaveProjectMaterial" xml:space="preserve"><value>In Bibliothek speichern…</value></data>
+  <data name="ReplaceMaterial" xml:space="preserve"><value>Vorhandenen ersetzen</value></data>
+  <data name="RenameMaterial" xml:space="preserve"><value>Bezeichnung anpassen</value></data>
+  <data name="MaterialNameConflictQuestion" xml:space="preserve"><value>Ein eigener Werkstoff mit der Bezeichnung „{0}“ und anderen Daten ist bereits vorhanden.</value></data>
+  <data name="ReplaceMaterialQuestion" xml:space="preserve"><value>Den eigenen Werkstoff „{0}“ durch die aktuellen Werkstoffdaten ersetzen?</value></data>
 </root>

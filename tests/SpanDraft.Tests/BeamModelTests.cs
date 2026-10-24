@@ -11,7 +11,7 @@ namespace SpanDraft.Tests;
 
 public class BeamModelTests
 {
-    private static Material TestMaterial() => new("Test", Pressure.FromMegapascals(210000), Pressure.FromMegapascals(235));
+    private static Material TestMaterial() => new("Test", Pressure.FromMegapascals(210000), Pressure.FromMegapascals(235), MaterialStrengthType.Re);
     private static Section TestSection() => new RectangleSection(Length.FromMillimeters(40), Length.FromMillimeters(80));
     private static Support[] EndSupports() =>
         [new(default, SupportType.Pinned), new(Length.FromMeters(2), SupportType.Roller)];

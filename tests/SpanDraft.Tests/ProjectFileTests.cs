@@ -320,7 +320,9 @@ public sealed class ProjectFileTests
             """);
         var state = ProjectFileCodec.Deserialize(bytes);
         Assert.Null(state.Info); Assert.Equal(2, state.Document.Length.Meters);
-        Assert.True(state.ContentEquals(ProjectFileCodec.Deserialize(ProjectFileCodec.Serialize(state))));
+        Assert.Null(state.Document.Material.StrengthType);
+        Assert.Throws<ProjectFormatException>(() => ProjectFileCodec.Serialize(state));
+        Assert.True(state.ContentEquals(ProjectFileCodec.Deserialize(ProjectFileCodec.SerializeRecovery(state))));
     }
 
     [Fact]

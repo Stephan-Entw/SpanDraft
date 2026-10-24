@@ -29,7 +29,7 @@ public sealed class ProjectSectionStateTests
             "axis" => d.WithBendingAxis(SectionAxisDesignation.Z),
             _ => d with { Material = new(field == "name" ? "Renamed" : m.Name,
                 field == "E" ? Pressure.FromPascals(200e9) : m.YoungsModulus,
-                field == "fy" ? Pressure.FromPascals(355e6) : m.YieldStrength,
+                field == "fy" ? Pressure.FromPascals(355e6) : m.YieldStrength, field == "strengthType" ? MaterialStrengthType.Rp02 : m.StrengthType!.Value,
                 field == "density" ? MassDensity.FromKilogramsPerCubicMeter(7850) : m.Density,
                 field == "poisson" ? PoissonRatio.FromValue(.3) : m.PoissonRatio) }
         };
@@ -40,6 +40,7 @@ public sealed class ProjectSectionStateTests
     [InlineData("density", false)]
     [InlineData("poisson", false)]
     [InlineData("name", false)]
+    [InlineData("strengthType", false)]
     [InlineData("E", true)]
     [InlineData("fy", true)]
     [InlineData("axis", true)]

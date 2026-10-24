@@ -12,7 +12,7 @@ internal static class ReportTestProjects
     internal static ProjectState Create(bool overflow = false)
     {
         var section = new RectangularHollowSectionGeometry(Mm(60), Mm(100), Mm(4), Mm(6));
-        var material = new Material("S235JR", Pressure.FromPascals(210e9), Pressure.FromMegapascals(235));
+        var material = new Material("S235JR", Pressure.FromPascals(210e9), Pressure.FromMegapascals(235), MaterialStrengthType.Re);
         double length = overflow ? 7 : 2;
         var supports = Enumerable.Range(0, overflow ? 8 : 2).Select(i => new EditorSupport(Id(i + 1),
             M(overflow ? i : i * 2), i == 0 ? SupportType.Pinned : SupportType.Roller, ((char)('A' + i)).ToString())).ToArray();

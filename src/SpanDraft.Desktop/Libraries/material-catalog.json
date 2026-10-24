@@ -7,6 +7,7 @@
         "name": "S235JR",
         "youngsModulus": 210000000000,
         "yieldStrength": 235000000,
+        "strengthType": "re",
         "density": 7850,
         "poissonRatio": 0.30
       },
@@ -18,6 +19,7 @@
         "name": "S355JR",
         "youngsModulus": 210000000000,
         "yieldStrength": 355000000,
+        "strengthType": "re",
         "density": 7850,
         "poissonRatio": 0.30
       },
@@ -29,6 +31,7 @@
         "name": "X5CrNi18-10",
         "youngsModulus": 200000000000,
         "yieldStrength": 190000000,
+        "strengthType": "rp02",
         "density": 7900,
         "poissonRatio": 0.30
       },
@@ -41,6 +44,7 @@
         "name": "X2CrNiMo17-12-2",
         "youngsModulus": 200000000000,
         "yieldStrength": 200000000,
+        "strengthType": "rp02",
         "density": 8000,
         "poissonRatio": 0.30
       },
@@ -53,6 +57,7 @@
         "name": "42CrMo4 +QT",
         "youngsModulus": 210000000000,
         "yieldStrength": 650000000,
+        "strengthType": "rp02",
         "density": 7800,
         "poissonRatio": 0.30
       },
@@ -64,6 +69,7 @@
         "name": "34CrNiMo6 +QT",
         "youngsModulus": 210000000000,
         "yieldStrength": 800000000,
+        "strengthType": "rp02",
         "density": 7800,
         "poissonRatio": 0.30
       },
@@ -75,6 +81,7 @@
         "name": "AlMgSi0,5 T66",
         "youngsModulus": 69000000000,
         "yieldStrength": 150000000,
+        "strengthType": "rp02",
         "density": 2700,
         "poissonRatio": 0.33
       },
@@ -87,6 +94,7 @@
         "name": "AlMg3 H22",
         "youngsModulus": 70000000000,
         "yieldStrength": 130000000,
+        "strengthType": "rp02",
         "density": 2670,
         "poissonRatio": 0.33
       },

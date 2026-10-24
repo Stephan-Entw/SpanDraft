@@ -319,7 +319,7 @@ Ergebnisvergleiche verwenden `absTol + 1e-9 · |Soll|`: absolut `1e-7 N`,
 numerischen Abbruchschwellen getrennt.
 
 Der Solver liefert keine Festigkeitsbewertung. Reine elastische Biegespannung
-und ein einfaches Verhältnis zur Streckgrenze werden als getrenntes Postprocessing
+und ein einfaches Verhältnis zum gewählten Festigkeitskennwert werden als getrenntes Postprocessing
 in [SpanDraft.Engineering](ENGINEERING.md) ausgewertet. Normative
 Festigkeits-/Gebrauchstauglichkeitsnachweise, Schubverformung, geometrische
 Nichtlinearität und Eigengewicht sind nicht implementiert.

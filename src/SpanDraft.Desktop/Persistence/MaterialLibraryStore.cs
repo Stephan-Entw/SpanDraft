@@ -20,11 +20,15 @@ public sealed class MaterialLibraryStore(IProjectFileStore files, string path, A
 
     public async Task SaveAsync(UserMaterialLibrary library, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(library);
         cancellationToken.ThrowIfCancellationRequested();
-        byte[] bytes = MaterialLibraryCodec.Serialize(library);
         // A failed load must never turn damaged user data into an empty replacement.
         var existing = await files.ReadAsync(FilePath);
-        if (existing is not null) MaterialLibraryCodec.Deserialize(existing);
+        var previous = existing is null ? new UserMaterialLibrary() : MaterialLibraryCodec.Deserialize(existing);
+        foreach (var entry in library.All.Where(e => e.StrengthType is null))
+            if (previous.Find(entry.Name) is not { } old || !MaterialSnapshotComparison.Equals(old, entry))
+                throw new LibraryFormatException("A new or changed material requires a strength type.");
+        byte[] bytes = MaterialLibraryCodec.Serialize(library);
         cancellationToken.ThrowIfCancellationRequested();
         ensureDirectory?.Invoke();
         await files.WriteAtomicAsync(FilePath, bytes, cancellationToken);

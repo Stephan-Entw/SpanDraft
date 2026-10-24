@@ -74,7 +74,7 @@ public sealed class DesktopModelReferenceTests
     [Fact]
     public void NegativeMomentExtremumAndSelectedMaterialAreUsed()
     {
-        var material = new Material("Test", Pressure.FromPascals(E), Pressure.FromMegapascals(355));
+        var material = new Material("Test", Pressure.FromPascals(E), Pressure.FromMegapascals(355), MaterialStrengthType.Re);
         var analysis = Analyze(Beam([SupportAt(0, SupportType.Fixed)], [Point(2, -1000)], material));
         var references = ModelReferenceValues.FromAnalysis(analysis);
         Assert.True(analysis.Solution.Extrema.MinimumBendingMoment.Value.NewtonMeters < 0);

@@ -61,7 +61,8 @@ public sealed class DesktopMenuControlTests
         main.NewCommand.Execute(null); CheckWorkspace(MainWorkspaceKind.ProjectSetup);
         main.Setup.ShowMaterials(); CheckWorkspace(MainWorkspaceKind.MaterialSelection);
         var materials = (MaterialSelectionViewModel)main.Setup.CurrentStep!;
-        materials.NewCommand.Execute(null); CheckWorkspace(MainWorkspaceKind.MaterialEditor);
+        main.Setup.SelectedMaterial = main.BuiltInMaterials!.All[0]; main.Setup.ShowOverview(); main.Setup.ShowMaterials();
+        materials = (MaterialSelectionViewModel)main.Setup.CurrentStep!; materials.EditSelectedCommand.Execute(null); CheckWorkspace(MainWorkspaceKind.MaterialSelection);
         main.Setup.Escape(); main.Setup.ShowOverview();
         main.Setup.ShowSections(); CheckWorkspace(MainWorkspaceKind.SectionDefinition);
         var definition = Assert.Single(window.GetVisualDescendants().OfType<SectionDefinitionView>());

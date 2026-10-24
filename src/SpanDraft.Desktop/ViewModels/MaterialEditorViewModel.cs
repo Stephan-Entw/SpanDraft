@@ -1,6 +1,5 @@
 using SpanDraft.Core.Materials;
 using SpanDraft.Core.Units;
-using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 
@@ -11,47 +10,73 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
     private static readonly UnitDefinition GPa = new("GPa", "GPa", UnitDimension.Pressure, PresentationNumber.Parse("1e9"));
     private string _name, _number, _standards;
     private SetupChoice<MaterialCategory>? _category;
+    private SetupChoice<MaterialStrengthType>? _strengthType;
     private string? _error, _saveError;
     private readonly string? _originalName;
-    private MaterialLibraryEntry? _savedEntry;
-    private bool _nameValidationVisible;
+    private readonly Func<Material, Task<string?>> _confirm;
+    private bool _confirming;
+    private bool _nameValidationVisible, _strengthTypeValidationVisible;
 
-    public MaterialEditorViewModel(ProjectSetupViewModel setup, MaterialLibraryEntry? entry, SetupEditorMode mode,
-        Material? projectSnapshot = null) : base(setup)
+    public MaterialEditorViewModel(ProjectSetupViewModel setup, Material? material, SetupEditorMode mode,
+        Func<Material, Task<string?>>? confirm = null, bool showNameConflict = false) : base(setup)
     {
-        var material = entry?.Material ?? projectSnapshot;
-        Mode = mode; _originalName = IsLibraryEdit ? entry?.Material.Name : null;
+        Mode = mode;
+        _confirm = confirm ?? (_ => Task.FromResult<string?>(null));
+        _originalName = IsLibraryEdit ? material?.Name : null;
         _name = material?.Name ?? "";
-        Title = IsLibraryEdit ? Strings.EditUserMaterial : material is null ? Strings.MaterialDefine : Strings.MaterialCustomize;
-        _number = entry?.MaterialNumber ?? ""; _standards = string.Join("; ", entry?.OtherStandards ?? []);
+        Title = IsLibraryEdit ? Strings.EditUserMaterial : IsProjectDraft ? Strings.MaterialCustomize : Strings.MaterialDefine;
+        _number = material?.MaterialNumber ?? ""; _standards = string.Join("; ", material?.OtherStandards ?? []);
         Categories = MaterialSelectionViewModel.Categories();
-        _category = Categories.Single(c => c.Value == (entry?.Category ?? MaterialCategory.Other));
+        _category = Categories.Single(c => c.Value == (material?.Category ?? MaterialCategory.Other));
+        StrengthTypes = [new(MaterialStrengthType.Re, "Re"), new(MaterialStrengthType.Rp02, "Rp0,2")];
+        _strengthType = StrengthTypes.SingleOrDefault(c => c.Value == material?.StrengthType);
+        _nameValidationVisible = showNameConflict;
         Inputs =
         [
             new("E", Strings.MaterialYoungsModulus, GPa, Validate, material?.YoungsModulus.Pascals),
-            new("fy", Strings.MaterialYieldStrength, UnitCatalog.Megapascal, Validate, material?.YieldStrength.Pascals),
+            new("strength", material?.StrengthType is { } type ? MaterialStrengthDisplay.Label(type) : Strings.MaterialStrength, UnitCatalog.Megapascal, Validate, material?.YieldStrength.Pascals),
             new("rho", Strings.MaterialDensity, UnitCatalog.Dimensionless, Validate, material?.Density?.KilogramsPerCubicMeter, optional: true, hint: "kg/m³"),
             new("nu", Strings.MaterialPoissonRatio, UnitCatalog.Dimensionless, Validate, material?.PoissonRatio?.Value, optional: true, signed: true)
         ];
-        ApplyCommand = new(ApplyAsync, () => CanApply);
-        AddLibraryCommand = new(AddLibraryAsync, () => CanAddLibrary);
-        ReplaceLibraryCommand = new(ReplaceLibraryAsync, () => CanReplaceLibrary);
-        CancelCommand = new(() => setup.ReturnToMaterials(), () => !IsBusy);
+        ConfirmCommand = new(ConfirmAsync, () => CanConfirm);
+        CancelCommand = new(() => CloseRequested?.Invoke(false), () => !IsBusy);
         Validate();
     }
+    public event Action<bool>? CloseRequested;
     public SetupEditorMode Mode { get; }
     public bool IsLibraryEdit => Mode == SetupEditorMode.UserLibraryEdit;
-    public bool IsProjectDraft => !IsLibraryEdit;
+    public bool IsProjectDraft => Mode == SetupEditorMode.ProjectDraft;
+    public new bool IsBusy => _confirming || base.IsBusy;
     public string Title { get; }
-    public string PrimaryAction => IsLibraryEdit ? Strings.Save : Strings.Apply;
-    public string CancelLabel => Strings.Cancel;
     public string Name { get => _name; set { if (!IsBusy && Set(ref _name, value)) Validate(); } }
     public string MaterialNumber { get => _number; set { if (!IsBusy && Set(ref _number, value)) Validate(); } }
     public string OtherStandards { get => _standards; set { if (!IsBusy && Set(ref _standards, value)) Validate(); } }
     public IReadOnlyList<SetupChoice<MaterialCategory>> Categories { get; }
     public SetupChoice<MaterialCategory>? Category { get => _category; set { if (!IsBusy && Set(ref _category, value)) Validate(); } }
     public IReadOnlyList<SetupNumberInput> Inputs { get; }
-    public string? NameError => string.IsNullOrWhiteSpace(Name) ? Strings.MaterialNameRequired : null;
+    public IReadOnlyList<SetupChoice<MaterialStrengthType>> StrengthTypes { get; }
+    public SetupChoice<MaterialStrengthType>? StrengthType
+    {
+        get => _strengthType;
+        set
+        {
+            if (IsBusy || !Set(ref _strengthType, value)) return;
+            Inputs[1].SetLabel(value is not null && StrengthTypes.Contains(value)
+                ? MaterialStrengthDisplay.Label(value.Value) : Strings.MaterialStrength);
+            Validate();
+        }
+    }
+    public string? StrengthTypeError => StrengthType is null || !StrengthTypes.Contains(StrengthType) ? Strings.MaterialStrengthRequired : null;
+    public bool HasStrengthTypeError => StrengthTypeError is not null;
+    public bool ShowStrengthTypeError => _strengthTypeValidationVisible && HasStrengthTypeError;
+    public void CompleteStrengthTypeInput()
+    {
+        _strengthTypeValidationVisible = true;
+        Notify(nameof(ShowStrengthTypeError));
+    }
+    public string? NameError => string.IsNullOrWhiteSpace(Name) ? Strings.MaterialNameRequired
+        : !IsProjectDraft && Setup.Libraries?.UserMaterials.Find(Name.Trim()) is { } existing
+            && !StringComparer.OrdinalIgnoreCase.Equals(existing.Name, _originalName) ? Strings.LibraryNameConflict : null;
     public bool HasNameError => NameError is not null;
     public bool ShowNameError => _nameValidationVisible && HasNameError;
     public void CompleteNameInput()
@@ -61,37 +86,23 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
     }
     public string? CategoryError => Category is null || !Categories.Contains(Category) ? Strings.MaterialCategoryRequired : null;
     public bool HasCategoryError => CategoryError is not null;
-    public bool CanSaveToLibrary => Setup.Libraries?.CanSaveMaterials == true;
-    private bool HasLibraryNameConflict => Draft is { } entry && Setup.Libraries?.UserMaterials.Find(entry.Material.Name) is { } existing
-        && !IsInLibrary && !StringComparer.OrdinalIgnoreCase.Equals(existing.Material.Name, _originalName);
-    public string? LibraryError => _saveError ?? Setup.Libraries?.MaterialLibraryError
-        ?? (HasLibraryNameConflict ? Strings.LibraryNameConflict : null);
-    public bool HasLibraryError => LibraryError is not null;
-    public MaterialLibraryEntry? Draft { get; private set; }
-    public bool IsInLibrary => _savedEntry is not null && Draft is { } entry && MaterialSnapshotComparison.Equals(_savedEntry, entry)
-        && Setup.Libraries?.UserMaterials.Find(entry.Material.Name) is { } saved && MaterialSnapshotComparison.Equals(saved, entry);
-    public string LibraryActionLabel => IsInLibrary ? Strings.InLibrary : Strings.SaveToLibrary;
-    public bool CanApply => IsProjectDraft && !IsBusy && Draft is not null;
-    public bool CanAddLibrary => IsProjectDraft && !IsBusy && Draft is not null && CanSaveToLibrary && !IsInLibrary && !HasLibraryNameConflict;
-    public bool CanReplaceLibrary => IsLibraryEdit && !IsBusy && Draft is not null && CanSaveToLibrary && !HasLibraryNameConflict;
-    public bool CanConfirm => IsLibraryEdit ? CanReplaceLibrary : CanApply;
-    public string? Error => _error ?? (IsLibraryEdit ? LibraryError : null);
+    public Material? Draft { get; private set; }
+    public bool CanConfirm => !IsBusy && Draft is not null && !HasNameError;
+    public string? Error => _saveError ?? _error;
     public bool HasError => Error is not null;
-    public bool HasFormError => _error is not null && !HasNameError && !HasCategoryError && Inputs.All(i => !i.HasError);
-    public AsyncActionCommand ApplyCommand { get; }
-    public AsyncActionCommand AddLibraryCommand { get; }
-    public AsyncActionCommand ReplaceLibraryCommand { get; }
-    public AsyncActionCommand ConfirmCommand => IsLibraryEdit ? ReplaceLibraryCommand : ApplyCommand;
+    public bool HasFormError => _saveError is not null || _error is not null && !HasNameError && !HasCategoryError && !HasStrengthTypeError && Inputs.All(i => !i.HasError);
+    public AsyncActionCommand ConfirmCommand { get; }
     public ActionCommand CancelCommand { get; }
     private void Validate()
     {
         _saveError = null; _error = null; Draft = null;
         if (HasNameError) _error = NameError;
         else if (HasCategoryError) _error = CategoryError;
+        else if (HasStrengthTypeError) _error = StrengthTypeError;
         else if (Inputs.Any(i => !i.TryRead(out _))) _error = Strings.InvalidMaterialInputs;
         else
         {
-            Inputs[0].TryRead(out var e); Inputs[1].TryRead(out var fy);
+            Inputs[0].TryRead(out var e); Inputs[1].TryRead(out var strength);
             Inputs[2].TryRead(out var rho); Inputs[3].TryRead(out var nu);
             PoissonRatio? poisson = null;
             try { if (nu is { } value) poisson = PoissonRatio.FromValue(value); }
@@ -100,44 +111,33 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
             {
                 try
                 {
-                    Draft = new(new Material(Name.Trim(), Pressure.FromPascals(e!.Value), Pressure.FromPascals(fy!.Value),
-                        rho is { } density ? MassDensity.FromKilogramsPerCubicMeter(density) : null, poisson),
-                        Category!.Value, MaterialNumber, OtherStandards.Split(';').Select(s => s.Trim()).Where(s => s.Length > 0));
+                    Draft = new Material(Name.Trim(), Pressure.FromPascals(e!.Value), Pressure.FromPascals(strength!.Value), StrengthType!.Value,
+                        rho is { } density ? MassDensity.FromKilogramsPerCubicMeter(density) : null, poisson,
+                        Category!.Value, MaterialNumber, OtherStandards.Split(';'));
                 }
                 catch (ArgumentException) { _error = Strings.InvalidMaterialInputs; }
             }
         }
         Refresh();
     }
-    public Task<bool> ConfirmAsync() => IsLibraryEdit ? ReplaceLibraryAsync() : ApplyAsync();
-    public Task<bool> ApplyAsync()
+    public async Task<bool> ConfirmAsync()
     {
-        if (!CanApply || Draft is not { } entry) return Task.FromResult(false);
-        Setup.SelectedMaterial = entry.Material;
-        Setup.ShowOverview();
-        return Task.FromResult(true);
-    }
-    public async Task<bool> AddLibraryAsync()
-    {
-        if (!CanAddLibrary || Draft is not { } entry) return false;
-        _saveError = await Setup.Libraries!.SaveMaterialAsync(entry);
-        if (_saveError is null) _savedEntry = entry;
-        Refresh(); return _saveError is null;
-    }
-    public async Task<bool> ReplaceLibraryAsync()
-    {
-        if (!CanReplaceLibrary || Draft is not { } entry) return false;
-        _saveError = await Setup.Libraries!.SaveMaterialAsync(entry, _originalName);
-        if (_saveError is not null) { Refresh(); return false; }
-        Setup.ReturnToMaterials(entry.Material.Name);
-        return true;
+        if (!CanConfirm || Draft is not { } material) return false;
+        _confirming = true; Refresh();
+        try
+        {
+            _saveError = await _confirm(material);
+            if (_saveError is not null) return false;
+            CloseRequested?.Invoke(true);
+            return true;
+        }
+        finally { _confirming = false; Refresh(); }
     }
     public override void Refresh()
     {
         base.Refresh();
-        foreach (var name in new[] { nameof(Error), nameof(HasError), nameof(HasFormError), nameof(Draft), nameof(CanConfirm), nameof(CanApply), nameof(CanAddLibrary), nameof(CanReplaceLibrary),
-            nameof(CanSaveToLibrary), nameof(LibraryError), nameof(HasLibraryError), nameof(IsInLibrary), nameof(LibraryActionLabel),
-            nameof(NameError), nameof(HasNameError), nameof(ShowNameError), nameof(CategoryError), nameof(HasCategoryError) }) Notify(name);
-        ApplyCommand.Refresh(); AddLibraryCommand.Refresh(); ReplaceLibraryCommand.Refresh(); CancelCommand.Refresh();
+        foreach (var name in new[] { nameof(IsBusy), nameof(Error), nameof(HasError), nameof(HasFormError), nameof(Draft), nameof(CanConfirm),
+            nameof(NameError), nameof(HasNameError), nameof(ShowNameError), nameof(CategoryError), nameof(HasCategoryError), nameof(StrengthTypeError), nameof(HasStrengthTypeError), nameof(ShowStrengthTypeError) }) Notify(name);
+        ConfirmCommand.Refresh(); CancelCommand.Refresh();
     }
 }

@@ -19,7 +19,7 @@ public sealed class ProjectSetupRecoveryTests
     private static readonly string Slot = TestPath("setup-recovery.json");
     private static readonly string ProjectSlot = TestPath("project-recovery.json");
     private static readonly Material PreciseMaterial = new(" Precise steel ",
-        Pressure.FromPascals(210123456789.12345), Pressure.FromPascals(355123456.78912345),
+        Pressure.FromPascals(210123456789.12345), Pressure.FromPascals(355123456.78912345), MaterialStrengthType.Re,
         MassDensity.FromKilogramsPerCubicMeter(7800.123456789), PoissonRatio.FromValue(.31234567890123456));
     private static ProjectSetupDraft Draft(int fields = 7) => new(
         (fields & 1) != 0 ? M(1.0000000000000002) : null,
@@ -41,7 +41,7 @@ public sealed class ProjectSetupRecoveryTests
         {
             Recovery = new(Files, Slot, Delay.Wait, () => Now);
             NormalRecovery = new(Files, ProjectSlot, ProjectDelay.Wait, () => Now);
-            Main = new(files: Files, dialogs: Dialogs, recovery: NormalRecovery, setupRecovery: Recovery, settings: settings, userNameProvider: userNameProvider);
+            Main = new(files: Files, dialogs: Dialogs, recovery: NormalRecovery, setupRecovery: Recovery, materialStore: new(Files, "materials"), settings: settings, userNameProvider: userNameProvider);
         }
         public void Seed(ProjectSetupDraft? draft = null) => Files.Data[Slot] = ProjectSetupRecovery.Encode(new(draft ?? Draft(), Now));
         public async Task Publish()
@@ -305,10 +305,11 @@ public sealed class ProjectSetupRecoveryTests
         Assert.Equal(M(1.2345), (await f.Recovery.ReadAsync())!.Draft.Length);
         setup.ShowMaterials(); var materials = Assert.IsType<MaterialSelectionViewModel>(setup.CurrentStep);
         materials.NewCommand.Execute(null); var material = Assert.IsType<MaterialEditorViewModel>(materials.Editor);
-        material.Name = "One-off"; material.Inputs[0].Text = "210"; material.Inputs[1].Text = "355";
+        material.Name = "One-off"; material.Inputs[0].Text = "210"; material.Inputs[1].Text = "355"; material.StrengthType = material.StrengthTypes[0];
         int waits = f.Delay.Waiters.Count; Assert.Null(setup.SelectedMaterial);
         await f.Publish(); Assert.Null((await f.Recovery.ReadAsync())!.Draft.Material); Assert.Equal(waits, f.Delay.Waiters.Count);
-        Assert.True(await material.ConfirmAsync()); Assert.Equal(waits + 1, f.Delay.Waiters.Count);
+        Assert.True(await material.ConfirmAsync()); Assert.Equal(waits, f.Delay.Waiters.Count);
+        Assert.Null(setup.SelectedMaterial); materials.UseSelected(); Assert.Equal(waits + 1, f.Delay.Waiters.Count);
         setup.ShowSections(); var definition = setup.Definition!; definition.SelectForm(SectionEditorType.Rectangle);
         foreach (var input in definition.Parameters) { input.PendingText = "100"; Assert.True(input.Commit()); }
         definition.BeginNameEdit(); definition.PendingName = "Confirmed name"; Assert.True(definition.CommitName());
@@ -326,7 +327,7 @@ public sealed class ProjectSetupRecoveryTests
     public async Task UnchangedConfirmationsNavigationAndPresentationDoNotScheduleWrites()
     {
         var f = new Fixture(); f.Seed(); f.Start(); await f.Main.InitializeRecoveryAsync(); var setup = f.Main.Setup;
-        setup.SelectedMaterial = new Material(PreciseMaterial.Name, PreciseMaterial.YoungsModulus, PreciseMaterial.YieldStrength,
+        setup.SelectedMaterial = new Material(PreciseMaterial.Name, PreciseMaterial.YoungsModulus, PreciseMaterial.YieldStrength, MaterialStrengthType.Re,
             PreciseMaterial.Density, PreciseMaterial.PoissonRatio);
         setup.SelectedSection = new RectangleSectionGeometry(M(.12345678901234567), M(.23456789012345678));
         setup.BendingAxis = setup.BendingAxis;

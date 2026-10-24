@@ -35,7 +35,7 @@ public sealed class DesktopProjectSetupControlTests
         var files = new Files(); var dialogs = new Dialogs();
         var main = new MainWindowViewModel(files: files, dialogs: dialogs, materialStore: new(files, "materials"), sectionStore: new(files, "sections")); main.NewCommand.Execute(null);
         var builtin = main.BuiltInMaterials!.Find("X5CrNi18-10")!;
-        files.Data["materials"] = MaterialLibraryCodec.Serialize(new([new(builtin.Material, builtin.Category, builtin.MaterialNumber, ["AISI 304", "UNS S30400"])]));
+        files.Data["materials"] = MaterialLibraryCodec.Serialize(new([LibraryTestSupport.WithMetadata(builtin, builtin.Category, builtin.MaterialNumber, ["AISI 304", "UNS S30400"])]));
         files.Data["sections"] = SectionLibraryCodec.Serialize(new([new("My custom angle", new AngleSectionGeometry(M(.1), M(.2), M(.005), M(0)))]));
         await main.InitializeLibrariesAsync();
         // Use the production shell and its menu in an inert window, without starting local file/recovery I/O.
@@ -66,7 +66,7 @@ public sealed class DesktopProjectSetupControlTests
         Assert.False(main.Setup.LengthInput.Confirm()); Capture("create-length-invalid");
         Assert.Equal(emptyHeight, emptyCard.Bounds.Height);
         main.Setup.LengthInput.Cancel(); Capture("create-empty-restored");
-        main.Setup.SelectedMaterial = builtin.Material; Arrange(window, width, height); Capture("create-material-selected");
+        main.Setup.SelectedMaterial = builtin; Arrange(window, width, height); Capture("create-material-selected");
         Assert.True(emptyCard.Bounds.Height > emptyHeight);
         Assert.True(emptyCard.FindControl<TextBlock>("MaterialDescription")!.IsEffectivelyVisible);
         main.Setup.SelectedMaterial = null; Arrange(window, width, height);
@@ -89,7 +89,7 @@ public sealed class DesktopProjectSetupControlTests
         main.Setup.ShowMaterials(); Capture("material-selection-builtins");
         ScrollBottom(); Capture("material-selection-user");
         var materials = Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep);
-        Assert.Null(materials.CurrentEntry);
+        Assert.NotNull(materials.CurrentEntry);
         Assert.Equal("X5CrNi18-10", materials.UserEntries.Single().Name);
         Assert.Equal("1.4301", materials.UserEntries.Single().MaterialNumber); Assert.Equal("AISI 304 · UNS S30400", materials.UserEntries.Single().OtherStandards);
         materials.SelectedEntry = materials.BuiltInEntries[0]; materials.EditSelectedCommand.Execute(null); Capture("builtin-customize");
@@ -204,31 +204,22 @@ public sealed class DesktopProjectSetupControlTests
     public async Task EnterOnlyConfirmsValidDraftAndEscapeReturnsOneSetupLevel()
     {
         using var environment = new DesktopControlEnvironment();
-        var main = new MainWindowViewModel(); main.NewCommand.Execute(null); var view = new ProjectSetupView { DataContext = main.Setup };
-        var window = new Window { Content = view, Width = 1100, Height = 650 };
-        window.Show();
-        main.Setup.ShowMaterials(); Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep).NewCommand.Execute(null);
-        Arrange(window, 1100, 650);
-        var input = Assert.Single(view.GetVisualDescendants().OfType<TextBox>(), t => t.Name == "MaterialNameInput");
-        Assert.True(input.IsFocused);
-        Assert.True(DesktopControlEnvironment.MoveFocus(window, input, NavigationDirection.Next));
-        Assert.IsType<ComboBox>(Assert.Single(view.GetVisualDescendants().OfType<Control>(), c => c.IsFocused));
-        Assert.True(DesktopControlEnvironment.MoveFocus(window, view.GetVisualDescendants().OfType<Control>().Single(c => c.IsFocused), NavigationDirection.Previous));
-        Assert.True(input.IsFocused);
-        Press(Key.Enter); Assert.Equal(ProjectSetupPage.MaterialSelection, main.Setup.Page); Assert.Null(main.Editor);
-        var editor = Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep).Editor);
-        editor.Name = "Draft"; editor.Inputs[0].Text = "210"; editor.Inputs[1].Text = "235";
-        input.Focus(); Press(Key.Enter); Assert.Equal(ProjectSetupPage.MaterialSelection, main.Setup.Page);
-        view.GetVisualDescendants().OfType<TextBox>().First(t => t.Name == "MaterialValueInput").Focus();
-        Press(Key.Enter); Assert.Equal(ProjectSetupPage.Overview, main.Setup.Page); Assert.Null(main.Editor);
-        main.Setup.ShowSections();
-        Arrange(window, 1100, 650); Press(Key.Escape); Assert.Equal(ProjectSetupPage.Overview, main.Setup.Page);
-        Press(Key.Escape); Assert.Equal(ProjectSetupPage.Overview, main.Setup.Page); Assert.Null(main.Editor);
-        Assert.Equal(MainViewMode.Start, main.Mode);
+        var files = new Files(); var dialogs = new Dialogs();
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, materialStore: new(files, "materials")); main.NewCommand.Execute(null);
+        var view = new ProjectSetupView { DataContext = main.Setup }; var window = new Window { Content = view, Width = 1100, Height = 650 };
+        dialogs.MaterialEditorHook = model => new MaterialEditorWindow(model).ShowDialog(window);
+        window.Show(); main.Setup.ShowMaterials(); var selection = (MaterialSelectionViewModel)main.Setup.CurrentStep!;
+        selection.NewCommand.Execute(null); Arrange(window, 1100, 650);
+        var modal = Assert.Single(window.OwnedWindows.OfType<MaterialEditorWindow>()); var editor = selection.Editor!;
+        Assert.False(await editor.ConfirmAsync()); Assert.Null(main.Editor);
+        editor.Name = "Draft"; editor.Inputs[0].Text = "210"; editor.Inputs[1].Text = "235"; editor.StrengthType = editor.StrengthTypes[0];
+        Assert.True(await editor.ConfirmAsync()); Assert.Empty(window.OwnedWindows);
+        Assert.Equal(ProjectSetupPage.MaterialSelection, main.Setup.Page); Assert.Null(main.Setup.SelectedMaterial);
+        selection.UseSelected(); Assert.Equal(ProjectSetupPage.Overview, main.Setup.Page); Assert.Null(main.Editor);
+        main.Setup.ShowSections(); main.Setup.Escape(); Assert.True(main.Setup.IsOverview);
+        main.Setup.Escape(); Assert.Equal(MainViewMode.Start, main.Mode);
         Assert.True(await main.NewAsync()); view.DataContext = main.Setup;
-        CompleteSetup(main); await main.Setup.ConfirmAsync(); Assert.NotNull(main.Editor);
-        void Press(Key key) => (view.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.IsFocused) ?? view)
-            .RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key });
+        CompleteSetup(main); await main.Setup.ConfirmAsync(); Assert.NotNull(main.Editor); window.Close();
     }
 
     [Fact]
@@ -292,7 +283,7 @@ public sealed class DesktopProjectSetupControlTests
         setup.ShowSections(); var definition = setup.Definition!;
         definition.BeginNameEdit(); definition.PendingName = new string('W', 250); definition.CommitName();
         Assert.True(await definition.ConfirmAsync());
-        setup.SelectedMaterial = new(new string('M', 250), ProjectTemplates.Material.YoungsModulus, ProjectTemplates.Material.YieldStrength);
+        setup.SelectedMaterial = new(new string('M', 250), ProjectTemplates.Material.YoungsModulus, ProjectTemplates.Material.YieldStrength, SpanDraft.Core.Materials.MaterialStrengthType.Re);
         var view = new ProjectSetupView { DataContext = setup };
         var window = new Window { Content = view, Width = width, Height = height }; window.Show(); Arrange(window, width, height);
         var card = view.FindControl<BeamSetupCard>("BeamCard")!;

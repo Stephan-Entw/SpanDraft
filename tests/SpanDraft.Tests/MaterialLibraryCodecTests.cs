@@ -24,9 +24,9 @@ public sealed class MaterialLibraryCodecTests
         bool density, bool poisson)
     {
         var material = new Material("Fixture A", Pressure.FromPascals(123456789.01234567),
-            Pressure.FromPascals(2345678.901234567), density ? MassDensity.FromKilogramsPerCubicMeter(1234.5) : null,
+            Pressure.FromPascals(2345678.901234567), MaterialStrengthType.Re, density ? MassDensity.FromKilogramsPerCubicMeter(1234.5) : null,
             poisson ? PoissonRatio.FromValue(0) : null);
-        var expected = new MaterialLibraryEntry(material, category, "1.2345", ["Fixture A standard", "Fixture B standard"]);
+        var expected = LibraryTestSupport.WithMetadata(material, category, "1.2345", ["Fixture A standard", "Fixture B standard"]);
         var bytes = MaterialLibraryCodec.Serialize(new([expected]));
         var actual = Assert.Single(MaterialLibraryCodec.Deserialize(bytes).All);
         Assert.Equivalent(expected, actual, strict: true);
@@ -53,11 +53,11 @@ public sealed class MaterialLibraryCodecTests
     public void SyntheticFixtureLoadsWithoutDependingOnWriterOrProjectDTOs()
     {
         var actual = Assert.Single(MaterialLibraryCodec.Deserialize(Encoding.UTF8.GetBytes(MaterialFixture)).All);
-        Assert.Equal("Fixture A", actual.Material.Name);
-        Assert.Equal(123456789.01234567, actual.Material.YoungsModulus.Pascals);
-        Assert.Equal(2345678.901234567, actual.Material.YieldStrength.Pascals);
-        Assert.Equal(1234.5, actual.Material.Density?.KilogramsPerCubicMeter);
-        Assert.Equal(0d, actual.Material.PoissonRatio?.Value);
+        Assert.Equal("Fixture A", actual.Name);
+        Assert.Equal(123456789.01234567, actual.YoungsModulus.Pascals);
+        Assert.Equal(2345678.901234567, actual.YieldStrength.Pascals);
+        Assert.Equal(1234.5, actual.Density?.KilogramsPerCubicMeter);
+        Assert.Equal(0d, actual.PoissonRatio?.Value);
         Assert.Equal(MaterialCategory.StainlessSteel, actual.Category);
         Assert.Equal("1.2345", actual.MaterialNumber);
         Assert.Equal(new[] { "Fixture standard A", "Fixture standard B" }, actual.OtherStandards);
@@ -74,7 +74,7 @@ public sealed class MaterialLibraryCodecTests
         foreach (string key in new[] { "materialNumber", "otherStandards" })
             if (explicitNull) entry[key] = null; else entry.AsObject().Remove(key);
         var actual = MaterialLibraryCodec.Deserialize(Bytes(root)); var material = Assert.Single(actual.All);
-        Assert.Null(material.Material.Density); Assert.Null(material.Material.PoissonRatio);
+        Assert.Null(material.Density); Assert.Null(material.PoissonRatio);
         Assert.Null(material.MaterialNumber); Assert.Empty(material.OtherStandards);
         var wire = JsonNode.Parse(MaterialLibraryCodec.Serialize(actual))!["entries"]![0]!;
         Assert.Equal(new[] { "category", "material" }, wire.AsObject().Select(p => p.Key).Order());
@@ -95,7 +95,7 @@ public sealed class MaterialLibraryCodecTests
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
             var bytes = MaterialLibraryCodec.Serialize(new([MaterialEntry()]));
             Assert.Contains("123456789.01234567", Encoding.UTF8.GetString(bytes));
-            Assert.Equal(MaterialEntry().Material.YoungsModulus, MaterialLibraryCodec.Deserialize(bytes).All[0].Material.YoungsModulus);
+            Assert.Equal(MaterialEntry().YoungsModulus, MaterialLibraryCodec.Deserialize(bytes).All[0].YoungsModulus);
         }
         finally { CultureInfo.CurrentCulture = previous; }
     }

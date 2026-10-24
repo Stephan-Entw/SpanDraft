@@ -83,7 +83,7 @@ Die Engineering-Auswertung ergänzt:
 - maximale Durchbiegung
 - maßgebendes Biegemoment
 - maximale elastische Biegespannung
-- Sicherheitsfaktor gegenüber der hinterlegten Streckgrenze
+- Sicherheitsfaktor gegenüber dem hinterlegten Festigkeitskennwert (Re oder Rp0,2)
 
 Der Sicherheitsfaktor ist eine einfache elastische Bewertung und kein normativer
 Festigkeitsnachweis. Details stehen in [ENGINEERING.md](ENGINEERING.md).

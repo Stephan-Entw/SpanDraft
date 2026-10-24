@@ -13,7 +13,7 @@ public sealed class DesktopMechanicalComparerTests
 {
     private static Length M(double value) => Length.FromMeters(value);
     private static Material Material(double e = 210e9, double re = 235e6, string name = "Steel") =>
-        new(name, Pressure.FromPascals(e), Pressure.FromPascals(re));
+        new(name, Pressure.FromPascals(e), Pressure.FromPascals(re), MaterialStrengthType.Re);
     private static Section Section(double a = .01, double i = 1e-6, double w = .001) =>
         new CustomSection(Area.FromSquareMeters(a), SecondMomentOfArea.FromMetersToTheFourth(i), SectionModulus.FromCubicMeters(w));
     private static BeamLoad[] Loads() => [new PointForce(M(.2), Force.FromNewtons(-1000)),

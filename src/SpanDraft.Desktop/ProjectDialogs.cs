@@ -64,6 +64,18 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
         string.Format(CultureInfo.CurrentUICulture, Strings.DeleteSectionQuestion, name),
         [(Strings.Cancel, false), (Strings.Delete, true)]);
 
+    public Task ShowMaterialEditorAsync(MaterialEditorViewModel editor) =>
+        new MaterialEditorWindow(editor) { Icon = owner.Icon }.ShowDialog(owner);
+
+    public Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string name) => ShowAsync(
+        string.Format(CultureInfo.CurrentUICulture, Strings.MaterialNameConflictQuestion, name),
+        [(Strings.ReplaceMaterial, MaterialNameConflictDecision.Replace),
+         (Strings.RenameMaterial, MaterialNameConflictDecision.Rename), (Strings.Cancel, MaterialNameConflictDecision.Cancel)]);
+
+    public Task<bool> ConfirmMaterialReplaceAsync(string name) => ShowAsync(
+        string.Format(CultureInfo.CurrentUICulture, Strings.ReplaceMaterialQuestion, name),
+        [(Strings.Cancel, false), (Strings.ReplaceMaterial, true)]);
+
     private Task<T> ShowAsync<T>(string message, (string Label, T Result)[] choices)
     {
         var dialog = new Window
@@ -75,7 +87,8 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
         foreach (var (label, result) in choices)
         {
-            var button = new Button { Content = label, IsDefault = buttons.Children.Count == 0 };
+            var button = new Button { Content = label, IsDefault = typeof(T) == typeof(MaterialNameConflictDecision)
+                ? Equals(result, MaterialNameConflictDecision.Cancel) : buttons.Children.Count == 0 };
             AutomationProperties.SetName(button, label);
             button.Click += (_, _) => dialog.Close(result);
             buttons.Children.Add(button);

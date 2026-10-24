@@ -120,7 +120,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public LengthInputViewModel LengthInput { get; }
     public string? LengthError => LengthInput.HasError ? LengthInput.ErrorText : null;
     public bool HasLengthError => LengthError is not null;
-    public bool CanApply => IsOverview && !IsBusy && HasValidInfoInput && HasSection && SelectedMaterial is not null
+    public bool CanApply => IsOverview && !IsBusy && HasValidInfoInput && HasSection && SelectedMaterial?.StrengthType is not null
         && LengthInput.TryGetLength(out var length) && !HasLengthError
         && (_originalDocument is not { } document || BeamLengthConstraints.Error(document, length) is null);
     public string? SectionDisplayName => _sectionDisplayName;
@@ -155,8 +155,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     }
     public bool HasMaterial => SelectedMaterial is not null;
     public string MaterialName => SelectedMaterial?.Name ?? Strings.SelectMaterialRequired;
-    internal void SelectMaterial(SpanDraft.Desktop.Libraries.MaterialLibraryEntry entry) => SelectedMaterial = entry.Material;
-    public string MaterialSummary => SelectedMaterial is null ? "" : "E " + YoungsModulus + " · fy " + YieldStrength;
+    public string MaterialSummary => SelectedMaterial is null ? "" : "E " + YoungsModulus + " · " + MaterialStrengthDisplay.Summary(SelectedMaterial) + " MPa";
     public string? StartupError => Libraries?.BuiltInError;
     public bool HasStartupError => StartupError is not null;
     public string SectionName => SelectedSection is { } section
@@ -234,10 +233,6 @@ public sealed class ProjectSetupViewModel : ObservableObject
         RefreshLibraryState(); Libraries?.RefreshWorkspaceState();
     }
     public void ShowOverview() { if (!IsBusy) Navigate(ProjectSetupPage.Overview, null); }
-    internal void ReturnToMaterials(string? replacement = null)
-    {
-        _materials?.EndEdit(replacement);
-    }
     public void Escape()
     {
         if (IsBusy) return;

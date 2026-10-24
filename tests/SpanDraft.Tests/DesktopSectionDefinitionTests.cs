@@ -54,7 +54,7 @@ public sealed class DesktopSectionDefinitionTests
             : ParametricSectionTestSupport.Shape(kind, r: .5);
         var axis = section.Axes[^1].AxisDesignation;
         var material = new SpanDraft.Core.Materials.Material("Snapshot", ProjectTemplates.Material.YoungsModulus,
-            ProjectTemplates.Material.YieldStrength, MassDensity.FromKilogramsPerCubicMeter(7850),
+            ProjectTemplates.Material.YieldStrength, SpanDraft.Core.Materials.MaterialStrengthType.Re, MassDensity.FromKilogramsPerCubicMeter(7850),
             SpanDraft.Core.Materials.PoissonRatio.FromValue(.3));
         var state = State() with { Document = State().Document.WithSection(section, axis) with { Material = material } };
         var app = new App(create: false); var path = TestPath("loaded.spandraft");

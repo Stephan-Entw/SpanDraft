@@ -56,8 +56,15 @@ public static class ProjectFileCodec
 
     public static ProjectState FromDto(ProjectFileV1 file) => FromDto(ProjectFileV1Reader.Migrate(file));
 
-    public static ProjectFileV3 ToDto(ProjectState state)
+    public static ProjectFileV3 ToDto(ProjectState state) => ToDto(state, allowLegacy: false);
+
+    internal static byte[] SerializeRecovery(ProjectState state) =>
+        JsonSerializer.SerializeToUtf8Bytes(ToDto(state, allowLegacy: true), JsonOptions);
+
+    private static ProjectFileV3 ToDto(ProjectState state, bool allowLegacy)
     {
+        if (!allowLegacy && state.Document.Material.StrengthType is null)
+            throw new ProjectFormatException("The material strength type must be confirmed before saving.");
         var d = state.Document;
         var n = d.NamingState;
         return new()
@@ -92,15 +99,20 @@ public static class ProjectFileCodec
     internal static MaterialV2 MaterialToDto(Material material) => new()
     {
         Name = material.Name, YoungsModulus = material.YoungsModulus.Pascals,
-        YieldStrength = material.YieldStrength.Pascals, Density = material.Density?.KilogramsPerCubicMeter,
-        PoissonRatio = material.PoissonRatio?.Value
+        YieldStrength = material.YieldStrength.Pascals, StrengthType = MaterialStrengthWire.Write(material.StrengthType),
+        Density = material.Density?.KilogramsPerCubicMeter,
+        PoissonRatio = material.PoissonRatio?.Value,
+        Category = MaterialCategoryWire.Write(material.Category), MaterialNumber = material.MaterialNumber,
+        OtherStandards = material.OtherStandards.Count == 0 ? null : material.OtherStandards.ToArray()
     };
 
-    internal static Material MaterialFromDto(MaterialV2 material) => new(
+    internal static Material MaterialFromDto(MaterialV2 material) => MaterialStrengthWire.Read(
         Required(material.Name, "material.name"), Pressure.FromPascals(Number(material.YoungsModulus, "youngsModulus")),
-        Pressure.FromPascals(Number(material.YieldStrength, "yieldStrength")),
+        Pressure.FromPascals(Number(material.YieldStrength, "yieldStrength")), material.StrengthType,
         material.Density is { } rho ? MassDensity.FromKilogramsPerCubicMeter(Number(rho, "density")) : null,
-        material.PoissonRatio is { } nu ? PoissonRatio.FromValue(Number(nu, "poissonRatio")) : null);
+        material.PoissonRatio is { } nu ? PoissonRatio.FromValue(Number(nu, "poissonRatio")) : null,
+        material.Category is null ? MaterialCategory.Other : MaterialCategoryWire.Read(material.Category),
+        material.MaterialNumber, material.OtherStandards);
 
     internal static SectionV2 SectionToDto(ISectionDefinition section) =>
         SectionDefinitionCompatibility.Normalize(section) switch

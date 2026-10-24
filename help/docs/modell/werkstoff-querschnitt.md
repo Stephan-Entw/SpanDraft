@@ -11,13 +11,43 @@ Die Länge reicht von `x = 0` links bis `x = L` rechts. Lager und Lasten können
 | Kennwert | Bedeutung in SpanDraft |
 | --- | --- |
 | `E` – Elastizitätsmodul | Bestimmt die Steifigkeit und damit Verformung und Rotation |
-| `fy` – Streckgrenze | Wird für den Sicherheitsfaktor verwendet |
+| Festigkeitskennwert: Streckgrenze `Re` oder 0,2-%-Dehngrenze `Rp0,2` | Wird für den Sicherheitsfaktor verwendet |
 
 Dichte `ρ` und Poissonzahl `ν` können gespeichert werden, gehen aber nicht direkt in die aktuelle Balkenberechnung ein. Insbesondere erzeugt die Dichte kein automatisches Eigengewicht. Werkstoffnummer, Normbezeichnungen und Kategorie dienen der Identifikation. Katalogwerte sind technische Referenzwerte und ersetzen keine passende Norm, Herstellerangabe oder Materialbescheinigung.
 
+Der Werkstoff besitzt genau einen Festigkeitskennwert. Bei eigenen Definitionen
+wählen Sie dessen Typ ausdrücklich und geben einen zugehörigen Zahlenwert ein.
+Die Kategorie legt den Typ nicht fest. Bei älteren Daten kann der Typ noch fehlen;
+vor dem Bearbeiten, regulären Projektspeichern oder Erstellen eines Berichts muss
+er im Werkstoffeditor festgelegt werden.
+
 ### Werkstoffbibliothek
 
-Neben eingebauten Werkstoffen sind eigene Definitionen möglich: einmalig im Projekt oder zusätzlich in **Meine Werkstoffe**. Das Projekt speichert eine eigene Kopie der übernommenen Werte; spätere Bibliotheksänderungen ändern bestehende Projekte nicht.
+Die gemeinsame Werkstofftabelle enthält den Projektwerkstoff und verfügbare
+Vorlagen. Der Projektwerkstoff trägt ein Häkchen und den Zusatz **(aktuell im
+Projekt)**. Wenn er zu Suche und Filter passt, steht er an erster Stelle.
+Unter **Quelle** können Sie ausschließlich den Projektwerkstoff, eingebaute
+Werkstoffe oder **Meine Werkstoffe** anzeigen. Kategorien berücksichtigen alle
+drei Quellen. Ein Schloss kennzeichnet ausschließlich eingebaute,
+schreibgeschützte Werkstoffe. **Kopie erstellen…** legt
+eine bearbeitbare Variante in **Meine Werkstoffe** an. Auch **Neuer Werkstoff**
+speichert nach Bestätigung einen eigenen Bibliothekseintrag.
+
+**Anpassen…** öffnet einen kleinen Dialog. Dessen **OK** bestätigt die Bearbeitung:
+bei eigenen Werkstoffen wird der Bibliothekseintrag direkt gespeichert, beim
+Projektwerkstoff zunächst nur der Arbeitsstand der geöffneten Auswahl.
+**Übernehmen** überträgt den markierten Werkstoff in die Projektübersicht; dort
+bestätigen Sie die Projektänderungen gemeinsam. **Abbrechen** in der Auswahl
+verwirft den Projekt-Arbeitsstand, erhält aber bereits bestätigte
+Bibliotheksänderungen.
+
+Das Projekt speichert sämtliche Werte einschließlich Kategorie, Werkstoffnummer
+und anderer Normen als unabhängigen Snapshot. Späteres Ändern oder Löschen eines
+Bibliothekseintrags verändert bestehende Projekte nicht. **In Bibliothek
+speichern…** ist beim Projektwerkstoff verfügbar, solange noch kein vollständig
+identischer Werkstoff existiert. Bei gleichem eigenen Namen mit anderen Daten
+können Sie den vorhandenen Eintrag nach zusätzlicher Bestätigung ersetzen, die
+Bezeichnung anpassen oder abbrechen.
 
 ## Querschnitt
 

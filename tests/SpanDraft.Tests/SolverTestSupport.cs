@@ -24,7 +24,7 @@ internal static class SolverTestSupport
 
     internal static BeamModel Beam(IEnumerable<Support>? supports = null, IEnumerable<BeamLoad>? loads = null,
         Material? material = null, Section? section = null) =>
-        new(M(L), material ?? new Material("Test steel", Pressure.FromPascals(E), Pressure.FromMegapascals(235)),
+        new(M(L), material ?? new Material("Test steel", Pressure.FromPascals(E), Pressure.FromMegapascals(235), MaterialStrengthType.Re),
             section ?? new RectangleSection(Length.FromMillimeters(40), Length.FromMillimeters(80)),
             supports ?? [SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller)], loads ?? []);
 

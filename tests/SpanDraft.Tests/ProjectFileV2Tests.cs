@@ -249,7 +249,7 @@ public sealed class ProjectFileV2Tests
     public void MaterialSnapshotPreservesOptionalValuesExactly(bool density, bool poisson)
     {
         var old = State();
-        var material = new Material(old.Document.Material.Name, old.Document.Material.YoungsModulus, old.Document.Material.YieldStrength,
+        var material = new Material(old.Document.Material.Name, old.Document.Material.YoungsModulus, old.Document.Material.YieldStrength, MaterialStrengthType.Re,
             density ? MassDensity.FromKilogramsPerCubicMeter(7850.123456789) : null,
             poisson ? PoissonRatio.FromValue(.30000000000000004) : null);
         var state = old with { Document = old.Document with { Material = material } };

@@ -11,5 +11,5 @@ public static class ProjectTemplates
         Length.FromMillimeters(100), Length.FromMillimeters(100), Length.FromMillimeters(5));
 
     public static Material Material { get; } = new("Fixture steel",
-        Pressure.FromPascals(210e9), Pressure.FromMegapascals(235));
+        Pressure.FromPascals(210e9), Pressure.FromMegapascals(235), MaterialStrengthType.Re);
 }

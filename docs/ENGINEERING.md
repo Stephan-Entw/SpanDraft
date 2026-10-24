@@ -65,15 +65,16 @@ Die Engineering-Auswertung berechnet ausschließlich reine elastische Biegung:
 
 ```text
 σ_b,max [Pa] = BendingMomentMagnitude [Nm] / min(W+, W−) [m³]
-S           = Re [Pa] / σ_b,max [Pa]
+S           = Festigkeitskennwert [Pa] / σ_b,max [Pa]
 ```
 
 W+ und W− stammen aus `Beam.BendingAxisProperties.PositiveSectionModulus`
-beziehungsweise `NegativeSectionModulus`, Re aus `Beam.Material.YieldStrength`;
+beziehungsweise `NegativeSectionModulus`, der Festigkeitskennwert aus
+`Beam.Material.YieldStrength` (Typ Re oder Rp0,2);
 alle sind im Domain Model positiv validiert. Der maximale elastische
 Spannungsbetrag ist das Maximum aus |M|/W+ und |M|/W−.
 Der Spannungsbetrag besitzt denselben kritischen Ort und dieselbe Seite wie
-das ausgewählte Moment. S ist ein einfaches Verhältnis zur Streckgrenze,
+das ausgewählte Moment. S ist ein einfaches Verhältnis zum gewählten Festigkeitskennwert,
 kein normativer Sicherheitsnachweis und keine Freigabe einer Konstruktion.
 
 Im unbelasteten beziehungsweise biegespannungsfreien Fall sind Momentbetrag und

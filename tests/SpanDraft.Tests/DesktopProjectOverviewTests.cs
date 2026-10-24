@@ -376,7 +376,7 @@ public sealed class DesktopProjectOverviewTests
         var moment = editor.Presentation.Result!.Solution.Nodes[0].ReactionMoment!.Value;
         Assert.Equal(QuantityFormatter.FormatNumber(moment.NewtonMeters, QuantityKind.Moment,
             references: editor.Presentation.References), Assert.Single(editor.Overview.Reactions).Moment);
-        var material = new Material("Other steel", Pressure.FromPascals(200e9), Pressure.FromPascals(250e6));
+        var material = new Material("Other steel", Pressure.FromPascals(200e9), Pressure.FromPascals(250e6), MaterialStrengthType.Re);
         var section = new CircleSection(Mm(50));
         editor.ApplySetup(section, material);
         Assert.Equal("Other steel", editor.Overview.Material);

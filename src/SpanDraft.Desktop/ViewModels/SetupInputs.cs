@@ -4,7 +4,7 @@ using SpanDraft.Desktop.Resources;
 
 namespace SpanDraft.Desktop.ViewModels;
 
-public enum SetupEditorMode { ProjectDraft, UserLibraryEdit }
+public enum SetupEditorMode { ProjectDraft, UserLibraryEdit, UserLibraryCreate }
 public enum SectionEditorType { Rectangle, RectangularHollow, Circle, CircularHollow, ISection, USection, TSection, Angle, Manual }
 public enum ManualAxisConfiguration { Y, Z, U, V, YZ, UV }
 public abstract record SetupChoiceLabel(string Label);
@@ -21,19 +21,23 @@ public sealed class SetupNumberInput : ObservableObject
     private readonly double? _original;
     private readonly string _originalText;
     private readonly bool _optional, _nonnegative, _signed;
-    private string _text;
+    private string _text, _label;
     private bool _validationVisible;
     public SetupNumberInput(string key, string label, UnitDefinition unit, Action changed, double? value = null,
         bool optional = false, bool nonnegative = false, bool signed = false, string? hint = null)
     {
-        Key = key; Label = label; Unit = unit; _changed = changed;
+        Key = key; _label = label; Unit = unit; _changed = changed;
         _optional = optional; _nonnegative = nonnegative; _signed = signed;
         _original = value;
         _text = _originalText = value is { } v ? InputQuantityFormatter.Format(v, unit) : "";
         Hint = hint;
     }
     public string Key { get; }
-    public string Label { get; }
+    public string Label => _label;
+    internal void SetLabel(string label)
+    {
+        if (Set(ref _label, label, nameof(Label))) Notify(nameof(InputLabel));
+    }
     public UnitDefinition Unit { get; }
     public string? Hint { get; }
     public bool HasHint => !string.IsNullOrEmpty(Hint);

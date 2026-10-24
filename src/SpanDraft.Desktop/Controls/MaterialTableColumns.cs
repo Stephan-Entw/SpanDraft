@@ -7,7 +7,7 @@ public sealed class MaterialTableColumns : Grid
 {
     public MaterialTableColumns()
     {
-        ColumnDefinitions = new("*,120,80,85");
+        ColumnDefinitions = new("*,120,80,120");
         ColumnDefinitions[0].MinWidth = 200;
         ColumnSpacing = 8;
     }

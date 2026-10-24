@@ -131,6 +131,6 @@ public sealed class ProjectRecovery
     public static byte[] Encode(RecoverySnapshot snapshot) => JsonSerializer.SerializeToUtf8Bytes(new RecoveryEnvelopeV1
     {
         RecoveryVersion = 1, OriginalFilePath = snapshot.OriginalFilePath,
-        WrittenAtUtc = snapshot.WrittenAtUtc, Project = JsonElement.Parse(ProjectFileCodec.Serialize(snapshot.State))
+        WrittenAtUtc = snapshot.WrittenAtUtc, Project = JsonElement.Parse(ProjectFileCodec.SerializeRecovery(snapshot.State))
     }, ProjectFileCodec.JsonOptions);
 }

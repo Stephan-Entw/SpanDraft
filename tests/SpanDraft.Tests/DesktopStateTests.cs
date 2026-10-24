@@ -202,7 +202,7 @@ public class DesktopStateTests
         Assert.Equal(ProjectSetupMode.Edit, s.Main.Setup.Mode);
         Assert.Same(document.Section, s.Main.Setup.SelectedSection);
         Assert.Same(document.Material, s.Main.Setup.SelectedMaterial);
-        s.Main.Setup.SelectedMaterial = new("Temporary", Pressure.FromPascals(100e9), Pressure.FromMegapascals(100));
+        s.Main.Setup.SelectedMaterial = new("Temporary", Pressure.FromPascals(100e9), Pressure.FromMegapascals(100), MaterialStrengthType.Re);
         s.Main.Setup.SelectedSection = new RectangleSection(Length.FromMillimeters(30), Length.FromMillimeters(40));
         Assert.Same(document, editor.Document);
         s.Main.Setup.CancelCommand.Execute(null);
@@ -222,7 +222,7 @@ public class DesktopStateTests
         s.Editor.DimensionLength.Confirm();
         var editor = s.Editor;
         s.Main.EditProject();
-        var material = new Material("Alternative", Pressure.FromPascals(100e9), Pressure.FromMegapascals(100));
+        var material = new Material("Alternative", Pressure.FromPascals(100e9), Pressure.FromMegapascals(100), MaterialStrengthType.Re);
         var section = new RectangleSection(Length.FromMillimeters(30), Length.FromMillimeters(40));
         s.Main.Setup.SelectedMaterial = material;
         s.Main.Setup.SelectedSection = section;

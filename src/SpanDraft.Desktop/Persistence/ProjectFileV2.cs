@@ -2,7 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace SpanDraft.Desktop.Persistence;
 
-// Historical V2 wire contract; also supplies the unchanged document and presentation DTOs. Domain and editor objects are never serialized directly.
+// Historical V2 wire contract; document DTOs also support compatible optional material metadata.
+// Domain and editor objects are never serialized directly.
 public sealed record ProjectFileV2
 {
     public required string Format { get; init; }
@@ -26,9 +27,13 @@ public sealed record DocumentV2
 
 public sealed record MaterialV2
 {
+    public string? Category { get; init; }
+    public string? MaterialNumber { get; init; }
+    public string[]? OtherStandards { get; init; }
     public required string Name { get; init; }
     public required double YoungsModulus { get; init; }
     public required double YieldStrength { get; init; }
+    public string? StrengthType { get; init; }
     public double? Density { get; init; }
     public double? PoissonRatio { get; init; }
 }

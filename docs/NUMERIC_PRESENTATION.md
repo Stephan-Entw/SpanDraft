@@ -21,7 +21,7 @@ Für `n` signifikante Stellen gilt beim umgerechneten Rohwert `x ≠ 0` in der A
 | Durchbiegung `w` | `max(Δsig(w, 2), L · 10⁻⁵)` |
 | Kraft, Querkraft, vertikale Lagerreaktion `F/V/R` | `max(Δsig(F, 3), min(0,001 · Fref, 1 N))` |
 | Biege- und Lagermoment `M` | `max(Δsig(M, 3), min(0,001 · Mref, 0,1 N·m))` |
-| Biegespannung `σ` | `max(Δsig(σ, n), min(0,001 · Re, 0,1 MPa))`, mit `n` gemäß unten |
+| Biegespannung `σ` | `max(Δsig(σ, n), min(0,001 · R, 0,1 MPa))`, mit `n` gemäß unten |
 | Sicherheitsfaktor `S` | Eigene Staffelung gemäß Abschnitt 3 |
 | Übrige berechnete Größen, z. B. Normalkraft `N`, axiale Verschiebung `u`, Rotation `θ`, Querschnittskennwerte `A/I/W` | `Δsig(x, 3)`; **keine** modellabhängige Mindestauflösung |
 
@@ -31,8 +31,8 @@ Definitionen:
 - `L`: physikalische Balkenlänge. Der Beitrag `L · 10⁻⁵` wird in die Anzeigeeinheit von `w` umgerechnet, unabhängig von der ausgewählten Balkenlängeneinheit. Die längenabhängige Mindestauflösung wächst **proportional und ohne künstliche Obergrenze** mit `L`. Die tatsächliche Schrittweite folgt der oben festgelegten Stufung.
 - `Fref`: größter Betrag aus Punktkräften, Resultierenden der einzelnen Streckenlasten `|q| · Lastlänge`, äquivalenten Kräften der Punktmomente `|M|/L` sowie berechneten Querkräften und vertikalen Lagerreaktionen. Gegensinnige Lasten werden **nicht** vorher saldiert.
 - `Mref`: größter Betrag des berechneten Biegemomentverlaufs (aus den vorhandenen analytischen Extrema).
-- `Re`: Streckgrenze des gewählten Werkstoffs.
-- Für Spannungen gilt `n = 2`; ab `|σ| ≥ 0,5 · Re` gilt `n = 3`. Damit der Übergang keine rückläufige Anzeige verursacht, gilt `n = 3` bereits dann, wenn die vorläufige Rundung auf zwei signifikante Stellen `0,5 · Re` erreicht oder überschreitet.
+- `R`: numerischer Festigkeitskennwert des gewählten Werkstoffs, je nach gespeichertem Typ `Re` oder `Rp0,2`. Die Rundung verwendet ausschließlich den Zahlenwert, auch bei noch ungeklärten Legacy-Daten.
+- Für Spannungen gilt `n = 2`; ab `|σ| ≥ 0,5 · R` gilt `n = 3`. Damit der Übergang keine rückläufige Anzeige verursacht, gilt `n = 3` bereits dann, wenn die vorläufige Rundung auf zwei signifikante Stellen `0,5 · R` erreicht oder überschreitet.
 - Die Kraftregel mit `Fref` gilt für **transversale** Kräfte und Reaktionen. Die Normalkraft `N` verwendet bis zur fachlichen Definition eines axialen Lastmaßstabs die Auffangregel. `u` übernimmt **nicht** die längenabhängige Durchbiegungsregel; `A/I/W` sind nur bei **lesender** Anzeige betroffen, nicht beim Bearbeiten eines Querschnitts.
 - Ist eine Referenzgröße null, entfällt ihr Modellbeitrag. Exakte Ergebnisse `0` werden als `0` ausgegeben. Ein Wert ungleich null, der auf null gerundet würde, erscheint als `≈ 0` (mit Einheit); niemals als scheinbar exakte Null.
 - In Diagrammextremum-Beschriftungen ersetzt `≈` bei angenäherter Null das Gleichheitszeichen: `min ≈ 0 mm`, `max ≈ 0 mm` beziehungsweise `min = max ≈ 0 mm`; niemals `min = ≈ 0 mm`.
@@ -111,6 +111,6 @@ Eingebaute Profile sind unveränderlich. Jede individuelle Einheitenänderung er
 
 - Eine zentrale Darstellungsschicht bündelt Einheiten, Format und Präzisionsregeln; keine Rundungslogik in Core, Solver oder Engineering.
 - Getrennte Formatierung für **bearbeitbare Eingaben**, **berechnete Werte** und **Achsenticks**. Offene Eingaben werden beim Einheitenwechsel nicht stillschweigend neu interpretiert.
-- Referenzfälle oben sowie Halbwerte, negative Werte, sehr kleine Nichtnullwerte, `0`, `−0`, `∞`, Grenzen bei `S = 3/10/100`, Übergang bei `σ = 0,5 Re`, Grenzen der Schrittweitenstufung `1/2/5`, unterschiedliche Modellgrößen und gemischte Einheiten testen.
+- Referenzfälle oben sowie Halbwerte, negative Werte, sehr kleine Nichtnullwerte, `0`, `−0`, `∞`, Grenzen bei `S = 3/10/100`, Übergang bei `σ = 0,5 R`, Grenzen der Schrittweitenstufung `1/2/5`, unterschiedliche Modellgrößen und gemischte Einheiten testen.
 - Diagramme müssen dieselben Kurven, Sprünge und Extremwertpositionen zeigen; nur Text und Einheiten ändern sich.
 - Die Zahlenbeispiele sind **Abnahmekriterien**. Die Darstellungsvorgaben sind keine Validierung der mechanischen Berechnung.

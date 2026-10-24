@@ -49,6 +49,6 @@ SpanDraft zeigt nur Reaktionskomponenten, die der betreffende Lagertyp übertrag
 | Maximale Durchbiegung | größter Betrag der Querverschiebung |
 | Maßgebendes Moment | größter Betrag des Biegemoments |
 | [Maximale Biegespannung](spannung-sicherheit.md#biegespannung) | daraus abgeleitete elastische Biegebeanspruchung |
-| [Sicherheitsfaktor](spannung-sicherheit.md#sicherheitsfaktor) | Vergleich mit der hinterlegten Streckgrenze |
+| [Sicherheitsfaktor](spannung-sicherheit.md#sicherheitsfaktor) | Vergleich mit dem hinterlegten Festigkeitskennwert |
 
 Wenn keine Ergebnisse erscheinen, siehe [Probleme erkennen und beheben](../hintergrund/probleme.md).

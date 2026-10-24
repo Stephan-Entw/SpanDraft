@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using SpanDraft.Analysis;
+using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Core.Units;
@@ -18,10 +19,11 @@ public sealed class LibrarySnapshotTests
     [Fact]
     public async Task MaterialSnapshotSurvivesLibraryReplaceRenameDeleteAndPersistence()
     {
-        var entry = MaterialLibraryCodec.Deserialize(Encoding.UTF8.GetBytes(MaterialFixture)).All[0];
+        var input = MaterialJson(); input["entries"]![0]!["material"]!["strengthType"] = "rp02";
+        var entry = MaterialLibraryCodec.Deserialize(Bytes(input)).All[0];
         var library = new UserMaterialLibrary([entry]);
         var state = CalculableState();
-        state = state with { Document = state.Document with { Material = library.Find("Fixture A")!.Material } };
+        state = state with { Document = state.Document with { Material = library.Find("Fixture A")! } };
         byte[] snapshot = ProjectFileCodec.Serialize(state);
         var result = Analyze(state);
         library.Replace("Fixture A", MaterialEntry("Fixture A", 987654321));
@@ -62,8 +64,8 @@ public sealed class LibrarySnapshotTests
     public void EqualMaterialNamesDoNotIdentifyValuesAcrossProjects()
     {
         var state = CalculableState();
-        var first = state with { Document = state.Document with { Material = MaterialEntry("Same name", 123456789).Material } };
-        var second = state with { Document = state.Document with { Material = MaterialEntry("Same name", 987654321).Material } };
+        var first = state with { Document = state.Document with { Material = MaterialEntry("Same name", 123456789) } };
+        var second = state with { Document = state.Document with { Material = MaterialEntry("Same name", 987654321) } };
         var loadedFirst = ProjectFileCodec.Deserialize(ProjectFileCodec.Serialize(first));
         var loadedSecond = ProjectFileCodec.Deserialize(ProjectFileCodec.Serialize(second));
         Assert.Equal(loadedFirst.Document.Material.Name, loadedSecond.Document.Material.Name);
@@ -112,10 +114,10 @@ public sealed class LibrarySnapshotTests
     {
         var root = JsonNode.Parse(bytes)!;
         Assert.Equal(new[] { "format", "formatVersion", "document", "presentation" }.Order(), root.AsObject().Select(p => p.Key).Order());
-        Assert.Equal(new[] { "name", "youngsModulus", "yieldStrength", "density", "poissonRatio" }.Where(key =>
+        Assert.Equal(new[] { "name", "youngsModulus", "yieldStrength", "strengthType", "density", "poissonRatio", "category", "materialNumber", "otherStandards" }.Where(key =>
             root["document"]!["material"]!.AsObject().ContainsKey(key)).Order(), root["document"]!["material"]!.AsObject().Select(p => p.Key).Order());
         string json = Encoding.UTF8.GetString(bytes);
-        foreach (var forbidden in new[] { "library", "preset", "source", "provenance", "origin", "category", "materialNumber", "otherStandards" })
+        foreach (var forbidden in new[] { "library", "preset", "source", "provenance", "origin" })
             Assert.DoesNotContain(forbidden, json, StringComparison.OrdinalIgnoreCase);
     }
 }

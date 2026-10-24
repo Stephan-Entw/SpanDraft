@@ -11,7 +11,7 @@ using SpanDraft.Desktop.State;
 namespace SpanDraft.Desktop.ViewModels;
 
 public enum MainViewMode { ProjectSetup, Editor, Start, ReportPreview }
-public enum MainWorkspaceKind { ProjectSetup, MaterialSelection, MaterialEditor, SectionDefinition, BeamEditor, Start, ReportPreview }
+public enum MainWorkspaceKind { ProjectSetup, MaterialSelection, SectionDefinition, BeamEditor, Start, ReportPreview }
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
@@ -158,14 +158,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
     public ProjectSession? Session => Editor?.Session;
     public bool IsBusy => _busy || _libraryBusy || ReportPreview?.IsBusy == true;
-    public bool IsWorkspaceBusy => IsBusy || Mode == MainViewMode.ProjectSetup && Setup.IsBusy;
+    public bool IsWorkspaceBusy => IsBusy || Mode == MainViewMode.ProjectSetup && (Setup.IsBusy
+        || Setup.CurrentStep is MaterialSelectionViewModel { IsEditing: true } or MaterialSelectionViewModel { IsActionBusy: true });
     public MainWorkspaceKind Workspace => Mode == MainViewMode.ReportPreview ? MainWorkspaceKind.ReportPreview
         : Mode == MainViewMode.Start ? MainWorkspaceKind.Start
         : Mode == MainViewMode.Editor ? MainWorkspaceKind.BeamEditor : Setup.Page switch
     {
         ProjectSetupPage.SectionDefinition => MainWorkspaceKind.SectionDefinition,
-        ProjectSetupPage.MaterialSelection => Setup.CurrentStep is MaterialSelectionViewModel { IsEditing: true }
-            ? MainWorkspaceKind.MaterialEditor : MainWorkspaceKind.MaterialSelection,
+        ProjectSetupPage.MaterialSelection => MainWorkspaceKind.MaterialSelection,
         _ => MainWorkspaceKind.ProjectSetup
     };
     public bool IsSectionWorkspace => Workspace == MainWorkspaceKind.SectionDefinition;
@@ -178,6 +178,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public Task<bool> ReportAsync() => !CanReport ? Task.FromResult(false) : RunOperationAsync(async () =>
     {
         var editor = Editor!;
+        if (editor.Document.Material.StrengthType is null)
+        {
+            if (_dialogs is not null) await _dialogs.ShowErrorAsync(Strings.MaterialStrengthResolve);
+            return false;
+        }
         editor.IsReportOpen = true;
         try
         {
@@ -430,6 +435,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task<bool> SaveCurrentAsync(bool saveAs = false, bool recordRecent = true)
     {
         if (Session is not { } session) return false;
+        if (session.CurrentRevision.State.Document.Material.StrengthType is null)
+        {
+            if (_dialogs is not null) await _dialogs.ShowErrorAsync(Strings.MaterialStrengthResolve);
+            return false;
+        }
         string? path = saveAs ? null : session.FilePath;
         if (path is null)
         {

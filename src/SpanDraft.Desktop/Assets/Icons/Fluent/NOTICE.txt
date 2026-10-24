@@ -4,5 +4,6 @@ Edit, Star, Info, Error Circle, Document Add, Folder Open, Document and Book Ope
 Zoom In, Zoom Out, Document Fit, Document Width, Document Data, Print, Document PDF, Chevron Left and Chevron Right SVG assets are included.
 Add and Subtract SVG assets are included.
 Document Settings SVG asset is included.
+Checkmark Circle and Lock Closed SVG assets are included.
 SVG geometry is unchanged; foreground color is supplied by application resources.
 See LICENSE.txt for the MIT license.

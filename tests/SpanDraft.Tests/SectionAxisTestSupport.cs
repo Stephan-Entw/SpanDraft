@@ -13,7 +13,7 @@ internal static class SectionAxisTestSupport
 {
     internal static BeamModel AxisBeam(ISectionDefinition section, SectionAxisDesignation axis,
         IEnumerable<BeamLoad>? loads = null, bool cantilever = true) =>
-        new(M(L), new Material("Axis test steel", Pressure.FromPascals(E), Pressure.FromMegapascals(235)),
+        new(M(L), new Material("Axis test steel", Pressure.FromPascals(E), Pressure.FromMegapascals(235), MaterialStrengthType.Re),
             section, axis, cantilever ? [SupportAt(0, SupportType.Fixed)] :
                 [SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller)], loads ?? []);
 

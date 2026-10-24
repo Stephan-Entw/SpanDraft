@@ -17,8 +17,9 @@ public sealed record ProjectState(EditorDocument Document, EditorPresentationSta
         && a.DistributedLoads.SequenceEqual(b.DistributedLoads) && a.NamingState == b.NamingState;
 
     internal static bool MaterialContentEquals(Material a, Material b) => a.Name == b.Name
-        && a.YoungsModulus == b.YoungsModulus && a.YieldStrength == b.YieldStrength
-        && a.Density == b.Density && a.PoissonRatio == b.PoissonRatio;
+        && a.YoungsModulus == b.YoungsModulus && a.YieldStrength == b.YieldStrength && a.StrengthType == b.StrengthType
+        && a.Density == b.Density && a.PoissonRatio == b.PoissonRatio
+        && a.Category == b.Category && a.MaterialNumber == b.MaterialNumber && a.OtherStandards.SequenceEqual(b.OtherStandards);
 
     internal static bool SectionContentEquals(ISectionDefinition a, ISectionDefinition b)
     {

@@ -5,7 +5,7 @@ using SpanDraft.Desktop.ViewModels;
 
 namespace SpanDraft.Desktop.Views;
 
-/// <summary>The form is embedded in the material workspace; navigation and actions belong to its host.</summary>
+/// <summary>Shared form hosted by the owned material editor window.</summary>
 public partial class MaterialEditorView : UserControl
 {
     public MaterialEditorView() => InitializeComponent();
@@ -18,6 +18,11 @@ public partial class MaterialEditorView : UserControl
     private void NumberLostFocus(object? sender, RoutedEventArgs e)
     {
         if (sender is TextBox { DataContext: SetupNumberInput input }) input.CompleteInput();
+    }
+
+    private void StrengthTypeLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MaterialEditorViewModel model) model.CompleteStrengthTypeInput();
     }
 
     private void NameKeyDown(object? sender, KeyEventArgs e)

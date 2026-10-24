@@ -1286,7 +1286,13 @@ public sealed class ProjectReportTests : IDisposable
         var sectionProperties = Assert.Single(report.TextRuns, r => r.Text.Contains(report.Data.SectionProperties[0]));
         var materialProperties = Assert.Single(report.TextRuns, r => r.Text.Contains(report.Data.MaterialProperties[0]));
         Assert.All(report.Data.SectionProperties, p => Assert.Contains(p, sectionProperties.Text));
-        Assert.All(report.Data.MaterialProperties, p => Assert.Contains(p, materialProperties.Text));
+        var tables = report.Pages[page].Tables;
+        var materialPropertyRuns = report.TextRuns.Where(r => r.Bounds.Left >= sectionArea.Left
+            && r.Bounds.Right <= sectionArea.Right + .01f && r.Bounds.Top >= materialProperties.Bounds.Top
+            && (tables.Count == 0 || r.Bounds.Top < tables[0].Bounds.Top)
+            && report.Data.MaterialProperties.Any(p => r.Text.Contains(p, StringComparison.Ordinal) || p.Contains(r.Text, StringComparison.Ordinal))).ToArray();
+        string materialText = string.Join(" ", materialPropertyRuns.Select(r => r.Text));
+        Assert.All(report.Data.MaterialProperties, p => Assert.Contains(p, materialText));
         var materialHeading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Material);
         Assert.True(sectionArea.Bottom <= sectionProperties.Bounds.Top);
         Assert.True(sectionProperties.Bounds.Bottom < materialHeading.Bounds.Top);
@@ -1296,8 +1302,7 @@ public sealed class ProjectReportTests : IDisposable
             Assert.True(run.Bounds.Left >= sectionArea.Left);
             Assert.True(run.Bounds.Right <= sectionArea.Right + .01f);
         }
-        var tables = report.Pages[page].Tables;
-        if (tables.Count > 0) Assert.True(materialProperties.Bounds.Bottom < tables[0].Bounds.Top);
+        if (tables.Count > 0) Assert.All(materialPropertyRuns, run => Assert.True(run.Bounds.Bottom < tables[0].Bounds.Top));
     }
 
     private static void AssertTableHeadersAndBounds(ReportDocument report, int page)

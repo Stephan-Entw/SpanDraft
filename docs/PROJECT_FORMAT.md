@@ -19,10 +19,22 @@ Wiederverwendung; übernommene Daten bleiben vollständig unabhängig.
 
 ## Material, Querschnitt und Biegeachse
 
-Material speichert Name, E und fy sowie optional Dichte ρ und Poissonzahl ν.
+Material speichert Name, Kategorie, optionale Werkstoffnummer, geordnete andere
+Normbezeichnungen, E und den numerischen Festigkeitskennwert
+(`yieldStrength`) sowie `strengthType` mit den stabilen Stringwerten `re` und
+`rp02`. Dichte ρ und Poissonzahl ν bleiben optional. Das Typfeld erweitert die
+bestehenden Verträge kompatibel ohne neue Versionsnummer. Historische Dateien
+ohne Typ (oder mit null) laden ungeklärt, ohne Ableitung aus Name oder Kategorie.
+Unbekannte Typwerte sind ungültig. Reguläres Speichern verlangt einen expliziten
+Typ; eine Typänderung gehört zu Inhalt und History, nicht zur Mechanik.
 Fehlende oder null gesetzte optionale Werte bedeuten tatsächlich unbekannt.
 Beim Laden werden keine angenommenen Werte ergänzt. ρ und ν haben derzeit
-keine Wirkung auf Solver oder Engineering.
+keine Wirkung auf Solver oder Engineering. Kategorie, Werkstoffnummer und
+Normbezeichnungen erweitern den bestehenden Materialvertrag ebenfalls ohne
+Versionswechsel. Historische Projekte ohne Kategorie laden mit `Other`, ohne
+Werkstoffnummer mit null und ohne Normliste mit einer leeren Sammlung. Es gibt
+keine Ergänzung aus einem heutigen Katalog; unbekannte Kategorien sind ungültig.
+Alle Materialmetadaten bleiben auch in Projekt- und Setup-Recovery erhalten.
 
 Parametrische Querschnitte speichern ausschließlich die Form und ihre
 ursprünglichen Abmessungen einschließlich der unabhängigen Radiusparameter.
@@ -60,7 +72,7 @@ lösen jedoch keine mechanische Neuberechnung aus.
 ## SI-Vertrag und übriger Projektinhalt
 
 Physikalische Werte stehen ausschließlich in kanonischen SI-Einheiten:
-Länge/Position in m, A in m², I in m⁴, W in m³, E/fy in Pa, Dichte in kg/m³,
+Länge/Position in m, A in m², I in m⁴, W in m³, E/Festigkeitskennwert in Pa, Dichte in kg/m³,
 Poissonzahl dimensionslos, Kraft in N, Moment in N·m und Linienlast in N/m.
 Keine Einheitensymbole, Anzeigeeinheiten oder lokalisierten Zahlstrings.
 Anzeigeeinstellungen sind davon unabhängig. Null ist für Positionen und Lasten gültig.
@@ -99,7 +111,7 @@ Undo/Redo und Recovery. Ihre Änderung allein löst keine Analysis aus.
 ## V1-/V2-Migration und Legacy-Kompatibilität
 
 V1 und V2 werden mit fehlenden Projektangaben (`Info == null`) gelesen.
-Der Dokument-/Presentation-Vertrag aus V2 bleibt in V3 unverändert.
+V3 verwendet weiterhin die Dokument-/Presentation-Struktur aus V2.
 V1 wird beim Laden unmittelbar ins aktuelle In-Memory-Modell migriert:
 Rechteck, Rechteckrohr, Kreis und Rundrohr werden parametrische Definitionen;
 Rechteckrohre erhalten Außenradius 0. V1-`custom` wird Manual mit originalem
@@ -107,15 +119,16 @@ A/I/W und einer Y-Achse. Alle V1-Dokumente verwenden Y; Dichte und Poissonzahl
 bleiben null. Ihre mechanischen Kennwerte und Berechnungsergebnisse bleiben erhalten.
 
 Bloßes Öffnen verändert keine Benutzerdatei und macht das geöffnete Projekt
-nicht allein wegen der Migration dirty. Erst ein tatsächliches Speichern
-schreibt V3; ursprünglicher Dateipfad und normales Save-/Save-As-Verhalten bleiben erhalten.
+nicht allein wegen der Migration dirty. Erst ein tatsächliches Speichern nach
+expliziter Klärung des Kennwerttyps schreibt V3; ursprünglicher Dateipfad und normales Save-/Save-As-Verhalten bleiben erhalten.
 Es gibt keinen V1-/V2-Writer. Noch verwendete Legacy-Sections werden beim V3-Schreiben
 auf dieselben kanonischen Formen normalisiert; es gibt keinen Legacy-Wiretyp.
 
 `Load → Save → Load` erhält den fachlichen Inhalt. Der Inhaltsvergleich verwendet
 Originalparameter beziehungsweise Manual-Eingaben, vollständige Materialdaten
 und Biegeachse. Er ist vom mechanischen Vergleich getrennt: Änderungen nur an
-Name/ρ/ν sind Projektänderungen ohne Neuberechnung; die Achsenidentität ist
+Name/Kategorie/Werkstoffnummer/Normbezeichnungen/Kennwerttyp/ρ/ν sind
+Projektänderungen ohne Neuberechnung; die Achsenidentität ist
 auch bei gleichen I/W mechanisch relevant.
 
 ## Validierung und Recovery
@@ -137,6 +150,10 @@ Recovery ist ein privater lokaler Slot, kein Autosave der Benutzerdatei.
 Das bestehende interne Envelope bleibt bei `recoveryVersion = 1`, optionalem
 Originalpfad und UTC-Zeitstempel. Sein eingebettetes Projekt verwendet genau
 denselben Codec: neue Recovery schreibt V3; historische V1-/V2-Projekte bleiben lesbar.
+Ausschließlich private Recovery darf ungeklärte Legacy-Materialien weiterhin
+verlustfrei sichern; dieselben Materialmappings erhalten den fehlenden Typ.
+Das gilt auch für Setup-Recovery. Reguläres Projektspeichern und neue
+Reportausgabe bleiben bis zur Typklärung gesperrt.
 Nur committed Zustände einer dirty Session werden geschrieben; nach Wiederherstellen
 bleibt das Projekt dirty. Die Benutzerdatei wird nicht automatisch geändert.
 Recovery wird ohne Nachfrage entfernt, wenn ihr vollständiger Projektinhalt

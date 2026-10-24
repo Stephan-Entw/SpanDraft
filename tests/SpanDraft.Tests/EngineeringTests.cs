@@ -15,7 +15,7 @@ public class EngineeringTests
     private static CustomSection Section(double w = 0.001) => new(Area.FromSquareMeters(0.01),
         SecondMomentOfArea.FromMetersToTheFourth(1e-6), SectionModulus.FromCubicMeters(w));
     private static Material Steel(double yieldStrength = 250e6) =>
-        new("Engineering test steel", Pressure.FromPascals(200e9), Pressure.FromPascals(yieldStrength));
+        new("Engineering test steel", Pressure.FromPascals(200e9), Pressure.FromPascals(yieldStrength), MaterialStrengthType.Re);
     private static BeamModel CenterLoad(double force = -1000, double w = 0.001, double re = 250e6) =>
         Beam(loads: [Point(1, force)], material: Steel(re), section: Section(w));
 

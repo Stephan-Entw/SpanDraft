@@ -31,7 +31,7 @@ public sealed class LibraryModelTests
         Assert.Equal(new[] { casing, second }, library.All);
         Assert.True(library.Remove("rEnAmEd")); Assert.False(library.Remove("RENAMED"));
         Assert.Same(second, Assert.Single(library.All));
-        var view = Assert.IsAssignableFrom<IList<MaterialLibraryEntry>>(library.All);
+        var view = Assert.IsAssignableFrom<IList<Material>>(library.All);
         Assert.Throws<NotSupportedException>(() => view.Clear());
         Assert.Throws<NotSupportedException>(() => view[0] = first);
     }
@@ -75,9 +75,9 @@ public sealed class LibraryModelTests
         Assert.Same(builtIn, catalog.Find("FIXTURE A")); Assert.Null(catalog.Find("absent"));
         var user = MaterialEntry("fixture a", 987654321);
         var library = new UserMaterialLibrary([user]);
-        Assert.Same(user, library.Find(builtIn.Material.Name));
-        Assert.NotEqual(builtIn.Material.YoungsModulus, user.Material.YoungsModulus);
-        var view = Assert.IsAssignableFrom<IList<MaterialLibraryEntry>>(catalog.All);
+        Assert.Same(user, library.Find(builtIn.Name));
+        Assert.NotEqual(builtIn.YoungsModulus, user.YoungsModulus);
+        var view = Assert.IsAssignableFrom<IList<Material>>(catalog.All);
         Assert.Throws<NotSupportedException>(() => view.Add(user));
         Assert.Throws<NotSupportedException>(() => view[0] = user);
         Assert.DoesNotContain(typeof(BuiltInMaterialCatalog).GetMethods(), method =>
@@ -85,20 +85,20 @@ public sealed class LibraryModelTests
     }
 
     [Fact]
-    public void MetadataIsOptionalDefensivelyCopiedAndSeparateFromCore()
+    public void MetadataBelongsToTheImmutableMaterialSnapshot()
     {
         string[] standards = [" Standard A ", "", " ", "Standard B"];
-        var entry = new MaterialLibraryEntry(MaterialEntry().Material, MaterialCategory.StainlessSteel, " 1.2345 ", standards);
+        var entry = LibraryTestSupport.WithMetadata(MaterialEntry(), MaterialCategory.StainlessSteel, " 1.2345 ", standards);
         standards[0] = "Changed";
         Assert.Equal("1.2345", entry.MaterialNumber);
         Assert.Equal(new[] { "Standard A", "Standard B" }, entry.OtherStandards);
         var view = Assert.IsAssignableFrom<IList<string>>(entry.OtherStandards);
         Assert.Throws<NotSupportedException>(() => view.Add("Changed"));
-        var empty = new MaterialLibraryEntry(entry.Material, MaterialCategory.Other, " ", []);
+        var empty = LibraryTestSupport.WithMetadata(entry, MaterialCategory.Other, " ", []);
         Assert.Null(empty.MaterialNumber); Assert.Empty(empty.OtherStandards);
-        Assert.Same(entry.Material, empty.Material);
-        Assert.DoesNotContain(typeof(Material).GetProperties(), p => p.Name is "Category" or "MaterialNumber" or "OtherStandards");
-        Assert.DoesNotContain(typeof(MaterialLibraryEntry).GetProperties(), p => p.Name is "Id" or "Name" or "Designation");
+        Assert.Equal(entry.YoungsModulus, empty.YoungsModulus);
+        Assert.Contains(typeof(Material).GetProperties(), p => p.Name == "Category");
+        Assert.DoesNotContain(typeof(Material).GetProperties(), p => p.Name is "Id" or "Designation");
         Assert.DoesNotContain(typeof(SectionLibraryEntry).GetProperties(), p => p.Name is "Id" or "BendingAxis");
     }
 
@@ -108,9 +108,8 @@ public sealed class LibraryModelTests
     [InlineData(" A ")]
     public void LibraryNamesMustBeNonEmptyAndAlreadyTrimmed(string name)
     {
-        Assert.Throws<ArgumentException>(() => new MaterialLibraryEntry(
-            new Material(name.Length == 0 || string.IsNullOrWhiteSpace(name) ? " " : name,
-                Pressure.FromPascals(1), Pressure.FromPascals(1)), MaterialCategory.Other));
+        Assert.Throws<ArgumentException>(() => new UserMaterialLibrary([
+            new Material(name, Pressure.FromPascals(1), Pressure.FromPascals(1), MaterialStrengthType.Re)]));
         Assert.Throws<ArgumentException>(() => new SectionLibraryEntry(name, ParametricSectionTestSupport.Shape(0)));
     }
 
@@ -124,8 +123,8 @@ public sealed class LibraryModelTests
         Assert.Throws<ArgumentException>(() => new UserSectionLibrary([section, new("a", section.Section)]));
         Assert.Throws<ArgumentNullException>(() => new UserMaterialLibrary([null!]));
         Assert.Throws<ArgumentNullException>(() => new UserSectionLibrary([null!]));
-        Assert.Throws<ArgumentNullException>(() => new MaterialLibraryEntry(null!, MaterialCategory.Other));
+        Assert.Throws<ArgumentNullException>(() => LibraryTestSupport.WithMetadata(null!, MaterialCategory.Other));
         Assert.Throws<ArgumentNullException>(() => new SectionLibraryEntry("A", null!));
-        Assert.Throws<ArgumentOutOfRangeException>(() => new MaterialLibraryEntry(entry.Material, (MaterialCategory)123));
+        Assert.Throws<ArgumentOutOfRangeException>(() => LibraryTestSupport.WithMetadata(entry, (MaterialCategory)123));
     }
 }

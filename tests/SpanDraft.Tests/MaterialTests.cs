@@ -11,7 +11,7 @@ public class MaterialTests
     {
         var youngsModulus = Pressure.FromMegapascals(210000);
         var yieldStrength = Pressure.FromMegapascals(235);
-        var material = new Material("Test material", youngsModulus, yieldStrength);
+        var material = new Material("Test material", youngsModulus, yieldStrength, MaterialStrengthType.Re);
 
         Assert.Equal("Test material", material.Name);
         Assert.Equal(youngsModulus, material.YoungsModulus);
@@ -28,7 +28,7 @@ public class MaterialTests
     public void NonPositivePropertiesAreRejected(double youngsModulus, double yieldStrength)
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new Material("Test",
-            Pressure.FromMegapascals(youngsModulus), Pressure.FromMegapascals(yieldStrength)));
+            Pressure.FromMegapascals(youngsModulus), Pressure.FromMegapascals(yieldStrength), MaterialStrengthType.Re));
     }
 
     [Theory]
@@ -37,13 +37,13 @@ public class MaterialTests
     [InlineData("\t\n")]
     public void BlankNamesAreRejected(string name)
     {
-        Assert.Throws<ArgumentException>(() => new Material(name, Pressure.FromPascals(1), Pressure.FromPascals(1)));
+        Assert.Throws<ArgumentException>(() => new Material(name, Pressure.FromPascals(1), Pressure.FromPascals(1), MaterialStrengthType.Re));
     }
 
     [Fact]
     public void NullNameIsRejected()
     {
-        Assert.Throws<ArgumentNullException>(() => new Material(null!, Pressure.FromPascals(1), Pressure.FromPascals(1)));
+        Assert.Throws<ArgumentNullException>(() => new Material(null!, Pressure.FromPascals(1), Pressure.FromPascals(1), MaterialStrengthType.Re));
     }
     [Theory]
     [InlineData(false, false)]
@@ -52,7 +52,7 @@ public class MaterialTests
     [InlineData(true, true)]
     public void OptionalPropertiesAreIndependentAndDoNotChangeAnalysis(bool density, bool poisson)
     {
-        var material = new Material("Test steel", Pressure.FromPascals(210e9), Pressure.FromMegapascals(235),
+        var material = new Material("Test steel", Pressure.FromPascals(210e9), Pressure.FromMegapascals(235), MaterialStrengthType.Re,
             density ? MassDensity.FromKilogramsPerCubicMeter(7850) : null,
             poisson ? PoissonRatio.FromValue(.3) : null);
         Assert.Equal(density ? 7850d : (double?)null, material.Density?.KilogramsPerCubicMeter);
@@ -78,7 +78,7 @@ public class MaterialTests
 
     [Fact]
     public void MaterialRejectsDefaultDensity() => Assert.Throws<ArgumentOutOfRangeException>(() =>
-        new Material("Test", Pressure.FromPascals(1), Pressure.FromPascals(1), default(MassDensity), null));
+        new Material("Test", Pressure.FromPascals(1), Pressure.FromPascals(1), MaterialStrengthType.Re, default(MassDensity), null));
 
     [Theory]
     [InlineData(-1)]

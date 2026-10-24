@@ -52,7 +52,7 @@ internal static class ProjectTestSupport
                 SecondMomentOfArea.FromMetersToTheFourth(1.23456789e-9), SectionModulus.FromCubicMeters(1.23456789e-6))
         };
         var document = new EditorDocument(M(1.0000000000000002),
-            new Material("Test steel", Pressure.FromPascals(210e9), Pressure.FromPascals(235e6)), profile,
+            new Material("Test steel", Pressure.FromPascals(210e9), Pressure.FromPascals(235e6), MaterialStrengthType.Re), profile,
             [new(SupportId, M(0), SupportType.Fixed, "A"),
                 new(Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"), M(.5), SupportType.Pinned, "B"),
                 new(Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"), M(1), SupportType.Roller, "C")],
@@ -76,7 +76,7 @@ internal static class ProjectTestSupport
         }
         setup.SelectedSection ??= new SpanDraft.Core.Sections.Parametric.RectangularHollowSectionGeometry(
             M(.1), M(.1), M(.005), M(0));
-        setup.SelectedMaterial ??= main.BuiltInMaterials!.Find("S235JR")!.Material;
+        setup.SelectedMaterial ??= main.BuiltInMaterials!.Find("S235JR")!;
     }
 
     public static void CompleteProjectInfo(ProjectSetupViewModel setup)
@@ -163,6 +163,16 @@ internal static class ProjectTestSupport
         { RecoveryOrder.Add("setup"); return Task.FromResult(damaged ? DamagedSetupRecovery : SetupRecovery); }
         public Task ShowErrorAsync(string message) { Errors.Add(message); return Task.CompletedTask; }
         public bool ConfirmLibraryDelete { get; set; } = true;
+        public Func<MaterialEditorViewModel, Task>? MaterialEditorHook { get; set; }
+        public MaterialNameConflictDecision MaterialConflict { get; set; }
+        public bool ConfirmMaterialReplace { get; set; }
+        public int MaterialConflictQuestions { get; private set; }
+        public int MaterialReplaceQuestions { get; private set; }
+        public Task ShowMaterialEditorAsync(MaterialEditorViewModel editor) => MaterialEditorHook?.Invoke(editor) ?? Task.CompletedTask;
+        public Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string name)
+        { MaterialConflictQuestions++; return Task.FromResult(MaterialConflict); }
+        public Task<bool> ConfirmMaterialReplaceAsync(string name)
+        { MaterialReplaceQuestions++; return Task.FromResult(ConfirmMaterialReplace); }
         public Task<bool> ConfirmMaterialDeleteAsync(string name) => Task.FromResult(ConfirmLibraryDelete);
         public Task<bool> ConfirmSectionDeleteAsync(string name) => Task.FromResult(ConfirmLibraryDelete);
     }
