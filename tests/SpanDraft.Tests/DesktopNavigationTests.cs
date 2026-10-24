@@ -319,6 +319,7 @@ public sealed class DesktopNavigationTests
     [InlineData("de-DE", 1100, 650)]
     [InlineData("en-US", 1250, 800)]
     [InlineData("de-DE", 1600, 900)]
+    [InlineData("de-DE", 2400, 900)]
     public void WorkspaceKeepsToolbarIndependentAndOverviewScrollableAtSupportedSizes(string culture, double width, double height)
     {
         using var environment = new DesktopControlEnvironment();
@@ -343,7 +344,7 @@ public sealed class DesktopNavigationTests
         Assert.Equal(view.Bounds.Width, toolbar.Bounds.Width);
         Assert.Equal(toolbar.Bounds.Bottom, workspace.Bounds.Top);
         Assert.True(editorScroll.Bounds.Width > overview.Bounds.Width);
-        Assert.True(overview.Bounds.Width >= 320);
+        Assert.Equal(320, overview.Bounds.Width);
         Assert.Equal(editorScroll.Bounds.Right, overview.Bounds.Left);
         Assert.True(canvas.Bounds.Width > 0 && canvas.Bounds.Height > 0);
         Assert.Equal(6, toolbar.GetVisualDescendants().OfType<ToggleButton>().Count(b => b.Command is not null));
@@ -398,7 +399,7 @@ public sealed class DesktopNavigationTests
     [InlineData("de-DE", 1100, 650)]
     [InlineData("en-US", 1250, 800)]
     [InlineData("de-DE", 1600, 900)]
-    public void ModelAndAxisStayAtTopWithDiagramsBelowAndNoHeightDrivenGeometryChanges(
+    public void ModelAndAxisStayAtTopWithDiagramsBelowAndOnlyWidthDrivenGeometryChanges(
         string culture, double width, double height)
     {
         using var environment = new DesktopControlEnvironment();
@@ -444,9 +445,24 @@ public sealed class DesktopNavigationTests
             canvas.Scene.Annotations.Single(a => !a.IsSupport).Text);
         double axisTop = axis.Bounds.Top;
         double diagramHeight = diagrams.Bounds.Height;
+        double viewportWidth = scroll.Viewport.Width;
         Layout(window, width, height + 200);
-        Assert.Same(frame.Layout, canvas.Scene.Frame.Layout);
-        Assert.Equal(frame.Viewport, canvas.Scene.Frame.Viewport);
+        if (scroll.Viewport.Width == viewportWidth)
+        {
+            Assert.Same(frame.Layout, canvas.Scene.Frame.Layout);
+            Assert.Equal(frame.Viewport, canvas.Scene.Frame.Viewport);
+        }
+        else
+        {
+            // Removing the last scrollbar gutter returns its width to both viewports.
+            Assert.True(scroll.Viewport.Width > viewportWidth);
+            Assert.Equal(scroll.Bounds.Width, scroll.Viewport.Width);
+            Assert.Equal(scroll.Viewport.Width, diagrams.Viewport.Width);
+            Assert.Equal(scroll.Viewport.Width, surface.Bounds.Width);
+            Assert.All(view.GetVisualDescendants().OfType<ResultDiagram>(), diagram =>
+                Assert.Same(surface.StationLayout, diagram.Projection!.StationLayout));
+            frame = canvas.Scene.Frame;
+        }
         Assert.Equal(axisTop, axis.Bounds.Top);
         Assert.Equal(diagramHeight + 200, diagrams.Bounds.Height);
 

@@ -7,9 +7,12 @@
              x:Class="SpanDraft.Desktop.Views.EditorView"
              x:DataType="vm:EditorViewModel" KeyDown="EditorKeyDown">
   <UserControl.Styles>
+    <Style Selector="controls|BeamEditorSurface#BeamSurface, StackPanel#ResultDiagrams">
+      <Setter Property="MaxWidth" Value="1280" />
+    </Style>
     <!-- Keep Fluent's gutter in the layout while removing all chrome and input
-         when the upper editor has no scrollable range. -->
-    <Style Selector="ScrollViewer#EditorScroll /template/ ScrollBar:vertical[Maximum=0]">
+         from either viewport when only the other one has a scrollable range. -->
+    <Style Selector="ScrollViewer#EditorScroll /template/ ScrollBar:vertical[Maximum=0], ScrollViewer#DiagramScroll /template/ ScrollBar:vertical[Maximum=0]">
       <Setter Property="Opacity" Value="0" />
       <Setter Property="IsHitTestVisible" Value="False" />
     </Style>
@@ -88,16 +91,16 @@
     </Border>
     <Grid Grid.Row="1" x:Name="EditorWorkspace">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="4*" />
-        <ColumnDefinition Width="*" MinWidth="320" />
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="320" />
       </Grid.ColumnDefinitions>
       <Grid x:Name="EditorContent" RowDefinitions="Auto,*" SizeChanged="WorkspaceSizeChanged"
             Background="{DynamicResource CanvasBackground}">
-        <!-- Both viewports reserve the same gutter, including when only one overflows. -->
-        <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
+        <!-- Reserve matching gutters only while at least one viewport overflows. -->
+        <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
           <controls:BeamEditorSurface x:Name="BeamSurface" VerticalAlignment="Top" />
         </ScrollViewer>
-        <ScrollViewer Grid.Row="1" x:Name="DiagramScroll" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer Grid.Row="1" x:Name="DiagramScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
           <StackPanel x:Name="ResultDiagrams" Spacing="{StaticResource Space16}">
             <controls:ResultDiagram Kind="TransverseDisplacement" Presentation="{Binding Presentation}"
                                     StationLayout="{Binding #BeamSurface.StationLayout}" />
