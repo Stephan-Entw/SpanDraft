@@ -437,7 +437,7 @@ public sealed class ProjectReportTests : IDisposable
         Assert.True(main.ReportAsync().GetAwaiter().GetResult());
         var preview = main.ReportPreview!;
         preview.ShowPage(1);
-        Assert.Equal("Seite 2 von 2", preview.PageLabel); Assert.False(preview.NextCommand.CanExecute(null));
+        Assert.Equal("2 / 2", preview.PageLabel); Assert.False(preview.NextCommand.CanExecute(null));
         string destination = Path.GetFullPath("export.pdf");
         preview.SavePdfAsync(destination).GetAwaiter().GetResult(); Assert.True(files.Data.ContainsKey(destination));
         Assert.Equal(new[] { destination }, files.Writes);
@@ -452,7 +452,9 @@ public sealed class ProjectReportTests : IDisposable
 
     [Theory]
     [InlineData("de-DE", false, 1100, 650)] [InlineData("en-US", true, 1100, 650)]
+    [InlineData("de-DE", true, 1100, 650)] [InlineData("en-US", false, 1100, 650)]
     [InlineData("de-DE", true, 1250, 800)] [InlineData("en-US", false, 1250, 800)]
+    [InlineData("de-DE", false, 1250, 800)] [InlineData("en-US", true, 1250, 800)]
     public void PreviewToolbarFitsTheMainWorkspaceInBothThemes(string language, bool dark, int width, int height)
     {
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language);
@@ -465,37 +467,93 @@ public sealed class ProjectReportTests : IDisposable
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(window.RequestedThemeVariant, view.ActualThemeVariant);
             var bar = view.FindControl<Border>("ReportToolbar")!;
-            var buttons = new[] { "PreviousButton", "NextButton", "ZoomOutButton", "ZoomInButton", "PageFitButton", "PageWidthButton", "SavePdfButton", "PrintButton", "CloseButton" }
+            var buttons = new[] { "PreviousButton", "NextButton", "ZoomOutButton", "ZoomInButton", "PageFitButton", "PageWidthButton", "SavePdfButton", "PrintButton", "CloseButton", "ZoomValueButton" }
                 .Select(n => view.FindControl<Button>(n)!).ToArray();
             Assert.All(buttons, button =>
             {
                 var top = button.TranslatePoint(default, bar)!.Value;
                 Assert.True(new Rect(bar.Bounds.Size).Contains(new Rect(top, button.Bounds.Size)), button.Name);
                 Assert.Equal(buttons[0].Bounds.Height, button.Bounds.Height);
+                Assert.Equal(buttons[0].TranslatePoint(default, bar)!.Value.Y, top.Y);
+                Assert.False(button.IsFocused); Assert.DoesNotContain("selected", button.Classes);
             });
             Assert.All(buttons.Take(6), button =>
             {
-                Assert.Equal(new Size(36, 36), button.Bounds.Size);
                 Assert.False(string.IsNullOrWhiteSpace(Avalonia.Automation.AutomationProperties.GetName(button)));
                 Assert.NotNull(ToolTip.GetTip(button));
+                if (button.Name is "ZoomOutButton" or "ZoomInButton")
+                {
+                    Assert.Equal(buttons[0].Bounds.Width, button.Bounds.Width);
+                    var symbol = Assert.Single(button.GetVisualDescendants().OfType<PathIcon>());
+                    Assert.Equal(new Size(16, 16), symbol.Bounds.Size);
+                    Assert.Same(button.Foreground, symbol.Foreground);
+                    Assert.Same(Application.Current!.FindResource(button.Name == "ZoomOutButton" ? "FluentIcon.Subtract" : "FluentIcon.Add"), symbol.Data);
+                    return;
+                }
+                bool navigation = button.Name is "PreviousButton" or "NextButton";
+                if (navigation) Assert.True(button.Bounds.Width < buttons[4].Bounds.Width);
+                else Assert.Equal(new Size(36, 36), button.Bounds.Size);
                 var icon = Assert.Single(button.GetVisualDescendants().OfType<PathIcon>());
                 Assert.Same(button.Foreground, icon.Foreground);
-                int size = button.Name is "PreviousButton" or "NextButton" ? 28
-                    : button.Name is "PageFitButton" or "PageWidthButton" ? 24 : 20;
+                int size = navigation ? 20 : 24;
                 Assert.Equal(new Size(size, size), icon.Bounds.Size);
             });
             Assert.False(buttons[0].IsEffectivelyEnabled); Assert.True(buttons[1].IsEffectivelyEnabled);
             Assert.Equal(OperatingSystem.IsWindows(), buttons[7].IsEnabled);
+            Assert.Equal(language == "de-DE" ? "Ganze Seite anzeigen" : "Show whole page", ToolTip.GetTip(buttons[4]));
+            Assert.Equal(language == "de-DE" ? "An Seitenbreite anpassen" : "Fit to page width", ToolTip.GetTip(buttons[5]));
             Assert.All(buttons.Skip(4).Take(2), button =>
-            {
-                Assert.IsType<Button>(button); Assert.DoesNotContain("selected", button.Classes);
-            });
+                Assert.Equal(ToolTip.GetTip(button), Avalonia.Automation.AutomationProperties.GetName(button)));
+            Assert.Contains("secondary", buttons[8].Classes);
+            Assert.DoesNotContain("toolbar", buttons[8].Classes); Assert.DoesNotContain("primary", buttons[8].Classes);
             Assert.DoesNotContain("…", Strings.ReportSavePdf); Assert.DoesNotContain("…", Strings.ReportPrint);
-            var navigationSeparator = view.FindControl<Avalonia.Controls.Shapes.Rectangle>("NavigationSeparator")!;
-            Assert.True(buttons[1].Bounds.Right <= navigationSeparator.Bounds.Left && navigationSeparator.Bounds.Right <= buttons[2].Bounds.Left);
-            Assert.True(buttons[4].TranslatePoint(new(buttons[4].Bounds.Width, 0), bar)!.Value.X
-                < view.FindControl<Avalonia.Controls.Shapes.Rectangle>("OutputSeparator")!.TranslatePoint(default, bar)!.Value.X);
-            Assert.DoesNotContain(view.GetVisualDescendants(), c => c is ComboBox or TextBox);
+            var ordered = new[] { "SavePdfButton", "PrintButton", "PreviousButton", "PageValue", "NextButton",
+                "ZoomOutButton", "ZoomValue", "ZoomInButton", "PageFitButton", "PageWidthButton", "CloseButton" }
+                .Select(name => view.FindControl<Control>(name)!).ToArray();
+            var bounds = ordered.Select(control => new Rect(control.TranslatePoint(default, bar)!.Value, control.Bounds.Size)).ToArray();
+            Assert.All(bounds, rect => Assert.True(new Rect(bar.Bounds.Size).Contains(rect)));
+            for (int i = 1; i < bounds.Length; i++) Assert.True(bounds[i - 1].Right <= bounds[i].Left, ordered[i].Name);
+            Assert.Equal(bar.Padding.Left, bounds[0].Left);
+            Assert.Equal(bar.Bounds.Width - bar.Padding.Right, bounds[^1].Right);
+            var center = view.FindControl<StackPanel>("PreviewControls")!;
+            Assert.Equal(bar.Bounds.Width / 2, center.TranslatePoint(new(center.Bounds.Width / 2, 0), bar)!.Value.X, .5);
+            Assert.Empty(bar.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Rectangle>());
+            Assert.Null(center.Background);
+            Assert.True(bounds[5].Left - bounds[4].Right > bounds[6].Left - bounds[5].Right);
+            Assert.Equal(bounds[5].Right, bounds[6].Left); Assert.Equal(bounds[6].Right, bounds[7].Left);
+            Assert.Equal(bounds[2].Right, bounds[3].Left); Assert.Equal(bounds[3].Right, bounds[4].Left);
+            double pageStep = bounds[3].Center.X - bounds[2].Center.X;
+            double zoomStep = bounds[6].Center.X - bounds[5].Center.X;
+            Assert.Equal(pageStep, bounds[4].Center.X - bounds[3].Center.X);
+            Assert.Equal(zoomStep, bounds[7].Center.X - bounds[6].Center.X);
+            Assert.True(bounds[5].Center.X - bounds[4].Center.X > Math.Max(pageStep, zoomStep));
+            Assert.True(bounds[8].Center.X - bounds[7].Center.X > Math.Max(pageStep, zoomStep));
+            Assert.Equal(bounds[5].Left - bounds[4].Right, bounds[8].Left - bounds[7].Right);
+            var zoomLabel = view.FindControl<TextBlock>("ZoomLabel")!;
+            double baseline = zoomLabel.TranslatePoint(new(0, zoomLabel.TextLayout.Baseline), bar)!.Value.Y;
+            Assert.All(buttons.Skip(6).Take(3), button =>
+            {
+                var caption = Assert.Single(button.GetVisualDescendants().OfType<TextBlock>());
+                Assert.Equal(baseline, caption.TranslatePoint(new(0, caption.TextLayout.Baseline), bar)!.Value.Y, .01);
+                Assert.Equal(caption.Text, Avalonia.Automation.AutomationProperties.GetName(button));
+                Assert.True(new Rect(button.Bounds.Size).Contains(new Rect(caption.TranslatePoint(default, button)!.Value, caption.Bounds.Size)));
+            });
+            Assert.IsType<ToolbarTextPresenter>(zoomLabel.Parent);
+            Assert.IsType<ToolbarTextPresenter>(view.FindControl<TextBlock>("PageLabel")!.Parent);
+            Assert.Equal((bounds[5].Center.X + bounds[7].Center.X) / 2, bounds[6].Center.X, .5);
+            Assert.All(new[] { ordered[3], ordered[6] }, label =>
+                Assert.Equal(bounds[0].Center.Y, label.TranslatePoint(new(0, label.Bounds.Height / 2), bar)!.Value.Y, .5));
+            var preview = main.ReportPreview!;
+            var pageLabel = view.FindControl<TextBlock>("PageLabel")!;
+            var pageValue = view.FindControl<ToolbarTextPresenter>("PageValue")!;
+            Assert.True(double.IsFinite(pageValue.Width));
+            Assert.Equal(pageValue.Width, pageValue.Bounds.Width);
+            var labelSize = pageValue.Bounds.Size;
+            Assert.Equal("1 / 2", pageLabel.Text);
+            preview.NextCommand.Execute(null); Dispatcher.UIThread.RunJobs(); Assert.Equal("2 / 2", pageLabel.Text);
+            preview.PreviousCommand.Execute(null); Dispatcher.UIThread.RunJobs(); Assert.Equal("1 / 2", pageLabel.Text);
+            Assert.Equal(labelSize, pageValue.Bounds.Size);
+            Assert.DoesNotContain(view.GetVisualDescendants(), c => c is ComboBox || c is TextBox { IsVisible: true });
             Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == Strings.ReportHeading);
             Assert.Empty(window.OwnedWindows); Assert.Equal(main.WindowTitle, window.Title);
             var page = view.FindControl<ReportPageControl>("PageView")!;
@@ -505,6 +563,93 @@ public sealed class ProjectReportTests : IDisposable
             string directory = Path.Combine(RepositoryRoot(), "output", "pdf", "production"); Directory.CreateDirectory(directory);
             using var image = new RenderTargetBitmap(new(width, height), new Vector(96, 96)); image.Render(window);
             image.Save(Path.Combine(directory, $"workspace-{language}-{dark}-{width}.png"), PngBitmapEncoderOptions.Default);
+            using var toolbarImage = new RenderTargetBitmap(new((int)bar.Bounds.Width, (int)bar.Bounds.Height), new(96, 96)); toolbarImage.Render(bar);
+            toolbarImage.Save(Path.Combine(directory, $"preview-toolbar-{language}-{dark}-{width}.png"), PngBitmapEncoderOptions.Default);
+        }
+        finally { window.Close(); }
+    }
+
+    [Theory]
+    [InlineData("Arial", 1)] [InlineData("Arial", 2)]
+    [InlineData("Helvetica Neue", 1)] [InlineData("Helvetica Neue", 2)]
+    [InlineData("Segoe UI", 1)] [InlineData("Segoe UI", 2)]
+    public void ReportControlsShareVisibleCenterAndTextBaselineAcrossFontsAndDisplayScaling(string font, int scaling)
+    {
+        var (main, files) = Open(ReportTestProjects.Create());
+        var (window, view) = ShowReportWorkspace(main, files);
+        try
+        {
+            view.FontFamily = new FontFamily(font);
+            var controls = view.FindControl<Border>("ReportToolbar")!;
+            var page = view.FindControl<TextBlock>("PageLabel")!;
+            var zoom = view.FindControl<TextBlock>("ZoomLabel")!;
+            var captions = new[] { "SavePdfButton", "PrintButton", "CloseButton" }
+                .Select(name => Assert.Single(view.FindControl<Button>(name)!.GetVisualDescendants().OfType<TextBlock>())).ToArray();
+            foreach (int percent in new[] { 25, 50, 61, 75, 125, 400 })
+            {
+                Assert.True(main.ReportPreview!.TrySetZoom(percent.ToString(CultureInfo.InvariantCulture)));
+                page.Text = percent < 100 ? "1 / 1" : "99 / 99";
+                Dispatcher.UIThread.RunJobs();
+                double baseline = page.TranslatePoint(new(0, page.TextLayout.Baseline), controls)!.Value.Y;
+                Assert.All(captions.Append(zoom), text =>
+                {
+                    Assert.Equal(baseline, text.TranslatePoint(new(0, text.TextLayout.Baseline), controls)!.Value.Y, .01);
+                    Assert.Null(text.RenderTransform);
+                });
+                Assert.Null(page.RenderTransform);
+                using var image = new RenderTargetBitmap(new((int)Math.Ceiling(controls.Bounds.Width * scaling),
+                    (int)Math.Ceiling(controls.Bounds.Height * scaling)), new(96 * scaling, 96 * scaling));
+                image.Render(controls);
+                using var pixels = new WriteableBitmap(image.PixelSize, image.Dpi, PixelFormat.Bgra8888, AlphaFormat.Premul);
+                using var buffer = pixels.Lock(); image.CopyPixels(buffer);
+                var bytes = new byte[buffer.RowBytes * buffer.Size.Height];
+                System.Runtime.InteropServices.Marshal.Copy(buffer.Address, bytes, 0, bytes.Length);
+                var minus = Ink(view.FindControl<Button>("ZoomOutButton")!);
+                var label = Ink(view.FindControl<Grid>("ZoomValue")!);
+                var plus = Ink(view.FindControl<Button>("ZoomInButton")!);
+                int leftGap = label.Left - minus.Right - 1, rightGap = plus.Left - label.Right - 1;
+                Assert.True(leftGap > 0 && rightGap > 0);
+                // Fluent Add and Subtract have different ink widths; their centers define the axis.
+                double zoomCenter = (label.Left + label.Right + 1) / 2d;
+                double symbolMidpoint = (minus.Left + minus.Right + plus.Left + plus.Right + 2) / 4d;
+                Assert.True(Math.Abs(zoomCenter - symbolMidpoint) <= scaling,
+                    $"{font}, {percent} %, {scaling}×: percentage center {zoomCenter}px vs symbol midpoint {symbolMidpoint}px");
+                var names = new[] { "PreviousButton", "PageValue", "NextButton", "ZoomOutButton", "ZoomValue", "ZoomInButton", "PageFitButton", "PageWidthButton", "CloseButton" };
+                double axis = view.FindControl<Button>("CloseButton")!.TranslatePoint(new(0,
+                    view.FindControl<Button>("CloseButton")!.Bounds.Height / 2), controls)!.Value.Y * scaling;
+                foreach (string name in names)
+                {
+                    var ink = Ink(view.FindControl<Control>(name)!);
+                    Assert.True(Math.Abs((ink.Top + ink.Bottom + 1) / 2d - axis) <= scaling,
+                        $"{font}, {percent} %, {scaling}×: {name} ink center {(ink.Top + ink.Bottom + 1) / 2d}px vs axis {axis}px");
+                }
+                if (font == "Helvetica Neue" && scaling == 2 && percent == 61)
+                {
+                    string directory = Path.Combine(RepositoryRoot(), "output", "pdf", "production"); Directory.CreateDirectory(directory);
+                    image.Save(Path.Combine(directory, "report-toolbar-aligned-2x.png"), PngBitmapEncoderOptions.Default);
+                }
+
+                (int Left, int Top, int Right, int Bottom) Ink(Control control)
+                {
+                    var origin = control.TranslatePoint(default, controls)!.Value;
+                    var foreground = (ISolidColorBrush)(control.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault()?.Foreground ??
+                        control.GetVisualDescendants().OfType<PathIcon>().First().Foreground)!;
+                    var color = foreground.Color;
+                    int threshold = (255 + Math.Max(color.R, Math.Max(color.G, color.B)) + 1) / 2;
+                    int left = image.PixelSize.Width, top = image.PixelSize.Height, right = -1, bottom = -1;
+                    for (int x = (int)Math.Floor(origin.X * scaling); x < Math.Ceiling((origin.X + control.Bounds.Width) * scaling); x++)
+                        for (int y = 0; y < image.PixelSize.Height; y++)
+                            // Count at least half-covered glyph pixels against the light surface, excluding the button border.
+                            if (bytes[y * buffer.RowBytes + x * 4 + 3] >= 128 &&
+                                Math.Max(bytes[y * buffer.RowBytes + x * 4], Math.Max(bytes[y * buffer.RowBytes + x * 4 + 1], bytes[y * buffer.RowBytes + x * 4 + 2])) <= threshold)
+                            {
+                                left = Math.Min(left, x); right = Math.Max(right, x);
+                                top = Math.Min(top, y); bottom = Math.Max(bottom, y);
+                            }
+                    Assert.True(right >= left, control.Name);
+                    return (left, top, right, bottom);
+                }
+            }
         }
         finally { window.Close(); }
     }
@@ -620,7 +765,7 @@ public sealed class ProjectReportTests : IDisposable
         preview.ShowPage(1); Assert.Equal(.5, preview.Zoom);
         preview.ZoomOutCommand.Execute(null); Assert.Equal(.25, preview.Zoom); Assert.False(preview.ZoomOutCommand.CanExecute(null));
         foreach (double step in new[] { .5, .75, 1, 1.25, 1.5, 2, 3, 4 })
-        { preview.ZoomInCommand.Execute(null); Assert.Equal(step, preview.Zoom); }
+        { preview.ZoomInCommand.Execute(null); Assert.Equal(step, preview.Zoom); Assert.Equal($"{step * 100:0} %", preview.ZoomLabel); }
         Assert.False(preview.ZoomInCommand.CanExecute(null));
         foreach (double step in new[] { 3, 2, 1.5, 1.25, 1, .75, .5, .25 })
         { preview.ZoomOutCommand.Execute(null); Assert.Equal(step, preview.Zoom); }
@@ -634,6 +779,118 @@ public sealed class ProjectReportTests : IDisposable
         Assert.True(main.ReportAsync().GetAwaiter().GetResult());
         Assert.Equal(0, main.ReportPreview!.PageIndex); Assert.True(main.ReportPreview.IsPageFit);
         main.CloseReport();
+    }
+
+    [Theory]
+    [InlineData("de-DE", "75", .75)] [InlineData("en-US", "75 %", .75)]
+    [InlineData("de-DE", "125", 1.25)] [InlineData("en-US", " 125% ", 1.25)]
+    [InlineData("de-DE", "87,5 %", .875)] [InlineData("en-US", "87.5", .875)]
+    [InlineData("de-DE", "25", .25)] [InlineData("en-US", "400 %", 4)]
+    public void InlineZoomCommitsManualPercentageWithoutMovingTheToolbar(string language, string text, double zoom)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language);
+        var (main, files) = Open(ReportTestProjects.Create(true));
+        var (window, view) = ShowReportWorkspace(main, files, 1100, 650);
+        try
+        {
+            var preview = main.ReportPreview!; var picture = preview.Picture;
+            var value = view.FindControl<Grid>("ZoomValue")!;
+            var button = view.FindControl<Button>("ZoomValueButton")!;
+            var input = view.FindControl<TextBox>("ZoomInput")!;
+            var center = view.FindControl<StackPanel>("PreviewControls")!;
+            var bounds = new Rect(center.TranslatePoint(default, view)!.Value, center.Bounds.Size);
+            Click(button); Dispatcher.UIThread.RunJobs();
+            Assert.True(input.IsVisible); Assert.True(input.IsFocused); Assert.False(button.IsVisible);
+            Assert.False(view.FindControl<TextBlock>("ZoomLabel")!.IsEffectivelyVisible);
+            Assert.Equal(preview.ZoomLabel, input.SelectedText);
+            Assert.Equal(value.Bounds.Width, input.Bounds.Width);
+            var border = Assert.Single(input.GetVisualDescendants().OfType<Border>(), b => b.Name == "PART_BorderElement");
+            Assert.Same(Application.Current!.FindResource("Accent"), border.BorderBrush);
+            input.Text = text; Press(input, Key.Enter); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(zoom, preview.Zoom); Assert.False(preview.IsPageFit); Assert.False(preview.IsPageWidthFit);
+            Assert.Same(picture, preview.Picture); Assert.False(input.IsVisible); Assert.True(button.IsVisible);
+            Assert.True(view.FindControl<TextBlock>("ZoomLabel")!.IsEffectivelyVisible);
+            Assert.Equal(preview.ZoomLabel, view.FindControl<TextBlock>("ZoomLabel")!.Text);
+            Assert.Equal(bounds, new Rect(center.TranslatePoint(default, view)!.Value, center.Bounds.Size));
+            var label = view.FindControl<TextBlock>("ZoomLabel")!;
+            var minus = view.FindControl<Button>("ZoomOutButton")!;
+            var plus = view.FindControl<Button>("ZoomInButton")!;
+            double midpoint = (minus.TranslatePoint(new(minus.Bounds.Width / 2, 0), value)!.Value.X
+                + plus.TranslatePoint(new(plus.Bounds.Width / 2, 0), value)!.Value.X) / 2;
+            Assert.Equal(midpoint, value.Bounds.Width / 2, .5);
+            Assert.True(label.TranslatePoint(new(label.Bounds.Width, 0), value)!.Value.X <= value.Bounds.Width);
+            preview.UpdateViewport(1000, 700); Assert.Equal(zoom, preview.Zoom);
+            preview.ShowPage(1); Assert.Equal(zoom, preview.Zoom); Assert.False(main.Session!.IsDirty);
+            preview.ZoomOutCommand.Execute(null);
+            double lower = new[] { .25, .5, .75, 1, 1.25, 1.5, 2, 3, 4 }.LastOrDefault(step => step < zoom, zoom);
+            Assert.Equal(lower, preview.Zoom);
+            Wheel(window, view, new Point(400, 200), KeyModifiers.Control, 1);
+            Assert.True(preview.Zoom > lower);
+        }
+        finally { window.Close(); }
+    }
+
+    [Theory]
+    [InlineData("")] [InlineData("abc")] [InlineData("NaN")] [InlineData("Infinity")]
+    [InlineData("0")] [InlineData("-75")] [InlineData("24")] [InlineData("401")]
+    [InlineData("75%%")] [InlineData("1,000")] [InlineData("1e2")]
+    public void InvalidInlineZoomStaysEditableAndEscapeDiscardsWithoutClosingTheReport(string text)
+    {
+        var (main, files) = Open(ReportTestProjects.Create());
+        var (window, view) = ShowReportWorkspace(main, files);
+        try
+        {
+            var preview = main.ReportPreview!; double zoom = preview.Zoom;
+            var button = view.FindControl<Button>("ZoomValueButton")!;
+            var input = view.FindControl<TextBox>("ZoomInput")!;
+            Click(button); input.Text = text; Press(input, Key.Enter);
+            Assert.Equal(zoom, preview.Zoom); Assert.True(preview.IsPageFit);
+            Assert.True(input.IsFocused); Assert.True(input.IsVisible); Assert.Contains("error", input.Classes);
+            Assert.Equal(Strings.ReportZoomRange, Avalonia.Automation.AutomationProperties.GetHelpText(input));
+            Press(input, Key.Escape); Dispatcher.UIThread.RunJobs();
+            Assert.Same(preview, main.ReportPreview); Assert.True(view.IsFocused);
+            Assert.Equal(zoom, preview.Zoom); Assert.True(button.IsVisible); Assert.False(input.IsVisible);
+            Assert.DoesNotContain("error", input.Classes);
+            Click(button); input.Text = "125"; view.FindControl<Button>("PageFitButton")!.Focus();
+            Assert.Equal(zoom, preview.Zoom); Assert.False(input.IsVisible);
+            Click(button); input.Text = "125"; Press(input, Key.Escape);
+            Assert.Equal(zoom, preview.Zoom); Assert.Same(preview, main.ReportPreview);
+            Press(view, Key.Escape); Assert.Null(main.ReportPreview);
+        }
+        finally { window.Close(); }
+    }
+
+    [Fact]
+    public void ZoomCommandsAndBusyStateDiscardPendingInputAndDoNotAllowStaleCommits()
+    {
+        var (main, files) = Open(ReportTestProjects.Create());
+        var (window, view) = ShowReportWorkspace(main, files);
+        try
+        {
+            var preview = main.ReportPreview!;
+            var button = view.FindControl<Button>("ZoomValueButton")!;
+            var input = view.FindControl<TextBox>("ZoomInput")!;
+            Click(button); input.Text = "125"; preview.ZoomInCommand.Execute(null);
+            Assert.False(input.IsVisible); double zoom = preview.Zoom;
+            Assert.Equal(preview.ZoomLabel, view.FindControl<TextBlock>("ZoomLabel")!.Text);
+            Click(button); input.Text = "125";
+            var pending = new TaskCompletionSource(); var output = preview.OutputAsync(() => pending.Task);
+            Assert.False(input.IsVisible); Assert.False(button.IsEffectivelyEnabled);
+            Assert.False(preview.TrySetZoom("125")); Assert.Equal(zoom, preview.Zoom);
+            pending.SetResult(); output.GetAwaiter().GetResult(); Dispatcher.UIThread.RunJobs();
+            Assert.True(button.IsEffectivelyEnabled);
+            main.CloseReport(); Assert.False(preview.TrySetZoom("125"));
+        }
+        finally { window.Close(); }
+    }
+
+    private static void Click(Button button) => typeof(Button).GetMethod("OnClick",
+        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(button, null);
+
+    private static void Press(InputElement input, Key key)
+    {
+        var args = new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key };
+        input.RaiseEvent(args); Assert.True(args.Handled);
     }
 
     [Fact]
@@ -658,14 +915,14 @@ public sealed class ProjectReportTests : IDisposable
         {
             var preview = main.ReportPreview!;
             var fitCommand = widthFit ? preview.PageWidthCommand : preview.PageFitCommand;
-            fitCommand.Execute(null); Dispatcher.UIThread.RunJobs(); double initial = preview.Zoom;
+            fitCommand.Execute(null); Dispatcher.UIThread.RunJobs(); double initial = preview.Zoom; CheckZoomLabel();
             Resize(1250, 800); Assert.True(preview.Zoom > initial);
             Assert.Equal(widthFit, preview.IsPageWidthFit); Assert.Equal(!widthFit, preview.IsPageFit);
-            preview.ShowPage(1); Assert.Equal(widthFit, preview.IsPageWidthFit);
-            preview.ZoomInCommand.Execute(null); double manual = preview.Zoom;
+            preview.ShowPage(1); Assert.Equal(widthFit, preview.IsPageWidthFit); CheckZoomLabel();
+            preview.ZoomInCommand.Execute(null); Dispatcher.UIThread.RunJobs(); double manual = preview.Zoom; CheckZoomLabel();
             Assert.False(preview.IsPageFit); Assert.False(preview.IsPageWidthFit);
             Resize(1100, 650); Assert.Equal(manual, preview.Zoom);
-            fitCommand.Execute(null); Dispatcher.UIThread.RunJobs();
+            fitCommand.Execute(null); Dispatcher.UIThread.RunJobs(); CheckZoomLabel();
             Assert.Equal(initial, preview.Zoom, .002);
             var scroll = view.FindControl<ScrollViewer>("PageScroll")!;
             Assert.True(preview.PageWidth + 32 <= scroll.Viewport.Width + 1);
@@ -681,6 +938,14 @@ public sealed class ProjectReportTests : IDisposable
         }
         finally { window.Close(); }
 
+        void CheckZoomLabel()
+        {
+            string text = view.FindControl<TextBlock>("ZoomLabel")!.Text!;
+            Assert.Equal(main.ReportPreview!.ZoomLabel, text); Assert.EndsWith(" %", text);
+            double percent = double.Parse(text[..^2], CultureInfo.CurrentUICulture);
+            Assert.InRange(Math.Abs(percent - main.ReportPreview.Zoom * 100), 0, .5);
+        }
+
         void Resize(int width, int height)
         {
             window.Width = width; window.Height = height;
@@ -688,7 +953,7 @@ public sealed class ProjectReportTests : IDisposable
             var content = (Control)window.Content!;
             content.InvalidateMeasure(); content.Measure(new(width, height));
             content.InvalidateArrange(); content.Arrange(new Rect(0, 0, width, height));
-            Dispatcher.UIThread.RunJobs();
+            Dispatcher.UIThread.RunJobs(); CheckZoomLabel();
         }
     }
 

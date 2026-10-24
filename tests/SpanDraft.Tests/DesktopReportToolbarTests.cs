@@ -174,7 +174,8 @@ public sealed class DesktopReportToolbarTests
         if (escape)
         {
             var key = new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape };
-            reportView.FindControl<Button>("PageFitButton")!.RaiseEvent(key); Assert.True(key.Handled);
+            Assert.True(reportView.IsFocused);
+            reportView.RaiseEvent(key); Assert.True(key.Handled);
         }
         else typeof(Button).GetMethod("OnClick", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(reportView.FindControl<Button>("CloseButton"), null);
@@ -187,6 +188,64 @@ public sealed class DesktopReportToolbarTests
         else if (draft == "distributed") { Assert.Same(buffer, editor.DistributedLoadDraft); Assert.Equal("unconfirmed", editor.DistributedLoadDraft!.IntensityText); }
         else { Assert.True(editor.DimensionLength.IsEditing); Assert.Equal("9000", editor.DimensionLength.Text); }
         window.Close();
+    }
+
+    [Theory]
+    [InlineData("toolbar")] [InlineData("menu")] [InlineData("keyboard")]
+    public void PreviewFocusAllowsImmediateEscapeAndNormalToolbarTabNavigationAfterReopening(string route)
+    {
+        using var environment = new DesktopControlEnvironment(); using var culture = new UiCultureScope("de-DE");
+        var (window, main) = OpenWindow(); Layout(window, 1100, 650);
+        try
+        {
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                if (route == "toolbar")
+                {
+                    var reportButton = window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ReportToolbarButton");
+                    reportButton.Focus(NavigationMethod.Tab);
+                    typeof(Button).GetMethod("OnClick", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(reportButton, null);
+                }
+                else if (route == "menu")
+                {
+                    var reportMenu = window.FindControl<MenuItem>("ReportMenuItem")!;
+                    reportMenu.Focus(NavigationMethod.Tab); reportMenu.Command!.Execute(null);
+                }
+                else
+                {
+                    var primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+                    var key = new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.P, KeyModifiers = primary };
+                    window.RaiseEvent(key); Assert.True(key.Handled);
+                }
+                Layout(window, 1100, 650);
+                var preview = Assert.Single(window.GetVisualDescendants().OfType<ReportPreviewView>());
+                Assert.Same(preview, window.FocusManager!.GetFocusedElement());
+                var toolbar = preview.FindControl<Border>("ReportToolbar")!;
+                Assert.All(toolbar.GetVisualDescendants().OfType<Button>(), button =>
+                {
+                    Assert.False(button.IsFocused); Assert.DoesNotContain("selected", button.Classes);
+                    Assert.False(Assert.Single(button.GetVisualDescendants().OfType<Border>(), b => b.Name == "FocusRing").IsVisible);
+                });
+                InputElement focused = preview;
+                if (attempt == 1)
+                {
+                    var names = new[] { "SavePdfButton", "PrintButton", "PreviousButton", "NextButton", "ZoomOutButton", "ZoomValueButton", "ZoomInButton",
+                        "PageFitButton", "PageWidthButton", "CloseButton" };
+                    foreach (var button in names.Select(name => preview.FindControl<Button>(name)!).Where(button => button.IsEffectivelyEnabled))
+                    {
+                        Assert.True(DesktopControlEnvironment.MoveFocus(window, focused, NavigationDirection.Next));
+                        Assert.Same(button, window.FocusManager.GetFocusedElement());
+                        Assert.True(Assert.Single(button.GetVisualDescendants().OfType<Border>(), b => b.Name == "FocusRing").IsVisible);
+                        focused = button;
+                    }
+                }
+                var escape = new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape };
+                focused.RaiseEvent(escape); Assert.True(escape.Handled);
+                Layout(window, 1100, 650);
+                Assert.Equal(MainWorkspaceKind.BeamEditor, main.Workspace);
+            }
+        }
+        finally { window.Close(); }
     }
 
     private static (MainWindow Window, MainWindowViewModel Main) OpenWindow()

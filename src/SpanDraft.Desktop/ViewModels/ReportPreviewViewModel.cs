@@ -20,7 +20,7 @@ public sealed class ReportPreviewViewModel : ObservableObject, IDisposable
     internal string? ProjectPath { get; }
     internal ReportPagePicture? Picture { get; private set; }
     public int PageIndex { get; private set; }
-    public string PageLabel => string.Format(CultureInfo.CurrentUICulture, Report.Data.Labels.PageFormat, PageIndex + 1, Report.Pages.Count);
+    public string PageLabel => string.Format(CultureInfo.CurrentUICulture, "{0} / {1}", PageIndex + 1, Report.Pages.Count);
     public bool IsBusy => busy;
     public bool CanOutput => !busy && !disposed;
     public bool CanPrint => CanOutput && OperatingSystem.IsWindows();
@@ -29,6 +29,7 @@ public sealed class ReportPreviewViewModel : ObservableObject, IDisposable
     public bool IsPageFit => fitMode == FitMode.Page;
     public bool IsPageWidthFit => fitMode == FitMode.Width;
     public double Zoom { get; private set; } = 1;
+    public string ZoomLabel => (Zoom * 100).ToString("0", CultureInfo.CurrentUICulture) + " %";
     public double PageWidth => ReportDocument.PageWidth * 96d / 72 * Zoom;
     public double PageHeight => ReportDocument.PageHeight * 96d / 72 * Zoom;
     public ActionCommand PreviousCommand { get; }
@@ -77,6 +78,18 @@ public sealed class ReportPreviewViewModel : ObservableObject, IDisposable
         if (fitMode != FitMode.Manual) SetZoom(FitZoom(fitMode), fitMode);
     }
 
+    public bool TrySetZoom(string? text)
+    {
+        if (!CanOutput) return false;
+        text = text?.Trim();
+        if (text?.EndsWith('%') == true) text = text[..^1].TrimEnd();
+        if (!double.TryParse(text, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
+                CultureInfo.CurrentUICulture, out double percent) || !double.IsFinite(percent)
+            || percent < ZoomSteps[0] * 100 || percent > ZoomSteps[^1] * 100) return false;
+        SetZoom(percent / 100, FitMode.Manual);
+        return true;
+    }
+
     private double FitZoom(FitMode mode)
     {
         if (viewportWidth <= 0 || viewportHeight <= 0) return Zoom;
@@ -89,7 +102,7 @@ public sealed class ReportPreviewViewModel : ObservableObject, IDisposable
     {
         if (Zoom == zoom && fitMode == mode) return;
         Zoom = zoom; fitMode = mode;
-        Notify(nameof(Zoom)); Notify(nameof(IsPageFit)); Notify(nameof(IsPageWidthFit)); Notify(nameof(PageWidth)); Notify(nameof(PageHeight));
+        Notify(nameof(Zoom)); Notify(nameof(ZoomLabel)); Notify(nameof(IsPageFit)); Notify(nameof(IsPageWidthFit)); Notify(nameof(PageWidth)); Notify(nameof(PageHeight));
         RefreshCommands();
     }
 

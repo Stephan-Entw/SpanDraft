@@ -3,56 +3,85 @@
              xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
              xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
              x:Class="SpanDraft.Desktop.Views.ReportPreviewView" x:DataType="vm:ReportPreviewViewModel"
-             KeyDown="PreviewKeyDown">
+             Focusable="True" KeyDown="PreviewKeyDown">
   <Grid RowDefinitions="Auto,Auto,*">
     <Border x:Name="ReportToolbar" Padding="{DynamicResource ToolbarPadding}" Background="{DynamicResource Surface}"
             BorderBrush="{DynamicResource Border}" BorderThickness="{DynamicResource BottomBorder}">
-      <DockPanel LastChildFill="False">
-        <StackPanel x:Name="NavigationAndZoom" Orientation="Horizontal" Spacing="{StaticResource Space4}" DockPanel.Dock="Left">
-          <Button x:Name="PreviousButton" Classes="iconToolbar" Padding="2" Command="{Binding PreviousCommand}"
-                  ToolTip.Tip="{x:Static resources:Strings.ReportPrevious}" AutomationProperties.Name="{x:Static resources:Strings.ReportPrevious}">
-            <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronLeft}" Width="28" Height="28" />
-          </Button>
-          <TextBlock x:Name="PageLabel" VerticalAlignment="Center" MinWidth="90" TextAlignment="Center" Text="{Binding PageLabel}" />
-          <Button x:Name="NextButton" Classes="iconToolbar" Padding="2" Command="{Binding NextCommand}"
-                  ToolTip.Tip="{x:Static resources:Strings.ReportNext}" AutomationProperties.Name="{x:Static resources:Strings.ReportNext}">
-            <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronRight}" Width="28" Height="28" />
-          </Button>
-          <Rectangle x:Name="NavigationSeparator" Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
-          <Button x:Name="ZoomOutButton" Classes="iconToolbar" Command="{Binding ZoomOutCommand}"
-                  ToolTip.Tip="{x:Static resources:Strings.ReportZoomOut}" AutomationProperties.Name="{x:Static resources:Strings.ReportZoomOut}">
-            <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ZoomOut}" Width="20" Height="20" />
-          </Button>
-          <Button x:Name="ZoomInButton" Classes="iconToolbar" Command="{Binding ZoomInCommand}"
-                  ToolTip.Tip="{x:Static resources:Strings.ReportZoomIn}" AutomationProperties.Name="{x:Static resources:Strings.ReportZoomIn}">
-            <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ZoomIn}" Width="20" Height="20" />
-          </Button>
-          <Button x:Name="PageFitButton" Classes="iconToolbar" Command="{Binding PageFitCommand}"
-                  ToolTip.Tip="{x:Static resources:Strings.ReportFit}" AutomationProperties.Name="{x:Static resources:Strings.ReportFit}">
-            <PathIcon Classes="fluentIcon fluentIcon24" Data="{StaticResource FluentIcon.DocumentFit}" />
-          </Button>
-          <Button x:Name="PageWidthButton" Classes="iconToolbar" Command="{Binding PageWidthCommand}"
-                  ToolTip.Tip="{x:Static resources:Strings.ReportPageWidth}" AutomationProperties.Name="{x:Static resources:Strings.ReportPageWidth}">
-            <PathIcon Classes="fluentIcon fluentIcon24" Data="{StaticResource FluentIcon.DocumentWidth}" />
-          </Button>
-        </StackPanel>
-        <StackPanel x:Name="OutputActions" Orientation="Horizontal" Spacing="{StaticResource Space4}" DockPanel.Dock="Right">
-          <Rectangle x:Name="OutputSeparator" Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
-          <Button x:Name="SavePdfButton" Classes="toolbar" Click="SavePdf" IsEnabled="{Binding CanOutput}">
+      <Grid ColumnDefinitions="*,Auto,*">
+        <StackPanel x:Name="OutputActions" Orientation="Horizontal" HorizontalAlignment="Left" Spacing="{StaticResource Space4}">
+          <Button x:Name="SavePdfButton" Classes="toolbar" Click="SavePdf" IsEnabled="{Binding CanOutput}"
+                  AutomationProperties.Name="{x:Static resources:Strings.ReportSavePdf}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
               <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.DocumentPdf}" Width="20" Height="20" />
-              <TextBlock Text="{x:Static resources:Strings.ReportSavePdf}" VerticalAlignment="Center" />
+              <controls:ToolbarTextPresenter>
+                <TextBlock Text="{x:Static resources:Strings.ReportSavePdf}" />
+              </controls:ToolbarTextPresenter>
             </StackPanel>
           </Button>
-          <Button x:Name="PrintButton" Classes="toolbar" Click="PrintReport" IsEnabled="{Binding CanPrint}">
+          <Button x:Name="PrintButton" Classes="toolbar" Click="PrintReport" IsEnabled="{Binding CanPrint}"
+                  AutomationProperties.Name="{x:Static resources:Strings.ReportPrint}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
               <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Print}" Width="20" Height="20" />
-              <TextBlock Text="{x:Static resources:Strings.ReportPrint}" VerticalAlignment="Center" />
+              <controls:ToolbarTextPresenter>
+                <TextBlock Text="{x:Static resources:Strings.ReportPrint}" />
+              </controls:ToolbarTextPresenter>
             </StackPanel>
           </Button>
-          <Button x:Name="CloseButton" Classes="toolbar" Content="{x:Static resources:Strings.ReportClose}" Command="{Binding CloseCommand}" />
         </StackPanel>
-      </DockPanel>
+        <StackPanel x:Name="PreviewControls" Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space24}">
+          <StackPanel x:Name="PageNavigation" Orientation="Horizontal">
+            <Button x:Name="PreviousButton" Classes="iconToolbar" Width="24" Padding="0" Command="{Binding PreviousCommand}"
+                    ToolTip.Tip="{x:Static resources:Strings.ReportPrevious}" AutomationProperties.Name="{x:Static resources:Strings.ReportPrevious}">
+              <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronLeft}" Width="20" Height="20" />
+            </Button>
+            <controls:ToolbarTextPresenter x:Name="PageValue" Width="44" Height="{DynamicResource ToolbarButton}">
+              <TextBlock x:Name="PageLabel" FontSize="{DynamicResource ToolbarSize}" Text="{Binding PageLabel}" />
+            </controls:ToolbarTextPresenter>
+            <Button x:Name="NextButton" Classes="iconToolbar" Width="24" Padding="0" Command="{Binding NextCommand}"
+                    ToolTip.Tip="{x:Static resources:Strings.ReportNext}" AutomationProperties.Name="{x:Static resources:Strings.ReportNext}">
+              <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronRight}" Width="20" Height="20" />
+            </Button>
+          </StackPanel>
+          <StackPanel x:Name="ZoomControls" Orientation="Horizontal">
+            <Button x:Name="ZoomOutButton" Classes="iconToolbar" Width="24" Padding="0" Command="{Binding ZoomOutCommand}"
+                    ToolTip.Tip="{x:Static resources:Strings.ReportZoomOut}" AutomationProperties.Name="{x:Static resources:Strings.ReportZoomOut}">
+              <PathIcon Classes="fluentIcon" Width="16" Height="16" Data="{StaticResource FluentIcon.Subtract}" />
+            </Button>
+            <Grid x:Name="ZoomValue" Width="48" IsEnabled="{Binding CanOutput}">
+              <controls:ToolbarTextPresenter x:Name="ZoomDisplay" Height="{DynamicResource ToolbarButton}" IsHitTestVisible="False">
+                <TextBlock x:Name="ZoomLabel" FontSize="{DynamicResource ToolbarSize}" Text="{Binding ZoomLabel}"
+                           Foreground="{Binding Foreground, ElementName=ZoomValueButton}" />
+              </controls:ToolbarTextPresenter>
+              <Button x:Name="ZoomValueButton" Classes="toolbar" HorizontalAlignment="Stretch" Padding="0" Background="Transparent" Click="EditZoom"
+                      AutomationProperties.Name="{x:Static resources:Strings.Zoom}" AutomationProperties.HelpText="{Binding ZoomLabel}" />
+              <TextBox x:Name="ZoomInput" IsVisible="False" MinWidth="0" TextAlignment="Center" Padding="2,0"
+                       Height="{DynamicResource ToolbarButton}" KeyDown="ZoomInputKeyDown" LostFocus="ZoomInputLostFocus"
+                       AutomationProperties.Name="{x:Static resources:Strings.Zoom}" />
+            </Grid>
+            <Button x:Name="ZoomInButton" Classes="iconToolbar" Width="24" Padding="0" Command="{Binding ZoomInCommand}"
+                    ToolTip.Tip="{x:Static resources:Strings.ReportZoomIn}" AutomationProperties.Name="{x:Static resources:Strings.ReportZoomIn}">
+              <PathIcon Classes="fluentIcon" Width="16" Height="16" Data="{StaticResource FluentIcon.Add}" />
+            </Button>
+          </StackPanel>
+          <StackPanel x:Name="FitControls" Orientation="Horizontal" Spacing="{StaticResource Space4}">
+            <Button x:Name="PageFitButton" Classes="iconToolbar" Command="{Binding PageFitCommand}"
+                    ToolTip.Tip="{x:Static resources:Strings.ReportFit}" AutomationProperties.Name="{x:Static resources:Strings.ReportFit}">
+              <PathIcon Classes="fluentIcon fluentIcon24" Data="{StaticResource FluentIcon.DocumentFit}" />
+            </Button>
+            <Button x:Name="PageWidthButton" Classes="iconToolbar" Command="{Binding PageWidthCommand}"
+                    ToolTip.Tip="{x:Static resources:Strings.ReportPageWidth}" AutomationProperties.Name="{x:Static resources:Strings.ReportPageWidth}">
+              <PathIcon Classes="fluentIcon fluentIcon24" Data="{StaticResource FluentIcon.DocumentWidth}" />
+            </Button>
+          </StackPanel>
+        </StackPanel>
+        <Button x:Name="CloseButton" Grid.Column="2" HorizontalAlignment="Right" Classes="secondary" Height="{DynamicResource ToolbarButton}"
+                VerticalContentAlignment="Stretch" Command="{Binding CloseCommand}"
+                AutomationProperties.Name="{x:Static resources:Strings.ReportClose}">
+          <controls:ToolbarTextPresenter>
+            <TextBlock Text="{x:Static resources:Strings.ReportClose}" />
+          </controls:ToolbarTextPresenter>
+        </Button>
+      </Grid>
     </Border>
     <TextBlock x:Name="ErrorText" Grid.Row="1" Margin="16,8" Classes="validationMessage" TextWrapping="Wrap"
                IsVisible="{Binding HasError}" Text="{Binding Error}" />

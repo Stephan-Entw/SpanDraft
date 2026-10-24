@@ -21,7 +21,7 @@ public sealed class DesktopIconTests
 {
     private static readonly string[] Toolbar = ["PointLoad", "PointMoment", "DistributedLoad", "FixedSupport", "PinnedSupport", "RollerSupport"];
     private static readonly string[] Fluent = ["DocumentAdd", "FolderOpen", "BookOpen", "Document", "Info", "Edit", "Star", "ErrorCircle", "Delete",
-        "ZoomIn", "ZoomOut", "Print", "DocumentPdf", "ChevronLeft", "ChevronRight"];
+        "ZoomIn", "ZoomOut", "Add", "Subtract", "Print", "DocumentPdf", "ChevronLeft", "ChevronRight"];
     private static readonly string[] Fluent24 = ["DocumentFit", "DocumentWidth", "DocumentData"];
 
     [Fact]

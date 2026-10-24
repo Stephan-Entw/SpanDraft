@@ -325,10 +325,11 @@
   <data name="ReportPosition" xml:space="preserve"><value>at x = {0} {1}{2}</value></data>
   <data name="ReportSavePdf" xml:space="preserve"><value>Save PDF</value></data>
   <data name="ReportPrint" xml:space="preserve"><value>Print</value></data>
-  <data name="ReportFit" xml:space="preserve"><value>Fit page</value></data>
-  <data name="ReportPageWidth" xml:space="preserve"><value>Page width</value></data>
+  <data name="ReportFit" xml:space="preserve"><value>Show whole page</value></data>
+  <data name="ReportPageWidth" xml:space="preserve"><value>Fit to page width</value></data>
   <data name="ReportZoomIn" xml:space="preserve"><value>Zoom in</value></data>
   <data name="ReportZoomOut" xml:space="preserve"><value>Zoom out</value></data>
+  <data name="ReportZoomRange" xml:space="preserve"><value>Enter a zoom between 25 and 400 %.</value></data>
   <data name="ReportPrevious" xml:space="preserve"><value>Previous page</value></data>
   <data name="ReportNext" xml:space="preserve"><value>Next page</value></data>
   <data name="ReportError" xml:space="preserve"><value>The report could not be created or output.</value></data>

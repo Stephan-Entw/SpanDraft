@@ -26,7 +26,7 @@ public partial class ReportPreviewView : UserControl
         AttachedToVisualTree += (_, _) =>
         {
             Observe();
-            Dispatcher.UIThread.Post(() => { if (TopLevel.GetTopLevel(this) is not null) PageFitButton.Focus(); });
+            Dispatcher.UIThread.Post(() => { if (TopLevel.GetTopLevel(this) is not null) Focus(); });
         };
         DetachedFromVisualTree += (_, _) =>
         {
@@ -44,6 +44,7 @@ public partial class ReportPreviewView : UserControl
 
     private void Observe()
     {
+        EndZoomEdit();
         ResetWheel();
         if (model is not null) model.PropertyChanged -= ModelChanged;
         model = DataContext as ReportPreviewViewModel;
@@ -54,6 +55,7 @@ public partial class ReportPreviewView : UserControl
 
     private void ModelChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(ReportPreviewViewModel.Zoom) or nameof(ReportPreviewViewModel.IsBusy)) EndZoomEdit();
         if (e.PropertyName == nameof(ReportPreviewViewModel.Picture)) PageView.Page = model?.Picture;
         if (e.PropertyName == nameof(ReportPreviewViewModel.PageIndex)) { ResetWheel(); PageScroll.Offset = default; }
         if (e.PropertyName == nameof(ReportPreviewViewModel.Zoom) && !wheelZooming
@@ -104,6 +106,36 @@ public partial class ReportPreviewView : UserControl
     }
 
     private void UpdateViewport() => model?.UpdateViewport(PageScroll.Viewport.Width, PageScroll.Viewport.Height);
+
+    private void EditZoom(object? sender, RoutedEventArgs e)
+    {
+        if (model?.CanOutput != true) return;
+        ZoomInput.Text = model.ZoomLabel;
+        ZoomDisplay.IsVisible = false; ZoomValueButton.IsVisible = false; ZoomInput.IsVisible = true;
+        ZoomInput.Focus(); ZoomInput.SelectAll();
+    }
+
+    private void EndZoomEdit()
+    {
+        ZoomInput.IsVisible = false; ZoomValueButton.IsVisible = true; ZoomDisplay.IsVisible = true;
+        ZoomInput.Classes.Remove("error"); ToolTip.SetTip(ZoomInput, null);
+        Avalonia.Automation.AutomationProperties.SetHelpText(ZoomInput, null);
+    }
+
+    private void ZoomInputLostFocus(object? sender, RoutedEventArgs e) => EndZoomEdit();
+
+    private void ZoomInputKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.KeyModifiers != KeyModifiers.None || e.Key is not (Key.Enter or Key.Escape)) return;
+        e.Handled = true;
+        if (e.Key == Key.Enter && model?.TrySetZoom(ZoomInput.Text) != true)
+        {
+            ZoomInput.Classes.Add("error"); ToolTip.SetTip(ZoomInput, Strings.ReportZoomRange);
+            Avalonia.Automation.AutomationProperties.SetHelpText(ZoomInput, Strings.ReportZoomRange);
+            return;
+        }
+        EndZoomEdit(); Focus();
+    }
 
     private void PreviewKeyDown(object? sender, KeyEventArgs e)
     {

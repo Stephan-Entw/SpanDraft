@@ -325,10 +325,11 @@
   <data name="ReportPosition" xml:space="preserve"><value>bei x = {0} {1}{2}</value></data>
   <data name="ReportSavePdf" xml:space="preserve"><value>PDF speichern</value></data>
   <data name="ReportPrint" xml:space="preserve"><value>Drucken</value></data>
-  <data name="ReportFit" xml:space="preserve"><value>Ganze Seite</value></data>
-  <data name="ReportPageWidth" xml:space="preserve"><value>Seitenbreite</value></data>
+  <data name="ReportFit" xml:space="preserve"><value>Ganze Seite anzeigen</value></data>
+  <data name="ReportPageWidth" xml:space="preserve"><value>An Seitenbreite anpassen</value></data>
   <data name="ReportZoomIn" xml:space="preserve"><value>Vergrößern</value></data>
   <data name="ReportZoomOut" xml:space="preserve"><value>Verkleinern</value></data>
+  <data name="ReportZoomRange" xml:space="preserve"><value>Zoom zwischen 25 und 400 % eingeben.</value></data>
   <data name="ReportPrevious" xml:space="preserve"><value>Vorherige Seite</value></data>
   <data name="ReportNext" xml:space="preserve"><value>Nächste Seite</value></data>
   <data name="ReportError" xml:space="preserve"><value>Der Bericht konnte nicht erstellt oder ausgegeben werden.</value></data>
