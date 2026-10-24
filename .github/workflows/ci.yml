@@ -67,7 +67,7 @@ jobs:
       - name: Verify solver source hash
         shell: bash
         run: |
-          expected_hash='81dbf47f2cf08c9100cb90497246bd4e8107a85e6f013c60046fcb047da78962'
+          expected_hash='c2099009800070d551256de89b0bb874453a54af0354b5605253360186f8dc82'
           actual_hash=$(jq -er '.solverSourceSha256' \
             "${RUNNER_TEMP}/spandraft-validation-report.json")
 

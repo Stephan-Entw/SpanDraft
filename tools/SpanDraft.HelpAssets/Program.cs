@@ -92,7 +92,7 @@ internal static class Program
     }
     private static void Text(Canvas page, string text, double x, double y, double width = 200, double size = 17) =>
         Add(page, new TextBlock { Text = text, FontSize = size, Foreground = AppBrush("TextPrimary"), TextAlignment = TextAlignment.Center }, x, y, width, 52);
-    private static EditorDocument Document() => new(Length.FromMeters(2), MaterialCatalogCodec.LoadBuiltIn().Find("S235JR")!.Material,
+    private static EditorDocument Document() => new(Length.FromMeters(2), MaterialCatalogCodec.LoadBuiltIn().Find("S235JR")!,
         new RectangleSectionGeometry(Length.FromMillimeters(40), Length.FromMillimeters(80)), SectionAxisDesignation.Y);
     private static BeamCanvas Beam(EditorDocument document, double width, double height, double beamY,
         double leftMargin = 60, double rightMargin = 60)
