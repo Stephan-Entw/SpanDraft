@@ -46,7 +46,7 @@
         </StackPanel>
       </Grid>
       <TextBlock x:Name="MaterialLibraryError" Text="{Binding LibraryError}" IsVisible="{Binding HasLibraryError}" Classes="validationMessage" />
-      <TextBlock Text="{x:Static resources:Strings.MaterialInLibrary}" IsVisible="{Binding IsInLibrary}" Classes="secondary" />
+      <TextBlock Text="{x:Static resources:Strings.InLibrary}" IsVisible="{Binding IsInLibrary}" Classes="secondary" />
     </StackPanel>
   </ScrollViewer>
 </UserControl>

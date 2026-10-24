@@ -138,6 +138,7 @@ public sealed class MaterialWorkflowRegressionTests
         editor.MaterialNumber = "1.2345"; editor.OtherStandards = " A ; B ; ";
         Assert.True(await editor.AddLibraryAsync()); Assert.Same(editor, Assert.IsType<MaterialSelectionViewModel>(f.Main.Setup.CurrentStep).Editor); Assert.Same(selected, f.Main.Setup.SelectedMaterial);
         Assert.True(editor.IsInLibrary); Assert.False(editor.AddLibraryCommand.CanExecute(null));
+        Assert.Equal(Strings.InLibrary, editor.LibraryActionLabel);
         var entry = Assert.Single(f.Main.UserMaterials.All); Assert.Equal(new[] { "A", "B" }, entry.OtherStandards);
         editor.CancelCommand.Execute(null); Assert.Same(selected, f.Main.Setup.SelectedMaterial); Assert.Single(f.Main.UserMaterials.All);
         editor = f.New(); editor.Name = "Second"; Assert.True(await editor.AddLibraryAsync());
@@ -164,7 +165,7 @@ public sealed class MaterialWorkflowRegressionTests
             case "number": editor.MaterialNumber = "1.2345"; break;
             default: editor.OtherStandards = "Another standard"; break;
         }
-        Assert.False(editor.IsInLibrary); Assert.Equal(Strings.SectionDefinitionAddLibrary, editor.LibraryActionLabel);
+        Assert.False(editor.IsInLibrary); Assert.Equal(Strings.SaveToLibrary, editor.LibraryActionLabel);
         Assert.Same(saved, f.Main.UserMaterials.All.Single()); Assert.Single(f.Files.Writes); Assert.True(editor.CanApply);
         Assert.Equal(changed == "name", editor.CanAddLibrary); // Adding must never replace the saved name.
         if (changed != "name") Assert.Equal(Strings.LibraryNameConflict, editor.LibraryError);

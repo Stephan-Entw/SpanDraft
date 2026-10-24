@@ -266,13 +266,11 @@
   <data name="SectionDefinitionGalleryTitle" xml:space="preserve"><value>Choose a section shape</value></data>
   <data name="SectionDefinitionGalleryLead" xml:space="preserve"><value>Choose the geometry for your section.</value></data>
   <data name="SectionDefinitionResetName" xml:space="preserve"><value>Use automatic name</value></data>
-  <data name="SectionDefinitionDiscard" xml:space="preserve"><value>Discard changes</value></data>
-  <data name="SectionDefinitionAddLibrary" xml:space="preserve"><value>Add to library</value></data>
+  <data name="SaveToLibrary" xml:space="preserve"><value>Save to library</value></data>
   <data name="SectionDefinitionFromLibrary" xml:space="preserve"><value>From my library</value></data>
   <data name="SectionDefinitionLibraryEmpty" xml:space="preserve"><value>No profiles saved for this shape yet.</value></data>
   <data name="SectionDefinitionLibrarySaved" xml:space="preserve"><value>Profile added to the library.</value></data>
   <data name="SectionDefinitionDimensions" xml:space="preserve"><value>Dimensions</value></data>
-  <data name="SectionDefinitionDimensionHint" xml:space="preserve"><value>All dimensions refer to the section shown.</value></data>
   <data name="SectionDefinitionParametricForm" xml:space="preserve"><value>Parametric shape</value></data>
   <data name="SectionDefinitionManualFormDescription" xml:space="preserve"><value>Manual section properties</value></data>
   <data name="SectionDefinitionChangeProfile" xml:space="preserve"><value>Change ›</value></data>
@@ -287,14 +285,15 @@
   <data name="MaterialYieldStrength" xml:space="preserve"><value>Yield strength fy</value></data>
   <data name="MaterialDensity" xml:space="preserve"><value>Density ρ</value></data>
   <data name="MaterialPoissonRatio" xml:space="preserve"><value>Poisson’s ratio ν</value></data>
-  <data name="MaterialInLibrary" xml:space="preserve"><value>In my library</value></data>
+  <data name="InLibrary" xml:space="preserve"><value>In library</value></data>
+  <data name="LibraryNameTaken" xml:space="preserve"><value>Name already taken</value></data>
+  <data name="LibrarySaveFailedShort" xml:space="preserve"><value>The library could not be saved.</value></data>
   <data name="MaterialCurrentEntry" xml:space="preserve"><value>Currently in project</value></data>
   <data name="MaterialFilters" xml:space="preserve"><value>Material filters</value></data>
   <data name="MaterialList" xml:space="preserve"><value>Materials</value></data>
   <data name="MaterialEditName" xml:space="preserve"><value>Edit material name</value></data>
   <data name="MaterialDefine" xml:space="preserve"><value>Define material</value></data>
   <data name="MaterialCustomize" xml:space="preserve"><value>Customize material</value></data>
-  <data name="MaterialUse" xml:space="preserve"><value>Use</value></data>
   <data name="MaterialCategories" xml:space="preserve"><value>Categories</value></data>
   <data name="MaterialLibrary" xml:space="preserve"><value>Library</value></data>
   <data name="MaterialDetailsTitle" xml:space="preserve"><value>Properties</value></data>

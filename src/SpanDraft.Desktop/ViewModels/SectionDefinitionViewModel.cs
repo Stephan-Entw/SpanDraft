@@ -120,7 +120,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     public bool ShowPreview => LayoutState is SectionDefinitionLayout.ParametricDraft or SectionDefinitionLayout.ParametricSection;
     public bool ShowValues => LayoutState is SectionDefinitionLayout.ParametricSection or SectionDefinitionLayout.Manual;
     public bool ShowConfirm => HasDefinition;
-    public bool ShowLibraryAction => ShowLibraryOption && HasCommittedInputs && !string.IsNullOrWhiteSpace(DisplayName);
+    public bool ShowLibraryAction => ShowLibraryOption && HasDefinition;
     public bool HasPreview => ShowPreview && Preview is not null;
     public string ValuesTitle => IsManual ? Strings.SectionDefinitionManualProperties : Strings.SectionDefinitionProperties;
     public string SelectedFormName => IsManual ? Strings.SectionDefinitionManualChoice : Forms.FirstOrDefault(f => f.Value == _type)?.Label ?? "";
@@ -134,7 +134,8 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         {
             if (!Set(ref _pendingName, value)) return;
             _nameError = null; Notify(nameof(NameError)); Notify(nameof(HasNameError));
-            Notify(nameof(CanSaveLibrary)); SaveLibraryCommand.Refresh();
+            _saveError = null; Notify(nameof(LibraryError)); Notify(nameof(HasLibraryError));
+            RefreshLibraryAction();
         }
     }
     public string? NameError => _nameError;
@@ -145,12 +146,22 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     public string HeaderTitle => IsChoosingForm ? Strings.SectionDefinitionChooseTitle : DisplayName;
     public string? LibraryError => _saveError;
     public bool HasLibraryError => LibraryError is not null;
+    private string LibraryName => IsEditingName ? PendingName.Trim() : DisplayName;
+    private SectionLibraryEntry? ExistingLibraryEntry => string.IsNullOrWhiteSpace(LibraryName) ? null
+        : _library?.Entries.FirstOrDefault(e => StringComparer.OrdinalIgnoreCase.Equals(e.Name, LibraryName));
+    public bool IsInLibrary => HasCommittedInputs && ExistingLibraryEntry is { } entry
+        && ProjectState.SectionContentEquals(entry.Section, _section!);
+    public bool HasLibraryNameConflict => HasCommittedInputs && ExistingLibraryEntry is not null && !IsInLibrary;
+    public string LibraryActionLabel => IsInLibrary ? Strings.InLibrary : Strings.SaveToLibrary;
+    public string? LibraryMessage => HasLibraryNameConflict ? Strings.LibraryNameTaken
+        : LibraryError == Strings.LibrarySaveFailed ? Strings.LibrarySaveFailedShort : LibraryError;
+    public bool HasLibraryMessage => !string.IsNullOrEmpty(LibraryMessage);
     public IReadOnlyList<SectionDefinitionPreset> LibraryEntries => _libraryEntries;
     public bool IsLibraryEmpty => _libraryEntries.Count == 0 && _library?.Error is null && _library is not null;
     private bool HasCommittedInputs => HasDefinition && _section is not null
         && Parameters.All(p => !p.IsPending && !p.HasError);
     public bool CanSaveLibrary => ShowLibraryAction && HasCommittedInputs && !IsBusy
-        && (!IsEditingName || !string.IsNullOrWhiteSpace(PendingName));
+        && !string.IsNullOrWhiteSpace(LibraryName) && ExistingLibraryEntry is null;
     private FormDraft Current => _drafts[_type!.Value];
     public SetupChoice<ManualAxisConfiguration> Configuration
     {
@@ -311,8 +322,8 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         }
         else
         {
-            Notify(nameof(CanConfirm)); Notify(nameof(ShowLibraryAction)); Notify(nameof(CanSaveLibrary));
-            ConfirmCommand.Refresh(); SaveLibraryCommand.Refresh(); RefreshHistoryAvailability();
+            Notify(nameof(CanConfirm)); RefreshLibraryAction();
+            ConfirmCommand.Refresh(); RefreshHistoryAvailability();
         }
     }
     private void Recalculate(SectionDefinitionInput? source)
@@ -420,8 +431,6 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     {
         if (!CanSaveLibrary || !CommitName() || _section is not { } section) return false;
         string name = DisplayName;
-        // Each attempt presents its own error, including repeated duplicate-name attempts.
-        _saveError = null; Notify(nameof(LibraryError)); Notify(nameof(HasLibraryError));
         _saveError = _library?.CanSave != true ? _library?.Error ?? Strings.SectionLibraryUnavailable
             : _library.ContainsName(name) ? Strings.LibraryNameConflict : null;
         if (_saveError is not null) { Refresh(); return false; }
@@ -509,6 +518,12 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     private string Format(double value, QuantityKind kind) => QuantityFormatter.Format(value, kind, Presentation.Profile, Presentation.Mode);
     private void RefreshInputs()
     { Notify(nameof(Parameters)); Notify(nameof(GeometryInputs)); Notify(nameof(ManualInputs)); Notify(nameof(ManualAreaInputs)); }
+    private void RefreshLibraryAction()
+    {
+        foreach (var property in new[] { nameof(ShowLibraryAction), nameof(CanSaveLibrary), nameof(IsInLibrary),
+            nameof(HasLibraryNameConflict), nameof(LibraryActionLabel), nameof(LibraryMessage), nameof(HasLibraryMessage) }) Notify(property);
+        SaveLibraryCommand.Refresh();
+    }
     private void Refresh()
     {
         RefreshAxisValues(); RefreshLibraryEntries();
@@ -517,10 +532,10 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
             nameof(HasNameError), nameof(LibraryError), nameof(HasLibraryError), nameof(Configuration), nameof(AvailableAxes), nameof(SelectedAxis),
             nameof(HasRadius), nameof(Preview), nameof(Section), nameof(HasValidSection),
             nameof(Area), nameof(CanConfirm), nameof(LayoutState), nameof(ShowPreview), nameof(ShowValues),
-            nameof(ShowConfirm), nameof(ShowLibraryAction), nameof(CanSaveLibrary), nameof(IsLibraryEmpty),
+            nameof(ShowConfirm), nameof(IsLibraryEmpty),
             nameof(HasCustomName), nameof(ShowResetName), nameof(HeaderTitle), nameof(AxesEquivalent), nameof(RequiresAxisSelection) }) Notify(property);
         ChangeFormCommand.Refresh(); EditNameCommand.Refresh(); ResetNameCommand.Refresh();
-        SaveLibraryCommand.Refresh(); ConfirmCommand.Refresh(); CancelCommand.Refresh();
+        RefreshLibraryAction(); ConfirmCommand.Refresh(); CancelCommand.Refresh();
         RefreshHistoryAvailability();
     }
 }

@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
@@ -35,12 +36,16 @@ public sealed class SectionDefinitionRedesignTests
         public string? DeleteError { get; set; }
         public bool CancelDelete { get; set; }
         public int DeleteCalls { get; private set; }
+        public int SaveCalls { get; private set; }
+        public TaskCompletionSource<string?>? SaveCompletion { get; set; }
         public TaskCompletionSource<string?>? DeleteCompletion { get; set; }
         public bool ContainsName(string name) => Source.Find(name) is not null;
-        public Task<string?> SaveAsync(SectionLibraryEntry entry)
+        public async Task<string?> SaveAsync(SectionLibraryEntry entry)
         {
-            if (SaveError is null) Source.Add(entry);
-            return Task.FromResult(SaveError);
+            SaveCalls++;
+            string? error = SaveCompletion is null ? SaveError : await SaveCompletion.Task;
+            if (error is null) Source.Add(entry);
+            return error;
         }
         public async Task<string?> DeleteAsync(string name)
         {
@@ -97,7 +102,7 @@ public sealed class SectionDefinitionRedesignTests
         Assert.Equal(M(.04), Assert.IsType<CircleSectionGeometry>(entry.Section).Diameter);
     }
     [Fact]
-    public void CompactSectionInputsChangeOnlyWithArrangedHeight()
+    public void InputSizesAndSpacingStayFixedWhenWindowHeightChanges()
     {
         using var environment = new DesktopControlEnvironment();
         var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.ISection); Fill(vm);
@@ -106,28 +111,40 @@ public sealed class SectionDefinitionRedesignTests
         window.Show();
         try
         {
-            Dispatcher.UIThread.RunJobs();
-            view.Measure(new Size(1100, 650)); view.Arrange(new Rect(0, 0, 1100, 650));
+            Arrange(650);
             var workspace = view.FindControl<Grid>("InputWorkspace")!;
-            Assert.Contains("compactSectionInputs", workspace.Classes);
+            var pinned = view.FindControl<StackPanel>("PinnedInputs")!;
+            var inputs = pinned.GetVisualDescendants().OfType<TextBox>().ToArray();
+            var sizes = inputs.Select(b => b.Bounds.Size).ToArray();
+            var rows = pinned.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("definitionInputRow")).ToArray();
+            var rowMargins = rows.Select(r => r.Margin).ToArray();
+            var margin = workspace.Margin; double spacing = pinned.Spacing;
+            foreach (double height in new[] { 900, 600, 800, 650 })
+            {
+                Arrange(height);
+                Assert.Equal(margin, workspace.Margin); Assert.Equal(spacing, pinned.Spacing);
+                Assert.Equal(sizes, inputs.Select(b => b.Bounds.Size));
+                Assert.Equal(rowMargins, rows.Select(r => r.Margin));
+                Assert.Same(view.FindControl<ScrollViewer>("InputScroll"), pinned.FindAncestorOfType<ScrollViewer>());
+            }
 
-            view.InvalidateMeasure(); view.Measure(new Size(1100, 900));
-            Assert.Contains("compactSectionInputs", workspace.Classes);
-            view.Arrange(new Rect(0, 0, 1100, 900));
-            Assert.DoesNotContain("compactSectionInputs", workspace.Classes);
-
-            view.InvalidateMeasure(); view.Measure(new Size(1100, 650));
-            Assert.DoesNotContain("compactSectionInputs", workspace.Classes);
-            view.Arrange(new Rect(0, 0, 1100, 650));
-            Assert.Contains("compactSectionInputs", workspace.Classes);
+            void Arrange(double height)
+            {
+                window.Height = height; view.Width = 1100; view.Height = height;
+                for (int i = 0; i < 3; i++)
+                { Dispatcher.UIThread.RunJobs(); view.Measure(new Size(1100, height)); view.Arrange(new Rect(0, 0, 1100, height)); }
+            }
         }
         finally { window.Close(); }
     }
-    [Fact]
-    public void HeaderLibraryActionTracksDraftValidity()
+    [Theory]
+    [InlineData("de-DE", 1)] [InlineData("en-US", 1)]
+    [InlineData("de-DE", 1.25)] [InlineData("en-US", 1.25)]
+    [InlineData("de-DE", 1.5)] [InlineData("en-US", 1.5)]
+    public async Task LibraryActionKeepsItsBoundsAndCenteredContentAcrossDraftAndSaveStates(string culture, double scaling)
     {
-        using var environment = new DesktopControlEnvironment();
-        var vm = new SectionDefinitionViewModel();
+        using var environment = new DesktopControlEnvironment(scaling); using var scope = new UiCultureScope(culture);
+        var library = new Library(); var vm = new SectionDefinitionViewModel(library: library);
         var view = new SectionDefinitionView { DataContext = vm };
         var window = new Window { Content = view, Width = 1100, Height = 650 };
         window.Show();
@@ -135,29 +152,63 @@ public sealed class SectionDefinitionRedesignTests
         {
             var button = view.FindControl<Button>("SaveLibraryButton")!;
             Assert.Same(vm.SaveLibraryCommand, button.Command);
-            AssertVisibility(false);
-            vm.SelectForm(SectionEditorType.ISection); AssertVisibility(false);
-            var input = vm.Parameters.Single(p => p.Key == "h");
-            input.PendingText = "100"; Assert.True(input.Commit()); AssertVisibility(false);
-            Fill(vm); Assert.Null(vm.SelectedAxis); Assert.False(vm.CanConfirm); AssertVisibility(true);
-
+            Layout(); Assert.False(button.IsEffectivelyVisible);
+            vm.SelectForm(SectionEditorType.Circle); Check(false);
+            var bounds = button.Bounds;
+            var heading = view.FindControl<StackPanel>("LibraryHeading")!;
+            var headingPosition = heading.TranslatePoint(default, view);
+            var input = vm.Parameters.Single();
+            Fill(vm); Check(true); Stable();
             string valid = input.PendingText;
-            input.PendingText = "120"; AssertVisibility(false);
-            Assert.True(input.Commit()); AssertVisibility(true);
-            input.PendingText = "invalid"; AssertVisibility(false);
-            Assert.False(input.Commit()); AssertVisibility(false);
-            input.PendingText = valid; Assert.True(input.Commit()); AssertVisibility(true);
+            input.PendingText = "120"; Check(false); Stable();
+            Assert.True(input.Commit()); Check(true); Stable();
+            input.PendingText = "invalid"; Check(false); Stable();
+            Assert.False(input.Commit()); Check(false); Stable();
+            input.PendingText = valid; Assert.True(input.Commit()); Check(true); Stable();
+            vm.BeginNameEdit(); vm.PendingName = "Taken"; Assert.True(vm.CommitName());
+            library.Source.Add(new("Taken", new CircleSectionGeometry(M(.04))));
+            vm.RefreshLibraryState(); Check(false); Stable();
+            var message = view.FindControl<TextBlock>("LibrarySaveMessage")!;
+            Assert.Equal(culture == "de-DE" ? "Name bereits vergeben" : "Name already taken", message.Text);
+            Assert.DoesNotContain("validationMessage", message.Classes);
+            vm.BeginNameEdit(); vm.PendingName = "Free"; Assert.True(vm.CommitName()); Check(true);
+            library.SaveError = Strings.LibrarySaveFailed;
+            button.Focus(); Assert.False(await vm.SaveLibraryAsync()); Check(true); Stable();
+            Assert.False(message.Focusable); Assert.Null(ToolTip.GetTip(button));
+            Assert.DoesNotContain(view.GetVisualDescendants().OfType<SectionInputHint>(), h => h.IsEffectivelyVisible);
+            Assert.Equal(culture == "de-DE" ? "Bibliothek konnte nicht gespeichert werden." : "The library could not be saved.", message.Text);
+            Assert.DoesNotContain("librarySaveError", button.Classes);
+            library.SaveError = null; Assert.True(await vm.SaveLibraryAsync()); Check(false); Stable();
+            Assert.True(vm.IsInLibrary); Assert.Null(message.Text);
+            Assert.Equal(culture == "de-DE" ? "In Bibliothek" : "In library", AutomationProperties.GetName(button));
+            Assert.Equal("✓", ((Grid)button.Content!).Children.OfType<TextBlock>().Single(t => t.IsEffectivelyVisible && Grid.GetColumn(t) == 0).Text);
 
             var hidden = new SectionDefinitionViewModel(showLibraryOption: false);
             hidden.SelectForm(SectionEditorType.ISection); Fill(hidden); view.DataContext = hidden;
-            AssertVisibility(false);
+            Layout(); Assert.False(button.IsEffectivelyVisible);
 
-            void AssertVisibility(bool expected)
+            void Check(bool enabled)
             {
-                Dispatcher.UIThread.RunJobs();
-                view.Measure(new Size(1100, 650)); view.Arrange(new Rect(0, 0, 1100, 650));
-                Assert.Equal(expected, button.IsVisible);
-                Assert.Equal(expected, button.IsEffectivelyVisible);
+                Layout(); Assert.True(button.IsEffectivelyVisible); Assert.Equal(enabled, button.IsEffectivelyEnabled);
+                var pinned = view.FindControl<StackPanel>("PinnedInputs")!;
+                Assert.InRange(Math.Abs(button.Bounds.Width - pinned.Bounds.Width), 0, 1);
+                var content = view.FindControl<Grid>("LibrarySaveButtonContent")!;
+                Assert.InRange(Math.Abs(content.TranslatePoint(new Point(content.Bounds.Width / 2, 0), button)!.Value.X - button.Bounds.Width / 2), 0, 1);
+                Assert.Equal(view.FindControl<TextBlock>("LibrarySaveButtonLabel")!.Text, AutomationProperties.GetName(button));
+                var message = view.FindControl<TextBlock>("LibrarySaveMessage")!;
+                Assert.Equal(vm.HasLibraryMessage, message.IsEffectivelyVisible);
+                if (!vm.HasLibraryMessage)
+                    Assert.Equal(button.Bounds.Height, view.FindControl<StackPanel>("LibrarySaveActions")!.Bounds.Height);
+            }
+            void Stable()
+            {
+                Assert.Equal(bounds, button.Bounds);
+                if (!vm.HasLibraryMessage) Assert.Equal(headingPosition, heading.TranslatePoint(default, view));
+            }
+            void Layout()
+            {
+                for (int i = 0; i < 3; i++)
+                { Dispatcher.UIThread.RunJobs(); view.Measure(new Size(1100, 650)); view.Arrange(new Rect(0, 0, 1100, 650)); }
             }
         }
         finally { window.Close(); }
@@ -172,8 +223,8 @@ public sealed class SectionDefinitionRedesignTests
         var original = Assert.Single(library.Entries);
         Assert.Equal(name, original.Name); Assert.Same(section, original.Section);
         Assert.Equal(name, vm.DisplayName); Assert.False(vm.HasCustomName);
-        Assert.True(vm.CanSaveLibrary); Assert.Null(vm.LibraryError);
-        Assert.False(await vm.SaveLibraryAsync()); Assert.Equal(Strings.LibraryNameConflict, vm.LibraryError);
+        Assert.False(vm.CanSaveLibrary); Assert.True(vm.IsInLibrary); Assert.Null(vm.LibraryError);
+        Assert.False(await vm.SaveLibraryAsync()); Assert.Null(vm.LibraryError); Assert.Equal(1, library.SaveCalls);
         Assert.Same(original, Assert.Single(library.Entries)); Assert.Equal(name, vm.DisplayName); Assert.True(vm.CanConfirm);
         var diameter = vm.Parameters.Single(); diameter.PendingText = "120"; diameter.Commit();
         Assert.Null(vm.LibraryError); Assert.NotEqual(name, vm.DisplayName);
@@ -188,7 +239,8 @@ public sealed class SectionDefinitionRedesignTests
         var vm = new SectionDefinitionViewModel(library: library); vm.SelectForm(SectionEditorType.Circle); Fill(vm);
         vm.BeginNameEdit(); vm.PendingName = " existing "; Assert.True(vm.CommitName());
         Assert.Equal("existing", vm.DisplayName); Assert.Null(vm.LibraryError); Assert.True(vm.CanConfirm);
-        Assert.False(await vm.SaveLibraryAsync()); Assert.Equal(Strings.LibraryNameConflict, vm.LibraryError);
+        Assert.True(vm.HasLibraryNameConflict); Assert.False(vm.CanSaveLibrary);
+        Assert.False(await vm.SaveLibraryAsync()); Assert.Null(vm.LibraryError); Assert.Equal(0, library.SaveCalls);
         Assert.Same(original, Assert.Single(library.Entries)); Assert.False(vm.IsEditingName);
         vm.BeginNameEdit(); vm.PendingName = ""; Assert.False(vm.CommitName()); Assert.False(vm.CanSaveLibrary);
         vm.CancelNameEdit(); vm.BeginNameEdit(); vm.PendingName = "My current name"; Assert.True(vm.CommitName());
@@ -196,6 +248,42 @@ public sealed class SectionDefinitionRedesignTests
         Assert.Equal(vm.DisplayName, library.Entries[1].Name);
         int closes = 0; vm.CloseRequested += _ => closes++;
         Assert.True(await vm.ConfirmAsync()); Assert.Equal(1, closes); Assert.Equal(2, library.Entries.Count);
+    }
+    [Theory]
+    [InlineData(SectionEditorType.Rectangle)] [InlineData(SectionEditorType.RectangularHollow)]
+    [InlineData(SectionEditorType.Circle)] [InlineData(SectionEditorType.CircularHollow)]
+    [InlineData(SectionEditorType.ISection)] [InlineData(SectionEditorType.USection)]
+    [InlineData(SectionEditorType.TSection)] [InlineData(SectionEditorType.Angle)] [InlineData(SectionEditorType.Manual)]
+    public async Task SavedStatusRecognizesLoadedValuesAndTracksEditsUndoAndDeletion(SectionEditorType type)
+    {
+        var library = new Library(); var vm = new SectionDefinitionViewModel(library: library);
+        vm.SelectForm(type); Fill(vm); vm.BeginNameEdit(); vm.PendingName = "Saved"; vm.CommitName();
+        Assert.True(await vm.SaveLibraryAsync()); var entry = Assert.Single(library.Entries);
+        var loaded = new SectionDefinitionViewModel(library: library); loaded.SelectForm(type); loaded.LoadPreset(entry);
+        Assert.True(loaded.IsInLibrary); Assert.False(loaded.CanSaveLibrary);
+        loaded.BeginNameEdit(); loaded.PendingName = " SAVED ";
+        Assert.True(loaded.IsInLibrary); Assert.False(loaded.HasLibraryNameConflict); loaded.CommitName();
+        loaded.SelectedAxis = loaded.AvailableAxes[0].Value; Assert.True(loaded.IsInLibrary);
+        var input = loaded.Parameters[0]; input.PendingText = type == SectionEditorType.Manual ? "1100" : "120"; input.Commit();
+        Assert.False(loaded.IsInLibrary); Assert.True(loaded.HasLibraryNameConflict); Assert.False(loaded.CanSaveLibrary);
+        Assert.Null(loaded.LibraryError); Assert.Equal(Strings.LibraryNameTaken, loaded.LibraryMessage);
+        Assert.False(await loaded.SaveLibraryAsync()); Assert.Equal(1, library.SaveCalls); Assert.Same(entry, Assert.Single(library.Entries));
+        Assert.True(loaded.Undo()); Assert.True(loaded.IsInLibrary); Assert.Null(loaded.LibraryMessage);
+        Assert.True(loaded.Redo()); Assert.True(loaded.HasLibraryNameConflict);
+        await loaded.DeletePresetAsync(entry);
+        Assert.False(loaded.HasLibraryNameConflict); Assert.True(loaded.CanSaveLibrary); Assert.Null(loaded.LibraryMessage);
+    }
+    [Fact]
+    public async Task PendingSavePreventsDuplicateWritesAndKeepsTheActionLabelStable()
+    {
+        var library = new Library { SaveCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously) };
+        var vm = new SectionDefinitionViewModel(library: library); vm.SelectForm(SectionEditorType.Circle); Fill(vm);
+        string label = vm.LibraryActionLabel;
+        var saving = vm.SaveLibraryAsync();
+        Assert.True(vm.IsBusy); Assert.False(vm.CanSaveLibrary); Assert.Equal(label, vm.LibraryActionLabel);
+        Assert.False(await vm.SaveLibraryAsync()); Assert.Equal(1, library.SaveCalls);
+        library.SaveCompletion.SetResult(null); Assert.True(await saving);
+        Assert.False(vm.IsBusy); Assert.True(vm.IsInLibrary); Assert.False(vm.CanSaveLibrary);
     }
     [Theory]
     [InlineData(ManualAxisConfiguration.YZ, SectionAxisDesignation.Z, ManualAxisConfiguration.YZ, SectionAxisDesignation.Z)]
@@ -229,7 +317,6 @@ public sealed class SectionDefinitionRedesignTests
         window.Show(); Layout(); initialHeader = header.Bounds;
         var beforeHeader = header.Bounds; var beforeColumns = columns.Bounds; var beforeBody = columns.TranslatePoint(default, view);
         var scroll = view.FindControl<Border>("InputColumn")!.GetVisualDescendants().OfType<ScrollViewer>().First();
-        var offset = scroll.Offset;
         var name = view.FindControl<TextBox>("NameInput")!; var automatic = view.FindControl<Button>("ResetNameButton")!;
         var error = view.FindControl<SectionInputHint>("NameErrorHint")!;
         vm.BeginNameEdit(); Layout(); Assert.True(name.IsFocused); Assert.True(automatic.IsEffectivelyVisible);
@@ -249,21 +336,25 @@ public sealed class SectionDefinitionRedesignTests
         Assert.Null(save.Flyout); Assert.Null(FlyoutBase.GetAttachedFlyout(save));
         vm.BeginNameEdit(); Layout(); vm.PendingName = "EXISTING"; Press(name, Key.Enter); Layout();
         Assert.False(await vm.SaveLibraryAsync()); Layout();
-        var libraryError = view.FindControl<SectionInputHint>("LibraryErrorHint")!;
-        Assert.Contains("librarySaveError", save.Classes); Assert.True(libraryError.IsEffectivelyVisible);
-        Assert.True(libraryError.IsFocused); Assert.True(ToolTip.GetIsOpen(libraryError));
+        var libraryMessage = view.FindControl<TextBlock>("LibrarySaveMessage")!;
+        Assert.True(vm.HasLibraryNameConflict); Assert.False(save.IsEffectivelyEnabled);
+        Assert.Equal(Strings.LibraryNameTaken, libraryMessage.Text); Assert.Null(vm.LibraryError);
         Assert.Single(library.Entries); Assert.False(vm.IsEditingName); Assert.Equal("EXISTING", vm.DisplayName);
-        libraryError.Focus(); Layout(); Assert.True(ToolTip.GetIsOpen(libraryError));
-        Press(libraryError, Key.Escape); Layout(); Assert.False(ToolTip.GetIsOpen(libraryError)); Assert.True(window.IsVisible);
-        save.Focus(); save.Command!.Execute(null); Layout();
-        Assert.True(libraryError.IsFocused); Assert.True(ToolTip.GetIsOpen(libraryError)); Assert.Single(library.Entries);
-        Assert.DoesNotContain(view.FindControl<ItemsControl>("LibraryEntryList")!.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == vm.LibraryError);
+        Assert.False(save.Command!.CanExecute(null)); Assert.Single(library.Entries);
         vm.BeginNameEdit(); Layout(); vm.PendingName = new string('W', 120); Press(name, Key.Enter); Layout();
+        library.SaveError = Strings.LibrarySaveFailed;
+        save.Focus(); save.Command.Execute(null); Layout();
+        Assert.False(libraryMessage.Focusable); Assert.True(save.IsEffectivelyEnabled);
+        Assert.Equal(Strings.LibrarySaveFailedShort, libraryMessage.Text);
+        Assert.DoesNotContain("librarySaveError", save.Classes);
+        library.SaveError = null;
         save.Command!.Execute(null); Layout();
-        Assert.Equal(vm.DisplayName, library.Entries[1].Name); Assert.False(libraryError.IsEffectivelyVisible);
+        Assert.Equal(vm.DisplayName, library.Entries[1].Name); Assert.Null(libraryMessage.Text);
+        Assert.True(vm.IsInLibrary); Assert.False(save.IsEffectivelyEnabled);
         Assert.Null(save.Flyout); Assert.Empty(window.OwnedWindows);
         Assert.Equal(beforeHeader, header.Bounds); Assert.Equal(beforeColumns, columns.Bounds);
-        Assert.Equal(beforeBody, columns.TranslatePoint(default, view)); Assert.Equal(offset, scroll.Offset);
+        Assert.Equal(beforeBody, columns.TranslatePoint(default, view));
+        Assert.Same(view.FindControl<ScrollViewer>("InputScroll"), scroll);
         window.Close();
 
         void Layout()
@@ -274,17 +365,50 @@ public sealed class SectionDefinitionRedesignTests
         }
         static void Press(Control control, Key key) => control.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key });
     }
-    [Fact]
-    public void SectionWorkspaceHasNoLocalMenuAndKeepsItsHeaderActions()
+    [Theory]
+    [InlineData("de-DE", SectionEditorType.Circle)] [InlineData("en-US", SectionEditorType.Circle)]
+    [InlineData("de-DE", SectionEditorType.Manual)] [InlineData("en-US", SectionEditorType.Manual)]
+    public void SectionWorkspaceKeepsCompletionInHeaderAndLibrarySaveAbovePresets(string culture, SectionEditorType type)
     {
         using var environment = new DesktopControlEnvironment();
+        using var scope = new UiCultureScope(culture);
         var vm = new SectionDefinitionViewModel(); var view = new SectionDefinitionView { DataContext = vm };
+        vm.SelectForm(type); Fill(vm);
         var owner = new Window { Content = view }; owner.Show();
         view.Measure(new Size(1100, 650)); view.Arrange(new Rect(0, 0, 1100, 650));
         Assert.Empty(view.GetVisualDescendants().OfType<Menu>());
-        Assert.Same(vm.SaveLibraryCommand, view.FindControl<Button>("SaveLibraryButton")!.Command);
-        Assert.Same(vm.CancelCommand, view.FindControl<Button>("CancelButton")!.Command);
-        Assert.Same(vm.ConfirmCommand, view.FindControl<Button>("ConfirmButton")!.Command);
+        var save = view.FindControl<Button>("SaveLibraryButton")!;
+        var cancel = view.FindControl<Button>("CancelButton")!;
+        var confirm = view.FindControl<Button>("ConfirmButton")!;
+        var actions = view.FindControl<StackPanel>("HeaderActions")!;
+        Assert.Equal(new[] { cancel, confirm }, actions.Children.OfType<Button>().Where(b => b.IsEffectivelyVisible));
+        Assert.Same(vm.SaveLibraryCommand, save.Command);
+        Assert.Same(vm.CancelCommand, cancel.Command);
+        Assert.Same(vm.ConfirmCommand, confirm.Command);
+        string saveText = culture == "de-DE" ? "In Bibliothek speichern" : "Save to library";
+        Assert.Equal(saveText, view.FindControl<TextBlock>("LibrarySaveButtonLabel")!.Text);
+        Assert.Equal(saveText, AutomationProperties.GetName(save));
+        Assert.Equal(culture == "de-DE" ? "Abbrechen" : "Cancel", cancel.Content);
+        Assert.Equal(culture == "de-DE" ? "Übernehmen" : "Apply", confirm.Content);
+        Assert.Equal(cancel.Content, AutomationProperties.GetName(cancel));
+        Assert.Equal(confirm.Content, AutomationProperties.GetName(confirm));
+        Assert.Contains("secondary", save.Classes); Assert.Contains("primary", confirm.Classes);
+        Assert.DoesNotContain("primary", cancel.Classes);
+        Assert.True(cancel.Bounds.Right <= confirm.Bounds.Left);
+        Assert.True(confirm.Bounds.Right <= actions.Bounds.Width);
+        var saveActions = view.FindControl<StackPanel>("LibrarySaveActions")!;
+        var pinned = view.FindControl<StackPanel>("PinnedInputs")!;
+        Assert.Same(pinned, saveActions.Parent);
+        Assert.Equal(new Control[] { save, view.FindControl<TextBlock>("LibrarySaveMessage")! }, saveActions.Children);
+        Assert.InRange(Math.Abs(save.Bounds.Width - pinned.Bounds.Width), 0, 1);
+        Assert.Same(saveActions, pinned.Children.Last());
+        Assert.Same(view.FindControl<ScrollViewer>("InputScroll"), save.FindAncestorOfType<ScrollViewer>());
+        Assert.True(saveActions.Bounds.Left >= 0 && saveActions.Bounds.Right <= pinned.Bounds.Width + 1);
+        var heading = view.FindControl<StackPanel>("LibraryHeading")!;
+        Assert.IsType<Border>(heading.Children[0]);
+        Assert.Equal(Strings.SectionDefinitionFromLibrary, Assert.IsType<TextBlock>(heading.Children[1]).Text);
+        Assert.True(save.TranslatePoint(default, view)!.Value.Y + save.Bounds.Height <= heading.TranslatePoint(default, view)!.Value.Y);
+        Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text is "Alle Maße beziehen sich auf den dargestellten Querschnitt." or "All dimensions refer to the section shown.");
         owner.Close();
     }
     [Fact]
@@ -381,8 +505,9 @@ public sealed class SectionDefinitionRedesignTests
             delete.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Dispatcher.UIThread.RunJobs();
             Assert.Equal(1, library.DeleteCalls); Assert.Null(vm.Section); Assert.False(vm.HasCustomName);
             Assert.Equal(library.DeleteError, vm.LibraryError);
-            Assert.True(view.FindControl<SectionInputHint>("LibraryErrorHint")!.IsEffectivelyVisible);
-            Assert.False(view.FindControl<Button>("SaveLibraryButton")!.IsEffectivelyVisible);
+            Assert.Equal(library.DeleteError, view.FindControl<TextBlock>("LibrarySaveMessage")!.Text);
+            Assert.True(view.FindControl<Button>("SaveLibraryButton")!.IsEffectivelyVisible);
+            Assert.False(view.FindControl<Button>("SaveLibraryButton")!.IsEffectivelyEnabled);
 
             load.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.Equal(1, library.DeleteCalls); Assert.Equal(entry.Name, vm.DisplayName); Assert.True(vm.CanConfirm);
@@ -435,8 +560,8 @@ public sealed class SectionDefinitionRedesignTests
     [Theory]
     [InlineData("de-DE", 1500, 980)] [InlineData("en-US", 1500, 980)]
     [InlineData("de-DE", 1250, 800)] [InlineData("en-US", 1250, 800)]
-    [InlineData("de-DE", 1000, 600)] [InlineData("en-US", 1000, 600)]
-    public void OnlyLibraryContentScrollsAndAllInputsStayVisible(string culture, int width, int height)
+    [InlineData("de-DE", 1100, 650)] [InlineData("en-US", 1100, 650)]
+    public void EntireInputPanelScrollsTogetherOnlyWhenContentOverflows(string culture, int width, int height)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
         foreach (var units in new[] { UnitProfile.Default, UnitProfile.UnitedStates })
@@ -453,30 +578,32 @@ public sealed class SectionDefinitionRedesignTests
                 Assert.Equal(count, vm.LibraryEntries.Count);
                 var pinned = view.FindControl<StackPanel>("PinnedInputs")!;
                 var heading = view.FindControl<StackPanel>("LibraryHeading")!;
-                var scroll = view.FindControl<ScrollViewer>("LibraryScroll")!;
+                var scroll = view.FindControl<ScrollViewer>("InputScroll")!;
                 var list = view.FindControl<ItemsControl>("LibraryEntryList")!;
-                var workspace = view.FindControl<Grid>("InputWorkspace")!;
-                double availableScrollHeight = workspace.Bounds.Height - pinned.DesiredSize.Height - heading.DesiredSize.Height;
-                bool libraryVisible = availableScrollHeight >= 96;
-                Assert.Equal(libraryVisible, view.FindControl<Grid>("LibraryQuickSelection")!.IsEffectivelyVisible);
-                Assert.Equal(libraryVisible, heading.IsEffectivelyVisible);
-                Assert.Equal(libraryVisible, scroll.IsEffectivelyVisible);
-                Assert.All(heading.GetVisualDescendants().OfType<Control>(), c => Assert.Equal(libraryVisible, c.IsEffectivelyVisible));
-                Assert.DoesNotContain(pinned.GetVisualAncestors(), a => a is ScrollViewer);
+                scroll.Offset = default; Layout();
+                Assert.True(view.FindControl<Grid>("LibraryQuickSelection")!.IsEffectivelyVisible);
+                Assert.True(heading.IsEffectivelyVisible); Assert.True(scroll.IsEffectivelyVisible);
+                Assert.All(heading.GetVisualDescendants().OfType<Control>(), c => Assert.True(c.IsEffectivelyVisible));
+                Assert.Same(scroll, pinned.FindAncestorOfType<ScrollViewer>());
+                Assert.Same(scroll, heading.FindAncestorOfType<ScrollViewer>());
                 Assert.Same(scroll, list.FindAncestorOfType<ScrollViewer>());
+                Assert.Null(view.FindControl<ScrollViewer>("LibraryScroll"));
+                Assert.Same(scroll, Assert.Single(view.FindControl<Border>("InputColumn")!.GetVisualDescendants()
+                    .OfType<ScrollViewer>(), s => s.FindAncestorOfType<TextBox>() is null));
+                Assert.Equal(ScrollBarVisibility.Auto, scroll.VerticalScrollBarVisibility);
+                var save = view.FindControl<Button>("SaveLibraryButton")!;
+                Assert.True(save.IsEffectivelyVisible);
+                var savePosition = save.TranslatePoint(default, view)!.Value;
+                var inputColumn = view.FindControl<Border>("InputColumn")!;
+                var columnPosition = inputColumn.TranslatePoint(default, view)!.Value;
+                Assert.True(savePosition.X >= columnPosition.X && savePosition.X + save.Bounds.Width <= columnPosition.X + inputColumn.Bounds.Width);
+                Assert.True(savePosition.Y >= 0);
+                Assert.True(savePosition.Y + save.Bounds.Height <= heading.TranslatePoint(default, view)!.Value.Y);
                 foreach (var box in pinned.GetVisualDescendants().OfType<TextBox>().Where(b => b.IsEffectivelyVisible))
                 {
                     var position = box.TranslatePoint(default, view)!.Value;
-                    Assert.InRange(position.Y, 0, height - box.Bounds.Height);
-                    if (libraryVisible)
-                        Assert.True(position.Y + box.Bounds.Height <= heading.TranslatePoint(default, view)!.Value.Y, type + ": inputs overlap library heading");
-                }
-                if (culture == "de-DE" && width == 1000 && height == 600 && type == SectionEditorType.ISection)
-                    Assert.False(libraryVisible);
-                if (!libraryVisible)
-                {
-                    Assert.False(view.FindControl<StackPanel>("LibraryContent")!.IsEffectivelyVisible);
-                    continue;
+                    Assert.True(position.Y >= 0);
+                    Assert.True(position.Y + box.Bounds.Height <= heading.TranslatePoint(default, view)!.Value.Y, type + ": inputs overlap library heading");
                 }
                 var profile = view.FindControl<Border>("ProfileCard")!;
                 var profileLeft = profile.TranslatePoint(default, view)!.Value.X;
@@ -504,7 +631,8 @@ public sealed class SectionDefinitionRedesignTests
                     }
                 }
                 Assert.True(scroll.Extent.Width <= scroll.Viewport.Width + 1);
-                var bar = scroll.GetVisualDescendants().OfType<ScrollBar>().Single(b => b.Orientation == Avalonia.Layout.Orientation.Vertical);
+                var bar = scroll.GetVisualDescendants().OfType<ScrollBar>().Single(b => b.Orientation == Avalonia.Layout.Orientation.Vertical
+                    && b.FindAncestorOfType<ScrollViewer>() == scroll);
                 if (bar.IsEffectivelyVisible)
                 {
                     var barLeft = bar.TranslatePoint(default, view)!.Value.X;
@@ -513,18 +641,28 @@ public sealed class SectionDefinitionRedesignTests
                     var columnRight = column.TranslatePoint(default, view)!.Value.X + column.Bounds.Width;
                     Assert.InRange(columnRight - (barLeft + bar.Bounds.Width), 0, 2);
                 }
-                Assert.True(scroll.Viewport.Height >= 96, type + ": insufficient visible library height: " + scroll.Viewport);
-                var fixedInputs = pinned.TranslatePoint(default, view); var fixedHeading = heading.TranslatePoint(default, view);
+                Assert.True(scroll.Viewport.Height > 0, type + ": library has no scroll area");
                 scroll.Offset = default; Layout();
                 var first = cards[0];
                 var before = first.TranslatePoint(default, view)!.Value;
+                var inputBefore = pinned.TranslatePoint(default, view)!.Value;
+                var headingBefore = heading.TranslatePoint(default, view)!.Value;
+                var saveBefore = save.TranslatePoint(default, view)!.Value;
                 scroll.Offset = new Vector(0, Math.Max(0, scroll.Extent.Height - scroll.Viewport.Height)); Layout();
-                Assert.Equal(fixedInputs, pinned.TranslatePoint(default, view)); Assert.Equal(fixedHeading, heading.TranslatePoint(default, view));
+                double delta = first.TranslatePoint(default, view)!.Value.Y - before.Y;
+                Assert.InRange(Math.Abs(pinned.TranslatePoint(default, view)!.Value.Y - inputBefore.Y - delta), 0, .5);
+                Assert.InRange(Math.Abs(heading.TranslatePoint(default, view)!.Value.Y - headingBefore.Y - delta), 0, .5);
+                Assert.InRange(Math.Abs(save.TranslatePoint(default, view)!.Value.Y - saveBefore.Y - delta), 0, .5);
                 if (scroll.Extent.Height > scroll.Viewport.Height + 1)
-                    Assert.True(first.TranslatePoint(default, view)!.Value.Y < before.Y);
+                    Assert.True(delta < 0);
+                else
+                {
+                    Assert.Equal(0, scroll.Offset.Y);
+                    Assert.False(bar.IsEffectivelyVisible);
+                }
                 var last = cards[^1];
                 double lastTop = last.TranslatePoint(default, scroll)!.Value.Y;
-                Assert.InRange(lastTop, -.5, scroll.Viewport.Height);
+                Assert.True(lastTop < scroll.Viewport.Height);
                 Assert.True(lastTop + last.Bounds.Height <= scroll.Viewport.Height + 1);
                 if (units == UnitProfile.Default && type == SectionEditorType.ISection && width == 1250 && height == 800
                     && Environment.GetEnvironmentVariable("SPANDRAFT_VISUAL_TEST_OUTPUT") is { Length: > 0 } directory)
@@ -544,33 +682,53 @@ public sealed class SectionDefinitionRedesignTests
     }
     [Theory]
     [InlineData("de-DE")] [InlineData("en-US")]
-    public void LibraryQuickSelectionReturnsAfterResizeAndUsesActualScrollHeight(string culture)
+    public void WholePanelScrollingKeepsLibraryReachableThroughResizeAndFeedback(string culture)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
         foreach (var units in new[] { UnitProfile.Default, UnitProfile.UnitedStates })
         {
-            var vm = new SectionDefinitionViewModel(new(units), new Library()); vm.SelectForm(SectionEditorType.ISection); Fill(vm);
+            var library = new Library();
+            var vm = new SectionDefinitionViewModel(new(units), library); vm.SelectForm(SectionEditorType.ISection); Fill(vm);
+            library.Source.Add(new("Saved profile", vm.Section!)); vm.RefreshLibraryState();
             var view = new SectionDefinitionView { DataContext = vm, UseLayoutRounding = false };
             var window = new Window { Content = view, Width = 1000, Height = 600, UseLayoutRounding = false }; window.Show();
             var region = view.FindControl<Grid>("LibraryQuickSelection")!;
+            var heading = view.FindControl<StackPanel>("LibraryHeading")!;
+            var scroll = view.FindControl<ScrollViewer>("InputScroll")!;
             var workspace = view.FindControl<Grid>("InputWorkspace")!;
             var pinned = view.FindControl<StackPanel>("PinnedInputs")!;
-            var heading = view.FindControl<StackPanel>("LibraryHeading")!;
-            var scroll = view.FindControl<ScrollViewer>("LibraryScroll")!;
-            Arrange(600); Assert.False(region.IsEffectivelyVisible);
-            double thresholdHeight = 600 + 96 - (workspace.Bounds.Height - pinned.DesiredSize.Height - heading.DesiredSize.Height);
-            foreach (var height in new[] { thresholdHeight - 1, thresholdHeight, thresholdHeight + 1, 980, 600, thresholdHeight })
+            var save = view.FindControl<Button>("SaveLibraryButton")!;
+            Arrange(600);
+            var inputSizes = pinned.GetVisualDescendants().OfType<TextBox>().Select(b => b.Bounds.Size).ToArray();
+            var margin = workspace.Margin; double spacing = pinned.Spacing;
+            double buttonHeight = save.Bounds.Height;
+            foreach (var height in new[] { 600, 650, 980, 600, 800 })
             {
                 Arrange(height);
-                bool visible = height >= thresholdHeight;
-                Assert.True(visible == region.IsEffectivelyVisible,
-                    $"{culture}/{height}: expected visibility {visible} at threshold {thresholdHeight}; actual {region.IsEffectivelyVisible}");
-                Assert.Equal(visible, heading.IsEffectivelyVisible); Assert.Equal(visible, scroll.IsEffectivelyVisible);
-                Assert.Equal(visible, view.FindControl<StackPanel>("LibraryContent")!.IsEffectivelyVisible);
-                if (visible) Assert.True(scroll.Viewport.Height >= 96 - 1e-7,
-                    $"{culture}/{height}: visible library viewport is only {scroll.Viewport.Height} DIP");
-                foreach (var box in pinned.GetVisualDescendants().OfType<TextBox>().Where(b => b.IsEffectivelyVisible))
-                    Assert.InRange(box.TranslatePoint(default, view)!.Value.Y, 0, height - box.Bounds.Height);
+                Check();
+                vm.BeginNameEdit(); vm.PendingName = "Saved profile"; vm.CommitName(); Arrange(height);
+                Assert.True(vm.IsInLibrary); Check();
+                vm.Parameters[0].PendingText = "120"; vm.Parameters[0].Commit(); Arrange(height);
+                Assert.True(vm.HasLibraryNameConflict); Check();
+                vm.LoadPreset(library.Entries[0]); Arrange(height); Check();
+
+                void Check()
+                {
+                    Assert.True(region.IsEffectivelyVisible); Assert.True(heading.IsEffectivelyVisible); Assert.True(scroll.IsEffectivelyVisible);
+                    Assert.True(view.FindControl<StackPanel>("LibraryContent")!.IsEffectivelyVisible);
+                    Assert.Same(scroll, pinned.FindAncestorOfType<ScrollViewer>());
+                    Assert.Equal(inputSizes, pinned.GetVisualDescendants().OfType<TextBox>().Select(b => b.Bounds.Size));
+                    Assert.Equal(margin, workspace.Margin); Assert.Equal(spacing, pinned.Spacing);
+                    Assert.Equal(buttonHeight, save.Bounds.Height);
+                    var preset = view.FindControl<ItemsControl>("LibraryEntryList")!.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("presetLoad"));
+                    Assert.Equal(ScrollBarVisibility.Auto, scroll.VerticalScrollBarVisibility);
+                    Assert.True(scroll.Viewport.Height > 0);
+                    scroll.Offset = new Vector(0, scroll.Extent.Height); Arrange(height);
+                    var top = preset.TranslatePoint(default, scroll)!.Value.Y;
+                    Assert.True(top < scroll.Viewport.Height);
+                    Assert.InRange(top + preset.Bounds.Height, 0, scroll.Viewport.Height + 1);
+                    scroll.Offset = default; Arrange(height);
+                }
             }
             window.Close();
             void Arrange(double height)
@@ -646,7 +804,7 @@ public sealed class SectionDefinitionRedesignTests
         Assert.Equal(entry.Name, vm.DisplayName); Assert.True(vm.HasCustomName);
         Assert.Equal(configuration, vm.Configuration.Value); Assert.Equal(source.Section!.Area, vm.Section!.Area);
         Assert.Equal(source.Section.Axes, vm.Section.Axes); Assert.Null(vm.SelectedAxis);
-        Assert.Equal(!vm.RequiresAxisSelection, vm.CanConfirm); Assert.True(vm.CanSaveLibrary);
+        Assert.Equal(!vm.RequiresAxisSelection, vm.CanConfirm); Assert.False(vm.CanSaveLibrary); Assert.True(vm.IsInLibrary);
     }
     [Fact]
     public async Task SaveNeedsNoBendingAxisStaysOpenAndDiscardDoesNotUndoExplicitSave()
@@ -657,7 +815,7 @@ public sealed class SectionDefinitionRedesignTests
         Assert.False(vm.CanConfirm); Assert.True(vm.ShowLibraryAction); Assert.True(vm.CanSaveLibrary);
         int closes = 0; vm.CloseRequested += result => { Assert.Null(result); closes++; };
         Assert.True(await vm.SaveLibraryAsync()); Assert.Equal(0, closes); Assert.Single(library.Entries);
-        Assert.True(vm.CanSaveLibrary); Assert.False(vm.HasLibraryError);
+        Assert.False(vm.CanSaveLibrary); Assert.True(vm.IsInLibrary); Assert.False(vm.HasLibraryError);
         vm.CancelCommand.Execute(null); Assert.Equal(1, closes); Assert.Single(library.Entries);
     }
     [Theory]
@@ -668,16 +826,16 @@ public sealed class SectionDefinitionRedesignTests
     public void LibraryActionRequiresCompleteValidCommittedInputs(SectionEditorType type)
     {
         var vm = new SectionDefinitionViewModel(); Assert.False(vm.ShowLibraryAction);
-        vm.SelectForm(type); Assert.False(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
+        vm.SelectForm(type); Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
         var input = vm.Parameters[0]; input.PendingText = "100";
-        Assert.False(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
+        Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
         if (vm.Parameters.Count > 1)
-        { input.Commit(); Assert.False(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary); }
+        { input.Commit(); Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary); }
         Fill(vm); Assert.True(vm.ShowLibraryAction); Assert.True(vm.CanSaveLibrary); Assert.Null(vm.SelectedAxis);
         Assert.Equal(!vm.RequiresAxisSelection, vm.CanConfirm);
         var valid = input.PendingText;
-        input.PendingText = "invalid"; Assert.False(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
-        input.Commit(); Assert.False(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
+        input.PendingText = "invalid"; Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
+        input.Commit(); Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
         input.PendingText = valid; input.Commit(); Assert.True(vm.ShowLibraryAction); Assert.True(vm.CanSaveLibrary);
         vm.BeginNameEdit(); vm.PendingName = " "; Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
         Assert.False(vm.CommitName()); Assert.False(vm.CanSaveLibrary); vm.CancelNameEdit(); Assert.True(vm.CanSaveLibrary);
@@ -695,8 +853,8 @@ public sealed class SectionDefinitionRedesignTests
         Assert.True(await vm.ConfirmAsync()); Assert.Empty(library.Entries);
         library.SaveError = null; Assert.True(await vm.SaveLibraryAsync());
         vm.BeginNameEdit(); vm.PendingName = "Second"; vm.CommitName(); Assert.True(vm.CanSaveLibrary);
-        vm.ResetNameCommand.Execute(null); Assert.True(vm.CanSaveLibrary); Assert.True(vm.CanConfirm); Assert.Null(vm.LibraryError);
-        Assert.False(await vm.SaveLibraryAsync()); Assert.Equal(Strings.LibraryNameConflict, vm.LibraryError);
+        vm.ResetNameCommand.Execute(null); Assert.False(vm.CanSaveLibrary); Assert.True(vm.CanConfirm); Assert.Null(vm.LibraryError);
+        Assert.True(vm.IsInLibrary); Assert.False(await vm.SaveLibraryAsync()); Assert.Null(vm.LibraryError);
     }
     [Theory]
     [InlineData("de-DE", 1500, 980)] [InlineData("en-US", 1500, 980)]
@@ -739,10 +897,15 @@ public sealed class SectionDefinitionRedesignTests
         var nameError = view.FindControl<SectionInputHint>("NameErrorHint")!;
         nameError.Focus(); Layout(); CaptureTip(nameError, "name-error-tooltip");
         vm.CancelNameEdit(); Capture("name-normal");
-        library.Source.Add(new(vm.DisplayName, vm.Section!));
+        library.Source.Add(new(vm.DisplayName, new ISectionGeometry(M(.12), M(.08), M(.008), M(.008), M(.005))));
+        vm.RefreshLibraryState();
         Assert.False(await vm.SaveLibraryAsync()); Layout(); Capture("library-conflict");
-        var libraryError = view.FindControl<SectionInputHint>("LibraryErrorHint")!;
-        libraryError.Focus(); Layout(); CaptureTip(libraryError, "library-error-tooltip");
+        Assert.Equal(Strings.LibraryNameTaken, view.FindControl<TextBlock>("LibrarySaveMessage")!.Text);
+        vm.BeginNameEdit(); vm.PendingName = "Save fails"; vm.CommitName();
+        library.SaveError = Strings.LibrarySaveFailed;
+        Assert.False(await vm.SaveLibraryAsync()); Layout(); Capture("library-save-error");
+        Assert.Equal(Strings.LibrarySaveFailedShort, view.FindControl<TextBlock>("LibrarySaveMessage")!.Text);
+        library.SaveError = null;
         vm.ResetName();
         Layout();
         var radiusHint = view.GetVisualDescendants().OfType<SectionInputHint>().Single(h => h.IsEffectivelyVisible && h.DataContext is SectionDefinitionInput { Key: "r" });

@@ -266,13 +266,11 @@
   <data name="SectionDefinitionGalleryTitle" xml:space="preserve"><value>Querschnittsform auswählen</value></data>
   <data name="SectionDefinitionGalleryLead" xml:space="preserve"><value>Wählen Sie die Geometrie für Ihren Querschnitt.</value></data>
   <data name="SectionDefinitionResetName" xml:space="preserve"><value>Automatischen Namen verwenden</value></data>
-  <data name="SectionDefinitionDiscard" xml:space="preserve"><value>Änderungen verwerfen</value></data>
-  <data name="SectionDefinitionAddLibrary" xml:space="preserve"><value>Zur Bibliothek hinzufügen</value></data>
+  <data name="SaveToLibrary" xml:space="preserve"><value>In Bibliothek speichern</value></data>
   <data name="SectionDefinitionFromLibrary" xml:space="preserve"><value>Aus meiner Bibliothek</value></data>
   <data name="SectionDefinitionLibraryEmpty" xml:space="preserve"><value>Für diese Form sind noch keine Profile gespeichert.</value></data>
   <data name="SectionDefinitionLibrarySaved" xml:space="preserve"><value>Profil zur Bibliothek hinzugefügt.</value></data>
   <data name="SectionDefinitionDimensions" xml:space="preserve"><value>Abmessungen</value></data>
-  <data name="SectionDefinitionDimensionHint" xml:space="preserve"><value>Alle Maße beziehen sich auf den dargestellten Querschnitt.</value></data>
   <data name="SectionDefinitionParametricForm" xml:space="preserve"><value>Parametrische Form</value></data>
   <data name="SectionDefinitionManualFormDescription" xml:space="preserve"><value>Manuelle Querschnittswerte</value></data>
   <data name="SectionDefinitionChangeProfile" xml:space="preserve"><value>Ändern ›</value></data>
@@ -287,14 +285,15 @@
   <data name="MaterialYieldStrength" xml:space="preserve"><value>Streckgrenze fy</value></data>
   <data name="MaterialDensity" xml:space="preserve"><value>Dichte ρ</value></data>
   <data name="MaterialPoissonRatio" xml:space="preserve"><value>Poissonzahl ν</value></data>
-  <data name="MaterialInLibrary" xml:space="preserve"><value>In meiner Bibliothek</value></data>
+  <data name="InLibrary" xml:space="preserve"><value>In Bibliothek</value></data>
+  <data name="LibraryNameTaken" xml:space="preserve"><value>Name bereits vergeben</value></data>
+  <data name="LibrarySaveFailedShort" xml:space="preserve"><value>Bibliothek konnte nicht gespeichert werden.</value></data>
   <data name="MaterialCurrentEntry" xml:space="preserve"><value>Aktuell im Projekt</value></data>
   <data name="MaterialFilters" xml:space="preserve"><value>Werkstofffilter</value></data>
   <data name="MaterialList" xml:space="preserve"><value>Werkstoffe</value></data>
   <data name="MaterialEditName" xml:space="preserve"><value>Werkstoffnamen bearbeiten</value></data>
   <data name="MaterialDefine" xml:space="preserve"><value>Werkstoff definieren</value></data>
   <data name="MaterialCustomize" xml:space="preserve"><value>Werkstoff anpassen</value></data>
-  <data name="MaterialUse" xml:space="preserve"><value>Verwenden</value></data>
   <data name="MaterialCategories" xml:space="preserve"><value>Kategorien</value></data>
   <data name="MaterialLibrary" xml:space="preserve"><value>Bibliothek</value></data>
   <data name="MaterialDetailsTitle" xml:space="preserve"><value>Eigenschaften</value></data>

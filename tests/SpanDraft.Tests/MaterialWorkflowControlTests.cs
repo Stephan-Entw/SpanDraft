@@ -45,7 +45,21 @@ public sealed class MaterialWorkflowControlTests
         var list = view.FindControl<ListBox>("MaterialEntries")!;
         Assert.Equal(SelectionMode.Single, list.SelectionMode); Assert.Same(selection.CurrentEntry, selection.SelectedEntry);
         Assert.All(list.GetVisualDescendants().OfType<ListBoxItem>(), row => Assert.Empty(row.GetVisualDescendants().OfType<Button>()));
-        Assert.Same(selection.UseSelectedCommand, view.FindControl<Button>("UseMaterialButton")!.Command);
+        var cancelSelection = view.FindControl<Button>("CancelMaterialSelectionButton")!;
+        var use = view.FindControl<Button>("UseMaterialButton")!;
+        Assert.Same(selection.BackCommand, cancelSelection.Command);
+        Assert.Same(selection.UseSelectedCommand, use.Command);
+        AssertActions((StackPanel)use.Parent!, (cancelSelection, culture == "de-DE" ? "Abbrechen" : "Cancel"), (use, culture == "de-DE" ? "Übernehmen" : "Apply"));
+        Assert.Contains("primary", use.Classes);
+        Assert.DoesNotContain("primary", cancelSelection.Classes);
+        var create = view.FindControl<Button>("NewMaterialButton")!;
+        var search = view.FindControl<TextBox>("MaterialSearchInput")!;
+        Assert.Equal(culture == "de-DE" ? "Neuer Werkstoff" : "New material", create.Content);
+        Assert.Equal(create.Content, AutomationProperties.GetName(create));
+        Assert.Contains("secondary", create.Classes);
+        Assert.Same(selection.NewCommand, create.Command);
+        Assert.Same(search.Parent, create.Parent);
+        Assert.True(search.Bounds.Right <= create.Bounds.Left);
         Assert.Same(selection.EditSelectedCommand, view.FindControl<Button>("EditSelectedMaterialButton")!.Command);
         Assert.Same(selection.DeleteSelectedCommand, view.FindControl<Button>("DeleteSelectedMaterialButton")!.Command);
         selection.SelectedEntry = selection.UserEntries.Single(); Arrange(window, width, height); VerifyLayout();
@@ -56,6 +70,7 @@ public sealed class MaterialWorkflowControlTests
         Assert.Empty(editorView.GetVisualDescendants().OfType<CheckBox>());
         Assert.False(view.FindControl<Button>("AddMaterialLibraryButton")!.IsVisible);
         Assert.Same(editor.ReplaceLibraryCommand, view.FindControl<Button>("ConfirmMaterialButton")!.Command);
+        VerifyEditorActions();
         var rows = editorView.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("materialInputRow")).ToArray();
         Assert.Equal(4, rows.Length);
         foreach (var row in rows)
@@ -78,7 +93,45 @@ public sealed class MaterialWorkflowControlTests
         Assert.Same(editor.AddLibraryCommand, view.FindControl<Button>("AddMaterialLibraryButton")!.Command);
         Assert.Same(editor.ApplyCommand, view.FindControl<Button>("ConfirmMaterialButton")!.Command);
         Assert.True(editor.HasLibraryError); Assert.True(editor.CanApply); Arrange(window, width, height); VerifyLayout(); Capture("new-conflict");
+        VerifyEditorActions();
+        editor.Name = "New saved material";
+        Assert.True(await editor.AddLibraryAsync()); Arrange(window, width, height);
+        Assert.True(editor.IsInLibrary);
+        Assert.False(view.FindControl<Button>("AddMaterialLibraryButton")!.IsEffectivelyEnabled);
+        VerifyEditorActions(); VerifyLayout();
         window.Close();
+
+        void VerifyEditorActions()
+        {
+            var library = view.FindControl<Button>("AddMaterialLibraryButton")!;
+            var cancel = view.FindControl<Button>("CancelMaterialButton")!;
+            var confirm = view.FindControl<Button>("ConfirmMaterialButton")!;
+            var actions = view.FindControl<StackPanel>("MaterialEditorActions")!;
+            string cancelText = culture == "de-DE" ? "Abbrechen" : "Cancel";
+            string primaryText = editor.IsLibraryEdit ? (culture == "de-DE" ? "Speichern" : "Save") : (culture == "de-DE" ? "Übernehmen" : "Apply");
+            if (editor.IsLibraryEdit)
+                AssertActions(actions, (cancel, cancelText), (confirm, primaryText));
+            else
+                AssertActions(actions, (library, editor.IsInLibrary ? (culture == "de-DE" ? "In Bibliothek" : "In library") : (culture == "de-DE" ? "In Bibliothek speichern" : "Save to library")), (cancel, cancelText), (confirm, primaryText));
+            Assert.Same(editor.CancelCommand, cancel.Command);
+            Assert.Contains("secondary", library.Classes);
+            Assert.Contains("primary", confirm.Classes);
+            Assert.DoesNotContain("primary", cancel.Classes);
+        }
+
+        void AssertActions(StackPanel actions, params (Button Button, string Text)[] expected)
+        {
+            Assert.Equal(expected.Select(e => e.Button), actions.Children.OfType<Button>().Where(b => b.IsEffectivelyVisible));
+            for (int i = 0; i < expected.Length; i++)
+            {
+                var (button, text) = expected[i];
+                Assert.Equal(text, button.Content);
+                Assert.Equal(text, AutomationProperties.GetName(button));
+                Assert.True(button.Bounds.Left >= 0 && button.Bounds.Right <= actions.Bounds.Width + 1,
+                    $"{button.Name}: {button.Bounds} outside action width {actions.Bounds.Width}");
+                if (i > 0) Assert.True(expected[i - 1].Button.Bounds.Right <= button.Bounds.Left);
+            }
+        }
 
         void Capture(string state)
         {

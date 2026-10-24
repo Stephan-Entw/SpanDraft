@@ -43,8 +43,8 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
     public bool IsLibraryEdit => Mode == SetupEditorMode.UserLibraryEdit;
     public bool IsProjectDraft => !IsLibraryEdit;
     public string Title { get; }
-    public string PrimaryAction => IsLibraryEdit ? Strings.Save : Strings.MaterialUse;
-    public string CancelLabel => Strings.SectionDefinitionDiscard;
+    public string PrimaryAction => IsLibraryEdit ? Strings.Save : Strings.Apply;
+    public string CancelLabel => Strings.Cancel;
     public string Name { get => _name; set { if (!IsBusy && Set(ref _name, value)) Validate(); } }
     public string MaterialNumber { get => _number; set { if (!IsBusy && Set(ref _number, value)) Validate(); } }
     public string OtherStandards { get => _standards; set { if (!IsBusy && Set(ref _standards, value)) Validate(); } }
@@ -70,7 +70,7 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
     public MaterialLibraryEntry? Draft { get; private set; }
     public bool IsInLibrary => _savedEntry is not null && Draft is { } entry && MaterialSnapshotComparison.Equals(_savedEntry, entry)
         && Setup.Libraries?.UserMaterials.Find(entry.Material.Name) is { } saved && MaterialSnapshotComparison.Equals(saved, entry);
-    public string LibraryActionLabel => IsInLibrary ? Strings.MaterialInLibrary : Strings.SectionDefinitionAddLibrary;
+    public string LibraryActionLabel => IsInLibrary ? Strings.InLibrary : Strings.SaveToLibrary;
     public bool CanApply => IsProjectDraft && !IsBusy && Draft is not null;
     public bool CanAddLibrary => IsProjectDraft && !IsBusy && Draft is not null && CanSaveToLibrary && !IsInLibrary && !HasLibraryNameConflict;
     public bool CanReplaceLibrary => IsLibraryEdit && !IsBusy && Draft is not null && CanSaveToLibrary && !HasLibraryNameConflict;

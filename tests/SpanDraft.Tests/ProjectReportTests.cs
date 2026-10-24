@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Media.TextFormatting;
 using Avalonia.Platform;
 using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia.Helpers;
@@ -573,7 +574,7 @@ public sealed class ProjectReportTests : IDisposable
     [InlineData("Arial", 1)] [InlineData("Arial", 2)]
     [InlineData("Helvetica Neue", 1)] [InlineData("Helvetica Neue", 2)]
     [InlineData("Segoe UI", 1)] [InlineData("Segoe UI", 2)]
-    public void ReportControlsShareVisibleCenterAndTextBaselineAcrossFontsAndDisplayScaling(string font, int scaling)
+    public void ReportToolbarKeepsSharedTextBaselineAndCentersIconsAndReferenceDigit(string font, int scaling)
     {
         var (main, files) = Open(ReportTestProjects.Create());
         var (window, view) = ShowReportWorkspace(main, files);
@@ -585,18 +586,25 @@ public sealed class ProjectReportTests : IDisposable
             var zoom = view.FindControl<TextBlock>("ZoomLabel")!;
             var captions = new[] { "SavePdfButton", "PrintButton", "CloseButton" }
                 .Select(name => Assert.Single(view.FindControl<Button>(name)!.GetVisualDescendants().OfType<TextBlock>())).ToArray();
+            double? initialBaseline = null;
             foreach (int percent in new[] { 25, 50, 61, 75, 125, 400 })
             {
                 Assert.True(main.ReportPreview!.TrySetZoom(percent.ToString(CultureInfo.InvariantCulture)));
                 page.Text = percent < 100 ? "1 / 1" : "99 / 99";
                 Dispatcher.UIThread.RunJobs();
                 double baseline = page.TranslatePoint(new(0, page.TextLayout.Baseline), controls)!.Value.Y;
-                Assert.All(captions.Append(zoom), text =>
+                if (initialBaseline is { } previous) Assert.Equal(previous, baseline, .01);
+                initialBaseline = baseline;
+                Assert.All(captions.Append(zoom).Append(page), text =>
                 {
                     Assert.Equal(baseline, text.TranslatePoint(new(0, text.TextLayout.Baseline), controls)!.Value.Y, .01);
                     Assert.Null(text.RenderTransform);
+                    var presenter = Assert.IsType<ToolbarTextPresenter>(text.Parent);
+                    var origin = text.TranslatePoint(default, presenter)!.Value;
+                    Assert.True(origin.X >= -.5 && origin.Y >= -.5);
+                    Assert.True(origin.X + text.Bounds.Width <= presenter.Bounds.Width + .5);
+                    Assert.True(origin.Y + text.Bounds.Height <= presenter.Bounds.Height + .5);
                 });
-                Assert.Null(page.RenderTransform);
                 using var image = new RenderTargetBitmap(new((int)Math.Ceiling(controls.Bounds.Width * scaling),
                     (int)Math.Ceiling(controls.Bounds.Height * scaling)), new(96 * scaling, 96 * scaling));
                 image.Render(controls);
@@ -609,25 +617,59 @@ public sealed class ProjectReportTests : IDisposable
                 var plus = Ink(view.FindControl<Button>("ZoomInButton")!);
                 int leftGap = label.Left - minus.Right - 1, rightGap = plus.Left - label.Right - 1;
                 Assert.True(leftGap > 0 && rightGap > 0);
-                // Fluent Add and Subtract have different ink widths; their centers define the axis.
-                double zoomCenter = (label.Left + label.Right + 1) / 2d;
+                // Text alignment uses font geometry; raster bounds also depend on pixel coverage.
+                var zoomValue = view.FindControl<Grid>("ZoomValue")!;
+                double zoomCenter = zoomValue.TranslatePoint(new(zoomValue.Bounds.Width / 2, 0), controls)!.Value.X * scaling;
+                double left = double.PositiveInfinity, right = double.NegativeInfinity, advance = 0;
+                foreach (var run in Assert.Single(zoom.TextLayout.TextLines).TextRuns.OfType<ShapedTextRun>())
+                {
+                    var glyphs = run.GlyphRun;
+                    left = Math.Min(left, advance + glyphs.InkBounds.Left - glyphs.BaselineOrigin.X);
+                    right = Math.Max(right, advance + glyphs.InkBounds.Right - glyphs.BaselineOrigin.X);
+                    advance += run.Size.Width;
+                }
+                Assert.True(double.IsFinite(left) && double.IsFinite(right));
+                double textCenter = zoom.TranslatePoint(new((left + right) / 2, 0), controls)!.Value.X * scaling;
+                Assert.True(Math.Abs(zoomCenter - textCenter) <= scaling,
+                    $"{font}, {percent} %, {scaling}×: text geometry center {textCenter}px vs zoom control center {zoomCenter}px");
+                // Fluent Add and Subtract have different ink widths; compare their rendered centers.
                 double symbolMidpoint = (minus.Left + minus.Right + plus.Left + plus.Right + 2) / 4d;
                 Assert.True(Math.Abs(zoomCenter - symbolMidpoint) <= scaling,
-                    $"{font}, {percent} %, {scaling}×: percentage center {zoomCenter}px vs symbol midpoint {symbolMidpoint}px");
-                var names = new[] { "PreviousButton", "PageValue", "NextButton", "ZoomOutButton", "ZoomValue", "ZoomInButton", "PageFitButton", "PageWidthButton", "CloseButton" };
+                    $"{font}, {percent} %, {scaling}×: zoom control center {zoomCenter}px vs symbol midpoint {symbolMidpoint}px");
+                var iconNames = new[] { "PreviousButton", "NextButton", "ZoomOutButton", "ZoomInButton", "PageFitButton", "PageWidthButton" };
                 double axis = view.FindControl<Button>("CloseButton")!.TranslatePoint(new(0,
                     view.FindControl<Button>("CloseButton")!.Bounds.Height / 2), controls)!.Value.Y * scaling;
-                foreach (string name in names)
+                foreach (string name in iconNames)
                 {
                     var ink = Ink(view.FindControl<Control>(name)!);
                     Assert.True(Math.Abs((ink.Top + ink.Bottom + 1) / 2d - axis) <= scaling,
                         $"{font}, {percent} %, {scaling}×: {name} ink center {(ink.Top + ink.Bottom + 1) / 2d}px vs axis {axis}px");
+                }
+                foreach (string name in new[] { "PageValue", "ZoomValue", "CloseButton" })
+                {
+                    var control = view.FindControl<Control>(name)!;
+                    double center = control.TranslatePoint(new(0, control.Bounds.Height / 2), controls)!.Value.Y * scaling;
+                    Assert.Equal(axis, center, .01);
                 }
                 if (font == "Helvetica Neue" && scaling == 2 && percent == 61)
                 {
                     string directory = Path.Combine(RepositoryRoot(), "output", "pdf", "production"); Directory.CreateDirectory(directory);
                     image.Save(Path.Combine(directory, "report-toolbar-aligned-2x.png"), PngBitmapEncoderOptions.Default);
                 }
+
+                // Text shares a baseline based on digit height. A slash or descender can
+                // change a string's ink bounds without changing that alignment.
+                string? pageText = page.Text;
+                page.Text = "0"; Dispatcher.UIThread.RunJobs();
+                Assert.Equal(baseline, page.TranslatePoint(new(0, page.TextLayout.Baseline), controls)!.Value.Y, .01);
+                using var reference = new RenderTargetBitmap(image.PixelSize, image.Dpi);
+                reference.Render(controls); reference.CopyPixels(buffer);
+                System.Runtime.InteropServices.Marshal.Copy(buffer.Address, bytes, 0, bytes.Length);
+                var digit = Ink(view.FindControl<ToolbarTextPresenter>("PageValue")!);
+                double digitCenter = (digit.Top + digit.Bottom + 1) / 2d;
+                Assert.True(Math.Abs(digitCenter - axis) <= scaling,
+                    $"{font}, {percent} %, {scaling}×: reference digit center {digitCenter}px vs axis {axis}px");
+                page.Text = pageText; Dispatcher.UIThread.RunJobs();
 
                 (int Left, int Top, int Right, int Bottom) Ink(Control control)
                 {

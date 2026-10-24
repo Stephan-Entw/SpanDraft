@@ -101,6 +101,18 @@ public sealed class DesktopProjectSetupControlTests
         Assert.True(Assert.IsType<MaterialEditorViewModel>(Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep).Editor).IsLibraryEdit);
         main.Setup.Escape(); main.Setup.ShowOverview(); main.Setup.ApplyCommand.Execute(null); main.EditProject();
         Capture("edit");
+        setupView = Assert.Single(window.GetVisualDescendants().OfType<ProjectSetupView>());
+        var cancelSetup = setupView.FindControl<Button>("CancelSetupButton")!;
+        var applySetup = setupView.FindControl<Button>("ApplySetupButton")!;
+        Assert.Equal(new[] { cancelSetup, applySetup }, ((StackPanel)applySetup.Parent!).Children.OfType<Button>());
+        Assert.True(cancelSetup.Bounds.Right <= applySetup.Bounds.Left);
+        Assert.Equal(culture == "de-DE" ? "Abbrechen" : "Cancel", cancelSetup.Content);
+        Assert.Equal(culture == "de-DE" ? "Übernehmen" : "Apply", applySetup.Content);
+        Assert.Equal(cancelSetup.Content, AutomationProperties.GetName(cancelSetup));
+        Assert.Equal(applySetup.Content, AutomationProperties.GetName(applySetup));
+        Assert.Same(main.Setup.CancelCommand, cancelSetup.Command);
+        Assert.Same(main.Setup.ApplyCommand, applySetup.Command);
+        Assert.Contains("secondary", cancelSetup.Classes); Assert.Contains("primary", applySetup.Classes);
         main.Setup.ShowMaterials(); Capture("current-project-material");
         materials = Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep); materials.EditSelectedCommand.Execute(null);
         Capture("current-material-edit"); main.Setup.Escape();

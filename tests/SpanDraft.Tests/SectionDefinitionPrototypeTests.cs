@@ -222,8 +222,8 @@ public sealed class SectionDefinitionPrototypeTests
         Assert.Same(preview,vm.Preview); Assert.Equal(text,vm.Parameters.Select(p=>p.PendingText)); Assert.Empty(main.UserSections.All);
         files.FailWritePath=null; Assert.True(await vm.SaveLibraryAsync()); Assert.Null(result); Assert.Single(main.UserSections.All); Assert.Single(files.Writes);
         var duplicate=new SectionDefinitionViewModel(library:Library(main)); duplicate.SelectForm(SectionEditorType.Rectangle); Fill(duplicate);
-        Assert.True(duplicate.CanConfirm); Assert.True(duplicate.CanSaveLibrary); Assert.Null(duplicate.LibraryError);
-        Assert.False(await duplicate.SaveLibraryAsync()); Assert.Equal(Strings.LibraryNameConflict, duplicate.LibraryError);
+        Assert.True(duplicate.CanConfirm); Assert.False(duplicate.CanSaveLibrary); Assert.True(duplicate.IsInLibrary); Assert.Null(duplicate.LibraryError);
+        Assert.False(await duplicate.SaveLibraryAsync()); Assert.Null(duplicate.LibraryError);
         duplicate.BeginNameEdit(); duplicate.PendingName="Another"; duplicate.CommitName(); Assert.True(duplicate.CanConfirm);
         var bytes=files.Data["sections"]; files.Data["sections"]=[123];
         Assert.False(await duplicate.SaveLibraryAsync()); Assert.Equal(new byte[]{123},files.Data["sections"]); Assert.Single(main.UserSections.All);
@@ -502,7 +502,7 @@ public sealed class SectionDefinitionPrototypeTests
         Assert.False(vm.ShowPreview); Assert.False(vm.ShowValues); Assert.False(vm.ShowLibraryAction); Assert.False(vm.ShowConfirm); Assert.False(vm.CanConfirm);
         vm.SelectForm(type);
         Assert.Equal(SectionDefinitionLayout.ParametricDraft, vm.LayoutState);
-        Assert.True(vm.ShowPreview); Assert.False(vm.ShowValues); Assert.False(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
+        Assert.True(vm.ShowPreview); Assert.False(vm.ShowValues); Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
         Fill(vm, false);
         Assert.Equal(SectionDefinitionLayout.ParametricSection, vm.LayoutState);
         Assert.True(vm.ShowValues); Assert.True(vm.ShowLibraryAction); Assert.True(vm.ShowConfirm);
@@ -516,7 +516,7 @@ public sealed class SectionDefinitionPrototypeTests
         Assert.Same(preview, vm.Preview); Assert.False(vm.CanConfirm);
         input.Commit();
         Assert.Equal(SectionDefinitionLayout.ParametricDraft, vm.LayoutState);
-        Assert.False(vm.ShowValues); Assert.False(vm.ShowLibraryAction); Assert.True(vm.ShowConfirm); Assert.False(vm.CanConfirm);
+        Assert.False(vm.ShowValues); Assert.True(vm.ShowLibraryAction); Assert.True(vm.ShowConfirm); Assert.False(vm.CanConfirm);
         Assert.Same(preview, vm.Preview); Assert.Empty(vm.AxisValues);
         vm.ChangeFormCommand.Execute(null);
         Assert.Equal(SectionDefinitionLayout.FormSelection, vm.LayoutState); Assert.False(vm.ShowPreview);
@@ -1080,16 +1080,16 @@ public sealed class SectionDefinitionPrototypeTests
             foreach (var form in vm.Forms)
             {
                 vm.ChangeFormCommand.Execute(null); vm.SelectForm(form.Value); Arrange(window, width, height);
-                AssertHeader(); Assert.False(view.FindControl<Button>("SaveLibraryButton")!.IsEffectivelyVisible); Assert.False(vm.CanSaveLibrary);
+                AssertHeader(); Assert.True(view.FindControl<Button>("SaveLibraryButton")!.IsEffectivelyVisible); Assert.False(vm.CanSaveLibrary);
                 AssertFields(view.FindControl<ItemsControl>("GeometryInputList")!);
                 Fill(vm, false); Arrange(window, width, height);
                 AssertHeader(); Assert.True(view.FindControl<Button>("SaveLibraryButton")!.IsEffectivelyVisible);
                 AssertProperties();
                 var field = vm.Parameters[0]; var valid = field.PendingText;
                 field.PendingText = "pending"; Arrange(window, width, height);
-                Assert.False(view.FindControl<Button>("SaveLibraryButton")!.IsEffectivelyVisible); Assert.False(vm.CanSaveLibrary);
+                Assert.True(view.FindControl<Button>("SaveLibraryButton")!.IsEffectivelyVisible); Assert.False(vm.CanSaveLibrary);
                 field.PendingText = "invalid"; field.Commit(); Arrange(window, width, height);
-                Assert.True(field.HasError); Assert.False(view.FindControl<Button>("SaveLibraryButton")!.IsEffectivelyVisible); Assert.False(vm.CanSaveLibrary);
+                Assert.True(field.HasError); Assert.True(view.FindControl<Button>("SaveLibraryButton")!.IsEffectivelyVisible); Assert.False(vm.CanSaveLibrary);
                 AssertFields(view.FindControl<ItemsControl>("GeometryInputList")!);
                 field.PendingText = valid; field.Commit(); Arrange(window, width, height);
             }

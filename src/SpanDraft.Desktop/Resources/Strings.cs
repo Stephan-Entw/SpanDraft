@@ -215,6 +215,10 @@ public static class Strings
     public static string EditLength => Get(nameof(EditLength));
     public static string Open => Get(nameof(Open));
     public static string Save => Get(nameof(Save));
+    public static string SaveToLibrary => Get(nameof(SaveToLibrary));
+    public static string InLibrary => Get(nameof(InLibrary));
+    public static string LibraryNameTaken => Get(nameof(LibraryNameTaken));
+    public static string LibrarySaveFailedShort => Get(nameof(LibrarySaveFailedShort));
     public static string Undo => Get(nameof(Undo));
     public static string Redo => Get(nameof(Redo));
     public static string Zoom => Get(nameof(Zoom));
@@ -330,8 +334,6 @@ public static class Strings
     public static string SectionDefinitionGalleryLead => Get(nameof(SectionDefinitionGalleryLead));
     public static string SectionDefinitionResetName => Get(nameof(SectionDefinitionResetName));
     public static string SectionDefinitionAutomatic => Get(nameof(SectionDefinitionAutomatic));
-    public static string SectionDefinitionDiscard => Get(nameof(SectionDefinitionDiscard));
-    public static string SectionDefinitionAddLibrary => Get(nameof(SectionDefinitionAddLibrary));
     public static string SectionDefinitionFromLibrary => Get(nameof(SectionDefinitionFromLibrary));
     public static string SectionDefinitionDeleteLibrary => Get(nameof(SectionDefinitionDeleteLibrary));
     public static string SectionDefinitionLibraryEmpty => Get(nameof(SectionDefinitionLibraryEmpty));
@@ -341,7 +343,6 @@ public static class Strings
     public static string SectionDefinitionChangeProfile => Get(nameof(SectionDefinitionChangeProfile));
     public static string SectionDefinitionParametricGroup => Get(nameof(SectionDefinitionParametricGroup));
     public static string SectionDefinitionDimensions => Get(nameof(SectionDefinitionDimensions));
-    public static string SectionDefinitionDimensionHint => Get(nameof(SectionDefinitionDimensionHint));
     public static string AllMaterials => Get(nameof(AllMaterials));
     public static string MaterialSearch => Get(nameof(MaterialSearch));
     public static string NoMaterialsFound => Get(nameof(NoMaterialsFound));
@@ -351,7 +352,6 @@ public static class Strings
     public static string MaterialYieldStrength => Get(nameof(MaterialYieldStrength));
     public static string MaterialDensity => Get(nameof(MaterialDensity));
     public static string MaterialPoissonRatio => Get(nameof(MaterialPoissonRatio));
-    public static string MaterialInLibrary => Get(nameof(MaterialInLibrary));
     public static string MaterialCurrentEntry => Get(nameof(MaterialCurrentEntry));
     public static string MaterialFilters => Get(nameof(MaterialFilters));
     public static string MaterialList => Get(nameof(MaterialList));
@@ -359,7 +359,6 @@ public static class Strings
 
     public static string MaterialDefine => Get(nameof(MaterialDefine));
     public static string MaterialCustomize => Get(nameof(MaterialCustomize));
-    public static string MaterialUse => Get(nameof(MaterialUse));
     public static string MaterialCategories => Get(nameof(MaterialCategories));
     public static string MaterialLibrary => Get(nameof(MaterialLibrary));
     public static string MaterialDetailsTitle => Get(nameof(MaterialDetailsTitle));

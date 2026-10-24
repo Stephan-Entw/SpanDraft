@@ -511,7 +511,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         Assert.False(m.CanAddLibrary); Assert.True(m.HasLibraryError); Assert.False(await m.AddLibraryAsync());
         Assert.True(m.CanConfirm); Assert.True(await m.ConfirmAsync());
         var s = NewSection(f); s.BeginNameEdit(); s.PendingName = "mINE"; s.CommitName();
-        Assert.False(await s.SaveLibraryAsync()); Assert.True(s.HasLibraryError);
+        Assert.False(s.CanSaveLibrary); Assert.False(await s.SaveLibraryAsync()); Assert.False(s.HasLibraryError);
         Assert.True(await s.ConfirmAsync()); Assert.Empty(f.Files.Writes);
     }
 

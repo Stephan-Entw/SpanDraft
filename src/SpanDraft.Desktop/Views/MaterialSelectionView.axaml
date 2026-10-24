@@ -22,12 +22,12 @@
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
         <TextBlock x:Name="MaterialWorkspaceTitle" Text="{Binding Title}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsEditing}" VerticalAlignment="Center">
-          <Button Content="{x:Static resources:Strings.Back}" Command="{Binding BackCommand}" Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.Back}" />
+          <Button x:Name="CancelMaterialSelectionButton" Content="{x:Static resources:Strings.Cancel}" Command="{Binding BackCommand}" Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
           <Button x:Name="UseMaterialButton" Content="{x:Static resources:Strings.Apply}" Command="{Binding UseSelectedCommand}" Classes="primary" AutomationProperties.Name="{x:Static resources:Strings.Apply}" />
         </StackPanel>
         <StackPanel x:Name="MaterialEditorActions" Grid.Column="1" DataContext="{Binding Editor}" x:DataType="vm:MaterialEditorViewModel" Orientation="Horizontal" Spacing="8" IsVisible="{Binding $parent[UserControl].((vm:MaterialSelectionViewModel)DataContext).IsEditing}" VerticalAlignment="Center">
-          <Button x:Name="CancelMaterialButton" Content="{Binding CancelLabel}" Command="{Binding CancelCommand}" Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{Binding CancelLabel}" />
           <Button x:Name="AddMaterialLibraryButton" Content="{Binding LibraryActionLabel}" IsVisible="{Binding IsProjectDraft}" Command="{Binding AddLibraryCommand}" Classes="secondary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{Binding LibraryActionLabel}" />
+          <Button x:Name="CancelMaterialButton" Content="{Binding CancelLabel}" Command="{Binding CancelCommand}" Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{Binding CancelLabel}" />
           <Button x:Name="ConfirmMaterialButton" Content="{Binding PrimaryAction}" Command="{Binding ConfirmCommand}" Classes="primary" AutomationProperties.Name="{Binding PrimaryAction}" />
         </StackPanel>
       </Grid>
