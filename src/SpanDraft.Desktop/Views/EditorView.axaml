@@ -17,59 +17,74 @@
   <Grid RowDefinitions="Auto,*">
     <Border x:Name="EditorToolbar" BorderThickness="{DynamicResource BottomBorder}" BorderBrush="{DynamicResource Border}"
             Background="{DynamicResource Surface}" Padding="{DynamicResource ToolbarPadding}">
-      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
-        <ToggleButton Classes="toolbar" IsChecked="{Binding IsForceTool, Mode=OneWay}" Command="{Binding ForceToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PointForce}">
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.PointLoad}" Stretch="Uniform" />
-            <TextBlock Text="{x:Static resources:Strings.PointForce}" VerticalAlignment="Center" />
-          </StackPanel>
-        </ToggleButton>
-        <ToggleButton Classes="toolbar" IsChecked="{Binding IsMomentTool, Mode=OneWay}" Command="{Binding MomentToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.Moment}">
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.PointMoment}" Stretch="Uniform" />
-            <TextBlock Text="{x:Static resources:Strings.Moment}" VerticalAlignment="Center" />
-          </StackPanel>
-        </ToggleButton>
-        <ToggleButton Classes="toolbar" IsChecked="{Binding IsDistributedLoadTool, Mode=OneWay}" Command="{Binding DistributedLoadToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.DistributedLoad}">
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.DistributedLoad}" Stretch="Uniform" />
-            <TextBlock Text="{x:Static resources:Strings.DistributedLoad}" VerticalAlignment="Center" />
-          </StackPanel>
-        </ToggleButton>
-        <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
-        <ToggleButton Classes="toolbar" IsChecked="{Binding IsFixedTool, Mode=OneWay}" Command="{Binding FixedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.FixedSupport}">
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.FixedSupport}" Stretch="Uniform" />
-            <TextBlock Text="{x:Static resources:Strings.FixedSupport}" VerticalAlignment="Center" />
-          </StackPanel>
-        </ToggleButton>
-        <ToggleButton Classes="toolbar" IsChecked="{Binding IsPinnedTool, Mode=OneWay}" Command="{Binding PinnedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PinnedSupport}">
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.PinnedSupport}" Stretch="Uniform" />
-            <TextBlock Text="{x:Static resources:Strings.PinnedSupport}" VerticalAlignment="Center" />
-          </StackPanel>
-        </ToggleButton>
-        <ToggleButton Classes="toolbar" IsChecked="{Binding IsRollerTool, Mode=OneWay}" Command="{Binding RollerToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.RollerSupport}">
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-            <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.RollerSupport}" Stretch="Uniform" />
-            <TextBlock Text="{x:Static resources:Strings.RollerSupport}" VerticalAlignment="Center" />
-          </StackPanel>
-        </ToggleButton>
-        <Rectangle x:Name="ReportToolbarSeparator" Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
-        <Button x:Name="ReportToolbarButton" Classes="toolbar"
-                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ReportCommand}"
-                AutomationProperties.Name="{x:Static resources:Strings.Report}"
-                ToolTip.Tip="{x:Static resources:Strings.ReportHeading}">
-          <StackPanel Orientation="Horizontal" Spacing="6">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space16}">
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
+          <ToggleButton Classes="toolbar" IsChecked="{Binding IsForceTool, Mode=OneWay}" Command="{Binding ForceToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PointForce}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.PointLoad}" Stretch="Uniform" />
+              <TextBlock Text="{x:Static resources:Strings.PointForce}" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton Classes="toolbar" IsChecked="{Binding IsMomentTool, Mode=OneWay}" Command="{Binding MomentToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.Moment}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.PointMoment}" Stretch="Uniform" />
+              <TextBlock Text="{x:Static resources:Strings.Moment}" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton Classes="toolbar" IsChecked="{Binding IsDistributedLoadTool, Mode=OneWay}" Command="{Binding DistributedLoadToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.DistributedLoad}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.DistributedLoad}" Stretch="Uniform" />
+              <TextBlock Text="{x:Static resources:Strings.DistributedLoad}" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
+          <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
+          <ToggleButton Classes="toolbar" IsChecked="{Binding IsFixedTool, Mode=OneWay}" Command="{Binding FixedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.FixedSupport}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.FixedSupport}" Stretch="Uniform" />
+              <TextBlock Text="{x:Static resources:Strings.FixedSupport}" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton Classes="toolbar" IsChecked="{Binding IsPinnedTool, Mode=OneWay}" Command="{Binding PinnedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PinnedSupport}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.PinnedSupport}" Stretch="Uniform" />
+              <TextBlock Text="{x:Static resources:Strings.PinnedSupport}" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton Classes="toolbar" IsChecked="{Binding IsRollerTool, Mode=OneWay}" Command="{Binding RollerToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.RollerSupport}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.RollerSupport}" Stretch="Uniform" />
+              <TextBlock Text="{x:Static resources:Strings.RollerSupport}" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
+          <Rectangle x:Name="ReportToolbarSeparator" Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
+          <Button x:Name="ReportToolbarButton" Classes="toolbar"
+                  Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ReportCommand}"
+                  AutomationProperties.Name="{x:Static resources:Strings.Report}"
+                  ToolTip.Tip="{x:Static resources:Strings.ReportHeading}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Grid Width="{DynamicResource ToolbarIconSize}" Height="{DynamicResource ToolbarIconSize}">
+                <PathIcon Classes="fluentIcon fluentIcon24" Data="{StaticResource FluentIcon.DocumentData}"
+                          Foreground="{Binding Foreground, ElementName=ReportToolbarButton}"
+                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Grid>
+              <TextBlock Text="{x:Static resources:Strings.Report}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+        <Button x:Name="ProjectPropertiesToolbarButton" Grid.Column="1" Classes="toolbar"
+                HorizontalAlignment="Right" VerticalAlignment="Center"
+                Command="{Binding ChangeProjectCommand}"
+                AutomationProperties.Name="{x:Static resources:Strings.EditProject}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
             <Grid Width="{DynamicResource ToolbarIconSize}" Height="{DynamicResource ToolbarIconSize}">
-              <PathIcon Classes="fluentIcon fluentIcon24" Data="{StaticResource FluentIcon.DocumentData}"
-                        Foreground="{Binding Foreground, ElementName=ReportToolbarButton}"
+              <PathIcon Classes="fluentIcon fluentIcon20" Data="{StaticResource FluentIcon.DocumentSettings}"
+                        Foreground="{Binding Foreground, ElementName=ProjectPropertiesToolbarButton}"
                         HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Grid>
-            <TextBlock Text="{x:Static resources:Strings.Report}" VerticalAlignment="Center" />
+            <TextBlock Text="{x:Static resources:Strings.EditProject}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
-      </StackPanel>
+      </Grid>
     </Border>
     <Grid Grid.Row="1" x:Name="EditorWorkspace">
       <Grid.ColumnDefinitions>

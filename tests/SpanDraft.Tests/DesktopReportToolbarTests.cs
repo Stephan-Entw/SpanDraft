@@ -1,5 +1,6 @@
 using System.Reflection;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Shapes;
@@ -45,7 +46,7 @@ public sealed class DesktopReportToolbarTests
         Assert.True(main.CanReport, main.Editor!.Presentation.StatusText);
         Assert.True(button.IsEffectivelyEnabled);
         Assert.Equal(language == "de-DE" ? "Bericht" : "Report", Assert.Single(button.GetVisualDescendants().OfType<TextBlock>()).Text);
-        var group = Assert.IsType<StackPanel>(bar.Child);
+        var group = Assert.IsType<StackPanel>(Assert.IsType<Grid>(bar.Child).Children[0]);
         var separator = view.FindControl<Rectangle>("ReportToolbarSeparator")!;
         var roller = Assert.IsType<ToggleButton>(group.Children[^3]);
         Assert.Same(main.Editor!.RollerToolCommand, roller.Command);
@@ -78,6 +79,80 @@ public sealed class DesktopReportToolbarTests
         Dispatcher.UIThread.RunJobs(); Assert.False(button.IsEffectivelyEnabled); Assert.False(main.ReportCommand.CanExecute(null));
         Assert.True(main.Undo()); Dispatcher.UIThread.RunJobs(); Assert.True(button.IsEffectivelyEnabled);
         window.Close();
+    }
+
+    [Theory]
+    [InlineData("de-DE", false)] [InlineData("de-DE", true)]
+    [InlineData("en-US", false)] [InlineData("en-US", true)]
+    public void ProjectPropertiesStayRightAlignedAndUseNormalToolbarStates(string language, bool dark)
+    {
+        using var environment = new DesktopControlEnvironment(); using var culture = new UiCultureScope(language);
+        Application.Current!.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+        var (window, main) = OpenWindow();
+        window.RequestedThemeVariant = Application.Current.RequestedThemeVariant;
+        try
+        {
+            Layout(window, 1100, 650);
+            var view = Assert.Single(window.GetVisualDescendants().OfType<EditorView>());
+            var bar = view.FindControl<Border>("EditorToolbar")!;
+            var layout = Assert.IsType<Grid>(bar.Child);
+            var left = Assert.IsType<StackPanel>(layout.Children[0]);
+            var report = view.FindControl<Button>("ReportToolbarButton")!;
+            var button = view.FindControl<Button>("ProjectPropertiesToolbarButton")!;
+            Assert.Same(main.Editor!.ChangeProjectCommand, button.Command);
+            string label = language == "de-DE" ? "Projekteigenschaften" : "Project properties";
+            Assert.Equal(label, Assert.Single(button.GetVisualDescendants().OfType<TextBlock>()).Text);
+            Assert.Equal(label, AutomationProperties.GetName(button));
+            Assert.Contains("toolbar", button.Classes); Assert.DoesNotContain("primary", button.Classes);
+            Assert.Equal(new System.Windows.Input.ICommand[] { main.Editor.ForceToolCommand, main.Editor.MomentToolCommand,
+                main.Editor.DistributedLoadToolCommand, main.Editor.FixedToolCommand, main.Editor.PinnedToolCommand,
+                main.Editor.RollerToolCommand, main.ReportCommand }, left.Children.OfType<Button>().Select(b => b.Command));
+            var originalLeftBounds = left.Children.Select(c => c.Bounds).ToArray();
+            double previousGap = 0;
+            foreach (int width in new[] { 1100, 1250, 1600, 2400 })
+            {
+                window.Width = width;
+                Layout(window, width, 800);
+                var bounds = new Rect(button.TranslatePoint(default, layout)!.Value, button.Bounds.Size);
+                var reportBounds = new Rect(report.TranslatePoint(default, layout)!.Value, report.Bounds.Size);
+                Assert.Equal(layout.Bounds.Width, bounds.Right);
+                Assert.True(new Rect(layout.Bounds.Size).Contains(bounds));
+                Assert.Equal(reportBounds.Top, bounds.Top); Assert.Equal(reportBounds.Height, bounds.Height);
+                Assert.True(new Rect(layout.Bounds.Size).Contains(reportBounds));
+                double gap = bounds.Left - reportBounds.Right;
+                Assert.True(gap > previousGap);
+                // The English captions use part of the column gap at the supported minimum width.
+                if (language != "en-US" || width > 1100) Assert.True(gap >= layout.ColumnSpacing);
+                previousGap = gap;
+                Assert.Equal(originalLeftBounds, left.Children.Select(c => c.Bounds));
+            }
+            var icon = Assert.Single(button.GetVisualDescendants().OfType<PathIcon>());
+            Assert.Same(Application.Current.FindResource("FluentIcon.DocumentSettings"), icon.Data);
+            Assert.Equal(new Size(20, 20), icon.Bounds.Size);
+            var slot = Assert.IsType<Grid>(icon.Parent);
+            Assert.Equal(Assert.IsType<Grid>(report.GetVisualDescendants().OfType<PathIcon>().Single().Parent).Bounds.Size, slot.Bounds.Size);
+            Assert.Equal(new Point(slot.Bounds.Width / 2, slot.Bounds.Height / 2), icon.Bounds.Center);
+            var path = Assert.Single(icon.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>());
+            Assert.False(icon.IsHitTestVisible); Assert.False(icon.Focusable);
+            Assert.Same(report.Background, button.Background); Assert.Same(report.Foreground, button.Foreground);
+            Assert.Same(button.Foreground, icon.Foreground); Assert.Same(icon.Foreground, path.Fill);
+            Assert.True(button.Focus(NavigationMethod.Tab)); Dispatcher.UIThread.RunJobs();
+            Assert.True(Assert.Single(button.GetVisualDescendants().OfType<Border>(), b => b.Name == "FocusRing").IsVisible);
+            ((IPseudoClasses)button.Classes).Set(":pointerover", true); Dispatcher.UIThread.RunJobs();
+            Assert.Same(Application.Current.FindResource("SurfaceHover"), button.Background);
+            Assert.Same(Application.Current.FindResource("TextPrimary"), button.Foreground);
+            ((IPseudoClasses)button.Classes).Set(":pressed", true); Dispatcher.UIThread.RunJobs();
+            Assert.Same(Application.Current.FindResource("SurfacePressed"), button.Background);
+            button.IsEnabled = false; Dispatcher.UIThread.RunJobs();
+            Assert.Same(Application.Current.FindResource("TextDisabled"), button.Foreground);
+            Assert.Same(button.Foreground, icon.Foreground); Assert.Same(icon.Foreground, path.Fill);
+            Assert.Equal(Colors.Transparent, Assert.IsAssignableFrom<ISolidColorBrush>(button.Background).Color);
+            ((IPseudoClasses)button.Classes).Set(":pressed", false);
+            ((IPseudoClasses)button.Classes).Set(":pointerover", false);
+            button.IsEnabled = true; Dispatcher.UIThread.RunJobs();
+            Assert.Same(report.Background, button.Background); Assert.Same(report.Foreground, button.Foreground);
+        }
+        finally { window.Close(); }
     }
 
     [Theory]

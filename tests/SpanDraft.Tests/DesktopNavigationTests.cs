@@ -273,7 +273,9 @@ public sealed class DesktopNavigationTests
             Assert.True(canvas.Bounds.Width > 0 && canvas.Bounds.Height > 0);
             Assert.Equal(6, view.GetVisualDescendants().OfType<ToggleButton>().Count(b => b.Command is not null));
             Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == editor.Presentation.StatusText);
-        Assert.Equal(editor.ChangeProjectCommand, Assert.Single(overview.GetVisualDescendants().OfType<Button>()).Command);
+            Assert.Empty(overview.GetVisualDescendants().OfType<Button>());
+            var properties = view.FindControl<Button>("ProjectPropertiesToolbarButton")!;
+            Assert.Same(editor.ChangeProjectCommand, properties.Command);
             Assert.DoesNotContain(view.GetVisualDescendants().OfType<Button>(), b => !b.IsEnabled);
             Assert.True(editor.Session.IsDirty);
             Assert.Empty(editor.Session.UndoHistory);
@@ -281,7 +283,23 @@ public sealed class DesktopNavigationTests
             Assert.Equal(1, analyses);
 
             // Editing the project uses the same setup; cancelling must restore the editor too.
-            model.EditProject();
+            var revision = editor.Session.CurrentRevision;
+            if (culture == "de-DE")
+            {
+                editor.ForceToolCommand.Execute(null);
+                Assert.True(editor.IsForceTool);
+            }
+            else
+            {
+                editor.DimensionLength.Begin(); editor.DimensionLength.Text = "9000";
+                Assert.True(editor.DimensionLength.IsEditing);
+            }
+            typeof(Button).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(properties, null);
+            Assert.False(editor.IsForceTool);
+            Assert.Null(editor.LoadDraft);
+            Assert.False(editor.DimensionLength.IsEditing);
+            Assert.Same(revision, editor.Session.CurrentRevision);
             Layout(window);
             Assert.Single(window.GetVisualDescendants().OfType<ProjectSetupView>());
             Assert.Contains(window.GetVisualDescendants().OfType<Button>(),
@@ -290,6 +308,7 @@ public sealed class DesktopNavigationTests
             model.Setup.CancelCommand.Execute(null);
             Layout(window);
             Assert.Same(editor, host.Content);
+            Assert.Same(revision, editor.Session.CurrentRevision);
             Assert.Single(window.GetVisualDescendants().OfType<BeamCanvas>());
             Assert.Equal(1, analyses);
         }
@@ -346,8 +365,16 @@ public sealed class DesktopNavigationTests
         Assert.Equal(model.Editor.Overview.Material + " · " + model.Editor.Overview.Length,
             string.Concat(materialAndLength.Inlines!.OfType<Avalonia.Controls.Documents.Run>().Select(r => r.Text)));
         Assert.Single(materialAndLength.TextLayout.TextLines);
-        Assert.Equal(culture == "de-DE" ? "Ändern" : "Change",
-            Assert.Single(overview.FindControl<Grid>("ProjectBlock")!.GetVisualDescendants().OfType<Button>()).Content);
+        var projectBlock = overview.FindControl<Grid>("ProjectBlock")!;
+        Assert.Empty(projectBlock.GetVisualDescendants().OfType<Button>());
+        Assert.Empty(projectBlock.ColumnDefinitions);
+        var projectDetails = Assert.Single(projectBlock.Children.OfType<StackPanel>());
+        Assert.Equal(projectBlock.Bounds.Width, projectDetails.Bounds.Width);
+        Assert.All(projectDetails.Children, text =>
+        {
+            Assert.Equal(0, text.Bounds.Left);
+            Assert.Equal(projectDetails.Bounds.Width, text.Bounds.Width);
+        });
         Assert.DoesNotContain(overview.GetVisualDescendants().OfType<TextBlock>(),
             t => t.Text == Strings.Section || t.Text == Strings.Material);
         // Dense annotations increase the model's existing minimum height and overflow vertically.
@@ -528,7 +555,7 @@ public sealed class DesktopNavigationTests
         Assert.False(overview.FindControl<StackPanel>("ReactionsSection")!.IsVisible);
         Assert.True(overview.FindControl<TextBlock>("AnalysisStatus")!.IsVisible);
         Assert.Equal(model.Editor!.Presentation.StatusText, overview.FindControl<TextBlock>("AnalysisStatus")!.Text);
-        Assert.Single(overview.GetVisualDescendants().OfType<Button>());
+        Assert.Empty(overview.GetVisualDescendants().OfType<Button>());
     }
 
     private static void AssertTables(ProjectOverviewView overview)

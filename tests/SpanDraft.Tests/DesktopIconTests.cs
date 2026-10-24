@@ -39,7 +39,7 @@ public sealed class DesktopIconTests
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
             Application.Current!.RequestedThemeVariant = theme;
-            foreach (var (key, size) in Fluent.Select(key => (key, 16)).Concat(Fluent24.Select(key => (key, 24))))
+            foreach (var (key, size) in Fluent.Select(key => (key, 16)).Append(("DocumentSettings", 20)).Concat(Fluent24.Select(key => (key, 24))))
                 foreach (var (state, color) in new[] { ("primary", "TextPrimary"), ("secondary", "TextSecondary"), ("disabled", "TextDisabled"), ("error", "Error") })
                 {
                     Assert.True(Application.Current.TryFindResource(color, theme, out var brush));
@@ -109,6 +109,7 @@ public sealed class DesktopIconTests
     private static PathIcon Icon(string key, int size = 16)
     {
         var icon = new PathIcon { Data = Resource<Geometry>("FluentIcon." + key), Classes = { "fluentIcon" } };
+        if (size == 20) icon.Classes.Add("fluentIcon20");
         if (size == 24) icon.Classes.Add("fluentIcon24");
         return icon;
     }

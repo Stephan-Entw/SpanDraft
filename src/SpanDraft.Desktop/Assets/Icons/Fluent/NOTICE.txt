@@ -1,7 +1,8 @@
-Microsoft Fluent UI System Icons — Regular, 16 and 24 px
+Microsoft Fluent UI System Icons — Regular, 16, 20 and 24 px
 Source: https://github.com/microsoft/fluentui-system-icons
 Edit, Star, Info, Error Circle, Document Add, Folder Open, Document and Book Open SVG assets are included.
 Zoom In, Zoom Out, Document Fit, Document Width, Document Data, Print, Document PDF, Chevron Left and Chevron Right SVG assets are included.
 Add and Subtract SVG assets are included.
+Document Settings SVG asset is included.
 SVG geometry is unchanged; foreground color is supplied by application resources.
 See LICENSE.txt for the MIT license.
