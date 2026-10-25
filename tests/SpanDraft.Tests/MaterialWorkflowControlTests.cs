@@ -12,6 +12,7 @@ using SpanDraft.Desktop;
 using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
@@ -23,6 +24,37 @@ namespace SpanDraft.Tests;
 [Collection("Schematic text")]
 public sealed class MaterialWorkflowControlTests
 {
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void MaterialInputsAndLibraryHeadersFollowTheCentralUnitsWithoutChangingSiValues(string culture)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new UiCultureScope(culture);
+        var material = new Material("Precision", Pressure.FromPascals(210.123456789e9), Pressure.FromPascals(235.123456789e6),
+            MaterialStrengthType.Re, MassDensity.FromKilogramsPerCubicMeter(7850.123456789), PoissonRatio.FromValue(.3123456789));
+        var setup = new ProjectSetupViewModel(ProjectSetupMode.Edit, ProjectTemplates.Section,
+            SpanDraft.Core.Sections.SectionAxisDesignation.Y, material, _ => { }, () => { }, new(UnitProfile.UnitedStates, 4));
+        var editor = new MaterialEditorViewModel(setup, material, SetupEditorMode.ProjectDraft);
+        var view = new MaterialEditorView { DataContext = editor };
+        var window = new Window { Content = view }; Arrange(window);
+        Assert.Equal("ksi", view.FindControl<TextBlock>("MaterialStrengthUnit")!.Text);
+        Assert.Same(UnitCatalog.Ksi, editor.Inputs[0].Unit); Assert.Same(UnitCatalog.Ksi, editor.Inputs[1].Unit);
+        Assert.Same(UnitCatalog.KilogramsPerCubicMeter, editor.Inputs[2].Unit);
+        foreach (var input in editor.Inputs) { input.CompleteInput(); Assert.True(input.TryRead(out _)); }
+        Assert.Equal(material.YoungsModulus, editor.Draft!.YoungsModulus);
+        Assert.Equal(material.YieldStrength, editor.Draft.YieldStrength);
+        Assert.Equal(material.Density, editor.Draft.Density); Assert.Equal(material.PoissonRatio, editor.Draft.PoissonRatio);
+        var library = new MaterialSelectionViewModel(setup);
+        Assert.Equal("E [ksi]", library.YoungsModulusHeader.PlainText);
+        Assert.EndsWith("[ksi]", library.StrengthHeader);
+        Assert.Equal(QuantityFormatter.FormatNumber(material.YoungsModulus.Pascals, QuantityKind.YoungsModulus, setup.ResultPresentation), library.CurrentEntry!.YoungsModulus);
+        setup.ApplyResultPresentation(new(UnitProfile.Default, 7, EngineeringNotation.Off));
+        library.Refresh();
+        Assert.Equal("E [GPa]", library.YoungsModulusHeader.PlainText);
+        Assert.Equal(QuantityFormatter.FormatNumber(material.Density!.Value.KilogramsPerCubicMeter, QuantityKind.Density, setup.ResultPresentation), library.CurrentEntry.Density);
+        window.Content = null;
+    }
+
     private static void Arrange(Window window, double width = 1100, double height = 650)
     { window.Measure(new Size(width, height)); window.Arrange(new Rect(0, 0, width, height)); Dispatcher.UIThread.RunJobs(); }
     private static void Activate(Button button)
@@ -204,7 +236,7 @@ public sealed class MaterialWorkflowControlTests
                     Assert.InRange(Math.Abs(cell.Bounds.Width - header.Bounds.Width), 0, 1);
                 }
             }
-            Assert.Equal(Strings.MaterialStrengthColumn, ((TextBlock)heading.Children[3]).Text);
+            Assert.Equal(selection.StrengthHeader, ((TextBlock)heading.Children[3]).Text);
             selection.SearchText = "no library match"; selection.SelectedFilter = selection.BuiltInFilter; Arrange(owner, width, height);
             Assert.Empty(selection.FilteredEntries); Assert.True(selection.IsEmpty); Assert.Null(selection.SelectedEntry); Assert.False(selection.CanUseSelected);
             selection.SearchText = ""; selection.SelectedFilter = selection.Filters[0]; selection.SelectedEntry = selection.CurrentEntry; Arrange(owner, width, height);

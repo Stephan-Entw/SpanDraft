@@ -38,17 +38,14 @@ public sealed record DecimalNumber
 /// <summary>The result of the one final precision rounding, before any notation or culture choice.</summary>
 public sealed class RoundedNumber
 {
-    internal RoundedNumber(DecimalNumber value, DecimalNumber step, bool isApproximateZero = false,
-        bool isPositiveInfinity = false)
+    internal RoundedNumber(DecimalNumber value, DecimalNumber step, bool isPositiveInfinity = false)
     {
         Value = value;
         Step = step;
-        IsApproximateZero = isApproximateZero;
         IsPositiveInfinity = isPositiveInfinity;
     }
 
     public DecimalNumber Value { get; }
     public DecimalNumber Step { get; }
-    public bool IsApproximateZero { get; }
     public bool IsPositiveInfinity { get; }
 }

@@ -530,7 +530,7 @@ public sealed class DesktopSchematicIntegrationTests
         var normal = CoordinateAxisLayout.Create(frame.Layout, 1100, DesktopLayoutFixture.Measure);
         var edit = CoordinateAxisLayout.Create(frame.Layout, 1100, DesktopLayoutFixture.Measure, editing: true);
         var end = edit.Labels.Single(l => l.Role == AxisEndpointRole.End);
-        Assert.Equal(1, end.PhysicalX); Assert.Equal("1000", end.Text);
+        Assert.Equal(1, end.PhysicalX); Assert.Equal("1\u202f000", end.Text);
         Assert.Equal(SchematicMetrics.LengthInputWidth + 8 + DesktopLayoutFixture.Measure("mm").Width, end.Bounds.Width);
         Assert.Equal(SchematicMetrics.LengthInputHeight, edit.LineHeight);
         Assert.True(edit.PaneHeight > normal.PaneHeight);

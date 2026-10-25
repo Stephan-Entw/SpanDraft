@@ -67,7 +67,11 @@ public sealed class UnitProfile
             [QuantityKind.Moment] = us ? UnitCatalog.KipFoot : civil ? UnitCatalog.KilonewtonMeter : UnitCatalog.NewtonMeter,
             [QuantityKind.DistributedLoad] = us ? UnitCatalog.KipPerFoot : civil ? UnitCatalog.KilonewtonPerMeter : UnitCatalog.NewtonPerMeter,
             [QuantityKind.Stress] = us ? UnitCatalog.Ksi : UnitCatalog.Megapascal,
-            [QuantityKind.SafetyFactor] = UnitCatalog.Dimensionless
+            [QuantityKind.SafetyFactor] = UnitCatalog.Dimensionless,
+            [QuantityKind.YoungsModulus] = us ? UnitCatalog.Ksi : UnitCatalog.Gigapascal,
+            [QuantityKind.MaterialStrength] = us ? UnitCatalog.Ksi : UnitCatalog.Megapascal,
+            [QuantityKind.Density] = UnitCatalog.KilogramsPerCubicMeter,
+            [QuantityKind.PoissonRatio] = UnitCatalog.Dimensionless
         };
         return new UnitProfile(kind, units);
     }

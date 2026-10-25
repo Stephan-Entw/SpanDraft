@@ -102,9 +102,6 @@ public static class Strings
     public static string DiagramMinimum => Get(nameof(DiagramMinimum));
     public static string DiagramMaximum => Get(nameof(DiagramMaximum));
     public static string DiagramMinimumAndMaximum => Get(nameof(DiagramMinimumAndMaximum));
-    public static string DiagramMinimumApproximate => Get(nameof(DiagramMinimumApproximate));
-    public static string DiagramMaximumApproximate => Get(nameof(DiagramMaximumApproximate));
-    public static string DiagramMinimumAndMaximumApproximate => Get(nameof(DiagramMinimumAndMaximumApproximate));
     public static string DistributedStartLabel => Get(nameof(DistributedStartLabel));
     public static string DistributedEndLabel => Get(nameof(DistributedEndLabel));
     public static string DistributedIntensityLabel => Get(nameof(DistributedIntensityLabel));
@@ -248,10 +245,6 @@ public static class Strings
     public static string UnitStress => Get(nameof(UnitStress));
     public static string UnitRotation => Get(nameof(UnitRotation));
     public static string SettingsNumeric => Get(nameof(SettingsNumeric));
-    public static string PresentationStandard => Get(nameof(PresentationStandard));
-    public static string PresentationDetailed => Get(nameof(PresentationDetailed));
-    public static string PresentationStandardDescription => Get(nameof(PresentationStandardDescription));
-    public static string PresentationDetailedDescription => Get(nameof(PresentationDetailedDescription));
     public static string PresentationCalculationHint => Get(nameof(PresentationCalculationHint));
     public static string SettingsLanguage => Get(nameof(SettingsLanguage));
     public static string InterfaceLanguage => Get(nameof(InterfaceLanguage));
@@ -380,4 +373,8 @@ public static class Strings
     public static string RenameMaterial => Get(nameof(RenameMaterial));
     public static string MaterialNameConflictQuestion => Get(nameof(MaterialNameConflictQuestion));
     public static string ReplaceMaterialQuestion => Get(nameof(ReplaceMaterialQuestion));
+    public static string SignificantDigits => Get(nameof(SignificantDigits));
+    public static string EngineeringNotation => Get(nameof(EngineeringNotation));
+    public static string NotationAutomatic => Get(nameof(NotationAutomatic));
+    public static string NotationOff => Get(nameof(NotationOff));
 }

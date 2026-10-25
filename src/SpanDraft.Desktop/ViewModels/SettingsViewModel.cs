@@ -1,4 +1,3 @@
-using System.Globalization;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Reporting.Notation;
@@ -50,8 +49,15 @@ public sealed class SettingsViewModel : ObservableObject
         {
             Row(QuantityKind.TransverseForce, Strings.UnitForce), Row(QuantityKind.AxialForce, Strings.UnitAxialForce),
             Row(QuantityKind.Moment, Strings.Moment), Row(QuantityKind.DistributedLoad, Strings.DistributedLoad),
-            Row(QuantityKind.Stress, Strings.UnitStress), Row(QuantityKind.Rotation, Strings.UnitRotation)
+            Row(QuantityKind.Stress, Strings.UnitStress), Row(QuantityKind.Rotation, Strings.UnitRotation),
+            Row(QuantityKind.YoungsModulus, Strings.MaterialYoungsModulus),
+            Row(QuantityKind.MaterialStrength, Strings.MaterialStrength), Row(QuantityKind.Density, Strings.MaterialDensity)
         };
+        Notations =
+        [
+            new(EngineeringNotation.Automatic, Strings.NotationAutomatic),
+            new(EngineeringNotation.Off, Strings.NotationOff)
+        ];
         UiLanguages =
         [
             new(UiLanguagePreference.System, Strings.SystemLanguage),
@@ -73,8 +79,20 @@ public sealed class SettingsViewModel : ObservableObject
     public string? ErrorText => _error;
     public bool HasError => ErrorText is not null;
     public bool HasCustomProfile => _pending.HasCustomProfile;
-    public string StandardDescription => string.Format(CultureInfo.CurrentCulture, Strings.PresentationStandardDescription, 12.345m, 12m);
-    public string DetailedDescription => string.Format(CultureInfo.CurrentCulture, Strings.PresentationDetailedDescription, 12.345m, 12.3m);
+    public IReadOnlyList<int> SignificantDigitChoices { get; } = Enumerable.Range(
+        ResultPresentationOptions.MinimumSignificantDigits,
+        ResultPresentationOptions.MaximumSignificantDigits - ResultPresentationOptions.MinimumSignificantDigits + 1).ToArray();
+    public int SignificantDigits
+    {
+        get => _pending.SignificantDigits;
+        set => Update(_pending with { SignificantDigits = value });
+    }
+    public IReadOnlyList<SetupChoice<EngineeringNotation>> Notations { get; }
+    public EngineeringNotation SelectedNotation
+    {
+        get => _pending.Notation;
+        set => Update(_pending with { Notation = value });
+    }
     public IReadOnlyList<UnitSettingViewModel> LeftUnits { get; }
     public IReadOnlyList<UnitSettingViewModel> RightUnits { get; }
     public IReadOnlyList<SetupChoice<UiLanguagePreference>> UiLanguages { get; }
@@ -93,8 +111,6 @@ public sealed class SettingsViewModel : ObservableObject
     public bool IsStructural { get => Kind == UnitProfileKind.StructuralEngineering; set { if (value) Select(UnitProfileKind.StructuralEngineering); } }
     public bool IsUnitedStates { get => Kind == UnitProfileKind.UnitedStates; set { if (value) Select(UnitProfileKind.UnitedStates); } }
     public bool IsCustom { get => Kind == UnitProfileKind.Custom; set { if (value) Select(UnitProfileKind.Custom); } }
-    public bool IsStandard { get => _pending.Mode == PresentationMode.Standard; set { if (value) Update(_pending with { Mode = PresentationMode.Standard }); } }
-    public bool IsDetailed { get => _pending.Mode == PresentationMode.Detailed; set { if (value) Update(_pending with { Mode = PresentationMode.Detailed }); } }
     private UnitProfileKind Kind => _pending.Profile.Kind;
     private UnitSettingViewModel Row(QuantityKind q, TechnicalText label) => new(this, q, label);
     public void Select(UnitProfileKind kind) => Update(_pending.Select(kind));
@@ -129,7 +145,7 @@ public sealed class SettingsViewModel : ObservableObject
     {
         foreach (string name in new[] { nameof(Pending), nameof(HasChanges), nameof(IsSaving), nameof(CanApply), nameof(ErrorText),
             nameof(HasError), nameof(HasCustomProfile), nameof(IsMechanical), nameof(IsStructural), nameof(IsUnitedStates),
-            nameof(IsCustom), nameof(IsStandard), nameof(IsDetailed), nameof(SelectedUiLanguage), nameof(SelectedRegionalFormat) }) Notify(name);
+            nameof(IsCustom), nameof(SignificantDigits), nameof(SelectedNotation), nameof(SelectedUiLanguage), nameof(SelectedRegionalFormat) }) Notify(name);
         foreach (var row in LeftUnits.Concat(RightUnits)) row.Refresh();
     }
 }

@@ -21,7 +21,9 @@ public sealed class SectionPreviewControl : Control
     public static readonly StyledProperty<SectionAxisDesignation?> SelectedAxisProperty = AvaloniaProperty.Register<SectionPreviewControl, SectionAxisDesignation?>(nameof(SelectedAxis));
     public static readonly StyledProperty<string?> HighlightedParameterProperty = AvaloniaProperty.Register<SectionPreviewControl, string?>(nameof(HighlightedParameter));
     public static readonly StyledProperty<UnitProfile> UnitProfileProperty = AvaloniaProperty.Register<SectionPreviewControl, UnitProfile>(nameof(UnitProfile), UnitProfile.Default);
-    static SectionPreviewControl() => AffectsRender<SectionPreviewControl>(GeometryProperty, SelectedAxisProperty, HighlightedParameterProperty, UnitProfileProperty, ShowCanvasBoundsProperty, CompactProperty);
+    public static readonly StyledProperty<ResultPresentationOptions> PresentationProperty = AvaloniaProperty.Register<SectionPreviewControl, ResultPresentationOptions>(nameof(Presentation), ResultPresentationOptions.Default);
+    public ResultPresentationOptions Presentation { get => GetValue(PresentationProperty); set => SetValue(PresentationProperty, value); }
+    static SectionPreviewControl() => AffectsRender<SectionPreviewControl>(PresentationProperty, GeometryProperty, SelectedAxisProperty, HighlightedParameterProperty, UnitProfileProperty, ShowCanvasBoundsProperty, CompactProperty);
     public bool ShowCanvasBounds { get => GetValue(ShowCanvasBoundsProperty); set => SetValue(ShowCanvasBoundsProperty, value); }
     public SectionPreviewGeometry? Geometry { get => GetValue(GeometryProperty); set => SetValue(GeometryProperty, value); }
     public SectionAxisDesignation? SelectedAxis { get => GetValue(SelectedAxisProperty); set => SetValue(SelectedAxisProperty, value); }
@@ -44,7 +46,7 @@ public sealed class SectionPreviewControl : Control
         {
             using var formatted = SchematicText.Format(text, Typeface.Default, 12, foreground);
             return new Size(formatted.Width, formatted.Height);
-        }, Compact);
+        }, Compact, Presentation);
         double scale = layout.Scale;
         Point Project(Point p) => layout.Project(p);
         var path = new StreamGeometry();

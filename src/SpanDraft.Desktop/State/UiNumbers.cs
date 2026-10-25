@@ -35,28 +35,10 @@ public static class UiNumbers
         return mantissa.ToString("0.##", culture) + "·10" + Superscript(engineeringExponent);
     }
 
-    /// <summary>Compact read-only values; retain small nonzero values and bound very large numbers.</summary>
-    public static string Compact(double value, CultureInfo? culture = null)
-    {
-        culture ??= CultureInfo.CurrentCulture;
-        if (!double.IsFinite(value)) return Format(value);
-        if (value == 0) return "0";
-        double magnitude = Math.Abs(value);
-        if (magnitude is >= 0.01 and < 10000)
-            return value.ToString("0.##", culture);
-
-        // Round before regrouping so a carry cannot be lost to binary scaling.
-        // The normalized representation also avoids underflow for subnormal
-        // doubles and overflow for very large values.
-        string scientific = magnitude.ToString("E2", CultureInfo.InvariantCulture);
-        int separator = scientific.IndexOf('E');
-        double mantissa = double.Parse(scientific.AsSpan(0, separator), CultureInfo.InvariantCulture);
-        int exponent = int.Parse(scientific.AsSpan(separator + 1), CultureInfo.InvariantCulture);
-        int engineeringExponent = (int)Math.Floor(exponent / 3d) * 3;
-        mantissa *= Math.Pow(10, exponent - engineeringExponent);
-        if (value < 0) mantissa = -mantissa;
-        return mantissa.ToString("0.##", culture) + "·10" + Superscript(engineeringExponent);
-    }
+    /// <summary>Technical display; precision and notation live in the central formatter.</summary>
+    public static string Compact(double value, CultureInfo? culture = null) => double.IsPositiveInfinity(value) ? "∞" :
+        SpanDraft.Desktop.Presentation.QuantityFormatter.FormatNumber(value,
+            SpanDraft.Desktop.Presentation.QuantityKind.PoissonRatio, culture: culture);
 
     private static string Superscript(int exponent) => string.Concat(exponent.ToString(CultureInfo.InvariantCulture)
         .Select(c => c == '-' ? '⁻' : "⁰¹²³⁴⁵⁶⁷⁸⁹"[c - '0']));

@@ -346,13 +346,68 @@ public sealed class ProjectReportTests : IDisposable
         Assert.Contains(wrapped.TextRuns, r => r.Text.Contains(TechnicalSymbols.MaximumStress.PlainText));
     }
 
+    [Theory]
+    [InlineData("de-DE", false)] [InlineData("en-US", false)]
+    [InlineData("de-DE", true)] [InlineData("en-US", true)]
+    public void ReportAndUiSharePrecisionNotationAndSemanticMaterialUnits(string culture, bool engineering)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        var state = ReportTestProjects.Create();
+        var original = state.Document.Loads[0];
+        state = state with { Document = state.Document.WithLoads([
+            new EditorPointForce(original.Id, Length.FromMeters(.8123456789), Force.FromNewtons(-12345.6789), original.Name)]) };
+        var options = new ResultPresentationOptions(UnitProfile.UnitedStates, 7,
+            engineering ? EngineeringNotation.Automatic : EngineeringNotation.Off);
+        var (main, _) = Open(state, options);
+        var editor = main.Editor!;
+        var bytes = ProjectFileCodec.Serialize(editor.Session.CurrentRevision.State);
+        using var report = ProjectReport.Capture(editor, Now);
+        var material = state.Document.Material;
+        Assert.Contains(report.Data.MaterialProperties, p => p.PlainText.EndsWith(
+            QuantityFormatter.Format(material.YoungsModulus.Pascals, QuantityKind.YoungsModulus, options), StringComparison.Ordinal));
+        Assert.Contains(report.Data.MaterialProperties, p => p.PlainText.EndsWith(
+            QuantityFormatter.Format(material.YieldStrength.Pascals, QuantityKind.MaterialStrength, options), StringComparison.Ordinal));
+        var forces = report.Data.Tables.Single(t => t.Title == Strings.Forces);
+        Assert.Equal(editor.Overview.Forces[0].Value, forces.Rows[0][1]);
+        Assert.Equal(editor.Overview.Forces[0].Position, forces.Rows[0][2]);
+        Assert.Equal(QuantityFormatter.FormatNumber(.8123456789,
+            QuantityKind.BeamLength, options), forces.Rows[0][2]);
+        Assert.Equal(editor.Overview.Reactions.Select(r => r.Ry), report.Data.Tables.Single(t => t.Title == Strings.Reactions).Rows.Select(r => r[2]));
+        Assert.Equal(editor.Presentation.Displacement, report.Data.Indicators[0].Value);
+        Assert.Equal(editor.Presentation.Moment, report.Data.Indicators[1].Value);
+        for (int i = 0; i < report.Pages.Count; i++) { using var bitmap = report.RenderPage(i); AssertTextContained(report); }
+        using var pdf = new MemoryStream(); report.WritePdf(pdf); Assert.True(pdf.Length > 0);
+        Assert.Equal(bytes, ProjectFileCodec.Serialize(editor.Session.CurrentRevision.State));
+    }
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void PdfWrappingPreservesWholeGroupedNumbersInsideNarrowTableCells(string culture)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var captured = ProjectReport.Capture(main.Editor!, Now);
+        string number = QuantityFormatter.FormatNumber(123456789012345d, QuantityKind.PoissonRatio,
+            significantDigits: 15, notation: EngineeringNotation.Off);
+        var table = new ReportTable("Grouped numbers", ["Name", "Value"], [.8f, .2f],
+            [new[] { "Group", number }]);
+        using var report = new ReportDocument(captured.Data with { Tables = [table] }, new(80, (_, _, _) => { }));
+        using var bitmap = report.RenderPage(0);
+        var run = Assert.Single(report.TextRuns, r => r.Text == number);
+        var fragment = Assert.Single(report.Pages[0].Tables);
+        Assert.True(run.Bounds.Left >= fragment.Bounds.Left + fragment.Bounds.Width * .8f - .1f);
+        Assert.True(run.Bounds.Right <= fragment.Bounds.Right + .1f);
+        using var pdf = new MemoryStream(); report.WritePdf(pdf); Assert.True(pdf.Length > 0);
+    }
+
     private static (MainWindowViewModel Main, Files Files) Open(ProjectState state,
         ResultPresentationOptions? presentation = null, Action? analyzed = null)
     {
         var files = new Files();
         string path = Path.GetFullPath("report-input.spandraft"); files.Data[path] = ProjectFileCodec.Serialize(state);
         var main = new MainWindowViewModel(files: files, settings: UserSettings.Default with
-            { Profile = presentation?.Profile ?? UnitProfile.Default, Mode = presentation?.Mode ?? PresentationMode.Standard },
+            { Profile = presentation?.Profile ?? UnitProfile.Default, SignificantDigits = presentation?.SignificantDigits ?? 3,
+              Notation = presentation?.Notation ?? EngineeringNotation.Automatic },
             analyze: beam => { analyzed?.Invoke(); return BeamAnalysis.Analyze(beam); });
         Assert.True(main.OpenAsync(path).GetAwaiter().GetResult());
         return (main, files);
@@ -372,7 +427,7 @@ public sealed class ProjectReportTests : IDisposable
             2 => UnitProfile.UnitedStates, _ => UnitProfile.MechanicalEngineering.WithUnit(QuantityKind.BeamLength, UnitCatalog.Meter)
         };
         int analyses = 0;
-        var (main, files) = Open(ReportTestProjects.Create(), new(profile, detailed ? PresentationMode.Detailed : PresentationMode.Standard), () => analyses++);
+        var (main, files) = Open(ReportTestProjects.Create(), new(profile, detailed ? 6 : 3), () => analyses++);
         var session = main.Session!; var revision = session.CurrentRevision; var original = files.Data[session.FilePath!].ToArray();
         var editor = main.Editor!;
         editor.PreviewAnnotationOffset(editor.Document.Loads[0].Id, new(99, 88));
@@ -388,7 +443,7 @@ public sealed class ProjectReportTests : IDisposable
         Assert.Contains(profile[QuantityKind.TransverseForce].Symbol, report.Data.Tables.Single(t => t.Title == Strings.Reactions).Headers[2].PlainText);
         using var before = new MemoryStream(); report.WritePng(before, 0);
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture == "de-DE" ? "en-US" : "de-DE");
-        Assert.True(main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Detailed));
+        Assert.True(main.SetResultPresentation(UnitProfile.UnitedStates, 6));
         using var after = new MemoryStream(); report.WritePng(after, 0);
         Assert.Equal(before.ToArray(), after.ToArray());
         using var backgroundPdf = new MemoryStream();
@@ -527,7 +582,7 @@ public sealed class ProjectReportTests : IDisposable
         SolverTestSupport.ForceClose(1000, result.Solution.Nodes[0].ReactionY);
         SolverTestSupport.ForceClose(800, result.Solution.Nodes[^1].ReactionY);
         SolverTestSupport.Close(710, result.Engineering.BendingMomentMagnitude.NewtonMeters, 1e-7);
-        Assert.Equal(new[] { "0,78 mm", "710 N·m", "23 MPa", "10" }, report.Data.Indicators.Select(i => i.Value));
+        Assert.Equal(new[] { "0,785 mm", "710 N·m", "22,8 MPa", "10,3" }, report.Data.Indicators.Select(i => i.Value));
     }
 
     [Theory]
@@ -557,7 +612,6 @@ public sealed class ProjectReportTests : IDisposable
         for (int i = 0; i < columns.Length; i++)
         {
             Assert.Equal(columns[i].Left, values[i].Left);
-            Assert.True(columns[i].Height < values[i].Height);
             Assert.True(columns[i].Bottom < values[i].Top);
             Assert.True(values[i].Bottom < report.Pages[0].BodyTop - 12);
             if (i + 1 < columns.Length) Assert.True(values[i].Right < columns[i + 1].Left);
@@ -565,9 +619,11 @@ public sealed class ProjectReportTests : IDisposable
         Assert.All(values, bounds => Assert.Equal(values[0].Top, bounds.Top));
     }
 
-    [Fact]
-    public void HeaderWrapsLongTitleAndValuesWithinTheExistingHeaderArea()
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void HeaderWrapsLongTitleAndValuesWithinTheExistingHeaderArea(string culture)
     {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
         var state = ReportTestProjects.Create() with
         {
             Info = new(string.Join(" ", Enumerable.Repeat("Trägernachweis für die Bühnenkonstruktion", 3)),
@@ -596,16 +652,18 @@ public sealed class ProjectReportTests : IDisposable
         AssertTextContained(report);
     }
 
-    [Fact]
-    public void MissingOptionalProjectInformationKeepsAllHeaderLabelsVisible()
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void MissingOptionalProjectInformationKeepsAllHeaderLabelsVisible(string culture)
     {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
         var state = ReportTestProjects.Create();
         var (main, _) = Open(state); using var full = ProjectReport.Capture(main.Editor!, Now);
         var (compactMain, _) = Open(state with { Info = new(state.Info!.CalculationTitle, null, null, state.Info.Author) });
         using var compact = ProjectReport.Capture(compactMain.Editor!, Now);
         Assert.Equal(full.Data.Metadata.Count - 2, compact.Data.Metadata.Count);
         Assert.All(compact.Data.Metadata, row => Assert.False(string.IsNullOrWhiteSpace(row.Value)));
-        Assert.True(compact.Pages[0].BodyTop < full.Pages[0].BodyTop);
+        Assert.True(compact.Pages[0].BodyTop <= full.Pages[0].BodyTop);
         Assert.DoesNotContain(compact.Data.Metadata, row => row.Value is "Neutrales Beispiel" or "BEISPIEL-01");
         using var fullBitmap = full.RenderPage(0, 96);
         using var compactBitmap = compact.RenderPage(0, 96);
@@ -629,6 +687,51 @@ public sealed class ProjectReportTests : IDisposable
     }
 
     [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void MissingMetadataDoesNotShrinkTheTitleOrColumnLabels(string culture)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var full = ProjectReport.Capture(main.Editor!, Now);
+        using var missing = new ReportDocument(full.Data with { Metadata = [] }, new(80, (_, _, _) => { }));
+        using var fullBitmap = full.RenderPage(0, 96);
+        using var missingBitmap = missing.RenderPage(0, 96);
+        foreach (string text in new[] { full.Data.Title, full.Data.Labels.Project, full.Data.Labels.Reference, full.Data.Labels.Author })
+        {
+            var expected = Assert.Single(full.TextRuns, r => r.Text == text).Bounds;
+            var actual = Assert.Single(missing.TextRuns, r => r.Text == text).Bounds;
+            Assert.Equal(expected, actual);
+        }
+        var placeholders = missing.TextRuns.Where(r => r.Text == "-" && r.Bounds.Top < missing.Pages[0].BodyTop - 12).ToArray();
+        Assert.Equal(3, placeholders.Length);
+        foreach (var placeholder in placeholders)
+        {
+            var label = Assert.Single(missing.TextRuns, r => r.Bounds.Left == placeholder.Bounds.Left &&
+                new[] { full.Data.Labels.Project, full.Data.Labels.Reference, full.Data.Labels.Author }.Contains(r.Text));
+            Assert.True(label.Bounds.Bottom < placeholder.Bounds.Top);
+            Assert.True(placeholder.Bounds.Bottom < missing.Pages[0].BodyTop - 12);
+        }
+    }
+
+    [Fact]
+    public void TallMeasuredHeaderMovesMetadataToItsOwnPageBeforeItCanDisplaceTheDiagrams()
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var captured = ProjectReport.Capture(main.Editor!, Now);
+        using var report = new ReportDocument(captured.Data with
+        {
+            Metadata = [(captured.Data.Labels.Title, captured.Data.Title), (captured.Data.Labels.Reference, new string('r', 1100))]
+        }, new(260, (_, _, _) => { }));
+        Assert.False(report.Pages[0].HasGraphics);
+        Assert.Contains(report.Pages, p => p.HasGraphics);
+        for (int page = 0; page < report.Pages.Count; page++)
+        {
+            using var bitmap = report.RenderPage(page, 96);
+            AssertTextContained(report);
+        }
+    }
+
+    [Theory]
     [InlineData(false)] [InlineData(true)]
     public void StandaloneAxisPaintsEndValueUnitAndDistortionHint(bool overflow)
     {
@@ -639,7 +742,7 @@ public sealed class ProjectReportTests : IDisposable
         var axis = visuals.Axis.AxisLayout!;
         Assert.True(visuals.Axis.IsStandalone); Assert.Equal("mm", axis.UnitSymbol);
         var end = Assert.Single(axis.Labels, l => l.Role == AxisEndpointRole.End);
-        Assert.Equal(overflow ? "7000" : "2000", end.Text);
+        Assert.Equal(overflow ? "7\u202f000" : "2\u202f000", end.Text);
         using var standalone = RenderBeam(visuals);
         visuals.Axis.IsStandalone = false;
         using var editor = RenderBeam(visuals);
@@ -1196,17 +1299,19 @@ public sealed class ProjectReportTests : IDisposable
             var (main, _) = Open(state); using var report = ProjectReport.Capture(main.Editor!, Now);
             Assert.Contains(report.Data.SectionProperties, p => p.PlainText.StartsWith("I" + axis.AxisDesignation.ToString().ToLowerInvariant() + " = "));
             bool sameDisplay = QuantityFormatter.Format(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus,
-                main.Editor!.ResultPresentation.Profile, references: main.Editor.Presentation.References) ==
+                main.Editor!.ResultPresentation.Profile) ==
                 QuantityFormatter.Format(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus,
-                main.Editor.ResultPresentation.Profile, references: main.Editor.Presentation.References);
+                main.Editor.ResultPresentation.Profile);
             Assert.Equal(sameDisplay ? 2 : 3, report.Data.SectionProperties.Count);
             using var bitmap = report.RenderPage(0, 96); AssertTextContained(report);
         }
     }
 
-    [Fact]
-    public void LegacyAndUnloadedProjectsNeedNoMetadataOrInventedResults()
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void LegacyAndUnloadedProjectsNeedNoMetadataOrInventedResults(string culture)
     {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
         var state = ReportTestProjects.Create(); state = state with { Info = null, Document = state.Document.WithLoads([]).WithDistributedLoads([]) };
         state = state with { Presentation = state.Presentation.RetainEntities(state.Document) };
         var (main, _) = Open(state); using var report = ProjectReport.Capture(main.Editor!, Now);

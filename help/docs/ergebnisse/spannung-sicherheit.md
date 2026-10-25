@@ -48,7 +48,7 @@ SpanDraft vergleicht die maximale elastische Biegespannung mit dem hinterlegten 
 
 Bei verschwindender Biegespannung kann mathematisch `S = ∞` erscheinen. Das bedeutet nicht „unendlich sicher“.
 
-Angezeigte Werte können gerundet sein; die Berechnung verwendet die ungerundeten Werte. Mehr dazu unter [Ergebnisdarstellung](../modell/koordinaten-einheiten.md#standard-oder-detailliert).
+Angezeigte Werte können gerundet sein; die Berechnung verwendet die ungerundeten Werte. Mehr dazu unter [Ergebnisdarstellung](../modell/koordinaten-einheiten.md#zahlendarstellung).
 
 ## Was der Sicherheitsfaktor nicht bewertet
 

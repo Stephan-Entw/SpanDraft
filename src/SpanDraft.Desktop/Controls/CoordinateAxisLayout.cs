@@ -13,10 +13,10 @@ public sealed record CoordinateAxisLayout(StationLayoutResult StationLayout, IRe
     public const double AxisY = 8;
     public const double ErrorReserve = 40;
     public static CoordinateAxisLayout Create(StationLayoutResult layout, double paneWidth,
-        Func<string, Size> measure, bool editing = false, UnitDefinition? unit = null)
+        Func<string, Size> measure, bool editing = false, UnitDefinition? unit = null, ResultPresentationOptions? options = null)
     {
         unit ??= UnitCatalog.Millimeter;
-        var text = layout.Stations.Select(s => InputQuantityFormatter.Display(s.PhysicalX, unit)).ToArray();
+        var text = layout.Stations.Select(s => InputQuantityFormatter.Display(s.PhysicalX, unit, options)).ToArray();
         var sizes = text.Select(measure).ToArray();
         double lineHeight = Math.Max(SchematicMetrics.AxisLabelLineHeight, sizes.Max(s => s.Height));
         if (editing) lineHeight = Math.Max(lineHeight, SchematicMetrics.LengthInputHeight);

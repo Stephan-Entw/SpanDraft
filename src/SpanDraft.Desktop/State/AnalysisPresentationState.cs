@@ -13,31 +13,22 @@ public enum AnalysisPresentationKind
 /// <summary>Presentation classification and the original successful result; no copied engineering data.</summary>
 public sealed record AnalysisPresentationState
 {
-    private readonly Lazy<ModelReferenceValues>? _references;
-
     public AnalysisPresentationState(AnalysisPresentationKind kind, BeamAnalysisResult? result,
         ResultPresentationOptions? options = null)
-        : this(kind, result, options ?? ResultPresentationOptions.Default,
-            result is null ? null : new Lazy<ModelReferenceValues>(() => ModelReferenceValues.FromAnalysis(result))) { }
-
-    private AnalysisPresentationState(AnalysisPresentationKind kind, BeamAnalysisResult? result,
-        ResultPresentationOptions options, Lazy<ModelReferenceValues>? references)
     {
         Kind = kind;
         Result = result;
-        Options = options;
-        _references = references;
+        Options = options ?? ResultPresentationOptions.Default;
     }
 
     public AnalysisPresentationKind Kind { get; }
     public BeamAnalysisResult? Result { get; }
     public ResultPresentationOptions Options { get; }
-    public ModelReferenceValues? References => _references?.Value;
 
     public AnalysisPresentationState WithPresentation(ResultPresentationOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        return Options == options ? this : new(Kind, Result, options, _references);
+        return Options == options ? this : new(Kind, Result, options);
     }
 
     public static AnalysisPresentationState FromOutcome(BeamAnalysisOutcome outcome, ResultPresentationOptions? options = null)
@@ -76,6 +67,5 @@ public sealed record AnalysisPresentationState
     public string SafetyFactor => Result is { } r ? Format(r.Engineering.SafetyFactor, QuantityKind.SafetyFactor) : "";
 
     private string Format(double siValue, QuantityKind kind) =>
-        QuantityFormatter.Format(siValue, kind, Options.Profile, Options.Mode,
-            kind == QuantityKind.SafetyFactor ? null : References);
+        QuantityFormatter.Format(siValue, kind, Options);
 }

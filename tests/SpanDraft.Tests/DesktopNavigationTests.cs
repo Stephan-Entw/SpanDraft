@@ -450,7 +450,7 @@ public sealed class DesktopNavigationTests
         Assert.Equal(3, view.GetVisualDescendants().OfType<ResultDiagram>().Count());
         Assert.Equal(ScrollBarVisibility.Disabled, scroll.HorizontalScrollBarVisibility);
         var frame = canvas.Scene.Frame;
-        Assert.Equal(culture == "de-DE" ? "F1 = -13,3·10³ N" : "F1 = -13.3·10³ N",
+        Assert.Equal(culture == "de-DE" ? "F1 = -13\u202f300 N" : "F1 = -13\u202f300 N",
             canvas.Scene.Annotations.Single(a => !a.IsSupport).Text);
         double axisTop = axis.Bounds.Top;
         double diagramHeight = diagrams.Bounds.Height;

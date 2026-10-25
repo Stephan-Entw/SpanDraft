@@ -356,7 +356,7 @@ public sealed class SectionDefinitionPrototypeTests
     public void NonDefaultUnitsAndPresentationDoNotChangeSIValuesOrManualInputKinds()
     {
         using var culture=new UiCultureScope("en-US");
-        var vm=new SectionDefinitionViewModel(new(UnitProfile.UnitedStates,PresentationMode.Detailed));
+        var vm=new SectionDefinitionViewModel(new(UnitProfile.UnitedStates,6));
         vm.SelectForm(SectionEditorType.Rectangle); Commit(vm,"b","2"); Commit(vm,"h","4");
         Assert.Equal(.0508,Assert.IsType<RectangleSectionGeometry>(vm.Section).Width.Meters);
         Assert.Contains("2 × 4 in",vm.DisplayName);

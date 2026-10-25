@@ -28,7 +28,7 @@ public sealed class DesktopSettingsInteractionTests
         {
             "language" => main.Settings with { UiLanguage = UiLanguagePreference.English },
             "region" => main.Settings with { RegionalFormat = RegionalFormatPreference.GermanGermany },
-            _ => main.Settings with { Mode = PresentationMode.Detailed }
+            _ => main.Settings with { SignificantDigits = 6 }
         };
         Assert.Null(await main.ApplySettingsAsync(next));
         Assert.True(next.ContentEquals(SettingsCodec.Deserialize(files.Data["settings"])));
@@ -52,12 +52,31 @@ public sealed class DesktopSettingsInteractionTests
         }
         else { main.Setup.LengthInput.Begin(); main.Setup.LengthInput.Text = "unfinished"; }
         var next = main.Settings with { UiLanguage = UiLanguagePreference.English,
-            RegionalFormat = RegionalFormatPreference.GermanGermany, Mode = PresentationMode.Detailed };
+            RegionalFormat = RegionalFormatPreference.GermanGermany, SignificantDigits = 6 };
         Assert.Null(await main.ApplySettingsAsync(next));
         Assert.Equal("unfinished", input?.PendingText ?? main.Setup.LengthInput.Text);
         Assert.NotNull(await main.ApplySettingsAsync(next.Select(UnitProfileKind.UnitedStates)));
         Assert.Same(next, main.Settings);
         Assert.Equal("unfinished", input?.PendingText ?? main.Setup.LengthInput.Text);
+    }
+
+    [Fact]
+    public async Task MaterialEditingKeepsExactBuffersWhilePrecisionChangesAndRejectsAffectedUnitChanges()
+    {
+        var files = new Files(); var main = CreateMain(files);
+        main.EditProject(); main.Setup.ShowMaterials();
+        var selection = Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep);
+        selection.EditSelectedCommand.Execute(null);
+        var editor = Assert.IsType<MaterialEditorViewModel>(selection.Editor);
+        editor.Inputs[0].Text = "unfinished";
+        var settings = main.Settings with { SignificantDigits = 8, Notation = EngineeringNotation.Off };
+        Assert.Null(await main.ApplySettingsAsync(settings));
+        Assert.Equal("unfinished", editor.Inputs[0].Text);
+        var writes = files.Writes.ToArray();
+        Assert.NotNull(await main.ApplySettingsAsync(settings.WithUnit(QuantityKind.YoungsModulus, UnitCatalog.Ksi)));
+        Assert.Equal(writes, files.Writes);
+        Assert.Same(editor, selection.Editor); Assert.Equal("unfinished", editor.Inputs[0].Text);
+        Assert.Same(UnitCatalog.Gigapascal, editor.Inputs[0].Unit);
     }
 
     private static MainWindowViewModel CreateMain(Files? files = null)
@@ -112,7 +131,7 @@ public sealed class DesktopSettingsInteractionTests
         Assert.Same(UnitProfile.Default, main.ResultPresentation.Profile);
         Assert.Same(draft, (object?)editor.SupportDraft ?? (object?)editor.LoadDraft ?? editor.DistributedLoadDraft);
         Assert.Equal(originalText, editor.DimensionLength.Text);
-        Assert.False(main.SetResultPresentation(UnitProfile.StructuralEngineering, PresentationMode.Detailed));
+        Assert.False(main.SetResultPresentation(UnitProfile.StructuralEngineering, 6));
         editor.CancelEditorInteraction();
         Assert.True(await dialog.ApplyAsync());
         Assert.False(dialog.CanApply); Assert.True(main.Settings.ContentEquals(await new LocalSettingsStore(files, "settings").LoadAsync()));
@@ -130,9 +149,9 @@ public sealed class DesktopSettingsInteractionTests
         var main = CreateMain(); var editor = main.Editor!; Edit(editor, target);
         var support = editor.SupportDraft; var point = editor.LoadDraft; var distributed = editor.DistributedLoadDraft;
         var reference = editor.Presentation.Result;
-        Assert.True(main.SetResultPresentation(UnitProfile.Default, PresentationMode.Detailed));
+        Assert.True(main.SetResultPresentation(UnitProfile.Default, 6));
         var unit = unrelated == QuantityKind.Moment ? UnitCatalog.KilonewtonMeter : UnitCatalog.Kilonewton;
-        Assert.True(main.SetResultPresentation(UnitProfile.Default.WithUnit(unrelated, unit), PresentationMode.Standard));
+        Assert.True(main.SetResultPresentation(UnitProfile.Default.WithUnit(unrelated, unit), 3));
         Assert.Same(support, editor.SupportDraft); Assert.Same(point, editor.LoadDraft); Assert.Same(distributed, editor.DistributedLoadDraft);
         Assert.Same(reference, editor.Presentation.Result);
         if (point is not null) Assert.Equal(target == "force" ? "N" : "N·m", point.Unit);
@@ -148,7 +167,7 @@ public sealed class DesktopSettingsInteractionTests
     public void DraggingBlocksChangedInputUnitsAndUpdatesBuffersInTheOriginalUnits(string target)
     {
         var main = CreateMain(); var editor = main.Editor!;
-        Assert.True(main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Standard));
+        Assert.True(main.SetResultPresentation(UnitProfile.UnitedStates, 3));
         Edit(editor, target);
         Guid id = target switch { "support" => SupportId, "force" => LoadId, "moment" => editor.Document.Loads[1].Id, _ => editor.Document.DistributedLoads[0].Id };
         Assert.True(target switch
@@ -156,7 +175,7 @@ public sealed class DesktopSettingsInteractionTests
             "support" => editor.BeginSupportDrag(id), "distributed" => editor.BeginDistributedLoadDrag(id, DistributedLoadEndpoint.Start),
             _ => editor.BeginLoadDrag(id)
         });
-        Assert.False(main.SetResultPresentation(UnitProfile.Default, PresentationMode.Standard));
+        Assert.False(main.SetResultPresentation(UnitProfile.Default, 3));
         var exact = M(.027387593197926163);
         if (target == "support")
         {
@@ -176,6 +195,6 @@ public sealed class DesktopSettingsInteractionTests
             Assert.Equal(InputQuantityFormatter.Format(exact.Meters, UnitCatalog.Foot), editor.LoadDraft!.PositionText);
             Assert.True(editor.ConfirmLoad()); Assert.Equal(exact, editor.Document.Loads.Single(l => l.Id == id).Position);
         }
-        Assert.True(main.SetResultPresentation(UnitProfile.Default, PresentationMode.Standard));
+        Assert.True(main.SetResultPresentation(UnitProfile.Default, 3));
     }
 }

@@ -1,16 +1,33 @@
 namespace SpanDraft.Desktop.Presentation;
 
-/// <summary>Application-level result display selection, independent of project revisions and persistence.</summary>
+public enum EngineeringNotation { Automatic, Off }
+
+/// <summary>Global display preferences, independent of stored SI values and project revisions.</summary>
 public sealed record ResultPresentationOptions
 {
-    public ResultPresentationOptions(UnitProfile? profile = null, PresentationMode mode = PresentationMode.Standard)
+    // 1–15 is useful technical precision within double's reliable decimal precision.
+    public const int MinimumSignificantDigits = 1;
+    public const int MaximumSignificantDigits = 15;
+    public const int DefaultSignificantDigits = 3;
+
+    public ResultPresentationOptions(UnitProfile? profile = null, int significantDigits = DefaultSignificantDigits,
+        EngineeringNotation notation = EngineeringNotation.Automatic)
     {
-        if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
+        ValidateSignificantDigits(significantDigits);
+        if (!Enum.IsDefined(notation)) throw new ArgumentOutOfRangeException(nameof(notation));
         Profile = profile ?? UnitProfile.Default;
-        Mode = mode;
+        SignificantDigits = significantDigits;
+        Notation = notation;
+    }
+
+    internal static void ValidateSignificantDigits(int digits)
+    {
+        if (digits is < MinimumSignificantDigits or > MaximumSignificantDigits)
+            throw new ArgumentOutOfRangeException(nameof(digits));
     }
 
     public UnitProfile Profile { get; }
-    public PresentationMode Mode { get; }
+    public int SignificantDigits { get; }
+    public EngineeringNotation Notation { get; }
     public static ResultPresentationOptions Default { get; } = new();
 }

@@ -45,7 +45,7 @@ Bei Bedarf kann ein einfacher Referenzlastfall oder eine unabhängige Gleichgewi
 
 Die Bedeutung der Ergebnisse erläutern [Ergebnisdiagramme und Lagerreaktionen](../ergebnisse/diagramme-reaktionen.md) sowie [Spannung und Sicherheitsfaktor](../ergebnisse/spannung-sicherheit.md).
 
-`≈ 0` bedeutet, dass der ungerundete Wert sehr klein, aber nicht exakt null ist. Die Berechnung selbst verwendet weiterhin den ungerundeten Wert.
+Sehr kleine Nichtnullwerte bleiben sichtbar, bei automatischer technischer Schreibweise mit einer Zehnerpotenz. Die Berechnung verwendet weiterhin den ungerundeten Wert.
 
 <details class="spandraft-details">
   <summary>Probleme mit Projekt- oder Bibliotheksdateien</summary>

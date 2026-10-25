@@ -1,3 +1,4 @@
+using System.Globalization;
 using SpanDraft.Core.Materials;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.Libraries;
@@ -12,8 +13,12 @@ public enum MaterialFilterKind { All, Category, Project, BuiltIn, User }
 public sealed record MaterialFilter(MaterialFilterKind Kind, string Label, MaterialCategory? Category = null);
 
 /// <summary>Origin is transient browser state; all values belong to the material snapshot.</summary>
-public sealed class MaterialSelectionItem(Material material, MaterialSelectionKind kind)
+public sealed class MaterialSelectionItem(Material material, MaterialSelectionKind kind, Func<ResultPresentationOptions>? readPresentation = null) : ObservableObject
 {
+    private ResultPresentationOptions Presentation => readPresentation?.Invoke() ?? ResultPresentationOptions.Default;
+    public string YoungsModulusUnit => Presentation.Profile[QuantityKind.YoungsModulus].Symbol;
+    public string StrengthUnit => Presentation.Profile[QuantityKind.MaterialStrength].Symbol;
+    public string DensityUnit => Presentation.Profile[QuantityKind.Density].Symbol;
     public Material Material { get; } = material;
     public MaterialSelectionKind Kind { get; } = kind;
     public bool IsProject => Kind == MaterialSelectionKind.Project;
@@ -29,25 +34,30 @@ public sealed class MaterialSelectionItem(Material material, MaterialSelectionKi
     public string CategoryLabel => MaterialSelectionViewModel.Categories().Single(c => c.Value == Material.Category).Label;
     public string OtherStandards => string.Join(" · ", Material.OtherStandards);
     public bool HasOtherStandards => OtherStandards.Length > 0;
-    public string YoungsModulus => UiNumbers.Indicator(Material.YoungsModulus.Pascals / 1e9);
-    public string StrengthValue => UiNumbers.Indicator(Material.YieldStrength.Megapascals);
+    public string YoungsModulus => QuantityFormatter.FormatNumber(Material.YoungsModulus.Pascals, QuantityKind.YoungsModulus, Presentation);
+    public string StrengthValue => QuantityFormatter.FormatNumber(Material.YieldStrength.Pascals, QuantityKind.MaterialStrength, Presentation);
     public TechnicalText StrengthLabelText => MaterialStrengthDisplay.LabelText(Material.StrengthType);
     public string StrengthLabel => StrengthLabelText.PlainText;
-    public TechnicalText StrengthSummaryText => MaterialStrengthDisplay.SummaryText(Material);
+    public TechnicalText StrengthSummaryText => MaterialStrengthDisplay.SummaryText(Material, Presentation);
     public string StrengthSummary => StrengthSummaryText.PlainText;
     public TechnicalText YoungsModulusLabel => Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus;
     public TechnicalText DensityLabel => Strings.MaterialDensity + " " + TechnicalSymbols.Density;
     public TechnicalText PoissonRatioLabel => Strings.MaterialPoissonRatio + " " + TechnicalSymbols.PoissonRatio;
-    public string AccessibleName => DisplayName + " · " + (OriginLabel is { } origin ? origin + " · " : "") + StrengthSummary + " MPa";
+    public string AccessibleName => DisplayName + " · " + (OriginLabel is { } origin ? origin + " · " : "") + StrengthSummary + " " + StrengthUnit;
     public bool HasDensity => Material.Density is not null;
     public bool HasPoissonRatio => Material.PoissonRatio is not null;
-    public string? Density => Material.Density is { } rho ? UiNumbers.Indicator(rho.KilogramsPerCubicMeter) : null;
-    public string? PoissonRatio => Material.PoissonRatio is { } nu ? UiNumbers.Indicator(nu.Value) : null;
+    public string? Density => Material.Density is { } rho ? QuantityFormatter.FormatNumber(rho.KilogramsPerCubicMeter, QuantityKind.Density, Presentation) : null;
+    internal void Refresh()
+    {
+        foreach (string name in new[] { nameof(YoungsModulus), nameof(StrengthValue), nameof(StrengthSummaryText), nameof(StrengthSummary), nameof(Density), nameof(PoissonRatio), nameof(AccessibleName), nameof(YoungsModulusUnit), nameof(StrengthUnit), nameof(DensityUnit) }) Notify(name);
+    }
+    public string? PoissonRatio => Material.PoissonRatio is { } nu ? QuantityFormatter.FormatNumber(nu.Value, QuantityKind.PoissonRatio, Presentation) : null;
 }
 
 public sealed class MaterialSelectionViewModel : SetupStepViewModel
 {
-    public TechnicalText YoungsModulusHeader => TechnicalSymbols.YoungsModulus + " [GPa]";
+    public string StrengthHeader => string.Format(CultureInfo.CurrentUICulture, Strings.MaterialStrengthColumn, Setup.ResultPresentation.Profile[QuantityKind.MaterialStrength].Symbol);
+    public TechnicalText YoungsModulusHeader => TechnicalSymbols.YoungsModulus + " [" + Setup.ResultPresentation.Profile[QuantityKind.YoungsModulus].Symbol + "]";
     private readonly IReadOnlyList<MaterialSelectionItem> _builtIns;
     private UserMaterialLibrary? _shownLibrary;
     private IReadOnlyList<MaterialSelectionItem> _users = [], _entries = [], _filtered = [];
@@ -60,8 +70,8 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
 
     public MaterialSelectionViewModel(ProjectSetupViewModel setup) : base(setup)
     {
-        _currentEntry = setup.SelectedMaterial is { } material ? new(material, MaterialSelectionKind.Project) : null;
-        _builtIns = (setup.Libraries?.BuiltInMaterials?.All ?? []).Select(m => new MaterialSelectionItem(m, MaterialSelectionKind.BuiltIn)).ToArray();
+        _currentEntry = setup.SelectedMaterial is { } material ? new(material, MaterialSelectionKind.Project, () => Setup.ResultPresentation) : null;
+        _builtIns = (setup.Libraries?.BuiltInMaterials?.All ?? []).Select(m => new MaterialSelectionItem(m, MaterialSelectionKind.BuiltIn, () => Setup.ResultPresentation)).ToArray();
         Filters = new[] { new MaterialFilter(MaterialFilterKind.All, Strings.AllMaterials) }
             .Concat(Categories().Select(c => new MaterialFilter(MaterialFilterKind.Category, c.Label, c.Value)))
             .Append(new(MaterialFilterKind.Project, Strings.MaterialCurrentEntry))
@@ -177,7 +187,7 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
             {
                 if (mode == SetupEditorMode.ProjectDraft)
                 {
-                    _currentEntry = new(result, MaterialSelectionKind.Project);
+                    _currentEntry = new(result, MaterialSelectionKind.Project, () => Setup.ResultPresentation);
                     SelectVisible(_currentEntry);
                     Notify(nameof(CurrentEntry));
                 }
@@ -272,7 +282,7 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
     {
         var previous = SelectedEntry;
         _shownLibrary = Setup.Libraries?.UserMaterials;
-        _users = (_shownLibrary?.All ?? []).Select(m => new MaterialSelectionItem(m, MaterialSelectionKind.User)).ToArray();
+        _users = (_shownLibrary?.All ?? []).Select(m => new MaterialSelectionItem(m, MaterialSelectionKind.User, () => Setup.ResultPresentation)).ToArray();
         var preferred = previous?.IsProject == true ? _currentEntry : _builtIns.Concat(_users).FirstOrDefault(e => e.Kind == previous?.Kind && e.Material == previous.Material);
         RebuildVisible(preferred);
         Notify(nameof(UserEntries));
@@ -307,6 +317,8 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
     {
         base.Refresh();
         Editor?.Refresh();
+        Notify(nameof(YoungsModulusHeader)); Notify(nameof(StrengthHeader));
+        foreach (var entry in _entries) entry.Refresh();
         if (!ReferenceEquals(_shownLibrary, Setup.Libraries?.UserMaterials)) RebuildEntries();
         foreach (var name in new[] { nameof(BuiltInError), nameof(HasBuiltInError), nameof(LibraryError), nameof(HasLibraryError), nameof(CanBrowse), nameof(Error), nameof(HasError) }) Notify(name);
         BackCommand.Refresh(); NewCommand.Refresh(); ShowUserCommand.Refresh(); ShowBuiltInCommand.Refresh(); ShowProjectCommand.Refresh(); NotifySelection();

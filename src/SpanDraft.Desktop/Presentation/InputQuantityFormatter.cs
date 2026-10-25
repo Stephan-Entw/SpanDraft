@@ -58,16 +58,9 @@ public static class InputQuantityFormatter
         return true;
     }
 
-    public static string Display(double siValue, UnitDefinition unit)
-    {
-        try { return SpanDraft.Desktop.State.UiNumbers.Compact(unit.FromSi(siValue), CultureInfo.CurrentCulture); }
-        catch (OverflowException) { /* The read-only label can represent a wider exponent range. */ }
-        var value = PresentationNumber.FromDouble(siValue) / unit.Scale;
-        if (value.IsZero) return "0";
-        int exponent = value.DecimalExponent - 2;
-        var digits = (value / PresentationNumber.PowerOfTen(exponent)).RoundToInteger();
-        return NumberFormatter.Format(new DecimalNumber(digits, exponent));
-    }
+    public static string Display(double siValue, UnitDefinition unit, ResultPresentationOptions? options = null) =>
+        QuantityFormatter.Display(siValue, unit, options);
 
-    public static string WithUnit(double siValue, UnitDefinition unit) => Display(siValue, unit) + " " + unit.Symbol;
+    public static string WithUnit(double siValue, UnitDefinition unit, ResultPresentationOptions? options = null) =>
+        QuantityFormatter.WithUnit(Display(siValue, unit, options), unit);
 }

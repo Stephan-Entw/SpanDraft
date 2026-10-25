@@ -108,3 +108,38 @@ von-Mises-Spannung, Schubspannung, Spannungsinteraktionen, Normbeiwerte,
 zulässige Durchbiegung, Knicken/Beulen, Ermüdung sowie Kerb- und
 Schweißnahtbewertungen. Die axiale Solverfähigkeit erweitert diesen Umfang
 nicht. Diese Auswertung ist **kein normativer Festigkeits- oder Sicherheitsnachweis**.
+
+## Numerische Darstellung in App und Bericht
+
+Die Darstellung liegt außerhalb der fachlichen Auswertung. Modell, Solver,
+Engineering und Projektdateien behalten ihre ungerundeten SI-Werte. Die lokalen,
+projektunabhängigen Einstellungen gelten für alle technischen Einzelwerte:
+maximal 1–15 signifikante Stellen (Default 3), technische Schreibweise
+Automatisch (Default) oder Aus. Der Bereich begrenzt die Anzeige auf eine für
+`double` sinnvolle Dezimalpräzision; er ist keine Aussage über Messgenauigkeit.
+
+Die Reihenfolge ist **SI-Wert → Anzeigeeinheit → einmalige Rundung → Schreibweise**.
+Halbwerte werden von null weg gerundet. Bedeutungslose Endnullen entfallen.
+Bei Automatisch gilt für den bereits gerundeten Betrag `10⁻³ ≤ |x| < 10⁶`
+Dezimalschreibweise, außerhalb Engineering-Notation mit Exponenten als
+Vielfachen von drei. Aus verwendet unabhängig von der Größenordnung
+Dezimalschreibweise. Null bleibt `0`, ein endlicher Nichtnullwert bleibt sichtbar;
+`∞` bezeichnet weiterhin den semantisch unendlichen Sicherheitsfaktor.
+Es gibt keine modellabhängigen Anzeigeauflösungen oder automatische Nullschwelle.
+
+Ganzzahlige Ziffern werden in Dreiergruppen mit schmalem geschütztem Leerzeichen
+(U+202F) gegliedert; nur das Dezimalzeichen folgt dem regionalen Zahlenformat,
+unabhängig von der Oberflächensprache. Engineering-Ausdrücke verwenden geschützte
+Abstände um `·`. Die PDF-Ausgabe bewahrt diese Zahlengruppen beim Umbruch.
+E-Modul, Festigkeitskennwert und Dichte besitzen eigene semantische Einheiten;
+metrische Defaults sind GPa, MPa und kg/m³, im US-Profil für beide Druckgrößen ksi.
+
+Bearbeiten verwendet stets den vollständigen gespeicherten Wert in der gewählten
+Einheit. Unveränderte Eingabebuffer behalten den originalen SI-Wert auch bei
+Fokuswechsel, Rebinding und Bestätigung. Darstellungswechsel verändern weder
+Berechnung, Projektdatei, Undo/Redo noch Dirty-State. Lokale historische
+Standard-/Detailed-Settings werden mit unveränderten Einheiten auf die neuen
+Defaults migriert; das Projektformat bleibt unverändert.
+
+Diagramm-Achsenticks behalten ihre eigenständige Nice-Tick-Logik. Zoom, Seitenzahlen
+und reine UI-Zähler unterliegen ebenfalls nicht der technischen Präzision.

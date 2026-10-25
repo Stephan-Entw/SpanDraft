@@ -16,7 +16,7 @@ public sealed class ProjectOverviewState
     private ProjectOverviewState(EditorDocument document, AnalysisPresentationState analysis)
     {
         Analysis = analysis;
-        Section = document.SectionDisplayName ?? SectionDisplay.Name(document.Section, analysis.Options.Profile);
+        Section = document.SectionDisplayName ?? SectionDisplay.Name(document.Section, analysis.Options.Profile, analysis.Options);
         Material = MaterialDisplay.Format(document.Material);
         Length = string.Format(CultureInfo.CurrentUICulture, Strings.OverviewLength, Position(document.Length),
             analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
@@ -26,11 +26,11 @@ public sealed class ProjectOverviewState
             .Where(l => l.Kind == kind).Select(l => new ProjectOverviewItem(l.Id, l.Name,
                 kind == PointLoadKind.Force ? "F" : "M",
                 InputQuantityFormatter.WithUnit(l.Value, analysis.Options.Profile[kind == PointLoadKind.Force
-                    ? QuantityKind.TransverseForce : QuantityKind.Moment]), Position(l.Position))).ToArray());
+                    ? QuantityKind.TransverseForce : QuantityKind.Moment], analysis.Options), Position(l.Position))).ToArray());
         Forces = PointLoads(PointLoadKind.Force);
         Moments = PointLoads(PointLoadKind.Moment);
         DistributedLoads = Array.AsReadOnly(document.DistributedLoads.Select(l => new ProjectOverviewItem(l.Id, l.Name,
-            "q", InputQuantityFormatter.WithUnit(l.Intensity.NewtonsPerMeter, analysis.Options.Profile[QuantityKind.DistributedLoad]),
+            "q", InputQuantityFormatter.WithUnit(l.Intensity.NewtonsPerMeter, analysis.Options.Profile[QuantityKind.DistributedLoad], analysis.Options),
             Position(l.StartPosition) + "…" + Position(l.EndPosition))).ToArray());
         Reactions = Array.AsReadOnly(analysis.Result is { } result
             ? document.Supports.Select(s =>
@@ -70,9 +70,9 @@ public sealed class ProjectOverviewState
         Analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
 
     private string Reaction(double siValue, QuantityKind kind) => QuantityFormatter.FormatNumber(siValue, kind,
-        Analysis.Options.Profile, Analysis.Options.Mode, Analysis.References);
+        Analysis.Options);
 
-    private string Position(Length position) => InputQuantityFormatter.Display(position.Meters, Analysis.Options.Profile[QuantityKind.BeamLength]);
+    private string Position(Length position) => InputQuantityFormatter.Display(position.Meters, Analysis.Options.Profile[QuantityKind.BeamLength], Analysis.Options);
 
     private static string SupportTypeName(SupportType type) => type switch
     {

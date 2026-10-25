@@ -52,7 +52,7 @@ public partial class CoordinateAxisPane : UserControl
     private void LengthChanged(object? sender, PropertyChangedEventArgs e)
     {
         // Buffer changes are intentionally absent: editing reserves fixed bounds once.
-        if (e.PropertyName is nameof(LengthInputViewModel.IsEditing) or nameof(LengthInputViewModel.Unit)) Repack();
+        if (e.PropertyName is nameof(LengthInputViewModel.IsEditing) or nameof(LengthInputViewModel.Unit) or nameof(LengthInputViewModel.DisplayText)) Repack();
     }
 
     private void Repack()
@@ -61,12 +61,12 @@ public partial class CoordinateAxisPane : UserControl
         Size Measure(string text) => SchematicText.Measure(text, Typeface.Default, FontSize);
         bool editing = _editor?.DimensionLength.IsEditing == true;
         AxisLayout = CoordinateAxisLayout.Create(StationLayout, _paneWidth, Measure, editing,
-            _editor?.ResultPresentation.Profile[QuantityKind.BeamLength]);
+            _editor?.ResultPresentation.Profile[QuantityKind.BeamLength], _editor?.ResultPresentation);
         AxisCanvas.AxisLayout = AxisLayout;
         AxisCanvas.LabelFontSize = FontSize;
         // Reserve for all supported input units, so changing label text never moves the beam.
         Height = UnitCatalog.All.Where(u => u.Dimension == UnitDimension.Length)
-            .Max(u => CoordinateAxisLayout.Create(StationLayout, _paneWidth, Measure, editing, u).PaneHeight);
+            .Max(u => CoordinateAxisLayout.Create(StationLayout, _paneWidth, Measure, editing, u, _editor?.ResultPresentation).PaneHeight);
         var end = AxisLayout.Labels.Single(l => l.Role == AxisEndpointRole.End);
         LengthButton.Content = end.Text;
         LengthButton.Height = end.Bounds.Height;

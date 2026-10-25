@@ -20,8 +20,6 @@ internal readonly struct PresentationNumber : IComparable<PresentationNumber>
     internal BigInteger Numerator { get; }
     internal BigInteger Denominator { get; }
     internal bool IsZero => Numerator.IsZero;
-    internal static PresentationNumber Zero => new(0, 1);
-    internal static PresentationNumber One => new(1, 1);
 
     internal static PresentationNumber FromDouble(double value)
     {
@@ -85,11 +83,6 @@ internal readonly struct PresentationNumber : IComparable<PresentationNumber>
     public int CompareTo(PresentationNumber other) =>
         (Numerator * other.Denominator).CompareTo(other.Numerator * Denominator);
 
-    internal static PresentationNumber Max(PresentationNumber left, PresentationNumber right) =>
-        left.CompareTo(right) >= 0 ? left : right;
-    internal static PresentationNumber Min(PresentationNumber left, PresentationNumber right) =>
-        left.CompareTo(right) <= 0 ? left : right;
-
     public static PresentationNumber operator *(PresentationNumber left, PresentationNumber right) =>
         new(left.Numerator * right.Numerator, left.Denominator * right.Denominator);
     public static PresentationNumber operator /(PresentationNumber left, PresentationNumber right)
@@ -98,7 +91,4 @@ internal readonly struct PresentationNumber : IComparable<PresentationNumber>
         return new(left.Numerator * right.Denominator * right.Numerator.Sign,
             left.Denominator * BigInteger.Abs(right.Numerator));
     }
-    public static PresentationNumber operator -(PresentationNumber left, PresentationNumber right) =>
-        new(left.Numerator * right.Denominator - right.Numerator * left.Denominator,
-            left.Denominator * right.Denominator);
 }

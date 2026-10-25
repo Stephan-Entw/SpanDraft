@@ -12,7 +12,7 @@ public readonly record struct LengthCommitResult(bool Accepted, string? ErrorTex
 /// <summary>Transient input session for the single inline dimension editor.</summary>
 public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, LengthCommitResult> commit,
     Func<bool>? preserveBuffer = null, Func<UnitDefinition>? readUnit = null,
-    bool retainRejectedOnBlur = false) : ObservableObject
+    bool retainRejectedOnBlur = false, Func<ResultPresentationOptions>? readPresentation = null) : ObservableObject
 {
     private string _text = Format(read(), readUnit?.Invoke() ?? UnitCatalog.Millimeter);
     private UnitDefinition _editUnit = UnitCatalog.Millimeter;
@@ -42,7 +42,7 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
     public string ErrorText => _commitError ?? Strings.InvalidLength;
     private UnitDefinition CurrentUnit => IsEditing ? _editUnit : readUnit?.Invoke() ?? UnitCatalog.Millimeter;
     public string Unit => CurrentUnit.Symbol;
-    public string DisplayText => read() is { } length ? InputQuantityFormatter.WithUnit(length.Meters, CurrentUnit) : "";
+    public string DisplayText => read() is { } length ? InputQuantityFormatter.WithUnit(length.Meters, CurrentUnit, readPresentation?.Invoke()) : "";
 
     public bool TryGetLength(out Length length)
     {

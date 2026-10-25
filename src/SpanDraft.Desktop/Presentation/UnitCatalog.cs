@@ -72,6 +72,8 @@ public static class UnitCatalog
     public static UnitDefinition KilonewtonPerMeter { get; } = Unit("kN/m", "kN/m", UnitDimension.DistributedLoad, "1000");
     public static UnitDefinition KipPerFoot { get; } = new("kip/ft", "kip/ft", UnitDimension.DistributedLoad, KipScale / FootScale);
     public static UnitDefinition Pascal { get; } = Unit("Pa", "Pa", UnitDimension.Pressure, "1");
+    public static UnitDefinition Gigapascal { get; } = Unit("GPa", "GPa", UnitDimension.Pressure, "1e9");
+    public static UnitDefinition KilogramsPerCubicMeter { get; } = Unit("kg/m3", "kg/m³", UnitDimension.MassDensity, "1");
     public static UnitDefinition Megapascal { get; } = Unit("MPa", "MPa", UnitDimension.Pressure, "1e6");
     public static UnitDefinition Ksi { get; } = new("ksi", "ksi", UnitDimension.Pressure, KipScale / (InchScale * InchScale));
     public static UnitDefinition Dimensionless { get; } = Unit("1", "", UnitDimension.Dimensionless, "1");
@@ -82,7 +84,7 @@ public static class UnitCatalog
         MeterToFourth, MillimeterToFourth, CentimeterToFourth, InchToFourth,
         CubicMeter, CubicMillimeter, CubicCentimeter, CubicInch, Radian,
         Newton, Kilonewton, Kip, NewtonMeter, KilonewtonMeter, KipFoot,
-        NewtonPerMeter, KilonewtonPerMeter, KipPerFoot, Pascal, Megapascal, Ksi, Dimensionless
+        NewtonPerMeter, KilonewtonPerMeter, KipPerFoot, Pascal, Megapascal, Gigapascal, Ksi, KilogramsPerCubicMeter, Dimensionless
     });
 
     public static UnitDimension DimensionOf(QuantityKind kind) => kind switch
@@ -96,8 +98,9 @@ public static class UnitCatalog
         QuantityKind.TransverseForce or QuantityKind.AxialForce => UnitDimension.Force,
         QuantityKind.Moment => UnitDimension.Moment,
         QuantityKind.DistributedLoad => UnitDimension.DistributedLoad,
-        QuantityKind.Stress => UnitDimension.Pressure,
-        QuantityKind.SafetyFactor => UnitDimension.Dimensionless,
+        QuantityKind.Stress or QuantityKind.YoungsModulus or QuantityKind.MaterialStrength => UnitDimension.Pressure,
+        QuantityKind.Density => UnitDimension.MassDensity,
+        QuantityKind.SafetyFactor or QuantityKind.PoissonRatio => UnitDimension.Dimensionless,
         _ => throw new ArgumentOutOfRangeException(nameof(kind))
     };
 

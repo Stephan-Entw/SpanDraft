@@ -23,9 +23,8 @@ internal static class ProjectReport
         var overview = ProjectOverviewState.From(state.Document, presentation);
         var analysis = presentation.Result!;
         var profile = presentation.Options.Profile;
-        string Quantity(double si, QuantityKind kind) => QuantityFormatter.Format(si, kind, profile,
-            presentation.Options.Mode, kind == QuantityKind.SafetyFactor ? null : presentation.References);
-        string Position(double meters) => InputQuantityFormatter.Display(meters, profile[QuantityKind.BeamLength]);
+        string Quantity(double si, QuantityKind kind) => QuantityFormatter.Format(si, kind, presentation.Options);
+        string Position(double meters) => QuantityFormatter.FormatNumber(meters, QuantityKind.BeamLength, presentation.Options);
         string Location(double meters, SpanDraft.Solver.EvaluationSide? side) =>
             string.Format(CultureInfo.CurrentUICulture, Strings.ReportPosition, Position(meters),
                 profile[QuantityKind.BeamLength].Symbol, side is null ? "" : side == SpanDraft.Solver.EvaluationSide.Left ? " (x−)" : " (x+)");
@@ -54,11 +53,11 @@ internal static class ProjectReport
         var data = new ReportData(state.Info?.CalculationTitle ?? Strings.ReportHeading, state.Info?.Author ?? "",
             ApplicationMetadata.Version, timestamp, timestamp.ToLocalTime().ToString("d", CultureInfo.CurrentCulture), metadata,
             (state.Document.SectionDisplayName ?? ShapeName(state.Document.Section)) + " · " + axisName + "-" + axisName, sectionProperties, overview.Material,
-            [Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus + " = " + InputQuantityFormatter.WithUnit(state.Document.Material.YoungsModulus.Pascals, profile[QuantityKind.Stress]),
-             MaterialStrengthDisplay.LabelText(state.Document.Material.StrengthType) + " = " + InputQuantityFormatter.WithUnit(state.Document.Material.YieldStrength.Pascals, profile[QuantityKind.Stress])],
+            [Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus + " = " + Quantity(state.Document.Material.YoungsModulus.Pascals, QuantityKind.YoungsModulus),
+             MaterialStrengthDisplay.LabelText(state.Document.Material.StrengthType) + " = " + Quantity(state.Document.Material.YieldStrength.Pascals, QuantityKind.MaterialStrength)],
             new ReportTable[]
             {
-                new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.32f, .43f, .25f],
+                new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.25f, .50f, .25f],
                     overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Type, s.Position }).ToArray(), LeftAlignedColumn: 1),
                 new(Strings.Forces, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.18f, .47f, .35f],
                     overview.Forces.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),

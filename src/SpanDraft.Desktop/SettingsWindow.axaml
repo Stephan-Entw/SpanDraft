@@ -46,20 +46,22 @@
         </StackPanel>
         <StackPanel Spacing="{StaticResource Space12}">
           <TextBlock Text="{x:Static resources:Strings.SettingsNumeric}" Classes="sectionTitle" />
-          <RadioButton GroupName="Presentation" IsChecked="{Binding IsStandard, Mode=TwoWay}"
-                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-            <StackPanel Spacing="{StaticResource Space4}">
-              <TextBlock Text="{x:Static resources:Strings.PresentationStandard}" Classes="bodyStrong" />
-              <TextBlock Text="{Binding StandardDescription}" Classes="secondary" TextWrapping="Wrap" />
-            </StackPanel>
-          </RadioButton>
-          <RadioButton GroupName="Presentation" IsChecked="{Binding IsDetailed, Mode=TwoWay}"
-                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-            <StackPanel Spacing="{StaticResource Space4}">
-              <TextBlock Text="{x:Static resources:Strings.PresentationDetailed}" Classes="bodyStrong" />
-              <TextBlock Text="{Binding DetailedDescription}" Classes="secondary" TextWrapping="Wrap" />
-            </StackPanel>
-          </RadioButton>
+          <Grid ColumnDefinitions="Auto,220" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space16}"
+                RowSpacing="{StaticResource Space12}">
+            <TextBlock Text="{x:Static resources:Strings.SignificantDigits}" Classes="propertyLabel" VerticalAlignment="Center" />
+            <ComboBox x:Name="SignificantDigitsPicker" Grid.Column="1" Width="220"
+                      ItemsSource="{Binding SignificantDigitChoices}" SelectedItem="{Binding SignificantDigits, Mode=TwoWay}"
+                      AutomationProperties.Name="{x:Static resources:Strings.SignificantDigits}" />
+            <TextBlock Grid.Row="1" Text="{x:Static resources:Strings.EngineeringNotation}" Classes="propertyLabel" VerticalAlignment="Center" />
+            <ComboBox x:Name="NotationPicker" Grid.Row="1" Grid.Column="1" Width="220"
+                      ItemsSource="{Binding Notations}" SelectedValueBinding="{ReflectionBinding Value}"
+                      SelectedValue="{Binding SelectedNotation, Mode=TwoWay}"
+                      AutomationProperties.Name="{x:Static resources:Strings.EngineeringNotation}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
           <TextBlock Text="{x:Static resources:Strings.PresentationCalculationHint}" Classes="caption" TextWrapping="Wrap" />
         </StackPanel>
         <StackPanel Spacing="{StaticResource Space12}">

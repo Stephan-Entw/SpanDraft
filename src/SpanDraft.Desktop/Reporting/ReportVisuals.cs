@@ -48,7 +48,7 @@ internal sealed class ReportVisuals
             var type = SectionDefinitionViewModel.FormOf(parametric);
             section = new SectionPreviewControl { Geometry = SectionPreviewGeometryResolver.FromSection(type,
                 SectionDefinitionViewModel.PresetValues(parametric), parametric), SelectedAxis = state.Document.BendingAxis,
-                UnitProfile = presentation.Options.Profile, IsHitTestVisible = false, Compact = true };
+                UnitProfile = presentation.Options.Profile, Presentation = presentation.Options, IsHitTestVisible = false, Compact = true };
             foreach (string key in new[] { "CanvasBackground", "AppBackground", "SurfacePressed", "TextSecondary", "TextPrimary", "Accent" })
                 section.Resources.Add(key, Brush(key));
         }
@@ -91,14 +91,14 @@ internal sealed class ReportVisuals
                 outerMargins: margins, supportSymbolScale: SupportSymbolScale, loadSymbolScale: LoadSymbolScale)!;
             var request = BeamRenderState.Create(inputs.Document, initial, Measure,
                 presentation: inputs.EditorPresentation, profile: profile, loadSymbolScale: LoadSymbolScale,
-                reserveLoadPreviewRow: false, minimumPaneHeight: MinimumBeamPaneHeight);
+                reserveLoadPreviewRow: false, minimumPaneHeight: MinimumBeamPaneHeight, options: inputs.Presentation.Options);
             var frame = layout.Update(inputs.Document, width, request.MinimumPaneHeight,
                 request.RequiredBelowBeamSpace, margins, SupportSymbolScale, LoadSymbolScale)!;
             Beam.Scene = BeamRenderState.Create(inputs.Document, frame, Measure,
                 presentation: inputs.EditorPresentation, profile: profile, loadSymbolScale: LoadSymbolScale,
-                reserveLoadPreviewRow: false, minimumPaneHeight: MinimumBeamPaneHeight);
+                reserveLoadPreviewRow: false, minimumPaneHeight: MinimumBeamPaneHeight, options: inputs.Presentation.Options);
             Beam.Height = frame.Viewport.Height;
-            Axis.AxisLayout = CoordinateAxisLayout.Create(frame.Layout, width, Measure, unit: profile[QuantityKind.BeamLength]);
+            Axis.AxisLayout = CoordinateAxisLayout.Create(frame.Layout, width, Measure, unit: profile[QuantityKind.BeamLength], options: inputs.Presentation.Options);
             Axis.Height = Axis.AxisLayout.PaneHeight;
             Canvas.SetTop(Axis, Beam.Height);
             Arrange(beamRoot, new(width, Beam.Height + Axis.Height));

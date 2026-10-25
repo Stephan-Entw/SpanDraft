@@ -69,7 +69,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         _resultPresentation = resultPresentation ?? ResultPresentationOptions.Default;
         Libraries = libraries; _apply = apply;
         LengthInput = new(() => SelectedLength, CommitLength, () => IsBusy || Libraries?.PreserveSetupInputs == true,
-            () => ResultPresentation.Profile[QuantityKind.BeamLength], retainRejectedOnBlur: true);
+            () => ResultPresentation.Profile[QuantityKind.BeamLength], retainRejectedOnBlur: true, readPresentation: () => ResultPresentation);
         LengthInput.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(LengthInputViewModel.Text) or nameof(LengthInputViewModel.IsEditing)
@@ -156,12 +156,12 @@ public sealed class ProjectSetupViewModel : ObservableObject
     }
     public bool HasMaterial => SelectedMaterial is not null;
     public string MaterialName => SelectedMaterial is { } material ? MaterialDisplay.Format(material) : Strings.SelectMaterialRequired;
-    public TechnicalText MaterialSummaryText => SelectedMaterial is null ? (TechnicalText)"" : TechnicalSymbols.YoungsModulus + " " + YoungsModulus + " · " + MaterialStrengthDisplay.SummaryText(SelectedMaterial) + " MPa";
+    public TechnicalText MaterialSummaryText => SelectedMaterial is null ? (TechnicalText)"" : TechnicalSymbols.YoungsModulus + " " + YoungsModulus + " · " + MaterialStrengthDisplay.SummaryText(SelectedMaterial, ResultPresentation) + " " + ResultPresentation.Profile[QuantityKind.MaterialStrength].Symbol;
     public string MaterialSummary => MaterialSummaryText.PlainText;
     public string? StartupError => Libraries?.BuiltInError;
     public bool HasStartupError => StartupError is not null;
     public string SectionName => SelectedSection is { } section
-        ? SectionDisplayName ?? SectionDisplay.Name(section, ResultPresentation.Profile) : Strings.SectionSelection;
+        ? SectionDisplayName ?? SectionDisplay.Name(section, ResultPresentation.Profile, ResultPresentation) : Strings.SectionSelection;
     public string AxisSummary => SelectedSection is not { } section ? "" : Strings.BendingAxis + " " + new AxisChoice(BendingAxis).Label
         + (section.Axes.Count == 2 && SectionDefinitionViewModel.HaveEquivalentProperties(section.Axes[0], section.Axes[1])
             ? " · " + Strings.SectionDefinitionEquivalent : "");
@@ -174,12 +174,12 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public bool IsAsymmetric => SelectedAxis is { } axis && axis.PositiveSectionModulus != axis.NegativeSectionModulus;
     public string PositiveModulus => SelectedAxis is { } axis ? Format(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus) : "";
     public string NegativeModulus => SelectedAxis is { } axis ? Format(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus) : "";
-    public string YoungsModulus => SelectedMaterial is { } m ? UiNumbers.Indicator(m.YoungsModulus.Pascals / 1e9) + " GPa" : "";
-    public string YieldStrength => SelectedMaterial is { } m ? UiNumbers.Indicator(m.YieldStrength.Megapascals) + " MPa" : "";
+    public string YoungsModulus => SelectedMaterial is { } m ? Format(m.YoungsModulus.Pascals, QuantityKind.YoungsModulus) : "";
+    public string YieldStrength => SelectedMaterial is { } m ? Format(m.YieldStrength.Pascals, QuantityKind.MaterialStrength) : "";
     public bool HasDensity => SelectedMaterial?.Density is not null;
     public bool HasPoissonRatio => SelectedMaterial?.PoissonRatio is not null;
-    public string Density => SelectedMaterial?.Density is { } rho ? UiNumbers.Indicator(rho.KilogramsPerCubicMeter) + " kg/m³" : "";
-    public string PoissonRatio => SelectedMaterial?.PoissonRatio is { } nu ? UiNumbers.Indicator(nu.Value) : "";
+    public string Density => SelectedMaterial?.Density is { } rho ? Format(rho.KilogramsPerCubicMeter, QuantityKind.Density) : "";
+    public string PoissonRatio => SelectedMaterial?.PoissonRatio is { } nu ? Format(nu.Value, QuantityKind.PoissonRatio) : "";
     public AsyncActionCommand ApplyCommand { get; }
     public ActionCommand CancelCommand { get; }
     public ActionCommand ChangeMaterialCommand { get; }
@@ -271,12 +271,17 @@ public sealed class ProjectSetupViewModel : ObservableObject
     }
     public bool CanApplyInputUnits(UnitProfile profile) => (!LengthInput.IsEditing
         || profile[QuantityKind.BeamLength].Id == ResultPresentation.Profile[QuantityKind.BeamLength].Id)
-        && (Definition?.CanApplyInputUnits(profile) ?? true);
+        && (Definition?.CanApplyInputUnits(profile) ?? true)
+        && (CurrentStep is not MaterialSelectionViewModel { Editor: not null }
+            || new[] { QuantityKind.YoungsModulus, QuantityKind.MaterialStrength, QuantityKind.Density, QuantityKind.PoissonRatio }
+                .All(kind => profile[kind].Id == ResultPresentation.Profile[kind].Id));
     internal void ApplyResultPresentation(ResultPresentationOptions options)
     {
         if (!Set(ref _resultPresentation, options, nameof(ResultPresentation))) return;
         LengthInput.Refresh(preserveError: LengthInput.IsEditing); RefreshLength(); RefreshSection();
         Definition?.ApplyResultPresentation(options);
+        foreach (var name in new[] { nameof(MaterialSummary), nameof(MaterialSummaryText), nameof(YoungsModulus), nameof(YieldStrength), nameof(Density), nameof(PoissonRatio) }) Notify(name);
+        if (CurrentStep is MaterialSelectionViewModel materials) materials.Refresh();
     }
     private void RefreshSection()
     {
@@ -292,7 +297,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         Definition?.RefreshLibraryState();
     }
     private string Format(double si, QuantityKind kind) =>
-        QuantityFormatter.Format(si, kind, ResultPresentation.Profile, ResultPresentation.Mode);
+        QuantityFormatter.Format(si, kind, ResultPresentation);
 }
 
 public abstract class SetupStepViewModel(ProjectSetupViewModel setup) : ObservableObject

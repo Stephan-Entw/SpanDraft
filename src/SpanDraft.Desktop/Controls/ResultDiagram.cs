@@ -48,7 +48,7 @@ public sealed class ResultDiagram : Control
         if (change.Property == PresentationProperty || change.Property == StationLayoutProperty
             || change.Property == KindProperty || change.Property == BoundsProperty)
         {
-            // A mode-only switch needs new labels, not a new scale or adaptive sampling.
+            // A precision-only switch needs new labels, not a new scale or adaptive sampling.
             bool textOnly = change.Property == PresentationProperty
                 && ReferenceEquals(Presentation?.Result, _projectedPresentation?.Result)
                 && ReferenceEquals(Presentation?.Options.Profile, _projectedPresentation?.Options.Profile);
@@ -67,15 +67,14 @@ public sealed class ResultDiagram : Control
     private string MarkerText(ResultDiagramMarker marker)
     {
         string quantity = QuantityFormatter.Format(marker.SiValue, ResultDiagramProjection.QuantityOf(Kind),
-            Options.Profile, Options.Mode, Presentation!.References);
-        bool approximate = quantity.StartsWith("≈ ", StringComparison.Ordinal);
+            Options);
         string format = marker.Kind switch
         {
-            ResultDiagramExtremumKind.Minimum => approximate ? Strings.DiagramMinimumApproximate : Strings.DiagramMinimum,
-            ResultDiagramExtremumKind.Maximum => approximate ? Strings.DiagramMaximumApproximate : Strings.DiagramMaximum,
-            _ => approximate ? Strings.DiagramMinimumAndMaximumApproximate : Strings.DiagramMinimumAndMaximum
+            ResultDiagramExtremumKind.Minimum => Strings.DiagramMinimum,
+            ResultDiagramExtremumKind.Maximum => Strings.DiagramMaximum,
+            _ => Strings.DiagramMinimumAndMaximum
         };
-        return string.Format(CultureInfo.CurrentUICulture, format, approximate ? quantity[2..] : quantity);
+        return string.Format(CultureInfo.CurrentUICulture, format, quantity);
     }
 
     public string TickLabel(ResultDiagramTick tick) => Projection is { } projection

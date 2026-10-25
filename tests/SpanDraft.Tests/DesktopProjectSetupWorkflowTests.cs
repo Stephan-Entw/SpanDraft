@@ -455,11 +455,11 @@ public sealed class DesktopProjectSetupWorkflowTests
     public async Task OpenSectionEditorRejectsAffectedUnitChangesAndRetainsTextOnPresentationChange()
     {
         var f = new Fixture(); await f.Load(); var editor = NewSection(f); editor.Parameters[0].PendingText = "100,";
-        Assert.False(f.Main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Standard));
+        Assert.False(f.Main.SetResultPresentation(UnitProfile.UnitedStates, 3));
         Assert.Same(editor, f.Main.Setup.CurrentStep); Assert.Equal("100,", editor.Parameters[0].PendingText);
-        Assert.True(f.Main.SetResultPresentation(UnitProfile.Default, PresentationMode.Detailed));
+        Assert.True(f.Main.SetResultPresentation(UnitProfile.Default, 6));
         Assert.Equal("100,", editor.Parameters[0].PendingText);
-        f.Main.Setup.Escape(); Assert.True(f.Main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Standard));
+        f.Main.Setup.Escape(); Assert.True(f.Main.SetResultPresentation(UnitProfile.UnitedStates, 3));
     }
 
     [Theory]
@@ -469,7 +469,7 @@ public sealed class DesktopProjectSetupWorkflowTests
     {
         using var scope = new UiCultureScope(culture);
         var f = new Fixture(); await f.Load();
-        Assert.True(f.Main.SetResultPresentation(profile switch { 0 => UnitProfile.Default, 1 => UnitProfile.StructuralEngineering, _ => UnitProfile.UnitedStates }, PresentationMode.Standard));
+        Assert.True(f.Main.SetResultPresentation(profile switch { 0 => UnitProfile.Default, 1 => UnitProfile.StructuralEngineering, _ => UnitProfile.UnitedStates }, 3));
         var material = new Material(" Precise ", Pressure.FromPascals(210123456789.12345), Pressure.FromPascals(355123456.78912345), MaterialStrengthType.Re,
             MassDensity.FromKilogramsPerCubicMeter(7800.123456789), PoissonRatio.FromValue(.31234567890123456));
         var manual = new ManualSectionDefinition(Area.FromSquareMeters(.0012345678901234567),
@@ -537,13 +537,13 @@ public sealed class DesktopProjectSetupWorkflowTests
         editor.SelectForm(SectionEditorType.Manual);
         var profile = UnitProfile.Default.WithUnit(QuantityKind.SectionDimension, UnitCatalog.Inch);
         // The loaded parametric draft also retains input buffers; protect all affected units.
-        Assert.False(f.Main.SetResultPresentation(profile, PresentationMode.Standard));
-        Assert.False(f.Main.SetResultPresentation(UnitProfile.Default.WithUnit(QuantityKind.Area, UnitCatalog.SquareInch), PresentationMode.Standard));
+        Assert.False(f.Main.SetResultPresentation(profile, 3));
+        Assert.False(f.Main.SetResultPresentation(UnitProfile.Default.WithUnit(QuantityKind.Area, UnitCatalog.SquareInch), 3));
         editor.CancelCommand.Execute(null);
-        Assert.True(f.Main.SetResultPresentation(profile, PresentationMode.Standard));
+        Assert.True(f.Main.SetResultPresentation(profile, 3));
         editor = Sections(f); editor.SelectForm(SectionEditorType.Rectangle);
         Assert.All(editor.Parameters, p => Assert.Equal(UnitCatalog.Inch, p.Unit));
-        Assert.False(f.Main.SetResultPresentation(UnitProfile.Default, PresentationMode.Standard));
+        Assert.False(f.Main.SetResultPresentation(UnitProfile.Default, 3));
     }
 
     [Fact]

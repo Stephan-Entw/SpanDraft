@@ -3,42 +3,41 @@ using System.Numerics;
 
 namespace SpanDraft.Desktop.Presentation;
 
-/// <summary>Writes already-rounded values. Notation and culture never perform numerical rounding.</summary>
+/// <summary>Writes already-rounded digits; notation and culture never round again.</summary>
 public static class NumberFormatter
 {
-    public static string Format(RoundedNumber rounded, CultureInfo? culture = null)
+    public const string GroupSeparator = "\u202f";
+
+    public static string Format(RoundedNumber rounded, CultureInfo? culture = null,
+        EngineeringNotation notation = EngineeringNotation.Automatic)
     {
         ArgumentNullException.ThrowIfNull(rounded);
-        culture ??= CultureInfo.CurrentCulture;
-        if (rounded.IsPositiveInfinity) return "∞";
-        if (rounded.IsApproximateZero) return "≈ 0";
-        return Format(rounded.Value, culture);
+        if (!Enum.IsDefined(notation)) throw new ArgumentOutOfRangeException(nameof(notation));
+        return rounded.IsPositiveInfinity ? "∞" : Format(rounded.Value, culture, notation);
     }
 
-    public static string Format(DecimalNumber value, CultureInfo? culture = null)
+    public static string Format(DecimalNumber value, CultureInfo? culture = null,
+        EngineeringNotation notation = EngineeringNotation.Automatic)
     {
         ArgumentNullException.ThrowIfNull(value);
+        if (!Enum.IsDefined(notation)) throw new ArgumentOutOfRangeException(nameof(notation));
         culture ??= CultureInfo.CurrentCulture;
         if (value.IsZero) return "0";
-        bool ordinary = value.MagnitudeExponent < 6 && value.Exponent >= -4;
-        int engineeringExponent = (int)Math.Floor(value.MagnitudeExponent / 3d) * 3;
-        if (ordinary || engineeringExponent == 0) return Decimal(value, 0, culture);
-        return Decimal(value, engineeringExponent, culture) + "·10" + Superscript(engineeringExponent);
+        bool engineering = notation == EngineeringNotation.Automatic && value.MagnitudeExponent is < -3 or >= 6;
+        int shift = engineering ? (int)Math.Floor(value.MagnitudeExponent / 3d) * 3 : 0;
+        string number = Decimal(value, shift, culture);
+        return engineering ? number + "\u00a0·\u00a010" + Superscript(shift) : number;
     }
 
     private static string Decimal(DecimalNumber value, int shift, CultureInfo culture)
     {
         string digits = BigInteger.Abs(value.Mantissa).ToString(CultureInfo.InvariantCulture);
         int exponent = value.Exponent - shift;
-        string result;
-        if (exponent >= 0) result = digits + new string('0', exponent);
-        else
-        {
-            int point = digits.Length + exponent;
-            string separator = culture.NumberFormat.NumberDecimalSeparator;
-            result = point > 0 ? digits.Insert(point, separator)
-                : "0" + separator + new string('0', -point) + digits;
-        }
+        int point = digits.Length + exponent;
+        string integer = point > 0 ? (exponent >= 0 ? digits + new string('0', exponent) : digits[..point]) : "0";
+        for (int i = integer.Length - 3; i > 0; i -= 3) integer = integer.Insert(i, GroupSeparator);
+        string fraction = exponent >= 0 ? "" : point > 0 ? digits[point..] : new string('0', -point) + digits;
+        string result = integer + (fraction.Length == 0 ? "" : culture.NumberFormat.NumberDecimalSeparator + fraction);
         return value.Mantissa.Sign < 0 ? culture.NumberFormat.NegativeSign + result : result;
     }
 
@@ -46,26 +45,35 @@ public static class NumberFormatter
         .Select(c => c == '-' ? '⁻' : "⁰¹²³⁴⁵⁶⁷⁸⁹"[c - '0']));
 }
 
-/// <summary>The integration boundary for read-only results; inputs and axis ticks retain their own formatting.</summary>
+/// <summary>Shared technical display boundary for UI and reports; editable text uses InputQuantityFormatter.Format.</summary>
 public static class QuantityFormatter
 {
+    public static string Format(double siValue, QuantityKind kind, ResultPresentationOptions options,
+        CultureInfo? culture = null) => Format(siValue, kind, options.Profile, options.SignificantDigits, options.Notation, culture);
+
+    public static string FormatNumber(double siValue, QuantityKind kind, ResultPresentationOptions options,
+        CultureInfo? culture = null) => FormatNumber(siValue, kind, options.Profile, options.SignificantDigits, options.Notation, culture);
+
     public static string Format(double siValue, QuantityKind kind, UnitProfile? profile = null,
-        PresentationMode mode = PresentationMode.Standard, ModelReferenceValues? references = null,
-        CultureInfo? culture = null)
+        int significantDigits = ResultPresentationOptions.DefaultSignificantDigits,
+        EngineeringNotation notation = EngineeringNotation.Automatic, CultureInfo? culture = null)
     {
-        profile ??= UnitProfile.Default;
-        var unit = profile[kind];
-        string number = FormatNumber(siValue, kind, profile, mode, references, culture);
-        return unit.Symbol.Length == 0 ? number : number + " " + unit.Symbol;
+        var unit = (profile ?? UnitProfile.Default)[kind];
+        string number = FormatNumber(siValue, kind, profile, significantDigits, notation, culture);
+        return WithUnit(number, unit);
     }
 
-    /// <summary>Same result precision as Format, without a unit suffix for cells with unit headers.</summary>
     public static string FormatNumber(double siValue, QuantityKind kind, UnitProfile? profile = null,
-        PresentationMode mode = PresentationMode.Standard, ModelReferenceValues? references = null,
+        int significantDigits = ResultPresentationOptions.DefaultSignificantDigits,
+        EngineeringNotation notation = EngineeringNotation.Automatic, CultureInfo? culture = null) =>
+        NumberFormatter.Format(NumericRounding.Round(siValue, kind, (profile ?? UnitProfile.Default)[kind], significantDigits), culture, notation);
+
+    internal static string Display(double siValue, UnitDefinition unit, ResultPresentationOptions? options = null,
         CultureInfo? culture = null)
     {
-        profile ??= UnitProfile.Default;
-        var rounded = NumericRounding.Round(siValue, kind, profile[kind], mode, references);
-        return NumberFormatter.Format(rounded, culture);
+        options ??= ResultPresentationOptions.Default;
+        return NumberFormatter.Format(NumericRounding.Round(siValue, unit, options.SignificantDigits), culture, options.Notation);
     }
+
+    internal static string WithUnit(string number, UnitDefinition unit) => unit.Symbol.Length == 0 ? number : number + " " + unit.Symbol;
 }

@@ -44,7 +44,7 @@ public sealed partial class EditorViewModel : ObservableObject
         _presentation = AnalysisPresentationState.FromOutcome(_analyze(Document.ToBeamModel()), resultPresentation);
         _overview = ProjectOverviewState.From(Document, _presentation);
         DimensionLength = new(() => Document.Length, ChangeLength, () => PreserveDrafts,
-            () => ResultPresentation.Profile[QuantityKind.BeamLength]);
+            () => ResultPresentation.Profile[QuantityKind.BeamLength], readPresentation: () => ResultPresentation);
         Session.StateApplied += ApplyState;
         Session.Changed += () => Notify(nameof(IsBusy));
         DimensionLength.BufferChanged += text =>
@@ -141,7 +141,7 @@ public sealed partial class EditorViewModel : ObservableObject
     public bool HasCoordinate => Preview is not null || LoadPreview is not null || DistributedPointerPosition is not null || DistributedLoadPreview is not null;
     public string CoordinateText => (Preview?.Position ?? LoadPreview?.Position ?? DistributedPointerPosition ?? DistributedLoadPreview?.EndPosition) is { } position
         ? string.Format(CultureInfo.CurrentUICulture, Strings.SupportCoordinate,
-            InputQuantityFormatter.Display(position.Meters, ResultPresentation.Profile[QuantityKind.BeamLength]),
+            InputQuantityFormatter.Display(position.Meters, ResultPresentation.Profile[QuantityKind.BeamLength], ResultPresentation),
             ResultPresentation.Profile[QuantityKind.BeamLength].Symbol) : "";
 
     public void ToggleSupportTool(SupportType type)

@@ -133,15 +133,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>Changes presentation only; affected open input sessions reject unit changes.</summary>
-    public bool SetResultPresentation(UnitProfile profile, PresentationMode mode)
+    public bool SetResultPresentation(UnitProfile profile, int significantDigits = ResultPresentationOptions.DefaultSignificantDigits,
+        EngineeringNotation notation = EngineeringNotation.Automatic)
     {
         ArgumentNullException.ThrowIfNull(profile);
-        var options = new ResultPresentationOptions(profile, mode);
+        var options = new ResultPresentationOptions(profile, significantDigits, notation);
         bool unitsChanged = !UserSettings.SameUnits(_settings.Profile, profile);
         if (_settingsSaving || IsBusy || unitsChanged && (Editor?.CanApplyInputUnits(profile) == false || !Setup.CanApplyInputUnits(profile))) return false;
         profile = UserSettings.Recognize(profile);
-        options = new(profile, mode);
-        _settings = _settings with { Profile = profile, Mode = mode,
+        options = new(profile, significantDigits, notation);
+        _settings = _settings with { Profile = profile, SignificantDigits = significantDigits, Notation = notation,
             CustomProfile = profile.Kind == UnitProfileKind.Custom ? profile : _settings.CustomProfile,
             LastStandardProfile = profile.Kind == UnitProfileKind.Custom ? _settings.LastStandardProfile : profile.Kind };
         SetPresentation(options);
@@ -150,7 +151,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void SetPresentation(ResultPresentationOptions options)
     {
-        if (_resultPresentation.Mode == options.Mode && UserSettings.SameUnits(_resultPresentation.Profile, options.Profile)) return;
+        if (_resultPresentation.SignificantDigits == options.SignificantDigits && _resultPresentation.Notation == options.Notation && UserSettings.SameUnits(_resultPresentation.Profile, options.Profile)) return;
         _resultPresentation = options;
         Setup.ApplyResultPresentation(options);
         Editor?.ApplyResultPresentation(options);

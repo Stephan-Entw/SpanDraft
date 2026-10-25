@@ -45,7 +45,7 @@ public sealed class DesktopCultureTests
         Assert.Equal(number, InputQuantityFormatter.Format(si, UnitCatalog.Millimeter));
         Assert.Equal(number, NumberFormatter.Format(new DecimalNumber(125, -1)));
         Assert.Equal(number + " MPa", QuantityFormatter.Format(12.5e6, QuantityKind.Stress, settings.Profile,
-            PresentationMode.Detailed));
+            6));
         Assert.Equal("mm", settings.Profile[QuantityKind.BeamLength].Symbol);
         Assert.Equal("N", settings.Profile[QuantityKind.TransverseForce].Symbol);
         Assert.Equal("MPa", settings.Profile[QuantityKind.Stress].Symbol);
@@ -83,7 +83,7 @@ public sealed class DesktopCultureTests
         var dialog = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
         dialog.SelectedUiLanguage = UiLanguagePreference.English;
         dialog.SelectedRegionalFormat = RegionalFormatPreference.EnglishUnitedStates;
-        dialog.Select(UnitProfileKind.UnitedStates); dialog.IsDetailed = true;
+        dialog.Select(UnitProfileKind.UnitedStates); dialog.SignificantDigits = 6;
         var pending = dialog.Pending;
         if (failSave) files.FailWritePath = "settings";
         Assert.Equal(!failSave, await dialog.ApplyAsync());
@@ -99,7 +99,7 @@ public sealed class DesktopCultureTests
         }
         Assert.Same(pending, main.Settings); Assert.False(dialog.HasChanges);
         Assert.Same(UnitProfile.UnitedStates, main.ResultPresentation.Profile);
-        Assert.Equal(PresentationMode.Detailed, main.ResultPresentation.Mode);
+        Assert.Equal(6, main.ResultPresentation.SignificantDigits);
         var reopened = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
         Assert.Equal(UiLanguagePreference.English, reopened.SelectedUiLanguage);
         Assert.Equal(RegionalFormatPreference.EnglishUnitedStates, reopened.SelectedRegionalFormat);
@@ -140,7 +140,7 @@ public sealed class DesktopCultureTests
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
         Assert.Same(startup.Settings, main.Settings); Assert.Equal(1, reads);
         Assert.NotNull(main.BuiltInMaterials); Assert.Null(main.MaterialLibraryError); Assert.Null(main.SectionLibraryError);
-        var next = main.Settings with { Mode = PresentationMode.Detailed };
+        var next = main.Settings with { SignificantDigits = 6 };
         Assert.Null(await main.ApplySettingsAsync(next));
         Assert.True(next.ContentEquals(SettingsCodec.Deserialize(files.Data["settings"])));
         window.Close(); Dispatcher.UIThread.RunJobs();

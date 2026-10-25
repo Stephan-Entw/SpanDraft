@@ -27,7 +27,7 @@ public sealed class DesktopResultPresentationTests
     public static IEnumerable<object[]> Cases()
     {
         foreach (string culture in new[] { "de-DE", "en-US" })
-        foreach (PresentationMode mode in Enum.GetValues<PresentationMode>())
+        foreach (int mode in new[] { 3, 6 })
         foreach (int profile in Enumerable.Range(0, 4))
             yield return [culture, mode, profile];
     }
@@ -40,7 +40,7 @@ public sealed class DesktopResultPresentationTests
 
     [Theory]
     [MemberData(nameof(Cases))]
-    public void ResultsReactionsAndSectionPropertiesUseThePhaseOnePipeline(string culture, PresentationMode mode, int index)
+    public void ResultsReactionsAndSectionPropertiesUseThePhaseOnePipeline(string culture, int mode, int index)
     {
         using var cultures = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
         var profile = Profile(index);
@@ -49,8 +49,8 @@ public sealed class DesktopResultPresentationTests
         var editor = EditorViewModel.ForSession(ProjectSession.Create(state), () => { }, resultPresentation: options);
         var presentation = editor.Presentation;
         var result = presentation.Result!;
-        string Format(double value, QuantityKind kind) => QuantityFormatter.Format(value, kind, profile, mode, presentation.References);
-        string Number(double value, QuantityKind kind) => QuantityFormatter.FormatNumber(value, kind, profile, mode, presentation.References);
+        string Format(double value, QuantityKind kind) => QuantityFormatter.Format(value, kind, profile, mode);
+        string Number(double value, QuantityKind kind) => QuantityFormatter.FormatNumber(value, kind, profile, mode);
         Assert.Equal(Format(result.Engineering.TransverseDisplacementMagnitude.Meters, QuantityKind.TransverseDisplacement), presentation.Displacement);
         Assert.Equal(Format(result.Engineering.BendingMomentMagnitude.NewtonMeters, QuantityKind.Moment), presentation.Moment);
         Assert.Equal(Format(result.Engineering.MaximumBendingStress.Pascals, QuantityKind.Stress), presentation.Stress);
@@ -71,8 +71,8 @@ public sealed class DesktopResultPresentationTests
         Assert.Equal(Format(setup.SelectedSection!.Area.SquareMeters, QuantityKind.Area), setup.Area);
         Assert.Equal(Format(setup.SelectedSection.GetAxis(setup.BendingAxis).SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea), setup.Inertia);
         Assert.Equal(Format(setup.SelectedSection.GetAxis(setup.BendingAxis).PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus), setup.Modulus);
-        Assert.Equal(UiNumbers.Indicator(state.Document.Material.YoungsModulus.Pascals / 1e9) + " GPa", setup.YoungsModulus);
-        Assert.Equal(UiNumbers.Indicator(state.Document.Material.YieldStrength.Megapascals) + " MPa", setup.YieldStrength);
+        Assert.Equal(Format(state.Document.Material.YoungsModulus.Pascals, QuantityKind.YoungsModulus), setup.YoungsModulus);
+        Assert.Equal(Format(state.Document.Material.YieldStrength.Pascals, QuantityKind.MaterialStrength), setup.YieldStrength);
     }
 
     [Fact]
@@ -97,7 +97,6 @@ public sealed class DesktopResultPresentationTests
         editor.DimensionLength.Text = "unfinished";
         var presentation = editor.Presentation;
         Assert.NotNull(presentation.Result);
-        var references = presentation.References;
         var revision = session.CurrentRevision;
         var document = editor.Document;
         var undo = session.UndoHistory.ToArray();
@@ -115,12 +114,11 @@ public sealed class DesktopResultPresentationTests
         session.StateApplied += (_, _, _) => applied++;
         editor.PropertyChanged += (_, e) => notifications.Add(e.PropertyName);
         foreach (var profile in new[] { UnitProfile.UnitedStates, Mixed, UnitProfile.Default })
-        foreach (var mode in Enum.GetValues<PresentationMode>())
+        foreach (var mode in new[] { 3, 6 })
         {
             Assert.Equal(UserSettings.SameUnits(profile, UnitProfile.Default), app.Main.SetResultPresentation(profile, mode));
             Assert.True(app.Main.SetResultPresentation(UnitProfile.Default, mode));
             Assert.Same(presentation.Result, editor.Presentation.Result);
-            Assert.Same(references, editor.Presentation.References);
             Assert.Same(revision, session.CurrentRevision);
             Assert.Same(document, editor.Document);
             Assert.Equal(undo, session.UndoHistory);
@@ -135,7 +133,7 @@ public sealed class DesktopResultPresentationTests
             Assert.Equal("bad position", draft.PositionText);
             Assert.Equal("-", draft.ValueText);
             Assert.Equal("unfinished", editor.DimensionLength.Text);
-            Assert.Equal(inputRows, editor.Overview.Forces.Concat(editor.Overview.Moments).Concat(editor.Overview.DistributedLoads));
+            Assert.Equal(inputRows.Select(r => r.Id), editor.Overview.Forces.Concat(editor.Overview.Moments).Concat(editor.Overview.DistributedLoads).Select(r => r.Id));
             Assert.Equal(writes, app.Files.Writes);
             Assert.Equal(recovery, app.Files.Data[App.Slot]);
             Assert.Equal(waiters, app.Delay.Waiters.Count);
@@ -146,14 +144,13 @@ public sealed class DesktopResultPresentationTests
         Assert.All(notifications, name => Assert.Contains(name, new[] { "ResultPresentation", "Presentation", "Overview", "CoordinateText" }));
         var before = editor.Presentation;
         int count = notifications.Count;
-        app.Main.SetResultPresentation(UnitProfile.Default, PresentationMode.Detailed);
+        app.Main.SetResultPresentation(UnitProfile.Default, 6);
         Assert.Same(before, editor.Presentation);
         Assert.Equal(count, notifications.Count);
         Assert.True(session.Commit(state with { Document = document with { Length = M(1.3) } }));
         Assert.Equal(analyses + 1, app.Analyses);
         Assert.NotSame(before.Result, editor.Presentation.Result);
-        Assert.NotSame(references, editor.Presentation.References);
-        Assert.Equal(PresentationMode.Detailed, editor.ResultPresentation.Mode);
+        Assert.Equal(6, editor.ResultPresentation.SignificantDigits);
         app.Delay.ReleaseAll();
         await app.Recovery.DrainAsync();
     }
@@ -163,7 +160,7 @@ public sealed class DesktopResultPresentationTests
     {
         var app = new App(create: false);
         Assert.True(await app.Main.NewAsync());
-        app.Main.SetResultPresentation(Mixed, PresentationMode.Detailed);
+        app.Main.SetResultPresentation(Mixed, 6);
         var section = app.Main.Setup.SelectedSection;
         var material = app.Main.Setup.SelectedMaterial;
         Assert.Same(section, app.Main.Setup.SelectedSection);
@@ -178,16 +175,15 @@ public sealed class DesktopResultPresentationTests
         app.Main.EditProject();
         var setup = app.Main.Setup;
         section = setup.SelectedSection; material = setup.SelectedMaterial;
-        var materialText = (setup.YoungsModulus, setup.YieldStrength);
         var notifications = new List<string?>();
         setup.PropertyChanged += (_, e) => notifications.Add(e.PropertyName);
         int analyses = app.Analyses;
-        app.Main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Standard);
+        app.Main.SetResultPresentation(UnitProfile.UnitedStates, 3);
         Assert.Contains("ResultPresentation", notifications); Assert.Contains("SectionName", notifications);
         Assert.Contains("LengthError", notifications); Assert.Contains("Inertia", notifications);
         Assert.Same(section, setup.SelectedSection);
         Assert.Same(material, setup.SelectedMaterial);
-        Assert.Equal(materialText, (setup.YoungsModulus, setup.YieldStrength));
+        Assert.Equal(QuantityFormatter.Format(material!.YoungsModulus.Pascals, QuantityKind.YoungsModulus, setup.ResultPresentation), setup.YoungsModulus);
         setup.CancelCommand.Execute(null);
         Assert.Equal(analyses, app.Analyses);
         Assert.True(await app.Main.NewAsync());
@@ -195,7 +191,7 @@ public sealed class DesktopResultPresentationTests
         ProjectTestSupport.CompleteSetup(app.Main); app.Main.Setup.ApplyCommand.Execute(null);
         Assert.Equal(app.Main.ResultPresentation, app.Main.Editor!.ResultPresentation);
         var restored = new App(create: false);
-        restored.Main.SetResultPresentation(Mixed, PresentationMode.Detailed);
+        restored.Main.SetResultPresentation(Mixed, 6);
         restored.Files.Data[App.Slot] = ProjectRecovery.Encode(new(LoadedState(), app.Dialogs.OpenPath, Now));
         Assert.True(await restored.Main.InitializeRecoveryAsync());
         Assert.Equal(restored.Main.ResultPresentation, restored.Main.Editor!.ResultPresentation);
@@ -210,7 +206,7 @@ public sealed class DesktopResultPresentationTests
         var document = new EditorDocument(M(1), ProjectTemplates.Material, ProjectTemplates.Section,
             [new(Guid.NewGuid(), M(0), SupportType.Pinned, "A"), new(Guid.NewGuid(), M(1), SupportType.Roller, "B")]);
         foreach (var profile in new[] { UnitProfile.Default, UnitProfile.StructuralEngineering, UnitProfile.UnitedStates, Mixed })
-        foreach (var mode in Enum.GetValues<PresentationMode>())
+        foreach (var mode in new[] { 3, 6 })
         {
             var options = new ResultPresentationOptions(profile, mode);
             var editor = new EditorViewModel(document, () => { }, resultPresentation: options);
@@ -221,8 +217,8 @@ public sealed class DesktopResultPresentationTests
             Assert.All(editor.Overview.Reactions, r => { Assert.Equal("0", r.Ry); Assert.Empty(r.Moment); });
             var tiny = document.WithLoads([new EditorPointForce(Guid.NewGuid(), M(.5), Force.FromNewtons(-1e-8), "F1")]);
             var loaded = new EditorViewModel(tiny, () => { }, resultPresentation: options);
-            if (mode == PresentationMode.Standard) Assert.StartsWith("≈ 0 ", loaded.Presentation.Displacement);
-            else Assert.DoesNotContain("≈", loaded.Presentation.Displacement);
+            Assert.DoesNotContain("≈", loaded.Presentation.Displacement);
+            Assert.NotEqual("0 " + profile[QuantityKind.TransverseDisplacement].Symbol, loaded.Presentation.Displacement);
         }
     }
 
@@ -234,9 +230,8 @@ public sealed class DesktopResultPresentationTests
         Assert.NotNull(editor.Presentation.Result);
         Assert.True(session.Commit(session.CurrentRevision.State with { Document = editor.Document.WithSupports([]) }));
         var failed = editor.Presentation;
-        var updated = failed.WithPresentation(new(Mixed, PresentationMode.Detailed));
+        var updated = failed.WithPresentation(new(Mixed, 6));
         Assert.Null(updated.Result);
-        Assert.Null(updated.References);
         Assert.Empty(updated.Displacement); Assert.Empty(updated.Moment);
         Assert.Empty(updated.Stress); Assert.Empty(updated.SafetyFactor);
         Assert.Empty(editor.Overview.Reactions);
@@ -249,38 +244,36 @@ public sealed class DesktopResultPresentationTests
         var options = app.Main.ResultPresentation;
         int changes = 0;
         app.Main.PropertyChanged += (_, _) => changes++;
-        app.Main.SetResultPresentation(UnitProfile.Default, PresentationMode.Standard);
+        app.Main.SetResultPresentation(UnitProfile.Default, 3);
         Assert.Same(options, app.Main.ResultPresentation); Assert.Equal(0, changes);
-        Assert.Throws<ArgumentNullException>(() => app.Main.SetResultPresentation(null!, PresentationMode.Standard));
-        Assert.Throws<ArgumentOutOfRangeException>(() => app.Main.SetResultPresentation(UnitProfile.Default, (PresentationMode)42));
+        Assert.Throws<ArgumentNullException>(() => app.Main.SetResultPresentation(null!, 3));
+        Assert.Throws<ArgumentOutOfRangeException>(() => app.Main.SetResultPresentation(UnitProfile.Default, 42));
         Assert.Same(options, app.Main.ResultPresentation);
     }
 
     [Fact]
-    public void SwitchingBeforeFirstReferenceAccessRetainsTheLazyCache()
+    public void SwitchingPrecisionRetainsTheOriginalAnalysis()
     {
         var outcome = BeamAnalysis.Analyze(LoadedState().Document.ToBeamModel());
         var original = AnalysisPresentationState.FromOutcome(outcome);
-        var switched = original.WithPresentation(new(Mixed, PresentationMode.Detailed));
+        var switched = original.WithPresentation(new(Mixed, 6));
         Assert.Same(outcome.Result, switched.Result);
-        Assert.Same(switched.References, original.References);
         var nextAnalysis = AnalysisPresentationState.FromOutcome(BeamAnalysis.Analyze(LoadedState().Document.ToBeamModel()));
-        Assert.NotSame(switched.References, nextAnalysis.References);
+        Assert.NotSame(switched.Result, nextAnalysis.Result);
     }
 
     [Fact]
     public void NumberOnlyFormattingUsesTheSamePrecisionAndExplicitCultureOverride()
     {
         using var cultures = new ResultCultureScope("de-DE", "en-US");
-        var references = new ModelReferenceValues(1, 1234.5678, 1234.5678, 235e6);
-        foreach (var mode in Enum.GetValues<PresentationMode>())
+        foreach (var mode in new[] { 3, 6 })
         foreach (var profile in new[] { UnitProfile.Default, UnitProfile.StructuralEngineering, UnitProfile.UnitedStates, Mixed })
         foreach (var kind in new[] { QuantityKind.AxialForce, QuantityKind.TransverseForce, QuantityKind.Moment })
         foreach (double value in new[] { 0, -0.0, 1e-12, -1234.5678 })
         {
             var culture = CultureInfo.GetCultureInfo("en-US");
-            string number = QuantityFormatter.FormatNumber(value, kind, profile, mode, references, culture);
-            Assert.Equal(number + " " + profile[kind].Symbol, QuantityFormatter.Format(value, kind, profile, mode, references, culture));
+            string number = QuantityFormatter.FormatNumber(value, kind, profile, mode, culture: culture);
+            Assert.Equal(number + " " + profile[kind].Symbol, QuantityFormatter.Format(value, kind, profile, mode, culture: culture));
             Assert.DoesNotContain(",", number);
         }
         Assert.Equal("∞", QuantityFormatter.FormatNumber(double.PositiveInfinity, QuantityKind.SafetyFactor));

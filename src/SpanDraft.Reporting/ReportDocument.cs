@@ -22,6 +22,7 @@ internal sealed class ReportDocument : IDisposable
     private readonly TechnicalText[] sectionProperties, materialProperties;
     private readonly float sectionDrawingTop, materialTop, firstTableTop, summaryHeight;
     private readonly List<(string Text, SKRect Bounds)> textRuns = [];
+    private readonly (IReadOnlyList<HeaderLine> Lines, float BodyTop) projectHeader;
     internal ReportData Data { get; }
     internal IReadOnlyList<ReportPage> Pages { get; }
     internal IReadOnlyList<(string Text, SKRect Bounds)> TextRuns => textRuns;
@@ -49,6 +50,7 @@ internal sealed class ReportDocument : IDisposable
             + sectionProperties.Length * LineHeight + BlockGap;
         firstTableTop = materialTop + HeadingHeight + materialLines.Length * LineHeight + 2
             + materialProperties.Length * LineHeight + BlockGap;
+        projectHeader = CreateProjectHeader();
         summaryHeight = MeasureSummary();
         Pages = Compose();
     }
@@ -101,12 +103,13 @@ internal sealed class ReportDocument : IDisposable
         var metadata = Data.Metadata.SelectMany(m => Wrap(m.Value, PageWidth - 2 * Margin - 64, 8.5f,
             m.Label == Data.Metadata.FirstOrDefault().Label).Select((line, i) => (i == 0 ? m.Label : "", line))).ToArray();
         // Very long metadata has its own pages; it must not squeeze the technical diagrams out of existence.
-        bool separateMetadata = metadata.Length > 8;
+        bool separateMetadata = metadata.Length > 8
+            || projectHeader.BodyTop + graphics.BeamHeight + 4 + 3 * 60 > FooterTop - 14;
         if (separateMetadata)
             foreach (var chunk in metadata.Chunk(48))
                 pages.Add(new(Margin + 44 + chunk.Length * LineHeight, false, null, [], chunk));
         var firstMetadata = separateMetadata ? [] : metadata;
-        float bodyTop = separateMetadata ? ContinuationTop : Margin + 44 + firstMetadata.Length * LineHeight;
+        float bodyTop = separateMetadata ? ContinuationTop : projectHeader.BodyTop;
         const float bottom = FooterTop - 14;
         const float columnGap = 6 * Mm;
         const float columnWidth = (PageWidth - 2 * Margin - columnGap) / 2;
@@ -344,7 +347,7 @@ internal sealed class ReportDocument : IDisposable
             PageWidth / 2, Margin, 8.5f, align: SKTextAlign.Center, color: Secondary);
         float headerBottom = page.BodyTop - 12;
         if (page.HasGraphics && (page.Metadata.Count > 0 || Data.Metadata.Count == 0))
-            headerBottom = DrawProjectHeader(canvas, page);
+            headerBottom = DrawProjectHeader(canvas);
         else if (page.Metadata.Count > 0)
         {
             string activeLabel = Pages.Take(index).SelectMany(p => p.Metadata)
@@ -394,63 +397,69 @@ internal sealed class ReportDocument : IDisposable
         Text(canvas, Data.Date, PageWidth - Margin, footerY, 7.5f, align: SKTextAlign.Right, color: Secondary);
     }
 
-    private float DrawProjectHeader(SKCanvas canvas, ReportPage page)
+    private sealed record HeaderLine(string Text, float X, float Top, float Size,
+        bool Strong = false, bool Secondary = false, SKTextAlign Align = SKTextAlign.Left);
+
+    private (IReadOnlyList<HeaderLine> Lines, float BodyTop) CreateProjectHeader()
     {
-        const float titleSize = 13.5f, titleLineHeight = 17;
-        float width = PageWidth - 2 * Margin, gap = 12;
-        float columnsWidth = width - 2 * gap;
+        const float titleSize = 13.5f, gap = 12;
+        float width = PageWidth - 2 * Margin, columnsWidth = width - 2 * gap;
         string[] labels = [Data.Labels.Project, Data.Labels.Reference, Data.Labels.Author];
         float[] widths = [columnsWidth / 2, columnsWidth / 4, columnsWidth / 4];
-        var fields = labels.Select(label => Data.Metadata.FirstOrDefault(m => m.Label == label)).ToArray();
-        var extra = Data.Metadata.Where(m => m.Label != Data.Labels.Title && !labels.Contains(m.Label)).ToArray();
-        float scale = 1, y = Margin + 13;
-        string[] title;
-        string[][] values;
-        (string Label, string Value)[] extraLines;
-        float height;
-        // Fit only the header into its existing space: pagination and body geometry stay frozen.
-        while (true)
+        var lines = new List<HeaderLine>();
+        float Add(HeaderLine line)
         {
-            title = Wrap(Data.Title, width, titleSize * scale, true);
-            values = fields.Select((field, i) => Wrap(string.IsNullOrWhiteSpace(field.Value) ? "-" : field.Value,
-                widths[i], 8.5f * scale)).ToArray();
-            extraLines = extra.SelectMany(m => Wrap(m.Value, width - 64, 8.5f * scale)
-                .Select((line, i) => (i == 0 ? m.Label : "", line))).ToArray();
-            height = (title.Length * titleLineHeight + 6 + 9 + 2 + values.Max(lines => lines.Length) * LineHeight
-                + extraLines.Length * LineHeight) * scale;
-            if (y + height <= page.BodyTop - 15) break;
-            scale *= .9f;
+            using var layout = new ReportTextLayout(line.Text, line.Size, line.Strong);
+            lines.Add(line);
+            return layout.Height;
         }
-        float headerReduction = Math.Min(10, Math.Max(0, page.BodyTop - 15 - y - height));
-        foreach (string line in title)
+
+        // Reserve the measured header before pagination; missing fields still need readable placeholders.
+        float y = Margin + 13;
+        foreach (string line in Wrap(Data.Title, width, titleSize, true))
+            y += Math.Max(17, Add(new(line, PageWidth / 2, y, titleSize, Strong: true, Align: SKTextAlign.Center)) + 2);
+        y += 4;
+        float x = Margin, labelHeight = 0;
+        for (int i = 0; i < labels.Length; i++)
         {
-            Text(canvas, line, PageWidth / 2, y, titleSize * scale, strong: true, align: SKTextAlign.Center);
-            y += titleLineHeight * scale;
+            labelHeight = Math.Max(labelHeight, Add(new(labels[i], x, y, 7, Secondary: true)));
+            x += widths[i] + gap;
         }
-        float metadataHeight = (11 + values.Max(lines => lines.Length) * LineHeight
-            + extraLines.Length * LineHeight) * scale;
-        float headerBottom = page.BodyTop - 12 - headerReduction;
-        y = Math.Max(y + 6 * scale, headerBottom - 6 - metadataHeight);
-        float x = Margin;
-        for (int i = 0; i < fields.Length; i++)
+        float valueTop = y + labelHeight + 3, bottom = valueTop;
+        x = Margin;
+        for (int i = 0; i < labels.Length; i++)
         {
-            Text(canvas, labels[i], x, y, 7 * scale, color: Secondary);
-            float valueY = y + 11 * scale;
-            foreach (string line in values[i])
+            string? value = Data.Metadata.FirstOrDefault(m => m.Label == labels[i]).Value;
+            y = valueTop;
+            foreach (string line in Wrap(string.IsNullOrWhiteSpace(value) ? "-" : value, widths[i], 8.5f))
             {
-                Text(canvas, line, x, valueY, 8.5f * scale);
-                valueY += LineHeight * scale;
+                float height = Add(new(line, x, y, 8.5f));
+                bottom = Math.Max(bottom, y + height);
+                y += Math.Max(LineHeight, height + 1);
             }
             x += widths[i] + gap;
         }
-        y += (11 + values.Max(lines => lines.Length) * LineHeight) * scale;
-        foreach (var (label, value) in extraLines)
+        y = bottom + 4;
+        foreach (var field in Data.Metadata.Where(m => m.Label != Data.Labels.Title && !labels.Contains(m.Label)))
         {
-            Text(canvas, label, Margin, y, 8.5f * scale, color: Secondary);
-            Text(canvas, value, Margin + 64, y, 8.5f * scale);
-            y += LineHeight * scale;
+            bool first = true;
+            foreach (string line in Wrap(field.Value, width - 64, 8.5f))
+            {
+                float height = Add(new(line, Margin + 64, y, 8.5f));
+                if (first) height = Math.Max(height, Add(new(field.Label, Margin, y, 8.5f, Secondary: true)));
+                bottom = y + height;
+                y += Math.Max(LineHeight, height + 1);
+                first = false;
+            }
         }
-        return headerBottom;
+        return (lines.AsReadOnly(), bottom + 18);
+    }
+
+    private float DrawProjectHeader(SKCanvas canvas)
+    {
+        foreach (var line in projectHeader.Lines)
+            Text(canvas, line.Text, line.X, line.Top, line.Size, line.Strong, line.Align, line.Secondary ? Secondary : Ink);
+        return projectHeader.BodyTop - 12;
     }
 
     private void DrawTable(SKCanvas canvas, ReportTableFragment fragment)
@@ -482,8 +491,12 @@ internal sealed class ReportDocument : IDisposable
             {
                 float cellWidth = table.Widths[i] * bounds.Width;
                 bool leftAligned = i == 0 || table.LeftAlignedColumn == i;
-                Lines(canvas, row.Cells[i].Skip(row.FirstLine).Take(row.LineCount), leftAligned ? x : x + cellWidth,
-                    y, 8.5f, i == 0, leftAligned ? SKTextAlign.Left : SKTextAlign.Right);
+                var lines = row.Cells[i].Skip(row.FirstLine).Take(row.LineCount).ToArray();
+                float measured = lines.Select(line => Width(line, 8.5f, i == 0)).DefaultIfEmpty(0).Max();
+                // Keep an indivisible number inside its cell even at high selected precision.
+                float size = measured > cellWidth - 4 ? 8.5f * (cellWidth - 4) / measured : 8.5f;
+                Lines(canvas, lines, leftAligned ? x : x + cellWidth,
+                    y, size, i == 0, leftAligned ? SKTextAlign.Left : SKTextAlign.Right);
                 x += cellWidth;
             }
             y += Math.Max(RowHeight, row.LineCount * LineHeight + 3);
@@ -595,6 +608,13 @@ internal sealed class ReportDocument : IDisposable
                 while (space > 0 && protectedSpaces?.Contains(pendingOffset + space) == true)
                     space = pending.PlainText.LastIndexOf(' ', space - 1);
                 if (space > 0) count = space;
+                else
+                {
+                    // Emergency word wrapping must still honor nonbreaking numeric groups.
+                    int end = pending.PlainText.IndexOf(' ');
+                    if (end < 0) end = pending.PlainText.Length;
+                    if (pending.PlainText.AsSpan(0, end).ContainsAny('\u202f', '\u00a0')) count = end;
+                }
                 lines.Add(pending.Slice(0, count));
                 int next = count;
                 while (next < pending.PlainText.Length && pending.PlainText[next] == ' ') next++;

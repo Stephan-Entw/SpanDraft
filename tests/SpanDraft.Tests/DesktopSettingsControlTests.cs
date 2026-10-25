@@ -85,7 +85,7 @@ public sealed class DesktopSettingsControlTests
         {
             var list = window.FindControl<ItemsControl>(name)!;
             var combos = list.GetVisualDescendants().OfType<ComboBox>().Where(c => c.IsVisible).ToArray();
-            Assert.Equal(name == "LeftUnitList" ? 7 : 5, combos.Length);
+            Assert.Equal(name == "LeftUnitList" ? 7 : 7, combos.Length);
             Assert.All(combos, c => Assert.Equal(132, c.Bounds.Width, 6));
             double x = combos[0].TranslatePoint(default, list)!.Value.X;
             Assert.All(combos, c => Assert.Equal(x, c.TranslatePoint(default, list)!.Value.X, 6));
@@ -133,25 +133,33 @@ public sealed class DesktopSettingsControlTests
     }
 
     [Theory]
-    [InlineData("de-DE", "de-DE", "Beispiel: 12,345 mm → 12 mm", "Beispiel: 12,345 mm → 12,3 mm")]
-    [InlineData("en-US", "en-US", "Example: 12.345 mm → 12 mm", "Example: 12.345 mm → 12.3 mm")]
-    [InlineData("en-US", "de-DE", "Example: 12,345 mm → 12 mm", "Example: 12,345 mm → 12,3 mm")]
-    [InlineData("de-DE", "en-US", "Beispiel: 12.345 mm → 12 mm", "Beispiel: 12.345 mm → 12.3 mm")]
-    public void PresentationExamplesUseTheActiveRegionalCultureIndependentlyOfUiLanguageAndPendingSettings(
-        string uiCulture, string culture, string standard, string detailed)
+    [InlineData("de-DE", "Signifikante Stellen", "Technische Schreibweise")]
+    [InlineData("en-US", "Significant digits", "Engineering notation")]
+    public void NumericPickersBindBothDirectionsAndRestoreDiscardedPreferences(string culture, string precisionLabel, string notationLabel)
     {
         using var environment = new DesktopControlEnvironment();
-        using var scope = new ResultCultureScope(culture, uiCulture);
+        using var scope = new ResultCultureScope(culture, culture);
         var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
         var window = new SettingsWindow(model); Arrange(window, 900, 780);
-        var descriptions = window.GetVisualDescendants().OfType<RadioButton>().Where(r => r.GroupName == "Presentation")
-            .Select(r => r.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Classes.Contains("secondary"))).ToArray();
-        Assert.Equal(2, descriptions.Length);
-        Assert.EndsWith("\n" + standard, descriptions[0].Text);
-        Assert.EndsWith("\n" + detailed, descriptions[1].Text);
-        model.SelectedRegionalFormat = culture == "de-DE" ? RegionalFormatPreference.EnglishUnitedStates : RegionalFormatPreference.GermanGermany;
-        Assert.EndsWith("\n" + standard, model.StandardDescription);
-        Assert.EndsWith("\n" + detailed, model.DetailedDescription);
+        var digits = window.FindControl<ComboBox>("SignificantDigitsPicker")!;
+        var notation = window.FindControl<ComboBox>("NotationPicker")!;
+        Assert.Equal(precisionLabel, AutomationProperties.GetName(digits));
+        Assert.Equal(notationLabel, AutomationProperties.GetName(notation));
+        Assert.Equal(digits.Bounds.Width, notation.Bounds.Width);
+        Assert.Equal(digits.Bounds.Left, notation.Bounds.Left);
+        Assert.Equal(3, digits.SelectedItem);
+        Assert.Equal(EngineeringNotation.Automatic, notation.SelectedValue);
+        Assert.Equal(Enumerable.Range(1, 15), model.SignificantDigitChoices);
+        digits.SelectedItem = 8;
+        notation.SelectedItem = model.Notations.Single(n => n.Value == EngineeringNotation.Off);
+        Assert.Equal(8, model.Pending.SignificantDigits);
+        Assert.Equal(EngineeringNotation.Off, model.Pending.Notation);
+        model.SignificantDigits = 4;
+        Assert.Equal(4, digits.SelectedItem);
+        model.DiscardPending();
+        Assert.Equal(3, digits.SelectedItem);
+        Assert.Equal(EngineeringNotation.Automatic, notation.SelectedValue);
+        Assert.DoesNotContain(window.GetVisualDescendants().OfType<RadioButton>(), r => r.GroupName == "Presentation");
     }
 
     [Fact]
@@ -189,15 +197,15 @@ public sealed class DesktopSettingsControlTests
         { published = settings; return Task.FromResult<string?>(null); });
         var window = new SettingsWindow(model);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
-        model.IsDetailed = true;
+        model.SignificantDigits = 6;
         model.SelectedUiLanguage = UiLanguagePreference.English;
         model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         Click(window, "OkButton");
         Assert.True(closeApproved);
-        Assert.Equal(PresentationMode.Detailed, published!.Mode);
+        Assert.Equal(6, published!.SignificantDigits);
         Assert.Equal(UiLanguagePreference.English, published.UiLanguage);
         Assert.Equal(RegionalFormatPreference.GermanGermany, published.RegionalFormat);
-        Assert.True(model.IsDetailed); Assert.False(model.HasChanges);
+        Assert.Equal(6, model.SignificantDigits); Assert.False(model.HasChanges);
     }
 
     [Fact]
@@ -225,7 +233,7 @@ public sealed class DesktopSettingsControlTests
         { writes++; return Task.FromResult<string?>(null); });
         var window = new SettingsWindow(model);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
-        model.Select(UnitProfileKind.UnitedStates); model.IsDetailed = true;
+        model.Select(UnitProfileKind.UnitedStates); model.SignificantDigits = 6;
         model.SelectedUiLanguage = UiLanguagePreference.English;
         model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         if (action == "cancel") Click(window, "CancelButton");
@@ -277,13 +285,13 @@ public sealed class DesktopSettingsControlTests
         var model = new SettingsViewModel(UserSettings.Default, _ => { writes++; return completion.Task; });
         var window = new SettingsWindow(model);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
-        model.IsDetailed = true;
+        model.SignificantDigits = 6;
         Click(window, "OkButton");
         Assert.True(model.IsSaving);
         Assert.False(window.FindControl<Button>("OkButton")!.IsEnabled);
         Assert.False(window.FindControl<Button>("CancelButton")!.IsEnabled);
         Click(window, "OkButton"); Click(window, "CancelButton"); Escape(window); window.Close();
-        Assert.False(closeApproved); Assert.True(model.IsDetailed); Assert.Equal(1, writes);
+        Assert.False(closeApproved); Assert.Equal(6, model.SignificantDigits); Assert.Equal(1, writes);
         completion.SetResult(null);
         Dispatcher.UIThread.RunJobs();
         Assert.True(closeApproved); Assert.False(model.IsSaving); Assert.False(model.HasChanges);
@@ -318,7 +326,7 @@ public sealed class DesktopSettingsControlTests
         var revision = editor.Session.CurrentRevision;
         foreach (var profile in new[] { UnitProfile.StructuralEngineering, UnitProfile.UnitedStates, DesktopResultPresentationTests.Mixed, UnitProfile.Default })
         {
-            Assert.True(main.SetResultPresentation(profile, PresentationMode.Standard));
+            Assert.True(main.SetResultPresentation(profile, 3));
             Arrange(window, 1250, 800);
             Assert.Same(layout, surface.StationLayout);
             Assert.Equal(frame.Viewport, canvas.Scene!.Frame.Viewport);

@@ -73,7 +73,7 @@
           </ComboBox>
           <TextBox x:Name="MaterialStrengthValueInput" Width="68" Height="{DynamicResource StandardControl}" Grid.Column="2" DataContext="{Binding Inputs[1]}" x:DataType="vm:SetupNumberInput" Text="{Binding Text, Mode=TwoWay}"
                    Classes="inlineDimension" Classes.error="{Binding ShowError}" LostFocus="NumberLostFocus" AutomationProperties.Name="{Binding InputLabel}" />
-          <TextBlock Grid.Column="4" Text="MPa" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
+          <TextBlock x:Name="MaterialStrengthUnit" Grid.Column="4" Text="{Binding Inputs[1].DisplayUnit}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
         </Grid>
         <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding StrengthTypeError}" IsVisible="{Binding ShowStrengthTypeError}" Classes="validationMessage" TextWrapping="Wrap" />
         <TextBlock Grid.Row="2" Grid.Column="2" DataContext="{Binding Inputs[1]}" x:DataType="vm:SetupNumberInput"

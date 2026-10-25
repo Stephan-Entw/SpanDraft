@@ -1,6 +1,5 @@
 using SpanDraft.Core.Materials;
 using SpanDraft.Desktop.Resources;
-using SpanDraft.Desktop.State;
 using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.Presentation;
@@ -28,6 +27,6 @@ internal static class MaterialStrengthDisplay
     };
 
     internal static string Summary(Material material) => SummaryText(material).PlainText;
-    internal static TechnicalText SummaryText(Material material) =>
-        SymbolText(material.StrengthType) + " " + UiNumbers.Indicator(material.YieldStrength.Megapascals);
+    internal static TechnicalText SummaryText(Material material, ResultPresentationOptions? options = null) =>
+        SymbolText(material.StrengthType) + " " + QuantityFormatter.FormatNumber(material.YieldStrength.Pascals, QuantityKind.MaterialStrength, options ?? ResultPresentationOptions.Default);
 }

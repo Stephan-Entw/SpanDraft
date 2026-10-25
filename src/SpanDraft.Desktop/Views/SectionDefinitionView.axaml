@@ -198,7 +198,7 @@
           </Border>
           <Border Grid.RowSpan="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0" IsHitTestVisible="False" />
           <controls:SectionPreviewControl x:Name="SectionPreview" Grid.Row="1" Margin="16" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
-              Geometry="{Binding Preview}" SelectedAxis="{Binding SelectedAxis}" HighlightedParameter="{Binding HighlightedParameter}" UnitProfile="{Binding Presentation.Profile}"
+              Geometry="{Binding Preview}" SelectedAxis="{Binding SelectedAxis}" HighlightedParameter="{Binding HighlightedParameter}" UnitProfile="{Binding Presentation.Profile}" Presentation="{Binding Presentation}"
               AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionSketch}" />
         </Grid>
         <Grid x:Name="ValuesColumn" Background="{DynamicResource AppBackground}" Classes.manualValues="{Binding IsManual}" Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="16" Margin="12,24,12,24" Grid.IsSharedSizeScope="True" IsVisible="{Binding ShowValues}">

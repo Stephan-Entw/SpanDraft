@@ -25,7 +25,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         EditorPresentationState? presentation = null, DistributedLoadPreview? distributedPreview = null,
         Guid? hiddenDistributedId = null, string? distributedName = null, UnitProfile? profile = null,
         bool reserveUnitWidths = false, double loadSymbolScale = 1, bool reserveLoadPreviewRow = true,
-        double minimumPaneHeight = SchematicMetrics.MinimumBeamPaneHeight)
+        double minimumPaneHeight = SchematicMetrics.MinimumBeamPaneHeight, ResultPresentationOptions? options = null)
     {
         var supports = new List<SupportVisual>();
         foreach (var support in document.Supports)
@@ -55,15 +55,15 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             void Reserve(string label, string name, double value, QuantityKind quantity)
             {
                 var sizes = UnitCatalog.All.Where(u => u.Dimension == UnitCatalog.DimensionOf(quantity))
-                    .Select(u => originalMeasure(name.Trim() + " = " + InputQuantityFormatter.WithUnit(value, u))).ToArray();
+                    .Select(u => originalMeasure(name.Trim() + " = " + InputQuantityFormatter.WithUnit(value, u, options))).ToArray();
                 reserved[label] = new(sizes.Max(s => s.Width), sizes.Max(s => s.Height));
             }
             measure = text => reserved.TryGetValue(text, out var size) ? size : originalMeasure(text);
         }
         var annotations = new List<EntityAnnotation>();
-        double above = Place(loads.Select((v, i) => (v.Id, v.Name, Text: PointLoadSymbol.Label(v.Preview, v.Name, profile),
+        double above = Place(loads.Select((v, i) => (v.Id, v.Name, Text: PointLoadSymbol.Label(v.Preview, v.Name, profile, options),
             v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)).Concat(distributed.Select((v, i) =>
-            (v.Id, v.Name, Text: DistributedLoadSymbol.Label(v.Preview, v.Name, profile), X: v.CenterX,
+            (v.Id, v.Name, Text: DistributedLoadSymbol.Label(v.Preview, v.Name, profile, options), X: v.CenterX,
                 v.IsPreview, v.Preview.IsInvalid, Order: loads.Count + i))), false);
         double below = Place(supports.Select((v, i) => (v.Id, v.Name, Text: v.Name,
             v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)), true);

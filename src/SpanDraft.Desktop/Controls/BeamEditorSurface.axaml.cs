@@ -211,7 +211,7 @@ public partial class BeamEditorSurface : UserControl
             // Reserve from committed labels, including a spare preview row. Neither
             // hover nor transient text changes the pane's requested height.
             var committed = BeamRenderState.Create(_editor.Document, frame, measure, presentation: _editor.EditorPresentation,
-                profile: _editor.ResultPresentation.Profile, reserveUnitWidths: true);
+                profile: _editor.ResultPresentation.Profile, reserveUnitWidths: true, options: _editor.ResultPresentation);
             if (_labelGesture is null)
             {
                 BeamPane.MinHeight = committed.MinimumPaneHeight;
@@ -224,7 +224,7 @@ public partial class BeamEditorSurface : UserControl
                 _editor.Preview, _editor.HiddenSupportId, _editor.SupportPreviewName,
                 _editor.LoadPreview, _editor.HiddenLoadId, _editor.LoadPreviewName, _editor.RenderPresentation,
                 _editor.DistributedLoadPreview, _editor.HiddenDistributedLoadId, _editor.DistributedLoadPreviewName,
-                _editor.ResultPresentation.Profile, reserveUnitWidths: true);
+                _editor.ResultPresentation.Profile, reserveUnitWidths: true, options: _editor.ResultPresentation);
             TechnicalCanvas.Scene = _scene;
             CoordinateAxis.SetStationLayout(frame.Layout, frame.Viewport.Width);
             SetAndRaise(StationLayoutProperty, ref _stationLayout, frame.Layout);

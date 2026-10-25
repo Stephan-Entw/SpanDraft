@@ -108,7 +108,6 @@ public sealed class DesktopResultDiagramControlTests
             new EditorPointMoment(Guid.NewGuid(), Length.FromMeters(.04), Moment.FromNewtonMeters(123456.789), "M1")]);
         Assert.True(main.Session!.Commit(main.Session.CurrentRevision.State with { Document = document }));
         var result = editor.Presentation.Result!;
-        var references = editor.Presentation.References;
         var view = new EditorView { DataContext = editor };
         var window = new Window { Content = view };
         Arrange(window, width, 950);
@@ -118,7 +117,7 @@ public sealed class DesktopResultDiagramControlTests
         var jumps = diagrams.Select(d => d.Projection!.Jumps.ToArray()).ToArray();
         int count = analyses;
         var profile = DesktopResultPresentationTests.Profile(profileIndex);
-        main.SetResultPresentation(profile, PresentationMode.Standard);
+        main.SetResultPresentation(profile, 3);
         Arrange(window, width, 950);
         var projections = diagrams.Select(d => d.Projection!).ToArray();
         for (int i = 0; i < diagrams.Length; i++)
@@ -158,24 +157,23 @@ public sealed class DesktopResultDiagramControlTests
         Assert.Equal(editor.Overview.ReactionYHeader, TechnicalTextPresenter.GetContent(overview.FindControl<TextBlock>("ReactionYHeader")!)!.PlainText);
         Assert.Equal(editor.Overview.ReactionMomentHeader, TechnicalTextPresenter.GetContent(overview.FindControl<TextBlock>("ReactionMomentHeader")!)!.PlainText);
         Snapshot(view, $"phase2-{uiCulture}-{profileIndex}-standard-workspace");
-        main.SetResultPresentation(profile, PresentationMode.Detailed);
+        main.SetResultPresentation(profile, 6);
         Arrange(window, width, 950);
         Assert.Equal(count, analyses);
         Assert.Same(result, editor.Presentation.Result);
-        Assert.Same(references, editor.Presentation.References);
         for (int i = 0; i < diagrams.Length; i++)
         {
             Assert.Same(projections[i], diagrams[i].Projection);
             AssertReadableMarkers(diagrams[i]);
             foreach (var label in diagrams[i].MarkerLabels)
                 Assert.Contains(QuantityFormatter.Format(label.Marker.SiValue,
-                    ResultDiagramProjection.QuantityOf(diagrams[i].Kind), profile, PresentationMode.Detailed, references), label.Text);
+                    ResultDiagramProjection.QuantityOf(diagrams[i].Kind), profile, 6), label.Text);
             Snapshot(diagrams[i], $"phase2-{uiCulture}-{profileIndex}-detailed-{diagrams[i].Kind}");
         }
         Snapshot(view, $"phase2-{uiCulture}-{profileIndex}-detailed-workspace");
         Assert.True(main.Session.Commit(main.Session.CurrentRevision.State with { Document = document.WithSupports([]) }));
         Assert.All(diagrams, d => { Assert.Null(d.Projection); Assert.Empty(d.MarkerLabels); });
-        main.SetResultPresentation(UnitProfile.Default, PresentationMode.Standard);
+        main.SetResultPresentation(UnitProfile.Default, 3);
         Assert.All(diagrams, d => { Assert.Null(d.Projection); Assert.Empty(d.MarkerLabels); });
         Assert.Empty(editor.Overview.Reactions);
         window.Content = null;
@@ -614,7 +612,7 @@ public sealed class DesktopResultDiagramControlTests
             {
                 Assert.EndsWith(" " + unit, label.Text);
                 Assert.Contains(QuantityFormatter.Format(label.Marker.SiValue,
-                    ResultDiagramProjection.QuantityOf(diagram.Kind), references: editor.Presentation.References), label.Text);
+                    ResultDiagramProjection.QuantityOf(diagram.Kind)), label.Text);
                 Assert.DoesNotContain("E", label.Text);
                 if (label.Marker.Value != 0) Assert.DoesNotContain("= 0 ", label.Text);
             });
@@ -625,7 +623,7 @@ public sealed class DesktopResultDiagramControlTests
     [Theory]
     [InlineData("de-DE")]
     [InlineData("en-US")]
-    public void ConstantApproximateZeroUsesOneComparisonSign(string culture)
+    public void ConstantTinyValuesStayVisible(string culture)
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new ResultCultureScope(culture, culture);
@@ -639,18 +637,18 @@ public sealed class DesktopResultDiagramControlTests
         var diagram = Assert.Single(Diagrams(view), d => d.Kind == ResultDiagramKind.ShearForce);
         var label = Assert.Single(diagram.MarkerLabels);
         Assert.NotEqual(0, label.Marker.SiValue);
-        Assert.Equal("min = max ≈ 0 N", label.Text);
+        Assert.Equal("min = max = " + QuantityFormatter.Format(label.Marker.SiValue, QuantityKind.TransverseForce), label.Text);
         AssertReadableMarkers(diagram);
         Snapshot(diagram, $"approximate-constant-{culture}");
         window.Content = null;
     }
 
     [Theory]
-    [InlineData("de-DE", -1e-8, "min ≈ 0 mm")]
-    [InlineData("en-US", -1e-8, "min ≈ 0 mm")]
-    [InlineData("de-DE", 1e-8, "max ≈ 0 mm")]
-    [InlineData("en-US", 1e-8, "max ≈ 0 mm")]
-    public void ApproximateZeroReplacesEqualityInExtremumLabels(string culture, double force, string expected)
+    [InlineData("de-DE", -1e-8, "min = ")]
+    [InlineData("en-US", -1e-8, "min = ")]
+    [InlineData("de-DE", 1e-8, "max = ")]
+    [InlineData("en-US", 1e-8, "max = ")]
+    public void TinyExtremaRemainVisibleWhenPrecisionChanges(string culture, double force, string expected)
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new ResultCultureScope(culture, culture);
@@ -663,16 +661,16 @@ public sealed class DesktopResultDiagramControlTests
         var diagram = Assert.Single(Diagrams(view), d => d.Kind == ResultDiagramKind.TransverseDisplacement);
         var projection = diagram.Projection;
         var label = Assert.Single(diagram.MarkerLabels, l => l.Marker.SiValue != 0);
-        Assert.Equal(expected, label.Text);
+        Assert.Equal(expected + QuantityFormatter.Format(label.Marker.SiValue, QuantityKind.TransverseDisplacement), label.Text);
         Assert.Equal(force < 0 ? ResultDiagramExtremumKind.Minimum : ResultDiagramExtremumKind.Maximum, label.Marker.Kind);
         Assert.Contains(diagram.MarkerLabels, l => l.Text == (force < 0 ? "max = 0 mm" : "min = 0 mm"));
         AssertReadableMarkers(diagram);
         Snapshot(diagram, $"approximate-comparison-{culture}-{(force < 0 ? "minimum" : "maximum")}");
-        diagram.Presentation = editor.Presentation.WithPresentation(new(mode: PresentationMode.Detailed));
+        diagram.Presentation = editor.Presentation.WithPresentation(new(significantDigits: 6));
         Assert.Same(projection, diagram.Projection);
         Assert.All(diagram.MarkerLabels, l => Assert.DoesNotContain("≈", l.Text));
         Assert.Contains(diagram.MarkerLabels, l => l.Text == (force < 0 ? "min = " : "max = ")
-            + QuantityFormatter.Format(label.Marker.SiValue, QuantityKind.TransverseDisplacement, mode: PresentationMode.Detailed));
+            + QuantityFormatter.Format(label.Marker.SiValue, QuantityKind.TransverseDisplacement, significantDigits: 6));
         window.Content = null;
     }
 

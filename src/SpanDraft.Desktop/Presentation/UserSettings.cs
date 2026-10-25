@@ -6,7 +6,18 @@ public sealed record UserSettings
     public UnitProfile Profile { get; init; } = UnitProfile.Default;
     public UnitProfileKind LastStandardProfile { get; init; } = UnitProfileKind.MechanicalEngineering;
     public UnitProfile? CustomProfile { get; init; }
-    public PresentationMode Mode { get; init; } = PresentationMode.Standard;
+    private int _significantDigits = ResultPresentationOptions.DefaultSignificantDigits;
+    private EngineeringNotation _notation = EngineeringNotation.Automatic;
+    public int SignificantDigits
+    {
+        get => _significantDigits;
+        init { ResultPresentationOptions.ValidateSignificantDigits(value); _significantDigits = value; }
+    }
+    public EngineeringNotation Notation
+    {
+        get => _notation;
+        init { if (!Enum.IsDefined(value)) throw new ArgumentOutOfRangeException(nameof(value)); _notation = value; }
+    }
     public UiLanguagePreference UiLanguage { get; init; } = UiLanguagePreference.System;
     public RegionalFormatPreference RegionalFormat { get; init; } = RegionalFormatPreference.System;
     private string? _lastAuthor;
@@ -16,7 +27,7 @@ public sealed record UserSettings
         init => _lastAuthor = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
     public bool HasCustomProfile => CustomProfile is not null;
-    public ResultPresentationOptions Presentation => new(Profile, Mode);
+    public ResultPresentationOptions Presentation => new(Profile, SignificantDigits, Notation);
     public static UserSettings Default { get; } = new();
 
     public static UnitProfile Standard(UnitProfileKind kind) => kind switch
@@ -52,7 +63,7 @@ public sealed record UserSettings
         };
     }
 
-    public bool ContentEquals(UserSettings other) => Mode == other.Mode && LastStandardProfile == other.LastStandardProfile
+    public bool ContentEquals(UserSettings other) => SignificantDigits == other.SignificantDigits && Notation == other.Notation && LastStandardProfile == other.LastStandardProfile
         && LastAuthor == other.LastAuthor && UiLanguage == other.UiLanguage && RegionalFormat == other.RegionalFormat
         && SameUnits(Profile, other.Profile) && HasCustomProfile == other.HasCustomProfile
         && (CustomProfile is null || SameUnits(CustomProfile, other.CustomProfile!));

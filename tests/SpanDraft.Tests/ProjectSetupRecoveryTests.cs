@@ -333,7 +333,7 @@ public sealed class ProjectSetupRecoveryTests
         setup.BendingAxis = setup.BendingAxis;
         setup.LengthInput.Begin(); Assert.True(setup.LengthInput.Confirm());
         setup.ShowMaterials(); setup.ShowOverview(); setup.ShowSections(); Assert.True(await setup.Definition!.ConfirmAsync());
-        Assert.True(f.Main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Detailed));
+        Assert.True(f.Main.SetResultPresentation(UnitProfile.UnitedStates, 6));
         Assert.Empty(f.Delay.Waiters); Assert.Empty(f.Files.Writes);
         setup.BendingAxis = SectionAxisDesignation.Y; Assert.Single(f.Delay.Waiters); await f.Publish();
         Assert.Equal(SectionAxisDesignation.Y, (await f.Recovery.ReadAsync())!.Draft.BendingAxis);

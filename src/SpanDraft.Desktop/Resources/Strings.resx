@@ -111,9 +111,6 @@
   <data name="DiagramMinimum" xml:space="preserve"><value>min = {0}</value></data>
   <data name="DiagramMaximum" xml:space="preserve"><value>max = {0}</value></data>
   <data name="DiagramMinimumAndMaximum" xml:space="preserve"><value>min = max = {0}</value></data>
-  <data name="DiagramMinimumApproximate" xml:space="preserve"><value>min ≈ {0}</value></data>
-  <data name="DiagramMaximumApproximate" xml:space="preserve"><value>max ≈ {0}</value></data>
-  <data name="DiagramMinimumAndMaximumApproximate" xml:space="preserve"><value>min = max ≈ {0}</value></data>
   <data name="SettingsTitle" xml:space="preserve"><value>Settings</value></data>
   <data name="SettingsUnits" xml:space="preserve"><value>Units</value></data>
   <data name="ProfileMechanical" xml:space="preserve"><value>Mechanical engineering</value></data>
@@ -131,11 +128,7 @@
   <data name="UnitAxialForce" xml:space="preserve"><value>Axial force</value></data>
   <data name="UnitStress" xml:space="preserve"><value>Stress</value></data>
   <data name="UnitRotation" xml:space="preserve"><value>Rotation</value></data>
-  <data name="SettingsNumeric" xml:space="preserve"><value>Numerical result presentation</value></data>
-  <data name="PresentationStandard" xml:space="preserve"><value>Standard</value></data>
-  <data name="PresentationDetailed" xml:space="preserve"><value>Detailed</value></data>
-  <data name="PresentationStandardDescription" xml:space="preserve"><value>Recommended display with appropriately reduced numerical precision.&#10;Example: {0} mm → {1} mm</value></data>
-  <data name="PresentationDetailedDescription" xml:space="preserve"><value>Shows results with higher numerical precision.&#10;Example: {0} mm → {1} mm</value></data>
+  <data name="SettingsNumeric" xml:space="preserve"><value>Number formatting</value></data>
   <data name="PresentationCalculationHint" xml:space="preserve"><value>Only the presentation changes. The calculation remains identical.</value></data>
   <data name="SettingsLanguage" xml:space="preserve"><value>Language and region</value></data>
   <data name="InterfaceLanguage" xml:space="preserve"><value>User interface language</value></data>
@@ -345,7 +338,7 @@
   <data name="ReportPdfTarget" xml:space="preserve"><value>Choose a destination with the .pdf extension.</value></data>
   <data name="Report" xml:space="preserve"><value>Report</value></data>
   <data name="MaterialStrength" xml:space="preserve"><value>Strength value</value></data>
-  <data name="MaterialStrengthColumn" xml:space="preserve"><value>Strength [MPa]</value></data>
+  <data name="MaterialStrengthColumn" xml:space="preserve"><value>Strength [{0}]</value></data>
   <data name="MaterialStrengthType" xml:space="preserve"><value>Strength type</value></data>
   <data name="MaterialStrengthRe" xml:space="preserve"><value>Yield strength</value></data>
   <data name="MaterialStrengthRp02" xml:space="preserve"><value>0.2% proof strength</value></data>
@@ -361,4 +354,8 @@
   <data name="Forces" xml:space="preserve"><value>Forces</value></data>
   <data name="Moments" xml:space="preserve"><value>Moments</value></data>
   <data name="DistributedLoads" xml:space="preserve"><value>Distributed loads</value></data>
+  <data name="SignificantDigits" xml:space="preserve"><value>Significant digits</value></data>
+  <data name="EngineeringNotation" xml:space="preserve"><value>Engineering notation</value></data>
+  <data name="NotationAutomatic" xml:space="preserve"><value>Automatic</value></data>
+  <data name="NotationOff" xml:space="preserve"><value>Off</value></data>
 </root>

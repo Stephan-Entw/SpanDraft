@@ -25,7 +25,8 @@ public sealed class DesktopPresentationUnitTests
             (UnitCatalog.Kip, kip), (UnitCatalog.NewtonMeter, 1), (UnitCatalog.KilonewtonMeter, 1000),
             (UnitCatalog.KipFoot, kip * foot), (UnitCatalog.NewtonPerMeter, 1),
             (UnitCatalog.KilonewtonPerMeter, 1000), (UnitCatalog.KipPerFoot, kip / foot),
-            (UnitCatalog.Pascal, 1), (UnitCatalog.Megapascal, 1e6),
+            (UnitCatalog.Pascal, 1), (UnitCatalog.Megapascal, 1e6), (UnitCatalog.Gigapascal, 1e9),
+            (UnitCatalog.KilogramsPerCubicMeter, 1),
             (UnitCatalog.Ksi, kip / (inch * inch)), (UnitCatalog.Dimensionless, 1)
         ];
         foreach (var (unit, scale) in units) yield return [unit, scale];
@@ -55,9 +56,9 @@ public sealed class DesktopPresentationUnitTests
     }
 
     [Theory]
-    [InlineData(UnitProfileKind.MechanicalEngineering, "mm|mm|mm|mm|mm²|mm⁴|mm³|rad|N|N|N·m|N/m|MPa|")]
-    [InlineData(UnitProfileKind.StructuralEngineering, "m|mm|mm|mm|cm²|cm⁴|cm³|rad|kN|kN|kN·m|kN/m|MPa|")]
-    [InlineData(UnitProfileKind.UnitedStates, "ft|in|in|in|in²|in⁴|in³|rad|kip|kip|kip·ft|kip/ft|ksi|")]
+    [InlineData(UnitProfileKind.MechanicalEngineering, "mm|mm|mm|mm|mm²|mm⁴|mm³|rad|N|N|N·m|N/m|MPa||GPa|MPa|kg/m³|")]
+    [InlineData(UnitProfileKind.StructuralEngineering, "m|mm|mm|mm|cm²|cm⁴|cm³|rad|kN|kN|kN·m|kN/m|MPa||GPa|MPa|kg/m³|")]
+    [InlineData(UnitProfileKind.UnitedStates, "ft|in|in|in|in²|in⁴|in³|rad|kip|kip|kip·ft|kip/ft|ksi||ksi|ksi|kg/m³|")]
     public void BuiltInProfileMatchesSpecification(UnitProfileKind kind, string expected)
     {
         var profile = kind == UnitProfileKind.MechanicalEngineering ? UnitProfile.MechanicalEngineering
@@ -104,21 +105,20 @@ public sealed class DesktopPresentationUnitTests
     }
 
     [Theory]
-    [InlineData("de-DE", "1,02 kip", "0,0003 in", "301·10⁻⁶ in")]
-    [InlineData("en-US", "1.02 kip", "0.0003 in", "301·10⁻⁶ in")]
+    [InlineData("de-DE", "1,02 kip", "301 · 10⁻⁶ in", "301,181 · 10⁻⁶ in")]
+    [InlineData("en-US", "1.02 kip", "301 · 10⁻⁶ in", "301.181 · 10⁻⁶ in")]
     public void UsPrecisionIsChosenInDisplayUnitBeforeAnyRounding(string culture, string force, string displacement, string detailed)
     {
-        var references = new ModelReferenceValues(0.05, 5000, 1000, 235e6);
         var c = CultureInfo.GetCultureInfo(culture);
         // 4514.96 N rounds to 4510 N in SI, whose converted value would round to 1.01 kip.
         Assert.Equal(force, QuantityFormatter.Format(4514.96, QuantityKind.TransverseForce,
-            UnitProfile.UnitedStates, references: references, culture: c));
+            UnitProfile.UnitedStates, culture: c));
         Assert.Equal(displacement, QuantityFormatter.Format(0.00765 / 1000, QuantityKind.TransverseDisplacement,
-            UnitProfile.UnitedStates, references: references, culture: c));
+            UnitProfile.UnitedStates, culture: c));
         Assert.Equal(detailed, QuantityFormatter.Format(0.00765 / 1000, QuantityKind.TransverseDisplacement,
-            UnitProfile.UnitedStates, PresentationMode.Detailed, culture: c));
-        Assert.Equal(culture == "de-DE" ? "0,0005 kip" : "0.0005 kip", QuantityFormatter.Format(2.7, QuantityKind.TransverseForce,
-            UnitProfile.UnitedStates, references: references, culture: c));
+            UnitProfile.UnitedStates, 6, culture: c));
+        Assert.Equal(culture == "de-DE" ? "607 · 10⁻⁶ kip" : "607 · 10⁻⁶ kip", QuantityFormatter.Format(2.7, QuantityKind.TransverseForce,
+            UnitProfile.UnitedStates, culture: c));
     }
 
     [Fact]
@@ -126,30 +126,27 @@ public sealed class DesktopPresentationUnitTests
     {
         // SI three-digit rounding would produce 4510 N and subsequently 1.01 kip.
         Assert.Equal("1.02 kip", QuantityFormatter.Format(4514.96, QuantityKind.AxialForce,
-            UnitProfile.UnitedStates, PresentationMode.Detailed, culture: CultureInfo.InvariantCulture));
+            UnitProfile.UnitedStates, culture: CultureInfo.InvariantCulture));
     }
 
     [Fact]
     public void MixedLengthUnitsUsePhysicalLengthRatherThanBeamDisplayUnit()
     {
         var profile = UnitProfile.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Foot);
-        var references = new ModelReferenceValues(10, 1000, 1000, 235e6);
-        Assert.Equal("0.1 mm", QuantityFormatter.Format(0.05 / 1000, QuantityKind.TransverseDisplacement,
-            profile, references: references, culture: CultureInfo.InvariantCulture));
+        Assert.Equal("0.05 mm", QuantityFormatter.Format(0.05 / 1000, QuantityKind.TransverseDisplacement,
+            profile, culture: CultureInfo.InvariantCulture));
         Assert.Equal("0.05 mm", QuantityFormatter.Format(0.05 / 1000, QuantityKind.AxialDisplacement,
-            profile, references: references, culture: CultureInfo.InvariantCulture));
+            profile, culture: CultureInfo.InvariantCulture));
     }
 
     [Fact]
     public void NotationKeepsExplicitlyChosenUnitAndExactRoundedDigits()
     {
-        var references = new ModelReferenceValues(1, 5000, 1000, 235e6);
-        Assert.Equal("4520 N", QuantityFormatter.Format(4516.02, QuantityKind.TransverseForce,
-            references: references, culture: CultureInfo.InvariantCulture));
+        Assert.Equal("4\u202f520 N", QuantityFormatter.Format(4516.02, QuantityKind.TransverseForce, culture: CultureInfo.InvariantCulture));
         Assert.Equal("4.52 kN", QuantityFormatter.Format(4516.02, QuantityKind.TransverseForce,
-            UnitProfile.StructuralEngineering, references: references, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("1·10⁶ N", QuantityFormatter.Format(1e6, QuantityKind.AxialForce, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("1000 kN", QuantityFormatter.Format(1e6, QuantityKind.AxialForce,
+            UnitProfile.StructuralEngineering, culture: CultureInfo.InvariantCulture));
+        Assert.Equal("1 · 10⁶ N", QuantityFormatter.Format(1e6, QuantityKind.AxialForce, culture: CultureInfo.InvariantCulture));
+        Assert.Equal("1\u202f000 kN", QuantityFormatter.Format(1e6, QuantityKind.AxialForce,
             UnitProfile.StructuralEngineering, culture: CultureInfo.InvariantCulture));
     }
 

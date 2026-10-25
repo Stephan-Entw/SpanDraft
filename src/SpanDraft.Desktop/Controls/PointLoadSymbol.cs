@@ -77,10 +77,10 @@ public static class PointLoadSymbol
     public static Guid? HitTest(IReadOnlyList<PointLoadVisual> visuals, double x, double y, Guid? editedId = null) =>
         HitTestGlyph(Group(visuals), x, y) is { } glyph ? ResolveEntity(glyph, editedId) : null;
 
-    public static string Label(PointLoadPreview preview, string name, UnitProfile? profile = null) =>
+    public static string Label(PointLoadPreview preview, string name, UnitProfile? profile = null, ResultPresentationOptions? options = null) =>
         name.Trim() + " = " + InputQuantityFormatter.WithUnit(preview.Value,
             (profile ?? UnitProfile.Default)[preview.Kind == PointLoadKind.Force
-                ? QuantityKind.TransverseForce : QuantityKind.Moment]);
+                ? QuantityKind.TransverseForce : QuantityKind.Moment], options);
 
     public static Point ForceTip(double value) => new(0,
         value > 0 ? -SchematicMetrics.ForceTopOffset : -SchematicMetrics.ForceBeamOffset);

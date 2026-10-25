@@ -1,11 +1,5 @@
 namespace SpanDraft.Desktop.Presentation;
 
-public enum PresentationMode
-{
-    Standard,
-    Detailed
-}
-
 /// <summary>Semantic quantities keep unit selection separate from result precision.</summary>
 public enum QuantityKind
 {
@@ -22,7 +16,11 @@ public enum QuantityKind
     Moment,
     DistributedLoad,
     Stress,
-    SafetyFactor
+    SafetyFactor,
+    YoungsModulus,
+    MaterialStrength,
+    Density,
+    PoissonRatio
 }
 
 public enum UnitDimension
@@ -36,5 +34,6 @@ public enum UnitDimension
     Moment,
     DistributedLoad,
     Pressure,
-    Dimensionless
+    Dimensionless,
+    MassDensity
 }

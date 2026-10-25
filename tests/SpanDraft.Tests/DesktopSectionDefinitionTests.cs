@@ -70,7 +70,7 @@ public sealed class DesktopSectionDefinitionTests
         Assert.Same(d.Material, setup.OriginalMaterial);
         var selected = d.Section.GetAxis(axis);
         string Format(double si, QuantityKind quantity) => QuantityFormatter.Format(si, quantity,
-            setup.ResultPresentation.Profile, setup.ResultPresentation.Mode);
+            setup.ResultPresentation);
         Assert.Equal(Format(selected.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea), setup.Inertia);
         var axisSummary = Strings.BendingAxis + " " + new AxisChoice(axis).Label;
         if (kind is 2 or 3) axisSummary += " · " + Strings.SectionDefinitionEquivalent;

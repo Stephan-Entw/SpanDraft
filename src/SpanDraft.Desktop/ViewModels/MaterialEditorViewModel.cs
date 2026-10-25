@@ -8,7 +8,6 @@ namespace SpanDraft.Desktop.ViewModels;
 
 public sealed class MaterialEditorViewModel : SetupStepViewModel
 {
-    private static readonly UnitDefinition GPa = new("GPa", "GPa", UnitDimension.Pressure, PresentationNumber.Parse("1e9"));
     private string _name, _number, _standards;
     private SetupChoice<MaterialCategory>? _category;
     private SetupChoice<MaterialStrengthType>? _strengthType;
@@ -38,10 +37,10 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
         _nameValidationVisible = showNameConflict;
         Inputs =
         [
-            new("E", Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus, GPa, Validate, material?.YoungsModulus.Pascals),
-            new("strength", material?.StrengthType is { } type ? MaterialStrengthDisplay.LabelText(type) : Strings.MaterialStrength, UnitCatalog.Megapascal, Validate, material?.YieldStrength.Pascals),
-            new("rho", Strings.MaterialDensity + " " + TechnicalSymbols.Density, UnitCatalog.Dimensionless, Validate, material?.Density?.KilogramsPerCubicMeter, optional: true, hint: "kg/m³"),
-            new("nu", Strings.MaterialPoissonRatio + " " + TechnicalSymbols.PoissonRatio, UnitCatalog.Dimensionless, Validate, material?.PoissonRatio?.Value, optional: true, signed: true)
+            new("E", Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus, setup.ResultPresentation.Profile[QuantityKind.YoungsModulus], Validate, material?.YoungsModulus.Pascals),
+            new("strength", material?.StrengthType is { } type ? MaterialStrengthDisplay.LabelText(type) : Strings.MaterialStrength, setup.ResultPresentation.Profile[QuantityKind.MaterialStrength], Validate, material?.YieldStrength.Pascals),
+            new("rho", Strings.MaterialDensity + " " + TechnicalSymbols.Density, setup.ResultPresentation.Profile[QuantityKind.Density], Validate, material?.Density?.KilogramsPerCubicMeter, optional: true),
+            new("nu", Strings.MaterialPoissonRatio + " " + TechnicalSymbols.PoissonRatio, setup.ResultPresentation.Profile[QuantityKind.PoissonRatio], Validate, material?.PoissonRatio?.Value, optional: true, signed: true)
         ];
         ConfirmCommand = new(ConfirmAsync, () => CanConfirm);
         CancelCommand = new(() => CloseRequested?.Invoke(false), () => !IsBusy);

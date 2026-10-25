@@ -110,7 +110,7 @@ public sealed class ProjectSetupIntegrationTests
         var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
         foreach (var profile in new[] { UnitProfile.UnitedStates, UnitProfile.StructuralEngineering, UnitProfile.Default })
         {
-            Assert.True(app.Main.SetResultPresentation(profile, PresentationMode.Standard));
+            Assert.True(app.Main.SetResultPresentation(profile, 3));
             setup.LengthInput.Refresh(); Assert.Empty(setup.LengthInput.Text); Assert.Empty(setup.LengthInput.DisplayText);
             Assert.Null(setup.SelectedLength); Assert.False(setup.LengthInput.TryGetLength(out _));
             Assert.False(setup.HasLengthError); Assert.False(setup.CanApply);
@@ -170,7 +170,7 @@ public sealed class ProjectSetupIntegrationTests
         Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses);
         setup.LengthInput.Begin(); Assert.False(setup.LengthInput.Confirm()); Assert.False(setup.HasLengthError);
         Assert.True(setup.LengthInput.IsEditing); setup.LengthInput.LoseFocus();
-        Assert.True(app.Main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Standard));
+        Assert.True(app.Main.SetResultPresentation(UnitProfile.UnitedStates, 3));
         Assert.Empty(setup.LengthInput.Text); Assert.Null(setup.SelectedLength);
     }
 
@@ -220,14 +220,14 @@ public sealed class ProjectSetupIntegrationTests
     {
         using var scope = new UiCultureScope(culture);
         var app = new App(); var options = profile switch { 0 => UnitProfile.Default, 1 => UnitProfile.StructuralEngineering, _ => UnitProfile.UnitedStates };
-        Assert.True(app.Main.SetResultPresentation(options, PresentationMode.Standard));
+        Assert.True(app.Main.SetResultPresentation(options, 3));
         app.Main.Session!.Commit(app.Main.Session.CurrentRevision.State with { Document = app.Main.Editor!.Document with { Length = M(1.2345678901234567) } });
         var revision = app.Main.Session.CurrentRevision; app.Main.EditProject();
         Assert.True(await app.Main.Setup.ConfirmAsync()); Assert.Same(revision, app.Main.Session.CurrentRevision);
         app.Main.EditProject(); var input = app.Main.Setup.LengthInput; input.Begin(); input.Text = "unfinished";
         var other = options.WithUnit(QuantityKind.BeamLength, options[QuantityKind.BeamLength].Id == UnitCatalog.Inch.Id ? UnitCatalog.Millimeter : UnitCatalog.Inch);
-        Assert.False(app.Main.SetResultPresentation(other, PresentationMode.Standard)); Assert.Equal("unfinished", input.Text);
-        Assert.True(app.Main.SetResultPresentation(options, PresentationMode.Detailed)); Assert.Equal("unfinished", input.Text);
+        Assert.False(app.Main.SetResultPresentation(other, 3)); Assert.Equal("unfinished", input.Text);
+        Assert.True(app.Main.SetResultPresentation(options, 6)); Assert.Equal("unfinished", input.Text);
     }
 
     [Theory]

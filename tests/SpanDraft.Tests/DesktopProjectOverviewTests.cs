@@ -106,7 +106,7 @@ public sealed class DesktopProjectOverviewTests
         var overview = editor.Overview;
         Assert.Equal(SectionDisplay.Name(doc.Section), overview.Section);
         Assert.Equal(MaterialDisplay.Format(doc.Material), overview.Material);
-        Assert.Equal(culture == "de-DE" ? "Länge 1000 mm" : "Length 1000 mm", overview.Length);
+        Assert.Equal(culture == "de-DE" ? "Länge 1\u202f000 mm" : "Length 1\u202f000 mm", overview.Length);
         Assert.Equal(doc.Supports[0].Id, Assert.Single(overview.Supports).Id);
         Assert.Equal(supportType, overview.Supports[0].Type);
         Assert.Equal("0", overview.Supports[0].Position);
@@ -279,8 +279,8 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", "Länge 1000 mm", "Länge 1200 mm")]
-    [InlineData("en-US", "Length 1000 mm", "Length 1200 mm")]
+    [InlineData("de-DE", "Länge 1\u202f000 mm", "Länge 1\u202f200 mm")]
+    [InlineData("en-US", "Length 1\u202f000 mm", "Length 1\u202f200 mm")]
     public void ModelLengthPublishesOnlyAfterCommitAndFollowsMechanicalHistory(string culture, string initial, string committed)
     {
         using var scope = new UiCultureScope(culture);
@@ -363,10 +363,8 @@ public sealed class DesktopProjectOverviewTests
         {
             var node = editor.Presentation.Result!.Solution.Nodes.Single(n => n.Position == support.Position);
             var row = editor.Overview.Reactions.Single(r => r.Id == support.Id);
-            Assert.Equal(QuantityFormatter.FormatNumber(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce,
-                references: editor.Presentation.References), row.Ry);
-            if (node.ReactionX is { } rx) Assert.Equal(QuantityFormatter.FormatNumber(rx.Newtons, QuantityKind.AxialForce,
-                references: editor.Presentation.References), row.Rx);
+            Assert.Equal(QuantityFormatter.FormatNumber(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce), row.Ry);
+            if (node.ReactionX is { } rx) Assert.Equal(QuantityFormatter.FormatNumber(rx.Newtons, QuantityKind.AxialForce), row.Rx);
             if (loaded) Assert.StartsWith("-", row.Ry);
             else Assert.Equal("0", row.Ry);
         }
@@ -386,8 +384,7 @@ public sealed class DesktopProjectOverviewTests
     {
         var editor = Observed(Document(), out var analyses);
         var moment = editor.Presentation.Result!.Solution.Nodes[0].ReactionMoment!.Value;
-        Assert.Equal(QuantityFormatter.FormatNumber(moment.NewtonMeters, QuantityKind.Moment,
-            references: editor.Presentation.References), Assert.Single(editor.Overview.Reactions).Moment);
+        Assert.Equal(QuantityFormatter.FormatNumber(moment.NewtonMeters, QuantityKind.Moment), Assert.Single(editor.Overview.Reactions).Moment);
         var material = new Material("Other steel", Pressure.FromPascals(200e9), Pressure.FromPascals(250e6), MaterialStrengthType.Re);
         var section = new CircleSection(Mm(50));
         editor.ApplySetup(section, material);
@@ -398,8 +395,8 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", "-1230")]
-    [InlineData("en-US", "-1230")]
+    [InlineData("de-DE", "-1\u202f230")]
+    [InlineData("en-US", "-1\u202f230")]
     public void ReactionDisplayUsesResultPrecisionWithoutRoundingCommittedLoads(string culture, string expected)
     {
         using var scope = new UiCultureScope(culture);
@@ -418,8 +415,8 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", "400,12", "-100,57 N", "600,99", "50,12 N·m", "200,25…800,75", "-500,99 N/m")]
-    [InlineData("en-US", "400.12", "-100.57 N", "600.99", "50.12 N·m", "200.25…800.75", "-500.99 N/m")]
+    [InlineData("de-DE", "400", "-101 N", "601", "50,1 N·m", "200…801", "-501 N/m")]
+    [InlineData("en-US", "400", "-101 N", "601", "50.1 N·m", "200…801", "-501 N/m")]
     public void TableCellsRoundOnlyDisplayValuesInNumericCulture(string culture, string forcePosition,
         string force, string momentPosition, string moment, string range, string intensity)
     {
@@ -440,12 +437,12 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", 1234.5678, "1234,57")]
-    [InlineData("en-US", -1234.5678, "-1234.57")]
-    [InlineData("de-DE", -0.000123456, "-123·10⁻⁶")]
-    [InlineData("en-US", 0.000123456, "123·10⁻⁶")]
-    [InlineData("de-DE", 12345678, "12,3·10⁶")]
-    [InlineData("en-US", -12345678, "-12.3·10⁶")]
+    [InlineData("de-DE", 1234.5678, "1\u202f230")]
+    [InlineData("en-US", -1234.5678, "-1\u202f230")]
+    [InlineData("de-DE", -0.000123456, "-123 · 10⁻⁶")]
+    [InlineData("en-US", 0.000123456, "123 · 10⁻⁶")]
+    [InlineData("de-DE", 12345678, "12,3 · 10⁶")]
+    [InlineData("en-US", -12345678, "-12.3 · 10⁶")]
     [InlineData("en-US", -0.0, "0")]
     [InlineData("de-DE", double.PositiveInfinity, "∞")]
     public void CompactNumbersBoundWidthWithoutHidingSmallNonzeroValues(string culture, double value, string expected)
