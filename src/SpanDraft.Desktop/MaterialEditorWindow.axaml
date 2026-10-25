@@ -2,16 +2,16 @@
         xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels" xmlns:views="clr-namespace:SpanDraft.Desktop.Views"
         xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
         x:Class="SpanDraft.Desktop.MaterialEditorWindow" x:DataType="vm:MaterialEditorViewModel"
-        Title="{Binding Title}" Width="560" SizeToContent="Height" CanResize="False"
+        Title="{Binding Title}" Width="408" SizeToContent="Height" CanResize="False"
         ShowInTaskbar="False" WindowStartupLocation="CenterOwner" Background="{DynamicResource Surface}">
   <Grid RowDefinitions="*,Auto">
     <views:MaterialEditorView />
-    <Border Grid.Row="1" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="{DynamicResource Padding16}">
+    <Border Grid.Row="1" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="24,16">
       <StackPanel x:Name="MaterialEditorActions" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
         <Button x:Name="CancelMaterialButton" Content="{x:Static resources:Strings.Cancel}" Command="{Binding CancelCommand}"
-                Classes="ghost" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
+                Width="96" Height="{DynamicResource StandardControl}" MinWidth="88" MinHeight="32" Classes="ghost" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
         <Button x:Name="ConfirmMaterialButton" Content="{x:Static resources:Strings.OK}" Command="{Binding ConfirmCommand}"
-                IsDefault="True" Classes="primary" AutomationProperties.Name="{x:Static resources:Strings.OK}" />
+                IsDefault="True" Width="96" Height="{DynamicResource StandardControl}" MinWidth="88" MinHeight="32" Classes="primary" AutomationProperties.Name="{x:Static resources:Strings.OK}" />
       </StackPanel>
     </Border>
   </Grid>

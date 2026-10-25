@@ -2,62 +2,110 @@
              xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls" xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels" xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
              x:Class="SpanDraft.Desktop.Views.MaterialEditorView" x:DataType="vm:MaterialEditorViewModel">
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-    <StackPanel Margin="{DynamicResource Padding24}" Spacing="{StaticResource Space12}" IsEnabled="{Binding !IsBusy}">
-      <Grid ColumnDefinitions="156,*" ColumnSpacing="12" RowDefinitions="Auto,Auto">
-        <TextBlock Text="{x:Static resources:Strings.MaterialDesignation}" Classes="propertyLabel" VerticalAlignment="Center" />
-        <TextBox x:Name="MaterialNameInput" Grid.Column="1" Text="{Binding Name, Mode=TwoWay}" Classes.error="{Binding ShowNameError}"
+    <StackPanel Grid.IsSharedSizeScope="True" Margin="24,12" Spacing="{StaticResource Space8}" IsEnabled="{Binding !IsBusy}">
+      <Grid RowDefinitions="Auto,Auto">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="140" SharedSizeGroup="MaterialLabel" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="208" />
+        </Grid.ColumnDefinitions>
+        <TextBlock Text="{x:Static resources:Strings.MaterialDesignation}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <TextBox x:Name="MaterialNameInput" Grid.Column="2" Text="{Binding Name, Mode=TwoWay}" Classes.error="{Binding ShowNameError}"
                  KeyDown="NameKeyDown" LostFocus="NameLostFocus" AutomationProperties.Name="{x:Static resources:Strings.MaterialDesignation}" />
-        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding NameError}" IsVisible="{Binding ShowNameError}" Classes="validationMessage" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding NameError}" IsVisible="{Binding ShowNameError}" Classes="validationMessage" TextWrapping="Wrap" />
       </Grid>
-      <Grid ColumnDefinitions="156,*" ColumnSpacing="12" RowDefinitions="Auto,Auto">
-        <TextBlock Text="{x:Static resources:Strings.MaterialCategory}" Classes="propertyLabel" VerticalAlignment="Center" />
-        <ComboBox x:Name="MaterialCategoryInput" Grid.Column="1" ItemsSource="{Binding Categories}" SelectedItem="{Binding Category, Mode=TwoWay}"
+      <Grid RowDefinitions="Auto,Auto">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="140" SharedSizeGroup="MaterialLabel" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="208" />
+        </Grid.ColumnDefinitions>
+        <TextBlock Text="{x:Static resources:Strings.MaterialCategory}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <ComboBox x:Name="MaterialCategoryInput" Grid.Column="2" ItemsSource="{Binding Categories}" SelectedItem="{Binding Category, Mode=TwoWay}"
                   HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.MaterialCategory}">
           <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
         </ComboBox>
-        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CategoryError}" IsVisible="{Binding HasCategoryError}" Classes="validationMessage" />
+        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding CategoryError}" IsVisible="{Binding HasCategoryError}" Classes="validationMessage" />
       </Grid>
-      <Grid ColumnDefinitions="156,*" ColumnSpacing="12">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="140" SharedSizeGroup="MaterialLabel" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="208" />
+        </Grid.ColumnDefinitions>
         <TextBlock Text="{x:Static resources:Strings.MaterialNumber}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
-        <TextBox x:Name="MaterialNumberInput" Grid.Column="1" Text="{Binding MaterialNumber, Mode=TwoWay}" AutomationProperties.Name="{x:Static resources:Strings.MaterialNumber}" />
+        <TextBox x:Name="MaterialNumberInput" Grid.Column="2" Text="{Binding MaterialNumber, Mode=TwoWay}" AutomationProperties.Name="{x:Static resources:Strings.MaterialNumber}" />
       </Grid>
-      <Grid ColumnDefinitions="156,*" ColumnSpacing="12">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="140" SharedSizeGroup="MaterialLabel" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="208" />
+        </Grid.ColumnDefinitions>
         <TextBlock Text="{x:Static resources:Strings.OtherStandards}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
-        <TextBox x:Name="MaterialStandardsInput" Grid.Column="1" Text="{Binding OtherStandards, Mode=TwoWay}" AutomationProperties.Name="{x:Static resources:Strings.OtherStandards}" />
+        <TextBox x:Name="MaterialStandardsInput" Grid.Column="2" Text="{Binding OtherStandards, Mode=TwoWay}" AutomationProperties.Name="{x:Static resources:Strings.OtherStandards}" />
       </Grid>
-      <Grid Classes="materialInputRow" Margin="0" ColumnDefinitions="156,*,40" ColumnSpacing="12" RowDefinitions="Auto,Auto" DataContext="{Binding Inputs[0]}" x:DataType="vm:SetupNumberInput">
+      <Grid Classes="materialInputRow" Margin="0,8,0,0" RowDefinitions="Auto,Auto" DataContext="{Binding Inputs[0]}" x:DataType="vm:SetupNumberInput">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="140" SharedSizeGroup="MaterialLabel" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="208" />
+        </Grid.ColumnDefinitions>
         <TextBlock controls:TechnicalTextPresenter.Content="{Binding LabelText}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
-        <TextBox x:Name="MaterialYoungsModulusInput" Grid.Column="1" Text="{Binding Text, Mode=TwoWay}" Classes="inlineDimension" Classes.error="{Binding ShowError}"
-                 LostFocus="NumberLostFocus" AutomationProperties.Name="{Binding InputLabel}" />
-        <TextBlock Grid.Column="2" Text="{Binding DisplayUnit}" Classes="propertyLabel" VerticalAlignment="Center" />
-        <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Error}" IsVisible="{Binding ShowError}" Classes="validationMessage" TextWrapping="Wrap" />
+        <Grid Grid.Column="2" ColumnDefinitions="76,8,68,8,48" HorizontalAlignment="Left">
+          <TextBox x:Name="MaterialYoungsModulusInput" Width="68" Height="{DynamicResource StandardControl}" Grid.Column="2" Text="{Binding Text, Mode=TwoWay}" Classes="inlineDimension" Classes.error="{Binding ShowError}"
+                   LostFocus="NumberLostFocus" AutomationProperties.Name="{Binding InputLabel}" />
+          <TextBlock Grid.Column="4" Text="{Binding DisplayUnit}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Grid>
+        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Error}" IsVisible="{Binding ShowError}" Classes="validationMessage" TextWrapping="Wrap" />
       </Grid>
-      <Grid x:Name="MaterialStrengthRow" ColumnDefinitions="156,88,*,40" ColumnSpacing="12" RowDefinitions="Auto,Auto,Auto">
-        <TextBlock Text="{x:Static resources:Strings.MaterialStrength}" Classes="propertyLabel" VerticalAlignment="Center" />
-        <ComboBox x:Name="MaterialStrengthTypeInput" Grid.Column="1" ItemsSource="{Binding StrengthTypes}" SelectedItem="{Binding StrengthType, Mode=TwoWay}"
-                  LostFocus="StrengthTypeLostFocus" HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.MaterialStrengthType}">
-          <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock controls:TechnicalTextPresenter.Content="{Binding DisplayText}" /></DataTemplate></ComboBox.ItemTemplate>
-        </ComboBox>
-        <TextBox x:Name="MaterialStrengthValueInput" Grid.Column="2" DataContext="{Binding Inputs[1]}" x:DataType="vm:SetupNumberInput" Text="{Binding Text, Mode=TwoWay}"
-                 Classes="inlineDimension" Classes.error="{Binding ShowError}" LostFocus="NumberLostFocus" AutomationProperties.Name="{Binding InputLabel}" />
-        <TextBlock Grid.Column="3" Text="MPa" Classes="propertyLabel" VerticalAlignment="Center" />
-        <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding StrengthTypeError}" IsVisible="{Binding ShowStrengthTypeError}" Classes="validationMessage" TextWrapping="Wrap" />
-        <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" DataContext="{Binding Inputs[1]}" x:DataType="vm:SetupNumberInput"
+      <Grid x:Name="MaterialStrengthRow" RowDefinitions="Auto,Auto,Auto">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="140" SharedSizeGroup="MaterialLabel" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="208" />
+        </Grid.ColumnDefinitions>
+        <TextBlock Text="{x:Static resources:Strings.MaterialStrength}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <Grid Grid.Column="2" ColumnDefinitions="76,8,68,8,48" HorizontalAlignment="Left">
+          <ComboBox x:Name="MaterialStrengthTypeInput" Width="76" Grid.Column="0" ItemsSource="{Binding StrengthTypes}" SelectedItem="{Binding StrengthType, Mode=TwoWay}"
+                    LostFocus="StrengthTypeLostFocus" HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.MaterialStrengthType}">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock controls:TechnicalTextPresenter.Content="{Binding DisplayText}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBox x:Name="MaterialStrengthValueInput" Width="68" Height="{DynamicResource StandardControl}" Grid.Column="2" DataContext="{Binding Inputs[1]}" x:DataType="vm:SetupNumberInput" Text="{Binding Text, Mode=TwoWay}"
+                   Classes="inlineDimension" Classes.error="{Binding ShowError}" LostFocus="NumberLostFocus" AutomationProperties.Name="{Binding InputLabel}" />
+          <TextBlock Grid.Column="4" Text="MPa" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Grid>
+        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding StrengthTypeError}" IsVisible="{Binding ShowStrengthTypeError}" Classes="validationMessage" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="2" Grid.Column="2" DataContext="{Binding Inputs[1]}" x:DataType="vm:SetupNumberInput"
                    Text="{Binding Error}" IsVisible="{Binding ShowError}" Classes="validationMessage" TextWrapping="Wrap" />
       </Grid>
-      <Grid Classes="materialInputRow" Margin="0" ColumnDefinitions="156,*,40" ColumnSpacing="12" RowDefinitions="Auto,Auto" DataContext="{Binding Inputs[2]}" x:DataType="vm:SetupNumberInput">
+      <Grid Classes="materialInputRow" Margin="0" RowDefinitions="Auto,Auto" DataContext="{Binding Inputs[2]}" x:DataType="vm:SetupNumberInput">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="140" SharedSizeGroup="MaterialLabel" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="208" />
+        </Grid.ColumnDefinitions>
         <TextBlock controls:TechnicalTextPresenter.Content="{Binding LabelText}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
-        <TextBox x:Name="MaterialDensityInput" Grid.Column="1" Text="{Binding Text, Mode=TwoWay}" Classes="inlineDimension" Classes.error="{Binding ShowError}"
-                 LostFocus="NumberLostFocus" AutomationProperties.Name="{Binding InputLabel}" />
-        <TextBlock Grid.Column="2" Text="{Binding DisplayUnit}" Classes="propertyLabel" VerticalAlignment="Center" />
-        <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Error}" IsVisible="{Binding ShowError}" Classes="validationMessage" TextWrapping="Wrap" />
+        <Grid Grid.Column="2" ColumnDefinitions="76,8,68,8,48" HorizontalAlignment="Left">
+          <TextBox x:Name="MaterialDensityInput" Width="68" Height="{DynamicResource StandardControl}" Grid.Column="2" Text="{Binding Text, Mode=TwoWay}" Classes="inlineDimension" Classes.error="{Binding ShowError}"
+                   LostFocus="NumberLostFocus" AutomationProperties.Name="{Binding InputLabel}" />
+          <TextBlock Grid.Column="4" Text="{Binding DisplayUnit}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Grid>
+        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Error}" IsVisible="{Binding ShowError}" Classes="validationMessage" TextWrapping="Wrap" />
       </Grid>
-      <Grid Classes="materialInputRow" Margin="0" ColumnDefinitions="156,*,40" ColumnSpacing="12" RowDefinitions="Auto,Auto" DataContext="{Binding Inputs[3]}" x:DataType="vm:SetupNumberInput">
+      <Grid Classes="materialInputRow" Margin="0" RowDefinitions="Auto,Auto" DataContext="{Binding Inputs[3]}" x:DataType="vm:SetupNumberInput">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="140" SharedSizeGroup="MaterialLabel" />
+          <ColumnDefinition Width="12" />
+          <ColumnDefinition Width="208" />
+        </Grid.ColumnDefinitions>
         <TextBlock controls:TechnicalTextPresenter.Content="{Binding LabelText}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
-        <TextBox x:Name="MaterialPoissonInput" Grid.Column="1" Text="{Binding Text, Mode=TwoWay}" Classes="inlineDimension" Classes.error="{Binding ShowError}"
-                 LostFocus="NumberLostFocus" AutomationProperties.Name="{Binding InputLabel}" />
-        <TextBlock Grid.Column="2" Text="{Binding DisplayUnit}" Classes="propertyLabel" VerticalAlignment="Center" />
-        <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Error}" IsVisible="{Binding ShowError}" Classes="validationMessage" TextWrapping="Wrap" />
+        <Grid Grid.Column="2" ColumnDefinitions="76,8,68,8,48" HorizontalAlignment="Left">
+          <TextBox x:Name="MaterialPoissonInput" Width="68" Height="{DynamicResource StandardControl}" Grid.Column="2" Text="{Binding Text, Mode=TwoWay}" Classes="inlineDimension" Classes.error="{Binding ShowError}"
+                   LostFocus="NumberLostFocus" AutomationProperties.Name="{Binding InputLabel}" />
+          <TextBlock Grid.Column="4" Text="{Binding DisplayUnit}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </Grid>
+        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Error}" IsVisible="{Binding ShowError}" Classes="validationMessage" TextWrapping="Wrap" />
       </Grid>
       <TextBlock Text="{Binding Error}" IsVisible="{Binding HasFormError}" Classes="validationMessage" TextWrapping="Wrap" />
     </StackPanel>

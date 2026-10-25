@@ -40,6 +40,53 @@ public sealed class MaterialWorkflowControlTests
         foreach (var control in window.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible && c is TextBox or ComboBox or Button { Command: not null }))
             Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(control)));
     }
+    private static void VerifyCompactEditor(MaterialEditorWindow modal)
+    {
+        VerifyLayout(modal);
+        Assert.Equal(408, modal.Width);
+        Assert.Equal(SizeToContent.Height, modal.SizeToContent);
+        var form = modal.GetVisualDescendants().OfType<MaterialEditorView>().Single();
+        double X(Control control) => control.TranslatePoint(default, modal)!.Value.X;
+        var name = form.FindControl<TextBox>("MaterialNameInput")!;
+        foreach (var control in new Control[] { name, form.FindControl<ComboBox>("MaterialCategoryInput")!, form.FindControl<TextBox>("MaterialNumberInput")!, form.FindControl<TextBox>("MaterialStandardsInput")! })
+        {
+            Assert.Equal(208, control.Bounds.Width, 6);
+            Assert.Equal(name.Bounds.Height, control.Bounds.Height, 6);
+            Assert.Equal(X(name), X(control), 6);
+            Assert.Equal(24, modal.Bounds.Width - X(control) - control.Bounds.Width, 6);
+        }
+        var strength = form.FindControl<Grid>("MaterialStrengthRow")!;
+        var type = form.FindControl<ComboBox>("MaterialStrengthTypeInput")!;
+        Assert.Equal(name.Bounds.Height, type.Bounds.Height, 6);
+        Assert.Equal(76, type.Bounds.Width, 6); Assert.Equal(X(name), X(type), 6);
+        var value = form.FindControl<TextBox>("MaterialStrengthValueInput")!;
+        Assert.Equal(8, X(value) - X(type) - type.Bounds.Width, 6);
+        var unit = ((Grid)value.Parent!).Children.OfType<TextBlock>().Single(t => Grid.GetColumn(t) == 4);
+        Assert.Equal(8, X(unit) - X(value) - value.Bounds.Width, 6);
+        foreach (var inputName in new[] { "MaterialYoungsModulusInput", "MaterialStrengthValueInput", "MaterialDensityInput", "MaterialPoissonInput" })
+        {
+            var input = form.FindControl<TextBox>(inputName)!;
+            Assert.Equal(name.Bounds.Height, input.Bounds.Height, 6);
+            Assert.Equal(68, input.Bounds.Width, 6); Assert.Equal(X(value), X(input), 6);
+            var row = (Grid)input.Parent!;
+            var inputUnit = row.Children.OfType<TextBlock>().Single(t => Grid.GetColumn(t) == 4);
+            Assert.Equal(X(unit), X(inputUnit), 6);
+            Assert.Equal(48, inputUnit.Bounds.Width, 6);
+            Assert.Equal(X(name) + name.Bounds.Width, X(inputUnit) + inputUnit.Bounds.Width, 6);
+            Assert.Equal(208, row.Bounds.Width, 6);
+            var label = ((Grid)row.Parent!).Children.OfType<TextBlock>().Single(t => Grid.GetRow(t) == 0 && Grid.GetColumn(t) == 0);
+            Assert.Equal(24, X(label), 6);
+            Assert.True(label.TextLayout.Width <= label.Bounds.Width + 1, "Clipped label: " + label.Text);
+        }
+        var rows = ((StackPanel)strength.Parent!).Children.OfType<Grid>().ToArray();
+        for (int i = 1; i < rows.Length; i++)
+            Assert.Equal(i == 4 ? 16 : 8, rows[i].Bounds.Top - rows[i - 1].Bounds.Bottom, 6);
+        var buttons = modal.FindControl<StackPanel>("MaterialEditorActions")!.Children.OfType<Button>().ToArray();
+        Assert.Equal(buttons[0].Bounds.Size, buttons[1].Bounds.Size);
+        Assert.All(buttons, button => { Assert.True(button.Bounds.Width >= 88); Assert.True(button.Bounds.Height >= 32); });
+        Assert.Equal(24, modal.Bounds.Width - X(buttons[1]) - buttons[1].Bounds.Width, 6);
+        Assert.Equal(new Thickness(24, 16), ((Border)buttons[0].Parent!.Parent!).Padding);
+    }
     private static (Window Window, MainWindowViewModel Main, MaterialSelectionViewModel Selection, MaterialSelectionView View) Open(Files files, Dialogs dialogs, double width = 1100, double height = 650)
     {
         var main = new MainWindowViewModel(files: files, dialogs: dialogs, materialStore: new(files, "materials")); main.NewCommand.Execute(null);
@@ -172,7 +219,7 @@ public sealed class MaterialWorkflowControlTests
             Assert.Same(owner, modal.Owner); Assert.False(selection.CanBrowse); Assert.False(modal.ShowInTaskbar);
             Assert.Empty(view.GetVisualDescendants().OfType<MaterialEditorView>());
             var editor = selection.Editor!; Assert.Same(editor, modal.DataContext);
-            VerifyLayout(modal);
+            VerifyCompactEditor(modal);
             var buttons = modal.FindControl<StackPanel>("MaterialEditorActions")!.Children.OfType<Button>().ToArray();
             Assert.Equal(new[] { Strings.Cancel, Strings.OK }, buttons.Select(b => (string)b.Content!));
             Assert.Same(editor.ConfirmCommand, buttons[1].Command); Assert.True(buttons[0].Bounds.Right < buttons[1].Bounds.Left);
@@ -185,11 +232,11 @@ public sealed class MaterialWorkflowControlTests
             var form = modal.GetVisualDescendants().OfType<MaterialEditorView>().Single();
             var strength = form.FindControl<Grid>("MaterialStrengthRow")!;
             var combo = form.FindControl<ComboBox>("MaterialStrengthTypeInput")!;
-            var value = strength.Children.OfType<TextBox>().Single();
+            var value = form.FindControl<TextBox>("MaterialStrengthValueInput")!;
             Assert.True(combo.Bounds.Right < value.Bounds.Left);
             Assert.InRange(Math.Abs(combo.Bounds.Center.Y - value.Bounds.Center.Y), 0, 1);
             editor.Inputs[0].Text = "0"; editor.Inputs[0].CompleteInput(); Arrange(modal, modal.Width, modal.Bounds.Height);
-            Assert.False(buttons[1].IsEffectivelyEnabled); VerifyLayout(modal);
+            Assert.False(buttons[1].IsEffectivelyEnabled); VerifyCompactEditor(modal);
             Press(modal, Key.Escape); Dispatcher.UIThread.RunJobs(); Assert.Empty(owner.OwnedWindows); Assert.False(selection.IsEditing); Assert.True(owner.IsEnabled);
             Assert.Same(selection.UserEntries[0], selection.SelectedEntry); Assert.Empty(files.Writes);
             Assert.Same(selection.UseSelectedCommand, use.Command);
@@ -210,6 +257,10 @@ public sealed class MaterialWorkflowControlTests
             var name = form.FindControl<TextBox>("MaterialNameInput")!; Assert.True(name.IsFocused);
             Assert.False(editor.CanConfirm); Assert.False(editor.ShowNameError);
             Press(name, Key.Enter); Assert.True(form.FindControl<ComboBox>("MaterialCategoryInput")!.IsFocused); Assert.True(editor.ShowNameError);
+            foreach (var input in editor.Inputs) { input.Text = "invalid"; input.CompleteInput(); }
+            form.FindControl<ComboBox>("MaterialStrengthTypeInput")!.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            Arrange(modal, modal.Width, modal.Bounds.Height); VerifyCompactEditor(modal);
+            editor.Inputs[2].Text = ""; editor.Inputs[3].Text = "";
             editor.Name = "New saved"; editor.Inputs[0].Text = "210"; editor.Inputs[1].Text = "355";
             Assert.False(editor.CanConfirm); editor.StrengthType = editor.StrengthTypes[1]; Assert.True(editor.CanConfirm);
             Assert.True(await editor.ConfirmAsync()); Dispatcher.UIThread.RunJobs(); Assert.Empty(owner.OwnedWindows);
