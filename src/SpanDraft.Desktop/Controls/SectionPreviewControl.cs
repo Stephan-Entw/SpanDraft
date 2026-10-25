@@ -5,6 +5,7 @@ using SpanDraft.Core.Sections;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.Sections;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.Controls;
 
@@ -41,7 +42,7 @@ public sealed class SectionPreviewControl : Control
         var fill = Brush("SurfacePressed", Brushes.Transparent);
         var layout = SectionPreviewDrawingLayout.Create(geometry, Bounds.Size, UnitProfile[QuantityKind.SectionDimension], text =>
         {
-            var formatted = SchematicText.Format(text, Typeface.Default, 12, foreground);
+            using var formatted = SchematicText.Format(text, Typeface.Default, 12, foreground);
             return new Size(formatted.Width, formatted.Height);
         }, Compact);
         double scale = layout.Scale;
@@ -80,9 +81,9 @@ public sealed class SectionPreviewControl : Control
             {
                 using var rotation = context.PushTransform(Matrix.CreateRotation(-Math.PI / 2)
                     * Matrix.CreateTranslation(dimension.TextBounds.Left, dimension.TextBounds.Bottom));
-                Text(context, dimension.Text, new(0, 0), brush);
+                Text(context, dimension.Content, new(0, 0), brush);
             }
-            else Text(context, dimension.Text, dimension.TextBounds.TopLeft, brush);
+            else Text(context, dimension.Content, dimension.TextBounds.TopLeft, brush);
         }
         foreach (var axis in layout.Axes)
         {
@@ -99,7 +100,7 @@ public sealed class SectionPreviewControl : Control
             context.DrawLine(new Pen(brush, thickness, dashStyle, lineCap: PenLineCap.Round), axis.Start, solidStart);
             context.DrawLine(new Pen(brush, thickness), solidStart, axis.End);
             Arrow(context, brush, axis.End, -direction);
-            Text(context, axis.Axis.ToString().ToLowerInvariant(), axis.LabelPosition, brush);
+            Text(context, TechnicalSymbols.Axis(axis.Axis.ToString().ToLowerInvariant()), axis.LabelPosition, brush);
         }
         if (geometry.Centroid is { } centroid)
             context.DrawEllipse(foreground, new Pen(Brush("AppBackground", Brushes.White), 1), Project(centroid), 3, 3);
@@ -107,10 +108,10 @@ public sealed class SectionPreviewControl : Control
     }
     protected override Size MeasureOverride(Size availableSize) => new(Math.Min(520, availableSize.Width), Math.Min(440, availableSize.Height));
     private IBrush Brush(string name, IBrush fallback) => this.TryFindResource(name,out var resource) && resource is IBrush brush ? brush : fallback;
-    private static void Text(DrawingContext context,string text,Point point,IBrush brush,double size=12)
+    private static void Text(DrawingContext context,TechnicalText text,Point point,IBrush brush,double size=12)
     {
-        var formatted = SchematicText.Format(text,Typeface.Default,size,brush);
-        context.DrawText(formatted,point);
+        using var formatted = SchematicText.Format(text,Typeface.Default,size,brush);
+        formatted.Draw(context,point);
     }
     private static void Arrow(DrawingContext context,IBrush brush,Point point,Vector direction)
     {

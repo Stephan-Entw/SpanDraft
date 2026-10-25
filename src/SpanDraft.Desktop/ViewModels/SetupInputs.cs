@@ -1,14 +1,21 @@
 using SpanDraft.Core.Sections;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
 public enum SetupEditorMode { ProjectDraft, UserLibraryEdit, UserLibraryCreate }
 public enum SectionEditorType { Rectangle, RectangularHollow, Circle, CircularHollow, ISection, USection, TSection, Angle, Manual }
 public enum ManualAxisConfiguration { Y, Z, U, V, YZ, UV }
-public abstract record SetupChoiceLabel(string Label);
-public sealed record SetupChoice<T>(T Value, string Label) : SetupChoiceLabel(Label);
+public abstract record SetupChoiceLabel(string Label)
+{
+    public TechnicalText DisplayText { get; init; } = Label;
+}
+public sealed record SetupChoice<T>(T Value, string Label) : SetupChoiceLabel(Label)
+{
+    public override string ToString() => Label;
+}
 public sealed record AxisChoice(SectionAxisDesignation Value)
 {
     public string Label => Value.ToString().ToLowerInvariant() + "-" + Value.ToString().ToLowerInvariant();
@@ -21,9 +28,10 @@ public sealed class SetupNumberInput : ObservableObject
     private readonly double? _original;
     private readonly string _originalText;
     private readonly bool _optional, _nonnegative, _signed;
-    private string _text, _label;
+    private string _text;
+    private TechnicalText _label;
     private bool _validationVisible;
-    public SetupNumberInput(string key, string label, UnitDefinition unit, Action changed, double? value = null,
+    public SetupNumberInput(string key, TechnicalText label, UnitDefinition unit, Action changed, double? value = null,
         bool optional = false, bool nonnegative = false, bool signed = false, string? hint = null)
     {
         Key = key; _label = label; Unit = unit; _changed = changed;
@@ -33,10 +41,11 @@ public sealed class SetupNumberInput : ObservableObject
         Hint = hint;
     }
     public string Key { get; }
-    public string Label => _label;
-    internal void SetLabel(string label)
+    public string Label => _label.PlainText;
+    public TechnicalText LabelText => _label;
+    internal void SetLabel(TechnicalText label)
     {
-        if (Set(ref _label, label, nameof(Label))) Notify(nameof(InputLabel));
+        if (Set(ref _label, label, nameof(Label))) { Notify(nameof(InputLabel)); Notify(nameof(LabelText)); }
     }
     public UnitDefinition Unit { get; }
     public string? Hint { get; }

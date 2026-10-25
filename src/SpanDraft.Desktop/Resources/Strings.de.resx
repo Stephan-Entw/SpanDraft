@@ -281,9 +281,9 @@
   <data name="NoMaterialsFound" xml:space="preserve"><value>Keine Bibliothekswerkstoffe entsprechen diesen Filtern.</value></data>
   <data name="MaterialIdentification" xml:space="preserve"><value>Bezeichnung und Normen</value></data>
   <data name="MaterialProperties" xml:space="preserve"><value>Mechanische Eigenschaften</value></data>
-  <data name="MaterialYoungsModulus" xml:space="preserve"><value>Elastizitätsmodul E</value></data>
-  <data name="MaterialDensity" xml:space="preserve"><value>Dichte ρ</value></data>
-  <data name="MaterialPoissonRatio" xml:space="preserve"><value>Poissonzahl ν</value></data>
+  <data name="MaterialYoungsModulus" xml:space="preserve"><value>Elastizitätsmodul</value></data>
+  <data name="MaterialDensity" xml:space="preserve"><value>Dichte</value></data>
+  <data name="MaterialPoissonRatio" xml:space="preserve"><value>Poissonzahl</value></data>
   <data name="InLibrary" xml:space="preserve"><value>In Bibliothek</value></data>
   <data name="LibraryNameTaken" xml:space="preserve"><value>Name bereits vergeben</value></data>
   <data name="LibrarySaveFailedShort" xml:space="preserve"><value>Bibliothek konnte nicht gespeichert werden.</value></data>
@@ -339,17 +339,17 @@
   <data name="ReportClose" xml:space="preserve"><value>Bericht schließen</value></data>
   <data name="ReportSummary" xml:space="preserve"><value>Maßgebende Kennwerte</value></data>
   <data name="ReportMaterial" xml:space="preserve"><value>Material</value></data>
-  <data name="ReportDeflection" xml:space="preserve"><value>Maximale Durchbiegung |w|max</value></data>
-  <data name="ReportMoment" xml:space="preserve"><value>Maßgebendes Biegemoment |M|max</value></data>
-  <data name="ReportStress" xml:space="preserve"><value>Max. elastische Biegespannung σb,max</value></data>
-  <data name="ReportSafety" xml:space="preserve"><value>Sicherheitsfaktor S = {0} / σb,max</value></data>
+  <data name="ReportDeflection" xml:space="preserve"><value>Maximale Durchbiegung</value></data>
+  <data name="ReportMoment" xml:space="preserve"><value>Maßgebendes Biegemoment</value></data>
+  <data name="ReportStress" xml:space="preserve"><value>Max. elastische Biegespannung</value></data>
+  <data name="ReportSafety" xml:space="preserve"><value>Sicherheitsfaktor</value></data>
   <data name="ReportPdfTarget" xml:space="preserve"><value>Bitte ein Exportziel mit der Dateiendung .pdf wählen.</value></data>
   <data name="Report" xml:space="preserve"><value>Bericht</value></data>
   <data name="MaterialStrength" xml:space="preserve"><value>Festigkeitskennwert</value></data>
   <data name="MaterialStrengthColumn" xml:space="preserve"><value>Kennwert [MPa]</value></data>
   <data name="MaterialStrengthType" xml:space="preserve"><value>Kennwerttyp</value></data>
-  <data name="MaterialStrengthRe" xml:space="preserve"><value>Streckgrenze Re</value></data>
-  <data name="MaterialStrengthRp02" xml:space="preserve"><value>0,2-%-Dehngrenze Rp0,2</value></data>
+  <data name="MaterialStrengthRe" xml:space="preserve"><value>Streckgrenze</value></data>
+  <data name="MaterialStrengthRp02" xml:space="preserve"><value>0,2-%-Dehngrenze</value></data>
   <data name="MaterialStrengthUnspecified" xml:space="preserve"><value>Typ nicht festgelegt</value></data>
   <data name="MaterialStrengthRequired" xml:space="preserve"><value>Re oder Rp0,2 auswählen.</value></data>
   <data name="MaterialStrengthResolve" xml:space="preserve"><value>Vor dem Speichern oder Erstellen eines Berichts den Kennwerttyp im Werkstoffeditor auf Re oder Rp0,2 festlegen.</value></data>

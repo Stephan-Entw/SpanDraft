@@ -6,6 +6,7 @@ using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Reporting;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.Reporting;
 
@@ -17,7 +18,7 @@ internal static class ProjectReport
         if (!editor.Presentation.IsSuccess) throw new InvalidOperationException(Strings.CalculationUnavailable);
         var state = editor.Session.CurrentRevision.State;
         if (state.Document.Material.StrengthType is null) throw new InvalidOperationException(Strings.MaterialStrengthResolve);
-        var strengthSymbol = MaterialStrengthDisplay.Symbol(state.Document.Material.StrengthType);
+        var strengthSymbol = MaterialStrengthDisplay.SymbolText(state.Document.Material.StrengthType);
         var presentation = editor.Presentation;
         var overview = ProjectOverviewState.From(state.Document, presentation);
         var analysis = presentation.Result!;
@@ -38,39 +39,39 @@ internal static class ProjectReport
         }
         var axis = analysis.Beam.BendingAxisProperties;
         string axisName = state.Document.BendingAxis.ToString().ToLowerInvariant();
-        var sectionProperties = new List<string>
-        { "I" + axisName + " = " + Quantity(axis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea) };
+        var sectionProperties = new List<TechnicalText>
+        { TechnicalSymbols.Inertia(axisName) + " = " + Quantity(axis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea) };
         if (Quantity(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus)
             == Quantity(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus))
-            sectionProperties.Add("W" + axisName + " = " + Quantity(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
+            sectionProperties.Add(TechnicalSymbols.Modulus(axisName) + " = " + Quantity(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
         else
         {
-            sectionProperties.Add("W" + axisName + "+ = " + Quantity(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
-            sectionProperties.Add("W" + axisName + "− = " + Quantity(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus));
+            sectionProperties.Add(TechnicalSymbols.Modulus(axisName, 1) + " = " + Quantity(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
+            sectionProperties.Add(TechnicalSymbols.Modulus(axisName, -1) + " = " + Quantity(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus));
         }
         var engineering = analysis.Engineering;
         var timestamp = createdAt ?? DateTimeOffset.Now;
         var data = new ReportData(state.Info?.CalculationTitle ?? Strings.ReportHeading, state.Info?.Author ?? "",
             ApplicationMetadata.Version, timestamp, timestamp.ToLocalTime().ToString("d", CultureInfo.CurrentCulture), metadata,
             (state.Document.SectionDisplayName ?? ShapeName(state.Document.Section)) + " · " + axisName + "-" + axisName, sectionProperties, overview.Material,
-            ["E = " + InputQuantityFormatter.WithUnit(state.Document.Material.YoungsModulus.Pascals, profile[QuantityKind.Stress]),
-             MaterialStrengthDisplay.Label(state.Document.Material.StrengthType) + " = " + InputQuantityFormatter.WithUnit(state.Document.Material.YieldStrength.Pascals, profile[QuantityKind.Stress])],
+            [TechnicalSymbols.YoungsModulus + " = " + InputQuantityFormatter.WithUnit(state.Document.Material.YoungsModulus.Pascals, profile[QuantityKind.Stress]),
+             MaterialStrengthDisplay.LabelText(state.Document.Material.StrengthType) + " = " + InputQuantityFormatter.WithUnit(state.Document.Material.YieldStrength.Pascals, profile[QuantityKind.Stress])],
             [
-                new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, "x [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.17f, .48f, .35f],
+                new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.17f, .48f, .35f],
                     overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Type, s.Position }).ToArray()),
-                new(Strings.Loads, [Strings.OverviewName, Strings.OverviewValue, "x [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.16f, .42f, .42f],
+                new(Strings.Loads, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.16f, .42f, .42f],
                     overview.Loads.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
-                new(Strings.Reactions, [Strings.Support, overview.ReactionXHeader, overview.ReactionYHeader, overview.ReactionMomentHeader],
+                new(Strings.Reactions, [Strings.Support, overview.ReactionXHeaderText, overview.ReactionYHeaderText, overview.ReactionMomentHeaderText],
                     [.16f, .24f, .30f, .30f], overview.Reactions.Select(r => (IReadOnlyList<string>)new[]
                     { r.Name, Missing(r.Rx), Missing(r.Ry), Missing(r.Moment) }).ToArray())
             ],
             [
-                new(Strings.ReportDeflection, presentation.Displacement,
+                new(Strings.ReportDeflection + " " + TechnicalSymbols.MaximumDisplacement, presentation.Displacement,
                     Location(engineering.CriticalTransverseDisplacement.Position.Meters, engineering.CriticalTransverseDisplacement.Side)),
-                new(Strings.ReportMoment, presentation.Moment,
+                new(Strings.ReportMoment + " " + TechnicalSymbols.MaximumMoment, presentation.Moment,
                     Location(engineering.CriticalBendingMoment.Position.Meters, engineering.CriticalBendingMoment.Side)),
-                new(Strings.ReportStress, presentation.Stress, null),
-                new(string.Format(CultureInfo.CurrentUICulture, Strings.ReportSafety, strengthSymbol), presentation.SafetyFactor, null)
+                new(Strings.ReportStress + " " + TechnicalSymbols.MaximumStress, presentation.Stress, null),
+                new(Strings.ReportSafety + " " + TechnicalSymbols.SafetyFactor + " = " + strengthSymbol + " / " + TechnicalSymbols.MaximumStress, presentation.SafetyFactor, null)
             ], new(Strings.ReportHeading, Strings.ReportContinuation, Strings.ReportPage, Strings.Section, Strings.ReportMaterial,
                 Strings.ReportSummary, Strings.ReportNotes, [Strings.ReportTheory, Strings.ReportLimits]));
         var visuals = new ReportVisuals(state, presentation, data);

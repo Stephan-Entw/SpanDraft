@@ -41,7 +41,7 @@
           <TextBlock Text="{x:Static resources:Strings.SelectMaterialRequired}" Classes="bodyStrong" IsVisible="{Binding !HasMaterial}" VerticalAlignment="Center" Grid.RowSpan="2" />
           <StackPanel Grid.Row="1" IsVisible="{Binding HasMaterial}" Spacing="6" VerticalAlignment="Center">
             <TextBlock x:Name="MaterialDescription" Text="{Binding MaterialName}" Classes="bodyStrong" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialName}" />
-            <TextBlock Text="{Binding MaterialSummary}" Classes="propertyLabel" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialSummary}" />
+            <TextBlock controls:TechnicalTextPresenter.Content="{Binding MaterialSummaryText}" Classes="propertyLabel" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialSummary}" />
           </StackPanel>
           <TextBlock Grid.Column="1" Grid.RowSpan="2" Text="›" FontSize="24" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
         </Grid>

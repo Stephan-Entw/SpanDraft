@@ -1,17 +1,18 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.Controls;
 
 /// <summary>One property, with a shared value column and a measured common text baseline.</summary>
 public sealed class SectionPropertyRow : Grid
 {
-    public static readonly StyledProperty<string> LabelProperty = AvaloniaProperty.Register<SectionPropertyRow, string>(nameof(Label), "");
+    public static readonly StyledProperty<TechnicalText> LabelProperty = AvaloniaProperty.Register<SectionPropertyRow, TechnicalText>(nameof(Label), (TechnicalText)"");
     public static readonly StyledProperty<string> ValueProperty = AvaloniaProperty.Register<SectionPropertyRow, string>(nameof(Value), "");
     private readonly TextBlock _label = new() { FontSize = 14, FontWeight = FontWeight.Normal, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _value = new() { FontSize = 14, FontWeight = FontWeight.SemiBold, TextAlignment = TextAlignment.Right };
-    public string Label { get => GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
+    public TechnicalText Label { get => GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
     public string Value { get => GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
 
     public SectionPropertyRow()
@@ -25,7 +26,7 @@ public sealed class SectionPropertyRow : Grid
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == LabelProperty) _label.Text = Label;
+        if (change.Property == LabelProperty) TechnicalTextPresenter.SetContent(_label, Label);
         if (change.Property == ValueProperty) _value.Text = Value;
     }
     protected override Size ArrangeOverride(Size finalSize)

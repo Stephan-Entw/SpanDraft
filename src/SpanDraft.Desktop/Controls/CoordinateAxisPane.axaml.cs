@@ -8,6 +8,7 @@ using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.Controls;
 
@@ -111,8 +112,8 @@ public sealed class CoordinateAxisCanvas : Control
             context.DrawLine(pen, new(station.ScreenX, CoordinateAxisLayout.AxisY - 4), new(station.ScreenX, CoordinateAxisLayout.AxisY + 4));
         foreach (var label in axis.Labels.Where(l => IsStandalone || l.Role != AxisEndpointRole.End))
             context.DrawText(SchematicText.Format(label.Text, Typeface.Default, LabelFontSize, AxisBrush), label.Bounds.Position);
-        context.DrawText(SchematicText.Format("x [" + axis.UnitSymbol + "]", Typeface.Default, LabelFontSize, AxisBrush),
-            new(axis.StationLayout.Stations[^1].ScreenX + 8, 0));
+        using var unit = SchematicText.Format(TechnicalSymbols.Axis("x") + " [" + axis.UnitSymbol + "]", Typeface.Default, LabelFontSize, AxisBrush);
+        unit.Draw(context, new(axis.StationLayout.Stations[^1].ScreenX + 8, 0));
         if (IsStandalone && axis.StationLayout.IsDistorted)
             context.DrawText(SchematicText.Format(Strings.SchematicDrawing, Typeface.Default, 12, AxisBrush),
                 new(axis.StationLayout.Stations[0].ScreenX, axis.Packing.PaneHeight));

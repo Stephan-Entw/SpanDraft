@@ -2,6 +2,7 @@ using Avalonia;
 using SpanDraft.Core.Sections;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.ViewModels;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.Sections;
 
@@ -13,8 +14,11 @@ public sealed record PreviewDrawingArrow(Point Tip, Vector TailDirection)
         Tip + TailDirection * Length - new Vector(-TailDirection.Y, TailDirection.X) * HalfWidth];
     public Rect Bounds => new(Points.Min(p => p.X), Points.Min(p => p.Y), Points.Max(p => p.X) - Points.Min(p => p.X), Points.Max(p => p.Y) - Points.Min(p => p.Y));
 }
-public sealed record PreviewDrawingDimension(string Key, string Text, Rect TextBounds,
-    IReadOnlyList<PreviewDrawingLine> Lines, IReadOnlyList<PreviewDrawingArrow> Arrows, bool Rotated = false);
+public sealed record PreviewDrawingDimension(string Key, TechnicalText Content, Rect TextBounds,
+    IReadOnlyList<PreviewDrawingLine> Lines, IReadOnlyList<PreviewDrawingArrow> Arrows, bool Rotated = false)
+{
+    public string Text => Content.PlainText;
+}
 public sealed record PreviewDrawingAxis(SectionAxisDesignation Axis, Point Start, Point End, Rect LabelBounds, bool IsReference = false)
 {
     public Point LabelPosition => LabelBounds.TopLeft;
@@ -36,9 +40,9 @@ public sealed class SectionPreviewDrawingLayout
     public IReadOnlyList<PreviewDrawingAxis> Axes { get; private set; } = [];
     public Point Project(Point point) => new(ProfileBounds.Left + point.X * Scale, ProfileBounds.Top + (_height - point.Y) * Scale);
 
-    public static SectionPreviewDrawingLayout Create(SectionPreviewGeometry geometry, Size size, UnitDefinition unit, Func<string, Size> measure, bool compact = false)
+    public static SectionPreviewDrawingLayout Create(SectionPreviewGeometry geometry, Size size, UnitDefinition unit, Func<TechnicalText, Size> measure, bool compact = false)
     {
-        string Label(PreviewDimension dimension) => (dimension.Key is "d" or "D" ? "Ø" : dimension.Key)
+        TechnicalText Label(PreviewDimension dimension) => (dimension.Key is "d" or "D" ? TechnicalSymbols.Diameter : TechnicalSymbols.SectionInput(dimension.Key))
             + (dimension.IsConfirmed ? " = " + InputQuantityFormatter.WithUnit(dimension.Value, unit) : "");
         var labels = geometry.Dimensions.Values.ToDictionary(d => d.Key, Label);
         var textSizes = labels.ToDictionary(p => p.Key, p => measure(p.Value));
@@ -112,7 +116,7 @@ public sealed class SectionPreviewDrawingLayout
                 }
                 Point start = center - direction * (DistanceToEdge(-direction) + AxisStartOverhang);
                 Point end = center + direction * (DistanceToEdge(direction) + AxisEndOverhang);
-                Size labelSize = measure(axis.ToString().ToLowerInvariant());
+                Size labelSize = measure(TechnicalSymbols.Axis(axis.ToString().ToLowerInvariant()));
                 Point labelCenter = end + direction * 10;
                 return new(axis, start, end, FitText(new Rect(labelCenter - new Vector(labelSize.Width / 2, labelSize.Height / 2), labelSize), size), reference);
             }
@@ -254,7 +258,7 @@ public sealed class SectionPreviewDrawingLayout
         var candidates = details.Select(d => Candidates(d)
             .DistinctBy(candidate => (candidate.TextBounds, candidate.Lines[0], candidate.Lines[^1])).ToArray()).ToArray();
         var sourceAxes = layout.Axes;
-        var axisSizes = sourceAxes.ToDictionary(a => a.Axis, a => measure(a.Axis.ToString().ToLowerInvariant()));
+        var axisSizes = sourceAxes.ToDictionary(a => a.Axis, a => measure(TechnicalSymbols.Axis(a.Axis.ToString().ToLowerInvariant())));
         bool PlaceAxisLabels()
         {
             var placed = new List<PreviewDrawingAxis>();

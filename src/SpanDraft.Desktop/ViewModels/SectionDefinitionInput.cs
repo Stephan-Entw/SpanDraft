@@ -1,5 +1,6 @@
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -13,12 +14,13 @@ public sealed class SectionDefinitionInput : ObservableObject
     private string _pendingText = "", _committedText = "";
     private string? _error;
     private bool _parseError;
-    public SectionDefinitionInput(string key, UnitDefinition unit, Action<SectionDefinitionInput, bool> changed, bool nonnegative = false, string? displayLabel = null)
-    { Key = key; Unit = unit; _changed = changed; _nonnegative = nonnegative; DisplayLabel = displayLabel ?? Symbol; }
+    public SectionDefinitionInput(string key, UnitDefinition unit, Action<SectionDefinitionInput, bool> changed, bool nonnegative = false, TechnicalText? displayLabel = null)
+    { Key = key; Unit = unit; _changed = changed; _nonnegative = nonnegative; DisplayText = displayLabel ?? TechnicalSymbols.SectionInput(key); }
     public string Key { get; }
     public UnitDefinition Unit { get; }
-    public string Symbol => Key.Length > 1 && char.IsUpper(Key[0]) ? Key[..1] + Key[1..].ToLowerInvariant() : Key;
-    public string DisplayLabel { get; }
+    public string Symbol => TechnicalSymbols.SectionInput(Key).PlainText;
+    public TechnicalText DisplayText { get; }
+    public string DisplayLabel => DisplayText.PlainText;
     public bool HasRadiusHint => Key == "r";
     public bool LastCommitChangedValue { get; private set; }
     public string Label => DisplayLabel + " [" + Unit.Symbol + "]";

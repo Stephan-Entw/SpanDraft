@@ -3,6 +3,7 @@ using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.State;
 
@@ -52,9 +53,12 @@ public sealed class ProjectOverviewState
     public AnalysisPresentationState Analysis { get; }
     public bool HasSupports => Supports.Count > 0;
     public bool HasLoads => Loads.Count > 0;
-    public string ReactionXHeader => "Rx [" + Analysis.Options.Profile[QuantityKind.AxialForce].Symbol + "]";
-    public string ReactionYHeader => "Ry [" + Analysis.Options.Profile[QuantityKind.TransverseForce].Symbol + "]";
-    public string ReactionMomentHeader => "M [" + Analysis.Options.Profile[QuantityKind.Moment].Symbol + "]";
+    public string ReactionXHeader => ReactionXHeaderText.PlainText;
+    public TechnicalText ReactionXHeaderText => TechnicalSymbols.ReactionX + " [" + Analysis.Options.Profile[QuantityKind.AxialForce].Symbol + "]";
+    public string ReactionYHeader => ReactionYHeaderText.PlainText;
+    public TechnicalText ReactionYHeaderText => TechnicalSymbols.ReactionY + " [" + Analysis.Options.Profile[QuantityKind.TransverseForce].Symbol + "]";
+    public string ReactionMomentHeader => ReactionMomentHeaderText.PlainText;
+    public TechnicalText ReactionMomentHeaderText => TechnicalSymbols.Moment + " [" + Analysis.Options.Profile[QuantityKind.Moment].Symbol + "]";
     public string PositionHeader => string.Format(CultureInfo.CurrentUICulture, Strings.OverviewPosition,
         Analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
 

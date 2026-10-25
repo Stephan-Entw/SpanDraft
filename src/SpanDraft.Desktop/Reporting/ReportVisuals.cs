@@ -15,6 +15,7 @@ using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Sections.Parametric;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.Reporting;
 
@@ -125,7 +126,7 @@ internal sealed class ReportVisuals
                 SchematicText.Measure(d.TickLabel(t), Typeface.Default, 12).Width));
             double startWidth = Measure(Axis.AxisLayout.Labels.Single(l => l.Role == AxisEndpointRole.Start).Text).Width;
             double endWidth = Measure(Axis.AxisLayout.Labels.Single(l => l.Role == AxisEndpointRole.End).Text).Width;
-            double unitWidth = Measure("x [" + Axis.AxisLayout.UnitSymbol + "]").Width;
+            double unitWidth = SchematicText.Measure(TechnicalSymbols.Axis("x") + " [" + Axis.AxisLayout.UnitSymbol + "]", Typeface.Default, AnnotationFontSize).Width;
             var next = new StationOuterMargins(
                 Math.Max(margins.Left, Math.Max(minimum.Left, Math.Max(startWidth / 2 + 8, tickWidth + 16))),
                 Math.Max(margins.Right, Math.Max(minimum.Right, Math.Max(endWidth / 2 + 8, unitWidth + 16))));

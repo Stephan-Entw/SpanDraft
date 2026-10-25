@@ -2,6 +2,7 @@ using SpanDraft.Core.Materials;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -28,15 +29,19 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
         _number = material?.MaterialNumber ?? ""; _standards = string.Join("; ", material?.OtherStandards ?? []);
         Categories = MaterialSelectionViewModel.Categories();
         _category = Categories.Single(c => c.Value == (material?.Category ?? MaterialCategory.Other));
-        StrengthTypes = [new(MaterialStrengthType.Re, "Re"), new(MaterialStrengthType.Rp02, "Rp0,2")];
+        StrengthTypes =
+        [
+            new(MaterialStrengthType.Re, MaterialStrengthDisplay.Symbol(MaterialStrengthType.Re)) { DisplayText = TechnicalSymbols.YieldStrength },
+            new(MaterialStrengthType.Rp02, MaterialStrengthDisplay.Symbol(MaterialStrengthType.Rp02)) { DisplayText = TechnicalSymbols.ProofStrength }
+        ];
         _strengthType = StrengthTypes.SingleOrDefault(c => c.Value == material?.StrengthType);
         _nameValidationVisible = showNameConflict;
         Inputs =
         [
-            new("E", Strings.MaterialYoungsModulus, GPa, Validate, material?.YoungsModulus.Pascals),
-            new("strength", material?.StrengthType is { } type ? MaterialStrengthDisplay.Label(type) : Strings.MaterialStrength, UnitCatalog.Megapascal, Validate, material?.YieldStrength.Pascals),
-            new("rho", Strings.MaterialDensity, UnitCatalog.Dimensionless, Validate, material?.Density?.KilogramsPerCubicMeter, optional: true, hint: "kg/m³"),
-            new("nu", Strings.MaterialPoissonRatio, UnitCatalog.Dimensionless, Validate, material?.PoissonRatio?.Value, optional: true, signed: true)
+            new("E", Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus, GPa, Validate, material?.YoungsModulus.Pascals),
+            new("strength", material?.StrengthType is { } type ? MaterialStrengthDisplay.LabelText(type) : Strings.MaterialStrength, UnitCatalog.Megapascal, Validate, material?.YieldStrength.Pascals),
+            new("rho", Strings.MaterialDensity + " " + TechnicalSymbols.Density, UnitCatalog.Dimensionless, Validate, material?.Density?.KilogramsPerCubicMeter, optional: true, hint: "kg/m³"),
+            new("nu", Strings.MaterialPoissonRatio + " " + TechnicalSymbols.PoissonRatio, UnitCatalog.Dimensionless, Validate, material?.PoissonRatio?.Value, optional: true, signed: true)
         ];
         ConfirmCommand = new(ConfirmAsync, () => CanConfirm);
         CancelCommand = new(() => CloseRequested?.Invoke(false), () => !IsBusy);
@@ -62,7 +67,7 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
         {
             if (IsBusy || !Set(ref _strengthType, value)) return;
             Inputs[1].SetLabel(value is not null && StrengthTypes.Contains(value)
-                ? MaterialStrengthDisplay.Label(value.Value) : Strings.MaterialStrength);
+                ? MaterialStrengthDisplay.LabelText(value.Value) : Strings.MaterialStrength);
             Validate();
         }
     }

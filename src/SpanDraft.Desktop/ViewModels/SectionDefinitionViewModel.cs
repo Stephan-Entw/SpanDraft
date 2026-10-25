@@ -7,6 +7,7 @@ using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.Sections;
 using SpanDraft.Desktop.State;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -208,7 +209,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     public SectionPreviewGeometry? Preview => _type is null ? null : Current.Preview;
     public ISectionDefinition? Section => _section;
     public bool HasValidSection => HasDefinition && _section is not null;
-    public string AreaLabel => Strings.SectionDefinitionArea + " A";
+    public TechnicalText AreaLabel => Strings.SectionDefinitionArea + " " + TechnicalSymbols.Area;
     public string Area => _section is null ? "—" : Format(_section.Area.SquareMeters, QuantityKind.Area);
     public IReadOnlyList<SectionDefinitionAxisValue> AxisValues => _axisValues;
     private void RefreshAxisValues()
@@ -236,8 +237,8 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
                     double inertia = properties!.SecondMomentOfArea.MetersToTheFourth, otherInertia = other.SecondMomentOfArea.MetersToTheFourth;
                     if (!NearlyEqual(inertia, otherInertia)) heading += " · " + (inertia > otherInertia ? Strings.SectionDefinitionStrongAxis : Strings.SectionDefinitionWeakAxis);
                 }
-                block.Update(heading, Strings.SectionDefinitionInertia + " I" + letter,
-                    Strings.SectionDefinitionModulus + " W" + letter + "+", Strings.SectionDefinitionModulus + " W" + letter + "−",
+                block.Update(heading, Strings.SectionDefinitionInertia + " " + TechnicalSymbols.Inertia(letter),
+                    Strings.SectionDefinitionModulus + " " + TechnicalSymbols.Modulus(letter, 1), Strings.SectionDefinitionModulus + " " + TechnicalSymbols.Modulus(letter, -1),
                     properties is null ? "—" : Format(properties.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea),
                     properties is null ? "—" : Format(properties.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus),
                     properties is null ? "—" : Format(properties.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus),
@@ -286,9 +287,9 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
             Current.Inputs[key].BeforeCommittedValueChange += () => _beforeInputChange = CaptureHistory();
         }
     }
-    private string InputLabel(string key)
+    private TechnicalText InputLabel(string key)
     {
-        string symbol = key.Length > 1 && char.IsUpper(key[0]) ? key[..1] + key[1..].ToLowerInvariant() : key;
+        var symbol = TechnicalSymbols.SectionInput(key);
         string description = key switch
         {
             "A" => Strings.SectionDefinitionArea, _ when key.StartsWith('I') => Strings.SectionDefinitionInertia,
@@ -299,7 +300,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
             "t" => _type == SectionEditorType.Angle ? Strings.SectionDefinitionThickness : Strings.SectionDefinitionWallThickness,
             "tw" => Strings.SectionDefinitionWebThickness, "tf" => Strings.SectionDefinitionFlangeThickness,
             "r" => _type == SectionEditorType.RectangularHollow ? Strings.SectionDefinitionOuterRadius : Strings.SectionDefinitionInnerRadius,
-            _ => symbol
+            _ => symbol.PlainText
         };
         return description + " " + symbol;
     }

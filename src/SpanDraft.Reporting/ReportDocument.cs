@@ -1,3 +1,4 @@
+using SpanDraft.Reporting.Notation;
 using System.Globalization;
 using SkiaSharp;
 
@@ -13,11 +14,10 @@ internal sealed class ReportDocument : IDisposable
     private const float BlockGap = 12, LineHeight = 12, SectionDrawingHeight = 118;
     private static readonly SKColor Ink = SKColor.Parse("#202631"), Secondary = SKColor.Parse("#5E6878"),
         Rule = SKColor.Parse("#C5CDD8");
-    private readonly SKTypeface regular = SKTypeface.FromFamilyName("Arial");
-    private readonly SKTypeface bold = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold);
     private readonly ReportTechnicalGraphics graphics;
     private readonly List<IDisposable> ownedGraphics = [];
-    private readonly string[] sectionLines, sectionProperties, materialLines, materialProperties;
+    private readonly string[] sectionLines, materialLines;
+    private readonly TechnicalText[] sectionProperties, materialProperties;
     private readonly float materialTop, firstTableTop, summaryHeight;
     private readonly List<(string Text, SKRect Bounds)> textRuns = [];
     internal ReportData Data { get; }
@@ -61,9 +61,9 @@ internal sealed class ReportDocument : IDisposable
         return [.. lines.Take(2), "…"];
     }
 
-    private string[] PropertyLines(IReadOnlyList<string> properties)
+    private TechnicalText[] PropertyLines(IReadOnlyList<TechnicalText> properties)
     {
-        string joined = string.Join("    ", properties);
+        var joined = TechnicalText.Join("    ", properties);
         return Width(joined, 8.5f) <= RightWidth ? [joined]
             : properties.SelectMany(p => Wrap(p, RightWidth, 8.5f)).ToArray();
     }
@@ -250,10 +250,13 @@ internal sealed class ReportDocument : IDisposable
         foreach (var fragment in page.Tables) DrawTable(canvas, fragment);
         if (page.SummaryTop is { } summary) DrawSummary(canvas, summary);
         Line(canvas, Margin, FooterTop, PageWidth - Margin, FooterTop, Rule, .6f);
-        Text(canvas, "SpanDraft " + Data.Version, Margin, FooterTop + 10, 7.5f, color: Secondary);
+        using var footer = new ReportTextLayout("SpanDraft " + Data.Version + Data.Date
+            + string.Format(CultureInfo.InvariantCulture, Data.Labels.PageFormat, index + 1, Pages.Count), 7.5f);
+        float footerY = Math.Min(FooterTop + 10, PageHeight - Margin - footer.Height);
+        Text(canvas, "SpanDraft " + Data.Version, Margin, footerY, 7.5f, color: Secondary);
         Text(canvas, string.Format(CultureInfo.InvariantCulture, Data.Labels.PageFormat, index + 1, Pages.Count),
-            PageWidth / 2, FooterTop + 10, 7.5f, align: SKTextAlign.Center, color: Secondary);
-        Text(canvas, Data.Date, PageWidth - Margin, FooterTop + 10, 7.5f, align: SKTextAlign.Right, color: Secondary);
+            PageWidth / 2, footerY, 7.5f, align: SKTextAlign.Center, color: Secondary);
+        Text(canvas, Data.Date, PageWidth - Margin, footerY, 7.5f, align: SKTextAlign.Right, color: Secondary);
     }
 
     private void DrawTable(SKCanvas canvas, ReportTableFragment fragment)
@@ -344,86 +347,65 @@ internal sealed class ReportDocument : IDisposable
     private void Heading(SKCanvas canvas, string text, float x, float y, float width)
     { Text(canvas, text, x, y, 10, true); Line(canvas, x, y + 14, x + width, y + 14, Rule, .5f); }
 
-    private float Width(string text, float size, bool strong = false)
+    private float Width(string text, float size, bool strong = false) => Width((TechnicalText)text, size, strong);
+    private float Width(TechnicalText text, float size, bool strong = false)
     {
-        using var font = new SKFont(strong ? bold : regular, size);
-        float width = 0;
-        foreach (var rune in text.EnumerateRunes())
-        {
-            string c = rune.ToString();
-            if (font.ContainsGlyphs(c)) width += font.MeasureText(c);
-            else
-            {
-                using var face = SKFontManager.Default.MatchCharacter(rune.Value)
-                    ?? throw new InvalidOperationException($"No report font provides {c}.");
-                using var fallback = new SKFont(face, size);
-                width += fallback.MeasureText(c);
-            }
-        }
-        return width;
+        using var layout = new ReportTextLayout(text, size, strong);
+        return layout.Width;
     }
 
-    private string[] Wrap(string text, float width, float size, bool strong = false)
+    private string[] Wrap(string text, float width, float size, bool strong = false) =>
+        Wrap((TechnicalText)text, width, size, strong).Select(line => line.PlainText).ToArray();
+
+    private TechnicalText[] Wrap(TechnicalText text, float width, float size, bool strong = false)
     {
-        var lines = new List<string>();
-        foreach (string paragraph in text.Replace("\r", "").Split('\n'))
+        var lines = new List<TechnicalText>();
+        int offset = 0;
+        foreach (string paragraph in text.PlainText.Split('\n'))
         {
-            string pending = paragraph;
-            if (pending.Length == 0) { lines.Add(""); continue; }
-            while (pending.Length > 0)
+            int length = paragraph.TrimEnd('\r').Length;
+            var pending = text.Slice(offset, length);
+            offset += paragraph.Length + 1;
+            if (length == 0) { lines.Add(pending); continue; }
+            while (pending.PlainText.Length > 0)
             {
                 if (Width(pending, size, strong) <= width) { lines.Add(pending); break; }
-                // Binary search text-element boundaries, so a surrogate or combining mark is never split.
-                int[] elements = StringInfo.ParseCombiningCharacters(pending);
+                int[] elements = StringInfo.ParseCombiningCharacters(pending.PlainText);
                 int low = 1, high = elements.Length;
                 while (low < high)
                 {
                     int mid = (low + high + 1) / 2;
-                    int end = mid == elements.Length ? pending.Length : elements[mid];
-                    if (Width(pending[..end], size, strong) <= width) low = mid; else high = mid - 1;
+                    int end = mid == elements.Length ? pending.PlainText.Length : elements[mid];
+                    if (Width(pending.Slice(0, end), size, strong) <= width) low = mid; else high = mid - 1;
                 }
-                int count = low == elements.Length ? pending.Length : elements[low];
-                int space = pending.LastIndexOf(' ', Math.Max(0, count - 1), count);
+                int count = low == elements.Length ? pending.PlainText.Length : elements[low];
+                int space = pending.PlainText.LastIndexOf(' ', Math.Max(0, count - 1), count);
                 if (space > 0) count = space;
-                lines.Add(pending[..count]);
-                pending = pending[count..].TrimStart(' ');
+                lines.Add(pending.Slice(0, count));
+                int next = count;
+                while (next < pending.PlainText.Length && pending.PlainText[next] == ' ') next++;
+                pending = pending.Slice(next, pending.PlainText.Length - next);
             }
         }
         return lines.ToArray();
     }
+    private void Lines(SKCanvas canvas, IEnumerable<TechnicalText> lines, float x, float y, float size = 8.5f,
+        bool strong = false, SKTextAlign align = SKTextAlign.Left, SKColor? color = null)
+    { foreach (var line in lines) { Text(canvas, line, x, y, size, strong, align, color); y += LineHeight; } }
+
     private SKRect Text(SKCanvas canvas, string text, float x, float y, float size = 8.5f,
+        bool strong = false, SKTextAlign align = SKTextAlign.Left, SKColor? color = null, bool track = true) =>
+        Text(canvas, (TechnicalText)text, x, y, size, strong, align, color, track);
+
+    private SKRect Text(SKCanvas canvas, TechnicalText text, float x, float y, float size = 8.5f,
         bool strong = false, SKTextAlign align = SKTextAlign.Left, SKColor? color = null, bool track = true)
     {
-        using var font = new SKFont(strong ? bold : regular, size);
-        // Arial lacks some technical superscripts; use system glyph fallback, never replacement boxes.
-        var fonts = new List<(string Text, SKFont Font)>();
-        foreach (var rune in text.EnumerateRunes())
-        {
-            string character = rune.ToString();
-            SKFont selected = font;
-            if (!font.ContainsGlyphs(character))
-            {
-                using var face = SKFontManager.Default.MatchCharacter(rune.Value)
-                    ?? throw new InvalidOperationException($"No report font provides {character}.");
-                selected = new SKFont(face, size);
-                if (!selected.ContainsGlyphs(character)) throw new InvalidOperationException($"Missing report glyph {character}.");
-            }
-            if (fonts.Count > 0 && ReferenceEquals(fonts[^1].Font, selected))
-                fonts[^1] = (fonts[^1].Text + character, selected);
-            else fonts.Add((character, selected));
-        }
+        using var layout = new ReportTextLayout(text, size, strong);
         using var paint = new SKPaint { Color = color ?? Ink, IsAntialias = true };
-        float width = fonts.Sum(run => run.Font.MeasureText(run.Text));
-        float left = x - (align == SKTextAlign.Right ? width : align == SKTextAlign.Center ? width / 2 : 0);
-        var bounds = new SKRect(left, y, left + width, y + font.Metrics.Descent - font.Metrics.Ascent);
-        float cursor = left;
-        foreach (var run in fonts)
-        {
-            canvas.DrawText(run.Text, cursor, y - font.Metrics.Ascent, SKTextAlign.Left, run.Font, paint);
-            cursor += run.Font.MeasureText(run.Text);
-            if (!ReferenceEquals(run.Font, font)) run.Font.Dispose();
-        }
-        if (track) textRuns.Add((text, bounds));
+        float left = x - (align == SKTextAlign.Right ? layout.Width : align == SKTextAlign.Center ? layout.Width / 2 : 0);
+        layout.Draw(canvas, left, y, paint);
+        var bounds = new SKRect(left, y, left + layout.Width, y + layout.Height);
+        if (track) textRuns.Add((text.PlainText, bounds));
         return bounds;
     }
 
@@ -437,6 +419,6 @@ internal sealed class ReportDocument : IDisposable
     public void Dispose()
     {
         foreach (var graphic in ownedGraphics) graphic.Dispose();
-        ownedGraphics.Clear(); regular.Dispose(); bold.Dispose();
+        ownedGraphics.Clear();
     }
 }

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
              xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
              xmlns:state="clr-namespace:SpanDraft.Desktop.State"
              xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
@@ -131,9 +132,9 @@
           <TextBlock Text="{x:Static resources:Strings.Reactions}" Classes="sectionTitle" />
           <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,*,*,*">
             <TextBlock Text="{x:Static resources:Strings.Support}" Classes="centered" />
-            <TextBlock x:Name="ReactionXHeader" Grid.Column="1" Text="{Binding Overview.ReactionXHeader}" Classes="number" />
-            <TextBlock x:Name="ReactionYHeader" Grid.Column="2" Text="{Binding Overview.ReactionYHeader}" Classes="number" />
-            <TextBlock x:Name="ReactionMomentHeader" Grid.Column="3" Text="{Binding Overview.ReactionMomentHeader}" Classes="number" />
+            <TextBlock x:Name="ReactionXHeader" Grid.Column="1" controls:TechnicalTextPresenter.Content="{Binding Overview.ReactionXHeaderText}" Classes="number" />
+            <TextBlock x:Name="ReactionYHeader" Grid.Column="2" controls:TechnicalTextPresenter.Content="{Binding Overview.ReactionYHeaderText}" Classes="number" />
+            <TextBlock x:Name="ReactionMomentHeader" Grid.Column="3" controls:TechnicalTextPresenter.Content="{Binding Overview.ReactionMomentHeaderText}" Classes="number" />
           </Grid>
           <ItemsControl x:Name="ReactionTable" ItemsSource="{Binding Overview.Reactions}" ItemTemplate="{StaticResource ReactionRowTemplate}" />
         </StackPanel>

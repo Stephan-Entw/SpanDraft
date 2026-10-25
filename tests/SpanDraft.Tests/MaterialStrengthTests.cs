@@ -229,7 +229,7 @@ public sealed class MaterialStrengthTests
         Assert.Equal(MaterialStrengthType.Rp02, ProjectFileCodec.Deserialize(app.Files.Data[path]).Document.Material.StrengthType);
         Assert.NotEqual(original, app.Files.Data[path]);
         using var report = ProjectReport.Capture(app.Main.Editor);
-        Assert.Contains("Rp0,2", report.Data.Indicators[3].Label);
+        Assert.Contains("Rp0,2", report.Data.Indicators[3].Label.PlainText);
     }
 
 #pragma warning restore xUnit1031
@@ -265,8 +265,8 @@ public sealed class MaterialStrengthTests
         var main = new MainWindowViewModel(files: files);
         Assert.True(await main.OpenAsync(path));
         using var report = ProjectReport.Capture(main.Editor!);
-        Assert.Contains(report.Data.MaterialProperties, p => p.StartsWith(MaterialStrengthDisplay.Label(type) + " = ", StringComparison.Ordinal));
-        Assert.Equal(string.Format(CultureInfo.CurrentUICulture, Strings.ReportSafety, symbol), report.Data.Indicators[3].Label);
+        Assert.Contains(report.Data.MaterialProperties, p => p.PlainText.StartsWith(MaterialStrengthDisplay.Label(type) + " = ", StringComparison.Ordinal));
+        Assert.Equal(Strings.ReportSafety + " S = " + symbol + " / σb,max", report.Data.Indicators[3].Label.PlainText);
         Assert.DoesNotContain("S = Re", Strings.ReportLimits);
         using var pdf = new MemoryStream(); report.WritePdf(pdf);
         Assert.Contains(report.TextRuns, r => r.Text.Contains(symbol, StringComparison.Ordinal));

@@ -29,6 +29,7 @@ using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
 using SpanDraft.Reporting;
+using SpanDraft.Reporting.Notation;
 using Xunit;
 
 // Control rendering must stay on the owning Avalonia dispatcher thread.
@@ -48,6 +49,38 @@ public sealed class ProjectReportTests : IDisposable
     }
     public void Dispose() { environment.Dispose(); CultureInfo.CurrentCulture = originalCulture; CultureInfo.CurrentUICulture = originalUi; }
     private static readonly DateTimeOffset Now = new(2026, 10, 23, 12, 34, 56, TimeSpan.FromHours(2));
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void TechnicalNotationSurvivesCaptureWrappingAndVectorOutput(string culture)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        var fixture = ReportTestProjects.Create(); var mm = Length.FromMillimeters;
+        var document = fixture.Document.WithSection(new TSectionGeometry(mm(100), mm(60), mm(4), mm(6), mm(3)), SectionAxisDesignation.Y)
+            with { Material = new SpanDraft.Core.Materials.Material("Aluminium", Pressure.FromPascals(70e9),
+                Pressure.FromMegapascals(150), SpanDraft.Core.Materials.MaterialStrengthType.Rp02) };
+        var state = fixture with { Document = document };
+        var (main, _) = Open(state);
+        using var report = ProjectReport.Capture(main.Editor!, Now);
+        Assert.Contains(report.Data.SectionProperties, text => text.Runs.Any(r => r.Position == TechnicalPosition.Superscript && r.Text == "+"));
+        Assert.Contains(report.Data.SectionProperties, text => text.Runs.Any(r => r.Position == TechnicalPosition.Superscript && r.Text == "−"));
+        Assert.Contains(report.Data.MaterialProperties, text => text.Runs.Any(r => r.Position == TechnicalPosition.Subscript && r.Text == "p0,2"));
+        Assert.Equal(TechnicalSymbols.MaximumStress.Runs, report.Data.Indicators[2].Label.Runs.TakeLast(2));
+        string directory = Path.Combine(RepositoryRoot(), "output", "pdf", "production"); Directory.CreateDirectory(directory);
+        string name = "technical-notation-" + culture;
+        File.WriteAllBytes(Path.Combine(directory, name + ".spandraft"), ProjectFileCodec.Serialize(state));
+        using (var pdf = File.Create(Path.Combine(directory, name + ".pdf"))) report.WritePdf(pdf);
+        using (var png = File.Create(Path.Combine(directory, name + ".png"))) report.WritePng(png, 0);
+        AssertTextContained(report); AssertInformationBlocksSeparated(report, 0);
+        Assert.DoesNotMatch(@"/Subtype\s*/Image\b", System.Text.Encoding.Latin1.GetString(File.ReadAllBytes(Path.Combine(directory, name + ".pdf"))));
+
+        var longLabel = string.Concat(Enumerable.Repeat("Long localized description ", 8)) + TechnicalSymbols.MaximumStress;
+        using var wrapped = new ReportDocument(report.Data with
+            { Indicators = [new(longLabel, "150 MPa", null)] }, new(80, (_, _, _) => { }));
+        using var bitmap = wrapped.RenderPage(0);
+        AssertTextContained(wrapped);
+        Assert.Contains(wrapped.TextRuns, r => r.Text.Contains(TechnicalSymbols.MaximumStress.PlainText));
+    }
 
     private static (MainWindowViewModel Main, Files Files) Open(ProjectState state,
         ResultPresentationOptions? presentation = null, Action? analyzed = null)
@@ -87,8 +120,8 @@ public sealed class ProjectReportTests : IDisposable
         Assert.Equal(editor.Presentation.SafetyFactor, report.Data.Indicators[3].Value);
         Assert.Equal(Now, report.Data.CreatedAt);
         Assert.Equal(Now.ToLocalTime().ToString("d", CultureInfo.CurrentCulture), report.Data.Date);
-        Assert.Contains(profile[QuantityKind.BeamLength].Symbol, report.Data.Tables[0].Headers[2]);
-        Assert.Contains(profile[QuantityKind.TransverseForce].Symbol, report.Data.Tables[2].Headers[2]);
+        Assert.Contains(profile[QuantityKind.BeamLength].Symbol, report.Data.Tables[0].Headers[2].PlainText);
+        Assert.Contains(profile[QuantityKind.TransverseForce].Symbol, report.Data.Tables[2].Headers[2].PlainText);
         using var before = new MemoryStream(); report.WritePng(before, 0);
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture == "de-DE" ? "en-US" : "de-DE");
         Assert.True(main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Detailed));
@@ -376,7 +409,7 @@ public sealed class ProjectReportTests : IDisposable
         {
             var state = fixture with { Document = fixture.Document.WithSection(section, axis.AxisDesignation) };
             var (main, _) = Open(state); using var report = ProjectReport.Capture(main.Editor!, Now);
-            Assert.Contains(report.Data.SectionProperties, p => p.StartsWith("I" + axis.AxisDesignation.ToString().ToLowerInvariant() + " = "));
+            Assert.Contains(report.Data.SectionProperties, p => p.PlainText.StartsWith("I" + axis.AxisDesignation.ToString().ToLowerInvariant() + " = "));
             bool sameDisplay = QuantityFormatter.Format(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus,
                 main.Editor!.ResultPresentation.Profile, references: main.Editor.Presentation.References) ==
                 QuantityFormatter.Format(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus,
@@ -1283,21 +1316,23 @@ public sealed class ProjectReportTests : IDisposable
         AssertTableHeadersAndBounds(report, page);
         if (!report.Pages[page].HasGraphics) return;
         var sectionArea = report.TechnicalAreas(page).Single(a => a.Kind == ReportGraphic.Section).Bounds;
-        var sectionProperties = Assert.Single(report.TextRuns, r => r.Text.Contains(report.Data.SectionProperties[0]));
-        var materialProperties = Assert.Single(report.TextRuns, r => r.Text.Contains(report.Data.MaterialProperties[0]));
-        Assert.All(report.Data.SectionProperties, p => Assert.Contains(p, sectionProperties.Text));
+        var materialHeading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Material);
+        var sectionProperties = report.TextRuns.Where(r => r.Bounds.Left >= sectionArea.Left
+            && r.Bounds.Right <= sectionArea.Right + .01f && r.Bounds.Top >= sectionArea.Bottom
+            && r.Bounds.Bottom < materialHeading.Bounds.Top).ToArray();
+        Assert.NotEmpty(sectionProperties);
+        var materialProperties = Assert.Single(report.TextRuns, r => r.Text.Contains(report.Data.MaterialProperties[0].PlainText));
+        Assert.All(report.Data.SectionProperties, p => Assert.Contains(p.PlainText, string.Join(" ", sectionProperties.Select(r => r.Text))));
         var tables = report.Pages[page].Tables;
         var materialPropertyRuns = report.TextRuns.Where(r => r.Bounds.Left >= sectionArea.Left
             && r.Bounds.Right <= sectionArea.Right + .01f && r.Bounds.Top >= materialProperties.Bounds.Top
             && (tables.Count == 0 || r.Bounds.Top < tables[0].Bounds.Top)
-            && report.Data.MaterialProperties.Any(p => r.Text.Contains(p, StringComparison.Ordinal) || p.Contains(r.Text, StringComparison.Ordinal))).ToArray();
+            && report.Data.MaterialProperties.Any(p => r.Text.Contains(p.PlainText, StringComparison.Ordinal) || p.PlainText.Contains(r.Text, StringComparison.Ordinal))).ToArray();
         string materialText = string.Join(" ", materialPropertyRuns.Select(r => r.Text));
-        Assert.All(report.Data.MaterialProperties, p => Assert.Contains(p, materialText));
-        var materialHeading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Material);
-        Assert.True(sectionArea.Bottom <= sectionProperties.Bounds.Top);
-        Assert.True(sectionProperties.Bounds.Bottom < materialHeading.Bounds.Top);
+        Assert.All(report.Data.MaterialProperties, p => Assert.Contains(p.PlainText, materialText));
+        Assert.All(sectionProperties, run => Assert.True(sectionArea.Bottom <= run.Bounds.Top && run.Bounds.Bottom < materialHeading.Bounds.Top));
         Assert.True(materialHeading.Bounds.Bottom < materialProperties.Bounds.Top);
-        foreach (var run in new[] { sectionProperties, materialHeading, materialProperties })
+        foreach (var run in sectionProperties.Concat(new[] { materialHeading, materialProperties }))
         {
             Assert.True(run.Bounds.Left >= sectionArea.Left);
             Assert.True(run.Bounds.Right <= sectionArea.Right + .01f);
@@ -1320,7 +1355,7 @@ public sealed class ProjectReportTests : IDisposable
                 && r.Bounds.Right <= fragment.Bounds.Right + .01f && r.Bounds.Top >= fragment.Bounds.Top
                 && r.Bounds.Bottom <= fragment.Bounds.Top + fragment.HeadingHeight).ToArray();
             string text = string.Concat(headings.Select(r => r.Text)).Replace(" ", "");
-            foreach (string header in report.Data.Tables[fragment.Table].Headers)
+            foreach (string header in report.Data.Tables[fragment.Table].Headers.Select(h => h.PlainText))
                 Assert.Contains(header.Replace(" ", ""), text);
             if (fragment.Rows[0].Row > 0 || fragment.Rows[0].FirstLine > 0)
                 Assert.Contains(report.Data.Labels.Continuation.Replace(" ", ""), text);

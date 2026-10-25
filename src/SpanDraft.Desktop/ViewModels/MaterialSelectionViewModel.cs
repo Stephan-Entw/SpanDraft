@@ -3,6 +3,7 @@ using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -29,8 +30,13 @@ public sealed class MaterialSelectionItem(Material material, MaterialSelectionKi
     public bool HasOtherStandards => OtherStandards.Length > 0;
     public string YoungsModulus => UiNumbers.Indicator(Material.YoungsModulus.Pascals / 1e9);
     public string StrengthValue => UiNumbers.Indicator(Material.YieldStrength.Megapascals);
-    public string StrengthLabel => MaterialStrengthDisplay.Label(Material.StrengthType);
-    public string StrengthSummary => MaterialStrengthDisplay.Summary(Material);
+    public TechnicalText StrengthLabelText => MaterialStrengthDisplay.LabelText(Material.StrengthType);
+    public string StrengthLabel => StrengthLabelText.PlainText;
+    public TechnicalText StrengthSummaryText => MaterialStrengthDisplay.SummaryText(Material);
+    public string StrengthSummary => StrengthSummaryText.PlainText;
+    public TechnicalText YoungsModulusLabel => Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus;
+    public TechnicalText DensityLabel => Strings.MaterialDensity + " " + TechnicalSymbols.Density;
+    public TechnicalText PoissonRatioLabel => Strings.MaterialPoissonRatio + " " + TechnicalSymbols.PoissonRatio;
     public string AccessibleName => Name + " · " + (OriginLabel is { } origin ? origin + " · " : "") + StrengthSummary + " MPa";
     public bool HasDensity => Material.Density is not null;
     public bool HasPoissonRatio => Material.PoissonRatio is not null;
@@ -40,6 +46,7 @@ public sealed class MaterialSelectionItem(Material material, MaterialSelectionKi
 
 public sealed class MaterialSelectionViewModel : SetupStepViewModel
 {
+    public TechnicalText YoungsModulusHeader => TechnicalSymbols.YoungsModulus + " [GPa]";
     private readonly IReadOnlyList<MaterialSelectionItem> _builtIns;
     private UserMaterialLibrary? _shownLibrary;
     private IReadOnlyList<MaterialSelectionItem> _users = [], _entries = [], _filtered = [];

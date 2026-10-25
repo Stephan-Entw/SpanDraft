@@ -7,6 +7,7 @@ using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.Sections;
 using SpanDraft.Desktop.State;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -148,14 +149,15 @@ public sealed class ProjectSetupViewModel : ObservableObject
         set
         {
             if (!Set(ref _selectedMaterial, value)) return;
-            foreach (var name in new[] { nameof(HasMaterial), nameof(MaterialName), nameof(MaterialSummary), nameof(YoungsModulus), nameof(YieldStrength),
+            foreach (var name in new[] { nameof(HasMaterial), nameof(MaterialName), nameof(MaterialSummary), nameof(MaterialSummaryText), nameof(YoungsModulus), nameof(YieldStrength),
                 nameof(Density), nameof(PoissonRatio), nameof(HasDensity), nameof(HasPoissonRatio), nameof(CanApply) }) Notify(name);
             ApplyCommand.Refresh(); DraftCommitted();
         }
     }
     public bool HasMaterial => SelectedMaterial is not null;
     public string MaterialName => SelectedMaterial?.Name ?? Strings.SelectMaterialRequired;
-    public string MaterialSummary => SelectedMaterial is null ? "" : "E " + YoungsModulus + " · " + MaterialStrengthDisplay.Summary(SelectedMaterial) + " MPa";
+    public TechnicalText MaterialSummaryText => SelectedMaterial is null ? (TechnicalText)"" : TechnicalSymbols.YoungsModulus + " " + YoungsModulus + " · " + MaterialStrengthDisplay.SummaryText(SelectedMaterial) + " MPa";
+    public string MaterialSummary => MaterialSummaryText.PlainText;
     public string? StartupError => Libraries?.BuiltInError;
     public bool HasStartupError => StartupError is not null;
     public string SectionName => SelectedSection is { } section

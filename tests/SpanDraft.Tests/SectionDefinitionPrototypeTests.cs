@@ -19,6 +19,7 @@ using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
 using Xunit;
 using static SpanDraft.Tests.ProjectTestSupport;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Tests;
 
@@ -745,7 +746,7 @@ public sealed class SectionDefinitionPrototypeTests
         Commit(vm, "b", width); Commit(vm, "h", height);
         if (type == SectionEditorType.ISection) Commit(vm, "tw", "0.1");
         var geometry = vm.Preview!;
-        Size Measure(string text) => new(text.Length * 7, 16);
+        Size Measure(TechnicalText text) => new(text.PlainText.Length * 7, 16);
         var layout = SectionPreviewDrawingLayout.Create(geometry, new(420, 440), UnitCatalog.Millimeter, Measure);
         Assert.Equal(geometry.Width / geometry.Height, layout.ProfileBounds.Width / layout.ProfileBounds.Height, 10);
         Assert.Equal(2, layout.Axes.Count);
@@ -776,13 +777,13 @@ public sealed class SectionDefinitionPrototypeTests
     public void PreviewDimensionsStaySymbolicAndR0DoesNotInventAnArc()
     {
         var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.ISection);
-        var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, new(520, 440), UnitCatalog.Millimeter, text => new(text.Length * 7, 16));
+        var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, new(520, 440), UnitCatalog.Millimeter, text => new(text.PlainText.Length * 7, 16));
         Assert.All(layout.Dimensions, d => Assert.DoesNotContain("mm", d.Text));
         Assert.Equal("r", layout.Dimensions.Single(d => d.Key == "r").Text);
         Assert.Equal(2, layout.Axes.Count); Assert.All(layout.Axes, a => Assert.True(a.IsReference));
         Fill(vm, false); Commit(vm, "r", "0");
         Assert.All(vm.Preview!.Contours.SelectMany(c => c), s => Assert.Null(s.Center));
-        layout = SectionPreviewDrawingLayout.Create(vm.Preview, new(520, 440), UnitCatalog.Millimeter, text => new(text.Length * 7, 16));
+        layout = SectionPreviewDrawingLayout.Create(vm.Preview, new(520, 440), UnitCatalog.Millimeter, text => new(text.PlainText.Length * 7, 16));
         Assert.Equal("r = 0 mm", layout.Dimensions.Single(d => d.Key == "r").Text);
     }
     [Fact]
@@ -822,7 +823,7 @@ public sealed class SectionDefinitionPrototypeTests
         Assert.False(view.FindControl<TextBlock>("AxisSelectionHint")!.IsEffectivelyVisible);
         Assert.True(view.FindControl<Button>("ConfirmButton")!.IsEffectivelyEnabled);
         block.Select(); Assert.Null(vm.SelectedAxis); Assert.Null(view.FindControl<SectionPreviewControl>("SectionPreview")!.SelectedAxis);
-        var labels = block.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToArray();
+        var labels = block.GetVisualDescendants().OfType<TextBlock>().Select(t => TechnicalTextPresenter.GetContent(t)?.PlainText ?? t.Text).ToArray();
         Assert.Contains(Strings.SectionDefinitionInertia + " I", labels); Assert.Contains(Strings.SectionDefinitionModulus + " W+", labels);
         Assert.Contains(Strings.SectionDefinitionModulus + " W−", labels);
         window.Close();
@@ -1148,7 +1149,7 @@ public sealed class SectionDefinitionPrototypeTests
                     var label = row.Children.OfType<Grid>().Single();
                     var texts = new[] { label.Children.OfType<TextBlock>().Single(), row.Children.OfType<TextBlock>().Single() };
                     var input = Assert.IsType<SectionDefinitionInput>(box.DataContext);
-                    Assert.Equal(input.DisplayLabel, texts[0].Text); Assert.Equal(input.Unit.Symbol, texts[1].Text);
+                    Assert.Equal(input.DisplayLabel, TechnicalTextPresenter.GetContent(texts[0])!.PlainText); Assert.Equal(input.Unit.Symbol, texts[1].Text);
                     Assert.Equal(88, box.Bounds.Width); Assert.Equal(14, texts[0].FontSize); Assert.Equal(14, box.FontSize);
                     Assert.Equal(Avalonia.Media.TextAlignment.Left, box.TextAlignment);
                     Assert.True(box.Bounds.Left - label.Bounds.Right >= 7.5);

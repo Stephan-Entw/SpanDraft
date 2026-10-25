@@ -154,9 +154,9 @@ public sealed class DesktopResultDiagramControlTests
             Snapshot(diagram, $"phase2-{uiCulture}-{profileIndex}-standard-{diagram.Kind}");
         }
         var overview = Assert.Single(view.GetVisualDescendants().OfType<ProjectOverviewView>());
-        Assert.Equal(editor.Overview.ReactionXHeader, overview.FindControl<TextBlock>("ReactionXHeader")!.Text);
-        Assert.Equal(editor.Overview.ReactionYHeader, overview.FindControl<TextBlock>("ReactionYHeader")!.Text);
-        Assert.Equal(editor.Overview.ReactionMomentHeader, overview.FindControl<TextBlock>("ReactionMomentHeader")!.Text);
+        Assert.Equal(editor.Overview.ReactionXHeader, TechnicalTextPresenter.GetContent(overview.FindControl<TextBlock>("ReactionXHeader")!)!.PlainText);
+        Assert.Equal(editor.Overview.ReactionYHeader, TechnicalTextPresenter.GetContent(overview.FindControl<TextBlock>("ReactionYHeader")!)!.PlainText);
+        Assert.Equal(editor.Overview.ReactionMomentHeader, TechnicalTextPresenter.GetContent(overview.FindControl<TextBlock>("ReactionMomentHeader")!)!.PlainText);
         Snapshot(view, $"phase2-{uiCulture}-{profileIndex}-standard-workspace");
         main.SetResultPresentation(profile, PresentationMode.Detailed);
         Arrange(window, width, 950);

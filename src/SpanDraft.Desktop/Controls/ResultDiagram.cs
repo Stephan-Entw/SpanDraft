@@ -6,6 +6,7 @@ using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.Controls;
 
@@ -27,11 +28,12 @@ public sealed class ResultDiagram : Control
     public ResultDiagramProjection? Projection { get; private set; }
     public IReadOnlyList<ResultDiagramMarkerLabel> MarkerLabels { get; private set; } = [];
     private ResultPresentationOptions Options => Presentation?.Options ?? ResultPresentationOptions.Default;
-    public string Title => (Kind switch
+    public string Title => TitleText.PlainText;
+    public TechnicalText TitleText => (Kind switch
     {
-        ResultDiagramKind.TransverseDisplacement => Strings.DeflectionDiagram + " w(x)",
-        ResultDiagramKind.ShearForce => Strings.ShearDiagram + " V(x)",
-        _ => Strings.BendingDiagram + " M(x)"
+        ResultDiagramKind.TransverseDisplacement => Strings.DeflectionDiagram + " " + TechnicalSymbols.Function(TechnicalSymbols.Displacement),
+        ResultDiagramKind.ShearForce => Strings.ShearDiagram + " " + TechnicalSymbols.Function(TechnicalSymbols.Shear),
+        _ => Strings.BendingDiagram + " " + TechnicalSymbols.Function(TechnicalSymbols.Moment)
     }) + " [" + Options.Profile[ResultDiagramProjection.QuantityOf(Kind)].Symbol + "]";
 
     public ResultDiagram()
@@ -157,10 +159,9 @@ public sealed class ResultDiagram : Control
         var background = Brush("CanvasBackground");
         var text = Brush("TextSecondary");
         context.FillRectangle(background, new Rect(Bounds.Size));
-        var title = SchematicText.Format(Title, Typeface.Default, 13, Brush("TextPrimary"));
-        title.MaxTextWidth = Math.Max(1, Bounds.Width - 16);
-        title.TextAlignment = TextAlignment.Center;
-        context.DrawText(title, new(8, 8));
+        using var title = SchematicText.Format(TitleText, Typeface.Default, 13, Brush("TextPrimary"),
+            Math.Max(1, Bounds.Width - 16), TextAlignment.Center);
+        title.Draw(context, new(8, 8));
         if (Projection is not { } projection)
         {
             var status = SchematicText.Format(Presentation?.StatusText ?? Strings.CalculationUnavailable, Typeface.Default, 12, text);

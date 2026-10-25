@@ -6,7 +6,7 @@
     <DataTemplate x:Key="DefinitionInput" x:DataType="vm:SectionDefinitionInput">
       <Grid Classes="definitionInputRow" ColumnDefinitions="*,88,Auto" ColumnSpacing="8" MinHeight="36">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" VerticalAlignment="Center" HorizontalAlignment="Left">
-          <TextBlock Text="{Binding DisplayLabel}" Classes="definitionLabel" TextWrapping="Wrap" VerticalAlignment="Center" />
+          <TextBlock controls:TechnicalTextPresenter.Content="{Binding DisplayText}" Classes="definitionLabel" TextWrapping="Wrap" VerticalAlignment="Center" />
           <controls:SectionInputHint Grid.Column="1" Classes="inputHint" IsVisible="{Binding HasRadiusHint}"
               Message="{x:Static resources:Strings.SectionDefinitionRadiusHint}">
             <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Info}" Foreground="{DynamicResource TextSecondary}" />
@@ -232,9 +232,9 @@
                           </Border>
                           <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="definitionAxisTitle" TextWrapping="Wrap" VerticalAlignment="Center" />
                         </Grid>
-                        <controls:SectionPropertyRow Label="{Binding InertiaLabel}" Value="{Binding Inertia}" />
-                        <controls:SectionPropertyRow Label="{Binding PositiveLabel}" Value="{Binding PositiveModulus}" />
-                        <controls:SectionPropertyRow Label="{Binding NegativeLabel}" Value="{Binding NegativeModulus}" />
+                        <controls:SectionPropertyRow Label="{Binding InertiaText}" Value="{Binding Inertia}" />
+                        <controls:SectionPropertyRow Label="{Binding PositiveText}" Value="{Binding PositiveModulus}" />
+                        <controls:SectionPropertyRow Label="{Binding NegativeText}" Value="{Binding NegativeModulus}" />
                       </StackPanel>
                     </controls:SectionAxisBlock>
                   </DataTemplate>

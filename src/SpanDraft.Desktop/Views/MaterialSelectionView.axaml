@@ -23,7 +23,7 @@
         </Grid>
         <TextBlock Grid.Column="1" Text="{Binding MaterialNumber, TargetNullValue=—}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialNumber}" />
         <TextBlock Grid.Column="2" Text="{Binding YoungsModulus}" TextAlignment="Right" />
-        <TextBlock Grid.Column="3" Text="{Binding StrengthSummary}" TextAlignment="Right" TextWrapping="Wrap" />
+        <TextBlock Grid.Column="3" controls:TechnicalTextPresenter.Content="{Binding StrengthSummaryText}" TextAlignment="Right" TextWrapping="Wrap" />
       </controls:MaterialTableColumns>
     </DataTemplate>
   </UserControl.Resources>
@@ -80,7 +80,7 @@
                       <controls:MaterialTableColumns x:Name="MaterialTableHeader" Classes="materialColumns materialHeading">
                         <TextBlock Text="{x:Static resources:Strings.MaterialDesignation}" Margin="24,0,0,0" />
                         <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.MaterialNumber}" />
-                        <TextBlock Grid.Column="2" Text="E [GPa]" TextAlignment="Right" />
+                        <TextBlock Grid.Column="2" controls:TechnicalTextPresenter.Content="{Binding $parent[UserControl].((vm:MaterialSelectionViewModel)DataContext).YoungsModulusHeader}" TextAlignment="Right" />
                         <TextBlock Grid.Column="3" Text="{x:Static resources:Strings.MaterialStrengthColumn}" TextWrapping="Wrap" TextAlignment="Right" />
                       </controls:MaterialTableColumns>
                     </Border>
@@ -105,10 +105,10 @@
                 <TextBlock Text="{Binding OtherStandards}" IsVisible="{Binding HasOtherStandards}" Classes="secondary" TextWrapping="Wrap" />
                 <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="0,16,0,0">
                   <Grid Classes="materialProperties" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
-                    <TextBlock Text="{x:Static resources:Strings.MaterialYoungsModulus}" /><TextBlock Grid.Column="1" TextAlignment="Right"><Run Text="{Binding YoungsModulus}" /><Run Text=" GPa" /></TextBlock>
-                    <TextBlock Grid.Row="1" Text="{Binding StrengthLabel}" TextWrapping="Wrap" /><TextBlock Grid.Row="1" Grid.Column="1" TextAlignment="Right"><Run Text="{Binding StrengthValue}" /><Run Text=" MPa" /></TextBlock>
-                    <TextBlock Grid.Row="2" Text="{x:Static resources:Strings.MaterialDensity}" IsVisible="{Binding HasDensity}" /><TextBlock Grid.Row="2" Grid.Column="1" IsVisible="{Binding HasDensity}" TextAlignment="Right"><Run Text="{Binding Density}" /><Run Text=" kg/m³" /></TextBlock>
-                    <TextBlock Grid.Row="3" Text="{x:Static resources:Strings.MaterialPoissonRatio}" IsVisible="{Binding HasPoissonRatio}" /><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PoissonRatio}" IsVisible="{Binding HasPoissonRatio}" TextAlignment="Right" />
+                    <TextBlock controls:TechnicalTextPresenter.Content="{Binding YoungsModulusLabel}" /><TextBlock Grid.Column="1" TextAlignment="Right"><Run Text="{Binding YoungsModulus}" /><Run Text=" GPa" /></TextBlock>
+                    <TextBlock Grid.Row="1" controls:TechnicalTextPresenter.Content="{Binding StrengthLabelText}" TextWrapping="Wrap" /><TextBlock Grid.Row="1" Grid.Column="1" TextAlignment="Right"><Run Text="{Binding StrengthValue}" /><Run Text=" MPa" /></TextBlock>
+                    <TextBlock Grid.Row="2" controls:TechnicalTextPresenter.Content="{Binding DensityLabel}" IsVisible="{Binding HasDensity}" /><TextBlock Grid.Row="2" Grid.Column="1" IsVisible="{Binding HasDensity}" TextAlignment="Right"><Run Text="{Binding Density}" /><Run Text=" kg/m³" /></TextBlock>
+                    <TextBlock Grid.Row="3" controls:TechnicalTextPresenter.Content="{Binding PoissonRatioLabel}" IsVisible="{Binding HasPoissonRatio}" /><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PoissonRatio}" IsVisible="{Binding HasPoissonRatio}" TextAlignment="Right" />
                   </Grid>
                 </Border>
               </StackPanel>
