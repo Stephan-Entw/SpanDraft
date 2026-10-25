@@ -18,9 +18,9 @@
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
         <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
-          <TextBlock Text="{x:Static resources:Strings.DistributedStartLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBlock controls:TechnicalTextPresenter.Content="{Binding DistributedLoadDraft.StartLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="StartInput" Text="{Binding DistributedLoadDraft.StartText, Mode=TwoWay}"
-                   Classes.error="{Binding DistributedLoadDraft.HasStartError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedStartLabel}" />
+                   Classes.error="{Binding DistributedLoadDraft.HasStartError}" AutomationProperties.Name="{Binding DistributedLoadDraft.StartLabel.PlainText}" />
           <TextBlock Grid.Column="2" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
         <TextBlock Text="{Binding DistributedLoadDraft.StartError}" IsVisible="{Binding DistributedLoadDraft.HasStartError}"
@@ -28,9 +28,9 @@
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
         <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
-          <TextBlock Text="{x:Static resources:Strings.DistributedEndLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBlock controls:TechnicalTextPresenter.Content="{Binding DistributedLoadDraft.EndLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="EndInput" Text="{Binding DistributedLoadDraft.EndText, Mode=TwoWay}"
-                   Classes.error="{Binding DistributedLoadDraft.HasEndError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedEndLabel}" />
+                   Classes.error="{Binding DistributedLoadDraft.HasEndError}" AutomationProperties.Name="{Binding DistributedLoadDraft.EndLabel.PlainText}" />
           <TextBlock Grid.Column="2" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
         <TextBlock Text="{Binding DistributedLoadDraft.EndError}" IsVisible="{Binding DistributedLoadDraft.HasEndError}"

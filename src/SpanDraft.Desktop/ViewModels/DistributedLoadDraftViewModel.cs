@@ -2,6 +2,7 @@ using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -43,6 +44,8 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
 
     public Guid? OriginalId { get; }
     public string PositionUnit => _positionUnit.Symbol;
+    public TechnicalText StartLabel => Strings.DistributedStartLabel + " " + TechnicalSymbols.Axis("x");
+    public TechnicalText EndLabel => Strings.DistributedEndLabel + " " + TechnicalSymbols.Axis("x");
     public string IntensityUnit => _intensityUnit.Symbol;
     public bool IsExisting => OriginalId.HasValue;
     public AutoNameCandidate? AutoCandidate { get; }

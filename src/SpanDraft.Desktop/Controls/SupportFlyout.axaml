@@ -28,10 +28,10 @@
       </Grid>
       <StackPanel Spacing="{StaticResource Space4}">
         <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
-          <TextBlock Text="{x:Static resources:Strings.Position}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBlock controls:TechnicalTextPresenter.Content="{Binding SupportDraft.PositionLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="PositionInput" Text="{Binding SupportDraft.PositionText, Mode=TwoWay}"
                    Classes.error="{Binding SupportDraft.HasError}"
-                   AutomationProperties.Name="{x:Static resources:Strings.Position}" />
+                   AutomationProperties.Name="{Binding SupportDraft.PositionLabel.PlainText}" />
           <TextBlock Grid.Column="2" Text="{Binding SupportDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
         <TextBlock Text="{Binding SupportDraft.ErrorText}" IsVisible="{Binding SupportDraft.HasError}"

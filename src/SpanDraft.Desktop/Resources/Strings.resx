@@ -66,7 +66,7 @@
   <data name="LicenseOpenError" xml:space="preserve"><value>The bundled license text could not be opened.</value></data>
   <data name="Support" xml:space="preserve"><value>Support</value></data>
   <data name="SupportTypeLabel" xml:space="preserve"><value>Support type</value></data>
-  <data name="Position" xml:space="preserve"><value>Position X</value></data>
+  <data name="Position" xml:space="preserve"><value>Position</value></data>
   <data name="OK" xml:space="preserve"><value>OK</value></data>
   <data name="Delete" xml:space="preserve"><value>Delete</value></data>
   <data name="SupportAlreadyExists" xml:space="preserve"><value>A support already exists at this position.</value></data>
@@ -82,8 +82,8 @@
   <data name="DuplicateEntityName" xml:space="preserve"><value>This name is already used in the project.</value></data>
   <data name="EntityNameLabel" xml:space="preserve"><value>Name</value></data>
   <data name="SchematicDrawing" xml:space="preserve"><value>Schematic drawing</value></data>
-  <data name="DistributedStartLabel" xml:space="preserve"><value>Start X</value></data>
-  <data name="DistributedEndLabel" xml:space="preserve"><value>End X</value></data>
+  <data name="DistributedStartLabel" xml:space="preserve"><value>Start</value></data>
+  <data name="DistributedEndLabel" xml:space="preserve"><value>End</value></data>
   <data name="DistributedIntensityLabel" xml:space="preserve"><value>Line load q</value></data>
   <data name="InvalidDistributedRange" xml:space="preserve"><value>The range must satisfy 0 ≤ Start X &lt; End X ≤ beam length.</value></data>
   <data name="SaveAs" xml:space="preserve"><value>Save As…</value></data>
@@ -124,9 +124,9 @@
   <data name="UnitSectionDimension" xml:space="preserve"><value>Section dimensions</value></data>
   <data name="UnitDeflection" xml:space="preserve"><value>Deflection</value></data>
   <data name="UnitAxialDisplacement" xml:space="preserve"><value>Axial displacement</value></data>
-  <data name="UnitArea" xml:space="preserve"><value>Section area A</value></data>
-  <data name="UnitInertia" xml:space="preserve"><value>Second moment of area I</value></data>
-  <data name="UnitModulus" xml:space="preserve"><value>Section modulus W</value></data>
+  <data name="UnitArea" xml:space="preserve"><value>Section area</value></data>
+  <data name="UnitInertia" xml:space="preserve"><value>Second moment of area</value></data>
+  <data name="UnitModulus" xml:space="preserve"><value>Section modulus</value></data>
   <data name="UnitForce" xml:space="preserve"><value>Force / shear / reaction</value></data>
   <data name="UnitAxialForce" xml:space="preserve"><value>Axial force</value></data>
   <data name="UnitStress" xml:space="preserve"><value>Stress</value></data>

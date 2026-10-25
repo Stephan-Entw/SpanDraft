@@ -3,6 +3,7 @@
         xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
         xmlns:presentation="clr-namespace:SpanDraft.Desktop.Presentation"
         xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+        xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
         x:Class="SpanDraft.Desktop.SettingsWindow" x:DataType="vm:SettingsViewModel"
         Title="{x:Static resources:Strings.SettingsTitle}"
         Width="900" Height="780" MinWidth="820" MinHeight="450"
@@ -10,7 +11,7 @@
   <Window.Resources>
     <DataTemplate x:Key="UnitRow" x:DataType="vm:UnitSettingViewModel">
       <Grid ColumnDefinitions="*,132" ColumnSpacing="{StaticResource Space12}" MinHeight="34" Margin="0,0,0,4">
-        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Classes="propertyLabel" TextWrapping="Wrap" />
+        <TextBlock controls:TechnicalTextPresenter.Content="{Binding LabelText}" VerticalAlignment="Center" Classes="propertyLabel" TextWrapping="Wrap" />
         <ComboBox Grid.Column="1" ItemsSource="{Binding Units}" SelectedItem="{Binding SelectedUnit, Mode=TwoWay}"
                   IsVisible="{Binding IsEditable}" HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Label}">
           <ComboBox.ItemTemplate>

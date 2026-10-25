@@ -2,6 +2,7 @@ using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -61,6 +62,7 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     public string ValueLabel => Kind == PointLoadKind.Force ? Strings.ForceValueLabel : Strings.MomentValueLabel;
     public string Unit => _valueUnit.Symbol;
     public string PositionUnit => _positionUnit.Symbol;
+    public TechnicalText PositionLabel => Strings.Position + " " + TechnicalSymbols.Axis("x");
     public string PositionText
     {
         get => _positionText;

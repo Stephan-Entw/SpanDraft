@@ -3,6 +3,7 @@ using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
@@ -54,6 +55,7 @@ public sealed class SupportDraftViewModel : ObservableObject
     });
     public Guid? OriginalId { get; }
     public string PositionUnit => _positionUnit.Symbol;
+    public TechnicalText PositionLabel => Strings.Position + " " + TechnicalSymbols.Axis("x");
     public bool IsExisting => OriginalId.HasValue;
     public AutoNameCandidate? AutoCandidate { get; }
     public string NameText

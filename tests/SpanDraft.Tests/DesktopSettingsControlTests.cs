@@ -1,5 +1,8 @@
 using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -16,6 +19,7 @@ using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
+using SpanDraft.Reporting.Notation;
 using Xunit;
 
 namespace SpanDraft.Tests;
@@ -85,6 +89,31 @@ public sealed class DesktopSettingsControlTests
             Assert.All(combos, c => Assert.Equal(132, c.Bounds.Width, 6));
             double x = combos[0].TranslatePoint(default, list)!.Value.X;
             Assert.All(combos, c => Assert.Equal(x, c.TranslatePoint(default, list)!.Value.X, 6));
+            foreach (var label in list.GetVisualDescendants().OfType<TextBlock>().Where(t => TechnicalTextPresenter.GetContent(t) is not null))
+            {
+                var row = Assert.IsType<UnitSettingViewModel>(label.DataContext);
+                var symbol = row.Quantity switch
+                {
+                    QuantityKind.Area => TechnicalSymbols.Area,
+                    QuantityKind.SecondMomentOfArea => TechnicalSymbols.Inertia(),
+                    QuantityKind.SectionModulus => TechnicalSymbols.Modulus(),
+                    _ => null
+                };
+                Assert.Equal(row.Label, new TextBlockAutomationPeer(label).GetName());
+                var picker = ((Grid)label.Parent!).Children.OfType<ComboBox>().Single();
+                Assert.Equal(row.Label, AutomationProperties.GetName(picker));
+                var runs = label.Inlines!.Cast<Run>().ToArray();
+                if (symbol is not null)
+                {
+                    Assert.Equal(symbol.Runs, row.LabelText.Runs.TakeLast(symbol.Runs.Count));
+                    Assert.EndsWith(" " + symbol.PlainText, row.Label);
+                    Assert.Equal(FontStyle.Italic, runs[^1].FontStyle);
+                    Assert.Equal(FontStyle.Normal, runs[0].FontStyle);
+                }
+                else Assert.All(runs, run => Assert.Equal(FontStyle.Normal, run.FontStyle));
+                Assert.True(label.TextLayout.Width <= label.Bounds.Width + .01);
+                Assert.True(label.TextLayout.Height <= label.Bounds.Height + .01);
+            }
         }
         Export(scroll, $"settings-{culture}-{width}x{height}-top.png", width, height);
         model.ChangeUnit(QuantityKind.BeamLength, UnitCatalog.Inch);

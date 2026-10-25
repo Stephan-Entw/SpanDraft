@@ -66,7 +66,7 @@
   <data name="LicenseOpenError" xml:space="preserve"><value>Der mitgelieferte Lizenztext konnte nicht geöffnet werden.</value></data>
   <data name="Support" xml:space="preserve"><value>Lager</value></data>
   <data name="SupportTypeLabel" xml:space="preserve"><value>Lagertyp</value></data>
-  <data name="Position" xml:space="preserve"><value>Position X</value></data>
+  <data name="Position" xml:space="preserve"><value>Position</value></data>
   <data name="OK" xml:space="preserve"><value>OK</value></data>
   <data name="Delete" xml:space="preserve"><value>Löschen</value></data>
   <data name="SupportAlreadyExists" xml:space="preserve"><value>An dieser Position ist bereits ein Lager vorhanden.</value></data>
@@ -82,8 +82,8 @@
   <data name="DuplicateEntityName" xml:space="preserve"><value>Diese Bezeichnung wird im Projekt bereits verwendet.</value></data>
   <data name="EntityNameLabel" xml:space="preserve"><value>Bezeichnung</value></data>
   <data name="SchematicDrawing" xml:space="preserve"><value>Schematische Darstellung</value></data>
-  <data name="DistributedStartLabel" xml:space="preserve"><value>Start X</value></data>
-  <data name="DistributedEndLabel" xml:space="preserve"><value>Ende X</value></data>
+  <data name="DistributedStartLabel" xml:space="preserve"><value>Start</value></data>
+  <data name="DistributedEndLabel" xml:space="preserve"><value>Ende</value></data>
   <data name="DistributedIntensityLabel" xml:space="preserve"><value>Streckenlast q</value></data>
   <data name="InvalidDistributedRange" xml:space="preserve"><value>Der Bereich muss 0 ≤ Start X &lt; Ende X ≤ Balkenlänge erfüllen.</value></data>
   <data name="SaveAs" xml:space="preserve"><value>Speichern unter…</value></data>
@@ -124,9 +124,9 @@
   <data name="UnitSectionDimension" xml:space="preserve"><value>Querschnittsabmessungen</value></data>
   <data name="UnitDeflection" xml:space="preserve"><value>Durchbiegung</value></data>
   <data name="UnitAxialDisplacement" xml:space="preserve"><value>Axiale Verschiebung</value></data>
-  <data name="UnitArea" xml:space="preserve"><value>Querschnittsfläche A</value></data>
-  <data name="UnitInertia" xml:space="preserve"><value>Flächenträgheitsmoment I</value></data>
-  <data name="UnitModulus" xml:space="preserve"><value>Widerstandsmoment W</value></data>
+  <data name="UnitArea" xml:space="preserve"><value>Querschnittsfläche</value></data>
+  <data name="UnitInertia" xml:space="preserve"><value>Flächenträgheitsmoment</value></data>
+  <data name="UnitModulus" xml:space="preserve"><value>Widerstandsmoment</value></data>
   <data name="UnitForce" xml:space="preserve"><value>Kraft / Querkraft / Lagerreaktion</value></data>
   <data name="UnitAxialForce" xml:space="preserve"><value>Normalkraft</value></data>
   <data name="UnitStress" xml:space="preserve"><value>Spannung</value></data>

@@ -18,9 +18,9 @@
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
         <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
-          <TextBlock Text="{x:Static resources:Strings.Position}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBlock controls:TechnicalTextPresenter.Content="{Binding LoadDraft.PositionLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="PositionInput" Text="{Binding LoadDraft.PositionText, Mode=TwoWay}"
-                   Classes.error="{Binding LoadDraft.HasPositionError}" AutomationProperties.Name="{x:Static resources:Strings.Position}" />
+                   Classes.error="{Binding LoadDraft.HasPositionError}" AutomationProperties.Name="{Binding LoadDraft.PositionLabel.PlainText}" />
           <TextBlock Grid.Column="2" Text="{Binding LoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
         <TextBlock Text="{Binding LoadDraft.PositionError}" IsVisible="{Binding LoadDraft.HasPositionError}"

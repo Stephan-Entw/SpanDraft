@@ -1,19 +1,21 @@
 using System.Globalization;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
 public sealed class UnitSettingViewModel : ObservableObject
 {
     private readonly SettingsViewModel _owner;
-    public UnitSettingViewModel(SettingsViewModel owner, QuantityKind quantity, string label)
+    public UnitSettingViewModel(SettingsViewModel owner, QuantityKind quantity, TechnicalText label)
     {
-        _owner = owner; Quantity = quantity; Label = label;
+        _owner = owner; Quantity = quantity; LabelText = label;
         Units = UnitCatalog.All.Where(u => u.Dimension == UnitCatalog.DimensionOf(quantity)).ToArray();
     }
     public QuantityKind Quantity { get; }
-    public string Label { get; }
+    public TechnicalText LabelText { get; }
+    public string Label => LabelText.PlainText;
     public IReadOnlyList<UnitDefinition> Units { get; }
     public bool IsEditable => Units.Count > 1;
     public UnitDefinition SelectedUnit
@@ -40,7 +42,9 @@ public sealed class SettingsViewModel : ObservableObject
         {
             Row(QuantityKind.BeamLength, Strings.UnitBeamLength), Row(QuantityKind.SectionDimension, Strings.UnitSectionDimension),
             Row(QuantityKind.TransverseDisplacement, Strings.UnitDeflection), Row(QuantityKind.AxialDisplacement, Strings.UnitAxialDisplacement),
-            Row(QuantityKind.Area, Strings.UnitArea), Row(QuantityKind.SecondMomentOfArea, Strings.UnitInertia), Row(QuantityKind.SectionModulus, Strings.UnitModulus)
+            Row(QuantityKind.Area, Strings.UnitArea + " " + TechnicalSymbols.Area),
+            Row(QuantityKind.SecondMomentOfArea, Strings.UnitInertia + " " + TechnicalSymbols.Inertia()),
+            Row(QuantityKind.SectionModulus, Strings.UnitModulus + " " + TechnicalSymbols.Modulus())
         };
         RightUnits = new[]
         {
@@ -92,7 +96,7 @@ public sealed class SettingsViewModel : ObservableObject
     public bool IsStandard { get => _pending.Mode == PresentationMode.Standard; set { if (value) Update(_pending with { Mode = PresentationMode.Standard }); } }
     public bool IsDetailed { get => _pending.Mode == PresentationMode.Detailed; set { if (value) Update(_pending with { Mode = PresentationMode.Detailed }); } }
     private UnitProfileKind Kind => _pending.Profile.Kind;
-    private UnitSettingViewModel Row(QuantityKind q, string label) => new(this, q, label);
+    private UnitSettingViewModel Row(QuantityKind q, TechnicalText label) => new(this, q, label);
     public void Select(UnitProfileKind kind) => Update(_pending.Select(kind));
     public void ChangeUnit(QuantityKind quantity, UnitDefinition unit) => Update(_pending.WithUnit(quantity, unit));
     public void DiscardPending()
