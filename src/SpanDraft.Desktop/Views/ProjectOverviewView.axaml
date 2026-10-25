@@ -100,7 +100,7 @@
           <TextBlock Text="{x:Static resources:Strings.BeamModel}" Classes="sectionTitle" />
           <StackPanel Grid.Row="1" Spacing="{StaticResource Space4}" Margin="0,4">
             <TextBlock Text="{Binding Overview.Section}" Classes="bodyStrong" />
-            <TextBlock x:Name="MaterialAndLength" Classes="secondary" Text="{Binding Overview.Material}"
+            <TextBlock x:Name="MaterialDescription" Classes="secondary" Text="{Binding Overview.Material}"
                        TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Overview.Material}"
                        AutomationProperties.Name="{Binding Overview.Material}" />
           </StackPanel>

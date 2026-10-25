@@ -47,7 +47,6 @@ public sealed class ProjectOverviewState
     public string Section { get; }
     public string Material { get; }
     public string Length { get; }
-    public string MaterialAndLength => Material + " · " + Length;
     public IReadOnlyList<ProjectOverviewItem> Supports { get; }
     public IReadOnlyList<ProjectOverviewItem> Loads { get; }
     public IReadOnlyList<ProjectOverviewReaction> Reactions { get; }
