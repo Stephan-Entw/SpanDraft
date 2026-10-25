@@ -69,7 +69,12 @@ public sealed class DesktopProjectSetupControlTests
         main.Setup.SelectedMaterial = builtin; Arrange(window, width, height); Capture("create-material-selected");
         Assert.True(emptyCard.Bounds.Height > emptyHeight);
         Assert.True(emptyCard.FindControl<TextBlock>("MaterialDescription")!.IsEffectivelyVisible);
+        AssertMaterialDisplay("X5CrNi18-10 (1.4301) · AISI 304");
+        main.Setup.SelectedMaterial = LibraryTestSupport.WithMetadata(builtin, builtin.Category, "9.8765", ["Other standard", "Second standard"]);
+        Arrange(window, width, height);
+        AssertMaterialDisplay("X5CrNi18-10 (9.8765) · Other standard · Second standard");
         main.Setup.SelectedMaterial = null; Arrange(window, width, height);
+        Assert.Equal(Strings.SelectMaterialRequired, main.Setup.MaterialName);
         Assert.Equal(emptyHeight, emptyCard.Bounds.Height);
         main.Setup.SelectedSection = new CircleSectionGeometry(M(.1)); Arrange(window, width, height); Capture("create-section-selected");
         Assert.True(emptyCard.Bounds.Height > emptyHeight);
@@ -143,6 +148,14 @@ public sealed class DesktopProjectSetupControlTests
         main.Setup.ShowSections(); Capture("sections-unavailable");
         var unavailable=main.Setup.Definition!; unavailable.SelectForm(SectionEditorType.Rectangle); Fill(unavailable); Capture("section-oneoff-unavailable");
 
+        void AssertMaterialDisplay(string expected)
+        {
+            var description = emptyCard.FindControl<TextBlock>("MaterialDescription")!;
+            Assert.Equal(expected, main.Setup.MaterialName);
+            Assert.Equal(expected, description.Text);
+            Assert.Equal(expected, ToolTip.GetTip(description));
+            Assert.Equal(expected, AutomationProperties.GetHelpText(materialButton));
+        }
         void ScrollBottom()
         {
             foreach (var scroll in window.GetVisualDescendants().OfType<ScrollViewer>().Where(s => s.IsEffectivelyVisible && s.FindAncestorOfType<TextBox>() is null))
@@ -188,8 +201,10 @@ public sealed class DesktopProjectSetupControlTests
         var dialogs = (IProjectDialogs)Activator.CreateInstance(type, [owner])!;
         foreach (var action in new[] { "escape", "cancel", "delete" })
         {
-            var pending = material ? dialogs.ConfirmMaterialDeleteAsync("Mine") : dialogs.ConfirmSectionDeleteAsync("Mine");
+            const string displayName = "Mine (1.4567) · UNS Example · AISI Shop";
+            var pending = material ? dialogs.ConfirmMaterialDeleteAsync(displayName) : dialogs.ConfirmSectionDeleteAsync("Mine");
             var dialog = Assert.Single(owner.OwnedWindows); Arrange(dialog, 520, 300);
+            if (material) Assert.Contains(dialog.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == string.Format(Strings.DeleteMaterialQuestion, displayName));
             var buttons = dialog.GetVisualDescendants().OfType<Button>().Where(b => b.Content is string).ToArray();
             Assert.True(buttons[0].IsDefault); Assert.False(buttons[1].IsDefault);
             Assert.Equal(Strings.Cancel, buttons[0].Content); Assert.Equal(Strings.Delete, buttons[1].Content);

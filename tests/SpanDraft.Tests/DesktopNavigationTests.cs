@@ -1,5 +1,6 @@
 using System.Globalization;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
@@ -330,7 +331,8 @@ public sealed class DesktopNavigationTests
         var state = ProjectTestSupport.State();
         var loads = Enumerable.Range(1, 35).Select(i => (EditorPointLoad)new EditorPointForce(Guid.NewGuid(),
             Length.FromMillimeters(500), Force.FromNewtons(-i), "Long committed load name " + i));
-        var document = state.Document.WithLoads(loads) with { Length = Length.FromMeters(1) };
+        var material = MaterialWorkflowRegressionTests.Entry(new string('W', 120));
+        var document = state.Document.WithLoads(loads) with { Length = Length.FromMeters(1), Material = material };
         Assert.True(model.Editor!.Session.Commit(new(document, state.Presentation)));
         Assert.True(model.Editor.Presentation.IsSuccess, model.Editor.Presentation.StatusText);
         Layout(window, width, height);
@@ -363,9 +365,16 @@ public sealed class DesktopNavigationTests
         var projectText = overview.FindControl<Grid>("ProjectBlock")!.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text);
         Assert.Contains(culture == "de-DE" ? "Balkenmodell" : "Beam model", projectText);
         var materialAndLength = overview.FindControl<TextBlock>("MaterialAndLength")!;
-        Assert.Equal(model.Editor.Overview.Material + " · " + model.Editor.Overview.Length,
-            string.Concat(materialAndLength.Inlines!.OfType<Avalonia.Controls.Documents.Run>().Select(r => r.Text)));
+        Assert.Equal(material.Name + " (1.4567) · UNS Example · AISI Shop", model.Editor.Overview.Material);
+        Assert.Equal(model.Editor.Overview.Material, materialAndLength.Text);
+        Assert.Equal(materialAndLength.Text, ToolTip.GetTip(materialAndLength));
+        Assert.Equal(materialAndLength.Text, AutomationProperties.GetName(materialAndLength));
         Assert.Single(materialAndLength.TextLayout.TextLines);
+        Assert.Equal(TextTrimming.CharacterEllipsis, materialAndLength.TextTrimming);
+        Assert.True(materialAndLength.TextLayout.TextLines[0].HasCollapsed);
+        Assert.True(overviewScroll.Extent.Width <= overviewScroll.Viewport.Width);
+        var materialBounds = new Rect(materialAndLength.TranslatePoint(default, overview)!.Value, materialAndLength.Bounds.Size);
+        Assert.True(new Rect(overview.Bounds.Size).Contains(materialBounds));
         var projectBlock = overview.FindControl<Grid>("ProjectBlock")!;
         Assert.Empty(projectBlock.GetVisualDescendants().OfType<Button>());
         Assert.Empty(projectBlock.ColumnDefinitions);

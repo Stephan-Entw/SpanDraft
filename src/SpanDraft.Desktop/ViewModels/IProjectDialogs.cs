@@ -14,8 +14,8 @@ public interface IProjectDialogs
     Task<RecoveryDecision> ConfirmSetupRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc);
     Task ShowErrorAsync(string message);
     Task ShowMaterialEditorAsync(MaterialEditorViewModel editor);
-    Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string name);
-    Task<bool> ConfirmMaterialReplaceAsync(string name);
-    Task<bool> ConfirmMaterialDeleteAsync(string name);
+    Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string displayName);
+    Task<bool> ConfirmMaterialReplaceAsync(string displayName);
+    Task<bool> ConfirmMaterialDeleteAsync(string displayName);
     Task<bool> ConfirmSectionDeleteAsync(string name);
 }

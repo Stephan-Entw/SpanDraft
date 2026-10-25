@@ -2,6 +2,7 @@ using SpanDraft.Core.Materials;
 using System.Text.Json;
 using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 
 namespace SpanDraft.Desktop.ViewModels;
@@ -42,9 +43,10 @@ public sealed partial class MainWindowViewModel
     }
 
     internal Task ShowMaterialEditorAsync(MaterialEditorViewModel editor) => _dialogs?.ShowMaterialEditorAsync(editor) ?? Task.CompletedTask;
-    internal Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string name) =>
-        _dialogs?.ResolveMaterialNameConflictAsync(name) ?? Task.FromResult(MaterialNameConflictDecision.Cancel);
-    internal Task<bool> ConfirmMaterialReplaceAsync(string name) => _dialogs?.ConfirmMaterialReplaceAsync(name) ?? Task.FromResult(false);
+    internal Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(Material material) =>
+        _dialogs?.ResolveMaterialNameConflictAsync(MaterialDisplay.Format(material)) ?? Task.FromResult(MaterialNameConflictDecision.Cancel);
+    internal Task<bool> ConfirmMaterialReplaceAsync(Material material) =>
+        _dialogs?.ConfirmMaterialReplaceAsync(MaterialDisplay.Format(material)) ?? Task.FromResult(false);
 
     public Task<string?> SaveMaterialAsync(Material entry, string? oldName = null) => LibraryOperationAsync(async () =>
     {
@@ -70,7 +72,9 @@ public sealed partial class MainWindowViewModel
     public Task<string?> DeleteMaterialAsync(string name) => LibraryOperationAsync(async () =>
     {
         if (!CanSaveMaterials) return Strings.MaterialLibraryUnavailable;
-        if (_dialogs is null || !await _dialogs.ConfirmMaterialDeleteAsync(name)) return null;
+        var material = UserMaterials.Find(name);
+        if (material is null) return Strings.LibraryEntryMissing;
+        if (_dialogs is null || !await _dialogs.ConfirmMaterialDeleteAsync(MaterialDisplay.Format(material))) return null;
         var next = new UserMaterialLibrary(UserMaterials.All);
         if (!next.Remove(name)) return Strings.LibraryEntryMissing;
         await _materialStore!.SaveAsync(next);

@@ -3,7 +3,6 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
 using Avalonia.Interactivity;
@@ -30,7 +29,7 @@ public sealed class DesktopReportToolbarTests
     [Theory]
     [InlineData("de-DE", false, 1100, 650)] [InlineData("en-US", true, 1100, 650)]
     [InlineData("de-DE", true, 1250, 800)] [InlineData("en-US", false, 1250, 800)]
-    public void ReportFollowsSupportsAndSharesMenuCommandWithoutOverflow(string language, bool dark, int width, int height)
+    public void ReportPrecedesProjectPropertiesAndSharesMenuCommandWithoutOverflow(string language, bool dark, int width, int height)
     {
         using var environment = new DesktopControlEnvironment(); using var culture = new UiCultureScope(language);
         Application.Current!.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
@@ -46,14 +45,16 @@ public sealed class DesktopReportToolbarTests
         Assert.True(main.CanReport, main.Editor!.Presentation.StatusText);
         Assert.True(button.IsEffectivelyEnabled);
         Assert.Equal(language == "de-DE" ? "Bericht" : "Report", Assert.Single(button.GetVisualDescendants().OfType<TextBlock>()).Text);
-        var group = Assert.IsType<StackPanel>(Assert.IsType<Grid>(bar.Child).Children[0]);
-        var separator = view.FindControl<Rectangle>("ReportToolbarSeparator")!;
-        var roller = Assert.IsType<ToggleButton>(group.Children[^3]);
+        var layout = Assert.IsType<Grid>(bar.Child);
+        var tools = Assert.IsType<StackPanel>(layout.Children[0]);
+        var group = Assert.IsType<StackPanel>(layout.Children[1]);
+        var properties = view.FindControl<Button>("ProjectPropertiesToolbarButton")!;
+        var roller = Assert.IsType<ToggleButton>(tools.Children[^1]);
         Assert.Same(main.Editor!.RollerToolCommand, roller.Command);
-        Assert.Same(separator, group.Children[^2]); Assert.Same(button, group.Children[^1]);
+        Assert.Equal(new Control[] { button, properties }, group.Children);
         Assert.Equal(roller.Bounds.Height, button.Bounds.Height);
-        Assert.Equal(roller.Bounds.Top, button.Bounds.Top);
-        Assert.True(roller.Bounds.Right <= separator.Bounds.Left && separator.Bounds.Right <= button.Bounds.Left);
+        Assert.Equal(roller.TranslatePoint(default, bar)!.Value.Y, button.TranslatePoint(default, bar)!.Value.Y);
+        Assert.Equal(group.Spacing, properties.Bounds.Left - button.Bounds.Right);
         var bounds = new Rect(button.TranslatePoint(default, bar)!.Value, button.Bounds.Size);
         Assert.True(new Rect(bar.Bounds.Size).Contains(bounds));
         var icon = Assert.Single(button.GetVisualDescendants().OfType<PathIcon>());
@@ -97,6 +98,7 @@ public sealed class DesktopReportToolbarTests
             var bar = view.FindControl<Border>("EditorToolbar")!;
             var layout = Assert.IsType<Grid>(bar.Child);
             var left = Assert.IsType<StackPanel>(layout.Children[0]);
+            var right = Assert.IsType<StackPanel>(layout.Children[1]);
             var report = view.FindControl<Button>("ReportToolbarButton")!;
             var button = view.FindControl<Button>("ProjectPropertiesToolbarButton")!;
             Assert.Same(main.Editor!.ChangeProjectCommand, button.Command);
@@ -106,7 +108,8 @@ public sealed class DesktopReportToolbarTests
             Assert.Contains("toolbar", button.Classes); Assert.DoesNotContain("primary", button.Classes);
             Assert.Equal(new System.Windows.Input.ICommand[] { main.Editor.ForceToolCommand, main.Editor.MomentToolCommand,
                 main.Editor.DistributedLoadToolCommand, main.Editor.FixedToolCommand, main.Editor.PinnedToolCommand,
-                main.Editor.RollerToolCommand, main.ReportCommand }, left.Children.OfType<Button>().Select(b => b.Command));
+                main.Editor.RollerToolCommand }, left.Children.OfType<Button>().Select(b => b.Command));
+            Assert.Equal(new Control[] { report, button }, right.Children);
             var originalLeftBounds = left.Children.Select(c => c.Bounds).ToArray();
             double previousGap = 0;
             foreach (int width in new[] { 1100, 1250, 1600, 2400 })
@@ -119,10 +122,11 @@ public sealed class DesktopReportToolbarTests
                 Assert.True(new Rect(layout.Bounds.Size).Contains(bounds));
                 Assert.Equal(reportBounds.Top, bounds.Top); Assert.Equal(reportBounds.Height, bounds.Height);
                 Assert.True(new Rect(layout.Bounds.Size).Contains(reportBounds));
-                double gap = bounds.Left - reportBounds.Right;
+                Assert.Equal(right.Spacing, bounds.Left - reportBounds.Right);
+                var lastTool = left.Children[^1];
+                double gap = reportBounds.Left - lastTool.TranslatePoint(new(lastTool.Bounds.Width, 0), layout)!.Value.X;
                 Assert.True(gap > previousGap);
-                // The English captions use part of the column gap at the supported minimum width.
-                if (language != "en-US" || width > 1100) Assert.True(gap >= layout.ColumnSpacing);
+                Assert.True(gap >= layout.ColumnSpacing);
                 previousGap = gap;
                 Assert.Equal(originalLeftBounds, left.Children.Select(c => c.Bounds));
             }

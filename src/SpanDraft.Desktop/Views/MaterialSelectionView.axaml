@@ -5,7 +5,7 @@
   <UserControl.Resources>
     <DataTemplate x:Key="MaterialRow" x:DataType="vm:MaterialSelectionItem">
       <controls:MaterialTableColumns Classes="materialColumns">
-        <Grid x:Name="MaterialDesignationCell" ColumnDefinitions="16,*" ColumnSpacing="8" ToolTip.Tip="{Binding Name}">
+        <Grid x:Name="MaterialDesignationCell" ColumnDefinitions="16,*" ColumnSpacing="8" ToolTip.Tip="{Binding DisplayName}">
           <Border x:Name="MaterialOriginSlot" Width="16" Height="16" Background="Transparent" VerticalAlignment="Center"
                   ToolTip.Tip="{Binding OriginLabel}" AutomationProperties.Name="{Binding OriginLabel}">
             <Grid>

@@ -22,6 +22,7 @@ public sealed class MaterialSelectionItem(Material material, MaterialSelectionKi
     public string? OriginLabel => IsProject ? Strings.MaterialCurrentEntry : IsBuiltIn ? Strings.BuiltInMaterialReadOnly : null;
     public string? ProjectSuffix => IsProject ? Strings.MaterialProjectSuffix : null;
     public string Name => Material.Name;
+    public string DisplayName => MaterialDisplay.Format(Material);
     public string? MaterialNumber => Material.MaterialNumber;
     public bool HasMaterialNumber => MaterialNumber is not null;
     public bool HasCategory => true;
@@ -37,7 +38,7 @@ public sealed class MaterialSelectionItem(Material material, MaterialSelectionKi
     public TechnicalText YoungsModulusLabel => Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus;
     public TechnicalText DensityLabel => Strings.MaterialDensity + " " + TechnicalSymbols.Density;
     public TechnicalText PoissonRatioLabel => Strings.MaterialPoissonRatio + " " + TechnicalSymbols.PoissonRatio;
-    public string AccessibleName => Name + " · " + (OriginLabel is { } origin ? origin + " · " : "") + StrengthSummary + " MPa";
+    public string AccessibleName => DisplayName + " · " + (OriginLabel is { } origin ? origin + " · " : "") + StrengthSummary + " MPa";
     public bool HasDensity => Material.Density is not null;
     public bool HasPoissonRatio => Material.PoissonRatio is not null;
     public string? Density => Material.Density is { } rho ? UiNumbers.Indicator(rho.KilogramsPerCubicMeter) : null;
@@ -225,12 +226,12 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
             var existing = main.UserMaterials.Find(selected.Name.Trim());
             if (existing is not null)
             {
-                var choice = await main.ResolveMaterialNameConflictAsync(existing.Name);
+                var choice = await main.ResolveMaterialNameConflictAsync(existing);
                 if (choice == MaterialNameConflictDecision.Cancel) return false;
                 if (choice == MaterialNameConflictDecision.Rename) rename = true;
                 else
                 {
-                    if (!await main.ConfirmMaterialReplaceAsync(existing.Name)) return false;
+                    if (!await main.ConfirmMaterialReplaceAsync(existing)) return false;
                     _error = await main.SaveMaterialAsync(librarySnapshot, existing.Name);
                 }
             }

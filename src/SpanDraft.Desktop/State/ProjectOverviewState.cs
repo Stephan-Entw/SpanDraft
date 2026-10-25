@@ -17,7 +17,7 @@ public sealed class ProjectOverviewState
     {
         Analysis = analysis;
         Section = document.SectionDisplayName ?? SectionDisplay.Name(document.Section, analysis.Options.Profile);
-        Material = document.Material.Name;
+        Material = MaterialDisplay.Format(document.Material);
         Length = string.Format(CultureInfo.CurrentUICulture, Strings.OverviewLength, Position(document.Length),
             analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
         Supports = Array.AsReadOnly(document.Supports.Select(s => new ProjectOverviewItem(s.Id, s.Name,
@@ -47,6 +47,7 @@ public sealed class ProjectOverviewState
     public string Section { get; }
     public string Material { get; }
     public string Length { get; }
+    public string MaterialAndLength => Material + " · " + Length;
     public IReadOnlyList<ProjectOverviewItem> Supports { get; }
     public IReadOnlyList<ProjectOverviewItem> Loads { get; }
     public IReadOnlyList<ProjectOverviewReaction> Reactions { get; }

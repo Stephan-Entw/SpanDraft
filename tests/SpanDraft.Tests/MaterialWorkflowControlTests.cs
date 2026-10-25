@@ -91,7 +91,9 @@ public sealed class MaterialWorkflowControlTests
                 foreach (var icon in new[] { projectIcon, builtInIcon }) { Assert.False(icon.Focusable); Assert.False(icon.IsHitTestVisible); }
                 Assert.Equal(item.OriginLabel, ToolTip.GetTip(slot)); Assert.Equal(item.OriginLabel, AutomationProperties.GetName(slot));
                 Assert.Equal(item.AccessibleName, AutomationProperties.GetName(row));
-                Assert.Equal(item.Name, ToolTip.GetTip((Control)columns.Children[0]));
+                Assert.Equal(item.DisplayName, ToolTip.GetTip((Control)columns.Children[0]));
+                Assert.Equal(item.Material.Name, name.Text);
+                Assert.StartsWith(item.DisplayName + " · ", item.AccessibleName);
                 Assert.Equal(item.IsProject, suffix.IsVisible);
                 if (item.IsProject)
                 {
@@ -243,12 +245,15 @@ public sealed class MaterialWorkflowControlTests
         using var environment = new DesktopControlEnvironment(); var owner = new Window(); owner.Show();
         try
         {
-            var dialogs = new ProjectDialogs(owner); var decision = dialogs.ResolveMaterialNameConflictAsync("Mine"); Dispatcher.UIThread.RunJobs();
+            const string displayName = "Mine (1.4567) · UNS Example · AISI Shop";
+            var dialogs = new ProjectDialogs(owner); var decision = dialogs.ResolveMaterialNameConflictAsync(displayName); Dispatcher.UIThread.RunJobs();
             var conflict = Assert.Single(owner.OwnedWindows); var buttons = conflict.GetVisualDescendants().OfType<Button>().ToArray();
+            Assert.Contains(conflict.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == string.Format(Strings.MaterialNameConflictQuestion, displayName));
             Assert.Equal(new[] { Strings.ReplaceMaterial, Strings.RenameMaterial, Strings.Cancel }, buttons.Select(b => b.Content));
             Activate(buttons[0]); Assert.Equal(MaterialNameConflictDecision.Replace, await decision);
-            var confirmation = dialogs.ConfirmMaterialReplaceAsync("Mine"); Dispatcher.UIThread.RunJobs();
+            var confirmation = dialogs.ConfirmMaterialReplaceAsync(displayName); Dispatcher.UIThread.RunJobs();
             var confirmWindow = Assert.Single(owner.OwnedWindows); Assert.Equal(2, confirmWindow.GetVisualDescendants().OfType<Button>().Count());
+            Assert.Contains(confirmWindow.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == string.Format(Strings.ReplaceMaterialQuestion, displayName));
             Press(confirmWindow, Key.Escape); Assert.False(await confirmation);
         }
         finally { foreach (var modal in owner.OwnedWindows.ToArray()) modal.Close(); owner.Close(); }

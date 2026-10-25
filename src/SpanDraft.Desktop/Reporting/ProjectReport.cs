@@ -54,7 +54,7 @@ internal static class ProjectReport
         var data = new ReportData(state.Info?.CalculationTitle ?? Strings.ReportHeading, state.Info?.Author ?? "",
             ApplicationMetadata.Version, timestamp, timestamp.ToLocalTime().ToString("d", CultureInfo.CurrentCulture), metadata,
             (state.Document.SectionDisplayName ?? ShapeName(state.Document.Section)) + " · " + axisName + "-" + axisName, sectionProperties, overview.Material,
-            [TechnicalSymbols.YoungsModulus + " = " + InputQuantityFormatter.WithUnit(state.Document.Material.YoungsModulus.Pascals, profile[QuantityKind.Stress]),
+            [Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus + " = " + InputQuantityFormatter.WithUnit(state.Document.Material.YoungsModulus.Pascals, profile[QuantityKind.Stress]),
              MaterialStrengthDisplay.LabelText(state.Document.Material.StrengthType) + " = " + InputQuantityFormatter.WithUnit(state.Document.Material.YieldStrength.Pascals, profile[QuantityKind.Stress])],
             [
                 new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.17f, .48f, .35f],
@@ -72,8 +72,9 @@ internal static class ProjectReport
                     Location(engineering.CriticalBendingMoment.Position.Meters, engineering.CriticalBendingMoment.Side)),
                 new(Strings.ReportStress + " " + TechnicalSymbols.MaximumStress, presentation.Stress, null),
                 new(Strings.ReportSafety + " " + TechnicalSymbols.SafetyFactor + " = " + strengthSymbol + " / " + TechnicalSymbols.MaximumStress, presentation.SafetyFactor, null)
-            ], new(Strings.ReportHeading, Strings.ReportContinuation, Strings.ReportPage, Strings.Section, Strings.ReportMaterial,
-                Strings.ReportSummary, Strings.ReportNotes, [Strings.ReportTheory, Strings.ReportLimits]));
+            ], new(Strings.ReportHeading.ToUpperInvariant(), Strings.ReportContinuation, Strings.ReportPage, Strings.Section, Strings.ReportMaterial,
+                Strings.ReportSummary, Strings.ReportNotes, [Strings.ReportTheory, Strings.ReportLimits],
+                Strings.CalculationTitle, Strings.Project, Strings.Reference, Strings.Author));
         var visuals = new ReportVisuals(state, presentation, data);
         var report = new ReportDocument(data, visuals.Graphics);
         try { visuals.Freeze(report); return report; }

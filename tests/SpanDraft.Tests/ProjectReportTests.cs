@@ -51,6 +51,131 @@ public sealed class ProjectReportTests : IDisposable
     private static readonly DateTimeOffset Now = new(2026, 10, 23, 12, 34, 56, TimeSpan.FromHours(2));
 
     [Theory]
+    [InlineData("S235JR (1.0038) · A36", new[] { "S235JR (1.0038) · A36" })]
+    [InlineData("S235JR · A36 · SS400", new[] { "S235JR · A36 · SS400" })]
+    [InlineData("X5CrNi18-10 (1.4301) · AISI 304 · UNS S30400", new[] { "X5CrNi18-10 (1.4301)", "AISI 304 · UNS S30400" })]
+    [InlineData("X5CrNi18-10 (1.4301)", new[] { "X5CrNi18-10 (1.4301)" })]
+    public void MaterialDesignationKeepsStandardsTogetherWhenWrapping(string designation, string[] expectedLines)
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var original = ProjectReport.Capture(main.Editor!, Now);
+        using var report = new ReportDocument(original.Data with { Material = designation }, new(130, (_, _, _) => { }));
+        using var bitmap = report.RenderPage(0, 96);
+        var lines = MaterialDesignationRuns(report);
+        Assert.Equal(expectedLines, lines.Select(r => r.Text));
+        Assert.Equal(designation, report.Data.Material);
+        Assert.DoesNotContain(report.Data.Metadata, m => m.Label == report.Data.Labels.Material);
+        Assert.All(lines.Zip(lines.Skip(1)), pair =>
+        {
+            Assert.Equal(pair.First.Bounds.Left, pair.Second.Bounds.Left);
+            Assert.True(pair.First.Bounds.Bottom < pair.Second.Bounds.Top);
+        });
+        AssertTextContained(report); AssertInformationBlocksSeparated(report, 0);
+    }
+
+    [Theory]
+    [InlineData(true)] [InlineData(false)]
+    public void MaterialDesignationWrapsOnlyTheOversizedBlock(bool wideName)
+    {
+        string wide = new('W', 24);
+        string designation = wideName ? wide + " · AISI 304" : "S235JR · " + wide;
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var original = ProjectReport.Capture(main.Editor!, Now);
+        using var report = new ReportDocument(original.Data with { Material = designation }, new(130, (_, _, _) => { }));
+        using var bitmap = report.RenderPage(0, 96);
+        var lines = MaterialDesignationRuns(report);
+        Assert.Equal(3, lines.Length);
+        if (wideName)
+        {
+            Assert.Equal(wide, string.Concat(lines.Take(2).Select(r => r.Text)));
+            Assert.Equal("AISI 304", lines[^1].Text);
+        }
+        else
+        {
+            Assert.Equal("S235JR", lines[0].Text);
+            Assert.Equal(wide, string.Concat(lines.Skip(1).Select(r => r.Text)));
+        }
+        Assert.DoesNotContain(report.Data.Metadata, m => m.Label == report.Data.Labels.Material);
+        AssertTextContained(report); AssertInformationBlocksSeparated(report, 0);
+    }
+
+    [Fact]
+    public void MaterialDesignationWithoutStandardsStillUsesNormalWrapping()
+    {
+        string designation = new('W', 24);
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var original = ProjectReport.Capture(main.Editor!, Now);
+        using var report = new ReportDocument(original.Data with { Material = designation }, new(130, (_, _, _) => { }));
+        using var bitmap = report.RenderPage(0, 96);
+        var lines = MaterialDesignationRuns(report);
+        Assert.Equal(2, lines.Length);
+        Assert.Equal(designation, string.Concat(lines.Select(r => r.Text)));
+        Assert.DoesNotContain(report.Data.Metadata, m => m.Label == report.Data.Labels.Material);
+        AssertTextContained(report); AssertInformationBlocksSeparated(report, 0);
+    }
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void MaterialMetadataUpdatesUseTheCurrentSnapshotWithoutReanalysis(string culture)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        var initial = ReportTestProjects.Create();
+        var originalMaterial = LibraryTestSupport.WithMetadata(initial.Document.Material, initial.Document.Material.Category, "1.0038", []);
+        initial = initial with { Document = initial.Document with { Material = originalMaterial } };
+        int analyses = 0;
+        var (main, files) = Open(initial, analyzed: () => analyses++);
+        var editor = main.Editor!;
+        var analysis = editor.Presentation;
+        using var original = ProjectReport.Capture(editor, Now);
+        Assert.Equal("S235JR (1.0038)", original.Data.Material);
+        var updated = new SpanDraft.Core.Materials.Material("Project steel", originalMaterial.YoungsModulus,
+            originalMaterial.YieldStrength, originalMaterial.StrengthType!.Value, originalMaterial.Density,
+            originalMaterial.PoissonRatio, originalMaterial.Category, "9.8765", ["Standard B", "Standard A"]);
+        editor.ApplySetup(editor.Document.Section, editor.Document.BendingAxis, updated);
+        AssertCurrent("Project steel (9.8765) · Standard B · Standard A");
+        Assert.True(editor.Undo()); AssertCurrent("S235JR (1.0038)");
+        Assert.True(editor.Redo()); AssertCurrent("Project steel (9.8765) · Standard B · Standard A");
+        Assert.Equal("S235JR (1.0038)", original.Data.Material);
+        Assert.Equal(1, analyses); Assert.Empty(files.Writes);
+
+        void AssertCurrent(string expected)
+        {
+            using var report = ProjectReport.Capture(editor, Now);
+            Assert.Equal(expected, report.Data.Material);
+            Assert.Equal(expected, editor.Overview.Material);
+            Assert.Same(analysis, editor.Presentation);
+            Assert.Equal(original.Data.Indicators.Select(i => (i.Label.PlainText, i.Value, i.Position)),
+                report.Data.Indicators.Select(i => (i.Label.PlainText, i.Value, i.Position)));
+            using var bitmap = report.RenderPage(0, 96);
+            Assert.Equal(expected, string.Join(" · ", MaterialDesignationRuns(report).Select(r => r.Text)));
+            AssertTextContained(report);
+        }
+    }
+
+    [Fact]
+    public void LongMaterialDesignationPreservesEveryStandardInReportMetadata()
+    {
+        var state = ReportTestProjects.Create();
+        var standards = Enumerable.Range(0, 30).Select(i => $"Long standard designation {i}").ToArray();
+        var material = LibraryTestSupport.WithMetadata(state.Document.Material, state.Document.Material.Category, "1.0038", standards);
+        var (main, _) = Open(state with { Document = state.Document with { Material = material } });
+        using var report = ProjectReport.Capture(main.Editor!, Now);
+        string expected = "S235JR (1.0038) · " + string.Join(" · ", standards);
+        Assert.Equal(expected, report.Data.Material);
+        Assert.Contains(report.Data.Metadata, m => m.Label == report.Data.Labels.Material && m.Value == expected);
+        for (int page = 0; page < report.Pages.Count; page++)
+        {
+            using var bitmap = report.RenderPage(page, 96); AssertTextContained(report);
+            if (!report.Pages[page].HasGraphics) continue;
+            var lines = MaterialDesignationRuns(report);
+            Assert.Equal(3, lines.Length);
+            Assert.Equal("S235JR (1.0038)", lines[0].Text);
+            Assert.Equal("…", lines[^1].Text);
+            AssertInformationBlocksSeparated(report, page);
+        }
+    }
+
+    [Theory]
     [InlineData("de-DE")] [InlineData("en-US")]
     public void TechnicalNotationSurvivesCaptureWrappingAndVectorOutput(string culture)
     {
@@ -258,6 +383,72 @@ public sealed class ProjectReportTests : IDisposable
         Assert.Equal(new[] { "0,78 mm", "710 N·m", "23 MPa", "10" }, report.Data.Indicators.Select(i => i.Value));
     }
 
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void HeaderCentersTheTitleAboveThreeAlignedMetadataColumns(string culture)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var report = ProjectReport.Capture(main.Editor!, Now);
+        using var bitmap = report.RenderPage(0, 96);
+        var heading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Heading).Bounds;
+        var title = Assert.Single(report.TextRuns, r => r.Text == report.Data.Title).Bounds;
+        Assert.Equal(ReportDocument.PageWidth / 2, heading.MidX, 3);
+        Assert.Equal(heading.MidX, title.MidX, 3);
+        Assert.True(title.Top > heading.Bottom);
+        Assert.True(title.Top - heading.Bottom <= heading.Height / 2);
+        Assert.True(title.Height > heading.Height * 1.5f);
+        Assert.DoesNotContain(report.TextRuns, r => r.Text == report.Data.Labels.Title);
+        string[] labels = [report.Data.Labels.Project, report.Data.Labels.Reference, report.Data.Labels.Author];
+        var columns = labels.Select(label => Assert.Single(report.TextRuns, r => r.Text == label).Bounds).ToArray();
+        Assert.True(columns[0].Top > title.Bottom);
+        Assert.True(columns[0].Top - title.Bottom <= title.Height);
+        Assert.All(columns, bounds => Assert.Equal(columns[0].Top, bounds.Top));
+        Assert.True(columns[1].Left - columns[0].Left > columns[2].Left - columns[1].Left);
+        var values = labels.Select(label => report.Data.Metadata.Single(m => m.Label == label).Value)
+            .Select(value => Assert.Single(report.TextRuns, r => r.Text == value).Bounds).ToArray();
+        for (int i = 0; i < columns.Length; i++)
+        {
+            Assert.Equal(columns[i].Left, values[i].Left);
+            Assert.True(columns[i].Height < values[i].Height);
+            Assert.True(columns[i].Bottom < values[i].Top);
+            Assert.True(values[i].Bottom < report.Pages[0].BodyTop - 12);
+            if (i + 1 < columns.Length) Assert.True(values[i].Right < columns[i + 1].Left);
+        }
+        Assert.All(values, bounds => Assert.Equal(values[0].Top, bounds.Top));
+    }
+
+    [Fact]
+    public void HeaderWrapsLongTitleAndValuesWithinTheExistingHeaderArea()
+    {
+        var state = ReportTestProjects.Create() with
+        {
+            Info = new(string.Join(" ", Enumerable.Repeat("Trägernachweis für die Bühnenkonstruktion", 3)),
+                "Erweiterung des bestehenden Veranstaltungsgebäudes im nördlichen Projektbereich",
+                "Referenz zur Entwurfsplanung im Oktober 2026", "Ingenieurbüro für Tragwerksplanung und Konstruktion")
+        };
+        var (main, _) = Open(state);
+        using var report = ProjectReport.Capture(main.Editor!, Now);
+        using var bitmap = report.RenderPage(0, 96);
+        Assert.True(report.Pages[0].HasGraphics);
+        var header = report.TextRuns.Where(r => r.Bounds.Top < report.Pages[0].BodyTop).ToArray();
+        string[] labels = [report.Data.Labels.Project, report.Data.Labels.Reference, report.Data.Labels.Author];
+        var columns = labels.Select(label => Assert.Single(header, r => r.Text == label).Bounds).ToArray();
+        var title = header.Skip(1).TakeWhile(r => r.Bounds.Top < columns[0].Top).ToArray();
+        Assert.True(title.Length > 1);
+        Assert.Equal(state.Info.CalculationTitle, string.Join(" ", title.Select(r => r.Text)));
+        Assert.All(title, r => Assert.Equal(ReportDocument.PageWidth / 2, r.Bounds.MidX, 3));
+        for (int i = 0; i < columns.Length; i++)
+        {
+            var values = header.Where(r => r.Bounds.Left == columns[i].Left && r.Bounds.Top > columns[i].Bottom).ToArray();
+            Assert.Equal(report.Data.Metadata.Single(m => m.Label == labels[i]).Value, string.Join(" ", values.Select(r => r.Text)));
+            float right = i + 1 < columns.Length ? columns[i + 1].Left : ReportDocument.PageWidth - ReportDocument.Margin;
+            Assert.All(values, r => Assert.True(r.Bounds.Right <= right));
+        }
+        Assert.All(header, r => Assert.True(r.Bounds.Bottom < report.Pages[0].BodyTop - 12));
+        AssertTextContained(report);
+    }
+
     [Fact]
     public void MissingOptionalProjectInformationLeavesNoEmptyHeaderRows()
     {
@@ -269,6 +460,15 @@ public sealed class ProjectReportTests : IDisposable
         Assert.All(compact.Data.Metadata, row => Assert.False(string.IsNullOrWhiteSpace(row.Value)));
         Assert.True(compact.Pages[0].BodyTop < full.Pages[0].BodyTop);
         Assert.DoesNotContain(compact.Data.Metadata, row => row.Value is "Neutrales Beispiel" or "BEISPIEL-01");
+        using var fullBitmap = full.RenderPage(0, 96);
+        using var compactBitmap = compact.RenderPage(0, 96);
+        Assert.DoesNotContain(compact.TextRuns, r => r.Text == compact.Data.Labels.Project || r.Text == compact.Data.Labels.Reference);
+        var author = Assert.Single(compact.TextRuns, r => r.Text == compact.Data.Labels.Author).Bounds;
+        Assert.Equal(Assert.Single(full.TextRuns, r => r.Text == full.Data.Labels.Author).Bounds.Left, author.Left);
+        var title = Assert.Single(compact.TextRuns, r => r.Text == compact.Data.Title).Bounds;
+        Assert.True(title.Bottom < author.Top);
+        Assert.All(compact.TextRuns.Where(r => r.Bounds.Top < compact.Pages[0].BodyTop),
+            r => Assert.True(r.Bounds.Bottom < compact.Pages[0].BodyTop - 12));
     }
 
     [Theory]
@@ -1309,6 +1509,17 @@ public sealed class ProjectReportTests : IDisposable
         var bounds = WindowsReportPrinter.Destination(width, height, dpiX, dpiY);
         Assert.True(bounds.Left >= 0 && bounds.Top >= 0 && bounds.Right <= width && bounds.Bottom <= height);
         Assert.Equal(ReportDocument.PageWidth / ReportDocument.PageHeight, bounds.Width / dpiX / (bounds.Height / dpiY), 3);
+    }
+
+    private static (string Text, SKRect Bounds)[] MaterialDesignationRuns(ReportDocument report)
+    {
+        var heading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Material).Bounds;
+        var properties = Assert.Single(report.TextRuns, r => r.Text.Contains(report.Data.MaterialProperties[0].PlainText)).Bounds;
+        var lines = report.TextRuns.Where(r => r.Bounds.Left >= heading.Left && r.Bounds.Top > heading.Bottom
+            && r.Bounds.Bottom < properties.Top).ToArray();
+        Assert.NotEmpty(lines);
+        Assert.All(lines, r => Assert.True(r.Bounds.Right <= heading.Left + ReportDocument.RightWidth + .01f, r.Text));
+        return lines;
     }
 
     private static void AssertInformationBlocksSeparated(ReportDocument report, int page)

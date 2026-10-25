@@ -59,7 +59,9 @@
               <TextBlock Text="{x:Static resources:Strings.RollerSupport}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-          <Rectangle x:Name="ReportToolbarSeparator" Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space4}"
+                    HorizontalAlignment="Right" VerticalAlignment="Center">
           <Button x:Name="ReportToolbarButton" Classes="toolbar"
                   Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ReportCommand}"
                   AutomationProperties.Name="{x:Static resources:Strings.Report}"
@@ -73,20 +75,20 @@
               <TextBlock Text="{x:Static resources:Strings.Report}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
+          <Button x:Name="ProjectPropertiesToolbarButton" Classes="toolbar"
+                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                  Command="{Binding ChangeProjectCommand}"
+                  AutomationProperties.Name="{x:Static resources:Strings.EditProject}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+              <Grid Width="{DynamicResource ToolbarIconSize}" Height="{DynamicResource ToolbarIconSize}">
+                <PathIcon Classes="fluentIcon fluentIcon20" Data="{StaticResource FluentIcon.DocumentSettings}"
+                          Foreground="{Binding Foreground, ElementName=ProjectPropertiesToolbarButton}"
+                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Grid>
+              <TextBlock Text="{x:Static resources:Strings.EditProject}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
         </StackPanel>
-        <Button x:Name="ProjectPropertiesToolbarButton" Grid.Column="1" Classes="toolbar"
-                HorizontalAlignment="Right" VerticalAlignment="Center"
-                Command="{Binding ChangeProjectCommand}"
-                AutomationProperties.Name="{x:Static resources:Strings.EditProject}">
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
-            <Grid Width="{DynamicResource ToolbarIconSize}" Height="{DynamicResource ToolbarIconSize}">
-              <PathIcon Classes="fluentIcon fluentIcon20" Data="{StaticResource FluentIcon.DocumentSettings}"
-                        Foreground="{Binding Foreground, ElementName=ProjectPropertiesToolbarButton}"
-                        HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Grid>
-            <TextBlock Text="{x:Static resources:Strings.EditProject}" VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
       </Grid>
     </Border>
     <Grid Grid.Row="1" x:Name="EditorWorkspace">

@@ -7,6 +7,7 @@ using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
@@ -177,6 +178,8 @@ public sealed class MaterialWorkflowRegressionTests
         var f = new Fixture(); await f.Load(Entry("First"), Entry("Second")); f.Main.Setup.SelectedMaterial = Entry("Project");
         f.Dialogs.ConfirmLibraryDelete = true; var selection = f.Select(); selection.SelectedFilter = selection.UserFilter;
         selection.SelectedEntry = selection.FilteredEntries[0]; Assert.True(await selection.DeleteSelectedAsync());
+        Assert.Equal("First (1.4567) · UNS Example · AISI Shop", f.Dialogs.MaterialDeleteDisplayName);
+        Assert.Null(f.Main.UserMaterials.Find("First")); Assert.NotNull(f.Main.UserMaterials.Find("Second"));
         Assert.Equal("Second", selection.SelectedEntry!.Name); Assert.Contains(selection.SelectedEntry, selection.FilteredEntries);
         Assert.True(await selection.DeleteSelectedAsync()); Assert.True(selection.IsEmpty); Assert.Null(selection.SelectedEntry); Assert.False(selection.CanUseSelected);
         Assert.NotNull(selection.CurrentEntry); selection.SelectedFilter = selection.ProjectFilter;
@@ -325,21 +328,28 @@ public sealed class MaterialWorkflowRegressionTests
     }
 
     [Theory]
-    [InlineData("category")] [InlineData("number")] [InlineData("standards")]
+    [InlineData("name")] [InlineData("category")] [InlineData("number")] [InlineData("standards")]
     public async Task EachMetadataChangeParticipatesInHistoryAndRecoveryWithoutAnalysis(string field)
     {
         var f = new Fixture(); await f.Load(); f.Main.Setup.SelectedMaterial = Entry(); CompleteSetup(f.Main);
         Assert.True(await f.Main.Setup.ConfirmAsync()); var original = f.Main.Session!.CurrentRevision.State;
         int analyses = f.Analyses; f.Main.EditProject(); var selection = f.Select(); selection.EditSelectedCommand.Execute(null);
         var editor = selection.Editor!;
-        if (field == "category") editor.Category = editor.Categories.Single(c => c.Value == MaterialCategory.Other);
+        if (field == "name") editor.Name = "Renamed project material";
+        else if (field == "category") editor.Category = editor.Categories.Single(c => c.Value == MaterialCategory.Other);
         else if (field == "number") editor.MaterialNumber = "New number";
         else editor.OtherStandards = "Different standard";
         Assert.True(await editor.ConfirmAsync()); selection.UseSelected(); Assert.True(await f.Main.Setup.ConfirmAsync());
         var changed = f.Main.Session.CurrentRevision.State;
         Assert.False(original.ContentEquals(changed)); Assert.Equal(analyses, f.Analyses);
+        Assert.Equal(MaterialDisplay.Format(changed.Document.Material), f.Main.Editor!.Overview.Material);
+        Assert.Equal(f.Main.Editor.Overview.Material, f.Main.Setup.MaterialName);
+        Assert.Same(changed.Document.Material, changed.Document.ToBeamModel().Material);
+        Assert.True(changed.ContentEquals(ProjectFileCodec.Deserialize(ProjectFileCodec.Serialize(changed))));
         Assert.True(f.Main.Undo()); Assert.True(original.ContentEquals(f.Main.Session.CurrentRevision.State));
+        Assert.Equal(MaterialDisplay.Format(original.Document.Material), f.Main.Editor.Overview.Material);
         Assert.True(f.Main.Redo()); Assert.True(changed.ContentEquals(f.Main.Session.CurrentRevision.State));
+        Assert.Equal(MaterialDisplay.Format(changed.Document.Material), f.Main.Editor.Overview.Material);
         Assert.Equal(analyses, f.Analyses);
         var recovery = new ProjectRecovery(f.Files, "metadata-recovery"); await recovery.FlushAsync(changed, null);
         Assert.True(changed.ContentEquals((await recovery.ReadAsync())!.State));
@@ -387,11 +397,15 @@ public sealed class MaterialWorkflowRegressionTests
     [InlineData(MaterialNameConflictDecision.Rename, false)]
     public async Task ProjectNameConflictRequiresExplicitChoiceAndReplacementConfirmation(MaterialNameConflictDecision choice, bool confirm)
     {
-        var f = new Fixture(); await f.Load(Entry(category: MaterialCategory.Other)); var before = f.Files.Data["materials"].ToArray();
+        var existing = LibraryTestSupport.WithMetadata(Entry(category: MaterialCategory.Other), MaterialCategory.Other, "9.8765", ["Existing standard"]);
+        var f = new Fixture(); await f.Load(existing); var before = f.Files.Data["materials"].ToArray();
         f.Main.Setup.SelectedMaterial = Entry(); var project = f.Main.Setup.SelectedMaterial; var selection = f.Select();
         f.Dialogs.MaterialConflict = choice; f.Dialogs.ConfirmMaterialReplace = confirm;
         bool saved = await selection.SaveSelectedAsync(); Assert.Equal(choice == MaterialNameConflictDecision.Replace && confirm, saved);
         Assert.Equal(1, f.Dialogs.MaterialConflictQuestions); Assert.Equal(choice == MaterialNameConflictDecision.Replace ? 1 : 0, f.Dialogs.MaterialReplaceQuestions);
+        Assert.Equal("Shop stainless (9.8765) · Existing standard", f.Dialogs.MaterialConflictDisplayName);
+        if (choice == MaterialNameConflictDecision.Replace)
+            Assert.Equal(f.Dialogs.MaterialConflictDisplayName, f.Dialogs.MaterialReplaceDisplayName);
         if (choice == MaterialNameConflictDecision.Rename)
         {
             var editor = selection.Editor!; Assert.Equal(project!.Name, editor.Name); Assert.True(editor.ShowNameError);
@@ -399,7 +413,14 @@ public sealed class MaterialWorkflowRegressionTests
             editor.Name = "Unique"; Assert.True(await editor.ConfirmAsync()); Assert.Equal(2, f.Main.UserMaterials.All.Count);
             Assert.Equal(MaterialCategory.Other, f.Main.UserMaterials.All[0].Category); Assert.Equal(project.MaterialNumber, f.Main.UserMaterials.All[1].MaterialNumber);
         }
-        else if (saved) Assert.Equal(MaterialCategory.StainlessSteel, f.Main.UserMaterials.All[0].Category);
+        else if (saved)
+        {
+            var replaced = f.Main.UserMaterials.Find(project!.Name)!;
+            Assert.Single(f.Main.UserMaterials.All);
+            Assert.Equal(MaterialCategory.StainlessSteel, replaced.Category);
+            Assert.Equal(project.MaterialNumber, replaced.MaterialNumber);
+            Assert.Equal(project.OtherStandards, replaced.OtherStandards);
+        }
         else { Assert.Equal(before, f.Files.Data["materials"]); Assert.Empty(f.Files.Writes); }
         Assert.Same(project, f.Main.Setup.SelectedMaterial); Assert.Same(selection.CurrentEntry, selection.SelectedEntry);
     }

@@ -96,7 +96,7 @@ public sealed class DesktopProjectOverviewTests
         var editor = Observed(doc, out var analyses);
         var overview = editor.Overview;
         Assert.Equal(SectionDisplay.Name(doc.Section), overview.Section);
-        Assert.Equal(doc.Material.Name, overview.Material);
+        Assert.Equal(MaterialDisplay.Format(doc.Material), overview.Material);
         Assert.Equal(culture == "de-DE" ? "Länge 1000 mm" : "Length 1000 mm", overview.Length);
         Assert.Equal(doc.Supports[0].Id, Assert.Single(overview.Supports).Id);
         Assert.Equal(supportType, overview.Supports[0].Type);

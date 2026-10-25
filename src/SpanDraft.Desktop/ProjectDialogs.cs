@@ -57,8 +57,8 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
 
     public async Task ShowErrorAsync(string message) => await ShowAsync(message, [(Strings.OK, true)]);
 
-    public Task<bool> ConfirmMaterialDeleteAsync(string name) => ShowAsync(
-        string.Format(CultureInfo.CurrentUICulture, Strings.DeleteMaterialQuestion, name),
+    public Task<bool> ConfirmMaterialDeleteAsync(string displayName) => ShowAsync(
+        string.Format(CultureInfo.CurrentUICulture, Strings.DeleteMaterialQuestion, displayName),
         [(Strings.Cancel, false), (Strings.Delete, true)]);
     public Task<bool> ConfirmSectionDeleteAsync(string name) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.DeleteSectionQuestion, name),
@@ -67,13 +67,13 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
     public Task ShowMaterialEditorAsync(MaterialEditorViewModel editor) =>
         new MaterialEditorWindow(editor) { Icon = owner.Icon }.ShowDialog(owner);
 
-    public Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string name) => ShowAsync(
-        string.Format(CultureInfo.CurrentUICulture, Strings.MaterialNameConflictQuestion, name),
+    public Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string displayName) => ShowAsync(
+        string.Format(CultureInfo.CurrentUICulture, Strings.MaterialNameConflictQuestion, displayName),
         [(Strings.ReplaceMaterial, MaterialNameConflictDecision.Replace),
          (Strings.RenameMaterial, MaterialNameConflictDecision.Rename), (Strings.Cancel, MaterialNameConflictDecision.Cancel)]);
 
-    public Task<bool> ConfirmMaterialReplaceAsync(string name) => ShowAsync(
-        string.Format(CultureInfo.CurrentUICulture, Strings.ReplaceMaterialQuestion, name),
+    public Task<bool> ConfirmMaterialReplaceAsync(string displayName) => ShowAsync(
+        string.Format(CultureInfo.CurrentUICulture, Strings.ReplaceMaterialQuestion, displayName),
         [(Strings.Cancel, false), (Strings.ReplaceMaterial, true)]);
 
     private Task<T> ShowAsync<T>(string message, (string Label, T Result)[] choices)

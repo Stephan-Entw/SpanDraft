@@ -168,12 +168,16 @@ internal static class ProjectTestSupport
         public bool ConfirmMaterialReplace { get; set; }
         public int MaterialConflictQuestions { get; private set; }
         public int MaterialReplaceQuestions { get; private set; }
+        public string? MaterialConflictDisplayName { get; private set; }
+        public string? MaterialReplaceDisplayName { get; private set; }
+        public string? MaterialDeleteDisplayName { get; private set; }
         public Task ShowMaterialEditorAsync(MaterialEditorViewModel editor) => MaterialEditorHook?.Invoke(editor) ?? Task.CompletedTask;
-        public Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string name)
-        { MaterialConflictQuestions++; return Task.FromResult(MaterialConflict); }
-        public Task<bool> ConfirmMaterialReplaceAsync(string name)
-        { MaterialReplaceQuestions++; return Task.FromResult(ConfirmMaterialReplace); }
-        public Task<bool> ConfirmMaterialDeleteAsync(string name) => Task.FromResult(ConfirmLibraryDelete);
+        public Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string displayName)
+        { MaterialConflictDisplayName = displayName; MaterialConflictQuestions++; return Task.FromResult(MaterialConflict); }
+        public Task<bool> ConfirmMaterialReplaceAsync(string displayName)
+        { MaterialReplaceDisplayName = displayName; MaterialReplaceQuestions++; return Task.FromResult(ConfirmMaterialReplace); }
+        public Task<bool> ConfirmMaterialDeleteAsync(string displayName)
+        { MaterialDeleteDisplayName = displayName; return Task.FromResult(ConfirmLibraryDelete); }
         public Task<bool> ConfirmSectionDeleteAsync(string name) => Task.FromResult(ConfirmLibraryDelete);
     }
 

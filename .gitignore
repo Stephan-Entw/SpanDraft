@@ -6,8 +6,8 @@
 # macOS Finder metadata
 .DS_Store
 
-# Visual report review artifacts
-output/pdf/
+# Generated build and report artifacts
+/output/
 
 # User-specific files
 *.rsuser

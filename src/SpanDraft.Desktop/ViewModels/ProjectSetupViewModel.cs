@@ -155,7 +155,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         }
     }
     public bool HasMaterial => SelectedMaterial is not null;
-    public string MaterialName => SelectedMaterial?.Name ?? Strings.SelectMaterialRequired;
+    public string MaterialName => SelectedMaterial is { } material ? MaterialDisplay.Format(material) : Strings.SelectMaterialRequired;
     public TechnicalText MaterialSummaryText => SelectedMaterial is null ? (TechnicalText)"" : TechnicalSymbols.YoungsModulus + " " + YoungsModulus + " · " + MaterialStrengthDisplay.SummaryText(SelectedMaterial) + " MPa";
     public string MaterialSummary => MaterialSummaryText.PlainText;
     public string? StartupError => Libraries?.BuiltInError;

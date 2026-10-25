@@ -39,7 +39,7 @@ internal sealed class ReportDocument : IDisposable
         var metadata = Data.Metadata.ToList();
         sectionLines = CompactName(Data.Section, Data.Labels.Section, false, metadata);
         sectionProperties = PropertyLines(Data.SectionProperties);
-        materialLines = CompactName(Data.Material, Data.Labels.Material, true, metadata);
+        materialLines = CompactMaterialName(Data.Material, metadata);
         Data = Data with { Metadata = metadata.ToArray() };
         materialProperties = PropertyLines(Data.MaterialProperties);
         materialTop = sectionLines.Length * LineHeight + SectionDrawingHeight
@@ -52,9 +52,22 @@ internal sealed class ReportDocument : IDisposable
 
     internal void Own(IDisposable graphic) => ownedGraphics.Add(graphic);
 
-    private string[] CompactName(string value, string label, bool strong, List<(string Label, string Value)> metadata)
+    private string[] CompactMaterialName(string value, List<(string Label, string Value)> metadata)
     {
-        var lines = Wrap(value, RightWidth, 8.5f, strong);
+        const string separator = " · ";
+        int split = value.IndexOf(separator, StringComparison.Ordinal);
+        if (split < 0 || Width(value, 8.5f, true) <= RightWidth)
+            return CompactName(value, Data.Labels.Material, true, metadata);
+        var lines = Wrap(value[..split], RightWidth, 8.5f, true)
+            .Concat(Wrap(value[(split + separator.Length)..], RightWidth, 8.5f, true)).ToArray();
+        return CompactLines(value, Data.Labels.Material, lines, metadata);
+    }
+
+    private string[] CompactName(string value, string label, bool strong, List<(string Label, string Value)> metadata) =>
+        CompactLines(value, label, Wrap(value, RightWidth, 8.5f, strong), metadata);
+
+    private static string[] CompactLines(string value, string label, string[] lines, List<(string Label, string Value)> metadata)
+    {
         if (lines.Length <= 3) return lines;
         // Keep the complete name in the header pages instead of displacing the technical drawing.
         metadata.Add((label, value));
@@ -222,12 +235,27 @@ internal sealed class ReportDocument : IDisposable
         using var restore = new SKAutoCanvasRestore(canvas);
         canvas.Clear(SKColors.White);
         Text(canvas, Data.Labels.Heading + (index > 0 ? " · " + Data.Labels.Continuation : ""),
-            PageWidth / 2, Margin, 16, strong: true, align: SKTextAlign.Center);
-        if (page.Metadata.Count > 0)
+            PageWidth / 2, Margin, 8.5f, align: SKTextAlign.Center, color: Secondary);
+        float headerBottom = page.BodyTop - 12;
+        if (page.HasGraphics && page.Metadata.Count > 0)
+            headerBottom = DrawProjectHeader(canvas, page);
+        else if (page.Metadata.Count > 0)
         {
+            string activeLabel = Pages.Take(index).SelectMany(p => p.Metadata)
+                .LastOrDefault(m => m.Label.Length > 0).Label ?? "";
             float y = Margin + 28;
             foreach (var (label, value) in page.Metadata)
-            { Text(canvas, label, Margin, y, color: Secondary); Text(canvas, value, Margin + 64, y, strong: label == Data.Metadata.FirstOrDefault().Label); y += LineHeight; }
+            {
+                if (label.Length > 0) activeLabel = label;
+                if (activeLabel == Data.Labels.Title)
+                    Text(canvas, value, PageWidth / 2, y, 9.5f, strong: true, align: SKTextAlign.Center);
+                else
+                {
+                    Text(canvas, label, Margin, y, color: Secondary);
+                    Text(canvas, value, Margin + 64, y);
+                }
+                y += LineHeight;
+            }
         }
         else if (index > 0)
         {
@@ -235,7 +263,7 @@ internal sealed class ReportDocument : IDisposable
             foreach (string line in Wrap(Data.Title, PageWidth - 2 * Margin, 8.5f).Take(2))
             { Text(canvas, line, Margin, y, color: Secondary); y += LineHeight; }
         }
-        Line(canvas, Margin, page.BodyTop - 12, PageWidth - Margin, page.BodyTop - 12, Rule, .6f);
+        Line(canvas, Margin, headerBottom, PageWidth - Margin, headerBottom, Rule, .6f);
         if (page.HasGraphics)
         {
             foreach (var area in TechnicalAreas(index)) graphics.Draw(canvas, area.Kind, area.Bounds);
@@ -257,6 +285,67 @@ internal sealed class ReportDocument : IDisposable
         Text(canvas, string.Format(CultureInfo.InvariantCulture, Data.Labels.PageFormat, index + 1, Pages.Count),
             PageWidth / 2, footerY, 7.5f, align: SKTextAlign.Center, color: Secondary);
         Text(canvas, Data.Date, PageWidth - Margin, footerY, 7.5f, align: SKTextAlign.Right, color: Secondary);
+    }
+
+    private float DrawProjectHeader(SKCanvas canvas, ReportPage page)
+    {
+        const float titleSize = 13.5f, titleLineHeight = 17;
+        float width = PageWidth - 2 * Margin, gap = 12;
+        float columnsWidth = width - 2 * gap;
+        string[] labels = [Data.Labels.Project, Data.Labels.Reference, Data.Labels.Author];
+        float[] widths = [columnsWidth / 2, columnsWidth / 4, columnsWidth / 4];
+        var fields = labels.Select(label => Data.Metadata.FirstOrDefault(m => m.Label == label)).ToArray();
+        var extra = Data.Metadata.Where(m => m.Label != Data.Labels.Title && !labels.Contains(m.Label)).ToArray();
+        float scale = 1, y = Margin + 13;
+        string[] title;
+        string[][] values;
+        (string Label, string Value)[] extraLines;
+        float height;
+        // Fit only the header into its existing space: pagination and body geometry stay frozen.
+        while (true)
+        {
+            title = Wrap(Data.Title, width, titleSize * scale, true);
+            values = fields.Select((field, i) => Wrap(field.Value ?? "", widths[i], 8.5f * scale)).ToArray();
+            extraLines = extra.SelectMany(m => Wrap(m.Value, width - 64, 8.5f * scale)
+                .Select((line, i) => (i == 0 ? m.Label : "", line))).ToArray();
+            height = (title.Length * titleLineHeight + 6 + 9 + 2 + values.Max(lines => lines.Length) * LineHeight
+                + extraLines.Length * LineHeight) * scale;
+            if (y + height <= page.BodyTop - 15) break;
+            scale *= .9f;
+        }
+        float headerReduction = Math.Min(10, Math.Max(0, page.BodyTop - 15 - y - height));
+        foreach (string line in title)
+        {
+            Text(canvas, line, PageWidth / 2, y, titleSize * scale, strong: true, align: SKTextAlign.Center);
+            y += titleLineHeight * scale;
+        }
+        float metadataHeight = (11 + values.Max(lines => lines.Length) * LineHeight
+            + extraLines.Length * LineHeight) * scale;
+        float headerBottom = page.BodyTop - 12 - headerReduction;
+        y = Math.Max(y + 6 * scale, headerBottom - 6 - metadataHeight);
+        float x = Margin;
+        for (int i = 0; i < fields.Length; i++)
+        {
+            if (!string.IsNullOrEmpty(fields[i].Value))
+            {
+                Text(canvas, labels[i], x, y, 7 * scale, color: Secondary);
+                float valueY = y + 11 * scale;
+                foreach (string line in values[i])
+                {
+                    Text(canvas, line, x, valueY, 8.5f * scale);
+                    valueY += LineHeight * scale;
+                }
+            }
+            x += widths[i] + gap;
+        }
+        y += (11 + values.Max(lines => lines.Length) * LineHeight) * scale;
+        foreach (var (label, value) in extraLines)
+        {
+            Text(canvas, label, Margin, y, 8.5f * scale, color: Secondary);
+            Text(canvas, value, Margin + 64, y, 8.5f * scale);
+            y += LineHeight * scale;
+        }
+        return headerBottom;
     }
 
     private void DrawTable(SKCanvas canvas, ReportTableFragment fragment)

@@ -30,7 +30,7 @@
         </Grid>
       </Button>
       <Button x:Name="MaterialCardButton" Grid.Column="2" Classes="beamSetupSurface" Command="{Binding ChangeMaterialCommand}"
-          AutomationProperties.Name="{x:Static resources:Strings.MaterialSelection}">
+          AutomationProperties.Name="{x:Static resources:Strings.MaterialSelection}" AutomationProperties.HelpText="{Binding MaterialName}">
         <Grid RowDefinitions="Auto,*" RowSpacing="8" ColumnDefinitions="*,Auto" ColumnSpacing="12">
           <TextBlock Text="{x:Static resources:Strings.Material}" Classes="bodyStrong" IsVisible="{Binding HasMaterial}" />
           <TextBlock Text="{x:Static resources:Strings.SelectMaterialRequired}" Classes="bodyStrong" IsVisible="{Binding !HasMaterial}" VerticalAlignment="Center" Grid.RowSpan="2" />
