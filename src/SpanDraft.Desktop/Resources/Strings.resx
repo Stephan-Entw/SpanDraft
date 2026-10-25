@@ -320,10 +320,9 @@
   <data name="ReportHeading" xml:space="preserve"><value>Calculation report</value></data>
   <data name="ReportContinuation" xml:space="preserve"><value>Continuation</value></data>
   <data name="ReportPage" xml:space="preserve"><value>Page {0} of {1}</value></data>
-  <data name="ReportNotes" xml:space="preserve"><value>Calculation assumptions / Notes</value></data>
-  <data name="ReportTheory" xml:space="preserve"><value>Euler-Bernoulli · linear elastic · small deformations · constant material and cross-section.</value></data>
-  <data name="ReportLimits" xml:space="preserve"><value>Shear deformation and self-weight are not included. The ratio of the selected material strength value to σb,max is an elastic assessment, not a code-compliant strength or safety verification.</value></data>
-  <data name="ReportPosition" xml:space="preserve"><value>at x = {0} {1}{2}</value></data>
+  <data name="ReportNotes" xml:space="preserve"><value>Calculation model</value></data>
+  <data name="ReportTheory" xml:space="preserve"><value>Calculation based on Euler-Bernoulli theory, assuming linear-elastic behavior and small deformations. Material and cross-section are constant along the beam length; shear deformations are neglected.</value></data>
+  <data name="ReportPosition" xml:space="preserve"><value>x = {0} {1}{2}</value></data>
   <data name="ReportSavePdf" xml:space="preserve"><value>Save PDF</value></data>
   <data name="ReportPrint" xml:space="preserve"><value>Print</value></data>
   <data name="ReportFit" xml:space="preserve"><value>Show whole page</value></data>
@@ -339,8 +338,8 @@
   <data name="ReportClose" xml:space="preserve"><value>Close report</value></data>
   <data name="ReportSummary" xml:space="preserve"><value>Governing results</value></data>
   <data name="ReportMaterial" xml:space="preserve"><value>Material</value></data>
-  <data name="ReportDeflection" xml:space="preserve"><value>Maximum deflection</value></data>
-  <data name="ReportMoment" xml:space="preserve"><value>Governing bending moment</value></data>
+  <data name="ReportDeflection" xml:space="preserve"><value>Max. deflection</value></data>
+  <data name="ReportMoment" xml:space="preserve"><value>Max. bending moment</value></data>
   <data name="ReportStress" xml:space="preserve"><value>Max. elastic bending stress</value></data>
   <data name="ReportSafety" xml:space="preserve"><value>Safety factor</value></data>
   <data name="ReportPdfTarget" xml:space="preserve"><value>Choose a destination with the .pdf extension.</value></data>
@@ -359,4 +358,7 @@
   <data name="RenameMaterial" xml:space="preserve"><value>Change designation</value></data>
   <data name="MaterialNameConflictQuestion" xml:space="preserve"><value>A user material named “{0}” with different data already exists.</value></data>
   <data name="ReplaceMaterialQuestion" xml:space="preserve"><value>Replace the user material “{0}” with the current material data?</value></data>
+  <data name="Forces" xml:space="preserve"><value>Forces</value></data>
+  <data name="Moments" xml:space="preserve"><value>Moments</value></data>
+  <data name="DistributedLoads" xml:space="preserve"><value>Distributed loads</value></data>
 </root>

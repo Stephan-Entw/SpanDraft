@@ -20,6 +20,8 @@ using SpanDraft.Desktop.Views;
 using Xunit;
 using static SpanDraft.Tests.ProjectTestSupport;
 using SpanDraft.Reporting.Notation;
+using SpanDraft.Desktop.Reporting;
+using SpanDraft.Reporting;
 
 namespace SpanDraft.Tests;
 
@@ -35,6 +37,161 @@ public sealed class SectionDefinitionPrototypeTests
             Commit(vm,input.Key,input.Key switch
             { "b"=>"120", "h"=>"200", "d" or "D"=>"80", "t" or "tw"=>"5", "tf"=>"12", "r"=>"8", "A"=>"7200", _=>input.Key.StartsWith('I')?"8640000":"144000" });
         if (selectAxis && vm.RequiresAxisSelection) vm.SelectedAxis = vm.AvailableAxes[0].Value;
+    }
+
+    [Theory]
+    [InlineData("de-DE", false)] [InlineData("en-US", false)]
+    [InlineData("de-DE", true)] [InlineData("en-US", true)]
+    public void ReportCompactAnnotationsFitTheSquareViewportWithoutCollisions(string culture, bool thinFlange)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new UiCultureScope(culture);
+        double side = ReportDocument.RightWidth / ReportVisuals.PointsPerDip;
+        var size = new Size(side, side); var viewport = new Rect(size);
+        foreach (var type in new[] { SectionEditorType.Rectangle, SectionEditorType.RectangularHollow,
+            SectionEditorType.Circle, SectionEditorType.CircularHollow, SectionEditorType.ISection,
+            SectionEditorType.USection, SectionEditorType.TSection, SectionEditorType.Angle })
+        {
+            var vm = new SectionDefinitionViewModel(); vm.SelectForm(type); Fill(vm);
+            if (thinFlange && type is SectionEditorType.ISection or SectionEditorType.USection or SectionEditorType.TSection)
+            {
+                Commit(vm, "r", "0"); Commit(vm, "tf", "1.7");
+            }
+            foreach (var units in new[] { UnitProfile.Default, UnitProfile.UnitedStates })
+            {
+                var unit = units[QuantityKind.SectionDimension];
+                Size Measure(TechnicalText text) => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12);
+                var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, size, unit, Measure, compact: true);
+                string context = $"{culture}/{type}/{unit.Symbol}/thin={thinFlange}";
+                Assert.True(vm.Preview!.Dimensions.Count == layout.Dimensions.Count,
+                    context + "/dimensions: " + string.Join(",", layout.Dimensions.Select(d => d.Key))
+                    + "/bounds: " + layout.ProfileBounds + "/radius: " + (vm.Preview.Dimensions.TryGetValue("r", out var radius) ? radius.ToString() : "none"));
+                foreach (var dimension in layout.Dimensions)
+                {
+                    Assert.True(viewport.Contains(dimension.TextBounds), context + "/" + dimension.Key + "/text");
+                    Assert.Equal(dimension.Key is "h" or "tf", dimension.Rotated);
+                    var measured = Measure(dimension.Content);
+                    Assert.Equal(dimension.Rotated ? measured.Height : measured.Width, dimension.TextBounds.Width, 8);
+                    Assert.Equal(dimension.Rotated ? measured.Width : measured.Height, dimension.TextBounds.Height, 8);
+                    Assert.All(dimension.Arrows, arrow => Assert.True(viewport.Contains(arrow.Bounds), context + "/" + dimension.Key + "/arrow"));
+                    Assert.All(dimension.Arrows, arrow => Assert.False(arrow.Bounds.Intersects(dimension.TextBounds), context + "/" + dimension.Key + "/own arrow"));
+                    Assert.All(dimension.Lines, line =>
+                    {
+                        Assert.True(viewport.Contains(line.Start) && viewport.Contains(line.End), context + "/" + dimension.Key + "/line");
+                        Assert.False(LineIntersectsLabel(line, dimension.TextBounds), context + "/" + dimension.Key + "/own line");
+                    });
+                    foreach (var other in layout.Dimensions.Where(d => d != dimension))
+                    {
+                        Assert.False(dimension.TextBounds.Inflate(2).Intersects(other.TextBounds), context + "/" + dimension.Key + "/" + other.Key);
+                        Assert.All(other.Lines, line => Assert.False(LineIntersectsLabel(line, dimension.TextBounds), context + "/" + dimension.Key + "/" + other.Key + "/line"));
+                        Assert.All(other.Arrows, arrow => Assert.False(arrow.Bounds.Intersects(dimension.TextBounds), context + "/" + dimension.Key + "/" + other.Key + "/arrow"));
+                    }
+                    if (dimension.Key is "h" or "tf" or "b" or "d" or "D" or "t")
+                        Assert.False(layout.ProfileBounds.Intersects(dimension.TextBounds), context + "/" + dimension.Key + "/profile");
+                    if (dimension.Key == "b")
+                    {
+                        double measureY = dimension.Lines[2].Start.Y;
+                        Assert.Equal(layout.ProfileBounds.Bottom + 28, measureY, 8);
+                        Assert.InRange(dimension.TextBounds.Top - measureY, 0, 4 + 1e-8);
+                    }
+                    if (dimension.Key == "tf")
+                    {
+                        Assert.True(dimension.TextBounds.Right < layout.ProfileBounds.Left, context + "/tf text left of profile");
+                        Assert.All(dimension.Arrows, arrow => Assert.True(arrow.Bounds.Right < layout.ProfileBounds.Left, context + "/tf arrow left of profile"));
+                        Assert.All(dimension.Lines.Take(2), line =>
+                        {
+                            Assert.True(line.Start.X < layout.ProfileBounds.Left && line.End.X < line.Start.X,
+                                context + "/tf left extension");
+                            Assert.Equal(line.Start.Y, line.End.Y, 8);
+                        });
+                        var physical = vm.Preview.Dimensions["tf"];
+                        Assert.Equal(layout.Project(physical.Start).Y, dimension.Arrows[0].Tip.Y, 8);
+                        Assert.Equal(layout.Project(physical.End).Y, dimension.Arrows[1].Tip.Y, 8);
+                        var measureLine = dimension.Lines[2];
+                        var height = layout.Dimensions.Single(d => d.Key == "h");
+                        Assert.Equal(layout.ProfileBounds.Left - 22, measureLine.Start.X, 8);
+                        Assert.True(height.Lines[2].Start.X < measureLine.Start.X, context + "/h before tf");
+                        Assert.True(height.TextBounds.Right < dimension.TextBounds.Left, context + "/h text before tf");
+                        Assert.True(height.TextBounds.Right < height.Lines[2].Start.X, context + "/h caption left of line");
+                        Assert.True(dimension.TextBounds.Right < measureLine.Start.X, context + "/tf caption left of line");
+                        Assert.True(Math.Min(measureLine.Start.Y, measureLine.End.Y) <= dimension.TextBounds.Top);
+                        Assert.True(Math.Max(measureLine.Start.Y, measureLine.End.Y) >= dimension.TextBounds.Bottom);
+                        double flangeCenter = (dimension.Arrows[0].Tip.Y + dimension.Arrows[1].Tip.Y) / 2;
+                        if (type != SectionEditorType.TSection)
+                            Assert.True(dimension.TextBounds.Center.Y < flangeCenter, context + "/tf caption on upper extension");
+                        Assert.All(dimension.Arrows, arrow => Assert.False(arrow.Bounds.Intersects(layout.ProfileBounds), context + "/tf arrow profile"));
+                    }
+                }
+                foreach (var axis in layout.Axes)
+                {
+                    Assert.True(viewport.Contains(axis.LabelBounds), context + "/axis label");
+                    Assert.True(viewport.Contains(axis.ArrowBounds), context + "/axis arrow");
+                    Assert.False(layout.ProfileBounds.Intersects(axis.LabelBounds), context + "/axis profile");
+                    var baseCenter = (axis.ArrowPoints[1] + (Vector)axis.ArrowPoints[2]) / 2;
+                    Assert.Equal(baseCenter.X, axis.SolidEnd(true).X, 10);
+                    Assert.Equal(baseCenter.Y, axis.SolidEnd(true).Y, 10);
+                    Assert.Equal(axis.End, axis.SolidEnd(false));
+                    foreach (var other in layout.Axes)
+                    {
+                        Assert.False(other.ArrowBounds.Intersects(axis.LabelBounds), context + "/axis arrow label");
+                        Assert.False(LineIntersectsLabel(new(other.Start, other.End), axis.LabelBounds), context + "/axis line label");
+                    }
+                    foreach (var dimension in layout.Dimensions)
+                    {
+                        Assert.False(axis.LabelBounds.Intersects(dimension.TextBounds), context + "/axis dimension");
+                        Assert.False(axis.ArrowBounds.Intersects(dimension.TextBounds), context + "/arrow dimension");
+                        Assert.All(dimension.Lines, line => Assert.False(LineIntersectsLabel(line, axis.LabelBounds), context + "/axis dimension line"));
+                    }
+                }
+                // The editor keeps horizontal captions; its existing geometry tests
+                // separately protect the normal margins, dimensions and axis overhangs.
+                var editor = SectionPreviewDrawingLayout.Create(vm.Preview!, new(520, 440), unit, Measure);
+                Assert.All(editor.Dimensions, d => Assert.False(d.Rotated));
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("80")] [InlineData("120")] [InlineData("200")]
+    public void CompactYTriesClearPositionsAlongTheAxisBeforeMovingVertically(string height)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new UiCultureScope("en-US");
+        var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.ISection); Fill(vm);
+        Commit(vm, "h", height);
+        double side = ReportDocument.RightWidth / ReportVisuals.PointsPerDip;
+        foreach (var units in new[] { UnitProfile.Default, UnitProfile.UnitedStates })
+        {
+            Size Measure(TechnicalText text) => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12);
+            var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, new(side, side),
+                units[QuantityKind.SectionDimension], Measure, compact: true);
+            var y = layout.Axes.Single(a => a.Axis == SectionAxisDesignation.Y);
+            Assert.True(y.LabelBounds.Left > y.End.X);
+            var preferred = new Rect(new Point(y.End.X + 10 - y.LabelBounds.Width / 2,
+                y.End.Y - y.LabelBounds.Height / 2), y.LabelBounds.Size);
+            if (y.LabelBounds != preferred)
+                Assert.Contains(layout.Dimensions, d => d.TextBounds.Inflate(2).Intersects(preferred)
+                    || d.Lines.Any(line => LineIntersectsLabel(line, preferred))
+                    || d.Arrows.Any(arrow => arrow.Bounds.Intersects(preferred)));
+            if (Math.Abs(y.LabelBounds.Center.Y - y.End.Y) > 1e-8)
+                foreach (double distance in new[] { 10d, 26d, 42d })
+                {
+                    var onAxis = new Rect(new Point(Math.Min(side - y.LabelBounds.Width - 4,
+                        y.End.X + distance - y.LabelBounds.Width / 2), preferred.Top), preferred.Size);
+                    Assert.Contains(layout.Dimensions, d => d.TextBounds.Inflate(2).Intersects(onAxis)
+                        || d.Lines.Any(line => LineIntersectsLabel(line, onAxis))
+                        || d.Arrows.Any(arrow => arrow.Bounds.Intersects(onAxis)));
+                }
+            if (height is "120" or "200") Assert.Equal(preferred, y.LabelBounds);
+
+            var editor = SectionPreviewDrawingLayout.Create(vm.Preview!, new(520, 440),
+                units[QuantityKind.SectionDimension], Measure);
+            var width = editor.Dimensions.Single(d => d.Key == "b");
+            Assert.Equal(16, width.TextBounds.Top - width.Lines[2].Start.Y, 8);
+            var flange = editor.Dimensions.Single(d => d.Key == "tf");
+            Assert.False(flange.Rotated);
+            Assert.All(flange.Arrows, arrow => Assert.True(arrow.Bounds.Left > editor.ProfileBounds.Right));
+        }
     }
     [Theory]
     [InlineData(SectionEditorType.Rectangle)] [InlineData(SectionEditorType.RectangularHollow)]

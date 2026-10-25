@@ -105,7 +105,7 @@
                        AutomationProperties.Name="{Binding Overview.Material}" />
           </StackPanel>
         </Grid>
-        <StackPanel Spacing="{StaticResource Space4}">
+        <StackPanel x:Name="SupportsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.HasSupports}">
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.Supports}" Classes="sectionTitle" />
           <StackPanel IsVisible="{Binding Overview.HasSupports}">
@@ -117,19 +117,43 @@
             <ItemsControl x:Name="SupportTable" ItemsSource="{Binding Overview.Supports}" ItemTemplate="{StaticResource SupportRowTemplate}" />
           </StackPanel>
         </StackPanel>
-        <StackPanel Spacing="{StaticResource Space4}">
+        <StackPanel x:Name="ForceSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.HasForces}">
           <Border Classes="overviewSeparator" />
-          <TextBlock Text="{x:Static resources:Strings.Loads}" Classes="sectionTitle" />
-          <StackPanel IsVisible="{Binding Overview.HasLoads}">
+          <TextBlock Text="{x:Static resources:Strings.Forces}" Classes="sectionTitle" />
+          <StackPanel>
             <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,0.7*,1.3*">
               <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
               <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
               <TextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
             </Grid>
-            <ItemsControl x:Name="LoadTable" ItemsSource="{Binding Overview.Loads}" ItemTemplate="{StaticResource LoadRowTemplate}" />
+            <ItemsControl x:Name="ForceTable" ItemsSource="{Binding Overview.Forces}" ItemTemplate="{StaticResource LoadRowTemplate}" />
           </StackPanel>
         </StackPanel>
-        <StackPanel x:Name="ReactionsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.Analysis.IsSuccess}">
+        <StackPanel x:Name="MomentSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.HasMoments}">
+          <Border Classes="overviewSeparator" />
+          <TextBlock Text="{x:Static resources:Strings.Moments}" Classes="sectionTitle" />
+          <StackPanel>
+            <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,0.7*,1.3*">
+              <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
+              <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
+              <TextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
+            </Grid>
+            <ItemsControl x:Name="MomentTable" ItemsSource="{Binding Overview.Moments}" ItemTemplate="{StaticResource LoadRowTemplate}" />
+          </StackPanel>
+        </StackPanel>
+        <StackPanel x:Name="DistributedLoadSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.HasDistributedLoads}">
+          <Border Classes="overviewSeparator" />
+          <TextBlock Text="{x:Static resources:Strings.DistributedLoads}" Classes="sectionTitle" />
+          <StackPanel>
+            <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,0.7*,1.3*">
+              <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
+              <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
+              <TextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
+            </Grid>
+            <ItemsControl x:Name="DistributedLoadTable" ItemsSource="{Binding Overview.DistributedLoads}" ItemTemplate="{StaticResource LoadRowTemplate}" />
+          </StackPanel>
+        </StackPanel>
+        <StackPanel x:Name="ReactionsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.HasReactions}">
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.Reactions}" Classes="sectionTitle" />
           <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,*,*,*">

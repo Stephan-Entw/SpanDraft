@@ -24,7 +24,8 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         PointLoadPreview? loadPreview = null, Guid? hiddenLoadId = null, string? loadName = null,
         EditorPresentationState? presentation = null, DistributedLoadPreview? distributedPreview = null,
         Guid? hiddenDistributedId = null, string? distributedName = null, UnitProfile? profile = null,
-        bool reserveUnitWidths = false, double loadSymbolScale = 1)
+        bool reserveUnitWidths = false, double loadSymbolScale = 1, bool reserveLoadPreviewRow = true,
+        double minimumPaneHeight = SchematicMetrics.MinimumBeamPaneHeight)
     {
         var supports = new List<SupportVisual>();
         foreach (var support in document.Supports)
@@ -90,7 +91,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         // Offsets remain unrestricted. Saturate only the requested pane height.
         double visibleHeight = Math.Min(double.MaxValue, above + below);
         return new(frame, supports.AsReadOnly(), loads, PointLoadSymbol.Group(loads), annotations.AsReadOnly(),
-            Math.Max(visibleHeight, SchematicMetrics.MinimumBeamPaneHeight))
+            Math.Max(visibleHeight, minimumPaneHeight))
             { DistributedLoads = distributed, RequiredBelowBeamSpace = below };
 
         void AvoidManual(bool support)
@@ -139,8 +140,8 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             // clearance. Keep one support row available even before placement.
             if (support)
                 return SchematicMetrics.SupportLabelTopOffset + rowHeight + Math.Max(0, ends.Count - 1) * line;
-            // Always reserve a load preview row. Hover/leave cannot change the beam height.
-            return SchematicMetrics.ForceTopOffset * loadSymbolScale + 16 + (ends.Count + 1) * line;
+            // Reserve a load preview row for stable hover/leave height in the editor; reports opt out.
+            return SchematicMetrics.ForceTopOffset * loadSymbolScale + 16 + (ends.Count + (reserveLoadPreviewRow ? 1 : 0)) * line;
         }
         double Left(double x, double width) => Math.Clamp(x - width / 2, 8, Math.Max(8, frame.Viewport.Width - width - 8));
     }

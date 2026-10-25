@@ -66,7 +66,7 @@ public sealed class DesktopNavigationTests
         var projection = editor.Overview;
         int historyCount = editor.Session.UndoHistory.Count;
         int initialAnalyses = analyses;
-        foreach (string tableName in new[] { "SupportTable", "LoadTable", "ReactionTable" })
+        foreach (string tableName in new[] { "SupportTable", "ForceTable", "MomentTable", "DistributedLoadTable", "ReactionTable" })
         {
             var buttons = overview.FindControl<ItemsControl>(tableName)!.GetVisualDescendants().OfType<Button>().ToArray();
             Assert.NotEmpty(buttons);
@@ -134,7 +134,7 @@ public sealed class DesktopNavigationTests
         Assert.Equal(DistributedLoadInteraction.Neutral, editor.DistributedLoadState);
         var draft = editor.SupportDraft;
         draft.PositionText = "-";
-        var other = overview.FindControl<ItemsControl>("LoadTable")!.GetVisualDescendants().OfType<Button>().First();
+        var other = overview.FindControl<ItemsControl>("ForceTable")!.GetVisualDescendants().OfType<Button>().First();
         editor.IsMainMenuOpen = true;
         other.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.Same(draft, editor.SupportDraft);
@@ -185,7 +185,7 @@ public sealed class DesktopNavigationTests
         ActivateName(reaction, window, true);
         Assert.Equal(ProjectTestSupport.SupportId, editor.SupportDraft!.OriginalId);
         Assert.Equal("Renamed support", editor.SupportDraft.NameText);
-        var force = overview.FindControl<ItemsControl>("LoadTable")!.GetVisualDescendants().OfType<Button>()
+        var force = overview.FindControl<ItemsControl>("ForceTable")!.GetVisualDescendants().OfType<Button>()
             .Single(b => editor.Document.Loads.Any(l => l.Id == ((ProjectOverviewItem)b.DataContext!).Id && l.Kind == PointLoadKind.Force));
         ActivateName(force, window, true);
         Guid forceId = editor.LoadDraft!.OriginalId!.Value;
@@ -562,6 +562,41 @@ public sealed class DesktopNavigationTests
         Assert.Equal(axisTop, axis.Bounds.Top);
     }
 
+    [Theory]
+    [InlineData("de-DE", 0)] [InlineData("en-US", 0)]
+    [InlineData("de-DE", 1)] [InlineData("en-US", 1)]
+    [InlineData("de-DE", 2)] [InlineData("en-US", 2)]
+    [InlineData("de-DE", 3)] [InlineData("en-US", 3)]
+    [InlineData("de-DE", 4)] [InlineData("en-US", 4)]
+    public void EmptyLoadSectionsHideTheirEntireLayout(string culture, int group)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new UiCultureScope(culture);
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
+        var window = new MainWindow { DataContext = model };
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
+        var state = ProjectTestSupport.State();
+        var doc = state.Document;
+        doc = doc.WithLoads(group == 4 ? doc.Loads : doc.Loads.Where(l =>
+            group == 1 && l.Kind == PointLoadKind.Force || group == 2 && l.Kind == PointLoadKind.Moment));
+        doc = doc.WithDistributedLoads(group is 3 or 4 ? doc.DistributedLoads : []);
+        Assert.True(model.Editor!.Session.Commit(new(doc, state.Presentation)));
+        Layout(window);
+        var overview = Assert.Single(window.GetVisualDescendants().OfType<ProjectOverviewView>());
+        var sections = new[] { ("ForceSection", group is 1 or 4), ("MomentSection", group is 2 or 4),
+            ("DistributedLoadSection", group is 3 or 4) };
+        var visible = new List<StackPanel>();
+        foreach (var (name, expected) in sections)
+        {
+            var section = overview.FindControl<StackPanel>(name)!;
+            Assert.Equal(expected, section.IsVisible);
+            if (expected) visible.Add(section);
+            else Assert.Equal(0, section.Bounds.Height);
+        }
+        foreach (var pair in visible.Zip(visible.Skip(1)))
+            Assert.True(pair.First.Bounds.Bottom <= pair.Second.Bounds.Top);
+    }
+
     [Fact]
     public void EmptyEntityTablesHideTheirHeadersAndKeepTheExistingAnalysisStatus()
     {
@@ -571,11 +606,11 @@ public sealed class DesktopNavigationTests
         ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
         Layout(window);
         var overview = Assert.Single(window.GetVisualDescendants().OfType<ProjectOverviewView>());
-        foreach (string tableName in new[] { "SupportTable", "LoadTable" })
+        foreach (string tableName in new[] { "SupportTable", "ForceTable", "MomentTable", "DistributedLoadTable" })
         {
             var table = overview.FindControl<ItemsControl>(tableName)!;
             Assert.Equal(0, table.ItemCount);
-            Assert.False(((Control)table.Parent!).IsVisible);
+            Assert.False(((Control)table.Parent!.Parent!).IsVisible);
         }
         Assert.False(overview.FindControl<StackPanel>("ReactionsSection")!.IsVisible);
         Assert.True(overview.FindControl<TextBlock>("AnalysisStatus")!.IsVisible);
@@ -585,12 +620,18 @@ public sealed class DesktopNavigationTests
 
     private static void AssertTables(ProjectOverviewView overview)
     {
-        foreach (var (name, columns) in new[] { ("SupportTable", 3), ("LoadTable", 3), ("ReactionTable", 4) })
+        foreach (var (name, columns) in new[] { ("SupportTable", 3), ("ForceTable", 3), ("MomentTable", 3), ("DistributedLoadTable", 3), ("ReactionTable", 4) })
         {
             var table = overview.FindControl<ItemsControl>(name)!;
             var header = ((StackPanel)table.Parent!).Children.OfType<Grid>().Single(g => g.Classes.Contains("tableHeader"));
             var rows = table.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("overviewRow")).ToArray();
             Assert.Equal(table.ItemCount, rows.Length);
+            if (table.ItemCount == 0)
+            {
+                Assert.Empty(rows);
+                Assert.False(((Control)table.Parent!.Parent!).IsVisible);
+                continue;
+            }
             Assert.NotEmpty(rows);
             Assert.Equal(TextAlignment.Center, header.Children.OfType<TextBlock>().First().TextAlignment);
             if (name == "SupportTable")
@@ -599,7 +640,7 @@ public sealed class DesktopNavigationTests
                 Assert.True(header.ColumnDefinitions[0].ActualWidth > 48);
                 Assert.Equal(TextAlignment.Center, header.Children.OfType<TextBlock>().ElementAt(1).TextAlignment);
             }
-            if (name == "LoadTable")
+            if (name is "ForceTable" or "MomentTable" or "DistributedLoadTable")
             {
                 // More space for positions/ranges moves the value column left.
                 Assert.True(header.ColumnDefinitions[1].ActualWidth < header.ColumnDefinitions[2].ActualWidth);

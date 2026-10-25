@@ -14,6 +14,9 @@ namespace SpanDraft.Tests;
 
 public sealed class DesktopProjectOverviewTests
 {
+    private static IEnumerable<ProjectOverviewItem> AllLoads(ProjectOverviewState state) =>
+        state.Forces.Concat(state.Moments).Concat(state.DistributedLoads);
+
     private static Length Mm(double value) => Length.FromMillimeters(value);
     private static EditorDocument Document() => new(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section,
         [new(Guid.NewGuid(), Mm(0), SupportType.Fixed, "A")],
@@ -38,7 +41,13 @@ public sealed class DesktopProjectOverviewTests
     };
 
     private static IReadOnlyList<ProjectOverviewItem> Items(EditorViewModel editor, AutoNameKind kind) =>
-        kind == AutoNameKind.Support ? editor.Overview.Supports : editor.Overview.Loads;
+        kind switch
+        {
+            AutoNameKind.Support => editor.Overview.Supports,
+            AutoNameKind.Force => editor.Overview.Forces,
+            AutoNameKind.Moment => editor.Overview.Moments,
+            _ => editor.Overview.DistributedLoads
+        };
 
     private static void StartNew(EditorViewModel editor, AutoNameKind kind)
     {
@@ -102,16 +111,19 @@ public sealed class DesktopProjectOverviewTests
         Assert.Equal(supportType, overview.Supports[0].Type);
         Assert.Equal("0", overview.Supports[0].Position);
         Assert.Empty(overview.Supports[0].Value);
-        Assert.Equal(new[] { "F1", "M1", "q1" }, overview.Loads.Select(l => l.Name));
-        Assert.Equal(new[] { "F", "M", "q" }, overview.Loads.Select(l => l.Type));
-        Assert.Equal(new[] { "-100 N", "50 N·m", "-500 N/m" }, overview.Loads.Select(l => l.Value));
-        Assert.Equal(new[] { "400", "600", "200…800" }, overview.Loads.Select(l => l.Position));
+        Assert.Equal(new[] { "F1", "M1", "q1" }, AllLoads(overview).Select(l => l.Name));
+        Assert.Equal(new[] { "F", "M", "q" }, AllLoads(overview).Select(l => l.Type));
+        Assert.Equal(new[] { "-100 N", "50 N·m", "-500 N/m" }, AllLoads(overview).Select(l => l.Value));
+        Assert.Equal(new[] { "400", "600", "200…800" }, AllLoads(overview).Select(l => l.Position));
         Assert.True(overview.HasSupports);
-        Assert.True(overview.HasLoads);
+        Assert.True(overview.HasForces);
+        Assert.True(overview.HasMoments);
+        Assert.True(overview.HasDistributedLoads);
         Assert.Same(editor.Presentation, overview.Analysis);
         Assert.Equal(1, analyses());
         Assert.Throws<NotSupportedException>(() => ((IList<ProjectOverviewItem>)overview.Supports).Clear());
-        Assert.Throws<NotSupportedException>(() => ((IList<ProjectOverviewItem>)overview.Loads).Clear());
+        foreach (var group in new[] { overview.Forces, overview.Moments, overview.DistributedLoads })
+            Assert.Throws<NotSupportedException>(() => ((IList<ProjectOverviewItem>)group).Clear());
         Assert.Throws<NotSupportedException>(() => ((IList<ProjectOverviewReaction>)overview.Reactions).Clear());
     }
 
@@ -162,7 +174,7 @@ public sealed class DesktopProjectOverviewTests
         Assert.Equal(1, notifications);
         Assert.True(editor.Undo());
         Assert.Equal(before.Supports, editor.Overview.Supports);
-        Assert.Equal(before.Loads, editor.Overview.Loads);
+        Assert.Equal(AllLoads(before), AllLoads(editor.Overview));
         Assert.True(editor.Redo());
         Assert.Contains(Items(editor, kind), i => i.Name == "Committed entity");
         Assert.Equal(4, analyses());
@@ -313,7 +325,7 @@ public sealed class DesktopProjectOverviewTests
         var failed = editor.Overview;
         Assert.Equal(failure, failed.Analysis.Kind);
         Assert.Equal(supports.Select(s => s.Name), failed.Supports.Select(s => s.Name));
-        Assert.Equal(successful.Loads, failed.Loads);
+        Assert.Equal(AllLoads(successful), AllLoads(failed));
         Assert.Equal(successful.Section, failed.Section);
         Assert.Equal(successful.Material, failed.Material);
         Assert.Empty(failed.Reactions);
@@ -418,8 +430,8 @@ public sealed class DesktopProjectOverviewTests
             .WithDistributedLoads([new(Guid.NewGuid(), Mm(200.2468), Mm(800.7531),
                 ForcePerLength.FromNewtonsPerMeter(-500.98765), "q1")]);
         var editor = Observed(doc, out var analyses);
-        Assert.Equal(new[] { forcePosition, momentPosition, range }, editor.Overview.Loads.Select(l => l.Position));
-        Assert.Equal(new[] { force, moment, intensity }, editor.Overview.Loads.Select(l => l.Value));
+        Assert.Equal(new[] { forcePosition, momentPosition, range }, AllLoads(editor.Overview).Select(l => l.Position));
+        Assert.Equal(new[] { force, moment, intensity }, AllLoads(editor.Overview).Select(l => l.Value));
         Assert.Same(doc, editor.Document);
         Assert.Equal(-100.56789, editor.Document.Loads[0].Value);
         Assert.Equal(50.123456, editor.Document.Loads[1].Value);
@@ -442,14 +454,33 @@ public sealed class DesktopProjectOverviewTests
         Assert.Equal(expected, UiNumbers.Compact(value));
     }
 
+    [Theory]
+    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)] [InlineData(4)]
+    public void LoadGroupsRetainOriginalIdsOrderAndIndependentVisibility(int group)
+    {
+        var doc = Document();
+        doc = doc.WithLoads(group == 4 ? doc.Loads : doc.Loads.Where(l =>
+            group == 1 && l.Kind == PointLoadKind.Force || group == 2 && l.Kind == PointLoadKind.Moment));
+        doc = doc.WithDistributedLoads(group is 3 or 4 ? doc.DistributedLoads : []);
+        var overview = Observed(doc, out _).Overview;
+        Assert.Equal(doc.Loads.Where(l => l.Kind == PointLoadKind.Force).Select(l => l.Id), overview.Forces.Select(l => l.Id));
+        Assert.Equal(doc.Loads.Where(l => l.Kind == PointLoadKind.Moment).Select(l => l.Id), overview.Moments.Select(l => l.Id));
+        Assert.Equal(doc.DistributedLoads.Select(l => l.Id), overview.DistributedLoads.Select(l => l.Id));
+        Assert.Equal(group is 1 or 4, overview.HasForces);
+        Assert.Equal(group is 2 or 4, overview.HasMoments);
+        Assert.Equal(group is 3 or 4, overview.HasDistributedLoads);
+    }
+
     [Fact]
     public void EmptyDocumentHasNoTableRowsOrSyntheticPlaceholders()
     {
         var editor = Observed(new(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section), out var analyses);
         Assert.False(editor.Overview.HasSupports);
-        Assert.False(editor.Overview.HasLoads);
+        Assert.False(editor.Overview.HasForces);
+        Assert.False(editor.Overview.HasMoments);
+        Assert.False(editor.Overview.HasDistributedLoads);
         Assert.Empty(editor.Overview.Supports);
-        Assert.Empty(editor.Overview.Loads);
+        Assert.Empty(AllLoads(editor.Overview));
         Assert.Empty(editor.Overview.Reactions);
         Assert.Equal(AnalysisPresentationKind.MissingSupports, editor.Overview.Analysis.Kind);
         Assert.Equal(1, analyses());

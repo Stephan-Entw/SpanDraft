@@ -267,7 +267,7 @@ public sealed class MaterialStrengthTests
         using var report = ProjectReport.Capture(main.Editor!);
         Assert.Contains(report.Data.MaterialProperties, p => p.PlainText.StartsWith(MaterialStrengthDisplay.Label(type) + " = ", StringComparison.Ordinal));
         Assert.Equal(Strings.ReportSafety + " S = " + symbol + " / σb,max", report.Data.Indicators[3].Label.PlainText);
-        Assert.DoesNotContain("S = Re", Strings.ReportLimits);
+        Assert.Equal(new[] { Strings.ReportTheory }, report.Data.Labels.Assumptions);
         using var pdf = new MemoryStream(); report.WritePdf(pdf);
         Assert.Contains(report.TextRuns, r => r.Text.Contains(symbol, StringComparison.Ordinal));
         Assert.DoesNotContain(report.TextRuns, r => r.Text.Contains("fy", StringComparison.Ordinal));

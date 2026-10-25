@@ -23,6 +23,7 @@ namespace SpanDraft.Desktop.Reporting;
 internal sealed class ReportVisuals
 {
     internal const double VisualScale = .8;
+    internal const double MinimumBeamPaneHeight = 100;
     private const double SupportSymbolScale = .75;
     private const double LoadSymbolScale = .85;
     internal const double PointsPerDip = 72d / 96 * VisualScale;
@@ -86,14 +87,16 @@ internal sealed class ReportVisuals
         var margins = minimum;
         for (int pass = 0; pass < 16; pass++)
         {
-            var initial = layout.Update(inputs.Document, width, SchematicMetrics.MinimumBeamPaneHeight,
+            var initial = layout.Update(inputs.Document, width, MinimumBeamPaneHeight,
                 outerMargins: margins, supportSymbolScale: SupportSymbolScale, loadSymbolScale: LoadSymbolScale)!;
             var request = BeamRenderState.Create(inputs.Document, initial, Measure,
-                presentation: inputs.EditorPresentation, profile: profile, loadSymbolScale: LoadSymbolScale);
+                presentation: inputs.EditorPresentation, profile: profile, loadSymbolScale: LoadSymbolScale,
+                reserveLoadPreviewRow: false, minimumPaneHeight: MinimumBeamPaneHeight);
             var frame = layout.Update(inputs.Document, width, request.MinimumPaneHeight,
                 request.RequiredBelowBeamSpace, margins, SupportSymbolScale, LoadSymbolScale)!;
             Beam.Scene = BeamRenderState.Create(inputs.Document, frame, Measure,
-                presentation: inputs.EditorPresentation, profile: profile, loadSymbolScale: LoadSymbolScale);
+                presentation: inputs.EditorPresentation, profile: profile, loadSymbolScale: LoadSymbolScale,
+                reserveLoadPreviewRow: false, minimumPaneHeight: MinimumBeamPaneHeight);
             Beam.Height = frame.Viewport.Height;
             Axis.AxisLayout = CoordinateAxisLayout.Create(frame.Layout, width, Measure, unit: profile[QuantityKind.BeamLength]);
             Axis.Height = Axis.AxisLayout.PaneHeight;

@@ -320,10 +320,9 @@
   <data name="ReportHeading" xml:space="preserve"><value>Berechnungsbericht</value></data>
   <data name="ReportContinuation" xml:space="preserve"><value>Fortsetzung</value></data>
   <data name="ReportPage" xml:space="preserve"><value>Seite {0} von {1}</value></data>
-  <data name="ReportNotes" xml:space="preserve"><value>Berechnungsgrundlagen / Hinweise</value></data>
-  <data name="ReportTheory" xml:space="preserve"><value>Euler-Bernoulli · linear elastisch · kleine Verformungen · konstanter Werkstoff und Querschnitt.</value></data>
-  <data name="ReportLimits" xml:space="preserve"><value>Schubverformung und Eigengewicht sind nicht berücksichtigt. Das Verhältnis des gewählten Festigkeitskennwerts zu σb,max ist eine elastische Bewertung, kein normativer Festigkeits- oder Sicherheitsnachweis.</value></data>
-  <data name="ReportPosition" xml:space="preserve"><value>bei x = {0} {1}{2}</value></data>
+  <data name="ReportNotes" xml:space="preserve"><value>Berechnungsmodell</value></data>
+  <data name="ReportTheory" xml:space="preserve"><value>Berechnung nach Euler-Bernoulli, linear-elastisch und für kleine Verformungen. Werkstoff und Querschnitt sind über die Balkenlänge konstant; Schubverformungen werden vernachlässigt.</value></data>
+  <data name="ReportPosition" xml:space="preserve"><value>x = {0} {1}{2}</value></data>
   <data name="ReportSavePdf" xml:space="preserve"><value>PDF speichern</value></data>
   <data name="ReportPrint" xml:space="preserve"><value>Drucken</value></data>
   <data name="ReportFit" xml:space="preserve"><value>Ganze Seite anzeigen</value></data>
@@ -339,8 +338,8 @@
   <data name="ReportClose" xml:space="preserve"><value>Bericht schließen</value></data>
   <data name="ReportSummary" xml:space="preserve"><value>Maßgebende Kennwerte</value></data>
   <data name="ReportMaterial" xml:space="preserve"><value>Material</value></data>
-  <data name="ReportDeflection" xml:space="preserve"><value>Maximale Durchbiegung</value></data>
-  <data name="ReportMoment" xml:space="preserve"><value>Maßgebendes Biegemoment</value></data>
+  <data name="ReportDeflection" xml:space="preserve"><value>Max. Durchbiegung</value></data>
+  <data name="ReportMoment" xml:space="preserve"><value>Max. Biegemoment</value></data>
   <data name="ReportStress" xml:space="preserve"><value>Max. elastische Biegespannung</value></data>
   <data name="ReportSafety" xml:space="preserve"><value>Sicherheitsfaktor</value></data>
   <data name="ReportPdfTarget" xml:space="preserve"><value>Bitte ein Exportziel mit der Dateiendung .pdf wählen.</value></data>
@@ -359,4 +358,7 @@
   <data name="RenameMaterial" xml:space="preserve"><value>Bezeichnung anpassen</value></data>
   <data name="MaterialNameConflictQuestion" xml:space="preserve"><value>Ein eigener Werkstoff mit der Bezeichnung „{0}“ und anderen Daten ist bereits vorhanden.</value></data>
   <data name="ReplaceMaterialQuestion" xml:space="preserve"><value>Den eigenen Werkstoff „{0}“ durch die aktuellen Werkstoffdaten ersetzen?</value></data>
+  <data name="Forces" xml:space="preserve"><value>Kräfte</value></data>
+  <data name="Moments" xml:space="preserve"><value>Momente</value></data>
+  <data name="DistributedLoads" xml:space="preserve"><value>Streckenlasten</value></data>
 </root>

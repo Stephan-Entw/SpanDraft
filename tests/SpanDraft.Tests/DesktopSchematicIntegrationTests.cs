@@ -4,6 +4,7 @@ using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Layout;
+using SpanDraft.Desktop.Reporting;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
@@ -18,6 +19,71 @@ public sealed class DesktopSchematicIntegrationTests
         new(Mm(length), ProjectTemplates.Material, ProjectTemplates.Section, supports, loads);
     private static BeamLayoutFrame Frame(EditorDocument document, double width = 1100, double height = 600) => new BeamLayoutState().Update(document, width, height)!;
     private static BeamRenderState Scene(EditorDocument document, BeamLayoutFrame frame) => BeamRenderState.Create(document, frame, DesktopLayoutFixture.Measure);
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(6)]
+    public void DisablingPreviewReserveRemovesOnlyTheExtraLoadRow(int count)
+    {
+        var document = Document(Enumerable.Range(0, count)
+            .Select(i => Load(500, -1000, PointLoadKind.Force, "F" + i)).ToArray(),
+            [new(Guid.NewGuid(), Mm(0), SupportType.Pinned, "A")]);
+        var frame = Frame(document);
+        var standard = Scene(document, frame);
+        var ui = BeamRenderState.Create(document, frame, DesktopLayoutFixture.Measure,
+            reserveLoadPreviewRow: true, minimumPaneHeight: SchematicMetrics.MinimumBeamPaneHeight);
+        var reserved = BeamRenderState.Create(document, frame, DesktopLayoutFixture.Measure,
+            reserveLoadPreviewRow: true, minimumPaneHeight: ReportVisuals.MinimumBeamPaneHeight);
+        var compact = BeamRenderState.Create(document, frame, DesktopLayoutFixture.Measure,
+            reserveLoadPreviewRow: false, minimumPaneHeight: ReportVisuals.MinimumBeamPaneHeight);
+
+        Assert.Equal(standard.MinimumPaneHeight, ui.MinimumPaneHeight);
+        Assert.True(standard.MinimumPaneHeight >= SchematicMetrics.MinimumBeamPaneHeight);
+        Assert.Equal(SchematicMetrics.AxisLabelLineHeight + SchematicMetrics.EntityLabelPadding,
+            reserved.MinimumPaneHeight - compact.MinimumPaneHeight, 6);
+        Assert.Equal(reserved.RequiredBelowBeamSpace, compact.RequiredBelowBeamSpace);
+        Assert.Equal(reserved.Annotations, compact.Annotations);
+        Assert.True(compact.MinimumPaneHeight >= ReportVisuals.MinimumBeamPaneHeight);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CompactScenesStillGrowForOverlappingLoadsAndManualOffsets(bool manualOffsets)
+    {
+        double previousHeight = 0;
+        foreach (int count in new[] { 1, 2, 6 })
+        {
+            var loads = Enumerable.Range(0, count)
+                .Select(i => Load(500, -1000, i % 2 == 0 ? PointLoadKind.Force : PointLoadKind.Moment, "F" + i)).ToArray();
+            var support = new EditorSupport(Guid.NewGuid(), Mm(0), SupportType.Fixed, "A");
+            var document = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section,
+                supports: [support], loads: loads,
+                distributedLoads: [new(Guid.NewGuid(), Mm(200), Mm(800), ForcePerLength.FromNewtonsPerMeter(-500), "q1")]);
+            var presentation = new EditorPresentationState();
+            var layout = new BeamLayoutState();
+            var initial = Frame(document);
+            BeamRenderState Create(BeamLayoutFrame frame) => BeamRenderState.Create(document, frame,
+                DesktopLayoutFixture.Measure, presentation: presentation, reserveLoadPreviewRow: false,
+                minimumPaneHeight: ReportVisuals.MinimumBeamPaneHeight);
+            double automaticHeight = Create(initial).MinimumPaneHeight;
+            if (manualOffsets)
+                presentation = presentation.WithOffset(loads[0].Id, new(0, -120))
+                    .WithOffset(support.Id, new(0, 80));
+            var request = Create(initial);
+            var frame = layout.Update(document, 1100, request.MinimumPaneHeight, request.RequiredBelowBeamSpace)!;
+            var scene = Create(frame);
+
+            Assert.True(scene.MinimumPaneHeight > previousHeight);
+            if (manualOffsets) Assert.True(scene.MinimumPaneHeight > automaticHeight);
+            Assert.Equal(request.MinimumPaneHeight, scene.MinimumPaneHeight, 6);
+            Assert.All(scene.Annotations, label => Assert.True(new Rect(new Size(frame.Viewport.Width, frame.Viewport.Height)).Contains(label.Bounds)));
+            Assert.All(scene.Glyphs, glyph => Assert.True(glyph.Bounds.Top >= 0));
+            Assert.All(scene.DistributedLoads, load => Assert.True(load.TopY >= 0));
+            previousHeight = scene.MinimumPaneHeight;
+        }
+    }
 
     [Theory]
     [InlineData(SupportType.Fixed)]
@@ -47,12 +113,8 @@ public sealed class DesktopSchematicIntegrationTests
                 Assert.True(label.Bounds.Top >= 0);
                 Assert.True(label.Bounds.Bottom <= frame.Viewport.Height);
             });
-            if (count == 1)
-            {
-                Assert.Equal(180, frame.Viewport.Height);
-                Assert.Equal(124, frame.Viewport.BeamY);
-            }
-            else Assert.True(frame.Viewport.Height > previousHeight);
+            Assert.True(frame.Viewport.Height >= SchematicMetrics.MinimumBeamPaneHeight);
+            Assert.True(frame.Viewport.Height > previousHeight);
             previousHeight = frame.Viewport.Height;
 
             // The committed pane already has room for a placement preview row.

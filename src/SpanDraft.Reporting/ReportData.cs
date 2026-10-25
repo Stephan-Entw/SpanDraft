@@ -12,7 +12,7 @@ internal sealed record ReportLabels(string Heading, string Continuation, string 
     string Section, string Material, string Summary, string Notes, IReadOnlyList<string> Assumptions,
     string Title, string Project, string Reference, string Author);
 internal sealed record ReportTable(string Title, IReadOnlyList<TechnicalText> Headers,
-    IReadOnlyList<float> Widths, IReadOnlyList<IReadOnlyList<string>> Rows);
+    IReadOnlyList<float> Widths, IReadOnlyList<IReadOnlyList<string>> Rows, int? LeftAlignedColumn = null);
 internal sealed record ReportIndicator(TechnicalText Label, string Value, string? Position);
 internal enum ReportGraphic { Beam, Displacement, Shear, Moment, Section }
 internal sealed record ReportTechnicalGraphics(float BeamHeight, Action<SKCanvas, ReportGraphic, SKRect> Draw);

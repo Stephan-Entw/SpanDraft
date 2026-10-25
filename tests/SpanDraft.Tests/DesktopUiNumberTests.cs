@@ -60,7 +60,7 @@ public sealed class DesktopUiNumberTests
         Assert.Equal(UiNumbers.Format(document.Loads[0].Value), editor.LoadDraft!.ValueText);
         Assert.True(UiNumbers.TryParseSignedValue(editor.LoadDraft.ValueText, out var parsedForce));
         Assert.Equal(document.Loads[0].Value, parsedForce);
-        Assert.Equal(culture == "de-DE" ? "13,3·10³ N" : "13.3·10³ N", editor.Overview.Loads[0].Value);
+        Assert.Equal(culture == "de-DE" ? "13,3·10³ N" : "13.3·10³ N", editor.Overview.Forces[0].Value);
         Assert.Same(document, editor.Document);
     }
 }

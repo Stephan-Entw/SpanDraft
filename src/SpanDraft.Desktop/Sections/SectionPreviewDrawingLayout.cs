@@ -22,6 +22,15 @@ public sealed record PreviewDrawingDimension(string Key, TechnicalText Content, 
 public sealed record PreviewDrawingAxis(SectionAxisDesignation Axis, Point Start, Point End, Rect LabelBounds, bool IsReference = false)
 {
     public Point LabelPosition => LabelBounds.TopLeft;
+    internal const double ArrowLength = 12, ArrowHalfWidth = 3;
+    internal Vector Direction { get { Vector direction = End - Start; return direction / direction.Length; } }
+    internal Point ArrowBase => End - Direction * ArrowLength;
+    internal IReadOnlyList<Point> ArrowPoints => [End,
+        ArrowBase + new Vector(-Direction.Y, Direction.X) * ArrowHalfWidth,
+        ArrowBase - new Vector(-Direction.Y, Direction.X) * ArrowHalfWidth];
+    internal Rect ArrowBounds => new(ArrowPoints.Min(p => p.X), ArrowPoints.Min(p => p.Y),
+        ArrowPoints.Max(p => p.X) - ArrowPoints.Min(p => p.X), ArrowPoints.Max(p => p.Y) - ArrowPoints.Min(p => p.Y));
+    internal Point SolidEnd(bool compact) => compact ? ArrowBase : End;
 }
 
 /// <summary>Screen-space annotation layout. Physical contours, thicknesses and engineering values are never changed.</summary>
@@ -31,6 +40,13 @@ public sealed class SectionPreviewDrawingLayout
     public const double WebCaptionGap = 28;
     public const double WebHeightFraction = .70, TWebHeightFraction = .25;
     public const double RadiusLeaderAngleDegrees = 35, RadiusLeaderLength = 32;
+    private static class CompactMetrics
+    {
+        internal const double Left = 48, Right = 60, DetailGap = RadiusLeaderLength + 8, Top = 25, Bottom = 48;
+        internal const double Clearance = 2, WidthCaptionGap = 4, HeightCaptionGap = 6, ViewportInset = 4;
+        internal const double FlangeCaptionGap = 3, FlangeExtension = PreviewDrawingArrow.Length + Clearance;
+        internal const double FlangeOffset = 22;
+    }
     private SectionPreviewDrawingLayout(double scale, Rect profileBounds, double height)
     { Scale = scale; ProfileBounds = profileBounds; _height = height; }
     private readonly double _height;
@@ -46,12 +62,23 @@ public sealed class SectionPreviewDrawingLayout
             + (dimension.IsConfirmed ? " = " + InputQuantityFormatter.WithUnit(dimension.Value, unit) : "");
         var labels = geometry.Dimensions.Values.ToDictionary(d => d.Key, Label);
         var textSizes = labels.ToDictionary(p => p.Key, p => measure(p.Value));
+        bool nestedFlange = compact && geometry.Dimensions.ContainsKey("tf");
+        double heightOffset = nestedFlange
+            ? CompactMetrics.FlangeOffset + textSizes["h"].Height + CompactMetrics.FlangeCaptionGap + 2 * CompactMetrics.Clearance : 22;
         // Preserve the physical drawing envelope when changing the radius caption.
         double detailWidth = geometry.Dimensions.Values.Where(IsDetail).Select(d => d.Key == "r" && d.IsConfirmed
             ? measure("R" + InputQuantityFormatter.WithUnit(d.Value, unit)).Width : textSizes[d.Key].Width).DefaultIfEmpty(48).Max();
-        double left = compact ? 48 : geometry.Dimensions.ContainsKey("h") ? Math.Max(58, textSizes["h"].Width + 34) : 58;
-        double right = compact ? Math.Max(60, detailWidth + 12) : Math.Max(100, detailWidth + 52);
-        double top = compact ? 25 : 52, bottom = compact ? 48 : 90;
+        double left = compact ? CompactMetrics.Left : geometry.Dimensions.ContainsKey("h") ? Math.Max(58, textSizes["h"].Width + 34) : 58;
+        double right = compact ? Math.Max(CompactMetrics.Right, detailWidth + CompactMetrics.DetailGap) : Math.Max(100, detailWidth + 52);
+        if (nestedFlange)
+        {
+            // Transfer only the missing caption space from right to left;
+            // the viewport and the profile's available width stay unchanged.
+            double transfer = Math.Max(0, heightOffset + textSizes["h"].Height + CompactMetrics.HeightCaptionGap
+                + CompactMetrics.ViewportInset - left);
+            left += transfer; right -= transfer;
+        }
+        double top = compact ? CompactMetrics.Top : 52, bottom = compact ? CompactMetrics.Bottom : 90;
         double width = Math.Max(1, size.Width - left - right), height = Math.Max(1, size.Height - top - bottom);
         // Match the reference's generous drawing space without enlarging the physical profile indefinitely.
         double scale = Math.Min(Math.Min(width / geometry.Width, height / geometry.Height),
@@ -81,19 +108,19 @@ public sealed class SectionPreviewDrawingLayout
                 end = Project(new(geometry.Width, flangeBottom));
             }
             double measureY = bounds.Bottom + 28;
-            Point a = vertical ? new(bounds.Left - 22, start.Y) : new(start.X, measureY);
-            Point b = vertical ? new(bounds.Left - 22, end.Y) : new(end.X, measureY);
+            Point a = vertical ? new(bounds.Left - heightOffset, start.Y) : new(start.X, measureY);
+            Point b = vertical ? new(bounds.Left - heightOffset, end.Y) : new(end.X, measureY);
             var normal = vertical ? new Vector(-5, 0) : new Vector(0, 5);
             var lines = new List<PreviewDrawingLine> { new(start + normal, a + normal), new(end + normal, b + normal) };
             var arrows = new List<PreviewDrawingArrow>();
             AddDimension(a, b, lines, arrows);
             var caption = Caption(dimension.Key, vertical
                 ? new(a.X - textSizes[dimension.Key].Width - 8, (a.Y + b.Y - textSizes[dimension.Key].Height) / 2)
-                : new((a.X + b.X) / 2, a.Y + 16), !vertical);
+                : new((a.X + b.X) / 2, a.Y + (compact && dimension.Key == "b" ? CompactMetrics.WidthCaptionGap : 16)), !vertical);
             if (compact && vertical)
             {
                 var textSize = textSizes[dimension.Key];
-                caption = FitText(new Rect(a.X - textSize.Height - 6,
+                caption = FitText(new Rect(a.X - textSize.Height - CompactMetrics.HeightCaptionGap,
                     (a.Y + b.Y - textSize.Width) / 2, textSize.Height, textSize.Width), size);
             }
             dimensions.Add(new(dimension.Key, labels[dimension.Key], caption, lines, arrows, compact && vertical));
@@ -172,6 +199,12 @@ public sealed class SectionPreviewDrawingLayout
                 yield break;
             }
             bool vertical = dimension.Start.X == dimension.End.X;
+            bool leftFlange = compact && dimension.Key == "tf" && hasFixedWebDimension;
+            if (leftFlange)
+            {
+                // Project the same flange surfaces onto the left silhouette.
+                start = new(bounds.Left, start.Y); end = new(bounds.Left, end.Y);
+            }
             // A web continues through the profile: moving its measure a fixed distance
             // can still put the filled arrows on material. Include positions beyond
             // the actual profile envelope, independently of its aspect ratio.
@@ -179,19 +212,26 @@ public sealed class SectionPreviewDrawingLayout
                 ? new[] { bounds.Bottom - bounds.Height * (geometry.Type == SectionEditorType.TSection ? TWebHeightFraction : WebHeightFraction) - start.Y }
                 : new[] { -24d, 24d, -40d, 40d, -56d, 56d, -72d, 72d, -88d, 88d, -104d, 104d }
                     .Concat(new[] { 12d, 20d, 36d, 52d, 68d }.SelectMany(gap => new[] { bounds.Bottom + gap - start.Y, bounds.Top - gap - start.Y }));
-            var verticalOffsets = hasFixedWebDimension
+            var verticalOffsets = hasFixedWebDimension || compact
                 ? new[] { 32d, 36d, 38d, 46d, 60d, 6d, 10d, 14d, 18d, 22d, 26d,
                     size.Width - bounds.Right - PreviewDrawingArrow.HalfWidth - 4 }
                 : new[] { 32d, 36d, 38d, 46d, 60d };
+            if (leftFlange)
+            {
+                verticalOffsets = [CompactMetrics.FlangeOffset];
+            }
             foreach (double offset in vertical ? verticalOffsets : horizontalOffsets)
             {
-                Point a = vertical ? new(bounds.Right + offset, start.Y) : start + new Vector(0, offset);
-                Point b = vertical ? new(bounds.Right + offset, end.Y) : end + new Vector(0, offset);
+                double measureX = leftFlange ? bounds.Left - offset : bounds.Right + offset;
+                Point a = vertical ? new(measureX, start.Y) : start + new Vector(0, offset);
+                Point b = vertical ? new(measureX, end.Y) : end + new Vector(0, offset);
                 var lines = new List<PreviewDrawingLine>(); var arrows = new List<PreviewDrawingArrow>();
                 if (vertical)
                 {
-                    lines.Add(new(start + new Vector(4, 0), a + new Vector(5, 0)));
-                    lines.Add(new(end + new Vector(4, 0), b + new Vector(5, 0)));
+                    double side = leftFlange ? -1 : 1;
+                    double contourGap = leftFlange ? CompactMetrics.Clearance : 4;
+                    lines.Add(new(start + new Vector(side * contourGap, 0), a + new Vector(side * 5, 0)));
+                    lines.Add(new(end + new Vector(side * contourGap, 0), b + new Vector(side * 5, 0)));
                 }
                 else
                 {
@@ -199,6 +239,37 @@ public sealed class SectionPreviewDrawingLayout
                     lines.Add(new(start + separation, a + separation)); lines.Add(new(end + separation, b + separation));
                 }
                 AddDimension(a, b, lines, arrows);
+                if (leftFlange)
+                {
+                    var textSize = textSizes[dimension.Key];
+                    var rotatedSize = new Size(textSize.Height, textSize.Width);
+                    // Keep the actual flange endpoints and outside arrows; extend the
+                    // measure beside the full rotated caption rather than its short thickness.
+                    double outerCenter = Math.Max(CompactMetrics.ViewportInset + rotatedSize.Height / 2,
+                        Math.Min(a.Y, b.Y) - CompactMetrics.FlangeExtension - rotatedSize.Height / 2);
+                    double axisY = layout.Axes.Single(axis => axis.Axis == SectionAxisDesignation.Y).Start.Y;
+                    var captionCenters = new[] { outerCenter,
+                        axisY - CompactMetrics.Clearance - rotatedSize.Height / 2,
+                        bounds.Top + CompactMetrics.Clearance + rotatedSize.Height / 2,
+                        CompactMetrics.ViewportInset + rotatedSize.Height / 2 }
+                        .Concat(geometry.Type == SectionEditorType.TSection
+                            ? new[] { (a.Y + b.Y) / 2,
+                                bounds.Bottom - PreviewDrawingArrow.Length - CompactMetrics.Clearance - rotatedSize.Height / 2,
+                                dimensions.Single(d => d.Key == "h").TextBounds.Bottom + CompactMetrics.Clearance + rotatedSize.Height / 2 } : []);
+                    foreach (double centerY in captionCenters)
+                    {
+                        var caption = new Rect(new Point(a.X - CompactMetrics.FlangeCaptionGap - rotatedSize.Width,
+                            centerY - rotatedSize.Height / 2), rotatedSize);
+                        if (!new Rect(size).Contains(caption)) continue;
+                        var extended = lines.ToArray();
+                        extended[^1] = new(new(a.X, Math.Min(Math.Min(lines[^1].Start.Y, lines[^1].End.Y), caption.Top - CompactMetrics.Clearance)),
+                            new(a.X, Math.Max(Math.Max(lines[^1].Start.Y, lines[^1].End.Y), caption.Bottom + CompactMetrics.Clearance)));
+                        if (arrows.Any(arrow => arrow.Bounds.Intersects(caption))
+                            || extended.Any(line => IntersectsText(line, caption))) continue;
+                        yield return new(dimension.Key, labels[dimension.Key], caption, extended, arrows, true);
+                    }
+                    continue;
+                }
                 // Anchor the web caption to its right edge, independently of flange width.
                 foreach (double gap in IsFixedWebMeasure(dimension.Key)
                     ? Enumerable.Range((int)WebCaptionGap, Math.Max(1,
@@ -236,6 +307,9 @@ public sealed class SectionPreviewDrawingLayout
             if (IsFixedWebMeasure(candidate.Key) || candidate.Key == "r"
                 ? CaptionCoversMaterial(text) : bounds.Intersects(text)) return false;
             var viewport = new Rect(size);
+            if (compact && (!viewport.Contains(candidate.TextBounds)
+                || layout.Axes.Any(axis => axis.ArrowBounds.Inflate(CompactMetrics.Clearance).Intersects(candidate.TextBounds)
+                    || IntersectsText(new(axis.Start, axis.End), candidate.TextBounds)))) return false;
             if (candidate.Arrows.Any(arrow => !viewport.Contains(arrow.Bounds))
                 || candidate.Lines.Any(line => !viewport.Contains(line.Start) || !viewport.Contains(line.End))) return false;
             var measureLine = candidate.Key == "r" ? candidate.Lines[0] : candidate.Lines[2];
@@ -259,6 +333,7 @@ public sealed class SectionPreviewDrawingLayout
             .DistinctBy(candidate => (candidate.TextBounds, candidate.Lines[0], candidate.Lines[^1])).ToArray()).ToArray();
         var sourceAxes = layout.Axes;
         var axisSizes = sourceAxes.ToDictionary(a => a.Axis, a => measure(TechnicalSymbols.Axis(a.Axis.ToString().ToLowerInvariant())));
+        bool preferAxisTip = compact;
         bool PlaceAxisLabels()
         {
             var placed = new List<PreviewDrawingAxis>();
@@ -269,13 +344,22 @@ public sealed class SectionPreviewDrawingLayout
                 Vector direction = axis.End - axis.Start; direction /= direction.Length;
                 var normal = new Vector(-direction.Y, direction.X);
                 Size labelSize = axisSizes[axis.Axis];
-                foreach (double distance in new[] { 10d, 26d, 42d })
-                foreach (double offset in new[] { 0d, 20d, -20d, 40d, -40d, 60d, -60d })
+                var distances = new[] { 10d, 26d, 42d };
+                var offsets = new[] { 0d, 20d, -20d, 40d, -40d, 60d, -60d };
+                // Prefer another tip gap on the horizontal axis before moving y
+                // vertically. Keep the editor's and other axes' candidate order.
+                var positions = compact && axis.Axis == SectionAxisDesignation.Y
+                    ? offsets.SelectMany(offset => distances.Select(distance => (distance, offset)))
+                    : distances.SelectMany(distance => offsets.Select(offset => (distance, offset)));
+                if (preferAxisTip && axis.Axis == SectionAxisDesignation.Y) positions = positions.Take(1);
+                foreach (var (distance, offset) in positions)
                 {
                     Point center = axis.End + direction * distance + normal * offset;
                     var label = FitText(new Rect(center - new Vector(labelSize.Width / 2, labelSize.Height / 2), labelSize), size);
+                    if (compact && sourceAxes.Any(other => other.ArrowBounds.Inflate(CompactMetrics.Clearance).Intersects(label)
+                        || IntersectsText(new(other.Start, other.End), label.Inflate(CompactMetrics.Clearance)))) continue;
                     if (bounds.Intersects(label) || placed.Any(a => a.LabelBounds.Inflate(4).Intersects(label))
-                        || dimensions.Any(d => d.TextBounds.Inflate(4).Intersects(label)
+                        || dimensions.Any(d => d.TextBounds.Inflate(compact ? CompactMetrics.Clearance : 4).Intersects(label)
                             || d.Lines.Any(line => IntersectsText(line, label))
                             || d.Arrows.Any(arrow => arrow.Bounds.Intersects(label)))) continue;
                     placed.Add(axis with { LabelBounds = label });
@@ -298,6 +382,13 @@ public sealed class SectionPreviewDrawingLayout
             return false;
         }
         bool placed = Place(0);
+        if (!placed && preferAxisTip)
+        {
+            // Try the existing dimension alternatives before moving y away
+            // from its tip; relax that preference only if none of them fit.
+            preferAxisTip = false;
+            placed = Place(0);
+        }
         if (!placed)
         {
             // In extreme aspect ratios a leader may have to cross another thin line.

@@ -109,7 +109,7 @@ public sealed class DesktopResultPresentationTests
         var writes = app.Files.Writes.ToArray();
         var recovery = app.Files.Data[App.Slot].ToArray();
         int waiters = app.Delay.Waiters.Count, analyses = app.Analyses, changed = 0, applied = 0;
-        var inputRows = editor.Overview.Loads.ToArray();
+        var inputRows = editor.Overview.Forces.Concat(editor.Overview.Moments).Concat(editor.Overview.DistributedLoads).ToArray();
         var notifications = new List<string?>();
         session.Changed += () => changed++;
         session.StateApplied += (_, _, _) => applied++;
@@ -135,7 +135,7 @@ public sealed class DesktopResultPresentationTests
             Assert.Equal("bad position", draft.PositionText);
             Assert.Equal("-", draft.ValueText);
             Assert.Equal("unfinished", editor.DimensionLength.Text);
-            Assert.Equal(inputRows, editor.Overview.Loads);
+            Assert.Equal(inputRows, editor.Overview.Forces.Concat(editor.Overview.Moments).Concat(editor.Overview.DistributedLoads));
             Assert.Equal(writes, app.Files.Writes);
             Assert.Equal(recovery, app.Files.Data[App.Slot]);
             Assert.Equal(waiters, app.Delay.Waiters.Count);

@@ -22,14 +22,16 @@ public sealed class ProjectOverviewState
             analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
         Supports = Array.AsReadOnly(document.Supports.Select(s => new ProjectOverviewItem(s.Id, s.Name,
             SupportTypeName(s.Type), "", Position(s.Position))).ToArray());
-        Loads = Array.AsReadOnly(document.Loads.Select(l => new ProjectOverviewItem(l.Id, l.Name,
-            l.Kind == PointLoadKind.Force ? "F" : "M",
-            InputQuantityFormatter.WithUnit(l.Value, analysis.Options.Profile[l.Kind == PointLoadKind.Force
-                ? QuantityKind.TransverseForce : QuantityKind.Moment]), Position(l.Position)))
-            .Concat(document.DistributedLoads.Select(l => new ProjectOverviewItem(l.Id, l.Name,
-                "q", InputQuantityFormatter.WithUnit(l.Intensity.NewtonsPerMeter, analysis.Options.Profile[QuantityKind.DistributedLoad]),
-                Position(l.StartPosition) + "…" + Position(l.EndPosition))))
-            .ToArray());
+        IReadOnlyList<ProjectOverviewItem> PointLoads(PointLoadKind kind) => Array.AsReadOnly(document.Loads
+            .Where(l => l.Kind == kind).Select(l => new ProjectOverviewItem(l.Id, l.Name,
+                kind == PointLoadKind.Force ? "F" : "M",
+                InputQuantityFormatter.WithUnit(l.Value, analysis.Options.Profile[kind == PointLoadKind.Force
+                    ? QuantityKind.TransverseForce : QuantityKind.Moment]), Position(l.Position))).ToArray());
+        Forces = PointLoads(PointLoadKind.Force);
+        Moments = PointLoads(PointLoadKind.Moment);
+        DistributedLoads = Array.AsReadOnly(document.DistributedLoads.Select(l => new ProjectOverviewItem(l.Id, l.Name,
+            "q", InputQuantityFormatter.WithUnit(l.Intensity.NewtonsPerMeter, analysis.Options.Profile[QuantityKind.DistributedLoad]),
+            Position(l.StartPosition) + "…" + Position(l.EndPosition))).ToArray());
         Reactions = Array.AsReadOnly(analysis.Result is { } result
             ? document.Supports.Select(s =>
             {
@@ -48,11 +50,16 @@ public sealed class ProjectOverviewState
     public string Material { get; }
     public string Length { get; }
     public IReadOnlyList<ProjectOverviewItem> Supports { get; }
-    public IReadOnlyList<ProjectOverviewItem> Loads { get; }
+    public IReadOnlyList<ProjectOverviewItem> Forces { get; }
+    public IReadOnlyList<ProjectOverviewItem> Moments { get; }
+    public IReadOnlyList<ProjectOverviewItem> DistributedLoads { get; }
     public IReadOnlyList<ProjectOverviewReaction> Reactions { get; }
     public AnalysisPresentationState Analysis { get; }
     public bool HasSupports => Supports.Count > 0;
-    public bool HasLoads => Loads.Count > 0;
+    public bool HasForces => Forces.Count > 0;
+    public bool HasMoments => Moments.Count > 0;
+    public bool HasDistributedLoads => DistributedLoads.Count > 0;
+    public bool HasReactions => Reactions.Count > 0;
     public string ReactionXHeader => ReactionXHeaderText.PlainText;
     public TechnicalText ReactionXHeaderText => TechnicalSymbols.ReactionX + " [" + Analysis.Options.Profile[QuantityKind.AxialForce].Symbol + "]";
     public string ReactionYHeader => ReactionYHeaderText.PlainText;

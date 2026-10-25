@@ -21,7 +21,6 @@ public static class Strings
     public static string ReportPage => Get(nameof(ReportPage));
     public static string ReportNotes => Get(nameof(ReportNotes));
     public static string ReportTheory => Get(nameof(ReportTheory));
-    public static string ReportLimits => Get(nameof(ReportLimits));
     public static string ReportPosition => Get(nameof(ReportPosition));
     public static string ReportSavePdf => Get(nameof(ReportSavePdf));
     public static string ReportPrint => Get(nameof(ReportPrint));
@@ -191,6 +190,9 @@ public static class Strings
     public static string OverviewLength => Get(nameof(OverviewLength));
     public static string OverviewPosition => Get(nameof(OverviewPosition));
     public static string Supports => Get(nameof(Supports));
+    public static string Forces => Get(nameof(Forces));
+    public static string Moments => Get(nameof(Moments));
+    public static string DistributedLoads => Get(nameof(DistributedLoads));
     public static string Loads => Get(nameof(Loads));
     public static string Reactions => Get(nameof(Reactions));
     public static string Indicators => Get(nameof(Indicators));

@@ -25,6 +25,7 @@ using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Reporting;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Desktop.Sections;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
@@ -49,6 +50,143 @@ public sealed class ProjectReportTests : IDisposable
     }
     public void Dispose() { environment.Dispose(); CultureInfo.CurrentCulture = originalCulture; CultureInfo.CurrentUICulture = originalUi; }
     private static readonly DateTimeOffset Now = new(2026, 10, 23, 12, 34, 56, TimeSpan.FromHours(2));
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void SummaryUsesFullWidthWithInlinePositionsAndAlignedValues(string culture)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var captured = ProjectReport.Capture(main.Editor!, Now);
+        Assert.All(captured.Data.Indicators.Take(2), indicator => Assert.StartsWith("x = ", indicator.Position));
+        var indicators = captured.Data.Indicators.Select((indicator, index) => index < 2
+            ? indicator with { Position = $"x = 1234567{CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator}890123 mm (x−)" }
+            : indicator).ToArray();
+        using var report = new ReportDocument(captured.Data with { Indicators = indicators }, new(80, (_, _, _) => { }));
+        int page = report.Pages.Select((value, index) => (value, index)).Single(p => p.value.SummaryTop.HasValue).index;
+        using var bitmap = report.RenderPage(page);
+        float top = report.Pages[page].SummaryTop!.Value + 19;
+        var values = indicators.Select(indicator => Assert.Single(report.TextRuns,
+            run => run.Text == indicator.Value && run.Bounds.Top >= top).Bounds).ToArray();
+        var labels = indicators.Select(indicator => Assert.Single(report.TextRuns,
+            run => run.Text == indicator.Label.PlainText && run.Bounds.Top >= top).Bounds).ToArray();
+        Assert.Equal(values[0].Right, values[1].Right, 3);
+        Assert.Equal(values[2].Right, values[3].Right, 3);
+        Assert.Equal(ReportDocument.PageWidth - ReportDocument.Margin, values[2].Right, 3);
+        Assert.Equal(ReportDocument.Margin, labels[0].Left, 3);
+        Assert.Equal(labels[0].Left, labels[1].Left, 3);
+        Assert.Equal(labels[2].Left, labels[3].Left, 3);
+        Assert.True(values[0].Right < labels[2].Left);
+        Assert.True(values[0].Right - labels[0].Left > values[2].Right - labels[2].Left);
+        for (int index = 0; index < indicators.Length; index++)
+        {
+            Assert.Equal(labels[index].Top, values[index].Top);
+            Assert.True(labels[index].Right < values[index].Left);
+            if (indicators[index].Position is not { } position) continue;
+            var bounds = Assert.Single(report.TextRuns, run => run.Text == position && run.Bounds.Top == labels[index].Top).Bounds;
+            Assert.True(labels[index].Right < bounds.Left);
+            Assert.True(bounds.Right < values[index].Left);
+            Assert.True(bounds.Height < labels[index].Height);
+        }
+        Assert.Equal(labels[0].Top, labels[2].Top);
+        Assert.Equal(labels[1].Top, labels[3].Top);
+        Assert.True(labels[0].Bottom < labels[1].Top);
+        string directory = Path.Combine(RepositoryRoot(), "output", "pdf", "production");
+        Directory.CreateDirectory(directory);
+        using var png = File.Create(Path.Combine(directory, "summary-long-positions-" + culture + ".png"));
+        report.WritePng(png, page);
+    }
+
+    [Theory]
+    [InlineData("de-DE", false)] [InlineData("en-US", false)]
+    [InlineData("de-DE", true)] [InlineData("en-US", true)]
+    public void ISectionReportProducesSquareVectorReviewArtifacts(string culture, bool compactProfile)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        var state = ReportTestProjects.Create(); var mm = Length.FromMillimeters;
+        state = state with { Document = state.Document.WithSection(
+            compactProfile ? new ISectionGeometry(mm(100), mm(80), mm(10), mm(12), mm(10))
+                : new ISectionGeometry(mm(200), mm(120), mm(5), mm(12), mm(8)), SectionAxisDesignation.Y,
+            compactProfile ? "I/H-Profil 100 × 80 × 10 × 12 mm (r = 10 mm)" : null) };
+        var (main, _) = Open(state);
+        using var report = ProjectReport.Capture(main.Editor!, Now);
+        AssertCompleteTablesAndFinalSummary(report);
+        var area = report.TechnicalAreas(0).Single(a => a.Kind == ReportGraphic.Section).Bounds;
+        Assert.Equal(ReportDocument.RightWidth, area.Width, 4);
+        Assert.Equal(area.Width, area.Height, 4); // SKRect subtracts single-precision page coordinates.
+        var section = Assert.IsAssignableFrom<IParametricSectionDefinition>(state.Document.Section);
+        var geometry = SectionPreviewGeometryResolver.FromSection(SectionEditorType.ISection,
+            SectionDefinitionViewModel.PresetValues(section), section);
+        var viewport = new Size(area.Width / ReportVisuals.PointsPerDip, area.Height / ReportVisuals.PointsPerDip);
+        var layout = SectionPreviewDrawingLayout.Create(geometry, viewport, UnitProfile.Default[QuantityKind.SectionDimension],
+            text => SchematicText.Measure(text, Typeface.Default, 12), compact: true);
+        Assert.All(layout.Dimensions, d => Assert.True(new Rect(viewport).Contains(d.TextBounds), d.Key));
+        Assert.All(layout.Axes, a => Assert.True(new Rect(viewport).Contains(a.LabelBounds), a.Axis.ToString()));
+        var y = layout.Axes.Single(a => a.Axis == SectionAxisDesignation.Y);
+        Assert.Equal(y.End.X + 10, y.LabelBounds.Center.X, 8);
+        Assert.Equal(y.End.Y, y.LabelBounds.Center.Y, 8);
+        var flange = layout.Dimensions.Single(d => d.Key == "tf");
+        var height = layout.Dimensions.Single(d => d.Key == "h");
+        Assert.True(flange.TextBounds.Left > height.Lines[2].Start.X);
+        Assert.True(height.TextBounds.Right < height.Lines[2].Start.X);
+        Assert.True(flange.TextBounds.Right < flange.Lines[2].Start.X);
+        Assert.True(flange.TextBounds.Right < layout.ProfileBounds.Left);
+        Assert.All(flange.Arrows, arrow => Assert.True(arrow.Bounds.Left > height.Lines[2].Start.X
+            && arrow.Bounds.Right < layout.ProfileBounds.Left));
+        Assert.True(flange.TextBounds.Bottom < flange.Arrows.Min(a => a.Tip.Y));
+        string directory = Path.Combine(RepositoryRoot(), "output", "pdf", "production");
+        Directory.CreateDirectory(directory);
+        string name = (compactProfile ? "i-section-100x80-" : "i-section-") + culture;
+        File.WriteAllBytes(Path.Combine(directory, name + ".spandraft"), ProjectFileCodec.Serialize(state));
+        using var pdf = new MemoryStream(); report.WritePdf(pdf);
+        Assert.DoesNotMatch(@"/Subtype\s*/Image\b", Encoding.Latin1.GetString(pdf.ToArray()));
+        File.WriteAllBytes(Path.Combine(directory, name + ".pdf"), pdf.ToArray());
+        using (var png = File.Create(Path.Combine(directory, name + ".png"))) report.WritePng(png, 0);
+        using var bitmap = report.RenderPage(0);
+        AssertTextContained(report); AssertInformationBlocksSeparated(report, 0);
+        using var detail = new SKBitmap();
+        const float scale = 300f / 72;
+        Assert.True(bitmap.ExtractSubset(detail, new SKRectI((int)Math.Floor(area.Left * scale),
+            (int)Math.Floor(area.Top * scale), (int)Math.Ceiling(area.Right * scale), (int)Math.Ceiling(area.Bottom * scale))));
+        using var image = SKImage.FromBitmap(detail);
+        using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
+        using var output = File.Create(Path.Combine(directory, name + "-section.png")); encoded.SaveTo(output);
+    }
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void SectionDesignationKeepsQuantitiesAndRadiusClausesTogether(string culture)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var original = ProjectReport.Capture(main.Editor!, Now);
+        static float Measure(string text) { using var layout = new ReportTextLayout(text, 8.5f); return layout.Width; }
+        static string Prefix(string partialGroup, string completeGroup) => Enumerable.Range(1, 30)
+            .Select(n => new string('W', n) + " ").First(prefix => Measure(prefix + partialGroup) <= ReportDocument.RightWidth
+                && Measure(prefix + completeGroup) > ReportDocument.RightWidth);
+        (string Name, string[] Groups)[] cases =
+        [
+            (Prefix("10", "10 mm") + "10 mm · y-y", ["10 mm"]),
+            (Prefix("(r =", "(r = 5 mm)") + "(r = 5 mm) · y-y", ["(r = 5 mm)"]),
+            ("I/H-Profil 100 × 80 × 10 mm (r = 5 mm) · y-y", ["10 mm", "(r = 5 mm)"]),
+            ("I/H-Profil 100 × 80 × 10,5 mm (r = 5,5 mm) · y-y", ["10,5 mm", "(r = 5,5 mm)"]),
+            ("Custom I/H section 4 × 3 × 3/8 in (r = 0.2 in) · y-y", ["3/8 in", "(r = 0.2 in)"]),
+            ("I/H-Profil\n100 × 80 × 10 mm (r = 5 mm) · y-y", ["10 mm", "(r = 5 mm)"]),
+            ("Custom section with ordinary word boundaries", [])
+        ];
+        foreach (var (name, groups) in cases)
+        {
+            using var report = new ReportDocument(original.Data with { Section = name }, new(130, (_, _, _) => { }));
+            using var bitmap = report.RenderPage(0, 96);
+            var lines = SectionDesignationRuns(report, 0);
+            Assert.True(lines.Length > 1, name);
+            Assert.Equal(name.Replace('\n', ' '), string.Join(" ", lines.Select(r => r.Text)));
+            Assert.Equal(name, report.Data.Section);
+            Assert.DoesNotContain(report.Data.Metadata, m => m.Label == report.Data.Labels.Section);
+            foreach (var group in groups) Assert.Contains(lines, line => line.Text.Contains(group, StringComparison.Ordinal));
+            AssertInformationBlocksSeparated(report, 0); AssertTextContained(report);
+        }
+    }
 
     [Theory]
     [InlineData("S235JR (1.0038) · A36", new[] { "S235JR (1.0038) · A36" })]
@@ -202,7 +340,8 @@ public sealed class ProjectReportTests : IDisposable
         var longLabel = string.Concat(Enumerable.Repeat("Long localized description ", 8)) + TechnicalSymbols.MaximumStress;
         using var wrapped = new ReportDocument(report.Data with
             { Indicators = [new(longLabel, "150 MPa", null)] }, new(80, (_, _, _) => { }));
-        using var bitmap = wrapped.RenderPage(0);
+        int summaryPage = wrapped.Pages.Select((page, index) => (page, index)).Single(p => p.page.SummaryTop.HasValue).index;
+        using var bitmap = wrapped.RenderPage(summaryPage);
         AssertTextContained(wrapped);
         Assert.Contains(wrapped.TextRuns, r => r.Text.Contains(TechnicalSymbols.MaximumStress.PlainText));
     }
@@ -245,8 +384,8 @@ public sealed class ProjectReportTests : IDisposable
         Assert.Equal(editor.Presentation.SafetyFactor, report.Data.Indicators[3].Value);
         Assert.Equal(Now, report.Data.CreatedAt);
         Assert.Equal(Now.ToLocalTime().ToString("d", CultureInfo.CurrentCulture), report.Data.Date);
-        Assert.Contains(profile[QuantityKind.BeamLength].Symbol, report.Data.Tables[0].Headers[2].PlainText);
-        Assert.Contains(profile[QuantityKind.TransverseForce].Symbol, report.Data.Tables[2].Headers[2].PlainText);
+        Assert.Contains(profile[QuantityKind.BeamLength].Symbol, report.Data.Tables.Single(t => t.Title == Strings.Supports).Headers[2].PlainText);
+        Assert.Contains(profile[QuantityKind.TransverseForce].Symbol, report.Data.Tables.Single(t => t.Title == Strings.Reactions).Headers[2].PlainText);
         using var before = new MemoryStream(); report.WritePng(before, 0);
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture == "de-DE" ? "en-US" : "de-DE");
         Assert.True(main.SetResultPresentation(UnitProfile.UnitedStates, PresentationMode.Detailed));
@@ -296,6 +435,7 @@ public sealed class ProjectReportTests : IDisposable
         Assert.Equal(Enum.GetValues<ReportGraphic>(), areas.Select(a => a.Kind));
         Assert.All(areas.Take(4), a => Assert.Equal(128 * ReportDocument.Mm, a.Bounds.Width, 3));
         Assert.Equal(50 * ReportDocument.Mm, areas[^1].Bounds.Width, 3);
+        Assert.Equal(areas[^1].Bounds.Width, areas[^1].Bounds.Height, 4);
         Assert.All(areas.Take(4).Zip(areas.Skip(1).Take(3)), pair => Assert.True(pair.First.Bounds.Bottom <= pair.Second.Bounds.Top));
         Assert.True(areas[3].Bounds.Bottom < (report.Pages[0].SummaryTop ?? ReportDocument.FooterTop));
         for (int page = 0; page < report.Pages.Count; page++)
@@ -325,6 +465,13 @@ public sealed class ProjectReportTests : IDisposable
         main.Editor!.PreviewAnnotationOffset(state.Document.Loads[0].Id, new(77, 66));
         using var report = ProjectReport.Capture(main.Editor, Now);
         var visuals = new ReportVisuals(state, main.Editor.Presentation, report.Data);
+        var scene = visuals.Beam.Scene!;
+        var reserved = BeamRenderState.Create(state.Document, scene.Frame,
+            text => SchematicText.Measure(text, Typeface.Default, visuals.Beam.LabelFontSize),
+            presentation: state.Presentation, profile: main.Editor.Presentation.Options.Profile, loadSymbolScale: .85,
+            minimumPaneHeight: ReportVisuals.MinimumBeamPaneHeight);
+        Assert.True(scene.MinimumPaneHeight < reserved.MinimumPaneHeight);
+        Assert.Equal(scene.MinimumPaneHeight, visuals.Beam.Height, 6);
         var label = Assert.Single(visuals.Beam.Scene!.Annotations, a => a.Id == state.Document.Loads[0].Id);
         Assert.True(label.IsManual); Assert.Equal(label.AutoBounds.Translate(new Vector(18, 12)), label.Bounds);
         Assert.Null(visuals.Beam.HighlightedLoadId); Assert.Null(visuals.Beam.HighlightedDistributedLoadId);
@@ -431,7 +578,7 @@ public sealed class ProjectReportTests : IDisposable
         using var report = ProjectReport.Capture(main.Editor!, Now);
         using var bitmap = report.RenderPage(0, 96);
         Assert.True(report.Pages[0].HasGraphics);
-        var header = report.TextRuns.Where(r => r.Bounds.Top < report.Pages[0].BodyTop).ToArray();
+        var header = report.TextRuns.Where(r => r.Bounds.Top < report.Pages[0].BodyTop - 12).ToArray();
         string[] labels = [report.Data.Labels.Project, report.Data.Labels.Reference, report.Data.Labels.Author];
         var columns = labels.Select(label => Assert.Single(header, r => r.Text == label).Bounds).ToArray();
         var title = header.Skip(1).TakeWhile(r => r.Bounds.Top < columns[0].Top).ToArray();
@@ -450,7 +597,7 @@ public sealed class ProjectReportTests : IDisposable
     }
 
     [Fact]
-    public void MissingOptionalProjectInformationLeavesNoEmptyHeaderRows()
+    public void MissingOptionalProjectInformationKeepsAllHeaderLabelsVisible()
     {
         var state = ReportTestProjects.Create();
         var (main, _) = Open(state); using var full = ProjectReport.Capture(main.Editor!, Now);
@@ -462,12 +609,22 @@ public sealed class ProjectReportTests : IDisposable
         Assert.DoesNotContain(compact.Data.Metadata, row => row.Value is "Neutrales Beispiel" or "BEISPIEL-01");
         using var fullBitmap = full.RenderPage(0, 96);
         using var compactBitmap = compact.RenderPage(0, 96);
-        Assert.DoesNotContain(compact.TextRuns, r => r.Text == compact.Data.Labels.Project || r.Text == compact.Data.Labels.Reference);
+        string[] labels = [compact.Data.Labels.Project, compact.Data.Labels.Reference, compact.Data.Labels.Author];
+        var columns = labels.Select(label => Assert.Single(compact.TextRuns, r => r.Text == label).Bounds).ToArray();
+        Assert.All(columns, bounds => Assert.Equal(columns[0].Top, bounds.Top));
+        for (int i = 0; i < labels.Length; i++)
+            Assert.Equal(Assert.Single(full.TextRuns, r => r.Text == labels[i]).Bounds.Left, columns[i].Left);
+        foreach (var column in columns.Take(2))
+        {
+            var missing = Assert.Single(compact.TextRuns, r => r.Text == "-" && r.Bounds.Left == column.Left
+                && r.Bounds.Top > column.Bottom && r.Bounds.Bottom < compact.Pages[0].BodyTop - 12);
+            Assert.True(missing.Bounds.Top > column.Bottom);
+        }
         var author = Assert.Single(compact.TextRuns, r => r.Text == compact.Data.Labels.Author).Bounds;
         Assert.Equal(Assert.Single(full.TextRuns, r => r.Text == full.Data.Labels.Author).Bounds.Left, author.Left);
         var title = Assert.Single(compact.TextRuns, r => r.Text == compact.Data.Title).Bounds;
         Assert.True(title.Bottom < author.Top);
-        Assert.All(compact.TextRuns.Where(r => r.Bounds.Top < compact.Pages[0].BodyTop),
+        Assert.All(compact.TextRuns.Where(r => r.Bounds.Top < compact.Pages[0].BodyTop - 12),
             r => Assert.True(r.Bounds.Bottom < compact.Pages[0].BodyTop - 12));
     }
 
@@ -537,12 +694,438 @@ public sealed class ProjectReportTests : IDisposable
         }
     }
 
+    [Theory]
+    [InlineData("de-DE", 0)] [InlineData("en-US", 0)]
+    [InlineData("de-DE", 1)] [InlineData("en-US", 1)]
+    [InlineData("de-DE", 2)] [InlineData("en-US", 2)]
+    [InlineData("de-DE", 3)] [InlineData("en-US", 3)]
+    [InlineData("de-DE", 4)] [InlineData("en-US", 4)]
+    public void CaptureOmitsEmptyLoadGroupsAndPreservesGroupOrder(string culture, int group)
+    {
+        using var scope = new UiCultureScope(culture);
+        var state = ReportTestProjects.Create(true);
+        var document = state.Document;
+        document = document.WithLoads(group == 4 ? document.Loads : document.Loads.Where(l =>
+            group == 1 && l.Kind == PointLoadKind.Force || group == 2 && l.Kind == PointLoadKind.Moment).Take(1));
+        document = document.WithDistributedLoads(group is 3 or 4 ? document.DistributedLoads.Take(1) : []);
+        state = state with { Document = document, Presentation = state.Presentation.RetainEntities(document) };
+        var (main, _) = Open(state);
+        using var report = ProjectReport.Capture(main.Editor!, Now);
+        var expected = new List<string> { Strings.Supports };
+        if (group is 1 or 4) expected.Add(Strings.Forces);
+        if (group is 2 or 4) expected.Add(Strings.Moments);
+        if (group is 3 or 4) expected.Add(Strings.DistributedLoads);
+        expected.Add(Strings.Reactions);
+        Assert.Equal(expected, report.Data.Tables.Select(t => t.Title));
+        Assert.All(report.Data.Tables, t => Assert.NotEmpty(t.Rows));
+        Assert.Equal(culture == "de-DE" ? "Kr\u00e4fte" : "Forces", Strings.Forces);
+        Assert.Equal(culture == "de-DE" ? "Momente" : "Moments", Strings.Moments);
+        Assert.Equal(culture == "de-DE" ? "Streckenlasten" : "Distributed loads", Strings.DistributedLoads);
+    }
+
+    [Theory]
+    [InlineData(1)] [InlineData(25)] [InlineData(90)] [InlineData(250)]
+    public void TablesFlowAcrossColumnsAndSummaryFollowsEveryRow(int count)
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        ReportTable Table(string title, int rows) => new(title, ["Name"], [1],
+            Enumerable.Range(0, rows).Select(i => (IReadOnlyList<string>)new[] { title + i }).ToArray());
+        using var report = new ReportDocument(source.Data with
+        {
+            Tables = [Table("Forces", count), Table("Moments", 1), Table("Distributed", 1), Table("Reactions", count)]
+        }, new(130, (_, _, _) => { }));
+        AssertCompleteTablesAndFinalSummary(report);
+        var first = report.Pages[0];
+        if (count >= 25)
+        {
+            Assert.Null(first.SummaryTop);
+            var last = first.Tables.Last();
+            Assert.True(ReportDocument.FooterTop - 14 - last.Bounds.Bottom < ReportDocument.RowHeight);
+        }
+        if (count >= 90)
+        {
+            Assert.Contains(report.Pages.Skip(1), page => page.Tables.GroupBy(t => t.Bounds.Left).Any(g => g.Count() > 1));
+            Assert.Contains(report.Pages.Skip(1), page => page.Tables.Select(t => t.Bounds.Left).Distinct().Count() == 2);
+        }
+        for (int i = 0; i < report.Pages.Count; i++)
+        {
+            using var bitmap = report.RenderPage(i, 96);
+            foreach (var fragment in report.Pages[i].Tables)
+            {
+                bool continued = fragment.Rows[0].Row > 0 || fragment.Rows[0].FirstLine > 0;
+                string title = report.Data.Tables[fragment.Table].Title
+                    + (continued ? " \u00b7 " + report.Data.Labels.Continuation : "");
+                Assert.Contains(report.TextRuns, run => run.Text == title);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(true)] [InlineData(false)]
+    public void FirstPageStartsNextTableOnlyWhenACompleteDataRowFits(bool rowFits)
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        ReportTable Table(string title, int rows) => new(title, ["Name"], [1],
+            Enumerable.Range(0, rows).Select(i => (IReadOnlyList<string>)new[] { "R" + i }).ToArray());
+        using var probe = new ReportDocument(source.Data with { Tables = [Table("First", 200)] }, new(130, (_, _, _) => { }));
+        var fragment = probe.Pages[0].Tables[0];
+        float available = ReportDocument.FooterTop - 14 - fragment.Bounds.Top;
+        // Same one-line headings; preserve the existing 12-point gap between tables.
+        int count = (int)Math.Floor((available - 2 * fragment.HeadingHeight - 12 - ReportDocument.RowHeight) / ReportDocument.RowHeight);
+        if (!rowFits) count++;
+        using var report = new ReportDocument(source.Data with { Tables = [Table("First", count), Table("Second", 200)] },
+            new(130, (_, _, _) => { }));
+        var next = report.Pages[0].Tables.Where(f => f.Table == 1).ToArray();
+        if (rowFits) Assert.Single(Assert.Single(next).Rows);
+        else Assert.Empty(next);
+        AssertCompleteTablesAndFinalSummary(report);
+    }
+
+    [Fact]
+    public void WrappedRowsThatFitFreshColumnsRemainWhole()
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        var rows = Enumerable.Range(0, 24).Select(i => (IReadOnlyList<string>)new[]
+            { i + " " + string.Join(" ", Enumerable.Repeat("long cell content", 16)) }).ToArray();
+        using var report = new ReportDocument(source.Data with { Tables = [new("Reactions", ["Name"], [1], rows)] },
+            new(130, (_, _, _) => { }));
+        Assert.True(report.Pages.Count > 1);
+        var slices = report.Pages.SelectMany(p => p.Tables).SelectMany(t => t.Rows).ToArray();
+        Assert.Equal(Enumerable.Range(0, rows.Length), slices.Select(s => s.Row));
+        Assert.All(slices, s => { Assert.Equal(0, s.FirstLine); Assert.Equal(s.Cells.Max(c => c.Length), s.LineCount); });
+        AssertCompleteTablesAndFinalSummary(report);
+    }
+
+    [Fact]
+    public void ContinuationPageFlowsThroughShortTablesThenReactionsLeftToRightBeforeNextPage()
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        ReportTable Table(string title, int count) => new(title, ["Name"], [1],
+            Enumerable.Range(0, count).Select(i => (IReadOnlyList<string>)new[] { title + i }).ToArray());
+        using var probe = new ReportDocument(source.Data with { Tables = [Table("Stream", 300)] }, new(130, (_, _, _) => { }));
+        int firstPageRows = Assert.Single(probe.Pages[0].Tables).Rows.Count;
+        int columnRows = probe.Pages[1].Tables[0].Rows.Count;
+        using var report = new ReportDocument(source.Data with
+        {
+            Tables = [Table("Forces", firstPageRows), Table("Momente", 2),
+                Table("Streckenlasten", 2), Table("Reaktionen", columnRows * 2)]
+        }, new(130, (_, _, _) => { }));
+        var page = report.Pages[1];
+        var left = page.Tables.Where(f => f.Bounds.Left == ReportDocument.Margin).ToArray();
+        var right = page.Tables.Where(f => f.Bounds.Left > ReportDocument.Margin).ToArray();
+        Assert.Equal(new[] { 1, 2, 3 }, left.Select(f => f.Table));
+        var continued = Assert.Single(right);
+        Assert.Equal(3, continued.Table);
+        Assert.Equal(page.BodyTop, left[0].Bounds.Top);
+        Assert.Equal(page.BodyTop, continued.Bounds.Top);
+        Assert.All(left.Zip(left.Skip(1)), pair => Assert.True(pair.First.Bounds.Bottom < pair.Second.Bounds.Top));
+        Assert.Equal(left[^1].Rows[^1].Row + 1, continued.Rows[0].Row);
+        Assert.True(ReportDocument.FooterTop - 14 - left[^1].Bounds.Bottom < ReportDocument.RowHeight);
+        Assert.True(ReportDocument.FooterTop - 14 - continued.Bounds.Bottom < ReportDocument.RowHeight);
+        Assert.Null(page.SummaryTop);
+        var next = report.Pages[2].Tables[0];
+        Assert.Equal(ReportDocument.Margin, next.Bounds.Left);
+        Assert.Equal(continued.Rows[^1].Row + 1, next.Rows[0].Row);
+        AssertCompleteTablesAndFinalSummary(report);
+        using var bitmap = report.RenderPage(1, 96);
+        Assert.Contains(report.TextRuns, r => r.Text == "Reaktionen \u00b7 " + report.Data.Labels.Continuation
+            && r.Bounds.Left == continued.Bounds.Left && r.Bounds.Top == continued.Bounds.Top);
+    }
+
+    [Theory]
+    [InlineData("Supports", false)] [InlineData("Forces", false)] [InlineData("Moments", false)]
+    [InlineData("Distributed", false)] [InlineData("Reactions", false)] [InlineData("Future table", true)]
+    public void FinalContinuationBalancesAnyTableAtWholeRowBoundaries(string title, bool wrapped)
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        ReportTable Table(string name, int count) => new(name, ["Name"], [1],
+            Enumerable.Range(0, count).Select(i => (IReadOnlyList<string>)new[] { name + i }).ToArray());
+        using var probe = new ReportDocument(source.Data with { Tables = [Table("Stream", 300)] }, new(130, (_, _, _) => { }));
+        int firstPageRows = Assert.Single(probe.Pages[0].Tables).Rows.Count;
+        string suffix = wrapped ? " " + string.Join(" ", Enumerable.Repeat("wrapped content", 6)) : "";
+        var rows = Enumerable.Range(0, 18).Select(i => (IReadOnlyList<string>)new[] { title + i + suffix }).ToArray();
+        using var report = new ReportDocument(source.Data with
+        {
+            Tables = [Table("Forces", firstPageRows), new(title, ["Name"], [1], rows)]
+        }, new(130, (_, _, _) => { }));
+        Assert.Equal(probe.Pages[0].Tables[0].Bounds, report.Pages[0].Tables[0].Bounds);
+        Assert.Equal(firstPageRows, Assert.Single(report.Pages[0].Tables).Rows.Count);
+        var page = report.Pages[1];
+        Assert.Equal(2, page.Tables.Count);
+        var left = page.Tables[0]; var right = page.Tables[1];
+        Assert.Equal(ReportDocument.Margin, left.Bounds.Left);
+        Assert.True(right.Bounds.Left > left.Bounds.Right);
+        Assert.Equal(page.BodyTop, left.Bounds.Top);
+        Assert.Equal(page.BodyTop, right.Bounds.Top);
+        Assert.Equal(9, left.Rows.Count);
+        Assert.Equal(9, right.Rows.Count);
+        Assert.Equal(left.Bounds.Bottom, right.Bounds.Bottom, 3);
+        Assert.Equal(Enumerable.Range(0, 18), page.Tables.SelectMany(f => f.Rows).Select(r => r.Row));
+        Assert.All(page.Tables.SelectMany(f => f.Rows), r =>
+        {
+            Assert.Equal(0, r.FirstLine);
+            Assert.Equal(r.Cells.Max(c => c.Length), r.LineCount);
+        });
+        Assert.True(page.SummaryTop >= Math.Max(left.Bounds.Bottom, right.Bounds.Bottom) + 16);
+        AssertCompleteTablesAndFinalSummary(report);
+        using var bitmap = report.RenderPage(1, 96);
+        Assert.Contains(report.TextRuns, r => r.Text == title + " \u00b7 " + report.Data.Labels.Continuation
+            && r.Bounds.Left == right.Bounds.Left && r.Bounds.Top == right.Bounds.Top);
+    }
+
+    [Fact]
+    public void FinalContinuationChoosesBestSplitInsideReactionsAfterShortTables()
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        ReportTable Table(string title, int count) => new(title, ["Name"], [1],
+            Enumerable.Range(0, count).Select(i => (IReadOnlyList<string>)new[] { title + i }).ToArray());
+        using var probe = new ReportDocument(source.Data with { Tables = [Table("Stream", 300)] }, new(130, (_, _, _) => { }));
+        using var report = new ReportDocument(source.Data with
+        {
+            Tables = [Table("Forces", probe.Pages[0].Tables[0].Rows.Count), Table("Momente", 1),
+                Table("Streckenlasten", 2), Table("Reaktionen", 20)]
+        }, new(130, (_, _, _) => { }));
+        var page = report.Pages[1];
+        var left = page.Tables.Where(f => f.Bounds.Left == ReportDocument.Margin).ToArray();
+        var right = Assert.Single(page.Tables, f => f.Bounds.Left > ReportDocument.Margin);
+        Assert.Equal(new[] { 1, 2, 3 }, left.Select(f => f.Table));
+        Assert.Equal(3, right.Table);
+        Assert.Equal(6, left[^1].Rows.Count);
+        Assert.Equal(14, right.Rows.Count);
+        Assert.Equal(6, right.Rows[0].Row);
+        Assert.True(Math.Abs(left[^1].Bounds.Bottom - right.Bounds.Bottom) < ReportDocument.RowHeight);
+        AssertCompleteTablesAndFinalSummary(report);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void FinalContinuationCanSplitBetweenTablesOrBetweenTallWholeRows(bool tallRows)
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        ReportTable Table(string title, int count) => new(title, ["Name"], [1],
+            Enumerable.Range(0, count).Select(i => (IReadOnlyList<string>)new[] { title + i }).ToArray());
+        using var probe = new ReportDocument(source.Data with { Tables = [Table("Stream", 300)] }, new(130, (_, _, _) => { }));
+        var tables = new List<ReportTable> { Table("Forces", probe.Pages[0].Tables[0].Rows.Count) };
+        if (tallRows)
+            tables.Add(new("Tall", ["Name"], [1], Enumerable.Range(0, 2)
+                .Select(i => (IReadOnlyList<string>)new[] { string.Join("\n", Enumerable.Repeat("Row" + i, 8)) }).ToArray()));
+        else
+            tables.AddRange([Table("First", 4), Table("Next", 4)]);
+        using var report = new ReportDocument(source.Data with { Tables = tables }, new(130, (_, _, _) => { }));
+        var page = report.Pages[1];
+        Assert.Equal(2, page.Tables.Count);
+        var left = page.Tables[0]; var right = page.Tables[1];
+        Assert.True(right.Bounds.Left > left.Bounds.Right);
+        Assert.Equal(left.Bounds.Bottom, right.Bounds.Bottom, 3);
+        Assert.All(page.Tables.SelectMany(f => f.Rows), row =>
+        {
+            Assert.Equal(0, row.FirstLine);
+            Assert.Equal(row.Cells.Max(c => c.Length), row.LineCount);
+        });
+        if (tallRows)
+        {
+            Assert.Single(left.Rows);
+            Assert.Single(right.Rows);
+        }
+        else
+        {
+            Assert.Equal(1, left.Table);
+            Assert.Equal(2, right.Table);
+            Assert.Equal(0, right.Rows[0].Row);
+            using var bitmap = report.RenderPage(1, 96);
+            Assert.Contains(report.TextRuns, r => r.Text == "Next" && r.Bounds.Left == right.Bounds.Left);
+            Assert.DoesNotContain(report.TextRuns, r => r.Text == "Next \u00b7 " + report.Data.Labels.Continuation);
+        }
+        AssertCompleteTablesAndFinalSummary(report);
+    }
+
+    [Theory]
+    [InlineData(1)] [InlineData(2)] [InlineData(3)]
+    public void SingleShortRemainingTableStaysInLeftColumn(int rows)
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        ReportTable Table(string title, int count) => new(title, ["Name"], [1],
+            Enumerable.Range(0, count).Select(i => (IReadOnlyList<string>)new[] { title + i }).ToArray());
+        using var probe = new ReportDocument(source.Data with { Tables = [Table("Stream", 300)] }, new(130, (_, _, _) => { }));
+        using var report = new ReportDocument(source.Data with
+        {
+            Tables = [Table("Forces", probe.Pages[0].Tables[0].Rows.Count), Table("Short", rows)]
+        }, new(130, (_, _, _) => { }));
+        var fragment = Assert.Single(report.Pages[1].Tables);
+        Assert.Equal(ReportDocument.Margin, fragment.Bounds.Left);
+        Assert.Equal(rows, fragment.Rows.Count);
+        AssertCompleteTablesAndFinalSummary(report);
+    }
+
+    [Theory]
+    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)] [InlineData(4)]
+    public void EveryTableCanFlowThroughBothColumnsAndMultiplePages(int longTable)
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        string[] titles = ["Supports", "Forces", "Moments", "Distributed", "Reactions"];
+        var tables = titles.Select((title, table) => new ReportTable(title, ["Name"], [1],
+            Enumerable.Range(0, table == longTable ? 400 : 2)
+                .Select(row => (IReadOnlyList<string>)new[] { $"T{table}R{row}" }).ToArray())).ToArray();
+        using var report = new ReportDocument(source.Data with
+        {
+            Tables = [new("Empty", ["Name"], [1], []), .. tables, new("Empty", ["Name"], [1], [])]
+        }, new(130, (_, _, _) => { }));
+        AssertCompleteTablesAndFinalSummary(report);
+        var fragments = report.Pages.SelectMany(p => p.Tables).Where(f => f.Table == longTable + 1).ToArray();
+        Assert.True(report.Pages.Count > 3);
+        Assert.Contains(report.Pages.Skip(1), page => page.Tables.Where(f => f.Table == longTable + 1)
+            .Select(f => f.Bounds.Left).Distinct().Count() == 2);
+        Assert.True(fragments.Length > 4);
+        foreach (var fragment in report.Pages.SelectMany(p => p.Tables))
+        foreach (var slice in fragment.Rows)
+            Assert.Equal($"T{fragment.Table - 1}R{slice.Row}", Assert.Single(slice.Cells[0]));
+    }
+
+    [Fact]
+    public void FirstRowMovedToAnotherPageIsRewrappedWithoutContinuationTitle()
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        ReportTable Table(string title, IReadOnlyList<IReadOnlyList<string>> rows) => new(title, ["Name"], [1], rows);
+        var simpleRows = Enumerable.Range(0, 200).Select(i => (IReadOnlyList<string>)new[] { "R" + i }).ToArray();
+        using var probe = new ReportDocument(source.Data with { Tables = [Table("First", simpleRows)] }, new(130, (_, _, _) => { }));
+        var first = probe.Pages[0].Tables[0];
+        float available = ReportDocument.FooterTop - 14 - first.Bounds.Top;
+        int count = (int)Math.Floor((available - 2 * first.HeadingHeight - 12 - ReportDocument.RowHeight) / ReportDocument.RowHeight);
+        string longCell = string.Join(" ", Enumerable.Repeat("wrapped content", 18));
+        using var report = new ReportDocument(source.Data with
+        {
+            Tables = [Table("First", simpleRows.Take(count).ToArray()), Table("Second", [new[] { longCell }])]
+        }, new(130, (_, _, _) => { }));
+        Assert.DoesNotContain(report.Pages[0].Tables, f => f.Table == 1);
+        var next = Assert.Single(report.Pages[1].Tables, f => f.Table == 1);
+        var row = Assert.Single(next.Rows);
+        Assert.Equal(0, row.FirstLine);
+        Assert.Equal(row.Cells[0].Length, row.LineCount);
+        Assert.True(next.Bounds.Width > first.Bounds.Width);
+        using var narrow = new ReportDocument(source.Data with { Tables = [Table("Second", [new[] { longCell }])] }, new(130, (_, _, _) => { }));
+        Assert.True(narrow.Pages[0].Tables[0].Rows[0].LineCount > row.LineCount);
+        using var bitmap = report.RenderPage(1, 96);
+        Assert.Contains(report.TextRuns, r => r.Text == "Second");
+        Assert.DoesNotContain(report.TextRuns, r => r.Text == "Second \u00b7 " + report.Data.Labels.Continuation);
+        AssertCompleteTablesAndFinalSummary(report);
+    }
+
+    [Fact]
+    public void OversizedFirstRowRepeatsHeadersAndContinuationAfterFirstSlice()
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        string text = string.Join("\n", Enumerable.Range(0, 180).Select(i => $"Line {i}"));
+        using var report = new ReportDocument(source.Data with
+        {
+            Tables = [new("Arbitrary", ["Name", "Value"], [.7f, .3f], [new[] { text, "42" }, new[] { "End", "7" }])]
+        }, new(130, (_, _, _) => { }));
+        Assert.Empty(report.Pages[0].Tables);
+        AssertCompleteTablesAndFinalSummary(report);
+        var fragments = report.Pages.SelectMany(p => p.Tables).ToArray();
+        Assert.True(fragments.Length > 2);
+        Assert.All(fragments, f => Assert.Equal(fragments[0].Bounds.Width, f.Bounds.Width, 3));
+        Assert.Equal(Enumerable.Range(0, 180).Select(i => $"Line {i}"), fragments.SelectMany(f => f.Rows)
+            .Where(r => r.Row == 0).SelectMany(r => r.Cells[0].Skip(r.FirstLine).Take(r.LineCount)));
+        for (int page = 1; page < report.Pages.Count; page++)
+        {
+            using var bitmap = report.RenderPage(page, 96);
+            foreach (var fragment in report.Pages[page].Tables)
+            {
+                bool continued = fragment.Rows[0].Row > 0 || fragment.Rows[0].FirstLine > 0;
+                Assert.Contains(report.TextRuns, run => run.Text == "Arbitrary" +
+                    (continued ? " \u00b7 " + report.Data.Labels.Continuation : "") && run.Bounds.Top == fragment.Bounds.Top);
+                Assert.Contains(report.TextRuns, run => run.Text == "Name" &&
+                    run.Bounds.Top > fragment.Bounds.Top && run.Bounds.Bottom <= fragment.Bounds.Top + fragment.HeadingHeight);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void SummaryIsPlacedAfterUnreservedTableStream(bool largeSummary)
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        var table = new ReportTable("Any table", ["Name"], [1], Enumerable.Range(0, 30)
+            .Select(i => (IReadOnlyList<string>)new[] { "R" + i }).ToArray());
+        var data = source.Data with { Tables = [table] };
+        using var baseline = new ReportDocument(data with { Indicators = [], Labels = data.Labels with { Assumptions = [] } }, new(130, (_, _, _) => { }));
+        float summaryTop = baseline.Pages.Last().SummaryTop!.Value;
+        // With no indicators the two headings consume 36 points; each short note adds 12.
+        int notesThatFit = (int)Math.Floor((ReportDocument.FooterTop - 14 - summaryTop - 36) / 12);
+        Assert.True(notesThatFit > 0);
+        using var report = new ReportDocument(data with
+        {
+            Indicators = [], Labels = data.Labels with
+            { Assumptions = Enumerable.Repeat("Calculation assumption", notesThatFit + (largeSummary ? 1 : 0)).ToArray() }
+        }, new(130, (_, _, _) => { }));
+        AssertCompleteTablesAndFinalSummary(report);
+        Assert.Equal(baseline.Pages.SelectMany((p, page) => p.Tables.Select(f => (page, f.Table, f.Bounds, Rows: f.Rows.Count))),
+            report.Pages.SelectMany((p, page) => p.Tables.Select(f => (page, f.Table, f.Bounds, Rows: f.Rows.Count))));
+        int lastTablePage = report.Pages.Select((p, i) => (p, i)).Last(x => x.p.Tables.Count > 0).i;
+        Assert.Equal(largeSummary ? lastTablePage + 1 : lastTablePage, report.Pages.Count - 1);
+    }
+
+    [Fact]
+    public void EmptyStreamProducesSummaryAndImpossibleContentFailsWithoutLooping()
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var source = ProjectReport.Capture(main.Editor!, Now);
+        using var empty = new ReportDocument(source.Data with { Tables = [new("Empty", ["Name"], [1], [])] }, new(130, (_, _, _) => { }));
+        AssertCompleteTablesAndFinalSummary(empty);
+        Assert.All(empty.Pages, p => Assert.Empty(p.Tables));
+        var impossible = new ReportTable("Table", [string.Join("\n", Enumerable.Repeat("Header", 100))], [1], [new[] { "Row" }]);
+        Assert.Throws<InvalidOperationException>(() => new ReportDocument(source.Data with { Tables = [impossible] }, new(130, (_, _, _) => { })));
+        Assert.Throws<InvalidOperationException>(() => new ReportDocument(source.Data with
+        {
+            Tables = [], Labels = source.Data.Labels with { Assumptions = Enumerable.Repeat("Note", 100).ToArray() }
+        }, new(130, (_, _, _) => { })));
+    }
+
+    private static void AssertCompleteTablesAndFinalSummary(ReportDocument report)
+    {
+        var ordered = report.Pages.SelectMany(p => p.Tables).SelectMany(f => f.Rows.Select(r => (f.Table, r.Row))).ToArray();
+        Assert.Equal(ordered.OrderBy(r => r.Table).ThenBy(r => r.Row), ordered);
+        Assert.Equal(report.Data.Tables.SelectMany((t, table) => Enumerable.Range(0, t.Rows.Count).Select(row => (table, row))),
+            ordered.Distinct());
+        int summaryPage = Assert.Single(report.Pages.Select((p, i) => (Page: p, Index: i)), p => p.Page.SummaryTop.HasValue).Index;
+        Assert.Equal(report.Pages.Count - 1, summaryPage);
+        for (int table = 0; table < report.Data.Tables.Count; table++)
+        {
+            var slices = report.Pages.SelectMany(p => p.Tables).Where(f => f.Table == table).SelectMany(f => f.Rows).ToArray();
+            for (int row = 0; row < report.Data.Tables[table].Rows.Count; row++)
+            {
+                var parts = slices.Where(s => s.Row == row).ToArray();
+                Assert.NotEmpty(parts);
+                Assert.Equal(Enumerable.Range(0, parts[0].Cells.Max(c => c.Length)),
+                    parts.SelectMany(p => Enumerable.Range(p.FirstLine, p.LineCount)));
+            }
+        }
+        foreach (var page in report.Pages)
+        foreach (var fragment in page.Tables)
+        {
+            Assert.NotEmpty(fragment.Rows);
+            Assert.True(fragment.Bounds.Bottom <= (page.SummaryTop - 16 ?? ReportDocument.FooterTop - 14));
+        }
+    }
+
     [Fact]
     public void EmptyTablesAndManyRowsPaginateWithNoLostContentOrFooterOverlap()
     {
         var (main, _) = Open(ReportTestProjects.Create(true)); using var source = ProjectReport.Capture(main.Editor!, Now);
         var tables = source.Data.Tables.Select(t => t with { Rows = Enumerable.Range(0, 15).SelectMany(_ => t.Rows).ToArray() }).ToArray();
-        using var report = new ReportDocument(source.Data with { Tables = [tables[0], new("Empty", ["Name"], [1], []), tables[1], tables[2]] },
+        using var report = new ReportDocument(source.Data with { Tables = [tables[0], new("Empty", ["Name"], [1], []), .. tables.Skip(1)] },
             new(190, (_, _, _) => { }));
         Assert.True(report.Pages.Count > 2);
         for (int table = 0; table < report.Data.Tables.Count; table++)
@@ -565,8 +1148,9 @@ public sealed class ProjectReportTests : IDisposable
         state = state with { Document = state.Document.WithLoads(loads), Presentation = new() };
         var (main, _) = Open(state); using var report = ProjectReport.Capture(main.Editor!, Now);
         Assert.True(report.Pages.Count > 2);
-        Assert.Equal(count + 2, report.Data.Tables[1].Rows.Count);
-        Assert.Equal(count + 2, report.Pages.SelectMany(p => p.Tables).Where(t => t.Table == 1).Sum(t => t.Rows.Count));
+        int forceTable = report.Data.Tables.ToList().FindIndex(t => t.Title == Strings.Forces);
+        Assert.Equal(count, report.Data.Tables[forceTable].Rows.Count);
+        Assert.Equal(count, report.Pages.SelectMany(p => p.Tables).Where(t => t.Table == forceTable).Sum(t => t.Rows.Count));
         string directory = Path.Combine(RepositoryRoot(), "output", "pdf", "production"); Directory.CreateDirectory(directory);
         using (var pdf = File.Create(Path.Combine(directory, $"viele-lasten-{count}.pdf"))) report.WritePdf(pdf);
         for (int i = 0; i < report.Pages.Count; i++)
@@ -589,6 +1173,7 @@ public sealed class ProjectReportTests : IDisposable
         using var report = new ReportDocument(data, new(130, (_, _, _) => { }));
         var slices = report.Pages.SelectMany(p => p.Tables).SelectMany(f => f.Rows).Where(r => r.Row == 0).ToArray();
         Assert.True(slices.Length > 1);
+        AssertCompleteTablesAndFinalSummary(report);
         Assert.Equal(name, string.Concat(slices.SelectMany(r => r.Cells[0].Skip(r.FirstLine).Take(r.LineCount))));
         for (int page = 0; page < report.Pages.Count; page++)
         { using var bitmap = report.RenderPage(page, 96); AssertTextContained(report); }
@@ -627,8 +1212,15 @@ public sealed class ProjectReportTests : IDisposable
         var (main, _) = Open(state); using var report = ProjectReport.Capture(main.Editor!, Now);
         Assert.Empty(report.Data.Metadata); Assert.Empty(report.Data.Author);
         Assert.Contains("∞", report.Data.Indicators[3].Value);
-        Assert.Empty(report.Data.Tables[1].Rows);
+        Assert.Equal(new[] { Strings.Supports, Strings.Reactions }, report.Data.Tables.Select(t => t.Title));
         using var bitmap = report.RenderPage(0, 96); AssertTextContained(report);
+        string[] labels = [report.Data.Labels.Project, report.Data.Labels.Reference, report.Data.Labels.Author];
+        var columns = labels.Select(label => Assert.Single(report.TextRuns, r => r.Text == label).Bounds).ToArray();
+        Assert.All(columns, bounds => Assert.Equal(columns[0].Top, bounds.Top));
+        Assert.All(columns, bounds => Assert.True(bounds.Bottom < report.Pages[0].BodyTop - 12));
+        Assert.All(columns, column => Assert.Single(report.TextRuns, r => r.Text == "-"
+            && r.Bounds.Left == column.Left && r.Bounds.Top > column.Bottom
+            && r.Bounds.Bottom < report.Pages[0].BodyTop - 12));
     }
 
     [Fact]
@@ -1511,6 +2103,18 @@ public sealed class ProjectReportTests : IDisposable
         Assert.Equal(ReportDocument.PageWidth / ReportDocument.PageHeight, bounds.Width / dpiX / (bounds.Height / dpiY), 3);
     }
 
+    private static (string Text, SKRect Bounds)[] SectionDesignationRuns(ReportDocument report, int page)
+    {
+        var area = report.TechnicalAreas(page).Single(a => a.Kind == ReportGraphic.Section).Bounds;
+        var heading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Section
+            && r.Bounds.Left == area.Left && r.Bounds.Top < area.Top).Bounds;
+        var lines = report.TextRuns.Where(r => r.Bounds.Left >= area.Left && r.Bounds.Top > heading.Bottom
+            && r.Bounds.Bottom <= area.Top).ToArray();
+        Assert.NotEmpty(lines);
+        Assert.All(lines, r => Assert.True(r.Bounds.Right <= area.Right + .01f, r.Text));
+        return lines;
+    }
+
     private static (string Text, SKRect Bounds)[] MaterialDesignationRuns(ReportDocument report)
     {
         var heading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Material).Bounds;
@@ -1527,7 +2131,16 @@ public sealed class ProjectReportTests : IDisposable
         AssertTableHeadersAndBounds(report, page);
         if (!report.Pages[page].HasGraphics) return;
         var sectionArea = report.TechnicalAreas(page).Single(a => a.Kind == ReportGraphic.Section).Bounds;
+        var sectionHeading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Section
+            && r.Bounds.Left == sectionArea.Left && r.Bounds.Top < sectionArea.Top);
+        Assert.All(report.TextRuns.Where(r => r.Bounds.Top < report.Pages[page].BodyTop - 12),
+            r => Assert.True(r.Bounds.Bottom < sectionHeading.Bounds.Top, r.Text));
+        var designation = SectionDesignationRuns(report, page);
         var materialHeading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Material);
+        Assert.Equal(materialHeading.Bounds.Left, sectionHeading.Bounds.Left);
+        Assert.Equal(materialHeading.Bounds.Height, sectionHeading.Bounds.Height, 4);
+        Assert.True(sectionHeading.Bounds.Bottom < designation[0].Bounds.Top);
+        Assert.True(designation[^1].Bounds.Bottom <= sectionArea.Top);
         var sectionProperties = report.TextRuns.Where(r => r.Bounds.Left >= sectionArea.Left
             && r.Bounds.Right <= sectionArea.Right + .01f && r.Bounds.Top >= sectionArea.Bottom
             && r.Bounds.Bottom < materialHeading.Bounds.Top).ToArray();

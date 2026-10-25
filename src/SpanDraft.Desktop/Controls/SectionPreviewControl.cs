@@ -98,8 +98,8 @@ public sealed class SectionPreviewControl : Control
             Vector direction = axis.End - axis.Start; direction /= direction.Length;
             Point solidStart = axis.End - direction * AxisSolidEndLength;
             context.DrawLine(new Pen(brush, thickness, dashStyle, lineCap: PenLineCap.Round), axis.Start, solidStart);
-            context.DrawLine(new Pen(brush, thickness), solidStart, axis.End);
-            Arrow(context, brush, axis.End, -direction);
+            context.DrawLine(new Pen(brush, thickness), solidStart, axis.SolidEnd(Compact));
+            FilledArrow(context, brush, axis.ArrowPoints);
             Text(context, TechnicalSymbols.Axis(axis.Axis.ToString().ToLowerInvariant()), axis.LabelPosition, brush);
         }
         if (geometry.Centroid is { } centroid)
@@ -112,13 +112,6 @@ public sealed class SectionPreviewControl : Control
     {
         using var formatted = SchematicText.Format(text,Typeface.Default,size,brush);
         formatted.Draw(context,point);
-    }
-    private static void Arrow(DrawingContext context,IBrush brush,Point point,Vector direction)
-    {
-        var normal = new Vector(-direction.Y,direction.X);
-        const double length = 12, halfWidth = 3;
-        FilledArrow(context, brush, [point, point + direction * length + normal * halfWidth,
-            point + direction * length - normal * halfWidth]);
     }
     private static void FilledArrow(DrawingContext context, IBrush brush, IReadOnlyList<Point> points)
     {

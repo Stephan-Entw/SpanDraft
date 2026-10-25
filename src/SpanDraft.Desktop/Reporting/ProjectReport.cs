@@ -56,15 +56,20 @@ internal static class ProjectReport
             (state.Document.SectionDisplayName ?? ShapeName(state.Document.Section)) + " · " + axisName + "-" + axisName, sectionProperties, overview.Material,
             [Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus + " = " + InputQuantityFormatter.WithUnit(state.Document.Material.YoungsModulus.Pascals, profile[QuantityKind.Stress]),
              MaterialStrengthDisplay.LabelText(state.Document.Material.StrengthType) + " = " + InputQuantityFormatter.WithUnit(state.Document.Material.YieldStrength.Pascals, profile[QuantityKind.Stress])],
-            [
-                new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.17f, .48f, .35f],
-                    overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Type, s.Position }).ToArray()),
-                new(Strings.Loads, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.16f, .42f, .42f],
-                    overview.Loads.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
+            new ReportTable[]
+            {
+                new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.32f, .43f, .25f],
+                    overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Type, s.Position }).ToArray(), LeftAlignedColumn: 1),
+                new(Strings.Forces, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.18f, .47f, .35f],
+                    overview.Forces.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
+                new(Strings.Moments, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.18f, .47f, .35f],
+                    overview.Moments.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
+                new(Strings.DistributedLoads, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.18f, .47f, .35f],
+                    overview.DistributedLoads.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
                 new(Strings.Reactions, [Strings.Support, overview.ReactionXHeaderText, overview.ReactionYHeaderText, overview.ReactionMomentHeaderText],
                     [.16f, .24f, .30f, .30f], overview.Reactions.Select(r => (IReadOnlyList<string>)new[]
                     { r.Name, Missing(r.Rx), Missing(r.Ry), Missing(r.Moment) }).ToArray())
-            ],
+            }.Where(t => t.Rows.Count > 0).ToArray(),
             [
                 new(Strings.ReportDeflection + " " + TechnicalSymbols.MaximumDisplacement, presentation.Displacement,
                     Location(engineering.CriticalTransverseDisplacement.Position.Meters, engineering.CriticalTransverseDisplacement.Side)),
@@ -73,7 +78,7 @@ internal static class ProjectReport
                 new(Strings.ReportStress + " " + TechnicalSymbols.MaximumStress, presentation.Stress, null),
                 new(Strings.ReportSafety + " " + TechnicalSymbols.SafetyFactor + " = " + strengthSymbol + " / " + TechnicalSymbols.MaximumStress, presentation.SafetyFactor, null)
             ], new(Strings.ReportHeading.ToUpperInvariant(), Strings.ReportContinuation, Strings.ReportPage, Strings.Section, Strings.ReportMaterial,
-                Strings.ReportSummary, Strings.ReportNotes, [Strings.ReportTheory, Strings.ReportLimits],
+                Strings.ReportSummary, Strings.ReportNotes, [Strings.ReportTheory],
                 Strings.CalculationTitle, Strings.Project, Strings.Reference, Strings.Author));
         var visuals = new ReportVisuals(state, presentation, data);
         var report = new ReportDocument(data, visuals.Graphics);
