@@ -13,13 +13,9 @@
           </controls:SectionInputHint>
         </Grid>
         <TextBox Grid.Column="1" Width="88" Height="36" FontSize="14" Classes.error="{Binding HasError}"
-            Classes.definitionInput="True" Foreground="{DynamicResource TextPrimary}" TextAlignment="Left" HorizontalContentAlignment="Right"
+            Classes="numeric inlineValidation" Foreground="{DynamicResource TextPrimary}"
             Text="{Binding PendingText, Mode=TwoWay}" KeyDown="InputKeyDown" LostFocus="InputLostFocus" GotFocus="InputGotFocus"
-            AutomationProperties.Name="{Binding Label}" />
-        <controls:SectionInputHint Grid.Column="1" Classes="inputHint errorHint" IsVisible="{Binding HasError}"
-            Message="{Binding Error}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
-          <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
-        </controls:SectionInputHint>
+            ToolTip.Tip="{Binding Error}" AutomationProperties.HelpText="{Binding Error}" AutomationProperties.Name="{Binding Label}" />
         <TextBlock Grid.Column="2" MinWidth="24" Text="{Binding Unit.Symbol}" VerticalAlignment="Center" Classes="definitionLabel" />
       </Grid>
     </DataTemplate>
@@ -41,9 +37,6 @@
     <Style Selector="Grid.manualValues">
       <Setter Property="MaxWidth" Value="720" />
       <Setter Property="HorizontalAlignment" Value="Left" />
-    </Style>
-    <Style Selector="TextBox.definitionInput">
-      <Setter Property="Padding" Value="8,0,24,0" />
     </Style>
     <Style Selector="TextBlock.definitionLabel, TextBlock.definitionValue">
       <Setter Property="FontSize" Value="14" />
@@ -70,15 +63,9 @@
               </Grid>
             </Button>
             <Grid x:Name="NameEditor" ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding IsEditingName}">
-              <Grid>
-                <TextBox x:Name="NameInput" Text="{Binding PendingName, Mode=TwoWay}" Classes.error="{Binding HasNameError}"
-                    Height="{DynamicResource PrimaryAction}" Padding="8,0,28,0" FontSize="22" FontWeight="SemiBold"
-                    KeyDown="NameKeyDown" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionEditName}" />
-                <controls:SectionInputHint x:Name="NameErrorHint" Classes="inputHint errorHint" IsVisible="{Binding HasNameError}"
-                    Message="{Binding NameError}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
-                  <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
-                </controls:SectionInputHint>
-              </Grid>
+              <TextBox x:Name="NameInput" Text="{Binding PendingName, Mode=TwoWay}" Classes="inlineValidation" Classes.error="{Binding HasNameError}"
+                    Height="{DynamicResource PrimaryAction}" FontSize="22" FontWeight="SemiBold"
+                    KeyDown="NameKeyDown" ToolTip.Tip="{Binding NameError}" AutomationProperties.HelpText="{Binding NameError}" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionEditName}" />
               <Button x:Name="ResetNameButton" Grid.Column="1" Content="{x:Static resources:Strings.SectionDefinitionAutomatic}" Command="{Binding ResetNameCommand}"
                   Classes="ghost" Padding="0" Height="{DynamicResource PrimaryAction}"
                   AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionResetName}" />

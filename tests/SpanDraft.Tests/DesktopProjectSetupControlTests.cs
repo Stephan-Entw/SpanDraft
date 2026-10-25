@@ -51,7 +51,7 @@ public sealed class DesktopProjectSetupControlTests
         main.Setup.CalculationTitleInput.Cancel(); main.Setup.AuthorInput.Cancel();
         var emptyCard = Assert.Single(window.GetVisualDescendants().OfType<BeamSetupCard>());
         Assert.Empty(emptyCard.FindControl<TextBox>("SetupLengthInput")!.Text!);
-        Assert.False(emptyCard.FindControl<SpanDraft.Desktop.Controls.SectionInputHint>("SetupLengthErrorHint")!.IsEffectivelyVisible);
+        Assert.Null(emptyCard.FindControl<TextBox>("SetupLengthInput")!.InnerRightContent);
         var sectionButton = emptyCard.FindControl<Button>("SectionCardButton")!;
         Assert.Equal(new[] { Strings.SectionSelection, "›" }, sectionButton.GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.IsEffectivelyVisible).Select(t => t.Text));
@@ -331,9 +331,8 @@ public sealed class DesktopProjectSetupControlTests
         Assert.True(DesktopControlEnvironment.MoveFocus(window, length, NavigationDirection.Next));
         Arrange(window, width, height);
         Assert.True(section.IsFocused); Assert.Equal("0", length.Text); Assert.Equal(1000, setup.SelectedLength!.Value.Millimeters);
-        var error = card.FindControl<SpanDraft.Desktop.Controls.SectionInputHint>("SetupLengthErrorHint")!;
-        Assert.True(error.IsEffectivelyVisible); Assert.Equal(setup.LengthError, error.Message);
-        Assert.True(length.Bounds.Contains(error.Bounds));
+        Assert.IsType<PathIcon>(length.InnerRightContent);
+        Assert.Equal(setup.LengthError, ToolTip.GetTip(length));
         Assert.DoesNotContain(card.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text == setup.LengthError);
         Assert.False(setup.CanApply); Assert.False(setup.ApplyCommand.CanExecute(null));
         Assert.False(view.FindControl<Button>("ApplySetupButton")!.IsEffectivelyEnabled); Assert.Null(main.Session);
@@ -343,7 +342,7 @@ public sealed class DesktopProjectSetupControlTests
 
     [Theory]
     [InlineData("de-DE", 1100, 650)] [InlineData("en-US", 1250, 800)]
-    public async Task LengthErrorsUseTheSharedHintWithoutLayoutChangesAndEmptyBlurStaysNeutral(string culture, double width, double height)
+    public async Task LengthErrorsUseInlineContentWithoutLayoutChangesAndEmptyBlurStaysNeutral(string culture, double width, double height)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
         var main = new MainWindowViewModel(); Assert.True(await main.NewAsync()); var setup = main.Setup;
@@ -351,30 +350,23 @@ public sealed class DesktopProjectSetupControlTests
         var window = new Window { Content = view }; window.Show(); Arrange(window, width, height);
         var card = view.FindControl<BeamSetupCard>("BeamCard")!;
         var length = card.FindControl<TextBox>("SetupLengthInput")!;
-        var hint = card.FindControl<SpanDraft.Desktop.Controls.SectionInputHint>("SetupLengthErrorHint")!;
         var before = card.Bounds; var inputBounds = length.Bounds; var padding = length.Padding;
         Assert.True(view.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "CalculationTitleInput").IsFocused);
-        length.Focus(); Assert.False(hint.IsEffectivelyVisible);
+        length.Focus(); Assert.Null(length.InnerRightContent);
         card.FindControl<Button>("SectionCardButton")!.Focus(); Arrange(window, width, height);
-        Assert.False(setup.HasLengthError); Assert.False(hint.IsEffectivelyVisible); Assert.False(setup.CanApply);
+        Assert.False(setup.HasLengthError); Assert.Null(length.InnerRightContent); Assert.False(setup.CanApply);
         Assert.Null(setup.SelectedLength); Assert.Empty(length.Text!);
         length.Focus(); Press(length, Key.Enter); Assert.False(setup.HasLengthError); Assert.True(setup.LengthInput.IsEditing);
         length.Text = "-"; Arrange(window, width, height);
         Assert.False(setup.HasLengthError); Assert.DoesNotContain("error", length.Classes);
         Press(length, Key.Enter); Arrange(window, width, height);
-        Assert.True(setup.HasLengthError); Assert.True(hint.IsEffectivelyVisible); Assert.Contains("error", length.Classes);
+        Assert.True(setup.HasLengthError); Assert.IsType<PathIcon>(length.InnerRightContent); Assert.Contains("error", length.Classes);
         Assert.Equal(before, card.Bounds); Assert.Equal(inputBounds, length.Bounds); Assert.Equal(padding, length.Padding);
-        Assert.True(length.Bounds.Contains(hint.Bounds)); Assert.Equal(18, hint.Bounds.Width);
-        Assert.Equal(setup.LengthError, hint.Message);
-        Assert.Equal(setup.LengthError, Assert.IsType<TextBlock>(ToolTip.GetTip(hint)).Text);
-        Assert.Equal(setup.LengthError, AutomationProperties.GetName(hint));
-        Assert.DoesNotContain(card.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text == setup.LengthError);
-        hint.Focus(); Arrange(window, width, height); Assert.True(hint.IsFocused); Assert.True(ToolTip.GetIsOpen(hint));
-        Assert.True(Press(hint, Key.Escape).Handled); Assert.False(ToolTip.GetIsOpen(hint));
-        Assert.Equal(MainViewMode.ProjectSetup, main.Mode);
-        Press(hint, Key.Enter); Arrange(window, width, height); Assert.True(ToolTip.GetIsOpen(hint));
+        Assert.Equal(setup.LengthError, ToolTip.GetTip(length));
+        Assert.Equal(setup.LengthError, AutomationProperties.GetHelpText(length));
+        Assert.True(length.IsFocused);
         length.Focus(); length.Text = "1500"; Press(length, Key.Enter); Arrange(window, width, height);
-        Assert.False(hint.IsEffectivelyVisible); Assert.False(ToolTip.GetIsOpen(hint)); Assert.False(setup.HasLengthError);
+        Assert.Null(length.InnerRightContent); Assert.False(setup.HasLengthError);
         Assert.Equal(1500, setup.SelectedLength!.Value.Millimeters); Assert.Equal(before, card.Bounds); Assert.Null(main.Session);
         window.Close();
         static KeyEventArgs Press(Control control, Key key)
@@ -496,8 +488,9 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Equal(culture == "de-DE" ? "Titel fehlt noch." : "Title is missing.", setup.CalculationTitleInput.ErrorText);
         Assert.Equal(culture == "de-DE" ? "Name fehlt noch." : "Name is missing.", setup.AuthorInput.ErrorText);
         Assert.True(setup.ProjectTitleInput.Confirm()); Assert.True(setup.ReferenceInput.Confirm());
-        Assert.All(card.GetVisualDescendants().OfType<SpanDraft.Desktop.Controls.SectionInputHint>()
-            .Where(h => h.IsEffectivelyVisible), hint => Assert.Equal(setup.CalculationTitleInput.ErrorText, hint.Message));
+        Assert.IsType<PathIcon>(title.InnerRightContent);
+        Assert.Equal(setup.CalculationTitleInput.ErrorText, ToolTip.GetTip(title));
+        Assert.Equal(setup.CalculationTitleInput.ErrorText, AutomationProperties.GetHelpText(title));
         Assert.Equal("Beam", setup.Draft.CalculationTitle);
         Press(title, Key.Escape); Assert.Equal("Beam", title.Text); Assert.False(setup.CalculationTitleInput.HasError);
         Assert.Equal(MainViewMode.ProjectSetup, main.Mode);

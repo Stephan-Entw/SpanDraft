@@ -159,7 +159,12 @@
     <Setter Property="Height" Value="{DynamicResource CompactControl}" />
     <Setter Property="Padding" Value="{DynamicResource InlinePadding}" />
     <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBox.numeric, TextBox.inlineDimension">
     <Setter Property="TextAlignment" Value="Right" />
+    <!-- Avalonia 12's stretched presenter can leave the caret at its pre-arrange
+         position. Size the presenter to the text to keep glyphs and caret aligned. -->
+    <Setter Property="HorizontalContentAlignment" Value="Right" />
   </Style>
   <Style Selector="TextBox:pointerover:not(:disabled) /template/ Border#PART_BorderElement, ComboBox:pointerover:not(:disabled) /template/ Border#Background">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
@@ -219,7 +224,19 @@
   <Style Selector="TextBox.error /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="{DynamicResource ErrorSubtle}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Error}" />
+    <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
+  </Style>
+  <Style Selector="TextBox.error:focus /template/ Border#PART_BorderElement">
     <Setter Property="BorderThickness" Value="{DynamicResource FocusWidth}" />
+  </Style>
+  <Style Selector="TextBox.inlineValidation.error">
+    <Setter Property="InnerRightContent">
+      <Template>
+        <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}"
+                  Foreground="{DynamicResource Error}" Margin="0,0,8,0"
+                  Focusable="False" IsHitTestVisible="False" />
+      </Template>
+    </Setter>
   </Style>
 
   <Style Selector="Button.inputHint">

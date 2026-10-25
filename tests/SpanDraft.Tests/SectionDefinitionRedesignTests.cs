@@ -318,11 +318,12 @@ public sealed class SectionDefinitionRedesignTests
         var beforeHeader = header.Bounds; var beforeColumns = columns.Bounds; var beforeBody = columns.TranslatePoint(default, view);
         var scroll = view.FindControl<Border>("InputColumn")!.GetVisualDescendants().OfType<ScrollViewer>().First();
         var name = view.FindControl<TextBox>("NameInput")!; var automatic = view.FindControl<Button>("ResetNameButton")!;
-        var error = view.FindControl<SectionInputHint>("NameErrorHint")!;
         vm.BeginNameEdit(); Layout(); Assert.True(name.IsFocused); Assert.True(automatic.IsEffectivelyVisible);
         vm.PendingName = " "; Press(name, Key.Enter); Layout(); Assert.True(vm.HasNameError); Assert.True(vm.IsEditingName);
-        error.Focus(); Layout(); Assert.True(ToolTip.GetIsOpen(error)); Assert.True(vm.IsEditingName);
-        Press(error, Key.Escape); Layout(); Assert.True(vm.IsEditingName); Assert.False(ToolTip.GetIsOpen(error));
+        Assert.IsType<PathIcon>(name.InnerRightContent);
+        Assert.Equal(vm.NameError, ToolTip.GetTip(name));
+        Assert.Equal(vm.NameError, Avalonia.Automation.AutomationProperties.GetHelpText(name));
+        Assert.True(name.IsFocused); Assert.True(vm.IsEditingName);
         automatic.Focus(); Layout(); Assert.True(vm.IsEditingName); automatic.Command!.Execute(null); Layout();
         Assert.False(vm.IsEditingName); Assert.False(vm.HasNameError);
         vm.BeginNameEdit(); Layout(); vm.PendingName = "Existing";
@@ -894,8 +895,9 @@ public sealed class SectionDefinitionRedesignTests
         vm.BeginNameEdit(); vm.PendingName = "Draft duplicate"; Assert.True(vm.CommitName());
         vm.BeginNameEdit(); Capture("name-edit");
         vm.PendingName = " "; Assert.False(vm.CommitName()); Capture("name-error");
-        var nameError = view.FindControl<SectionInputHint>("NameErrorHint")!;
-        nameError.Focus(); Layout(); CaptureTip(nameError, "name-error-tooltip");
+        var nameInput = view.FindControl<TextBox>("NameInput")!;
+        nameInput.Focus(); ToolTip.SetIsOpen(nameInput, true); Layout(); CaptureTip(nameInput, "name-error-tooltip");
+        ToolTip.SetIsOpen(nameInput, false);
         vm.CancelNameEdit(); Capture("name-normal");
         library.Source.Add(new(vm.DisplayName, new ISectionGeometry(M(.12), M(.08), M(.008), M(.008), M(.005))));
         vm.RefreshLibraryState();
@@ -921,10 +923,10 @@ public sealed class SectionDefinitionRedesignTests
         radiusHint.Focus(); Dispatcher.UIThread.RunJobs(); Assert.True(ToolTip.GetIsOpen(radiusHint)); Capture("info-focus"); CaptureTip(radiusHint, "info-tooltip");
         ToolTip.SetIsOpen(radiusHint, false);
         var input = vm.Parameters.Single(p => p.Key == "tw"); input.PendingText = "invalid"; input.Commit(); Layout();
-        var errorHint = view.GetVisualDescendants().OfType<SectionInputHint>().Single(h => h.IsEffectivelyVisible && h.Classes.Contains("errorHint"));
-        Assert.Same(Application.Current!.FindResource("FluentIcon.ErrorCircle"), Assert.IsType<PathIcon>(errorHint.Content).Data);
-        errorHint.Focus(); Dispatcher.UIThread.RunJobs(); Assert.True(ToolTip.GetIsOpen(errorHint)); Capture("error-focus"); CaptureTip(errorHint, "error-tooltip");
-        ToolTip.SetIsOpen(errorHint, false);
+        var errorBox = view.GetVisualDescendants().OfType<TextBox>().Single(t => ReferenceEquals(t.DataContext, input));
+        Assert.Same(Application.Current!.FindResource("FluentIcon.ErrorCircle"), Assert.IsType<PathIcon>(errorBox.InnerRightContent).Data);
+        errorBox.Focus(); ToolTip.SetIsOpen(errorBox, true); Dispatcher.UIThread.RunJobs(); Capture("error-focus"); CaptureTip(errorBox, "error-tooltip");
+        ToolTip.SetIsOpen(errorBox, false);
         input.PendingText = "10"; input.Commit(); vm.BeginNameEdit(); vm.PendingName = new string('W', 80); vm.CommitName(); Capture("long-name");
         vm.ResetNameCommand.Execute(null); Capture("reset-name"); window.Close();
 
@@ -933,10 +935,10 @@ public sealed class SectionDefinitionRedesignTests
             for (int pass = 0; pass < 3; pass++)
             { Dispatcher.UIThread.RunJobs(); window.Measure(new Size(width, height)); window.Arrange(new Rect(0, 0, width, height)); view.Measure(new Size(width, height)); view.Arrange(new Rect(0, 0, width, height)); }
         }
-        void CaptureTip(SectionInputHint hint, string name)
+        void CaptureTip(Control hint, string name)
         {
-            var text = Assert.IsType<TextBlock>(ToolTip.GetTip(hint));
-            var tip = Assert.Single(text.GetVisualAncestors().OfType<ToolTip>());
+            var tip = Assert.IsType<ToolTip>(hint.GetValue(Avalonia.Controls.Diagnostics.ToolTipDiagnostics.ToolTipProperty));
+            var text = tip.GetVisualDescendants().OfType<TextBlock>().First();
             tip.Measure(new Size(320, 300)); tip.Arrange(new Rect(default, tip.DesiredSize));
             Assert.True(tip.Bounds.Width > 0); Assert.True(tip.Bounds.Height >= text.TextLayout.Height);
             if (Environment.GetEnvironmentVariable("SPANDRAFT_VISUAL_TEST_OUTPUT") is not { Length: > 0 } directory) return;

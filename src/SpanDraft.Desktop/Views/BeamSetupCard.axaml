@@ -7,15 +7,10 @@
       <Border x:Name="LengthSurface" Padding="8">
         <Grid x:Name="SetupLengthRow" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalAlignment="Center">
           <TextBlock x:Name="SetupLengthLabel" Text="{x:Static resources:Strings.SetupLength}" Classes="bodyStrong" VerticalAlignment="Center" />
-          <TextBox x:Name="SetupLengthInput" Grid.Column="1" Text="{Binding LengthInput.Text, Mode=TwoWay}" Classes="inlineDimension"
-              Classes.error="{Binding HasLengthError}" HorizontalContentAlignment="Right" Padding="8,0,24,0"
+          <TextBox x:Name="SetupLengthInput" Grid.Column="1" Text="{Binding LengthInput.Text, Mode=TwoWay}" Classes="inlineDimension inlineValidation"
+              Classes.error="{Binding HasLengthError}"
               GotFocus="LengthGotFocus" LostFocus="LengthLostFocus" KeyDown="LengthKeyDown"
-              AutomationProperties.Name="{x:Static resources:Strings.BeamLength}" />
-          <controls:SectionInputHint x:Name="SetupLengthErrorHint" Grid.Column="1" Classes="inputHint errorHint"
-              IsVisible="{Binding HasLengthError}" Message="{Binding LengthError}"
-              HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
-            <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}" Foreground="{DynamicResource Error}" />
-          </controls:SectionInputHint>
+              ToolTip.Tip="{Binding LengthError}" AutomationProperties.HelpText="{Binding LengthError}" AutomationProperties.Name="{x:Static resources:Strings.BeamLength}" />
           <TextBlock x:Name="SetupLengthUnit" Grid.Column="2" Text="{Binding LengthInput.Unit}" VerticalAlignment="Center" Classes="propertyLabel" />
         </Grid>
       </Border>

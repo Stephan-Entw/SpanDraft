@@ -355,7 +355,6 @@ public sealed class SectionDefinitionPrototypeTests
         var getCaretPoints = presenter.GetType().GetMethod("GetCaretPoints",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
         Point Caret() => ((ValueTuple<Point, Point>)getCaretPoints.Invoke(presenter, null)!).Item1;
-        double previousX = -1;
         foreach (string digit in new[] { "4", "5", "6" })
         {
             Type(digit); Assert.Equal(input.PendingText.Length, box.CaretIndex);
@@ -363,8 +362,6 @@ public sealed class SectionDefinitionPrototypeTests
             // The one-pixel caret is snapped and inset by Avalonia. Compare to
             // the actual glyph position with room for that raster alignment.
             Assert.InRange(Math.Abs(top.X - presenter.TextLayout.HitTestTextPosition(box.CaretIndex).X), 0, 2);
-            Assert.InRange(Math.Abs(top.X - presenter.TextLayout.Width), 0, 2);
-            Assert.True(top.X > previousX, "Appending a digit moved the caret backwards"); previousX = top.X;
             Assert.Same(preview, vm.Preview); Assert.Null(input.ConfirmedValue);
         }
         box.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Left });
@@ -375,7 +372,7 @@ public sealed class SectionDefinitionPrototypeTests
         box.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Back });
         Arrange(window, 1000, 600); Assert.Equal("456", input.PendingText); Assert.Equal(2, box.CaretIndex);
         box.SelectAll(); Type("12"); Assert.Equal("12", input.PendingText); Assert.Equal(2, box.CaretIndex);
-        Assert.InRange(Math.Abs(Caret().X - presenter.TextLayout.Width), 0, 2);
+        Assert.InRange(Math.Abs(Caret().X - presenter.TextLayout.HitTestTextPosition(box.CaretIndex).X), 0, 2);
         box.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
         Assert.NotNull(input.ConfirmedValue); Assert.Equal(2, box.CaretIndex);
         window.Close();
@@ -1113,7 +1110,7 @@ public sealed class SectionDefinitionPrototypeTests
                     var label = row.Children.OfType<Grid>().Single(); var unit = row.Children.OfType<TextBlock>().Single();
                     Assert.True(box.Bounds.Left - label.Bounds.Right >= 7.5);
                     Assert.InRange(unit.Bounds.Left - box.Bounds.Right, 7.5, 8.5);
-                    Assert.Equal(Avalonia.Media.TextAlignment.Left, box.TextAlignment);
+                    Assert.Equal(Avalonia.Media.TextAlignment.Right, box.TextAlignment);
                     Assert.False(box.IsReadOnly);
                 }
             }
@@ -1151,7 +1148,7 @@ public sealed class SectionDefinitionPrototypeTests
                     var input = Assert.IsType<SectionDefinitionInput>(box.DataContext);
                     Assert.Equal(input.DisplayLabel, TechnicalTextPresenter.GetContent(texts[0])!.PlainText); Assert.Equal(input.Unit.Symbol, texts[1].Text);
                     Assert.Equal(88, box.Bounds.Width); Assert.Equal(14, texts[0].FontSize); Assert.Equal(14, box.FontSize);
-                    Assert.Equal(Avalonia.Media.TextAlignment.Left, box.TextAlignment);
+                    Assert.Equal(Avalonia.Media.TextAlignment.Right, box.TextAlignment);
                     Assert.True(box.Bounds.Left - label.Bounds.Right >= 7.5);
                     Assert.InRange(texts[1].Bounds.Left - box.Bounds.Right, 7.5, 8.5);
                     Assert.True(texts[0].TextLayout.Width <= texts[0].Bounds.Width + 1, $"Clipped input label: {texts[0].Text}");
@@ -1505,7 +1502,7 @@ public sealed class SectionDefinitionPrototypeTests
     [Theory]
     [InlineData("de-DE", false)] [InlineData("en-US", false)]
     [InlineData("de-DE", true)] [InlineData("en-US", true)]
-    public void FieldHintsExposeErrorsByFocusAndActivationWithoutChangingFormWidth(string culture, bool manual)
+    public void InlineErrorsExposeDescriptionsWithoutChangingFormWidth(string culture, bool manual)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
         var vm = new SectionDefinitionViewModel(); vm.SelectForm(manual ? SectionEditorType.Manual : SectionEditorType.ISection);
@@ -1519,37 +1516,32 @@ public sealed class SectionDefinitionPrototypeTests
         var input = Input(vm, manual ? "A" : "tw");
         var box = view.GetVisualDescendants().OfType<TextBox>().Single(t => ReferenceEquals(t.DataContext, input));
         var row = Assert.IsType<Grid>(box.Parent);
-        var errorHint = row.Children.OfType<SectionInputHint>().Single();
-        Assert.False(errorHint.IsEffectivelyVisible); Assert.DoesNotContain("error", box.Classes);
+        Assert.Empty(row.Children.OfType<SectionInputHint>());
+        Assert.Null(box.InnerRightContent); Assert.DoesNotContain("error", box.Classes);
         var before = box.TranslatePoint(default, view)!.Value; var padding = box.Padding;
         var preview = vm.Preview;
         box.Focus(); box.Text = "invalid"; Dispatcher.UIThread.RunJobs();
         Assert.Same(preview, vm.Preview); Assert.False(input.HasError);
         box.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
         Arrange(window, 1100, 650);
-        Assert.True(input.HasError); Assert.True(errorHint.IsEffectivelyVisible); Assert.Contains("error", box.Classes);
-        Assert.Equal(input.Error, errorHint.Message);
-        Assert.Equal(input.Error, Assert.IsType<TextBlock>(ToolTip.GetTip(errorHint)).Text);
-        Assert.Equal(input.Error, Avalonia.Automation.AutomationProperties.GetName(errorHint));
+        Assert.True(input.HasError); Assert.Contains("error", box.Classes);
+        var errorIcon = Assert.IsType<PathIcon>(box.InnerRightContent);
+        Assert.False(errorIcon.Focusable); Assert.False(errorIcon.IsHitTestVisible);
+        Assert.Equal(input.Error, ToolTip.GetTip(box));
+        Assert.Equal(input.Error, Avalonia.Automation.AutomationProperties.GetHelpText(box));
         Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible), t => t.Text == input.Error);
         Assert.Equal(padding, box.Padding); Assert.Equal(before, box.TranslatePoint(default, view)!.Value);
         Assert.Equal(88, box.Bounds.Width);
-        Assert.True(box.Bounds.Contains(errorHint.Bounds));
+        Assert.True(new Rect(box.Bounds.Size).Contains(new Rect(errorIcon.TranslatePoint(default, box)!.Value, errorIcon.Bounds.Size)));
         foreach (var size in new[] { new Size(1000, 600), new Size(1250, 800), new Size(1100, 650) })
         {
             Arrange(window, size.Width, size.Height);
             Assert.Equal(inputWidth, grid.ColumnDefinitions[0].ActualWidth);
         }
-        errorHint.Focus(); Dispatcher.UIThread.RunJobs(); Assert.True(ToolTip.GetIsOpen(errorHint));
-        var escape = new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape };
-        errorHint.RaiseEvent(escape); Assert.True(escape.Handled); Assert.False(ToolTip.GetIsOpen(errorHint)); Assert.Equal(0, closes);
-        errorHint.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
-        Dispatcher.UIThread.RunJobs(); Assert.Null(errorHint.Flyout); Assert.True(ToolTip.GetIsOpen(errorHint));
-        errorHint.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
-        Assert.False(ToolTip.GetIsOpen(errorHint)); Assert.Equal(0, closes);
+        Assert.True(box.IsFocused); Assert.Equal(0, closes);
         box.Focus(); box.Text = manual ? "7200" : "6"; Dispatcher.UIThread.RunJobs();
         box.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter }); Arrange(window, 1100, 650);
-        Assert.False(input.HasError); Assert.False(errorHint.IsEffectivelyVisible); Assert.DoesNotContain("error", box.Classes);
+        Assert.False(input.HasError); Assert.Null(box.InnerRightContent); Assert.DoesNotContain("error", box.Classes);
         Assert.Equal(inputWidth, grid.ColumnDefinitions[0].ActualWidth);
         if (!manual)
         {
@@ -1563,9 +1555,9 @@ public sealed class SectionDefinitionPrototypeTests
             info.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
             Assert.False(ToolTip.GetIsOpen(info)); Assert.Equal(0, closes);
             Commit(vm, "r", "9999"); Arrange(window, 1100, 650);
-            var geometryHint = view.GetVisualDescendants().OfType<SectionInputHint>()
-                .Single(h => h.IsEffectivelyVisible && h.Classes.Contains("errorHint") && ReferenceEquals(h.DataContext, radius));
-            Assert.Equal(Strings.SectionDefinitionRadiusError, geometryHint.Message);
+            var radiusBox = view.GetVisualDescendants().OfType<TextBox>().Single(t => ReferenceEquals(t.DataContext, radius));
+            Assert.IsType<PathIcon>(radiusBox.InnerRightContent);
+            Assert.Equal(Strings.SectionDefinitionRadiusError, ToolTip.GetTip(radiusBox));
             Assert.Equal(inputWidth, grid.ColumnDefinitions[0].ActualWidth);
         }
         window.Close();

@@ -19,7 +19,7 @@
       <StackPanel Spacing="{StaticResource Space4}">
         <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
           <TextBlock Text="{x:Static resources:Strings.DistributedStartLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
-          <TextBox Grid.Column="1" x:Name="StartInput" Text="{Binding DistributedLoadDraft.StartText, Mode=TwoWay}"
+          <TextBox Classes="numeric" Grid.Column="1" x:Name="StartInput" Text="{Binding DistributedLoadDraft.StartText, Mode=TwoWay}"
                    Classes.error="{Binding DistributedLoadDraft.HasStartError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedStartLabel}" />
           <TextBlock Grid.Column="2" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
@@ -29,7 +29,7 @@
       <StackPanel Spacing="{StaticResource Space4}">
         <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
           <TextBlock Text="{x:Static resources:Strings.DistributedEndLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
-          <TextBox Grid.Column="1" x:Name="EndInput" Text="{Binding DistributedLoadDraft.EndText, Mode=TwoWay}"
+          <TextBox Classes="numeric" Grid.Column="1" x:Name="EndInput" Text="{Binding DistributedLoadDraft.EndText, Mode=TwoWay}"
                    Classes.error="{Binding DistributedLoadDraft.HasEndError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedEndLabel}" />
           <TextBlock Grid.Column="2" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
@@ -39,7 +39,7 @@
       <StackPanel Spacing="{StaticResource Space4}">
         <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
           <TextBlock Text="{x:Static resources:Strings.DistributedIntensityLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
-          <TextBox Grid.Column="1" Text="{Binding DistributedLoadDraft.IntensityText, Mode=TwoWay}"
+          <TextBox Classes="numeric" Grid.Column="1" Text="{Binding DistributedLoadDraft.IntensityText, Mode=TwoWay}"
                    Classes.error="{Binding DistributedLoadDraft.HasIntensityError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedIntensityLabel}" />
           <TextBlock Grid.Column="2" Text="{Binding DistributedLoadDraft.IntensityUnit}" VerticalAlignment="Center" />
         </Grid>

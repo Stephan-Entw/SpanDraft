@@ -36,7 +36,7 @@ public sealed class DesktopControlEnvironment : IDisposable
         var primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
         var hotkeys = (PlatformHotkeyConfiguration)Activator.CreateInstance(typeof(PlatformHotkeyConfiguration),
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null,
-            [primary, OperatingSystem.IsMacOS() ? KeyModifiers.Alt : KeyModifiers.Control, KeyModifiers.Shift], null)!;
+            [primary, KeyModifiers.Shift, OperatingSystem.IsMacOS() ? KeyModifiers.Alt : KeyModifiers.Control], null)!;
         var redo = new List<KeyGesture> { new(Key.Z, primary | KeyModifiers.Shift) };
         if (OperatingSystem.IsWindows()) redo.Add(new(Key.Y, KeyModifiers.Control));
         typeof(PlatformHotkeyConfiguration).GetProperty("Redo")!.SetValue(hotkeys, redo);
@@ -123,7 +123,7 @@ public sealed class DesktopControlEnvironment : IDisposable
                 "get_ClientSize" => _clientSize,
                 "get_MaxAutoSizeHint" => new Size(1250, 800),
                 "get_RenderScaling" or "get_DesktopScaling" => RenderScaling,
-                "get_Surfaces" => Array.Empty<object>(),
+                "get_Surfaces" => Array.CreateInstance(method.ReturnType.GetElementType()!, 0),
                 _ => base.Invoke(method, args)
             };
         }
