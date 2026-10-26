@@ -12,8 +12,6 @@ public static class UiNumbers
     public static string Format(double value) => double.IsPositiveInfinity(value)
         ? "∞" : value.ToString("G", CultureInfo.CurrentCulture);
 
-    public static string Indicator(double value) => Compact(value);
-
     /// <summary>Exact nice-tick labels, including decimal steps outside double's range.</summary>
     public static string AxisTick(int index, double stepMantissa, int stepExponent, CultureInfo? culture = null)
     {
@@ -34,11 +32,6 @@ public static class UiNumbers
         double mantissa = coefficient * Math.Pow(10, stepExponent - engineeringExponent);
         return mantissa.ToString("0.##", culture) + "·10" + Superscript(engineeringExponent);
     }
-
-    /// <summary>Technical display; precision and notation live in the central formatter.</summary>
-    public static string Compact(double value, CultureInfo? culture = null) => double.IsPositiveInfinity(value) ? "∞" :
-        SpanDraft.Desktop.Presentation.QuantityFormatter.FormatNumber(value,
-            SpanDraft.Desktop.Presentation.QuantityKind.PoissonRatio, culture: culture);
 
     private static string Superscript(int exponent) => string.Concat(exponent.ToString(CultureInfo.InvariantCulture)
         .Select(c => c == '-' ? '⁻' : "⁰¹²³⁴⁵⁶⁷⁸⁹"[c - '0']));

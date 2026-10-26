@@ -7,6 +7,7 @@ using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.Reporting;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
+using SpanDraft.Desktop.Presentation;
 using Xunit;
 
 namespace SpanDraft.Tests;
@@ -19,6 +20,41 @@ public sealed class DesktopSchematicIntegrationTests
         new(Mm(length), ProjectTemplates.Material, ProjectTemplates.Section, supports, loads);
     private static BeamLayoutFrame Frame(EditorDocument document, double width = 1100, double height = 600) => new BeamLayoutState().Update(document, width, height)!;
     private static BeamRenderState Scene(EditorDocument document, BeamLayoutFrame frame) => BeamRenderState.Create(document, frame, DesktopLayoutFixture.Measure);
+
+    [Theory]
+    [InlineData("de-DE", 6, EngineeringNotation.Automatic)]
+    [InlineData("en-US", 6, EngineeringNotation.Automatic)]
+    [InlineData("de-DE", 3, EngineeringNotation.Off)]
+    [InlineData("en-US", 3, EngineeringNotation.Off)]
+    [InlineData("de-DE", 7, EngineeringNotation.Off)]
+    [InlineData("en-US", 7, EngineeringNotation.Off)]
+    public void UnitWidthReservationUsesTheDisplayedLabelAsItsLookupKey(string culture, int digits, EngineeringNotation notation)
+    {
+        using var scope = new ResultCultureScope(culture, culture);
+        const double value = 1234567890.123;
+        var document = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section,
+            loads: [Load(200, value, PointLoadKind.Force, "F1"), Load(500, value, PointLoadKind.Moment, "M1")],
+            distributedLoads: [new(Guid.NewGuid(), Mm(700), Mm(900), ForcePerLength.FromNewtonsPerMeter(value), "q1")]);
+        var options = new ResultPresentationOptions(significantDigits: digits, notation: notation);
+        var measured = new List<string>();
+        double Width(string text) => text.Contains("kip", StringComparison.Ordinal) ? 300 + text.Length : text.Length * 3;
+        Size Measure(string text) { measured.Add(text); return new(Width(text), 18); }
+        var scene = BeamRenderState.Create(document, Frame(document), Measure, profile: options.Profile,
+            reserveUnitWidths: true, options: options);
+        foreach (var (name, kind) in new[] { ("F1", QuantityKind.TransverseForce), ("M1", QuantityKind.Moment), ("q1", QuantityKind.DistributedLoad) })
+        {
+            var label = Assert.Single(scene.Annotations, a => a.Text.StartsWith(name + " = ", StringComparison.Ordinal));
+            string expected = name + " = " + QuantityFormatter.Format(value, kind, options);
+            Assert.Equal(expected, label.Text);
+            Assert.NotEqual(name + " = " + QuantityFormatter.Format(value, kind, ResultPresentationOptions.Default), label.Text);
+            // A cache miss would measure the displayed label a second time and lose the wider unit reserve.
+            Assert.Single(measured, text => text == label.Text);
+            double reservedWidth = UnitCatalog.All.Where(u => u.Dimension == UnitCatalog.DimensionOf(kind))
+                .Max(unit => Width(name + " = " + InputQuantityFormatter.WithUnit(value, unit, options)));
+            Assert.Equal(reservedWidth, label.Bounds.Width);
+            Assert.True(label.Bounds.Width > Width(label.Text));
+        }
+    }
 
     [Theory]
     [InlineData(0)]
@@ -391,7 +427,7 @@ public sealed class DesktopSchematicIntegrationTests
         Assert.Equal(document.Loads[0].Id, PointLoadSymbol.HitTest(scene.Loads, bottom.X, bottom.Y));
         var label = Assert.Single(scene.Annotations);
         Assert.True(label.Bounds.Bottom < top.Y - SchematicMetrics.SymbolStrokeWidth / 2);
-        Assert.Equal("F7 = " + UiNumbers.Compact(value) + " N", label.Text);
+        Assert.Equal("F7 = " + QuantityFormatter.Format(value, QuantityKind.TransverseForce, ResultPresentationOptions.Default), label.Text);
         Assert.Equal(document.Loads[0].Id, PointLoadSymbol.ResolveEntity(glyph));
         Assert.True(SchematicMetrics.ForceHeight > 0);
     }
@@ -436,7 +472,7 @@ public sealed class DesktopSchematicIntegrationTests
         Assert.Equal(14.7721162952, PointLoadSymbol.MomentTip(true).Y, 10);
         Assert.Equal(-PointLoadSymbol.MomentTip(true).X, PointLoadSymbol.MomentTip(false).X);
         Assert.Equal(PointLoadSymbol.MomentTip(true).Y, PointLoadSymbol.MomentTip(false).Y);
-        Assert.Equal("M1 = " + UiNumbers.Compact(first) + " N·m", scene.Annotations.Single(a => a.Id == document.Loads[0].Id).Text);
+        Assert.Equal("M1 = " + QuantityFormatter.Format(first, QuantityKind.Moment, ResultPresentationOptions.Default), scene.Annotations.Single(a => a.Id == document.Loads[0].Id).Text);
         Assert.Equal(2, document.ToBeamModel().Loads.Count);
         Assert.Equal(2, glyph.Entities.Count);
         Assert.Equal(2, scene.Annotations.Count);

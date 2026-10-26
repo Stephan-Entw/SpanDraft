@@ -1,5 +1,6 @@
 using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Presentation;
 using Xunit;
 
 namespace SpanDraft.Tests;
@@ -239,6 +240,6 @@ public sealed class DesktopAxisTickFormattingTests
                 Assert.True(text.Length <= 16, text);
             }
         // Existing read-only formatting stays unchanged; extra tick precision is scoped.
-        Assert.Equal(culture == "de-DE" ? "0,025" : "0.025", UiNumbers.Compact(.025));
+        Assert.Equal(culture == "de-DE" ? "0,025" : "0.025", QuantityFormatter.FormatNumber(.025, QuantityKind.TransverseForce, ResultPresentationOptions.Default));
     }
 }

@@ -40,6 +40,65 @@ public sealed class DesktopInputUnitTests
         Assert.False(InputQuantityFormatter.TryParse(culture == "de-DE" ? "1.25" : "1,25", unit, out _));
     }
 
+    [Theory]
+    [InlineData("de-DE", "12\u202f200,05")]
+    [InlineData("en-US", "12\u202f200.05")]
+    public void DisplayedIntegerGroupsParseBackThroughTheRegionalInputPipeline(string culture, string expected)
+    {
+        using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
+        var options = new ResultPresentationOptions(significantDigits: 7, notation: EngineeringNotation.Off);
+        foreach (double sign in new[] { 1d, -1d })
+        {
+            double original = sign * 12.20005;
+            string displayed = QuantityFormatter.FormatNumber(original, QuantityKind.BeamLength, options);
+            Assert.Equal((sign < 0 ? "-" : "") + expected, displayed);
+            Assert.True(InputQuantityFormatter.TryParse(displayed, UnitCatalog.Millimeter, out var parsed));
+            Assert.Equal(original, parsed);
+        }
+        Assert.True(InputQuantityFormatter.TryParse("+" + expected, UnitCatalog.Millimeter, out var positive));
+        Assert.Equal(12.20005, positive);
+        Assert.True(InputQuantityFormatter.TryParse(expected + "e-2", UnitCatalog.Newton, out var exponent));
+        Assert.Equal(122.0005, exponent);
+        string otherRegion = culture == "de-DE" ? "12\u202f200.05" : "12\u202f200,05";
+        Assert.False(InputQuantityFormatter.TryParse(otherRegion, UnitCatalog.Millimeter, out _));
+        Assert.True(InputQuantityFormatter.TryParse(otherRegion, UnitCatalog.Millimeter, out var overridden,
+            CultureInfo.GetCultureInfo(culture == "de-DE" ? "en-US" : "de-DE")));
+        Assert.Equal(12.20005, overridden);
+    }
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void GroupRemovalPreservesAllEditableDigitsAndMultipleIntegerTriplets(string culture)
+    {
+        using var scope = new ResultCultureScope(culture, culture);
+        const double original = 12200.050001234567;
+        string editable = InputQuantityFormatter.Format(original, UnitCatalog.Newton);
+        string grouped = editable.Insert(2, NumberFormatter.GroupSeparator);
+        Assert.True(InputQuantityFormatter.TryParse(grouped, UnitCatalog.Newton, out var parsed));
+        Assert.Equal(original, parsed);
+        var options = new ResultPresentationOptions(significantDigits: 15, notation: EngineeringNotation.Off);
+        foreach (double value in new[] { 1234567890.12345, -1234567890.12345 })
+        {
+            string display = QuantityFormatter.FormatNumber(value, QuantityKind.TransverseForce, options);
+            Assert.Equal(3, display.Count(c => c == '\u202f'));
+            Assert.True(InputQuantityFormatter.TryParse(display, UnitCatalog.Newton, out parsed));
+            Assert.Equal(value, parsed);
+        }
+    }
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void MalformedGroupsAndUnrelatedSeparatorsRemainInvalid(string culture)
+    {
+        using var scope = new ResultCultureScope(culture, culture);
+        foreach (string invalid in new[]
+        {
+            "1\u202f22", "1234\u202f567", "12\u202f3456", "12\u202f\u202f345", "\u202f123", "123\u202f",
+            "1.234\u202f567", "1,234\u202f567", "12\u202f200e1\u202f000", "12 200", "12\u00a0200",
+            "12.200,05", "12,200.05", "12\u202f+200", "12\u202f200 000"
+        }) Assert.False(InputQuantityFormatter.TryParse(invalid, UnitCatalog.Newton, out _), invalid);
+    }
+
     public static IEnumerable<object[]> DraftCases()
     {
         foreach (string culture in new[] { "de-DE", "en-US" })

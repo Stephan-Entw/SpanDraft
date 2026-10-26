@@ -25,9 +25,24 @@ public static class InputQuantityFormatter
     {
         siValue = default;
         culture ??= CultureInfo.CurrentCulture;
-        if (text is null || text.Length > 512 || !double.TryParse(text, NumberStyles.Float, culture, out _)) return false;
-        string normalized = text.Trim().Replace(culture.NumberFormat.NumberDecimalSeparator, ".")
+        if (text is null || text.Length > 512) return false;
+        string normalized = text.Trim(' ', '\t', '\r', '\n', '\v', '\f').Replace(culture.NumberFormat.NumberDecimalSeparator, ".")
             .Replace(culture.NumberFormat.NegativeSign, "-").Replace(culture.NumberFormat.PositiveSign, "+");
+        if (normalized.Contains('\u202f'))
+        {
+            // Accept only SpanDraft's integer triplets, never separators in fractions or exponents.
+            int integerEnd = normalized.IndexOfAny(['.', 'E', 'e']);
+            string integer = integerEnd < 0 ? normalized : normalized[..integerEnd];
+            if (integer.StartsWith('-') || integer.StartsWith('+')) integer = integer[1..];
+            string[] groups = integer.Split('\u202f');
+            if (groups.Length < 2 || groups[0].Length is < 1 or > 3
+                || groups.Skip(1).Any(group => group.Length != 3)
+                || groups.Any(group => group.Any(c => !char.IsAsciiDigit(c)))
+                || integerEnd >= 0 && normalized.AsSpan(integerEnd).Contains('\u202f')) return false;
+            text = text.Replace(NumberFormatter.GroupSeparator, "");
+            normalized = normalized.Replace(NumberFormatter.GroupSeparator, "");
+        }
+        if (!double.TryParse(text, NumberStyles.Float, culture, out _)) return false;
         int separator = normalized.IndexOfAny(['E', 'e']);
         if (separator >= 0 && (!int.TryParse(normalized.AsSpan(separator + 1), CultureInfo.InvariantCulture, out int exponent)
             || exponent is < -400 or > 400)) return false;

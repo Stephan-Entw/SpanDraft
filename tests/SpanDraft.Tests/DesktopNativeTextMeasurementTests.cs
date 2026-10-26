@@ -12,6 +12,7 @@ using Avalonia.VisualTree;
 using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.Presentation;
 using Xunit;
 
 namespace SpanDraft.Tests;
@@ -178,7 +179,7 @@ public sealed class DesktopNativeTextMeasurementTests
             }
             var axis = CoordinateAxisLayout.Create(layout, 1000, Measure);
             Assert.Equal(layout.Stations.Count, measured.Count);
-            Assert.Equal(layout.Stations.Select(s => UiNumbers.Compact(s.PhysicalX * 1000)), measured.Select(m => m.Text));
+            Assert.Equal(layout.Stations.Select(s => QuantityFormatter.FormatNumber(s.PhysicalX, QuantityKind.BeamLength, ResultPresentationOptions.Default)), measured.Select(m => m.Text));
             Assert.All(measured, m =>
             {
                 Assert.True(double.IsFinite(m.Size.Width) && m.Size.Width > 0);
@@ -206,7 +207,7 @@ public sealed class DesktopNativeTextMeasurementTests
         var frame = new BeamLayoutState().Update(document, 1100, 600)!;
         var scene = BeamRenderState.Create(document, frame, text => SchematicText.Measure(text, Typeface.Default, 13));
         var label = Assert.Single(scene.Annotations);
-        Assert.Equal("Motorlast = " + UiNumbers.Compact(load.Value) + " N", label.Text);
+        Assert.Equal("Motorlast = " + QuantityFormatter.Format(load.Value, QuantityKind.TransverseForce, ResultPresentationOptions.Default), label.Text);
         Assert.True(double.IsFinite(label.Bounds.X) && double.IsFinite(label.Bounds.Y));
         Assert.True(double.IsFinite(label.Bounds.Width) && label.Bounds.Width > 0);
         Assert.True(double.IsFinite(label.Bounds.Height) && label.Bounds.Height > 0);

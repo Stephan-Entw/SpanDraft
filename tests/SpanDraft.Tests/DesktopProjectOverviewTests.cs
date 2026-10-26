@@ -448,7 +448,7 @@ public sealed class DesktopProjectOverviewTests
     public void CompactNumbersBoundWidthWithoutHidingSmallNonzeroValues(string culture, double value, string expected)
     {
         using var scope = new UiCultureScope(culture);
-        Assert.Equal(expected, UiNumbers.Compact(value));
+        Assert.Equal(expected, QuantityFormatter.FormatNumber(value, double.IsPositiveInfinity(value) ? QuantityKind.SafetyFactor : QuantityKind.TransverseForce, ResultPresentationOptions.Default));
     }
 
     [Theory]

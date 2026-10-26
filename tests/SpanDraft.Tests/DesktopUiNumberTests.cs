@@ -2,6 +2,7 @@ using System.Globalization;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
+using SpanDraft.Desktop.Presentation;
 using Xunit;
 
 namespace SpanDraft.Tests;
@@ -34,8 +35,8 @@ public sealed class DesktopUiNumberTests
     public void DisplayRulesUseRegionalCultureAndSuperscriptEngineeringGroups(string culture, double value, string expected)
     {
         using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
-        Assert.Equal(expected, UiNumbers.Compact(value));
-        Assert.Equal(expected, UiNumbers.Indicator(value));
+        Assert.Equal(expected, QuantityFormatter.FormatNumber(value,
+            double.IsPositiveInfinity(value) ? QuantityKind.SafetyFactor : QuantityKind.TransverseForce, ResultPresentationOptions.Default));
         Assert.DoesNotContain("E", expected);
     }
 

@@ -161,28 +161,40 @@ public sealed class SectionDefinitionPrototypeTests
         Commit(vm, "h", height);
         double side = ReportDocument.RightWidth / ReportVisuals.PointsPerDip;
         foreach (var units in new[] { UnitProfile.Default, UnitProfile.UnitedStates })
+        foreach (double textWidthScale in new[] { 1d, 1.25d })
         {
-            Size Measure(TechnicalText text) => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12);
+            Size Measure(TechnicalText text)
+            {
+                var measured = SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12);
+                return new(text.PlainText.Contains(" = ", StringComparison.Ordinal) ? measured.Width * textWidthScale : measured.Width, measured.Height);
+            }
             var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, new(side, side),
-                units[QuantityKind.SectionDimension], Measure, compact: true);
+                units[QuantityKind.SectionDimension], Measure, compact: true, options: new(units));
             var y = layout.Axes.Single(a => a.Axis == SectionAxisDesignation.Y);
             Assert.True(y.LabelBounds.Left > y.End.X);
-            var preferred = new Rect(new Point(y.End.X + 10 - y.LabelBounds.Width / 2,
-                y.End.Y - y.LabelBounds.Height / 2), y.LabelBounds.Size);
-            if (y.LabelBounds != preferred)
-                Assert.Contains(layout.Dimensions, d => d.TextBounds.Inflate(2).Intersects(preferred)
-                    || d.Lines.Any(line => LineIntersectsLabel(line, preferred))
-                    || d.Arrows.Any(arrow => arrow.Bounds.Intersects(preferred)));
-            if (Math.Abs(y.LabelBounds.Center.Y - y.End.Y) > 1e-8)
-                foreach (double distance in new[] { 10d, 26d, 42d })
-                {
-                    var onAxis = new Rect(new Point(Math.Min(side - y.LabelBounds.Width - 4,
-                        y.End.X + distance - y.LabelBounds.Width / 2), preferred.Top), preferred.Size);
-                    Assert.Contains(layout.Dimensions, d => d.TextBounds.Inflate(2).Intersects(onAxis)
-                        || d.Lines.Any(line => LineIntersectsLabel(line, onAxis))
-                        || d.Arrows.Any(arrow => arrow.Bounds.Intersects(onAxis)));
-                }
-            if (height is "120" or "200") Assert.Equal(preferred, y.LabelBounds);
+            Vector direction = y.End - y.Start; direction /= direction.Length;
+            var normal = new Vector(-direction.Y, direction.X);
+            Rect Candidate(double distance, double offset)
+            {
+                Point center = y.End + direction * distance + normal * offset;
+                return new(Math.Clamp(center.X - y.LabelBounds.Width / 2, 4, side - y.LabelBounds.Width - 4),
+                    Math.Clamp(center.Y - y.LabelBounds.Height / 2, 4, side - y.LabelBounds.Height - 4),
+                    y.LabelBounds.Width, y.LabelBounds.Height);
+            }
+            bool IsClear(Rect label) => new Rect(new Size(side, side)).Contains(label)
+                && !layout.ProfileBounds.Intersects(label)
+                && layout.Axes.All(axis => !axis.ArrowBounds.Inflate(2).Intersects(label)
+                    && !LineIntersectsLabel(new(axis.Start, axis.End), label.Inflate(2)))
+                && layout.Axes.Where(axis => axis != y).All(axis => !axis.LabelBounds.Inflate(4).Intersects(label))
+                && layout.Dimensions.All(d => !d.TextBounds.Inflate(2).Intersects(label)
+                    && d.Lines.All(line => !LineIntersectsLabel(line, label))
+                    && d.Arrows.All(arrow => !arrow.Bounds.Intersects(label)));
+            var candidates = new[] { 0d, 20d, -20d, 40d, -40d, 60d, -60d }
+                .SelectMany(offset => new[] { 10d, 26d, 42d }.Select(distance => Candidate(distance, offset))).ToArray();
+            var clear = candidates.Where(IsClear).ToArray();
+            Assert.NotEmpty(clear);
+            Assert.Equal(clear[0], y.LabelBounds);
+            Assert.True(IsClear(y.LabelBounds));
 
             var editor = SectionPreviewDrawingLayout.Create(vm.Preview!, new(520, 440),
                 units[QuantityKind.SectionDimension], Measure);

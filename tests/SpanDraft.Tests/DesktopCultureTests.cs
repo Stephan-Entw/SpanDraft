@@ -38,7 +38,7 @@ public sealed class DesktopCultureTests
         Assert.False(UiNumbers.TryParseSignedValue(wrongSeparator, out _));
         Assert.True(UiNumbers.TryParseLength(number, out var length)); Assert.Equal(.0125, length.Meters);
         Assert.True(UiNumbers.TryParsePosition(number, M(1), out var position)); Assert.Equal(length, position);
-        Assert.Equal(number, UiNumbers.Format(12.5)); Assert.Equal(number, UiNumbers.Compact(12.5));
+        Assert.Equal(number, UiNumbers.Format(12.5)); Assert.Equal(number, QuantityFormatter.FormatNumber(12.5, QuantityKind.TransverseForce, ResultPresentationOptions.Default));
         Assert.Equal(number, UiNumbers.AxisTick(5, 2.5, 0));
         Assert.True(InputQuantityFormatter.TryParse(number, UnitCatalog.Millimeter, out double si)); Assert.Equal(.0125, si);
         Assert.False(InputQuantityFormatter.TryParse(wrongSeparator, UnitCatalog.Millimeter, out _));

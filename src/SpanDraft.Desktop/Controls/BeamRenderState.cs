@@ -48,10 +48,10 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             foreach (var load in loads)
             {
                 var quantity = load.Preview.Kind == PointLoadKind.Force ? QuantityKind.TransverseForce : QuantityKind.Moment;
-                Reserve(PointLoadSymbol.Label(load.Preview, load.Name, profile), load.Name, load.Preview.Value, quantity);
+                Reserve(PointLoadSymbol.Label(load.Preview, load.Name, profile, options), load.Name, load.Preview.Value, quantity);
             }
             foreach (var load in distributed)
-                Reserve(DistributedLoadSymbol.Label(load.Preview, load.Name, profile), load.Name, load.Preview.Intensity, QuantityKind.DistributedLoad);
+                Reserve(DistributedLoadSymbol.Label(load.Preview, load.Name, profile, options), load.Name, load.Preview.Intensity, QuantityKind.DistributedLoad);
             void Reserve(string label, string name, double value, QuantityKind quantity)
             {
                 var sizes = UnitCatalog.All.Where(u => u.Dimension == UnitCatalog.DimensionOf(quantity))
