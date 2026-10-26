@@ -20,6 +20,10 @@ public partial class MainWindow : Window
     private AboutWindow? _aboutWindow;
     private SettingsWindow? _settingsWindow;
     private bool _initializing = true;
+    private readonly TaskCompletionSource _initialization = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>Completes after the initial libraries, recovery, recents and shell request have been processed.</summary>
+    public Task Initialization => _initialization.Task;
 
     public MainWindow() : this(null) { }
 
@@ -73,29 +77,41 @@ public partial class MainWindow : Window
         };
         Opened += async (_, _) =>
         {
-            _dialogs = new ProjectDialogs(this);
-            _model = new(files: files, dialogs: _dialogs, recovery: ProjectRecovery.Local(files),
-                setupRecovery: ProjectSetupRecovery.Local(files),
-                settingsStore: settingsStore, settings: settings,
-                materialStore: MaterialLibraryStore.Local(files), sectionStore: SectionLibraryStore.Local(files),
-                recentStore: RecentProjectsStore.Local(files), openUserManual: OpenUserManualAsync,
-                userNameProvider: static () => OperatingSystem.IsWindows() ? Environment.UserName : null);
-            await _model.InitializeLibrariesAsync();
-            DataContext = _model;
-            if (!await _model.InitializeRecoveryAsync())
+            try
             {
-                // An unresolved recovery must bypass the normal leave workflow, which deletes its slot.
-                _closeApproved = true;
-                Close();
-                return;
+                _dialogs = new ProjectDialogs(this);
+                var stores = startup?.StateStores ?? DesktopStateStores.Local(files);
+                _model = new(files: files, dialogs: _dialogs, recovery: stores.Recovery,
+                    setupRecovery: stores.SetupRecovery,
+                    settingsStore: settingsStore, settings: settings,
+                    materialStore: stores.Materials, sectionStore: stores.Sections,
+                    recentStore: stores.Recents, openUserManual: OpenUserManualAsync,
+                    userNameProvider: startup?.UserNameProvider ?? (static () => OperatingSystem.IsWindows() ? Environment.UserName : null));
+                await _model.InitializeLibrariesAsync();
+                DataContext = _model;
+                if (!await _model.InitializeRecoveryAsync())
+                {
+                    // An unresolved recovery must bypass the normal leave workflow, which deletes its slot.
+                    _closeApproved = true;
+                    _initialization.TrySetCanceled();
+                    Close();
+                    return;
+                }
+                _initializing = false;
+                quitCommand.Refresh();
+                await _model.InitializeRecentProjectsAsync();
+                // A restored setup draft takes precedence over the shell's open request.
+                if (_model.Mode != MainViewMode.ProjectSetup && args is [var path]
+                    && string.Equals(Path.GetExtension(path), ".spandraft", StringComparison.OrdinalIgnoreCase))
+                    await _model.OpenAsync(path);
+                _initialization.TrySetResult();
             }
-            _initializing = false;
-            quitCommand.Refresh();
-            await _model.InitializeRecentProjectsAsync();
-            // A restored setup draft takes precedence over the shell's open request.
-            if (_model.Mode != MainViewMode.ProjectSetup && args is [var path]
-                && string.Equals(Path.GetExtension(path), ".spandraft", StringComparison.OrdinalIgnoreCase))
-                await _model.OpenAsync(path);
+            catch (Exception error)
+            {
+                _initialization.TrySetException(error);
+                // Preserve normal fatal-startup behavior while making the error awaitable by hosts.
+                throw;
+            }
         };
         Closing += WindowClosing;
         Closed += (_, _) => _model?.ReleaseReport();

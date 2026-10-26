@@ -5,6 +5,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../tools/StoreScreenshots/SpanDraft.StoreScreenshots.csproj" />
     <ProjectReference Include="../../src/SpanDraft.Desktop/SpanDraft.Desktop.csproj" />
     <ProjectReference Include="../../src/SpanDraft.Core/SpanDraft.Core.csproj" />
     <ProjectReference Include="../../src/SpanDraft.Solver/SpanDraft.Solver.csproj" />
@@ -17,5 +18,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="Fixtures/**/*.spandraft" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../tools/StoreScreenshots/Fixtures/Crane Beam.spandraft" Link="Fixtures/Store/Crane Beam.spandraft" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../tools/StoreScreenshots/capture-size.json" Link="Fixtures/Store/capture-size.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
