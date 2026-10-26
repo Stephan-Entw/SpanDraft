@@ -1,6 +1,5 @@
 using System.Globalization;
 using Avalonia.Threading;
-using SpanDraft.Core.Sections;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
@@ -52,7 +51,7 @@ internal static class ProjectReport
         var timestamp = createdAt ?? DateTimeOffset.Now;
         var data = new ReportData(state.Info?.CalculationTitle ?? Strings.ReportHeading, state.Info?.Author ?? "",
             ApplicationMetadata.Version, timestamp, timestamp.ToLocalTime().ToString("d", CultureInfo.CurrentCulture), metadata,
-            (state.Document.SectionDisplayName ?? ShapeName(state.Document.Section)) + " · " + axisName + "-" + axisName, sectionProperties, overview.Material,
+            overview.Section, sectionProperties, overview.Material,
             [Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus + " = " + Quantity(state.Document.Material.YoungsModulus.Pascals, QuantityKind.YoungsModulus),
              MaterialStrengthDisplay.LabelText(state.Document.Material.StrengthType) + " = " + Quantity(state.Document.Material.YieldStrength.Pascals, QuantityKind.MaterialStrength)],
             new ReportTable[]
@@ -84,20 +83,6 @@ internal static class ProjectReport
         try { visuals.Freeze(report); return report; }
         catch { report.Dispose(); throw; }
     }
-
-    private static string ShapeName(ISectionDefinition section) => SectionDefinitionViewModel.FormOf(
-        SectionDefinitionCompatibility.Normalize(section)) switch
-    {
-        SectionEditorType.Rectangle => Strings.ShapeRectangle,
-        SectionEditorType.RectangularHollow => Strings.ShapeRectangularHollow,
-        SectionEditorType.Circle => Strings.ShapeCircle,
-        SectionEditorType.CircularHollow => Strings.ShapeCircularHollow,
-        SectionEditorType.ISection => Strings.SectionDefinitionShapeI,
-        SectionEditorType.USection => Strings.ShapeU,
-        SectionEditorType.TSection => Strings.ShapeT,
-        SectionEditorType.Angle => Strings.ShapeAngle,
-        _ => Strings.SectionDefinitionCustomName
-    };
 
     private static string Missing(string value) => value.Length == 0 ? "-" : value;
 }

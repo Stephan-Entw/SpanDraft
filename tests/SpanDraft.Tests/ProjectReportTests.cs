@@ -1282,6 +1282,25 @@ public sealed class ProjectReportTests : IDisposable
         { using var bitmap = report.RenderPage(page, 96); AssertTextContained(report); }
     }
 
+    [Theory]
+    [InlineData(null, "T-Profil 100 × 80 × 8 × 10 mm")]
+    [InlineData("Mein T-Profil", "Mein T-Profil")]
+    public void CapturedSectionNameMatchesOverviewWithoutAxisSuffix(string? displayName, string expected)
+    {
+        var state = ReportTestProjects.Create(); var mm = Length.FromMillimeters;
+        state = state with { Document = state.Document.WithSection(
+            new TSectionGeometry(mm(100), mm(80), mm(8), mm(10), mm(0)), SectionAxisDesignation.Y, displayName) };
+        var (main, _) = Open(state);
+        var editor = main.Editor!;
+        Assert.Equal(displayName, editor.Document.SectionDisplayName);
+
+        using var report = ProjectReport.Capture(editor, Now);
+
+        Assert.Equal(expected, report.Data.Section);
+        Assert.Equal(editor.Overview.Section, report.Data.Section);
+        Assert.Equal(displayName, editor.Document.SectionDisplayName);
+    }
+
     [Fact]
     public void AllSectionFormsAndAxesUseAuthoritativeProperties()
     {
@@ -1297,6 +1316,8 @@ public sealed class ProjectReportTests : IDisposable
         {
             var state = fixture with { Document = fixture.Document.WithSection(section, axis.AxisDesignation) };
             var (main, _) = Open(state); using var report = ProjectReport.Capture(main.Editor!, Now);
+            Assert.Equal(main.Editor!.Overview.Section, report.Data.Section);
+            Assert.DoesNotMatch(@" · [yzuv]-[yzuv]$", report.Data.Section);
             Assert.Contains(report.Data.SectionProperties, p => p.PlainText.StartsWith("I" + axis.AxisDesignation.ToString().ToLowerInvariant() + " = "));
             bool sameDisplay = QuantityFormatter.Format(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus,
                 main.Editor!.ResultPresentation.Profile) ==
