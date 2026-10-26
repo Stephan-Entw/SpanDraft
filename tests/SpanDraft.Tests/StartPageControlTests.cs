@@ -126,7 +126,8 @@ public sealed class StartPageControlTests
             {
                 var pending = dialogs.ConfirmRemoveMissingRecentAsync(path); Dispatcher.UIThread.RunJobs();
                 var dialog = Assert.Single(owner.OwnedWindows); Arrange(dialog, 520, 500);
-                var text = Assert.Single(dialog.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == message);
+                var text = Assert.Single(dialog.GetVisualDescendants().OfType<TextBlock>(),
+                    t => t.Text?.ReplaceLineEndings("\n") == message);
                 Assert.Equal(TextWrapping.Wrap, text.TextWrapping);
                 Assert.True(text.TextLayout.Height <= text.Bounds.Height + 1);
                 var buttons = dialog.GetVisualDescendants().OfType<Button>().ToArray();

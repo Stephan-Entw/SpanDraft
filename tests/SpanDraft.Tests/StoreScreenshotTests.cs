@@ -16,6 +16,7 @@ namespace SpanDraft.Tests;
 public sealed class StoreScreenshotTests
 {
     private static string Fixture => Path.Combine(AppContext.BaseDirectory, "Fixtures", "Store", "Crane Beam.spandraft");
+    public static bool IsWindows => OperatingSystem.IsWindows();
 
     [Theory]
     [InlineData("Start", "de-DE", "01-start-de-DE.png")]
@@ -42,22 +43,34 @@ public sealed class StoreScreenshotTests
         Assert.Throws<ArgumentException>(() => CaptureFiles.FileName(scene, culture));
 
     [Fact]
-    public async Task DemoRecentsRoundTripAsFiveNeutralPathsWithoutReadingTheExampleFiles()
+    public void DemoRecentsContainFiveNeutralWindowsPathsAndPreparedTimestamps()
     {
         var reference = new DateTimeOffset(2026, 10, 26, 18, 0, 0, TimeSpan.FromHours(1));
         var recents = CaptureFiles.DemoRecents(reference);
         Assert.Equal(5, recents.Length);
-        Assert.Equal(5, recents.Select(e => Path.GetFileName(e.Path)).Distinct().Count());
+        Assert.Equal(new[] { @"C:\SpanDraft\Examples\Crane Beam.spandraft", @"C:\SpanDraft\Examples\Cantilever Beam.spandraft",
+            @"C:\SpanDraft\Examples\Simply Supported Beam.spandraft", @"C:\SpanDraft\Examples\Overhang Beam.spandraft",
+            @"C:\SpanDraft\Examples\Fixed-End Beam.spandraft" }, recents.Select(e => e.Path));
         Assert.All(recents, entry =>
         {
             Assert.StartsWith(@"C:\SpanDraft\Examples\", entry.Path);
-            Assert.True(Path.IsPathFullyQualified(entry.Path));
             Assert.Equal(TimeSpan.Zero, entry.LastUsedUtc.Offset);
             Assert.True(entry.LastUsedUtc < reference);
         });
         Assert.Equal(new[] { new TimeSpan(0, 1, 20, 0), new(0, 6, 45, 0), new(1, 3, 10, 0), new(4, 8, 35, 0), new(11, 2, 50, 0) },
             recents.Select(e => reference - e.LastUsedUtc).ToArray());
         Assert.True(recents.Select(e => e.LastUsedUtc.UtcDateTime.Date).Distinct().Count() >= 3);
+        CaptureFiles.AssertDemoRecents(recents, reference);
+        var invalid = recents.ToArray(); invalid[0] = invalid[0] with { Path = TestPath("artifacts/internal.spandraft") };
+        Assert.Throws<InvalidDataException>(() => CaptureFiles.AssertDemoRecents(invalid, reference));
+    }
+
+    [Fact(Skip = "The native Windows screenshot fixture uses Windows absolute paths.", SkipUnless = nameof(IsWindows))]
+    public async Task DemoRecentsRoundTripWithoutReadingTheExampleFilesOnWindows()
+    {
+        var reference = new DateTimeOffset(2026, 10, 26, 18, 0, 0, TimeSpan.FromHours(1));
+        var recents = CaptureFiles.DemoRecents(reference);
+        Assert.All(recents, entry => Assert.True(Path.IsPathFullyQualified(entry.Path)));
         var files = new Files(); var reads = new List<string>();
         files.Data["isolated-recents.json"] = RecentProjectsCodec.Serialize(recents);
         files.BeforeRead = path => { reads.Add(path); return Task.CompletedTask; };
@@ -67,8 +80,6 @@ public sealed class StoreScreenshotTests
         Assert.Equal("isolated-recents.json", Assert.Single(reads));
         Assert.Empty(files.Writes);
         CaptureFiles.AssertDemoRecents(store.Entries.ToArray(), reference);
-        var invalid = recents.ToArray(); invalid[0] = invalid[0] with { Path = TestPath("artifacts/internal.spandraft") };
-        Assert.Throws<InvalidDataException>(() => CaptureFiles.AssertDemoRecents(invalid, reference));
     }
 
     [Fact]
@@ -163,19 +174,51 @@ public sealed class StoreScreenshotTests
     [Fact]
     public async Task FileBoundaryAllowsOnlyStateAndExplicitReadOnlyProjects()
     {
-        string root = TestPath("isolated"), fixture = TestPath("Fixture.spandraft");
+        // The guard checks real ancestors even with an in-memory store; macOS /var is a symlink.
+        string testRoot = Path.Combine(AppContext.BaseDirectory, "file-boundary-" + Guid.NewGuid().ToString("N"));
+        string root = Path.Combine(testRoot, "isolated"), fixture = Path.Combine(testRoot, "Fixture.spandraft");
         var disk = new Files(); var store = new IsolatedFileStore(root, [fixture], disk);
         string settings = Path.Combine(root, "settings.json");
         await store.WriteAtomicAsync(settings, [1], TestContext.Current.CancellationToken);
         Assert.Equal(new byte[] { 1 }, await store.ReadAsync(settings));
         await store.ReadAsync(fixture);
         await store.DeleteAsync(settings);
-        await Assert.ThrowsAsync<SecurityException>(() => store.ReadAsync(TestPath("isolated-other/settings.json")));
+        await Assert.ThrowsAsync<SecurityException>(() => store.ReadAsync(Path.Combine(testRoot, "isolated-other", "settings.json")));
         await Assert.ThrowsAsync<SecurityException>(() => store.ReadAsync(Path.Combine(root, "..", "private.json")));
         await Assert.ThrowsAsync<SecurityException>(() => store.WriteAtomicAsync(fixture, [], TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<SecurityException>(() => store.DeleteAsync(fixture));
         await Assert.ThrowsAsync<SecurityException>(() => store.WriteAtomicAsync(Path.Combine(root, "new.spandraft"), [], TestContext.Current.CancellationToken));
         Assert.Equal(4, store.AccessedPaths.Length);
+    }
+
+    [Theory(Skip = "Creating Windows symbolic links requires additional OS privileges.", SkipWhen = nameof(IsWindows))]
+    [InlineData(false)] [InlineData(true)]
+    public async Task FileBoundaryRejectsSymbolicLinksBeforeAccessingTheStore(bool linkDirectory)
+    {
+        string testRoot = Path.Combine(AppContext.BaseDirectory, "file-boundary-links-" + Guid.NewGuid().ToString("N"));
+        string state = Path.Combine(testRoot, "state"), outside = Path.Combine(testRoot, "outside");
+        Directory.CreateDirectory(state); Directory.CreateDirectory(outside);
+        string target = Path.Combine(outside, "settings.json");
+        string link = Path.Combine(state, linkDirectory ? "linked-directory" : "settings.json");
+        File.WriteAllText(target, "private state");
+        try
+        {
+            if (linkDirectory) Directory.CreateSymbolicLink(link, outside);
+            else File.CreateSymbolicLink(link, target);
+            string path = linkDirectory ? Path.Combine(link, "settings.json") : link;
+            var disk = new Files(); var store = new IsolatedFileStore(state, [], disk);
+            await Assert.ThrowsAsync<SecurityException>(() => store.ReadAsync(path));
+            await Assert.ThrowsAsync<SecurityException>(() => store.WriteAtomicAsync(path, [], TestContext.Current.CancellationToken));
+            await Assert.ThrowsAsync<SecurityException>(() => store.DeleteAsync(path));
+            Assert.Empty(store.AccessedPaths);
+            Assert.Equal("private state", File.ReadAllText(target));
+        }
+        finally
+        {
+            if (linkDirectory && Directory.Exists(link)) Directory.Delete(link);
+            else if (File.Exists(link)) File.Delete(link);
+            Directory.Delete(testRoot, recursive: true);
+        }
     }
 
     [Theory]
