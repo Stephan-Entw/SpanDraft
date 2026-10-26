@@ -135,6 +135,8 @@ public static class Strings
     public static string ProjectFileFilter => Get(nameof(ProjectFileFilter));
     public static string ProjectFileError => Get(nameof(ProjectFileError));
     public static string ProjectFileMissing => Get(nameof(ProjectFileMissing));
+    public static string MissingRecentQuestion => Get(nameof(MissingRecentQuestion));
+    public static string RemoveFromRecent => Get(nameof(RemoveFromRecent));
     public static string ProjectBusy => Get(nameof(ProjectBusy));
     public static string LocalFilesOnly => Get(nameof(LocalFilesOnly));
     public static string LeaveQuestion => Get(nameof(LeaveQuestion));

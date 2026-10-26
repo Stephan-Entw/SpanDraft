@@ -358,4 +358,12 @@
   <data name="EngineeringNotation" xml:space="preserve"><value>Engineering notation</value></data>
   <data name="NotationAutomatic" xml:space="preserve"><value>Automatic</value></data>
   <data name="NotationOff" xml:space="preserve"><value>Off</value></data>
+  <data name="MissingRecentQuestion" xml:space="preserve"><value>Project file not found.
+
+The file is no longer available at the saved location. It may have been deleted, moved or renamed.
+
+{0}
+
+Remove the entry from Recent projects?</value></data>
+  <data name="RemoveFromRecent" xml:space="preserve"><value>Remove from list</value></data>
 </root>

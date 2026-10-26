@@ -74,7 +74,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         UndoCommand = new(() => Undo(), () => CanUndo);
         RedoCommand = new(() => Redo(), () => CanRedo);
         UserManualCommand = new(async () => { if (openUserManual is not null) await openUserManual(); return true; }, () => true);
-        StartPage = new(NewCommand, OpenCommand, UserManualCommand, OpenAsync, () => CanOpenProject);
+        StartPage = new(NewCommand, OpenCommand, UserManualCommand, OpenRecentAsync, () => CanOpenProject);
     }
 
     public MainViewMode Mode => _mode;
@@ -400,10 +400,24 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public Task<bool> OpenAsync(string path) => !CanOpenProject ? Task.FromResult(false)
         : RunOperationAsync(() => OpenPathAsync(path));
 
-    private async Task<bool> OpenPathAsync(string path)
+    public Task<bool> OpenRecentAsync(string path) => !CanOpenProject ? Task.FromResult(false)
+        : RunOperationAsync(() => OpenPathAsync(path, fromRecent: true));
+
+    private async Task<bool> OpenPathAsync(string path, bool fromRecent = false)
     {
         // Parse and validate before touching the old session or asking its leave question.
-        var bytes = await _files.ReadAsync(path) ?? throw new IOException(Strings.ProjectFileMissing);
+        var bytes = await _files.ReadAsync(path);
+        if (bytes is null)
+        {
+            if (!fromRecent) throw new IOException(Strings.ProjectFileMissing);
+            if (_dialogs is not null && await _dialogs.ConfirmRemoveMissingRecentAsync(Path.GetFullPath(path))
+                && _recentStore is not null)
+            {
+                await _recentStore.RemoveAsync(path);
+                StartPage.SetRecentProjects(_recentStore.Entries);
+            }
+            return false;
+        }
         var state = ProjectFileCodec.Deserialize(bytes);
         var previousSession = Session;
         bool wasDirty = previousSession?.IsDirty == true;

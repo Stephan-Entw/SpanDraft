@@ -10,6 +10,7 @@ public interface IProjectDialogs
     Task<string?> PickOpenPathAsync();
     Task<string?> PickSavePathAsync(string? currentFilePath, string? calculationTitle);
     Task<LeaveDecision> ConfirmLeaveAsync(string projectFileName);
+    Task<bool> ConfirmRemoveMissingRecentAsync(string path);
     Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc);
     Task<RecoveryDecision> ConfirmSetupRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc);
     Task ShowErrorAsync(string message);

@@ -141,6 +141,10 @@ internal static class ProjectTestSupport
         public RecoveryDecision DamagedRecovery { get; set; } = RecoveryDecision.Discard;
         public List<string> Errors { get; } = [];
         public int LeaveQuestions { get; private set; }
+        public bool RemoveMissingRecent { get; set; }
+        public List<string> MissingRecentPaths { get; } = [];
+        public Task<bool> ConfirmRemoveMissingRecentAsync(string path)
+        { MissingRecentPaths.Add(path); return Task.FromResult(RemoveMissingRecent); }
         public int RecoveryQuestions { get; private set; }
         public int SaveQuestions { get; private set; }
         public Func<Task<LeaveDecision>>? LeaveHook { get; set; }

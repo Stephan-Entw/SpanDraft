@@ -98,17 +98,84 @@ public sealed class StartWorkspaceTests
 
     [Theory]
     [InlineData(false)] [InlineData(true)]
-    public async Task MissingOrInvalidRecentKeepsStartEntryAndReportsExistingProjectError(bool invalid)
+    public async Task MissingRecentAsksWhetherToRemoveAndUpdatesOnlyTheSelectedEntry(bool remove)
+    {
+        var f = new Fixture(); string path = TestPath("missing.spandraft"), other = TestPath("other.spandraft");
+        await f.Store.RecordUseAsync(other); await f.Store.RecordUseAsync(path);
+        await f.Main.InitializeRecentProjectsAsync();
+        var otherEntry = f.Store.Entries.Single(e => e.Path == other);
+        int writes = f.Files.Writes.Count;
+        f.Dialogs.RemoveMissingRecent = remove;
+        f.Main.StartPage.RecentProjects.Single(e => e.FilePath == path).OpenCommand.Execute(null);
+        Assert.Equal(new[] { path }, f.Dialogs.MissingRecentPaths);
+        Assert.Equal(MainViewMode.Start, f.Main.Mode); Assert.Null(f.Main.Session);
+        Assert.Equal(!remove, f.Store.Entries.Any(e => e.Path == path));
+        Assert.Equal(!remove, f.Main.StartPage.RecentProjects.Any(e => e.FilePath == path));
+        Assert.Equal(otherEntry, f.Store.Entries.Single(e => e.Path == other));
+        Assert.Equal(f.Store.Entries, RecentProjectsCodec.Deserialize(f.Files.Data[Fixture.Slot]));
+        Assert.Equal(writes + (remove ? 1 : 0), f.Files.Writes.Count);
+        Assert.Empty(f.Dialogs.Errors); Assert.Equal(0, f.Dialogs.LeaveQuestions);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task MissingRecentPreservesDirtyWorkspaceWithoutLeaveOrSave(bool remove)
+    {
+        var f = new Fixture(); await f.Create();
+        string path = TestPath("missing.spandraft");
+        await f.Store.RecordUseAsync(path); await f.Main.InitializeRecentProjectsAsync();
+        var session = f.Main.Session; var editor = f.Main.Editor; var revision = session!.CurrentRevision;
+        f.Dialogs.RemoveMissingRecent = remove;
+        Assert.False(await f.Main.OpenRecentAsync(path));
+        Assert.Same(session, f.Main.Session); Assert.Same(editor, f.Main.CurrentViewModel);
+        Assert.Same(revision, session.CurrentRevision); Assert.True(session.IsDirty);
+        Assert.Equal(0, f.Dialogs.LeaveQuestions); Assert.Equal(0, f.Dialogs.SaveQuestions);
+        Assert.Equal(!remove, f.Store.Entries.Count == 1);
+        Assert.Equal(!remove, f.Main.StartPage.RecentProjects.Count == 1);
+    }
+
+    [Theory]
+    [InlineData("invalid")] [InlineData("io")] [InlineData("access")]
+    public async Task InvalidOrUnreadableRecentKeepsEntryAndReportsExistingProjectError(string failure)
     {
         var f = new Fixture(); string path = TestPath("unavailable.spandraft");
         await f.Store.RecordUseAsync(path); await f.Main.InitializeRecentProjectsAsync();
-        if (invalid) f.Files.Data[path] = Encoding.UTF8.GetBytes("{}");
+        f.Files.Data[path] = Encoding.UTF8.GetBytes("{}");
+        f.Files.BeforeRead = p => p != path || failure == "invalid" ? Task.CompletedTask
+            : throw (failure == "access" ? new UnauthorizedAccessException("Denied") : new IOException("Unreadable"));
         var entries = f.Store.Entries; int writes = f.Files.Writes.Count;
-        Assert.False(await f.Main.OpenAsync(path));
+        f.Dialogs.RemoveMissingRecent = true;
+        Assert.False(await f.Main.OpenRecentAsync(path));
         Assert.Equal(MainViewMode.Start, f.Main.Mode); Assert.Null(f.Main.Session);
         Assert.Same(entries, f.Store.Entries); Assert.Equal(writes, f.Files.Writes.Count);
         Assert.StartsWith(Strings.ProjectFileError, Assert.Single(f.Dialogs.Errors));
+        Assert.Empty(f.Dialogs.MissingRecentPaths);
         Assert.Equal(0, f.Dialogs.LeaveQuestions); Assert.Single(f.Main.StartPage.RecentProjects);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task MissingDirectOpenKeepsRecentsAndUsesExistingError(bool picker)
+    {
+        var f = new Fixture(); string path = TestPath("missing.spandraft");
+        await f.Store.RecordUseAsync(path); await f.Main.InitializeRecentProjectsAsync();
+        var entries = f.Store.Entries; int writes = f.Files.Writes.Count;
+        f.Dialogs.OpenPath = path; f.Dialogs.RemoveMissingRecent = true;
+        Assert.False(picker ? await f.Main.OpenAsync() : await f.Main.OpenAsync(path));
+        Assert.Same(entries, f.Store.Entries); Assert.Single(f.Main.StartPage.RecentProjects);
+        Assert.Equal(writes, f.Files.Writes.Count); Assert.Empty(f.Dialogs.MissingRecentPaths);
+        Assert.StartsWith(Strings.ProjectFileError, Assert.Single(f.Dialogs.Errors));
+    }
+
+    [Fact]
+    public async Task MissingRecentRemovalSurvivesPersistenceFailure()
+    {
+        var f = new Fixture(); string path = TestPath("missing.spandraft");
+        await f.Store.RecordUseAsync(path); await f.Main.InitializeRecentProjectsAsync();
+        f.Files.FailWritePath = Fixture.Slot; f.Dialogs.RemoveMissingRecent = true;
+        Assert.False(await f.Main.OpenRecentAsync(path));
+        Assert.Empty(f.Store.Entries); Assert.True(f.Main.StartPage.IsEmpty);
+        Assert.Empty(f.Dialogs.Errors);
     }
 
     [Fact]
@@ -124,7 +191,7 @@ public sealed class StartWorkspaceTests
     {
         var f = new Fixture(); await f.Create(); var session = f.Main.Session;
         string path = f.Project(); f.Dialogs.Leave = decision;
-        Assert.Equal(decision != LeaveDecision.Cancel, await f.Main.OpenAsync(path));
+        Assert.Equal(decision != LeaveDecision.Cancel, await f.Main.OpenRecentAsync(path));
         Assert.Equal(1, f.Dialogs.LeaveQuestions);
         if (decision == LeaveDecision.Cancel) { Assert.Same(session, f.Main.Session); Assert.Empty(f.Store.Entries); }
         else { Assert.NotSame(session, f.Main.Session); Assert.Equal(path, f.Store.Entries[0].Path); }
@@ -204,7 +271,7 @@ public sealed class StartWorkspaceTests
         using var scope = new UiCultureScope(cultureName);
         var resources = new ResourceManager("SpanDraft.Desktop.Resources.Strings", typeof(Strings).Assembly);
         var set = resources.GetResourceSet(cultureName == "en-US" ? CultureInfo.InvariantCulture : CultureInfo.GetCultureInfo("de"), true, false)!;
-        foreach (string key in new[] { "Start", "Project", "OpenProject", "RecentProjects", "LastOpened", "NoRecentProjects", "Today", "Yesterday" })
+        foreach (string key in new[] { "Start", "Project", "OpenProject", "RecentProjects", "LastOpened", "NoRecentProjects", "Today", "Yesterday", "MissingRecentQuestion", "RemoveFromRecent" })
         {
             Assert.False(string.IsNullOrWhiteSpace(set.GetString(key)));
             Assert.Equal(set.GetString(key), typeof(Strings).GetProperty(key)!.GetValue(null));

@@ -57,6 +57,22 @@ public sealed class RecentProjectsStore(IProjectFileStore files, string path,
         finally { _gate.Release(); }
     }
 
+    public async Task RemoveAsync(string projectPath)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            await LoadLockedAsync();
+            string fullPath = Path.GetFullPath(projectPath);
+            Entries = Entries.Where(e => !RecentProjectsCodec.PathComparer.Equals(e.Path, fullPath)).ToArray();
+            // Comfort state is published in memory before its best-effort disk write.
+            ensureDirectory?.Invoke();
+            await files.WriteAtomicAsync(FilePath, RecentProjectsCodec.Serialize(Entries));
+        }
+        catch (Exception e) when (IsLocalStateError(e)) { }
+        finally { _gate.Release(); }
+    }
+
     private static bool IsLocalStateError(Exception e) => e is IOException or UnauthorizedAccessException
         or JsonException or ArgumentException or InvalidOperationException or NotSupportedException
         or System.Security.SecurityException;

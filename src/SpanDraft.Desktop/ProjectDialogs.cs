@@ -57,6 +57,10 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
 
     public async Task ShowErrorAsync(string message) => await ShowAsync(message, [(Strings.OK, true)]);
 
+    public Task<bool> ConfirmRemoveMissingRecentAsync(string path) => ShowAsync(
+        string.Format(CultureInfo.CurrentUICulture, Strings.MissingRecentQuestion, path),
+        [(Strings.RemoveFromRecent, true), (Strings.Cancel, false)]);
+
     public Task<bool> ConfirmMaterialDeleteAsync(string displayName) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.DeleteMaterialQuestion, displayName),
         [(Strings.Cancel, false), (Strings.Delete, true)]);

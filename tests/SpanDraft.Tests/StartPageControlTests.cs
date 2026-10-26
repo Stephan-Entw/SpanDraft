@@ -3,6 +3,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -103,6 +104,77 @@ public sealed class StartPageControlTests
         var row = Assert.Single(view.GetVisualDescendants().OfType<Button>(), b => b.Classes.Contains("recentProject"));
         Activate(row, key); Assert.Equal(MainViewMode.Editor, main.Mode); Assert.Equal(path, main.Session!.FilePath);
         window.Close();
+    }
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public async Task MissingRecentDialogUsesLocalizedChoicesAndResults(string culture)
+    {
+        using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
+        string path = TestPath(new string('W', 90) + ".spandraft");
+        var owner = new Window { Width = 1100, Height = 650 };
+        var dialogs = new ProjectDialogs(owner);
+        owner.Show();
+        try
+        {
+            string remove = culture == "de-DE" ? "Aus Liste entfernen" : "Remove from list";
+            string cancel = culture == "de-DE" ? "Abbrechen" : "Cancel";
+            string message = culture == "de-DE"
+                ? "Projektdatei nicht gefunden.\n\nDie Datei ist am gespeicherten Speicherort nicht mehr vorhanden. Sie wurde möglicherweise gelöscht, verschoben oder umbenannt.\n\n" + path + "\n\nSoll der Eintrag aus „Zuletzt verwendet“ entfernt werden?"
+                : "Project file not found.\n\nThe file is no longer available at the saved location. It may have been deleted, moved or renamed.\n\n" + path + "\n\nRemove the entry from Recent projects?";
+            foreach (string action in new[] { "cancel", "escape", "close", "remove" })
+            {
+                var pending = dialogs.ConfirmRemoveMissingRecentAsync(path); Dispatcher.UIThread.RunJobs();
+                var dialog = Assert.Single(owner.OwnedWindows); Arrange(dialog, 520, 500);
+                var text = Assert.Single(dialog.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == message);
+                Assert.Equal(TextWrapping.Wrap, text.TextWrapping);
+                Assert.True(text.TextLayout.Height <= text.Bounds.Height + 1);
+                var buttons = dialog.GetVisualDescendants().OfType<Button>().ToArray();
+                Assert.Equal(new[] { remove, cancel }, buttons.Select(b => b.Content));
+                Assert.True(buttons[0].IsDefault); Assert.False(buttons[1].IsDefault);
+                var panel = (Control)dialog.Content!;
+                foreach (var button in buttons)
+                {
+                    var bounds = button.Bounds;
+                    Assert.True(bounds.Width >= button.DesiredSize.Width);
+                    var position = button.TranslatePoint(default, panel)!.Value;
+                    Assert.True(position.X >= 0 && position.X + bounds.Width <= panel.Bounds.Width + 1);
+                }
+                if (action == "escape") dialog.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
+                else if (action == "close") dialog.Close();
+                else buttons[action == "remove" ? 0 : 1].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Assert.Equal(action == "remove", await WaitFor(pending));
+            }
+        }
+        finally
+        {
+            foreach (var dialog in owner.OwnedWindows.ToArray()) dialog.Close();
+            owner.Close();
+        }
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task MissingRecentCommandUpdatesVisibleRowsOnlyWhenRemovalIsConfirmed(bool remove)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files(); var store = new RecentProjectsStore(files, "recents", () => Now);
+        string path = TestPath("missing.spandraft"); await store.RecordUseAsync(path);
+        var dialogs = new Dialogs { RemoveMissingRecent = remove };
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, recentStore: store);
+        await main.InitializeRecentProjectsAsync();
+        var view = new StartPageView { DataContext = main.StartPage };
+        var window = new Window { Content = view, Width = 1100, Height = 650 }; window.Show();
+        try
+        {
+            Arrange(window, 1100, 650);
+            var row = Assert.Single(view.GetVisualDescendants().OfType<Button>(), b => b.Classes.Contains("recentProject"));
+            Activate(row, Key.Enter); Arrange(window, 1100, 650);
+            Assert.Equal(new[] { path }, dialogs.MissingRecentPaths);
+            Assert.Equal(remove ? 0 : 1, view.GetVisualDescendants().OfType<Button>().Count(b => b.Classes.Contains("recentProject")));
+            Assert.Equal(remove, view.FindControl<TextBlock>("EmptyRecentProjects")!.IsEffectivelyVisible);
+        }
+        finally { window.Close(); }
     }
 
     private static void Activate(Button button, Key key)

@@ -358,4 +358,12 @@
   <data name="EngineeringNotation" xml:space="preserve"><value>Technische Schreibweise</value></data>
   <data name="NotationAutomatic" xml:space="preserve"><value>Automatisch</value></data>
   <data name="NotationOff" xml:space="preserve"><value>Aus</value></data>
+  <data name="MissingRecentQuestion" xml:space="preserve"><value>Projektdatei nicht gefunden.
+
+Die Datei ist am gespeicherten Speicherort nicht mehr vorhanden. Sie wurde möglicherweise gelöscht, verschoben oder umbenannt.
+
+{0}
+
+Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
+  <data name="RemoveFromRecent" xml:space="preserve"><value>Aus Liste entfernen</value></data>
 </root>

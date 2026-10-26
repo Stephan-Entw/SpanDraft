@@ -146,6 +146,61 @@ public sealed class RecentProjectsTests
         Assert.Equal(new[] { TestPath("new.spandraft"), TestPath("old.spandraft") }, store.Entries.Select(e => e.Path));
     }
 
+    [Fact]
+    public async Task RemoveLoadsAndNormalizesOnlyTheSelectedPath()
+    {
+        var files = new Files(); string target = TestPath("target.spandraft"), other = TestPath("other.spandraft");
+        var original = new[] { new RecentProjectEntry(target, Now), new RecentProjectEntry(other, Now.AddDays(-1)) };
+        files.Data[Slot] = RecentProjectsCodec.Serialize(original);
+        var store = new RecentProjectsStore(files, Slot);
+        await store.RemoveAsync(Path.Combine(Path.GetDirectoryName(target)!, ".", Path.GetFileName(target)));
+        Assert.Equal(original[1], Assert.Single(store.Entries));
+        Assert.Equal(store.Entries, RecentProjectsCodec.Deserialize(files.Data[Slot]));
+    }
+
+    [Fact]
+    public async Task RemovePathCasingFollowsTheOperatingSystem()
+    {
+        var store = new RecentProjectsStore(new Files(), Slot, () => Now);
+        await store.RecordUseAsync(TestPath("Beam.spandraft"));
+        await store.RemoveAsync(TestPath("BEAM.spandraft"));
+        Assert.Equal(OperatingSystem.IsWindows() ? 0 : 1, store.Entries.Count);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task FailedRemovalPublicationRetainsMemoryUpdateAndPriorDiskState(bool directoryFailure)
+    {
+        var files = new Files(); string target = TestPath("target.spandraft");
+        var original = RecentProjectsCodec.Serialize([new(target, Now)]); files.Data[Slot] = original;
+        var store = new RecentProjectsStore(files, Slot, ensureDirectory:
+            directoryFailure ? () => throw new UnauthorizedAccessException() : null);
+        if (!directoryFailure) files.FailWritePath = Slot;
+        await store.RemoveAsync(target);
+        Assert.Empty(store.Entries); Assert.Equal(original, files.Data[Slot]);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task RemoveWaitsForLoadOrRecordAndPreservesOtherEntries(bool record)
+    {
+        var files = new Files(); string target = TestPath("target.spandraft"), other = TestPath("other.spandraft");
+        files.Data[Slot] = RecentProjectsCodec.Serialize([new(target, Now)]);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var store = new RecentProjectsStore(files, Slot, () => Now.AddMinutes(1));
+        if (record)
+            files.BeforeWrite = async (_, _, _) => { entered.TrySetResult(); await WaitFor(release.Task); };
+        else files.BeforeRead = async _ => { entered.SetResult(); await WaitFor(release.Task); };
+        var pending = record ? store.RecordUseAsync(other) : store.LoadAsync();
+        await WaitForCheckpoint(entered.Task, pending);
+        var removing = store.RemoveAsync(target); Assert.False(removing.IsCompleted);
+        release.SetResult(); await WaitFor(pending); await WaitFor(removing);
+        Assert.DoesNotContain(store.Entries, e => e.Path == target);
+        if (record) Assert.Equal(other, Assert.Single(store.Entries).Path); else Assert.Empty(store.Entries);
+        Assert.Equal(store.Entries, RecentProjectsCodec.Deserialize(files.Data[Slot]));
+    }
+
     private static JsonObject JsonSerializerEntry(string path, DateTimeOffset time) => new()
     { ["path"] = path, ["lastUsedUtc"] = time.ToString("O") };
 }
