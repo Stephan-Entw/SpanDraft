@@ -43,7 +43,7 @@ public sealed class SupportDraftViewModel : ObservableObject
         _nameText = AutoCandidate?.Name ?? document.Supports.First(s => s.Id == originalId).Name;
         _type = type;
         _bufferReferencePosition = position;
-        _bufferReferenceText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
+        _bufferReferenceText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
         _positionText = _bufferReferenceText;
         _preview = new(position, type);
         Validate();
@@ -96,7 +96,7 @@ public sealed class SupportDraftViewModel : ObservableObject
     internal void ApplyDragPosition(Length position)
     {
         _bufferReferencePosition = position;
-        _bufferReferenceText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
+        _bufferReferenceText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
         _preview = _preview with { Position = position };
         Set(ref _positionText, _bufferReferenceText, nameof(PositionText));
         Validate();

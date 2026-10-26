@@ -41,9 +41,9 @@ public sealed class PointLoadDraftViewModel : ObservableObject
             kind == PointLoadKind.Force ? AutoNameKind.Force : AutoNameKind.Moment) : null;
         _nameText = AutoCandidate?.Name ?? document.Loads.First(l => l.Id == originalId).Name;
         _referencePosition = position;
-        _positionText = _referencePositionText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
+        _positionText = _referencePositionText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
         _referenceValue = value;
-        _valueText = _referenceValueText = InputQuantityFormatter.Format(value, _valueUnit);
+        _valueText = _referenceValueText = InputQuantityFormatter.FormatExact(value, _valueUnit);
         _preview = new(position, kind, value);
         Validate();
     }
@@ -92,7 +92,7 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     internal void ApplyDragPosition(Length position)
     {
         _referencePosition = position;
-        _referencePositionText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
+        _referencePositionText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
         _preview = _preview with { Position = position };
         Set(ref _positionText, _referencePositionText, nameof(PositionText));
         Validate();

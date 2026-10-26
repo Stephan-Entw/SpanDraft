@@ -34,10 +34,10 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         _nameText = AutoCandidate?.Name ?? read().DistributedLoads.First(l => l.Id == originalId).Name;
         _referenceStart = start;
         _referenceEnd = end;
-        _startText = _referenceStartText = InputQuantityFormatter.Format(start.Meters, _positionUnit);
-        _endText = _referenceEndText = InputQuantityFormatter.Format(end.Meters, _positionUnit);
+        _startText = _referenceStartText = InputQuantityFormatter.FormatExact(start.Meters, _positionUnit);
+        _endText = _referenceEndText = InputQuantityFormatter.FormatExact(end.Meters, _positionUnit);
         _referenceIntensity = intensity;
-        _intensityText = _referenceIntensityText = InputQuantityFormatter.Format(intensity, _intensityUnit);
+        _intensityText = _referenceIntensityText = InputQuantityFormatter.FormatExact(intensity, _intensityUnit);
         _preview = new(start, end, intensity);
         Validate();
     }
@@ -78,14 +78,14 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         if (endpoint == DistributedLoadEndpoint.Start)
         {
             _referenceStart = position;
-            _referenceStartText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
+            _referenceStartText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
             _preview = _preview with { StartPosition = position };
             Set(ref _startText, _referenceStartText, nameof(StartText));
         }
         else
         {
             _referenceEnd = position;
-            _referenceEndText = InputQuantityFormatter.Format(position.Meters, _positionUnit);
+            _referenceEndText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
             _preview = _preview with { EndPosition = position };
             Set(ref _endText, _referenceEndText, nameof(EndText));
         }

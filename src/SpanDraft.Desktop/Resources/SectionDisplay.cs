@@ -36,8 +36,8 @@ public static class SectionDisplay
     private static string Caption(string shape, UnitDefinition unit, ResultPresentationOptions? options, double radius, bool diameter, params double[] values)
     {
         var name = shape + " " + (diameter ? "Ø" : "")
-            + string.Join(" × ", values.Select(v => InputQuantityFormatter.Display(v, unit, options))) + " " + unit.Symbol;
+            + string.Join(" × ", values.Select(v => QuantityFormatter.Display(v, unit, options))) + " " + unit.Symbol;
         return radius > 0 ? name + string.Format(CultureInfo.CurrentUICulture, Strings.SectionDefinitionRadiusSuffix,
-            InputQuantityFormatter.Display(radius, unit, options), unit.Symbol) : name;
+            QuantityFormatter.Display(radius, unit, options), unit.Symbol) : name;
     }
 }

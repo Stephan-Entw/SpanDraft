@@ -1,3 +1,4 @@
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Analysis;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
@@ -48,7 +49,7 @@ public sealed class DesktopPointLoadDragAndConflictTests
             Assert.Same(draft, s.Editor.LoadDraft);
             Assert.True(s.Editor.IsLoadFlyoutVisible);
             Assert.Equal(Mm(position), s.Editor.LoadPreview!.Position);
-            Assert.Equal(UiNumbers.Format(position), draft.PositionText);
+            Assert.Equal(InputQuantityFormatter.FormatExact(Mm(position).Meters, UnitCatalog.Millimeter), draft.PositionText);
             Assert.Equal("250", draft.ValueText);
             Assert.Equal(250, s.Editor.LoadPreview.Value);
             Assert.Same(document, s.Editor.Document);

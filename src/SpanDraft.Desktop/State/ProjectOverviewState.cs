@@ -25,12 +25,12 @@ public sealed class ProjectOverviewState
         IReadOnlyList<ProjectOverviewItem> PointLoads(PointLoadKind kind) => Array.AsReadOnly(document.Loads
             .Where(l => l.Kind == kind).Select(l => new ProjectOverviewItem(l.Id, l.Name,
                 kind == PointLoadKind.Force ? "F" : "M",
-                InputQuantityFormatter.WithUnit(l.Value, analysis.Options.Profile[kind == PointLoadKind.Force
+                QuantityFormatter.WithUnit(l.Value, analysis.Options.Profile[kind == PointLoadKind.Force
                     ? QuantityKind.TransverseForce : QuantityKind.Moment], analysis.Options), Position(l.Position))).ToArray());
         Forces = PointLoads(PointLoadKind.Force);
         Moments = PointLoads(PointLoadKind.Moment);
         DistributedLoads = Array.AsReadOnly(document.DistributedLoads.Select(l => new ProjectOverviewItem(l.Id, l.Name,
-            "q", InputQuantityFormatter.WithUnit(l.Intensity.NewtonsPerMeter, analysis.Options.Profile[QuantityKind.DistributedLoad], analysis.Options),
+            "q", QuantityFormatter.WithUnit(l.Intensity.NewtonsPerMeter, analysis.Options.Profile[QuantityKind.DistributedLoad], analysis.Options),
             Position(l.StartPosition) + "…" + Position(l.EndPosition))).ToArray());
         Reactions = Array.AsReadOnly(analysis.Result is { } result
             ? document.Supports.Select(s =>
@@ -72,7 +72,7 @@ public sealed class ProjectOverviewState
     private string Reaction(double siValue, QuantityKind kind) => QuantityFormatter.FormatNumber(siValue, kind,
         Analysis.Options);
 
-    private string Position(Length position) => InputQuantityFormatter.Display(position.Meters, Analysis.Options.Profile[QuantityKind.BeamLength], Analysis.Options);
+    private string Position(Length position) => QuantityFormatter.Display(position.Meters, Analysis.Options.Profile[QuantityKind.BeamLength], Analysis.Options);
 
     private static string SupportTypeName(SupportType type) => type switch
     {

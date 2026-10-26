@@ -147,7 +147,7 @@ public sealed class DesktopResultDiagramControlTests
             }
             Assert.Equal(projection.Ticks.Count, projection.Ticks.Select(diagram.TickLabel).Distinct().Count());
             foreach (var tick in projection.Ticks)
-                Assert.Equal(UiNumbers.AxisTick(tick.Index, projection.Scale.StepMantissa,
+                Assert.Equal(AxisTickFormatter.Format(tick.Index, projection.Scale.StepMantissa,
                     projection.Scale.StepExponent, System.Globalization.CultureInfo.GetCultureInfo(culture)), diagram.TickLabel(tick));
             AssertReadableMarkers(diagram);
             Snapshot(diagram, $"phase2-{uiCulture}-{profileIndex}-standard-{diagram.Kind}");

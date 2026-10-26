@@ -37,7 +37,7 @@ public sealed class SetupNumberInput : ObservableObject
         Key = key; _label = label; Unit = unit; _changed = changed;
         _optional = optional; _nonnegative = nonnegative; _signed = signed;
         _original = value;
-        _text = _originalText = value is { } v ? InputQuantityFormatter.Format(v, unit) : "";
+        _text = _originalText = value is { } v ? InputQuantityFormatter.FormatExact(v, unit) : "";
         Hint = hint;
     }
     public string Key { get; }

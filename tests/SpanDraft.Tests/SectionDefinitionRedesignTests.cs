@@ -788,7 +788,7 @@ public sealed class SectionDefinitionRedesignTests
         height.PendingText = "11"; height.Commit(); Assert.Equal(entry.Name, vm.DisplayName);
         Assert.Same(original, entry.Section); Assert.Equal("Original", entry.Name); Assert.Single(library.Entries);
         vm.ResetNameCommand.Execute(null); Assert.False(vm.HasCustomName); Assert.NotEqual(entry.Name, vm.DisplayName); Assert.Contains("11", vm.DisplayName);
-        Assert.Contains("203", InputQuantityFormatter.Format(loaded.Height.Meters, UnitCatalog.Millimeter));
+        Assert.Contains("203", InputQuantityFormatter.FormatExact(loaded.Height.Meters, UnitCatalog.Millimeter));
     }
     [Theory]
     [InlineData(ManualAxisConfiguration.Y)] [InlineData(ManualAxisConfiguration.Z)]

@@ -1,5 +1,6 @@
 using System.Globalization;
 using SpanDraft.Desktop.Layout;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.State;
 using Xunit;
 
@@ -135,8 +136,8 @@ public sealed class DesktopAxisLabelPackerTests
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
-            string longText = UiNumbers.Format(1200.5);
-            string shortText = UiNumbers.Format(1);
+            string longText = InputQuantityFormatter.FormatExact(1.2005, UnitCatalog.Millimeter);
+            string shortText = InputQuantityFormatter.FormatExact(.001, UnitCatalog.Millimeter);
             Assert.Equal(expected, longText);
             // Deterministic measurement fixture; real Avalonia measurement belongs to Stage 2.
             double Measure(string text) => text.Length * 8;

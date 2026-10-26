@@ -4,6 +4,7 @@ using SpanDraft.Core.Beams;
 using SpanDraft.Core.Loads;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
@@ -112,7 +113,7 @@ public sealed class DesktopDistributedLoadTests
         var draft = editor.DistributedLoadDraft!;
         draft.StartText = "300";
         draft.EndText = "900";
-        draft.IntensityText = UiNumbers.Format(q);
+        draft.IntensityText = InputQuantityFormatter.FormatExact(q, UnitCatalog.NewtonPerMeter);
         Assert.Equal(Mm(200), editor.DistributedLoadPreview!.StartPosition);
         Assert.Equal(Mm(800), editor.DistributedLoadPreview.EndPosition);
         Assert.Equal(q, editor.DistributedLoadPreview.Intensity);

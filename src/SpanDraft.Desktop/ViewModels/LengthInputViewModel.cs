@@ -42,7 +42,7 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
     public string ErrorText => _commitError ?? Strings.InvalidLength;
     private UnitDefinition CurrentUnit => IsEditing ? _editUnit : readUnit?.Invoke() ?? UnitCatalog.Millimeter;
     public string Unit => CurrentUnit.Symbol;
-    public string DisplayText => read() is { } length ? InputQuantityFormatter.WithUnit(length.Meters, CurrentUnit, readPresentation?.Invoke()) : "";
+    public string DisplayText => read() is { } length ? QuantityFormatter.WithUnit(length.Meters, CurrentUnit, readPresentation?.Invoke()) : "";
 
     public bool TryGetLength(out Length length)
     {
@@ -124,7 +124,7 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
     }
 
     private static string Format(Length? length, UnitDefinition unit) =>
-        length is { } value ? InputQuantityFormatter.Format(value.Meters, unit) : "";
+        length is { } value ? InputQuantityFormatter.FormatExact(value.Meters, unit) : "";
 
     private void ClearError()
     {

@@ -6,6 +6,7 @@ using SpanDraft.Core.Sections;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Controls;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
@@ -290,9 +291,9 @@ public sealed class DesktopSupportTests
     public void PositionParsingSupportsCultureAndInclusiveEndpoints(string culture, string text, double expected)
     {
         using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
-        Assert.True(UiNumbers.TryParsePosition(text, Mm(1000.5), out var position));
+        Assert.True(InputQuantityFormatter.TryParsePosition(text, UnitCatalog.Millimeter, Mm(1000.5), out var position));
         Assert.Equal(Mm(expected), position);
-        Assert.Equal(text, UiNumbers.Format(position.Millimeters));
+        Assert.Equal(text, InputQuantityFormatter.FormatExact(position.Meters, UnitCatalog.Millimeter));
     }
 
     [Theory]

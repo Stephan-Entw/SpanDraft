@@ -141,7 +141,7 @@ public sealed partial class EditorViewModel : ObservableObject
     public bool HasCoordinate => Preview is not null || LoadPreview is not null || DistributedPointerPosition is not null || DistributedLoadPreview is not null;
     public string CoordinateText => (Preview?.Position ?? LoadPreview?.Position ?? DistributedPointerPosition ?? DistributedLoadPreview?.EndPosition) is { } position
         ? string.Format(CultureInfo.CurrentUICulture, Strings.SupportCoordinate,
-            InputQuantityFormatter.Display(position.Meters, ResultPresentation.Profile[QuantityKind.BeamLength], ResultPresentation),
+            QuantityFormatter.Display(position.Meters, ResultPresentation.Profile[QuantityKind.BeamLength], ResultPresentation),
             ResultPresentation.Profile[QuantityKind.BeamLength].Symbol) : "";
 
     public void ToggleSupportTool(SupportType type)

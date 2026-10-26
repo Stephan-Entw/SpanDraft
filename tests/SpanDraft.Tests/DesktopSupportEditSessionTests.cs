@@ -3,6 +3,7 @@ using SpanDraft.Analysis;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Controls;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
@@ -152,7 +153,7 @@ public sealed class DesktopSupportEditSessionTests
             Assert.True(editor.EndSupportDrag());
             Assert.Same(draft, editor.SupportDraft);
             Assert.Equal(Mm(position), draft.CanvasPosition);
-            Assert.Equal(UiNumbers.Format(position), draft.PositionText);
+            Assert.Equal(InputQuantityFormatter.FormatExact(Mm(position).Meters, UnitCatalog.Millimeter), draft.PositionText);
             Assert.Equal(SupportType.Roller, editor.Preview!.Type);
             Assert.True(editor.IsSupportFlyoutVisible);
             Assert.True(editor.EditSupport(support.Id));

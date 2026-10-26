@@ -64,7 +64,7 @@ public sealed class DesktopSectionDefinitionTests
         app.Main.EditProject(); var setup = app.Main.Setup;
         Assert.Same(d.Section, setup.SelectedSection); Assert.Same(d.Material, setup.SelectedMaterial);
         Assert.Equal(d.Length, setup.SelectedLength);
-        Assert.Equal(InputQuantityFormatter.Format(d.Length.Meters, setup.ResultPresentation.Profile[QuantityKind.BeamLength]), setup.LengthInput.Text);
+        Assert.Equal(InputQuantityFormatter.FormatExact(d.Length.Meters, setup.ResultPresentation.Profile[QuantityKind.BeamLength]), setup.LengthInput.Text);
         Assert.True(setup.CanApply);
         Assert.Equal(axis, setup.BendingAxis);
         Assert.Same(d.Material, setup.OriginalMaterial);

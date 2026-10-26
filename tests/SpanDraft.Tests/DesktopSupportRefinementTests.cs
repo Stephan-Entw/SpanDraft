@@ -1,3 +1,4 @@
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Analysis;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
@@ -152,7 +153,7 @@ public sealed class DesktopSupportRefinementTests
     {
         var s = new Session(200);
         s.Editor.DimensionLength.Begin();
-        s.Editor.DimensionLength.Text = UiNumbers.Format(1000.5);
+        s.Editor.DimensionLength.Text = InputQuantityFormatter.FormatExact(1.0005, UnitCatalog.Millimeter);
         Assert.True(s.Editor.DimensionLength.Confirm());
         var document = s.Editor.Document;
         var support = document.Supports[0];

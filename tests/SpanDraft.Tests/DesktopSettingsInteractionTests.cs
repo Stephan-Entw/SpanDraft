@@ -180,19 +180,19 @@ public sealed class DesktopSettingsInteractionTests
         if (target == "support")
         {
             editor.UpdateSupportDrag(exact); Assert.True(editor.EndSupportDrag());
-            Assert.Equal(InputQuantityFormatter.Format(exact.Meters, UnitCatalog.Foot), editor.SupportDraft!.PositionText);
+            Assert.Equal(InputQuantityFormatter.FormatExact(exact.Meters, UnitCatalog.Foot), editor.SupportDraft!.PositionText);
             Assert.True(editor.ConfirmSupport()); Assert.Equal(exact, editor.Document.Supports[0].Position);
         }
         else if (target == "distributed")
         {
             editor.UpdateDistributedLoadDrag(exact); Assert.True(editor.EndDistributedLoadDrag());
-            Assert.Equal(InputQuantityFormatter.Format(exact.Meters, UnitCatalog.Foot), editor.DistributedLoadDraft!.StartText);
+            Assert.Equal(InputQuantityFormatter.FormatExact(exact.Meters, UnitCatalog.Foot), editor.DistributedLoadDraft!.StartText);
             Assert.True(editor.ConfirmDistributedLoad()); Assert.Equal(exact, editor.Document.DistributedLoads[0].StartPosition);
         }
         else
         {
             editor.UpdateLoadDrag(exact); Assert.True(editor.EndLoadDrag());
-            Assert.Equal(InputQuantityFormatter.Format(exact.Meters, UnitCatalog.Foot), editor.LoadDraft!.PositionText);
+            Assert.Equal(InputQuantityFormatter.FormatExact(exact.Meters, UnitCatalog.Foot), editor.LoadDraft!.PositionText);
             Assert.True(editor.ConfirmLoad()); Assert.Equal(exact, editor.Document.Loads.Single(l => l.Id == id).Position);
         }
         Assert.True(main.SetResultPresentation(UnitProfile.Default, 3));

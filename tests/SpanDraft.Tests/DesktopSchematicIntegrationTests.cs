@@ -50,7 +50,7 @@ public sealed class DesktopSchematicIntegrationTests
             // A cache miss would measure the displayed label a second time and lose the wider unit reserve.
             Assert.Single(measured, text => text == label.Text);
             double reservedWidth = UnitCatalog.All.Where(u => u.Dimension == UnitCatalog.DimensionOf(kind))
-                .Max(unit => Width(name + " = " + InputQuantityFormatter.WithUnit(value, unit, options)));
+                .Max(unit => Width(name + " = " + QuantityFormatter.WithUnit(value, unit, options)));
             Assert.Equal(reservedWidth, label.Bounds.Width);
             Assert.True(label.Bounds.Width > Width(label.Text));
         }

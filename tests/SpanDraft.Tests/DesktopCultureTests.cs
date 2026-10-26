@@ -34,16 +34,16 @@ public sealed class DesktopCultureTests
         Assert.Same(resolved.Culture, CultureInfo.DefaultThreadCurrentCulture);
         Assert.Same(resolved.UiCulture, CultureInfo.DefaultThreadCurrentUICulture);
         Assert.Equal(file, Strings.File); Assert.Equal(settingsLabel, Strings.Settings);
-        Assert.True(UiNumbers.TryParseSignedValue(number, out double parsed)); Assert.Equal(12.5, parsed);
-        Assert.False(UiNumbers.TryParseSignedValue(wrongSeparator, out _));
-        Assert.True(UiNumbers.TryParseLength(number, out var length)); Assert.Equal(.0125, length.Meters);
-        Assert.True(UiNumbers.TryParsePosition(number, M(1), out var position)); Assert.Equal(length, position);
-        Assert.Equal(number, UiNumbers.Format(12.5)); Assert.Equal(number, QuantityFormatter.FormatNumber(12.5, QuantityKind.TransverseForce, ResultPresentationOptions.Default));
-        Assert.Equal(number, UiNumbers.AxisTick(5, 2.5, 0));
+        Assert.True(InputQuantityFormatter.TryParse(number, UnitCatalog.Newton, out double parsed)); Assert.Equal(12.5, parsed);
+        Assert.False(InputQuantityFormatter.TryParse(wrongSeparator, UnitCatalog.Newton, out _));
+        Assert.True(InputQuantityFormatter.TryParseLength(number, UnitCatalog.Millimeter, out var length)); Assert.Equal(.0125, length.Meters);
+        Assert.True(InputQuantityFormatter.TryParsePosition(number, UnitCatalog.Millimeter, M(1), out var position)); Assert.Equal(length, position);
+        Assert.Equal(number, InputQuantityFormatter.FormatExact(12.5, UnitCatalog.Newton)); Assert.Equal(number, QuantityFormatter.FormatNumber(12.5, QuantityKind.TransverseForce, ResultPresentationOptions.Default));
+        Assert.Equal(number, AxisTickFormatter.Format(5, 2.5, 0));
         Assert.True(InputQuantityFormatter.TryParse(number, UnitCatalog.Millimeter, out double si)); Assert.Equal(.0125, si);
         Assert.False(InputQuantityFormatter.TryParse(wrongSeparator, UnitCatalog.Millimeter, out _));
-        Assert.Equal(number, InputQuantityFormatter.Format(si, UnitCatalog.Millimeter));
-        Assert.Equal(number, NumberFormatter.Format(new DecimalNumber(125, -1)));
+        Assert.Equal(number, InputQuantityFormatter.FormatExact(si, UnitCatalog.Millimeter));
+        Assert.Equal(number, QuantityFormatter.Format(new DecimalNumber(125, -1)));
         Assert.Equal(number + " MPa", QuantityFormatter.Format(12.5e6, QuantityKind.Stress, settings.Profile,
             6));
         Assert.Equal("mm", settings.Profile[QuantityKind.BeamLength].Symbol);

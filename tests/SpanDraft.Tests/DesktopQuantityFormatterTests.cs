@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SpanDraft.Tests;
 
-public sealed class DesktopUiNumberTests
+public sealed class DesktopQuantityFormatterTests
 {
     [Theory]
     [InlineData("de-DE", 13300, "13\u202f300")]
@@ -50,16 +50,16 @@ public sealed class DesktopUiNumberTests
         var input = new LengthInputViewModel(() => length, _ => LengthCommitResult.Success);
         Assert.Equal(culture == "de-DE" ? "1,23 · 10⁶ mm" : "1.23 · 10⁶ mm", input.DisplayText);
         input.Begin();
-        Assert.Equal(UiNumbers.Format(length.Millimeters), input.Text);
-        Assert.True(UiNumbers.TryParseLength(input.Text, out var parsedLength));
+        Assert.Equal(InputQuantityFormatter.FormatExact(length.Meters, UnitCatalog.Millimeter), input.Text);
+        Assert.True(InputQuantityFormatter.TryParseLength(input.Text, UnitCatalog.Millimeter, out var parsedLength));
         Assert.Equal(length, parsedLength);
 
         var document = new EditorDocument(Length.FromMillimeters(1000), ProjectTemplates.Material, ProjectTemplates.Section,
             loads: [new EditorPointForce(Guid.NewGuid(), Length.FromMillimeters(500), Force.FromNewtons(13333.123456789), "F1")]);
         var editor = new EditorViewModel(document, () => { });
         Assert.True(editor.EditLoad(document.Loads[0].Id));
-        Assert.Equal(UiNumbers.Format(document.Loads[0].Value), editor.LoadDraft!.ValueText);
-        Assert.True(UiNumbers.TryParseSignedValue(editor.LoadDraft.ValueText, out var parsedForce));
+        Assert.Equal(InputQuantityFormatter.FormatExact(document.Loads[0].Value, UnitCatalog.Newton), editor.LoadDraft!.ValueText);
+        Assert.True(InputQuantityFormatter.TryParse(editor.LoadDraft.ValueText, UnitCatalog.Newton, out var parsedForce));
         Assert.Equal(document.Loads[0].Value, parsedForce);
         Assert.Equal(culture == "de-DE" ? "13\u202f300 N" : "13\u202f300 N", editor.Overview.Forces[0].Value);
         Assert.Same(document, editor.Document);

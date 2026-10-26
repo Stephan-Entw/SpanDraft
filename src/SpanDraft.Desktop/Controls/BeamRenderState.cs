@@ -55,7 +55,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             void Reserve(string label, string name, double value, QuantityKind quantity)
             {
                 var sizes = UnitCatalog.All.Where(u => u.Dimension == UnitCatalog.DimensionOf(quantity))
-                    .Select(u => originalMeasure(name.Trim() + " = " + InputQuantityFormatter.WithUnit(value, u, options))).ToArray();
+                    .Select(u => originalMeasure(name.Trim() + " = " + QuantityFormatter.WithUnit(value, u, options))).ToArray();
                 reserved[label] = new(sizes.Max(s => s.Width), sizes.Max(s => s.Height));
             }
             measure = text => reserved.TryGetValue(text, out var size) ? size : originalMeasure(text);

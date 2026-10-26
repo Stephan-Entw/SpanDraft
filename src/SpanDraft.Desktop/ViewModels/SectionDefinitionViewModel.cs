@@ -397,9 +397,9 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         {
             var unit = Presentation.Profile[QuantityKind.SectionDimension];
             name += " " + (_type is SectionEditorType.Circle or SectionEditorType.CircularHollow ? "Ø" : "")
-                + string.Join(" × ", main.Select(k => InputQuantityFormatter.Display(values[k], unit, Presentation))) + " " + unit.Symbol;
+                + string.Join(" × ", main.Select(k => QuantityFormatter.Display(values[k], unit, Presentation))) + " " + unit.Symbol;
             if (values.TryGetValue("r", out double radius) && radius > 0)
-                name += string.Format(CultureInfo.CurrentUICulture, Strings.SectionDefinitionRadiusSuffix, InputQuantityFormatter.Display(radius, unit, Presentation), unit.Symbol);
+                name += string.Format(CultureInfo.CurrentUICulture, Strings.SectionDefinitionRadiusSuffix, QuantityFormatter.Display(radius, unit, Presentation), unit.Symbol);
         }
         Current.AutomaticName = name;
     }
@@ -510,7 +510,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
                 var values = PresetValues(section);
                 string summary = IsManual ? string.Join(" / ", section.Axes.Select(a => new AxisChoice(a.AxisDesignation).Label))
                     + " · " + Format(section.Area.SquareMeters, QuantityKind.Area)
-                    : string.Join(" × ", values.Values.Select(v => InputQuantityFormatter.Display(v, Presentation.Profile[QuantityKind.SectionDimension], Presentation)))
+                    : string.Join(" × ", values.Values.Select(v => QuantityFormatter.Display(v, Presentation.Profile[QuantityKind.SectionDimension], Presentation)))
                         + " " + Presentation.Profile[QuantityKind.SectionDimension].Symbol;
                 return new SectionDefinitionPreset(e, summary);
             }).ToArray();

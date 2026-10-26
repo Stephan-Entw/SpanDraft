@@ -70,7 +70,7 @@ internal static class ProjectTestSupport
         if (setup.SelectedLength is null)
         {
             setup.LengthInput.Begin();
-            setup.LengthInput.Text = SpanDraft.Desktop.Presentation.InputQuantityFormatter.Format(1,
+            setup.LengthInput.Text = SpanDraft.Desktop.Presentation.InputQuantityFormatter.FormatExact(1,
                 setup.ResultPresentation.Profile[SpanDraft.Desktop.Presentation.QuantityKind.BeamLength]);
             if (!setup.LengthInput.Confirm()) throw new InvalidOperationException(setup.LengthInput.ErrorText);
         }
@@ -200,7 +200,7 @@ internal static class ProjectTestSupport
         {
             var input = Main.Editor!.DimensionLength;
             input.Begin();
-            input.Text = SpanDraft.Desktop.State.UiNumbers.Format(meters * 1000);
+            input.Text = SpanDraft.Desktop.Presentation.InputQuantityFormatter.FormatExact(meters, SpanDraft.Desktop.Presentation.UnitCatalog.Millimeter);
             if (!input.Confirm()) throw new InvalidOperationException(input.ErrorText);
         }
     }

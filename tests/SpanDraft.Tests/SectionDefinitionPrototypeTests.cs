@@ -1510,7 +1510,7 @@ public sealed class SectionDefinitionPrototypeTests
                         text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
                     var drawing = layout.Dimensions.Single(d => d.Key == "r");
                     var line = Assert.Single(drawing.Lines); var arrow = Assert.Single(drawing.Arrows);
-                    Assert.Equal(radius.IsConfirmed ? "r = " + InputQuantityFormatter.WithUnit(radius.Value, unit) : "r", drawing.Text);
+                    Assert.Equal(radius.IsConfirmed ? "r = " + QuantityFormatter.WithUnit(radius.Value, unit) : "r", drawing.Text);
                     Assert.Equal(layout.Project(radius.End), line.Start); Assert.Equal(line.Start, arrow.Tip);
                     Vector ray = line.End - line.Start;
                     double angle = Math.Atan2(Math.Abs(ray.Y), ray.X) * 180 / Math.PI;
@@ -1594,7 +1594,7 @@ public sealed class SectionDefinitionPrototypeTests
                             Assert.Equal(layout.ProfileBounds.Bottom + 33, line.End.Y, 10);
                             Assert.True(line.End.Y > line.Start.Y);
                         });
-                        Assert.Equal("b" + (complete ? " = " + InputQuantityFormatter.WithUnit(geometry.Width, units[QuantityKind.SectionDimension]) : ""), width.Text);
+                        Assert.Equal("b" + (complete ? " = " + QuantityFormatter.WithUnit(geometry.Width, units[QuantityKind.SectionDimension]) : ""), width.Text);
                     }
                     else
                     {

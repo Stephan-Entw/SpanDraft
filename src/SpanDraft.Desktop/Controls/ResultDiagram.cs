@@ -78,7 +78,7 @@ public sealed class ResultDiagram : Control
     }
 
     public string TickLabel(ResultDiagramTick tick) => Projection is { } projection
-        ? UiNumbers.AxisTick(tick.Index, projection.Scale.StepMantissa, projection.Scale.StepExponent, CultureInfo.CurrentCulture)
+        ? AxisTickFormatter.Format(tick.Index, projection.Scale.StepMantissa, projection.Scale.StepExponent, CultureInfo.CurrentCulture)
         : "";
 
     private FormattedText TickText(ResultDiagramTick tick, IBrush brush) =>

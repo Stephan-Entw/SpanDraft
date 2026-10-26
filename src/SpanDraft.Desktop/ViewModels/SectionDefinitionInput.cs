@@ -40,7 +40,7 @@ public sealed class SectionDefinitionInput : ObservableObject
     {
         ConfirmedValue = snapshot.ConfirmedValue;
         HasInteracted = snapshot.HasInteracted;
-        _pendingText = _committedText = ConfirmedValue is { } value ? InputQuantityFormatter.Format(value, Unit) : "";
+        _pendingText = _committedText = ConfirmedValue is { } value ? InputQuantityFormatter.FormatExact(value, Unit) : "";
         _parseError = false;
         LastCommitChangedValue = false;
         SetError(null);
@@ -51,7 +51,7 @@ public sealed class SectionDefinitionInput : ObservableObject
     {
         LastCommitChangedValue = ConfirmedValue != value;
         ConfirmedValue = value;
-        _pendingText = _committedText = InputQuantityFormatter.Format(value, Unit);
+        _pendingText = _committedText = InputQuantityFormatter.FormatExact(value, Unit);
         _parseError = false;
         HasInteracted = true;
         SetError(null);

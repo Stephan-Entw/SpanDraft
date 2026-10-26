@@ -90,7 +90,7 @@ public sealed class DesktopNumericPresentationTests
         using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
         Assert.Equal(first, QuantityFormatter.FormatNumber(12200.05, QuantityKind.PoissonRatio, significantDigits: 7));
         Assert.Equal(second, QuantityFormatter.FormatNumber(123456.7, QuantityKind.PoissonRatio, significantDigits: 7));
-        Assert.Equal("\u202f", NumberFormatter.GroupSeparator);
+        Assert.Equal("\u202f", QuantityFormatter.GroupSeparator);
     }
 
     [Fact]

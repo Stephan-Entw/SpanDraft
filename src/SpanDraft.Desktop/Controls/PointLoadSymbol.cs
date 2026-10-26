@@ -78,7 +78,7 @@ public static class PointLoadSymbol
         HitTestGlyph(Group(visuals), x, y) is { } glyph ? ResolveEntity(glyph, editedId) : null;
 
     public static string Label(PointLoadPreview preview, string name, UnitProfile? profile = null, ResultPresentationOptions? options = null) =>
-        name.Trim() + " = " + InputQuantityFormatter.WithUnit(preview.Value,
+        name.Trim() + " = " + QuantityFormatter.WithUnit(preview.Value,
             (profile ?? UnitProfile.Default)[preview.Kind == PointLoadKind.Force
                 ? QuantityKind.TransverseForce : QuantityKind.Moment], options);
 

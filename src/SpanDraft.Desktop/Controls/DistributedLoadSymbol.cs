@@ -104,7 +104,7 @@ public static class DistributedLoadSymbol
         HitEndpoint(visual, x, y) is not null || visual.Bounds.Contains(new Point(x, y));
 
     public static string Label(DistributedLoadPreview preview, string name, UnitProfile? profile = null, ResultPresentationOptions? options = null) =>
-        name.Trim() + " = " + InputQuantityFormatter.WithUnit(preview.Intensity,
+        name.Trim() + " = " + QuantityFormatter.WithUnit(preview.Intensity,
             (profile ?? UnitProfile.Default)[QuantityKind.DistributedLoad], options);
 
     public static void DrawFill(DrawingContext context, DistributedLoadVisual visual, IBrush? neutralBrush)

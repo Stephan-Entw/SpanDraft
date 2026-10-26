@@ -51,7 +51,7 @@ public sealed class DesktopResultDiagramScaleTests
         var tick = Assert.Single(scale.Ticks());
         Assert.Equal(0, tick.Index); Assert.Equal(102, tick.ScreenY);
         Assert.Equal(tick.ScreenY, scale.ToScreen(0));
-        Assert.Equal("0", UiNumbers.AxisTick(tick.Index, scale.StepMantissa, scale.StepExponent));
+        Assert.Equal("0", AxisTickFormatter.Format(tick.Index, scale.StepMantissa, scale.StepExponent));
     }
 
     [Theory]
@@ -125,7 +125,7 @@ public sealed class DesktopResultDiagramScaleTests
         Assert.False(scale.IsZero);
         AssertReadableAndContained(scale, 36, 132);
         Assert.All(scale.Ticks().Where(t => t.Index != 0), t =>
-            Assert.NotEqual("0", UiNumbers.AxisTick(t.Index, scale.StepMantissa, scale.StepExponent)));
+            Assert.NotEqual("0", AxisTickFormatter.Format(t.Index, scale.StepMantissa, scale.StepExponent)));
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public sealed class DesktopResultDiagramScaleTests
         {
             var scale = new ResultDiagramScale(minimum, maximum, 36, 132);
             AssertReadableAndContained(scale, 36, 132);
-            var labels = scale.Ticks().Select(t => UiNumbers.AxisTick(t.Index, scale.StepMantissa, scale.StepExponent)).ToArray();
+            var labels = scale.Ticks().Select(t => AxisTickFormatter.Format(t.Index, scale.StepMantissa, scale.StepExponent)).ToArray();
             Assert.Equal(labels.Length, labels.Distinct().Count());
             Assert.DoesNotContain(labels, label => label.Contains('∞') || label.Contains('E') || label.Contains("NaN"));
             if (minimum < 0) Assert.True(scale.LowerTickIndex < 0);
@@ -221,7 +221,7 @@ public sealed class DesktopAxisTickFormattingTests
         int index, double mantissa, int exponent, string expected)
     {
         using var scope = new UiCultureScope(culture);
-        Assert.Equal(expected, UiNumbers.AxisTick(index, mantissa, exponent));
+        Assert.Equal(expected, AxisTickFormatter.Format(index, mantissa, exponent));
     }
 
     [Theory]
@@ -230,11 +230,11 @@ public sealed class DesktopAxisTickFormattingTests
     public void ZeroHasNoSignOrRedundantDigitsAndNonzeroTicksRemainNonzero(string culture)
     {
         using var scope = new UiCultureScope(culture);
-        Assert.Equal("0", UiNumbers.AxisTick(0, 0, 0));
+        Assert.Equal("0", AxisTickFormatter.Format(0, 0, 0));
         foreach (int exponent in new[] { -324, -300, -12, -3, -2, 0, 3, 4, 300, 309 })
             foreach (int index in new[] { -3, -1, 1, 3 })
             {
-                string text = UiNumbers.AxisTick(index, 2.5, exponent);
+                string text = AxisTickFormatter.Format(index, 2.5, exponent);
                 Assert.NotEqual("0", text); Assert.NotEqual("-0", text);
                 Assert.DoesNotContain('E', text);
                 Assert.True(text.Length <= 16, text);

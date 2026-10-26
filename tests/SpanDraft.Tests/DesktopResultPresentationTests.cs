@@ -277,9 +277,9 @@ public sealed class DesktopResultPresentationTests
             Assert.DoesNotContain(",", number);
         }
         Assert.Equal("∞", QuantityFormatter.FormatNumber(double.PositiveInfinity, QuantityKind.SafetyFactor));
-        Assert.Equal("2,5", UiNumbers.AxisTick(1, 2.5, 0, CultureInfo.CurrentCulture));
-        Assert.Equal("2,5", UiNumbers.AxisTick(1, 2.5, 0));
-        Assert.Equal("2.5", UiNumbers.AxisTick(1, 2.5, 0, CultureInfo.CurrentUICulture));
+        Assert.Equal("2,5", AxisTickFormatter.Format(1, 2.5, 0, CultureInfo.CurrentCulture));
+        Assert.Equal("2,5", AxisTickFormatter.Format(1, 2.5, 0));
+        Assert.Equal("2.5", AxisTickFormatter.Format(1, 2.5, 0, CultureInfo.CurrentUICulture));
     }
 }
 

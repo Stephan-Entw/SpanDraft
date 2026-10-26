@@ -6,7 +6,7 @@ namespace SpanDraft.Desktop.Presentation;
 /// <summary>Editable model values, independent of result rounding.</summary>
 public static class InputQuantityFormatter
 {
-    public static string Format(double siValue, UnitDefinition unit, CultureInfo? culture = null)
+    public static string FormatExact(double siValue, UnitDefinition unit, CultureInfo? culture = null)
     {
         culture ??= CultureInfo.CurrentCulture;
         try
@@ -39,8 +39,8 @@ public static class InputQuantityFormatter
                 || groups.Skip(1).Any(group => group.Length != 3)
                 || groups.Any(group => group.Any(c => !char.IsAsciiDigit(c)))
                 || integerEnd >= 0 && normalized.AsSpan(integerEnd).Contains('\u202f')) return false;
-            text = text.Replace(NumberFormatter.GroupSeparator, "");
-            normalized = normalized.Replace(NumberFormatter.GroupSeparator, "");
+            text = text.Replace(QuantityFormatter.GroupSeparator, "");
+            normalized = normalized.Replace(QuantityFormatter.GroupSeparator, "");
         }
         if (!double.TryParse(text, NumberStyles.Float, culture, out _)) return false;
         int separator = normalized.IndexOfAny(['E', 'e']);
@@ -67,15 +67,9 @@ public static class InputQuantityFormatter
     {
         position = default;
         // Inclusive endpoints retain the document's exact SI representation.
-        if (text == Format(beamLength.Meters, unit)) { position = beamLength; return true; }
+        if (text == FormatExact(beamLength.Meters, unit)) { position = beamLength; return true; }
         if (!TryParse(text, unit, out double meters) || meters < 0 || meters > beamLength.Meters) return false;
         position = Length.FromMeters(meters);
         return true;
     }
-
-    public static string Display(double siValue, UnitDefinition unit, ResultPresentationOptions? options = null) =>
-        QuantityFormatter.Display(siValue, unit, options);
-
-    public static string WithUnit(double siValue, UnitDefinition unit, ResultPresentationOptions? options = null) =>
-        QuantityFormatter.WithUnit(Display(siValue, unit, options), unit);
 }

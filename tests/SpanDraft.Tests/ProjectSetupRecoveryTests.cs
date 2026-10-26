@@ -214,7 +214,7 @@ public sealed class ProjectSetupRecoveryTests
         Assert.True(await f.Main.InitializeRecoveryAsync());
         Assert.Null(f.Main.Session); Assert.Null(f.Main.Editor); Assert.True(f.Main.Setup.IsOverview);
         Assert.True(Draft().ContentEquals(f.Main.Setup.Draft)); Assert.True(f.Main.Setup.CanApply);
-        Assert.Equal(InputQuantityFormatter.Format(Draft().Length!.Value.Meters, units[QuantityKind.BeamLength]), f.Main.Setup.LengthInput.Text);
+        Assert.Equal(InputQuantityFormatter.FormatExact(Draft().Length!.Value.Meters, units[QuantityKind.BeamLength]), f.Main.Setup.LengthInput.Text);
         Assert.Equal("My section", f.Main.Setup.SectionName);
         Assert.Empty(f.Delay.Waiters); Assert.Empty(f.Files.Writes); Assert.Equal(bytes, f.Files.Data[Slot]);
     }

@@ -5,6 +5,7 @@ using SpanDraft.Core.Loads;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Controls;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
@@ -32,7 +33,7 @@ public sealed class DesktopPointLoadTests
             Editor.ToggleLoadTool(kind);
             Editor.HoverLoadPlacement(Mm(x));
             Assert.True(Editor.PlaceLoad());
-            if (value is { } v) Editor.LoadDraft!.ValueText = UiNumbers.Format(v);
+            if (value is { } v) Editor.LoadDraft!.ValueText = InputQuantityFormatter.FormatExact(v, kind == PointLoadKind.Force ? UnitCatalog.Newton : UnitCatalog.NewtonMeter);
             Assert.True(Editor.ConfirmLoad());
             return Editor.Document.Loads.Last();
         }
@@ -147,7 +148,7 @@ public sealed class DesktopPointLoadTests
         var viewport = DesktopLayoutFixture.Fit(1250, 600, 1);
         var before = PointLoadSymbol.Layout(document.Loads, viewport, s.Editor.LoadPreview, load.Id).Single();
         draft.PositionText = "700";
-        draft.ValueText = UiNumbers.Format(-123.5);
+        draft.ValueText = InputQuantityFormatter.FormatExact(-123.5, kind == PointLoadKind.Force ? UnitCatalog.Newton : UnitCatalog.NewtonMeter);
         var after = PointLoadSymbol.Layout(document.Loads, viewport, s.Editor.LoadPreview, load.Id).Single();
         Assert.Equal(before.X, after.X);
         Assert.Equal(before.Y, after.Y);

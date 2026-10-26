@@ -177,7 +177,7 @@ public class DesktopStateTests
         Assert.False(input.IsEditing);
         Assert.False(input.HasError);
         Assert.Equal(expected, s.Editor.Document.Length.Millimeters);
-        Assert.Equal(UiNumbers.Format(expected), input.Text);
+        Assert.Equal(InputQuantityFormatter.FormatExact(s.Editor.Document.Length.Meters, UnitCatalog.Millimeter), input.Text);
         Assert.Equal(calls, s.Calls);
     }
 
@@ -256,10 +256,10 @@ public class DesktopStateTests
     public void ParsingAndFormattingUseRegionalCultureEvenWhenUiCultureDiffers(string culture, string input)
     {
         using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
-        Assert.True(UiNumbers.TryParseLength(input, out var length));
+        Assert.True(InputQuantityFormatter.TryParseLength(input, UnitCatalog.Millimeter, out var length));
         Assert.Equal(1000.5, length.Millimeters);
-        Assert.Equal(input, UiNumbers.Format(length.Millimeters));
-        Assert.Equal("1000", UiNumbers.Format(1000));
+        Assert.Equal(input, InputQuantityFormatter.FormatExact(length.Meters, UnitCatalog.Millimeter));
+        Assert.Equal("1000", InputQuantityFormatter.FormatExact(1, UnitCatalog.Millimeter));
     }
 
     [Theory]

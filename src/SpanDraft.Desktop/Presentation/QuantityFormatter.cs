@@ -3,10 +3,10 @@ using System.Numerics;
 
 namespace SpanDraft.Desktop.Presentation;
 
-/// <summary>Writes already-rounded digits; notation and culture never round again.</summary>
-public static class NumberFormatter
+/// <summary>Shared technical display boundary for UI and reports; editable text uses InputQuantityFormatter.FormatExact.</summary>
+public static class QuantityFormatter
 {
-    public const string GroupSeparator = "\u202f";
+    internal const string GroupSeparator = "\u202f";
 
     public static string Format(RoundedNumber rounded, CultureInfo? culture = null,
         EngineeringNotation notation = EngineeringNotation.Automatic)
@@ -43,11 +43,7 @@ public static class NumberFormatter
 
     private static string Superscript(int exponent) => string.Concat(exponent.ToString(CultureInfo.InvariantCulture)
         .Select(c => c == '-' ? '⁻' : "⁰¹²³⁴⁵⁶⁷⁸⁹"[c - '0']));
-}
 
-/// <summary>Shared technical display boundary for UI and reports; editable text uses InputQuantityFormatter.Format.</summary>
-public static class QuantityFormatter
-{
     public static string Format(double siValue, QuantityKind kind, ResultPresentationOptions options,
         CultureInfo? culture = null) => Format(siValue, kind, options.Profile, options.SignificantDigits, options.Notation, culture);
 
@@ -66,14 +62,17 @@ public static class QuantityFormatter
     public static string FormatNumber(double siValue, QuantityKind kind, UnitProfile? profile = null,
         int significantDigits = ResultPresentationOptions.DefaultSignificantDigits,
         EngineeringNotation notation = EngineeringNotation.Automatic, CultureInfo? culture = null) =>
-        NumberFormatter.Format(NumericRounding.Round(siValue, kind, (profile ?? UnitProfile.Default)[kind], significantDigits), culture, notation);
+        Format(NumericRounding.Round(siValue, kind, (profile ?? UnitProfile.Default)[kind], significantDigits), culture, notation);
 
     internal static string Display(double siValue, UnitDefinition unit, ResultPresentationOptions? options = null,
         CultureInfo? culture = null)
     {
         options ??= ResultPresentationOptions.Default;
-        return NumberFormatter.Format(NumericRounding.Round(siValue, unit, options.SignificantDigits), culture, options.Notation);
+        return Format(NumericRounding.Round(siValue, unit, options.SignificantDigits), culture, options.Notation);
     }
+
+    internal static string WithUnit(double siValue, UnitDefinition unit, ResultPresentationOptions? options = null) =>
+        WithUnit(Display(siValue, unit, options), unit);
 
     internal static string WithUnit(string number, UnitDefinition unit) => unit.Symbol.Length == 0 ? number : number + " " + unit.Symbol;
 }
