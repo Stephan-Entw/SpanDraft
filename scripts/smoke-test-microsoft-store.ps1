@@ -55,7 +55,7 @@ function Get-TestInstallation {
         $installed.Version.ToString() -cne $Expected.Info.Version -or $installed.Architecture.ToString() -ine 'X64') {
         throw 'Installed package Identity, version or architecture does not match the tested MSIX.'
     }
-    foreach ($relative in @('SpanDraft.Desktop.exe', 'coreclr.dll', 'LICENSE', 'THIRD_PARTY_NOTICES.txt', 'Help/index.html', 'Assets/StoreLogo.png')) {
+    foreach ($relative in @('SpanDraft.Desktop.exe', 'coreclr.dll', 'LICENSE', 'THIRD_PARTY_NOTICES.txt', 'Help/index.html', 'resources.pri', 'Assets/StoreLogo.png', 'Assets/ProjectFileLogo.png')) {
         $file = Get-Item -LiteralPath (Join-Path $installed.InstallLocation $relative)
         if ($file.PSIsContainer -or $file.Length -eq 0) { throw "Missing or empty installed content: $relative" }
     }

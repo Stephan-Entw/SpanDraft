@@ -45,6 +45,11 @@ try {
         $makeAppx = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
     }
     if (-not $makeAppx) { throw 'MakeAppx.exe was not found on PATH or in Windows Kits/10/bin/<version>/x64. Install a Windows 10/11 SDK outside this script.' }
+    $makePri = Join-Path (Split-Path -Parent $makeAppx) 'makepri.exe'
+    if (-not (Test-Path -LiteralPath $makePri -PathType Leaf)) {
+        $makePri = Get-Command MakePri.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source
+    }
+    if (-not $makePri) { throw 'MakePri.exe was not found beside MakeAppx.exe or on PATH. Install the Windows SDK resource tools outside this script.' }
 
     dotnet build $helper --configuration Release --nologo
     if ($LASTEXITCODE -ne 0) { throw "Packaging helper build failed (exit code $LASTEXITCODE)." }
@@ -69,6 +74,17 @@ try {
     dotnet publish $project --configuration Release --runtime win-x64 --self-contained true --output $publish
     if ($LASTEXITCODE -ne 0) { throw "Desktop publish failed (exit code $LASTEXITCODE)." }
     $null = Invoke-StoreTool -Arguments @('stage', $repoRoot, $publish, $staging, $version)
+    $priConfig = Join-Path $work 'priconfig.xml'
+    & $makePri createconfig /cf $priConfig /dq en-US /o
+    if ($LASTEXITCODE -ne 0) { throw "MakePri configuration failed (exit code $LASTEXITCODE)." }
+    # Keep every scale/theme in this MSIX instead of creating separate resource packages.
+    [xml] $priSettings = Get-Content -LiteralPath $priConfig -Raw
+    $null = $priSettings.resources.RemoveChild($priSettings.resources.packaging)
+    $priSettings.Save($priConfig)
+    & $makePri new /pr $staging /cf $priConfig /mn (Join-Path $staging 'AppxManifest.xml') /of (Join-Path $staging 'resources.pri') /o
+    if ($LASTEXITCODE -ne 0) { throw "MakePri indexing failed (exit code $LASTEXITCODE)." }
+    & $makePri dump /if (Join-Path $staging 'resources.pri') /of (Join-Path $work 'resources-dump.xml') /dt detailed /o
+    if ($LASTEXITCODE -ne 0) { throw "MakePri index verification failed (exit code $LASTEXITCODE)." }
 
     $suffix = if ($Development) { '-development' } else { '' }
     $packageName = "SpanDraft-$($source.MsixVersion)-x64$suffix.msix"
@@ -82,7 +98,7 @@ try {
     # Re-query instead of overriding Version: the central source and effective build must still agree.
     $finalSource = Invoke-StoreTool -Arguments @('validate-source', $repoRoot, (Get-ProductVersion), $mode, $source.Commit)
     if ($finalSource.ProductVersion -cne $source.ProductVersion) { throw 'Product version changed during packaging.' }
-    [ordered]@{ Source = $source; FinalSource = $finalSource; Package = $package; Sha256 = $hash; Signed = $false; MakeAppx = $makeAppx } |
+    [ordered]@{ Source = $source; FinalSource = $finalSource; Package = $package; Sha256 = $hash; Signed = $false; MakeAppx = $makeAppx; MakePri = $makePri } |
         ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $result 'build-info.json') -Encoding utf8
     Move-Item -LiteralPath $result -Destination $finalDirectory
     Write-Host "Mode: $mode"

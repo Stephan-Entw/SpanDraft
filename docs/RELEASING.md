@@ -129,7 +129,7 @@ Center upload automation. Both can use the same released source commit.
 
 Use Windows x64 with PowerShell 7, Git, .NET 10, the existing
 [offline help prerequisites](../help/README.md) and an installed Windows 10/11 SDK
-containing `MakeAppx.exe`. The script searches PATH and
+containing `MakeAppx.exe` and `MakePri.exe`. The script searches PATH and
 `Windows Kits/10/bin/<version>/x64`; it installs no tools or certificates. Inno
 Setup, SignTool and WACK are not build prerequisites.
 
@@ -157,10 +157,11 @@ pwsh ./scripts/package-microsoft-store.ps1 -Development
 
 Both modes reuse the existing notices check and offline help build, publish
 Release/win-x64 self-contained, create fresh staging, derive the required visual
-assets from the existing app icon and run MakeAppx with semantic validation
-enabled. The packaging helper then checks the actual package, including hashes
-of every staged file. It requires the app/runtime, notices, license and offline
-help. MakeAppx validation alone is not proof that a package installs or runs.
+assets from the existing app and project-file icons, index DPI and unplated
+shell variants with MakePri, and run MakeAppx with semantic validation enabled.
+The packaging helper then checks the actual package, including hashes of every
+staged file. It requires the app/runtime, resource index, notices, license and
+offline help. MakeAppx validation alone is not proof that a package installs or runs.
 
 Results are under `artifacts/microsoft-store/submission/` or `development/`:
 

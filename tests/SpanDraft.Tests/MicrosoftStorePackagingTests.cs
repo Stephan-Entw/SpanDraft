@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Xml.Linq;
+using SkiaSharp;
 using SpanDraft.MicrosoftStore;
 using Xunit;
 
@@ -14,7 +15,13 @@ public sealed class MicrosoftStorePackagingTests : IDisposable
     private string PathInTest(string name) => Path.Combine(_temporary, name);
 
     public MicrosoftStorePackagingTests() => Directory.CreateDirectory(_temporary);
-    public void Dispose() => Directory.Delete(_temporary, true);
+    public void Dispose()
+    {
+        // Git objects are read-only; Windows requires clearing that flag before deletion.
+        foreach (string file in Directory.EnumerateFiles(_temporary, "*", SearchOption.AllDirectories))
+            File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+        Directory.Delete(_temporary, true);
+    }
 
     [Theory]
     [InlineData("0.2.0", "0.2.0.0")]
@@ -96,9 +103,45 @@ public sealed class MicrosoftStorePackagingTests : IDisposable
         string staging = Stage();
         Assert.Equal(File.ReadAllBytes(Path.Combine(Repository(), "LICENSE")), File.ReadAllBytes(Path.Combine(staging, "LICENSE")));
         Assert.Equal("extra publish content", File.ReadAllText(Path.Combine(staging, "subfolder", "extra.txt")));
+        using var sourceIcon = SKBitmap.Decode(Path.Combine(Repository(), "src/SpanDraft.Desktop/Assets/ProjectFileIcon/spandraft-project.ico"));
+        using var packagedIcon = SKBitmap.Decode(Path.Combine(staging, "Assets/ProjectFileLogo.png"));
+        Assert.NotNull(sourceIcon);
+        Assert.NotNull(packagedIcon);
+        Assert.Equal(sourceIcon.Pixels, packagedIcon.Pixels);
         var info = PackageRules.Verify(Pack(staging), "0.2.0", staging);
         Assert.Equal(new PackageInfo("S.Antipin.SpanDraft", "CN=AC57B091-093F-4A75-87A8-A6DB7BD6BBFF", "0.2.0.0", "x64", "SpanDraft"), info);
         Assert.Throws<InvalidDataException>(() => PackageRules.Stage(Repository(), PathInTest("publish"), staging, "0.2.0"));
+    }
+
+    [Theory]
+    [InlineData("Assets/StoreLogo.scale-125.png", 63)]
+    [InlineData("Assets/StoreLogo.scale-400.png", 200)]
+    [InlineData("Assets/Square44x44Logo.scale-400.png", 176)]
+    [InlineData("Assets/Square150x150Logo.scale-125.png", 188)]
+    [InlineData("Assets/Square150x150Logo.scale-400.png", 600)]
+    public void StageProvidesHighDpiLogos(string path, int size)
+    {
+        using var image = SKBitmap.Decode(Path.Combine(Stage(), path));
+        Assert.NotNull(image);
+        Assert.Equal(size, image.Width);
+        Assert.Equal(size, image.Height);
+    }
+
+    [Fact]
+    public void ShellIconsKeepTheSameTransparentArtworkForBothUnplatedThemes()
+    {
+        string staging = Stage();
+        using var standard = SKBitmap.Decode(Path.Combine(staging, "Assets/Square44x44Logo.targetsize-256.png"));
+        using var dark = SKBitmap.Decode(Path.Combine(staging, "Assets/Square44x44Logo.targetsize-256_altform-unplated.png"));
+        using var light = SKBitmap.Decode(Path.Combine(staging, "Assets/Square44x44Logo.targetsize-256_altform-lightunplated.png"));
+        Assert.NotNull(standard);
+        Assert.NotNull(dark);
+        Assert.NotNull(light);
+        Assert.Equal(256, dark.Width);
+        Assert.Equal(256, dark.Height);
+        Assert.Contains(dark.Pixels, pixel => pixel.Alpha == 0);
+        Assert.Equal(standard.Pixels, dark.Pixels);
+        Assert.Equal(standard.Pixels, light.Pixels);
     }
 
     [Theory]
@@ -142,12 +185,47 @@ public sealed class MicrosoftStorePackagingTests : IDisposable
     }
 
     [Theory]
+    [InlineData("SupportedFileTypes")]
+    [InlineData("FileType")]
+    public void RejectsFileAssociationChildrenInTheUap3Namespace(string element)
+    {
+        string staging = Stage();
+        string path = Path.Combine(staging, "AppxManifest.xml");
+        var manifest = XDocument.Load(path);
+        manifest.Descendants().Single(e => e.Name.LocalName == element).Name = PackageRules.Uap3 + element;
+        manifest.Save(path);
+        Assert.Throws<InvalidDataException>(() => PackageRules.Verify(Pack(staging)));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RejectsMissingOrAppLogoForTheProjectFileAssociation(bool useAppLogo)
+    {
+        string staging = Stage();
+        string path = Path.Combine(staging, "AppxManifest.xml");
+        var manifest = XDocument.Load(path);
+        var logo = manifest.Descendants(PackageRules.Uap3 + "FileTypeAssociation").Single().Element(PackageRules.Uap + "Logo")!;
+        if (useAppLogo) logo.Value = @"Assets\Square44x44Logo.png";
+        else logo.Remove();
+        manifest.Save(path);
+        Assert.Throws<InvalidDataException>(() => PackageRules.Verify(Pack(staging)));
+    }
+
+    [Theory]
     [InlineData("SpanDraft.Desktop.exe")]
     [InlineData("coreclr.dll")]
     [InlineData("Help/index.html")]
     [InlineData("LICENSE")]
     [InlineData("THIRD_PARTY_NOTICES.txt")]
     [InlineData("Assets/StoreLogo.png")]
+    [InlineData("Assets/ProjectFileLogo.png")]
+    [InlineData("Assets/StoreLogo.scale-200.png")]
+    [InlineData("Assets/Square44x44Logo.scale-400.png")]
+    [InlineData("Assets/Square150x150Logo.scale-400.png")]
+    [InlineData("Assets/Square44x44Logo.targetsize-16_altform-unplated.png")]
+    [InlineData("Assets/Square44x44Logo.targetsize-256_altform-lightunplated.png")]
+    [InlineData("resources.pri")]
     [InlineData("AppxBlockMap.xml")]
     [InlineData("[Content_Types].xml")]
     public void RejectsMissingPackageInputs(string missing)
@@ -217,10 +295,10 @@ public sealed class MicrosoftStorePackagingTests : IDisposable
         string package = PathInTest("test.msix");
         ZipFile.CreateFromDirectory(staging, package);
         using var archive = ZipFile.Open(package, ZipArchiveMode.Update);
-        foreach (string name in new[] { "AppxBlockMap.xml", "[Content_Types].xml" })
+        foreach (string name in new[] { "AppxBlockMap.xml", "[Content_Types].xml", "resources.pri" })
         {
             using var writer = new StreamWriter(archive.CreateEntry(name).Open());
-            writer.Write("Container metadata fixture; MakeAppx validation runs only on Windows.");
+            writer.Write("Container/resource index fixture; Windows SDK validation runs only on real packages.");
         }
         return package;
     }

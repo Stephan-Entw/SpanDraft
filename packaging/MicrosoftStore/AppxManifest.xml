@@ -29,10 +29,11 @@
       <Extensions>
         <uap3:Extension Category="windows.fileTypeAssociation">
           <uap3:FileTypeAssociation Name="spandraft" Parameters="&quot;%1&quot;" MultiSelectModel="Single">
-            <uap3:DisplayName>SpanDraft Project</uap3:DisplayName>
-            <uap3:SupportedFileTypes>
-              <uap3:FileType>.spandraft</uap3:FileType>
-            </uap3:SupportedFileTypes>
+            <uap:DisplayName>SpanDraft Project</uap:DisplayName>
+            <uap:Logo>Assets\ProjectFileLogo.png</uap:Logo>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.spandraft</uap:FileType>
+            </uap:SupportedFileTypes>
           </uap3:FileTypeAssociation>
         </uap3:Extension>
       </Extensions>

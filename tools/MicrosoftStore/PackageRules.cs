@@ -19,14 +19,28 @@ internal static class PackageRules
     internal static readonly XNamespace Uap3 = "http://schemas.microsoft.com/appx/manifest/uap/windows10/3";
     internal static readonly XNamespace Uap10 = "http://schemas.microsoft.com/appx/manifest/uap/windows10/10";
     internal static readonly XNamespace Rescap = "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities";
-    internal static readonly (string Path, int Size)[] Assets =
-        [("Assets/StoreLogo.png", 50), ("Assets/Square44x44Logo.png", 44), ("Assets/Square150x150Logo.png", 150)];
+    internal static readonly (string Path, int Size)[] Assets = CreateAssets();
     internal static readonly string[] RequiredFiles =
     [
         "SpanDraft.Desktop.exe", "SpanDraft.Desktop.dll", "SpanDraft.Desktop.deps.json", "SpanDraft.Desktop.runtimeconfig.json",
         "coreclr.dll", "hostfxr.dll", "hostpolicy.dll", "System.Private.CoreLib.dll", "Avalonia.Desktop.dll", "libSkiaSharp.dll",
         "LICENSE", "THIRD_PARTY_NOTICES.txt", "Help/index.html", "Help/js/spandraft-help.js", "Help/js/iframe-worker-shim.js"
     ];
+
+    private static (string Path, int Size)[] CreateAssets()
+    {
+        var assets = new List<(string Path, int Size)> { ("Assets/ProjectFileLogo.png", 256) };
+        foreach (var (name, size) in new[] { ("StoreLogo", 50), ("Square44x44Logo", 44), ("Square150x150Logo", 150) })
+            foreach (int scale in new[] { 100, 125, 150, 200, 250, 300, 400 })
+            {
+                string qualifier = scale == 100 ? "" : $".scale-{scale}";
+                assets.Add(($"Assets/{name}{qualifier}.png", (size * scale + 99) / 100));
+            }
+        foreach (int size in new[] { 16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96, 256 })
+            foreach (string form in new[] { "", "_altform-unplated", "_altform-lightunplated" })
+                assets.Add(($"Assets/Square44x44Logo.targetsize-{size}{form}.png", size));
+        return [.. assets];
+    }
 
     internal static string MsixVersion(string version)
     {
@@ -76,14 +90,17 @@ internal static class PackageRules
         var manifest = XDocument.Load(Path.Combine(root, "packaging/MicrosoftStore/AppxManifest.xml"));
         manifest.Root!.Element(Foundation + "Identity")!.SetAttributeValue("Version", msixVersion);
         manifest.Save(Path.Combine(staging, "AppxManifest.xml"));
-        // Derive only the manifest-required sizes from the same source as the desktop icon.
+        // Derive manifest assets from the existing app and project file icons.
         using var icon = SKBitmap.Decode(Path.Combine(root, "src/SpanDraft.Desktop/Assets/AppIcon/app-icon-1024.png"))
             ?? throw new InvalidDataException("Cannot decode the existing SpanDraft app icon.");
+        using var projectIcon = SKBitmap.Decode(Path.Combine(root, "src/SpanDraft.Desktop/Assets/ProjectFileIcon/spandraft-project.ico"))
+            ?? throw new InvalidDataException("Cannot decode the existing SpanDraft project file icon.");
         foreach (var asset in Assets)
         {
             string destination = Path.Combine(staging, asset.Path);
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            using var resized = icon.Resize(new SKImageInfo(asset.Size, asset.Size), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
+            var sourceIcon = asset.Path == "Assets/ProjectFileLogo.png" ? projectIcon : icon;
+            using var resized = sourceIcon.Resize(new SKImageInfo(asset.Size, asset.Size), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
             using var data = resized.Encode(SKEncodedImageFormat.Png, 100);
             using var output = File.Create(destination);
             data.SaveTo(output);
@@ -110,7 +127,7 @@ internal static class PackageRules
             return output.ToArray();
         }
         var result = ValidateContents(Read, version);
-        foreach (string metadata in new[] { "AppxBlockMap.xml", "[Content_Types].xml" })
+        foreach (string metadata in new[] { "AppxBlockMap.xml", "[Content_Types].xml", "resources.pri" })
             Require(Read(metadata).Length > 0, $"Missing or empty MSIX metadata: {metadata}");
         if (staging is not null)
         {
@@ -157,7 +174,9 @@ internal static class PackageRules
         Expect(association, "Name", "spandraft");
         Expect(association, "Parameters", "\"%1\"");
         Expect(association, "MultiSelectModel", "Single");
-        Require(association.Descendants(Uap3 + "FileType").Select(e => e.Value).SequenceEqual([".spandraft"]), "Expected only the .spandraft association.");
+        Require((string?)association.Element(Uap + "Logo") == @"Assets\ProjectFileLogo.png", "Expected the project file icon for the .spandraft association.");
+        Require(association.Element(Uap + "SupportedFileTypes")?.Elements(Uap + "FileType").Select(e => e.Value).SequenceEqual([".spandraft"]) == true,
+            "Expected only the .spandraft association in the uap namespace.");
         Require(!manifest.Descendants().Attributes().Any(a => a.Name.LocalName == "AllowSilentDefaultTakeOver"), "Default-app takeover is not allowed.");
         var visual = app.Element(Uap + "VisualElements")!;
         Expect(visual, "Square44x44Logo", @"Assets\Square44x44Logo.png");
