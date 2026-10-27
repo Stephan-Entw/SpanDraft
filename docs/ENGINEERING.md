@@ -80,8 +80,8 @@ kein normativer Sicherheitsnachweis und keine Freigabe einer Konstruktion.
 Im unbelasteten beziehungsweise biegespannungsfreien Fall sind Momentbetrag und
 Spannung exakt null. Bei `σ_b,max == 0` wird ausdrücklich
 `double.PositiveInfinity` geliefert, ohne Division durch null. Die Auswertung
-liefert niemals NaN. Verbraucher müssen den unendlichen Faktor berücksichtigen,
-etwa bei späterer Darstellung oder Serialisierung.
+liefert niemals NaN. Verbraucher müssen den unendlichen Faktor bei Darstellung
+oder Serialisierung berücksichtigen.
 
 Es wird keine kleine Spannung künstlich auf null gesetzt. Es gelten die Grenzen
 der double-Arithmetik: Ein Überlauf der positiven Safety-Factor-Division ergibt
@@ -136,9 +136,16 @@ metrische Defaults sind GPa, MPa und kg/m³, im US-Profil für beide Druckgröß
 
 Bearbeiten verwendet stets den vollständigen gespeicherten Wert in der gewählten
 Einheit. Unveränderte Eingabebuffer behalten den originalen SI-Wert auch bei
-Fokuswechsel, Rebinding und Bestätigung. Darstellungswechsel verändern weder
-Berechnung, Projektdatei, Undo/Redo noch Dirty-State. Lokale historische
-Standard-/Detailed-Settings werden mit unveränderten Einheiten auf die neuen
+Fokuswechsel, Rebinding und Bestätigung. Eingaben verwenden das regionale
+Dezimalzeichen und erlauben E/e-Exponenten sowie optional die ausgegebenen
+Dreiergruppen mit U+202F im Ganzzahlteil. Andere Gruppentrennzeichen,
+fehlerhafte Gruppen und Gruppierungen in Nachkommateil oder Exponent werden
+abgelehnt; Einheitensymbole und die ausgegebene `· 10`-Schreibweise sind kein
+Zahleneingabeformat.
+
+Darstellungswechsel verändern weder Berechnung, Projektdatei, Undo/Redo noch
+Dirty-State. Lokale historische Standard-/Detailed-Settings werden mit
+unveränderten Einheiten auf die neuen
 Defaults migriert; das Projektformat bleibt unverändert.
 
 Diagramm-Achsenticks behalten ihre eigenständige Nice-Tick-Logik. Zoom, Seitenzahlen

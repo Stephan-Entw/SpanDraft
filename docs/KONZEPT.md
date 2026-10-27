@@ -1,6 +1,6 @@
 # SpanDraft – Konzept
 
-Stand: 18.10.2026
+Stand: 27.10.2026
 
 Dieses Dokument legt Produktvision, Scope, Architekturgrundsätze und Roadmap
 von SpanDraft fest. Verbindliche Fach-, API- und Dateiverträge stehen in
@@ -90,6 +90,9 @@ Festigkeitsnachweis. Details stehen in [ENGINEERING.md](ENGINEERING.md).
 
 Im Desktop werden kompakte Ergebniskennwerte und Lagerreaktionen sowie
 Live-Diagramme für Durchbiegung, Querkraft und Biegemoment dargestellt.
+Berichtsvorschau, PDF-Ausgabe und Windows-Druck dokumentieren bestätigte
+Projekteingaben, vorhandene Ergebnisse und Rechenannahmen. Die Ausgabe verändert
+keinen Projektinhalt; die State-Rationale steht in [UI.md](UI.md#berichte-als-eingefrorene-ausgabe).
 
 ## 5. Rechenmodell
 
@@ -103,8 +106,9 @@ validiert. Die Evidenz steht in [VALIDATION.md](VALIDATION.md).
 ## 6. Desktop und Projektmodell
 
 Der Desktop verwendet Avalonia und ist Windows-first ausgelegt. Entwicklung
-unter macOS und Linux bleibt möglich; offizielle Builds für diese Plattformen
-sind für die erste Veröffentlichung nicht erforderlich.
+unter macOS und Linux bleibt möglich; offizielle Release-Pakete sind derzeit
+auf Windows x64 ausgerichtet. Release- und Packaging-Abläufe stehen in
+[RELEASING.md](RELEASING.md).
 
 Bestätigte Änderungen bilden den Projektzustand. Offene Eingaben und Vorschauen
 verändern das Projekt noch nicht. Projekte werden als eigenständige
@@ -118,7 +122,9 @@ Implementiert sind:
 - Platzieren und Bearbeiten von Lagern und Lasten
 - Undo/Redo
 - eigenständige Projektdateien
+- Projektangaben mit Berechnungstitel, Ersteller und optionalen Projekt- und Referenzangaben
 - Crash-Wiederherstellung
+- Wiederherstellung bestätigter Werte noch nicht erstellter Projekte
 - konfigurierbare Einheiten
 - einheitliche numerische Eingabe- und Ergebnisdarstellung
 
@@ -163,7 +169,6 @@ Nicht zum aktuellen Produktziel gehören:
 - Ermüdungsnachweise
 - vollständige normbasierte Bemessung
 - automatische Profiloptimierung
-- Import eines FreeCAD-Profilkatalogs
 
 Neue Funktionen sollen nur aufgenommen werden, wenn sie typische
 Balkenberechnungen im Maschinenbau schneller, intuitiver, transparenter oder
@@ -171,30 +176,12 @@ zuverlässiger machen.
 
 ## 9. Nächste Produktziele
 
-Vor dem ersten nutzbaren Release stehen verbleibende Bedienungsdetails und
-die Release-Vorbereitung im Vordergrund.
+Mögliche spätere Erweiterungen, ohne festgelegte Reihenfolge:
 
-Ein eingebauter importierter Normprofilkatalog ist dafür nicht erforderlich.
-Querschnittsbibliotheken dienen zunächst der Wiederverwendung eigener
-parametrischer Definitionen und manueller Tabellenkennwerte.
-
-Berichte dokumentieren bestätigte Projekteingaben, vorhandene Analysis-/Engineering-
-Ergebnisse und Rechenannahmen. Vorschau, PDF und Windows-Druck verwenden dieselbe
-beim Öffnen eingefrorene Komposition einschließlich Sprache, Anzeigeeinheiten,
-Version und Berichtsdatum. Reporting enthält keine Berechnung oder Persistenz;
-Desktop liefert formatierte Inhalte und Vektorgrafiken der vorhandenen Controls.
-Die Ausgabe verändert weder Projektinhalt noch gespeicherte Projektdateien.
-XLSX-Export bleibt eine mögliche spätere Erweiterung.
-
-Danach mögliche Erweiterungen:
-
-- Tabellenansicht
-- Zoom/Pan
+- Zoom/Pan im Balkeneditor
 - weitere Streckenlastformen
 - Eigengewicht
 - zusätzliche Sprachen
-- Timoshenko-Balkentheorie
-- weitere gezielte Engineering-Auswertungen
 
 ## 10. Transparenz und Qualität
 

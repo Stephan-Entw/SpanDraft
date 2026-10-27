@@ -202,7 +202,7 @@ dV/ds = q                      [N/m]
 ```
 
 Die Funktionen werden analytisch/stückweise ausgewertet. Es gibt weder eine
-Sampling-Auflösung noch künstliche Zwischenknoten. Eine spätere Darstellung
+Sampling-Auflösung noch künstliche Zwischenknoten. Die Darstellung
 kann die Funktionen unabhängig davon beliebig fein abtasten.
 
 ## Auswertungs-API und einseitige Grenzwerte

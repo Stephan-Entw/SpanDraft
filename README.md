@@ -9,7 +9,9 @@ calculations and large general-purpose FEM systems: define one straight beam,
 place supports and loads directly in a technical sketch, edit exact dimensions
 and inspect the resulting structural response.
 
-SpanDraft is under active development and has not reached a stable release yet.
+SpanDraft has an initial public release, `v0.1.0`, and remains under active
+development. This README describes the current checkout, including changes made
+after that release.
 
 ## Current capabilities
 
@@ -29,15 +31,24 @@ The current desktop application supports:
 - undo and redo
 - versioned `.spandraft` project files
 - crash recovery
+- project information with calculation title, author, optional project title and reference
 - automatic analysis after committed model changes
 - compact display of maximum deflection, bending moment, bending stress and
-  yield-strength safety factor
+  safety factor against the material's yield or proof strength
+- calculation report preview, PDF export and Windows printing
+- German and English interface text, independent regional number formatting and
+  configurable technical units and display precision
 
 The numerical core provides support reactions and continuous analytical fields
 for displacement, rotation, axial force, shear force and bending moment.
 
-The desktop displays live diagrams for displacement, shear force and bending moment.
-A dedicated results view and PDF/XLSX export are planned.
+The desktop displays support reactions and live diagrams for displacement, shear
+force and bending moment. Reports capture confirmed project inputs, existing
+results and calculation assumptions.
+
+The published Windows x64 release uses an Inno Setup installer. The current
+checkout also provides an independent Microsoft Store/MSIX packaging path; see
+[RELEASING.md](docs/RELEASING.md) for both workflows and their prerequisites.
 
 ## Engineering scope
 
@@ -126,8 +137,9 @@ API rather than implementing mechanical formulas itself.
 - [ANALYSIS.md](docs/ANALYSIS.md) — application analysis API
 - [UI.md](docs/UI.md) — rationale for editor state and interaction
 - [PROJECT_FORMAT.md](docs/PROJECT_FORMAT.md) — `.spandraft` file format
+- [LIBRARIES.md](docs/LIBRARIES.md) — built-in materials and local reusable libraries
 - [VALIDATION.md](docs/VALIDATION.md) — independent solver validation
-- [RELEASING.md](docs/RELEASING.md) — intended release process
+- [RELEASING.md](docs/RELEASING.md) — release and packaging workflows
 
 ## License
 

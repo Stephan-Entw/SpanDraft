@@ -45,7 +45,10 @@ automatically, without another approval.**
    fail.
 5. On `windows-2025`, the existing packaging script builds the installer once.
    The automated smoke test installs that EXE, checks the installed contents and
-   shortcuts, starts the application for five seconds, stops it and uninstalls it.
+   shortcuts, verifies the project icon and per-user file association, then opens
+   a fixture project through the Windows shell. It verifies startup and the
+   expected project title, then stops the application and uninstalls it,
+   checking association cleanup as well.
 6. Only after that test passes, the EXE is hashed with SHA-256 and transferred as
    an internal Actions artifact. The publish job verifies its exact filename and
    hash before publishing that same EXE.
@@ -97,6 +100,7 @@ For a local build, use Windows with PowerShell 7, .NET 10 SDK, Inno Setup 6 and
 Python 3.11+ with `help/requirements.txt` installed (see the
 [help build instructions](../help/README.md)). Make `ISCC.exe` available on `PATH`
 or in its standard `Program Files (x86)` / `Program Files` installation directory.
+The script also searches `%LOCALAPPDATA%\Programs\Inno Setup 6`.
 From the repository root:
 
 ```powershell
@@ -105,16 +109,20 @@ pwsh ./scripts/smoke-test-windows-installer.ps1 -InstallerPath artifacts/windows
 ```
 
 The packaging script checks notices, builds and validates offline help, publishes
-the self-contained `win-x64` application and invokes Inno Setup. The smoke test
-requires no existing SpanDraft installation or conflicting shortcuts. It checks
-the default per-user installation under `%LOCALAPPDATA%\Programs\SpanDraft`,
-leaves the optional desktop shortcut disabled and cleans up its own installation
+the self-contained `win-x64` application and invokes Inno Setup. The installer
+registers the `.spandraft` icon and open command per user; Windows controls the
+user's default-app choice. The smoke test requires no existing SpanDraft
+installation, conflicting shortcuts or file associations, running application
+or recovery slots. It checks the default per-user installation under
+`%LOCALAPPDATA%\Programs\SpanDraft`, leaves the optional desktop shortcut disabled
+and cleans up its own installation
 on failure where possible. User data under `%LOCALAPPDATA%\SpanDraft` is retained.
 
 Manual Windows checks remain useful for visible installer UX, new setup options,
 larger OS integration changes or significant visual UI changes. As appropriate,
 inspect the wizard, optional desktop shortcut, finish-page launch, Start menu
-launch, first project and calculation, offline help, reinstall and Windows
+launch, opening a project from a path containing spaces/non-ASCII characters,
+first project and calculation, offline help, reinstall and Windows
 Settings uninstall. These are checks of the change, not a ritual for every patch
 release. The automated startup check does not evaluate rendering or interactive
 GUI behavior; product and calculation logic remains covered by the existing tests.
@@ -124,6 +132,11 @@ GUI behavior; product and calculation logic remains covered by the existing test
 The Store route is local and manual, independent of GitHub/Inno Setup. Neither
 route invokes or requires the other. There is no Store GitHub Action or Partner
 Center upload automation. Both can use the same released source commit.
+
+The MSIX tooling was added after `v0.1.0` and is absent from that tag. Use
+`-Development` from the current unreleased checkout for local checks; the
+Submission instructions below apply to a published tag that includes this
+tooling.
 
 ### Build from the released source
 
@@ -217,8 +230,8 @@ pwsh ./scripts/smoke-test-microsoft-store.ps1 -PackagePath $signed
 
 The smoke test validates the package and trusted signature, installs it with
 `Add-AppxPackage`, checks registered identity/version/architecture and installed
-files, launches via the registered application ID, verifies a fresh process from
-the package install location remains alive for five seconds, and uninstalls its
+files, launches via the registered application ID, verifies a fresh process
+starts successfully from the package install location, and uninstalls its
 own test installation. It uses the Windows PowerShell Appx module through
 PowerShell 7 compatibility. It does not inspect or automate the UI.
 
@@ -271,3 +284,7 @@ SHA-256 sidecar and manually upload **that package** to the matching Partner
 Center product. Do not upload the locally signed test copy or a development
 package. Review Store certification results and restricted-capability requests;
 publication remains a manual Partner Center action.
+
+For Store listing images, the independent
+[native screenshot workflow](../tools/StoreScreenshots/README.md) captures the
+current application in German and English. It is not a packaging or release gate.

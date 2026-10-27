@@ -174,12 +174,15 @@ eine abgebrochene oder fehlgeschlagene Erstellung erhält sie.
 
 ## Lokal zuletzt verwendeter Ersteller
 
-User Settings schreiben Version 3 mit optionalem `lastAuthor`. V1/V2 bleiben
-lesbar und liefern keinen zuletzt verwendeten Ersteller. Bisheriges Entwicklungs-V3
-mit `defaultAuthor` bleibt lesbar; ist `lastAuthor` vorhanden, hat es auch bei null
-Vorrang. Neue Dateien schreiben ausschließlich `lastAuthor`. Leerwerte werden null,
-andere Werte getrimmt. Der Wert ist ein lokaler Komfortwert, keine sichtbare
-Benutzereinstellung und niemals Teil einer Projektrevision.
+User Settings schreiben Version 4 mit optionalem `lastAuthor`; V1–V3 bleiben
+lesbar. V1/V2 liefern keinen zuletzt verwendeten Ersteller. Historisches
+Entwicklungs-V3 mit `defaultAuthor` bleibt lesbar; ist `lastAuthor` vorhanden,
+hat es auch bei null Vorrang. Neue Dateien schreiben ausschließlich `lastAuthor`.
+Leerwerte werden null, andere Werte getrimmt. Der Wert ist ein lokaler Komfortwert,
+keine sichtbare Benutzereinstellung und niemals Teil einer Projektrevision.
+Die Migration der numerischen Anzeigeeinstellungen steht in
+[ENGINEERING.md](ENGINEERING.md#numerische-darstellung-in-app-und-bericht);
+Settings-Version und Projektformatversion sind unabhängig.
 
 Ausschließlich erfolgreiche Neuanlagen aktualisieren den Wert mit dem normalisierten
 Ersteller des aktivierten Projekts. Die lokale Persistierung erfolgt best-effort;

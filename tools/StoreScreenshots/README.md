@@ -64,10 +64,9 @@ display-only paths under `C:\SpanDraft\Examples\`: `Crane Beam.spandraft`,
 `Overhang Beam.spandraft`, and `Fixed-End Beam.spandraft`. These files need not
 exist and are not opened. Only the actual demo project has a private byte-identical
 fixture copy inside the run directory. Start-page captures happen before opening it.
-The five recent timestamps precede the shared run reference by 1 h 20 min,
-6 h 45 min, 1 d 3 h 10 min, 4 d 8 h 35 min, and 11 d 2 h 50 min. Both languages
-use the same timestamps. The runner verifies all five displayed path texts and
-that every row is within the list viewport, with no internal or personal paths.
+Both languages use the same demo timestamps. The runner verifies all five
+displayed path texts and that every row is within the list viewport, with no
+internal or personal paths.
 
 The materials motif opens the existing project material browser, selects the
 built-in library and `S355JR (1.0045)`, and brings the selected row into view.

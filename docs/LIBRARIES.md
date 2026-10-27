@@ -12,7 +12,6 @@ Der eingebaute Materialkatalog ist eine unveränderliche, eingebettete,
 versionierte JSON-Ressource. Benutzer-Materialien und Benutzer-Querschnitte
 werden in getrennten lokalen Dateien verwaltet. Gleiche Materialnamen in
 Built-in und User sind zulässig; die Quellen werden nicht zusammengeführt.
-Ein importierter Normprofil- oder FreeCAD-Katalog gehört nicht zu diesem Vertrag.
 
 ## Lokale Schlüssel und Projektsnapshots
 
@@ -30,9 +29,11 @@ den bisherigen Inhalt zu verändern. Fehlende Replace-Ziele führen zu
 Sammlungen werden nur lesbar angeboten; optionale Metadaten werden defensiv
 kopiert. Der Built-in-Katalog bietet ausschließlich lesende Operationen.
 
-Bei einer Auswahl übernimmt das Projekt ausschließlich ein vollständiges
-Core-Objekt. Die vorhandenen Material- und Querschnittsdefinitionen sind
-unveränderlich; ihre Übernahme benötigt keine Verbindung zum Library-Eintrag.
+Bei einer Auswahl übernimmt das Projekt einen vollständigen fachlichen Snapshot.
+Bei Querschnittspresets kann zusätzlich der Preset-Name als optionaler
+Querschnittsanzeigename übernommen werden. Die Material- und
+Querschnittsdefinitionen sind unveränderlich; ihre Übernahme benötigt keine
+Verbindung zum Library-Eintrag.
 Ersetzen, Umbenennen oder Löschen eines Eintrags verändert keine bereits
 übernommenen Projektwerte. Der verbindliche eigenständige Projektdateivertrag
 steht in [PROJECT_FORMAT.md](PROJECT_FORMAT.md). Kategorie, Werkstoffnummer und
@@ -66,17 +67,16 @@ Projektanpassung ohne ausdrückliche Bibliotheksoperation keinen Bibliothekseint
 Biegeachse gehört weiterhin zum Balken beziehungsweise Projekt und ist kein
 Preset-Bestandteil. Verfügbare Achsen einer Definition sind davon unabhängig.
 
-Die parametrischen Formen sind Rechteck, Rechteckrohr, Kreis, Rundrohr, I/H,
-U, T und Winkel. Persistiert werden ausschließlich Form und ursprüngliche
+Die fachlichen Formen und Achsenregeln stehen in
+[DOMAIN.md](DOMAIN.md#fachliche-querschnittsdefinitionen-und-biegeachsen).
+
+Parametrische Presets speichern ausschließlich Form und ursprüngliche
 Eingabeparameter einschließlich unabhängiger Radien. Radius 0 ist eine explizite
 Eingabe, kein fehlender Wert. Berechnete Fläche, Schwerpunkt, Momente,
 Hauptachsenwinkel, Widerstandsmomente und abgeleitete Radien werden nicht
 gespeichert. Beim Laden rekonstruiert der vorhandene Geometriekern diese Werte.
 
-Manual-Definitionen speichern A sowie eine oder zwei Achsen mit Bezeichnung,
-I und einem Tabellenwert W. Für eine Achse gilt W+ = W− = W. Einzelne Y/Z/U/V
-sowie die Paare Y/Z und U/V folgen unverändert [DOMAIN.md](DOMAIN.md),
-einschließlich kanonischer Reihenfolge und Ablehnung ungültiger Paare.
+Manual-Definitionen speichern die ursprünglichen Tabellenkennwerte.
 Legacy-Core-Sections werden beim Schreiben aus ihren ursprünglichen Eingaben
 auf dieselben parametrischen beziehungsweise Manual-Formen normalisiert.
 

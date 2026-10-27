@@ -52,6 +52,13 @@ Manuelle Beschriftungspositionen sind Offsets zum automatisch berechneten Anker.
 Absolute Bildschirmkoordinaten würden die Beschriftung bei Resize oder Reflow
 vom zugehörigen Objekt lösen. Der Offset verändert ausschließlich die Darstellung.
 
+## Berichte als eingefrorene Ausgabe
+
+Berichte frieren den bestätigten Projektzustand samt Darstellung beim Öffnen ein,
+damit Vorschau, PDF und Windows-Druck auch nach Einstellungsänderungen
+übereinstimmen. Offene Eingaben bleiben beim Editor und werden durch die
+Ausgabe weder übernommen noch verworfen.
+
 ## Savepoint und Recovery
 
 Der Savepoint bezeichnet eine gespeicherte Revision. Undo kann genau zu ihr
