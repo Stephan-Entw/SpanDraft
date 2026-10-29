@@ -272,7 +272,7 @@ public sealed class DesktopNavigationTests
             var canvas = Assert.Single(view.GetVisualDescendants().OfType<BeamCanvas>());
             Assert.NotNull(canvas.Scene);
             Assert.True(canvas.Bounds.Width > 0 && canvas.Bounds.Height > 0);
-            Assert.Equal(6, view.GetVisualDescendants().OfType<ToggleButton>().Count(b => b.Command is not null));
+            Assert.Equal(7, view.GetVisualDescendants().OfType<ToggleButton>().Count(b => b.Command is not null));
             Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == editor.Presentation.StatusText);
             Assert.Empty(overview.GetVisualDescendants().OfType<Button>());
             var properties = view.FindControl<Button>("ProjectPropertiesToolbarButton")!;
@@ -349,7 +349,7 @@ public sealed class DesktopNavigationTests
         Assert.Equal(320, overview.Bounds.Width);
         Assert.Equal(editorScroll.Bounds.Right, overview.Bounds.Left);
         Assert.True(canvas.Bounds.Width > 0 && canvas.Bounds.Height > 0);
-        Assert.Equal(6, toolbar.GetVisualDescendants().OfType<ToggleButton>().Count(b => b.Command is not null));
+        Assert.Equal(7, toolbar.GetVisualDescendants().OfType<ToggleButton>().Count(b => b.Command is not null));
         Assert.True(overviewScroll.Extent.Height > overviewScroll.Viewport.Height);
         Assert.Equal(ScrollBarVisibility.Disabled, overviewScroll.HorizontalScrollBarVisibility);
         var editorOffset = editorScroll.Offset;

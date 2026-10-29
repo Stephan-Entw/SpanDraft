@@ -39,6 +39,7 @@ public sealed partial class EditorViewModel
     public void CancelEditorInteraction()
     {
         InteractionsCancelling?.Invoke();
+        CancelResultProbe();
         ClearAnnotationPreview();
         DimensionLength.Cancel();
         CancelSupportInteraction();

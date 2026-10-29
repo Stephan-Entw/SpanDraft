@@ -19,7 +19,7 @@ namespace SpanDraft.Tests;
 [Collection("Schematic text")]
 public sealed class DesktopIconTests
 {
-    private static readonly string[] Toolbar = ["PointLoad", "PointMoment", "DistributedLoad", "FixedSupport", "PinnedSupport", "RollerSupport"];
+    private static readonly string[] Toolbar = ["PointLoad", "PointMoment", "DistributedLoad", "FixedSupport", "PinnedSupport", "RollerSupport", "Probe"];
     private static readonly string[] Fluent = ["DocumentAdd", "FolderOpen", "BookOpen", "Document", "Info", "Edit", "Star", "ErrorCircle", "Delete",
         "ZoomIn", "ZoomOut", "Add", "Subtract", "Print", "DocumentPdf", "ChevronLeft", "ChevronRight", "CheckmarkCircle", "LockClosed"];
     private static readonly string[] Fluent24 = ["DocumentFit", "DocumentWidth", "DocumentData"];
@@ -60,11 +60,13 @@ public sealed class DesktopIconTests
             var bar = view.FindControl<Border>("EditorToolbar")!;
             Render(bar, $"toolbar-{theme}", (int)bar.Bounds.Width, (int)bar.Bounds.Height);
             var images = bar.GetVisualDescendants().OfType<Image>().Where(i => i.Classes.Contains("toolbarIcon")).ToArray();
-            Assert.Equal(6, images.Length);
+            Assert.Equal(Toolbar.Length, images.Length);
             foreach (var image in images)
             {
                 Assert.Equal(new Size(28, 28), image.Bounds.Size);
-                Assert.Equal(1, image.Opacity); Assert.False(image.IsHitTestVisible); Assert.False(image.Focusable);
+                bool enabled = image.GetVisualAncestors().OfType<Button>().First().IsEffectivelyEnabled;
+                Assert.Equal(enabled ? 1 : 0.45, image.Opacity);
+                Assert.False(image.IsHitTestVisible); Assert.False(image.Focusable);
             }
             bar.IsEnabled = false; Dispatcher.UIThread.RunJobs();
             Assert.All(images, image => Assert.Equal(0.45, image.Opacity));

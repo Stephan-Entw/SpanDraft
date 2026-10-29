@@ -15,6 +15,15 @@
                            HighlightedDistributedLoadId="{Binding HoveredDistributedLoadId}"
                            ConflictEntityIds="{Binding ConflictEntityIds}" ConstraintConflict="{Binding ConstraintConflict}" />
       <Canvas>
+        <Border x:Name="ProbeMarker" Width="1" Height="36" Background="{DynamicResource AxisStroke}"
+                IsVisible="False" IsHitTestVisible="False" />
+        <Ellipse x:Name="ProbePoint" Width="7" Height="7" Fill="{DynamicResource BeamStroke}"
+                 IsVisible="False" IsHitTestVisible="False" />
+        <Border x:Name="ProbeBox" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource BorderStrong}"
+                BorderThickness="{DynamicResource BorderWidth}" CornerRadius="{DynamicResource RadiusXS}"
+                Padding="{DynamicResource InlinePadding}" IsVisible="False" IsHitTestVisible="False">
+          <Grid x:Name="ProbeValues" ColumnDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space8}" />
+        </Border>
         <Border x:Name="LoadAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="DistributedLoadAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="SupportAnchor" Width="1" Height="1" IsHitTestVisible="False" />

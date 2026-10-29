@@ -38,6 +38,8 @@ public partial class BeamEditorSurface : UserControl
     public BeamEditorSurface()
     {
         InitializeComponent();
+        // Jump rows and text styles can change the box size after the pointer event.
+        ProbeBox.SizeChanged += (_, e) => PositionResultProbe(e.NewSize);
         AddHandler(KeyDownEvent, LabelGestureKeyDown, RoutingStrategies.Tunnel);
         SupportEditor.AddHandler(KeyDownEvent, LabelGestureKeyDown, RoutingStrategies.Tunnel);
         LoadEditor.AddHandler(KeyDownEvent, LabelGestureKeyDown, RoutingStrategies.Tunnel);
@@ -52,6 +54,7 @@ public partial class BeamEditorSurface : UserControl
             ReleaseGesture();
             if (_editor is not null)
             {
+                _editor.CancelResultProbe();
                 if (_editor.IsReportOpen) _editor.CancelPointerDrag();
                 else _editor.CancelEditorInteraction();
                 _editor.PropertyChanged -= EditorChanged;
@@ -77,6 +80,7 @@ public partial class BeamEditorSurface : UserControl
         CancelLabelGesture();
         if (_editor is not null)
         {
+            _editor.CancelResultProbe();
             _editor.PropertyChanged -= EditorChanged;
             _editor.InteractionsCancelling -= CancelSurfaceInteractions;
         }
@@ -159,6 +163,7 @@ public partial class BeamEditorSurface : UserControl
 
     private void EditorChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(EditorViewModel.ResultProbeRows)) SynchronizeResultProbe();
         if (e.PropertyName == nameof(EditorViewModel.IsBusy) && _editor!.IsBusy)
         {
             ReleaseGesture();
@@ -170,7 +175,7 @@ public partial class BeamEditorSurface : UserControl
             || e.PropertyName == nameof(EditorViewModel.IsLoadFlyoutVisible) && _editor!.LoadState == LoadInteraction.Placement
             || e.PropertyName == nameof(EditorViewModel.IsDistributedLoadFlyoutVisible) && _editor!.DistributedLoadState == DistributedLoadInteraction.Placement))
             CancelLabelGesture();
-        if (e.PropertyName is nameof(EditorViewModel.ResultPresentation) or nameof(EditorViewModel.IsBusy) or nameof(EditorViewModel.Document) or nameof(EditorViewModel.EditorPresentation) or nameof(EditorViewModel.RenderPresentation) or nameof(EditorViewModel.SupportDraft)
+        if (e.PropertyName is nameof(EditorViewModel.IsResultProbeTool) or nameof(EditorViewModel.ResultPresentation) or nameof(EditorViewModel.IsBusy) or nameof(EditorViewModel.Document) or nameof(EditorViewModel.EditorPresentation) or nameof(EditorViewModel.RenderPresentation) or nameof(EditorViewModel.SupportDraft)
             or nameof(EditorViewModel.IsSupportFlyoutVisible) or nameof(EditorViewModel.Preview)
             or nameof(EditorViewModel.HoveredSupportId) or nameof(EditorViewModel.HasSupportFeedback)
             or nameof(EditorViewModel.ConstraintConflict) or nameof(EditorViewModel.LoadPreview)
@@ -186,6 +191,7 @@ public partial class BeamEditorSurface : UserControl
         if (_synchronizing) return;
         if (_editor is null)
         {
+            ProbeMarker.IsVisible = ProbePoint.IsVisible = ProbeBox.IsVisible = false;
             SetAndRaise(StationLayoutProperty, ref _stationLayout, null);
             return;
         }
@@ -200,6 +206,7 @@ public partial class BeamEditorSurface : UserControl
                 Frame?.Viewport.BelowBeamSpace ?? SpanDraft.Desktop.Layout.SchematicMetrics.BelowBeamSpace);
             if (frame is null)
             {
+                ProbeMarker.IsVisible = ProbePoint.IsVisible = ProbeBox.IsVisible = false;
                 SetAndRaise(StationLayoutProperty, ref _stationLayout, null);
                 return;
             }
@@ -238,11 +245,12 @@ public partial class BeamEditorSurface : UserControl
             Canvas.SetTop(FeedbackOverlay, frame.Viewport.BeamY + 64);
             Canvas.SetLeft(SupportAnchor, x);
             Canvas.SetTop(SupportAnchor, frame.Viewport.BeamY + 56);
-            Cursor = _labelGesture?.IsDragging == true ? LabelDragCursor : placement ? PlacementCursor : _editor.Interaction == SupportInteraction.Drag || _editor.LoadState == LoadInteraction.Drag
+            Cursor = _labelGesture?.IsDragging == true ? LabelDragCursor : placement || _editor.IsResultProbeTool ? PlacementCursor : _editor.Interaction == SupportInteraction.Drag || _editor.LoadState == LoadInteraction.Drag
                 || _editor.DistributedLoadState == DistributedLoadInteraction.Drag ? DragCursor
                 : _editor.HoveredSupportId is not null || _editor.HoveredLoadId is not null || _editor.HoveredDistributedLoadId is not null ? EditCursor : Cursor.Default;
             SynchronizeLoadVisuals();
             SynchronizeDistributedVisuals();
+            SynchronizeResultProbe();
             var draft = _editor.SupportDraft;
             bool show = _editor.IsSupportFlyoutVisible && !_editor.IsBusy;
             FeedbackOverlay.Text = _editor.DistributedLoadFeedback ?? _editor.LoadFeedback ?? _editor.SupportFeedback;
@@ -281,6 +289,13 @@ public partial class BeamEditorSurface : UserControl
     {
         if (_editor is null || _editor.IsBusy) return;
         var point = e.GetPosition(BeamPane);
+        if (_editor.IsResultProbeTool)
+        {
+            var position = OverOverlay(e.Source) ? null : SnapResultProbe(point);
+            _editor.HoverResultProbe(position, IsProbeStation(position));
+            e.Handled = true;
+            return;
+        }
         if (_labelGesture is not null) { UpdateLabelGesture(point); e.Handled = true; return; }
         if (_gesture is not null || _loadGesture is not null || _distributedGesture is not null) { UpdateGesture(point); return; }
         if (_placementClick is not null) return;
@@ -313,6 +328,13 @@ public partial class BeamEditorSurface : UserControl
         if (_editor is null || _editor.IsBusy || OverOverlay(e.Source) || OverSupportFlyout(e.Source) || OverLoadFlyout(e.Source) || OverDistributedFlyout(e.Source)
             || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         var point = e.GetPosition(BeamPane);
+        if (_editor.IsResultProbeTool)
+        {
+            Focus();
+            if (SnapResultProbe(point) is { } position) _editor.ToggleResultProbeFixed(position, IsProbeStation(position));
+            e.Handled = true;
+            return;
+        }
         if (_editor.IsEditorNeutral && _scene?.HitTestLabels(point.X, point.Y).Count > 1)
         {
             ShowEntitySelection(_scene.HitTestEntities(point.X, point.Y), point);
@@ -468,6 +490,7 @@ public partial class BeamEditorSurface : UserControl
 
     private void SurfacePointerExited(object? sender, PointerEventArgs e)
     {
+        _editor?.HoverResultProbe(null);
         if (_gesture is not null || _loadGesture is not null || _distributedGesture is not null || _labelGesture is not null) return;
         _editor?.HoverPlacement(null);
         _editor?.HoverSupport(null);

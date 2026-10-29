@@ -46,7 +46,7 @@ public sealed partial class EditorViewModel : ObservableObject
         DimensionLength = new(() => Document.Length, ChangeLength, () => PreserveDrafts,
             () => ResultPresentation.Profile[QuantityKind.BeamLength], readPresentation: () => ResultPresentation);
         Session.StateApplied += ApplyState;
-        Session.Changed += () => Notify(nameof(IsBusy));
+        Session.Changed += () => { Notify(nameof(IsBusy)); RefreshResultProbeAvailability(); };
         DimensionLength.BufferChanged += text =>
         {
             if (ConstraintConflict is not null)
@@ -66,6 +66,7 @@ public sealed partial class EditorViewModel : ObservableObject
         FixedToolCommand = new(() => ToggleSupportTool(SupportType.Fixed));
         PinnedToolCommand = new(() => ToggleSupportTool(SupportType.Pinned));
         RollerToolCommand = new(() => ToggleSupportTool(SupportType.Roller));
+        ResultProbeToolCommand = new(ToggleResultProbeTool, () => CanResultProbe);
         ConfirmSupportCommand = new(() => ConfirmSupport());
         CancelSupportCommand = new(CancelSupportInteraction);
         DeleteSupportCommand = new(DeleteSupport);
@@ -108,6 +109,7 @@ public sealed partial class EditorViewModel : ObservableObject
         Notify(nameof(Overview));
         DimensionLength.Refresh(preserveError: DimensionLength.IsEditing);
         Notify(nameof(CoordinateText));
+        if (IsResultProbeTool) RefreshResultProbe();
     }
     public EditorPresentationState EditorPresentation => Session.CurrentRevision.State.Presentation;
     public EditorPresentationState RenderPresentation => _annotationPreview is { } p
@@ -136,7 +138,7 @@ public sealed partial class EditorViewModel : ObservableObject
     public Guid? HiddenSupportId => _draft?.OriginalId ?? _dragSupport?.Id;
     public string? SupportFeedback => _supportFeedback;
     public bool HasSupportFeedback => !string.IsNullOrEmpty(SupportFeedback);
-    public bool IsEditorNeutral => Interaction == SupportInteraction.Neutral && LoadState == LoadInteraction.Neutral
+    public bool IsEditorNeutral => !IsResultProbeTool && Interaction == SupportInteraction.Neutral && LoadState == LoadInteraction.Neutral
         && DistributedLoadState == DistributedLoadInteraction.Neutral;
     public bool HasCoordinate => Preview is not null || LoadPreview is not null || DistributedPointerPosition is not null || DistributedLoadPreview is not null;
     public string CoordinateText => (Preview?.Position ?? LoadPreview?.Position ?? DistributedPointerPosition ?? DistributedLoadPreview?.EndPosition) is { } position
@@ -422,12 +424,17 @@ public sealed partial class EditorViewModel : ObservableObject
         bool presentationChanged = !previous.Presentation.ContentEquals(next.Presentation);
         if (change == EditorChangeKind.Mechanical)
         {
+            CancelResultProbe();
             if (ConstraintConflict is { } conflict) UpdateConstraintConflict(conflict.RequestedLength);
             _presentation = AnalysisPresentationState.FromOutcome(_analyze(next.Document.ToBeamModel()), ResultPresentation);
             DimensionLength.Refresh(preserveError: ConstraintConflict is not null);
         }
         if (documentChanged) _overview = ProjectOverviewState.From(next.Document, _presentation);
-        if (change == EditorChangeKind.Mechanical) Notify(nameof(Presentation));
+        if (change == EditorChangeKind.Mechanical)
+        {
+            Notify(nameof(Presentation));
+            RefreshResultProbeAvailability();
+        }
         if (documentChanged)
         {
             Notify(nameof(Document));

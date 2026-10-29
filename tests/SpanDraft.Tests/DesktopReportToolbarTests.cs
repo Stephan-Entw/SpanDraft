@@ -49,7 +49,7 @@ public sealed class DesktopReportToolbarTests
         var tools = Assert.IsType<StackPanel>(layout.Children[0]);
         var group = Assert.IsType<StackPanel>(layout.Children[1]);
         var properties = view.FindControl<Button>("ProjectPropertiesToolbarButton")!;
-        var roller = Assert.IsType<ToggleButton>(tools.Children[^1]);
+        var roller = tools.Children.OfType<ToggleButton>().Single(b => b.Command == main.Editor!.RollerToolCommand);
         Assert.Same(main.Editor!.RollerToolCommand, roller.Command);
         Assert.Equal(new Control[] { button, properties }, group.Children);
         Assert.Equal(roller.Bounds.Height, button.Bounds.Height);
@@ -108,7 +108,7 @@ public sealed class DesktopReportToolbarTests
             Assert.Contains("toolbar", button.Classes); Assert.DoesNotContain("primary", button.Classes);
             Assert.Equal(new System.Windows.Input.ICommand[] { main.Editor.ForceToolCommand, main.Editor.MomentToolCommand,
                 main.Editor.DistributedLoadToolCommand, main.Editor.FixedToolCommand, main.Editor.PinnedToolCommand,
-                main.Editor.RollerToolCommand }, left.Children.OfType<Button>().Select(b => b.Command));
+                main.Editor.RollerToolCommand, main.Editor.ResultProbeToolCommand }, left.Children.OfType<Button>().Select(b => b.Command));
             Assert.Equal(new Control[] { report, button }, right.Children);
             var originalLeftBounds = left.Children.Select(c => c.Bounds).ToArray();
             double previousGap = 0;
@@ -125,8 +125,8 @@ public sealed class DesktopReportToolbarTests
                 Assert.Equal(right.Spacing, bounds.Left - reportBounds.Right);
                 var lastTool = left.Children[^1];
                 double gap = reportBounds.Left - lastTool.TranslatePoint(new(lastTool.Bounds.Width, 0), layout)!.Value.X;
-                Assert.True(gap > previousGap);
-                Assert.True(gap >= layout.ColumnSpacing);
+                Assert.True(gap > previousGap, $"Tool/report gap {gap} did not increase from {previousGap} at width {width}.");
+                Assert.True(gap >= layout.ColumnSpacing, $"Tool/report gap {gap} is less than {layout.ColumnSpacing} at width {width}.");
                 previousGap = gap;
                 Assert.Equal(originalLeftBounds, left.Children.Select(c => c.Bounds));
             }

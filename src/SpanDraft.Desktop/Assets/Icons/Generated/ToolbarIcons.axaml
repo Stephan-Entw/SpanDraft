@@ -232,6 +232,44 @@
       </DrawingGroup>
     </DrawingGroup>
   </DrawingImage>
+  <DrawingImage x:Key="ToolbarIcon.Probe">
+    <DrawingGroup>
+      <GeometryDrawing Brush="Transparent" Geometry="M0,0 H48 V48 H0 Z" />
+      <DrawingGroup>
+        <DrawingGroup>
+          <GeometryDrawing Geometry="F1 M23.995 7L24 17">
+            <GeometryDrawing.Pen>
+              <Pen Brush="#FF393F4C" Thickness="3" LineCap="Round" LineJoin="Round" MiterLimit="4" />
+            </GeometryDrawing.Pen>
+          </GeometryDrawing>
+        </DrawingGroup>
+        <DrawingGroup>
+          <GeometryDrawing Geometry="F1 M24 31L24.005 41">
+            <GeometryDrawing.Pen>
+              <Pen Brush="#FF393F4C" Thickness="3" LineCap="Round" LineJoin="Round" MiterLimit="4" />
+            </GeometryDrawing.Pen>
+          </GeometryDrawing>
+        </DrawingGroup>
+        <DrawingGroup>
+          <GeometryDrawing Geometry="F1 M7 23.995L17 24">
+            <GeometryDrawing.Pen>
+              <Pen Brush="#FF39404C" Thickness="3" LineCap="Round" LineJoin="Round" MiterLimit="4" />
+            </GeometryDrawing.Pen>
+          </GeometryDrawing>
+        </DrawingGroup>
+        <DrawingGroup>
+          <GeometryDrawing Geometry="F1 M31 24L41 24.005">
+            <GeometryDrawing.Pen>
+              <Pen Brush="#FF39404C" Thickness="3" LineCap="Round" LineJoin="Round" MiterLimit="4" />
+            </GeometryDrawing.Pen>
+          </GeometryDrawing>
+        </DrawingGroup>
+        <DrawingGroup>
+          <GeometryDrawing Brush="#FF0073FE" Geometry="F1 M28 24Q28 24.1965 27.9807 24.3921Q27.9615 24.5876 27.9231 24.7804Q27.8848 24.9731 27.8278 25.1611Q27.7707 25.3492 27.6955 25.5307Q27.6203 25.7123 27.5277 25.8856Q27.4351 26.0589 27.3259 26.2223Q27.2167 26.3857 27.092 26.5376Q26.9674 26.6895 26.8284 26.8284Q26.6895 26.9674 26.5376 27.092Q26.3857 27.2167 26.2223 27.3259Q26.0589 27.435 25.8856 27.5277Q25.7123 27.6203 25.5307 27.6955Q25.3492 27.7707 25.1611 27.8278Q24.9731 27.8848 24.7804 27.9231Q24.5876 27.9615 24.3921 27.9807Q24.1965 28 24 28Q23.8035 28 23.6079 27.9807Q23.4124 27.9615 23.2196 27.9231Q23.0269 27.8848 22.8389 27.8278Q22.6508 27.7707 22.4693 27.6955Q22.2877 27.6203 22.1144 27.5277Q21.9411 27.4351 21.7777 27.3259Q21.6143 27.2167 21.4624 27.092Q21.3105 26.9674 21.1716 26.8284Q21.0326 26.6895 20.908 26.5376Q20.7833 26.3857 20.6741 26.2223Q20.5649 26.0589 20.4723 25.8856Q20.3797 25.7123 20.3045 25.5307Q20.2293 25.3492 20.1722 25.1611Q20.1152 24.9731 20.0769 24.7804Q20.0385 24.5876 20.0193 24.3921Q20 24.1965 20 24Q20 23.8035 20.0193 23.6079Q20.0385 23.4124 20.0769 23.2196Q20.1152 23.0269 20.1722 22.8389Q20.2293 22.6508 20.3045 22.4693Q20.3797 22.2877 20.4723 22.1144Q20.5649 21.9411 20.6741 21.7777Q20.7833 21.6143 20.908 21.4624Q21.0326 21.3105 21.1716 21.1716Q21.3105 21.0326 21.4624 20.908Q21.6143 20.7833 21.7777 20.6741Q21.9411 20.5649 22.1144 20.4723Q22.2877 20.3797 22.4693 20.3045Q22.6508 20.2293 22.8389 20.1722Q23.0269 20.1152 23.2196 20.0769Q23.4124 20.0385 23.6079 20.0193Q23.8035 20 24 20Q24.1965 20 24.3921 20.0193Q24.5876 20.0385 24.7804 20.0769Q24.9731 20.1152 25.1611 20.1722Q25.3492 20.2293 25.5307 20.3045Q25.7123 20.3797 25.8856 20.4723Q26.0589 20.5649 26.2223 20.6741Q26.3857 20.7833 26.5376 20.908Q26.6895 21.0326 26.8284 21.1716Q26.9674 21.3105 27.092 21.4624Q27.2167 21.6143 27.3259 21.7777Q27.435 21.9411 27.5277 22.1144Q27.6203 22.2877 27.6955 22.4693Q27.7707 22.6508 27.8278 22.8389Q27.8848 23.0269 27.9231 23.2196Q27.9615 23.4124 27.9807 23.6079Q28 23.8035 28 24Z" />
+        </DrawingGroup>
+      </DrawingGroup>
+    </DrawingGroup>
+  </DrawingImage>
   <DrawingImage x:Key="ToolbarIcon.RollerSupport">
     <DrawingGroup>
       <GeometryDrawing Brush="Transparent" Geometry="M0,0 H48 V48 H0 Z" />

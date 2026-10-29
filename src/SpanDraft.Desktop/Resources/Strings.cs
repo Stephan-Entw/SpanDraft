@@ -5,6 +5,7 @@ namespace SpanDraft.Desktop.Resources;
 
 public static class Strings
 {
+    public static string ResultProbe => Get(nameof(ResultProbe));
     public static string Report => Get(nameof(Report));
     public static string ReportPdfTarget => Get(nameof(ReportPdfTarget));
     public static string ReportSummary => Get(nameof(ReportSummary));

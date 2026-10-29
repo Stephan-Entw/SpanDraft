@@ -634,6 +634,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         // Protect hidden editor buffers before changing the visible workspace.
         if (Editor is { } editor)
         {
+            if (mode != MainViewMode.Editor) editor.CancelResultProbe();
             editor.IsProjectSetupOpen = mode == MainViewMode.ProjectSetup;
             editor.IsReportOpen = mode == MainViewMode.ReportPreview;
         }
