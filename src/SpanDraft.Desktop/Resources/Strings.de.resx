@@ -367,4 +367,5 @@ Die Datei ist am gespeicherten Speicherort nicht mehr vorhanden. Sie wurde mögl
 Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="RemoveFromRecent" xml:space="preserve"><value>Aus Liste entfernen</value></data>
   <data name="ResultProbe" xml:space="preserve"><value>Probe</value></data>
+  <data name="ToggleLoadSign" xml:space="preserve"><value>Vorzeichen ändern</value></data>
 </root>

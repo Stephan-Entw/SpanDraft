@@ -5,18 +5,18 @@
              xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
              x:Class="SpanDraft.Desktop.Controls.SupportFlyout"
              x:DataType="vm:EditorViewModel" KeyDown="FlyoutKeyDown" KeyboardNavigation.TabNavigation="Cycle">
-  <Border Classes="supportFlyout" Width="320">
-    <StackPanel Spacing="{StaticResource Space12}">
+  <Border Classes="supportFlyout" MinWidth="300">
+    <StackPanel Spacing="{StaticResource Space8}">
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,*" ColumnSpacing="{StaticResource Space12}">
+        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
           <TextBlock Text="{x:Static resources:Strings.EntityNameLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
-          <TextBox Grid.Column="1" Text="{Binding SupportDraft.NameText, Mode=TwoWay}" Classes.error="{Binding SupportDraft.HasNameError}"
+          <TextBox Grid.Column="1" x:Name="NameInput" Text="{Binding SupportDraft.NameText, Mode=TwoWay}" Classes.error="{Binding SupportDraft.HasNameError}"
                    AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
         </Grid>
         <TextBlock Text="{Binding SupportDraft.NameError}" IsVisible="{Binding SupportDraft.HasNameError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
-      <Grid ColumnDefinitions="88,*" ColumnSpacing="{StaticResource Space12}">
+      <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
         <TextBlock Text="{x:Static resources:Strings.SupportTypeLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
         <ComboBox Grid.Column="1" x:Name="TypeInput" DropDownClosed="TypeDropDownClosed" ItemsSource="{x:Static vm:SupportDraftViewModel.Types}"
                   SelectedItem="{Binding SupportDraft.SelectedType, Mode=TwoWay}"
@@ -27,24 +27,24 @@
         </ComboBox>
       </Grid>
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,124,Auto" ColumnSpacing="{StaticResource Space12}">
+        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
           <TextBlock controls:TechnicalTextPresenter.Content="{Binding SupportDraft.PositionLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="PositionInput" Text="{Binding SupportDraft.PositionText, Mode=TwoWay}"
                    Classes.error="{Binding SupportDraft.HasError}"
                    AutomationProperties.Name="{Binding SupportDraft.PositionLabel.PlainText}" />
-          <TextBlock Grid.Column="2" Text="{Binding SupportDraft.PositionUnit}" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding SupportDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
         <TextBlock Text="{Binding SupportDraft.ErrorText}" IsVisible="{Binding SupportDraft.HasError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
         <TextBlock Text="{Binding SupportFeedback}" IsVisible="{Binding HasSupportFeedback}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource Space8}">
-        <Button Content="{x:Static resources:Strings.Delete}" Classes="ghost dangerGhost"
+      <StackPanel x:Name="Footer" Classes="editorFlyoutFooter">
+        <Button x:Name="DeleteAction" Content="{x:Static resources:Strings.Delete}" Classes="ghost dangerGhost"
                 IsVisible="{Binding SupportDraft.IsExisting}" Command="{Binding DeleteSupportCommand}" />
-        <Button Grid.Column="2" Content="{x:Static resources:Strings.Cancel}" Classes="ghost"
+        <Button x:Name="CancelAction" Content="{x:Static resources:Strings.Cancel}" Classes="ghost"
                 Command="{Binding CancelSupportCommand}" />
-        <Button Grid.Column="3" Classes="primary compactSupportAction"
+        <Button x:Name="ConfirmAction" Classes="primary compactSupportAction"
                 AutomationProperties.Name="{x:Static resources:Strings.OK}"
                 IsEnabled="{Binding SupportDraft.IsValid}" Command="{Binding ConfirmSupportCommand}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
@@ -53,7 +53,7 @@
                                       VerticalAlignment="Center" IsHitTestVisible="False" />
           </StackPanel>
         </Button>
-      </Grid>
+      </StackPanel>
     </StackPanel>
   </Border>
 </UserControl>

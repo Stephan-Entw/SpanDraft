@@ -380,4 +380,5 @@ public static class Strings
     public static string EngineeringNotation => Get(nameof(EngineeringNotation));
     public static string NotationAutomatic => Get(nameof(NotationAutomatic));
     public static string NotationOff => Get(nameof(NotationOff));
+    public static string ToggleLoadSign => Get(nameof(ToggleLoadSign));
 }

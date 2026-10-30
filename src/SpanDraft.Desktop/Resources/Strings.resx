@@ -367,4 +367,5 @@ The file is no longer available at the saved location. It may have been deleted,
 Remove the entry from Recent projects?</value></data>
   <data name="RemoveFromRecent" xml:space="preserve"><value>Remove from list</value></data>
   <data name="ResultProbe" xml:space="preserve"><value>Probe</value></data>
+  <data name="ToggleLoadSign" xml:space="preserve"><value>Change sign</value></data>
 </root>
