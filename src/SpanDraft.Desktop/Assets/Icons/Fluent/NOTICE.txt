@@ -5,5 +5,6 @@ Zoom In, Zoom Out, Document Fit, Document Width, Document Data, Print, Document 
 Add and Subtract SVG assets are included.
 Document Settings SVG asset is included.
 Checkmark Circle and Lock Closed SVG assets are included.
+Eye and Eye Off SVG assets are included.
 SVG geometry is unchanged; foreground color is supplied by application resources.
 See LICENSE.txt for the MIT license.

@@ -19,9 +19,9 @@ namespace SpanDraft.Tests;
 [Collection("Schematic text")]
 public sealed class DesktopIconTests
 {
-    private static readonly string[] Toolbar = ["PointLoad", "PointMoment", "DistributedLoad", "FixedSupport", "PinnedSupport", "RollerSupport", "Probe"];
+    private static readonly string[] Toolbar = ["PointLoad", "PointMoment", "DistributedLoad", "SelfWeight", "FixedSupport", "PinnedSupport", "RollerSupport", "Probe"];
     private static readonly string[] Fluent = ["DocumentAdd", "FolderOpen", "BookOpen", "Document", "Info", "Edit", "Star", "ErrorCircle", "Delete",
-        "ZoomIn", "ZoomOut", "Add", "Subtract", "Print", "DocumentPdf", "ChevronLeft", "ChevronRight", "CheckmarkCircle", "LockClosed"];
+        "ZoomIn", "ZoomOut", "Add", "Subtract", "Print", "DocumentPdf", "ChevronLeft", "ChevronRight", "CheckmarkCircle", "LockClosed", "Eye", "EyeOff"];
     private static readonly string[] Fluent24 = ["DocumentFit", "DocumentWidth", "DocumentData"];
 
     [Fact]
@@ -97,6 +97,30 @@ public sealed class DesktopIconTests
         window.RequestedThemeVariant = ThemeVariant.Dark;
         Dispatcher.UIThread.RunJobs(); Assert.Same(Brushes.Blue, path.Fill);
         window.Close();
+    }
+
+    [Fact]
+    public void SelfWeightPreservesTheSourceBaselineWithTheDescenderAboveTheArrowTip()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var drawings = Geometries(Resource<DrawingImage>("ToolbarIcon.SelfWeight").Drawing!).ToArray();
+        var glyph = Assert.Single(drawings, d => d.Brush is ISolidColorBrush { Color: var color } && color == Colors.Black);
+        var arrow = Assert.Single(drawings, d => d.Brush is ISolidColorBrush { Color: var color } && color == Color.Parse("#0073FE"));
+        var textBounds = glyph.Geometry!.Bounds;
+        var arrowBounds = arrow.Geometry!.Bounds;
+        Assert.True(textBounds.Right < arrowBounds.Left);
+        Assert.True(textBounds.Top < arrowBounds.Top);
+        Assert.True(textBounds.Bottom > arrowBounds.Top && textBounds.Bottom < arrowBounds.Bottom);
+        Render(new Border { Background = Brushes.White, Child = new Image
+            { Source = Resource<DrawingImage>("ToolbarIcon.SelfWeight"), Width = 96, Height = 96 } },
+            "self-weight-source-baseline", 96, 96);
+
+        static IEnumerable<GeometryDrawing> Geometries(Drawing drawing) => drawing switch
+        {
+            GeometryDrawing geometry => [geometry],
+            DrawingGroup group => group.Children.SelectMany(Geometries),
+            _ => []
+        };
     }
 
     [Fact]
