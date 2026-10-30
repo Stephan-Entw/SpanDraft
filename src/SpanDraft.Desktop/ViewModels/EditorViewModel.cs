@@ -63,6 +63,9 @@ public sealed partial class EditorViewModel : ObservableObject
         ConfirmDistributedLoadCommand = new(() => ConfirmDistributedLoad());
         CancelDistributedLoadCommand = new(CancelDistributedLoadInteraction);
         DeleteDistributedLoadCommand = new(DeleteDistributedLoad);
+        ToggleSelfWeightCommand = new(() => ToggleSelfWeight());
+        ToggleSelfWeightVisibilityCommand = new(ToggleSelfWeightVisibility);
+        DisableSelfWeightCommand = new(DisableSelfWeight);
         FixedToolCommand = new(() => ToggleSupportTool(SupportType.Fixed));
         PinnedToolCommand = new(() => ToggleSupportTool(SupportType.Pinned));
         RollerToolCommand = new(() => ToggleSupportTool(SupportType.Roller));
@@ -107,6 +110,7 @@ public sealed partial class EditorViewModel : ObservableObject
         Notify(nameof(ResultPresentation));
         Notify(nameof(Presentation));
         Notify(nameof(Overview));
+        if (IsSelfWeightEnabled) NotifySelfWeightValues();
         DimensionLength.Refresh(preserveError: DimensionLength.IsEditing);
         Notify(nameof(CoordinateText));
         if (IsResultProbeTool) RefreshResultProbe();
@@ -139,7 +143,7 @@ public sealed partial class EditorViewModel : ObservableObject
     public string? SupportFeedback => _supportFeedback;
     public bool HasSupportFeedback => !string.IsNullOrEmpty(SupportFeedback);
     public bool IsEditorNeutral => !IsResultProbeTool && Interaction == SupportInteraction.Neutral && LoadState == LoadInteraction.Neutral
-        && DistributedLoadState == DistributedLoadInteraction.Neutral;
+        && DistributedLoadState == DistributedLoadInteraction.Neutral && !IsSelfWeightFlyoutVisible;
     public bool HasCoordinate => Preview is not null || LoadPreview is not null || DistributedPointerPosition is not null || DistributedLoadPreview is not null;
     public string CoordinateText => (Preview?.Position ?? LoadPreview?.Position ?? DistributedPointerPosition ?? DistributedLoadPreview?.EndPosition) is { } position
         ? string.Format(CultureInfo.CurrentUICulture, Strings.SupportCoordinate,
@@ -360,8 +364,10 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public void ApplySetup(Section section, Material material) => ApplySetup(section, SectionAxisDesignation.Y, material);
 
-    public void ApplySetup(ISectionDefinition section, SectionAxisDesignation bendingAxis, Material material) =>
-        Commit(Document.WithSection(section, bendingAxis) with { Material = material });
+    public void ApplySetup(ISectionDefinition section, SectionAxisDesignation bendingAxis, Material material)
+    {
+        if (!IsBusy && CanApplyMaterial(material)) Commit(Document.WithSection(section, bendingAxis) with { Material = material });
+    }
 
     public bool ApplySetup(Length length, ISectionDefinition section, SectionAxisDesignation bendingAxis,
         Material material, string? sectionDisplayName) =>
@@ -370,7 +376,7 @@ public sealed partial class EditorViewModel : ObservableObject
     public bool ApplySetup(Length length, ISectionDefinition section, SectionAxisDesignation bendingAxis,
         Material material, string? sectionDisplayName, ProjectInfo? info)
     {
-        if (IsBusy || BeamLengthConstraints.Error(Document, length) is not null) return false;
+        if (IsBusy || !CanApplyMaterial(material) || BeamLengthConstraints.Error(Document, length) is not null) return false;
         var document = Document.WithSection(section, bendingAxis, sectionDisplayName) with { Length = length, Material = material };
         Session.Commit(Session.CurrentRevision.State with
         {
@@ -381,14 +387,14 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public bool SetAnnotationOffset(Guid id, AnnotationOffset? offset)
     {
-        if (IsBusy || !Document.NamedEntities.Any(e => e.Id == id)) return false;
+        if (IsBusy || !Document.EntityIds.Contains(id)) return false;
         Commit(Document, EditorPresentation.WithOffset(id, offset));
         return true;
     }
 
     public void PreviewAnnotationOffset(Guid id, AnnotationOffset offset)
     {
-        if (IsBusy || !Document.NamedEntities.Any(e => e.Id == id)) return;
+        if (IsBusy || !Document.EntityIds.Contains(id)) return;
         _annotationPreview = new(id, offset);
         Notify(nameof(RenderPresentation));
     }
@@ -441,5 +447,6 @@ public sealed partial class EditorViewModel : ObservableObject
             Notify(nameof(Overview));
         }
         if (presentationChanged) { Notify(nameof(EditorPresentation)); Notify(nameof(RenderPresentation)); }
+        if (documentChanged || presentationChanged) NotifySelfWeightState();
     }
 }

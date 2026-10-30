@@ -122,9 +122,14 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public string? LengthError => LengthInput.HasError ? LengthInput.ErrorText : null;
     public bool HasLengthError => LengthError is not null;
     public bool CanApply => IsOverview && !IsBusy && HasValidInfoInput && HasSection && SelectedMaterial?.StrengthType is not null
+        && MaterialError is null
         && LengthInput.TryGetLength(out var length) && !HasLengthError
         && (_originalDocument is not { } document || BeamLengthConstraints.Error(document, length) is null);
     public string? SectionDisplayName => _sectionDisplayName;
+    internal string? ValidateProjectMaterial(Material? material) => _originalDocument?.SelfWeight?.Enabled == true
+        && material?.Density is null ? Strings.SelfWeightMissingDensity : null;
+    public string? MaterialError => ValidateProjectMaterial(SelectedMaterial);
+    public bool HasMaterialError => MaterialError is not null;
     public bool HasSection => SelectedSection is not null;
     public ISectionDefinition? SelectedSection
     {
@@ -150,7 +155,8 @@ public sealed class ProjectSetupViewModel : ObservableObject
         {
             if (!Set(ref _selectedMaterial, value)) return;
             foreach (var name in new[] { nameof(HasMaterial), nameof(MaterialName), nameof(MaterialSummary), nameof(MaterialSummaryText), nameof(YoungsModulus), nameof(YieldStrength),
-                nameof(Density), nameof(PoissonRatio), nameof(HasDensity), nameof(HasPoissonRatio), nameof(CanApply) }) Notify(name);
+                nameof(Density), nameof(PoissonRatio), nameof(HasDensity), nameof(HasPoissonRatio), nameof(CanApply),
+                nameof(MaterialError), nameof(HasMaterialError) }) Notify(name);
             ApplyCommand.Refresh(); DraftCommitted();
         }
     }

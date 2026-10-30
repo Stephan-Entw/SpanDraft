@@ -42,7 +42,7 @@ public partial class BeamEditorSurface
             Dispatcher.UIThread.Post(() =>
             {
                 if (_distributedPopupFocusVersion == version && _shownDistributedDraft is null && _editor?.SupportDraft is null
-                    && _editor?.LoadDraft is null && TopLevel.GetTopLevel(this) is not null) Focus();
+                    && _editor?.LoadDraft is null && _editor?.IsSelfWeightFlyoutVisible != true && TopLevel.GetTopLevel(this) is not null) Focus();
             }, DispatcherPriority.Input);
     }
 
@@ -113,6 +113,13 @@ public partial class BeamEditorSurface
         }
         if (hits.Count != 1) return false;
         Guid id = hits[0];
+        if (_editor.Document.SelfWeight?.Id == id)
+        {
+            Focus();
+            _editor.EditSelfWeight(id);
+            e.Handled = true;
+            return true;
+        }
         if (_scene.DistributedLoads.FirstOrDefault(l => l.Id == id) is not { } load) return false;
         Focus();
         if (DistributedLoadSymbol.HitEndpoint(load, point.X, point.Y) is { } endpoint)
@@ -136,6 +143,7 @@ public partial class BeamEditorSurface
                 SelectionPopup.IsOpen = false;
                 if (_editor is not { } editor) return;
                 if (editor.Document.Supports.Any(s => s.Id == id)) editor.EditSupport(id);
+                else if (editor.Document.SelfWeight?.Id == id) editor.EditSelfWeight(id);
                 else if (editor.Document.DistributedLoads.Any(l => l.Id == id)) editor.EditDistributedLoad(id);
                 else editor.EditLoad(id);
             };

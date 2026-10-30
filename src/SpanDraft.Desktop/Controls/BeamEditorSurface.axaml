@@ -26,6 +26,7 @@
         </Border>
         <Border x:Name="LoadAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="DistributedLoadAnchor" Width="1" Height="1" IsHitTestVisible="False" />
+        <Border x:Name="SelfWeightAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="SupportAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="SelectionAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <TextBlock x:Name="CoordinateOverlay" Text="{Binding CoordinateText}" IsVisible="{Binding HasCoordinate}"
@@ -54,6 +55,10 @@
     <Popup x:Name="DistributedLoadPopup" PlacementTarget="{Binding #DistributedLoadAnchor}" Placement="Bottom"
            IsLightDismissEnabled="False" ShouldUseOverlayLayer="True" Closed="DistributedLoadPopupClosed">
       <controls:DistributedLoadFlyout x:Name="DistributedLoadEditor" />
+    </Popup>
+    <Popup x:Name="SelfWeightPopup" PlacementTarget="{Binding #SelfWeightAnchor}" Placement="Bottom"
+           IsLightDismissEnabled="False" ShouldUseOverlayLayer="True" Closed="SelfWeightPopupClosed">
+      <controls:SelfWeightFlyout x:Name="SelfWeightEditor" />
     </Popup>
   </Grid>
 </UserControl>

@@ -44,6 +44,7 @@ public partial class BeamEditorSurface : UserControl
         SupportEditor.AddHandler(KeyDownEvent, LabelGestureKeyDown, RoutingStrategies.Tunnel);
         LoadEditor.AddHandler(KeyDownEvent, LabelGestureKeyDown, RoutingStrategies.Tunnel);
         DistributedLoadEditor.AddHandler(KeyDownEvent, LabelGestureKeyDown, RoutingStrategies.Tunnel);
+        SelfWeightEditor.AddHandler(KeyDownEvent, LabelGestureKeyDown, RoutingStrategies.Tunnel);
         BeamPane.MinHeight = SpanDraft.Desktop.Layout.SchematicMetrics.MinimumBeamPaneHeight;
         CoordinateAxis.LengthEditStarting += () => { ReleaseGesture(); _editor?.CancelEditorInteraction(); };
         DataContextChanged += (_, _) => ObserveEditor();
@@ -70,6 +71,7 @@ public partial class BeamEditorSurface : UserControl
             _shownLoadDraft = null;
             DistributedLoadPopup.IsOpen = false;
             _shownDistributedDraft = null;
+            SelfWeightPopup.IsOpen = false;
         };
     }
 
@@ -115,7 +117,7 @@ public partial class BeamEditorSurface : UserControl
     {
         if (_editor?.PreserveDrafts == true) return;
         if (CancelLabelGesture()) return;
-        if (_editor?.SupportDraft is not null || _editor?.LoadDraft is not null || _editor?.DistributedLoadDraft is not null)
+        if (_editor?.SupportDraft is not null || _editor?.LoadDraft is not null || _editor?.DistributedLoadDraft is not null || _editor?.IsSelfWeightFlyoutVisible == true)
         {
             ReleaseGesture();
             _editor.CancelEditorInteraction();
@@ -124,13 +126,14 @@ public partial class BeamEditorSurface : UserControl
 
     private void SupportOutsidePointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_editor is null || _editor.PreserveDrafts || OverMenu(e.Source) || (!_editor.IsSupportFlyoutVisible && !_editor.IsLoadFlyoutVisible && !_editor.IsDistributedLoadFlyoutVisible)) return;
+        if (_editor is null || _editor.PreserveDrafts || OverMenu(e.Source) || (!_editor.IsSupportFlyoutVisible && !_editor.IsLoadFlyoutVisible && !_editor.IsDistributedLoadFlyoutVisible && !_editor.IsSelfWeightFlyoutVisible)) return;
         // Overview name buttons open the existing editors on Click (also via keyboard).
         // Do not consume their press or discard the same component's active buffer here.
         if (e.Source is Control overviewSource && (overviewSource is Button { } overviewButton
                 && overviewButton.Classes.Contains("overviewEntityAction")
             || overviewSource.GetVisualAncestors().OfType<Button>().Any(b => b.Classes.Contains("overviewEntityAction")))) return;
-        if (OverSupportFlyout(e.Source) || OverLoadFlyout(e.Source) || OverDistributedFlyout(e.Source)) return;
+        if (OverSupportFlyout(e.Source) || OverLoadFlyout(e.Source) || OverDistributedFlyout(e.Source) || OverSelfWeightFlyout(e.Source)) return;
+        if (SelfWeightPopup.IsOpen && new Rect(SelfWeightEditor.Bounds.Size).Contains(e.GetPosition(SelfWeightEditor))) return;
         if (DistributedLoadPopup.IsOpen && new Rect(DistributedLoadEditor.Bounds.Size).Contains(e.GetPosition(DistributedLoadEditor))) return;
         if (LoadPopup.IsOpen && new Rect(LoadEditor.Bounds.Size).Contains(e.GetPosition(LoadEditor))) return;
         // Overlay-hosted popup content and its type dropdown belong to this session.
@@ -142,9 +145,13 @@ public partial class BeamEditorSurface : UserControl
             && PointLoadSymbol.Contains(load, point.X, point.Y)) return;
         if (new Rect(BeamPane.Bounds.Size).Contains(point) && ActiveDistributedVisual is { } distributed
             && DistributedLoadSymbol.Contains(distributed, point.X, point.Y)) return;
+        if (_editor.IsSelfWeightFlyoutVisible && new Rect(BeamPane.Bounds.Size).Contains(point)
+            && _scene?.DistributedLoads.FirstOrDefault(l => l.Id == _editor.Document.SelfWeight?.Id) is { } selfWeight
+            && DistributedLoadSymbol.Contains(selfWeight, point.X, point.Y)) return;
         if (_scene?.HitTestLabel(point.X, point.Y) is { } label && label.Id is { } labelId
             && (labelId == _editor.SupportDraft?.OriginalId || labelId == _editor.LoadDraft?.OriginalId
-                || labelId == _editor.DistributedLoadDraft?.OriginalId)) return;
+                || labelId == _editor.DistributedLoadDraft?.OriginalId
+                || _editor.IsSelfWeightFlyoutVisible && labelId == _editor.Document.SelfWeight?.Id)) return;
         ReleaseGesture();
         _editor.CancelEditorInteraction();
         e.Handled = !OverToolbar(e.Source);
@@ -170,7 +177,7 @@ public partial class BeamEditorSurface : UserControl
             _editor.CancelPointerDrag();
         }
         if (_labelGesture is { } label && (e.PropertyName == nameof(EditorViewModel.Document)
-            && !_editor!.Document.NamedEntities.Any(entity => entity.Id == label.EntityId)
+            && !_editor!.Document.EntityIds.Contains(label.EntityId)
             || e.PropertyName == nameof(EditorViewModel.IsSupportFlyoutVisible) && _editor!.Interaction == SupportInteraction.Placement
             || e.PropertyName == nameof(EditorViewModel.IsLoadFlyoutVisible) && _editor!.LoadState == LoadInteraction.Placement
             || e.PropertyName == nameof(EditorViewModel.IsDistributedLoadFlyoutVisible) && _editor!.DistributedLoadState == DistributedLoadInteraction.Placement))
@@ -183,7 +190,8 @@ public partial class BeamEditorSurface : UserControl
             or nameof(EditorViewModel.HoveredLoadId) or nameof(EditorViewModel.HasLoadFeedback)
             or nameof(EditorViewModel.DistributedLoadPreview) or nameof(EditorViewModel.DistributedLoadDraft)
             or nameof(EditorViewModel.IsDistributedLoadFlyoutVisible) or nameof(EditorViewModel.HoveredDistributedLoadId)
-            or nameof(EditorViewModel.HasDistributedLoadFeedback)) SynchronizeVisuals();
+            or nameof(EditorViewModel.HasDistributedLoadFeedback) or nameof(EditorViewModel.IsSelfWeightFlyoutVisible)
+            or nameof(EditorViewModel.HasSelfWeightFeedback)) SynchronizeVisuals();
     }
 
     private void SynchronizeVisuals()
@@ -250,12 +258,13 @@ public partial class BeamEditorSurface : UserControl
                 : _editor.HoveredSupportId is not null || _editor.HoveredLoadId is not null || _editor.HoveredDistributedLoadId is not null ? EditCursor : Cursor.Default;
             SynchronizeLoadVisuals();
             SynchronizeDistributedVisuals();
+            SynchronizeSelfWeightVisuals();
             SynchronizeResultProbe();
             var draft = _editor.SupportDraft;
             bool show = _editor.IsSupportFlyoutVisible && !_editor.IsBusy;
-            FeedbackOverlay.Text = _editor.DistributedLoadFeedback ?? _editor.LoadFeedback ?? _editor.SupportFeedback;
-            FeedbackOverlay.IsVisible = !show && !_editor.IsLoadFlyoutVisible && !_editor.IsDistributedLoadFlyoutVisible
-                && (_editor.HasSupportFeedback || _editor.HasLoadFeedback || _editor.HasDistributedLoadFeedback);
+            FeedbackOverlay.Text = _editor.SelfWeightFeedback ?? _editor.DistributedLoadFeedback ?? _editor.LoadFeedback ?? _editor.SupportFeedback;
+            FeedbackOverlay.IsVisible = !show && !_editor.IsLoadFlyoutVisible && !_editor.IsDistributedLoadFlyoutVisible && !_editor.IsSelfWeightFlyoutVisible
+                && (_editor.HasSelfWeightFeedback || _editor.HasSupportFeedback || _editor.HasLoadFeedback || _editor.HasDistributedLoadFeedback);
             if (_shownDraft == draft && SupportPopup.IsOpen == show) return;
             _shownDraft = draft;
             int version = ++_popupFocusVersion;
@@ -270,7 +279,7 @@ public partial class BeamEditorSurface : UserControl
                 Dispatcher.UIThread.Post(() =>
                 {
                     if (_popupFocusVersion == version && _shownDraft is null && _editor?.LoadDraft is null && _editor?.DistributedLoadDraft is null
-                        && TopLevel.GetTopLevel(this) is not null) Focus();
+                        && _editor?.IsSelfWeightFlyoutVisible != true && TopLevel.GetTopLevel(this) is not null) Focus();
                 }, DispatcherPriority.Input);
         }
         finally { _synchronizing = false; }
@@ -319,13 +328,14 @@ public partial class BeamEditorSurface : UserControl
             Guid? id = hits?.Count == 1 ? hits[0] : null;
             _editor.HoverLoad(id is { } loadId && _editor.Document.Loads.Any(l => l.Id == loadId) ? id : null);
             _editor.HoverSupport(id is { } supportId && _editor.Document.Supports.Any(s => s.Id == supportId) ? id : null);
-            _editor.HoverDistributedLoad(id is { } distributedId && _editor.Document.DistributedLoads.Any(l => l.Id == distributedId) ? id : null);
+            _editor.HoverDistributedLoad(id is { } distributedId && (_editor.Document.DistributedLoads.Any(l => l.Id == distributedId)
+                || _editor.Document.SelfWeight is { Enabled: true } weight && weight.Id == distributedId) ? id : null);
         }
     }
 
     private void SurfacePointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_editor is null || _editor.IsBusy || OverOverlay(e.Source) || OverSupportFlyout(e.Source) || OverLoadFlyout(e.Source) || OverDistributedFlyout(e.Source)
+        if (_editor is null || _editor.IsBusy || OverOverlay(e.Source) || OverSupportFlyout(e.Source) || OverLoadFlyout(e.Source) || OverDistributedFlyout(e.Source) || OverSelfWeightFlyout(e.Source)
             || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         var point = e.GetPosition(BeamPane);
         if (_editor.IsResultProbeTool)
@@ -345,7 +355,8 @@ public partial class BeamEditorSurface : UserControl
         {
             if (label.Id is { } labelId && Frame is not null
                 && (_editor.IsEditorNeutral || labelId == _editor.SupportDraft?.OriginalId || labelId == _editor.LoadDraft?.OriginalId
-                    || labelId == _editor.DistributedLoadDraft?.OriginalId))
+                    || labelId == _editor.DistributedLoadDraft?.OriginalId
+                    || _editor.IsSelfWeightFlyoutVisible && labelId == _editor.Document.SelfWeight?.Id))
             {
                 Focus();
                 _layout.BeginInteraction(BeamPointerInteraction.LabelDrag);
@@ -357,6 +368,7 @@ public partial class BeamEditorSurface : UserControl
             e.Handled = true;
             return;
         }
+        if (HandleSelfWeightPress(point, e)) return;
         if (HandleDistributedPress(point, e)) return;
         if (HandleNeutralEntityPress(point, e)) return;
         if (HandleLoadPress(point, e)) return;

@@ -45,6 +45,7 @@ public sealed partial class EditorViewModel
         CancelSupportInteraction();
         CancelLoadInteraction();
         CancelDistributedLoadInteraction();
+        CancelSelfWeightInteraction();
     }
 
     /// <summary>Native dialogs may take pointer capture. Restore a gesture's draft without discarding its buffers.</summary>

@@ -352,6 +352,7 @@
   <Style Selector="controls|BeamCanvas">
     <Setter Property="LabelFontSize" Value="{DynamicResource BodySize}" />
     <Setter Property="BeamBrush" Value="{DynamicResource BeamStroke}" />
+    <Setter Property="SelfWeightBrush" Value="{DynamicResource SelfWeightStroke}" />
     <Setter Property="CanvasBackgroundBrush" Value="{DynamicResource CanvasBackground}" />
     <Setter Property="GhostBrush" Value="{DynamicResource AxisStroke}" />
     <Setter Property="AccentBrush" Value="{DynamicResource Accent}" />

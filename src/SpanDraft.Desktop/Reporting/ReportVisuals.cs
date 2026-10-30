@@ -57,6 +57,7 @@ internal sealed class ReportVisuals
         {
             Width = width, IsHitTestVisible = false, SupportSymbolScale = SupportSymbolScale, LabelFontSize = AnnotationFontSize,
             BeamBrush = Brush("BeamStroke"), CanvasBackgroundBrush = Brush("CanvasBackground"),
+            SelfWeightBrush = Brush("SelfWeightStroke"),
             AccentBrush = Brush("Accent"), GhostBrush = Brush("AxisStroke"), ErrorBrush = Brush("Error")
         };
         Axis = new()

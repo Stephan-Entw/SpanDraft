@@ -25,6 +25,7 @@ The current desktop application supports:
 - fixed, pinned and roller supports
 - point forces and point moments
 - constant distributed loads
+- optional self-weight derived from material density and cross-section area
 - direct graphical placement and editing
 - exact numeric positioning
 - schematic layout for dense models without changing physical coordinates

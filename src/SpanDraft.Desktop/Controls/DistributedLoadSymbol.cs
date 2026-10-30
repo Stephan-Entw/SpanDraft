@@ -10,6 +10,8 @@ public sealed record DistributedLoadVisual(Guid? Id, DistributedLoadPreview Prev
     double StartX, double EndX, double BeamY, bool IsPreview)
 {
     public double SymbolScale { get; init; } = 1;
+    public bool CanDragEndpoints { get; init; } = true;
+    public bool IsSelfWeight { get; init; }
     public double TopY => BeamY - SchematicMetrics.DistributedTopOffset * SymbolScale;
     public double BottomY => BeamY - SchematicMetrics.ForceBeamOffset * SymbolScale;
     public double CenterX => StartX + (EndX - StartX) / 2;
@@ -43,10 +45,15 @@ public static class DistributedLoadSymbol
         }
         if (preview is not null && !loads.Any(l => l.Id == hiddenId)) Add(null, preview, name ?? "", true);
         return visuals.AsReadOnly();
-        void Add(Guid? id, DistributedLoadPreview p, string label, bool draft) => visuals.Add(new(id, p, label.Trim(),
-            frame.Layout.Transform.PhysicalToScreen(p.StartPosition.Meters),
-            frame.Layout.Transform.PhysicalToScreen(p.EndPosition.Meters), frame.Viewport.BeamY, draft) { SymbolScale = symbolScale });
+        void Add(Guid? id, DistributedLoadPreview p, string label, bool draft) =>
+            visuals.Add(CreateVisual(id, p, label, frame, draft, symbolScale));
     }
+
+    public static DistributedLoadVisual CreateVisual(Guid? id, DistributedLoadPreview preview, string name,
+        BeamLayoutFrame frame, bool isPreview = false, double symbolScale = 1) => new(id, preview, name.Trim(),
+            frame.Layout.Transform.PhysicalToScreen(preview.StartPosition.Meters),
+            frame.Layout.Transform.PhysicalToScreen(preview.EndPosition.Meters), frame.Viewport.BeamY, isPreview)
+            { SymbolScale = symbolScale };
 
     public static int IntervalCount(double width)
     {
@@ -66,10 +73,11 @@ public static class DistributedLoadSymbol
             : visual.StartX + (visual.EndX - visual.StartX) * ((double)i / intervals)).ToArray());
     }
 
-    public static IReadOnlyList<DistributedLoadInnerGlyph> InnerGlyphs(IReadOnlyList<DistributedLoadVisual> visuals)
+    public static IReadOnlyList<DistributedLoadInnerGlyph> InnerGlyphs(IReadOnlyList<DistributedLoadVisual> visuals,
+        IEnumerable<double>? fixedPositions = null)
     {
         var glyphs = new List<DistributedLoadInnerGlyph>();
-        foreach (var span in Spans(visuals))
+        foreach (var span in Spans(visuals, fixedPositions))
         {
             int intervals = IntervalCount(span.End - span.Start);
             for (int i = 1; i < intervals; i++)
@@ -79,9 +87,10 @@ public static class DistributedLoadSymbol
     }
 
     private static IEnumerable<(double Start, double End, IReadOnlyList<DistributedLoadVisual> Entities)>
-        Spans(IReadOnlyList<DistributedLoadVisual> visuals)
+        Spans(IReadOnlyList<DistributedLoadVisual> visuals, IEnumerable<double>? fixedPositions = null)
     {
-        var endpoints = visuals.SelectMany(v => new[] { v.StartX, v.EndX }).Distinct().Order().ToArray();
+        var endpoints = visuals.SelectMany(v => new[] { v.StartX, v.EndX })
+            .Concat(fixedPositions ?? []).Distinct().Order().ToArray();
         for (int i = 1; i < endpoints.Length; i++)
         {
             double start = endpoints[i - 1], end = endpoints[i];
@@ -92,6 +101,7 @@ public static class DistributedLoadSymbol
 
     public static DistributedLoadEndpoint? HitEndpoint(DistributedLoadVisual visual, double x, double y)
     {
+        if (!visual.CanDragEndpoints) return null;
         bool Contains(double anchor) => new Rect(anchor - SchematicMetrics.DistributedArrowHeadHalfWidth * visual.SymbolScale,
             visual.TopY, 2 * SchematicMetrics.DistributedArrowHeadHalfWidth * visual.SymbolScale, SchematicMetrics.DistributedArrowHeight * visual.SymbolScale)
             .Inflate(HitPadding).Contains(new Point(x, y));
@@ -109,13 +119,14 @@ public static class DistributedLoadSymbol
 
     public static void DrawFill(DrawingContext context, DistributedLoadVisual visual, IBrush? neutralBrush)
     {
+        if (visual.IsSelfWeight) return;
         using (context.PushOpacity(SchematicMetrics.DistributedFillOpacity))
             context.DrawRectangle(neutralBrush, null, visual.FillBounds);
     }
 
     public static void DrawFills(DrawingContext context, IReadOnlyList<DistributedLoadVisual> visuals, IBrush? neutralBrush)
     {
-        foreach (var span in Spans(visuals))
+        foreach (var span in Spans(visuals.Where(v => !v.IsSelfWeight).ToArray()))
         {
             var bounds = span.Entities[0].FillBounds;
             using (context.PushOpacity(SchematicMetrics.DistributedFillOpacityForCount(span.Entities.Count)))

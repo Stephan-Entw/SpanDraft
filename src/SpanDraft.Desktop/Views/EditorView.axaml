@@ -9,7 +9,8 @@
   <UserControl.Styles>
     <!-- Keep the complete text toolbar readable at the minimum window width. -->
     <Style Selector="Border#EditorToolbar :is(Button).toolbar">
-      <Setter Property="Padding" Value="{DynamicResource Padding4}" />
+      <Setter Property="Padding" Value="2,4,8,4" />
+      <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
     </Style>
     <Style Selector="controls|BeamEditorSurface#BeamSurface, StackPanel#ResultDiagrams">
       <Setter Property="MaxWidth" Value="1280" />
@@ -24,7 +25,7 @@
   <Grid RowDefinitions="Auto,*">
     <Border x:Name="EditorToolbar" BorderThickness="{DynamicResource BottomBorder}" BorderBrush="{DynamicResource Border}"
             Background="{DynamicResource Surface}" Padding="{DynamicResource ToolbarPadding}">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space16}">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
           <ToggleButton Classes="toolbar" IsChecked="{Binding IsForceTool, Mode=OneWay}" Command="{Binding ForceToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PointForce}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
@@ -44,23 +45,33 @@
               <TextBlock Text="{x:Static resources:Strings.DistributedLoad}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
+          <ToggleButton x:Name="SelfWeightButton" Classes="toolbar" IsChecked="{Binding IsSelfWeightEnabled, Mode=OneWay}"
+                        Command="{Binding ToggleSelfWeightCommand}" AutomationProperties.Name="{x:Static resources:Strings.SelfWeight}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.SelfWeight}" Stretch="Uniform" />
+              <TextBlock Text="{x:Static resources:Strings.SelfWeight}" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
           <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
-          <ToggleButton Classes="toolbar" IsChecked="{Binding IsFixedTool, Mode=OneWay}" Command="{Binding FixedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.FixedSupport}">
+          <ToggleButton Classes="toolbar" IsChecked="{Binding IsFixedTool, Mode=OneWay}" Command="{Binding FixedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.FixedSupport}"
+                        ToolTip.Tip="{x:Static resources:Strings.FixedSupport}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.FixedSupport}" Stretch="Uniform" />
-              <TextBlock Text="{x:Static resources:Strings.FixedSupport}" VerticalAlignment="Center" />
+              <TextBlock Text="{x:Static resources:Strings.ToolbarFixedSupport}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton Classes="toolbar" IsChecked="{Binding IsPinnedTool, Mode=OneWay}" Command="{Binding PinnedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PinnedSupport}">
+          <ToggleButton Classes="toolbar" IsChecked="{Binding IsPinnedTool, Mode=OneWay}" Command="{Binding PinnedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PinnedSupport}"
+                        ToolTip.Tip="{x:Static resources:Strings.PinnedSupport}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.PinnedSupport}" Stretch="Uniform" />
-              <TextBlock Text="{x:Static resources:Strings.PinnedSupport}" VerticalAlignment="Center" />
+              <TextBlock Text="{x:Static resources:Strings.ToolbarPinnedSupport}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton Classes="toolbar" IsChecked="{Binding IsRollerTool, Mode=OneWay}" Command="{Binding RollerToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.RollerSupport}">
+          <ToggleButton Classes="toolbar" IsChecked="{Binding IsRollerTool, Mode=OneWay}" Command="{Binding RollerToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.RollerSupport}"
+                        ToolTip.Tip="{x:Static resources:Strings.RollerSupport}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.RollerSupport}" Stretch="Uniform" />
-              <TextBlock Text="{x:Static resources:Strings.RollerSupport}" VerticalAlignment="Center" />
+              <TextBlock Text="{x:Static resources:Strings.ToolbarRollerSupport}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
           <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />

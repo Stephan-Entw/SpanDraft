@@ -186,6 +186,9 @@ public static class Strings
     public static string FixedSupport => Get(nameof(FixedSupport));
     public static string PinnedSupport => Get(nameof(PinnedSupport));
     public static string RollerSupport => Get(nameof(RollerSupport));
+    public static string ToolbarFixedSupport => Get(nameof(ToolbarFixedSupport));
+    public static string ToolbarPinnedSupport => Get(nameof(ToolbarPinnedSupport));
+    public static string ToolbarRollerSupport => Get(nameof(ToolbarRollerSupport));
     public static string BeamModel => Get(nameof(BeamModel));
     public static string OverviewLength => Get(nameof(OverviewLength));
     public static string OverviewPosition => Get(nameof(OverviewPosition));
@@ -380,8 +383,13 @@ public static class Strings
     public static string EngineeringNotation => Get(nameof(EngineeringNotation));
     public static string NotationAutomatic => Get(nameof(NotationAutomatic));
     public static string NotationOff => Get(nameof(NotationOff));
+    public static string SelfWeight => Get(nameof(SelfWeight));
     public static string SelfWeightMissingDensity => Get(nameof(SelfWeightMissingDensity));
     public static string SelfWeightNameConflict => Get(nameof(SelfWeightNameConflict));
     public static string ReservedEntityName => Get(nameof(ReservedEntityName));
+    public static string Close => Get(nameof(Close));
     public static string ToggleLoadSign => Get(nameof(ToggleLoadSign));
+    public static string HideSelfWeight => Get(nameof(HideSelfWeight));
+    public static string ShowSelfWeight => Get(nameof(ShowSelfWeight));
+    public static string DisableSelfWeight => Get(nameof(DisableSelfWeight));
 }

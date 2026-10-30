@@ -29,9 +29,14 @@ public sealed class ProjectOverviewState
                     ? QuantityKind.TransverseForce : QuantityKind.Moment], analysis.Options), Position(l.Position))).ToArray());
         Forces = PointLoads(PointLoadKind.Force);
         Moments = PointLoads(PointLoadKind.Moment);
-        DistributedLoads = Array.AsReadOnly(document.DistributedLoads.Select(l => new ProjectOverviewItem(l.Id, l.Name,
-            "q", QuantityFormatter.WithUnit(l.Intensity.NewtonsPerMeter, analysis.Options.Profile[QuantityKind.DistributedLoad], analysis.Options),
-            Position(l.StartPosition) + "…" + Position(l.EndPosition))).ToArray());
+        ProjectOverviewItem Distributed(Guid id, string name, string type, double intensity, Length start, Length end) =>
+            new(id, name, type, QuantityFormatter.WithUnit(intensity, analysis.Options.Profile[QuantityKind.DistributedLoad], analysis.Options),
+                Position(start) + "…" + Position(end));
+        DistributedLoads = Array.AsReadOnly((document.SelfWeightLoad is { } weight
+            ? new[] { Distributed(document.SelfWeight!.Id, EditorSelfWeight.Symbol, EditorSelfWeight.Symbol,
+                weight.Intensity.NewtonsPerMeter, weight.StartPosition, weight.EndPosition) } : [])
+            .Concat(document.DistributedLoads.Select(l => Distributed(l.Id, l.Name, "q", l.Intensity.NewtonsPerMeter,
+                l.StartPosition, l.EndPosition))).ToArray());
         Reactions = Array.AsReadOnly(analysis.Result is { } result
             ? document.Supports.Select(s =>
             {

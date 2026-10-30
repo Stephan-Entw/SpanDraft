@@ -26,6 +26,9 @@
   <data name="FixedSupport" xml:space="preserve"><value>Einspannung</value></data>
   <data name="PinnedSupport" xml:space="preserve"><value>Festlager</value></data>
   <data name="RollerSupport" xml:space="preserve"><value>Loslager</value></data>
+  <data name="ToolbarFixedSupport" xml:space="preserve"><value>Einspannung</value></data>
+  <data name="ToolbarPinnedSupport" xml:space="preserve"><value>Festlager</value></data>
+  <data name="ToolbarRollerSupport" xml:space="preserve"><value>Loslager</value></data>
   <data name="BeamModel" xml:space="preserve"><value>Balkenmodell</value></data>
   <data name="OverviewLength" xml:space="preserve"><value>Länge {0} {1}</value></data>
   <data name="OverviewPosition" xml:space="preserve"><value>Position [{0}]</value></data>
@@ -367,8 +370,13 @@ Die Datei ist am gespeicherten Speicherort nicht mehr vorhanden. Sie wurde mögl
 Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="RemoveFromRecent" xml:space="preserve"><value>Aus Liste entfernen</value></data>
   <data name="ResultProbe" xml:space="preserve"><value>Probe</value></data>
+  <data name="SelfWeight" xml:space="preserve"><value>Eigengewicht</value></data>
   <data name="SelfWeightMissingDensity" xml:space="preserve"><value>Eigengewicht kann nicht berücksichtigt werden. Für den Werkstoff ist keine Dichte angegeben.</value></data>
   <data name="SelfWeightNameConflict" xml:space="preserve"><value>Eigengewicht kann nicht berücksichtigt werden. Benennen Sie zuerst die vorhandene Entity mit der Bezeichnung g oder G um.</value></data>
   <data name="ReservedEntityName" xml:space="preserve"><value>Die Bezeichnung g ist für Eigengewicht reserviert.</value></data>
+  <data name="Close" xml:space="preserve"><value>Schließen</value></data>
   <data name="ToggleLoadSign" xml:space="preserve"><value>Vorzeichen ändern</value></data>
+  <data name="HideSelfWeight" xml:space="preserve"><value>Ausblenden</value></data>
+  <data name="ShowSelfWeight" xml:space="preserve"><value>Einblenden</value></data>
+  <data name="DisableSelfWeight" xml:space="preserve"><value>Eigengewicht deaktivieren</value></data>
 </root>

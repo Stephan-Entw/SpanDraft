@@ -44,11 +44,19 @@ public static class StationRequirementBuilder
             requirements.Add(new(load.StartPosition.Meters, extent, extent));
             requirements.Add(new(load.EndPosition.Meters, extent, extent));
         }
+        if (document.SelfWeightLoad is { } weight)
+        {
+            double extent = (SchematicMetrics.DistributedArrowHeadHalfWidth + stroke) * loadSymbolScale;
+            requirements.Add(new(weight.StartPosition.Meters, extent, extent));
+            requirements.Add(new(weight.EndPosition.Meters, extent, extent));
+        }
         return Array.AsReadOnly(requirements.GroupBy(r => r.PhysicalX).OrderBy(g => g.Key)
             .Select(g => new StationRequirement(g.Key, g.Max(r => r.LeftExtent), g.Max(r => r.RightExtent))).ToArray());
     }
 
     public static IReadOnlyList<SpanRequirement> SpansFromDocument(EditorDocument document) =>
         Array.AsReadOnly(document.DistributedLoads.Select(l => new SpanRequirement(l.StartPosition.Meters,
-            l.EndPosition.Meters, SchematicMetrics.DistributedMinimumWidth)).ToArray());
+            l.EndPosition.Meters, SchematicMetrics.DistributedMinimumWidth))
+            .Concat(document.SelfWeightLoad is { } weight ? new[] { new SpanRequirement(weight.StartPosition.Meters,
+                weight.EndPosition.Meters, SchematicMetrics.DistributedMinimumWidth) } : []).ToArray());
 }

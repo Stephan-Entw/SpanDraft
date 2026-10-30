@@ -40,7 +40,11 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             new(id, preview, name.Trim(), frame.Layout.Transform.PhysicalToScreen(preview.Position.Meters), draft,
                 preview.Type == SupportType.Fixed && FixedSupportGeometry.AtPosition(preview.Position.Meters, document.Length.Meters).IsMirrored));
         var loads = PointLoadSymbol.Layout(document.Loads, frame, loadPreview, hiddenLoadId, loadName, loadSymbolScale);
-        var distributed = DistributedLoadSymbol.Layout(document.DistributedLoads, frame, distributedPreview, hiddenDistributedId, distributedName, loadSymbolScale);
+        var distributed = DistributedLoadSymbol.Layout(document.DistributedLoads, frame, distributedPreview, hiddenDistributedId, distributedName, loadSymbolScale).ToList();
+        if (presentation?.SelfWeightVisible != false && document.SelfWeightLoad is { } weight)
+            distributed.Insert(0, DistributedLoadSymbol.CreateVisual(document.SelfWeight!.Id,
+                new(weight.StartPosition, weight.EndPosition, weight.Intensity.NewtonsPerMeter), EditorSelfWeight.Symbol,
+                frame, symbolScale: loadSymbolScale) with { CanDragEndpoints = false, IsSelfWeight = true });
         if (reserveUnitWidths)
         {
             var originalMeasure = measure;
@@ -92,7 +96,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         double visibleHeight = Math.Min(double.MaxValue, above + below);
         return new(frame, supports.AsReadOnly(), loads, PointLoadSymbol.Group(loads), annotations.AsReadOnly(),
             Math.Max(visibleHeight, minimumPaneHeight))
-            { DistributedLoads = distributed, RequiredBelowBeamSpace = below };
+            { DistributedLoads = distributed.AsReadOnly(), RequiredBelowBeamSpace = below };
 
         void AvoidManual(bool support)
         {

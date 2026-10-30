@@ -14,6 +14,187 @@ public sealed class DesktopDistributedLoadRenderingTests
     private static DistributedLoadVisual Visual(double width = 96, double q = -500) =>
         new(Guid.NewGuid(), new(Length.FromMeters(.2), Length.FromMeters(.8), q), "q1", 50, 50 + width, 100, false);
 
+    private static PointLoadGlyph PointGlyph(double x, PointLoadKind kind, bool preview = false)
+    {
+        var visual = new PointLoadVisual(Guid.NewGuid(), new(Length.FromMeters(.5), kind, -100), "P", x, 100, preview);
+        return new(kind, x, 100, [visual]);
+    }
+
+    [Fact]
+    public void ForcePositionSplitsAndRedistributesBothSides()
+    {
+        var visual = Visual();
+        Assert.Equal(new[] { 82d, 114d }, DistributedLoadSymbol.InnerGlyphs([visual]).Select(g => g.X));
+        Assert.Equal(new[] { 74d, 122d }, DistributedLoadSymbol.InnerGlyphs([visual], [98]).Select(g => g.X));
+    }
+
+    [Fact]
+    public void MultipleForcePositionsSplitOneLoad()
+    {
+        var visual = Visual(192);
+        Assert.Equal(new[] { 74d, 130d, 162d, 218d },
+            DistributedLoadSymbol.InnerGlyphs([visual], [98, 194]).Select(g => g.X));
+    }
+
+    [Fact]
+    public void MultipleFixedPositionsSplitOverlappingLoadsDeterministically()
+    {
+        var a = Visual(192);
+        var b = Visual(96) with { StartX = 98, EndX = 194 };
+        var glyphs = DistributedLoadSymbol.InnerGlyphs([a, b], [146, 74, 146]);
+        Assert.Equal(new[] { 122d, 170d, 218d }, glyphs.Select(g => g.X));
+        Assert.Equal(new[] { a, b }, glyphs[0].Entities);
+        Assert.Equal(glyphs.Select(g => (g.X, g.Positive, g.Negative)),
+            DistributedLoadSymbol.InnerGlyphs([b, a], [74, 146]).Select(g => (g.X, g.Positive, g.Negative)));
+    }
+
+    [Fact]
+    public void OutsideAndEndpointPositionsDoNotChangeDistributionOrEndpoints()
+    {
+        var visual = Visual();
+        var before = DistributedLoadSymbol.InnerGlyphs([visual]);
+        Assert.Equal(before.Select(g => g.X),
+            DistributedLoadSymbol.InnerGlyphs([visual], [0, visual.StartX, visual.EndX, 200]).Select(g => g.X));
+        Assert.Equal(DistributedLoadEndpoint.Start, DistributedLoadSymbol.HitEndpoint(visual, visual.StartX, visual.TopY));
+        Assert.Equal(DistributedLoadEndpoint.End, DistributedLoadSymbol.HitEndpoint(visual, visual.EndX, visual.TopY));
+        var geometry = Geometry(Canvas(Scene([visual]) with { Glyphs = [PointGlyph(visual.StartX, PointLoadKind.Force)] }))
+            .Where(g => g.Brush is null && g.Geometry!.Bounds.Height == 28).ToArray();
+        Assert.Equal(new[] { 82d, 114d, visual.StartX, visual.EndX }, geometry.Take(4).Select(g => g.Geometry!.Bounds.X));
+    }
+
+    [Theory]
+    [InlineData(PointLoadKind.Force, false, 74, 122)]
+    [InlineData(PointLoadKind.Force, true, 74, 122)]
+    [InlineData(PointLoadKind.Moment, false, 82, 114)]
+    public void CanvasUsesOnlyForceGlyphPositionsIncludingPreviews(PointLoadKind kind, bool preview, double first, double second)
+    {
+        var scene = Scene([Visual()]) with { Glyphs = [PointGlyph(98, kind, preview)] };
+        var shafts = Geometry(Canvas(scene)).Where(g => g.Brush is null && g.Geometry!.Bounds.Height == 28).ToArray();
+        Assert.Equal(new[] { first, second }, shafts.Take(2).Select(g => g.Geometry!.Bounds.X));
+    }
+
+    [Theory]
+    [InlineData(-500, 1)] [InlineData(500, 1)]
+    [InlineData(-500, .85)] [InlineData(500, .85)]
+    public void SelfWeightUsesExactlyTheNormalGeometryAndSpacing(double q, double scale)
+    {
+        var normal = Visual(q: q) with { SymbolScale = scale };
+        var weight = normal with { IsSelfWeight = true, CanDragEndpoints = false, Name = "g" };
+        Assert.Equal(normal.TopY, weight.TopY);
+        Assert.Equal(normal.BottomY, weight.BottomY);
+        Assert.Equal(DistributedLoadSymbol.ArrowPositions(normal), DistributedLoadSymbol.ArrowPositions(weight));
+        var original = Geometry(Draw(normal)).ToArray();
+        var actual = Geometry(Draw(weight)).ToArray();
+        Assert.Equal(original.Length, actual.Length);
+        foreach (var (before, after) in original.Zip(actual))
+        {
+            Assert.Equal(before.Geometry!.Bounds, after.Geometry!.Bounds);
+            Assert.Equal(before.Pen!.Thickness, after.Pen!.Thickness);
+            Assert.Equal(before.Pen.LineCap, after.Pen.LineCap);
+            Assert.Equal(before.Pen.LineJoin, after.Pen.LineJoin);
+            Assert.Same(before.Pen.Brush, after.Pen.Brush);
+            Assert.Same(before.Brush, after.Brush);
+        }
+    }
+
+    [Fact]
+    public void SelfWeightDoesNotFillOrChangeNormalOverlapFills()
+    {
+        var a = Visual();
+        var b = Visual() with { StartX = 82, EndX = 178 };
+        var weight = Visual() with { StartX = 0, EndX = 300, IsSelfWeight = true };
+        var single = new DrawingGroup();
+        using (var context = single.Open()) DistributedLoadSymbol.DrawFill(context, weight, Brushes.Gray);
+        Assert.Empty(single.Children);
+        Assert.Empty(Fills([weight]).Children);
+        foreach (var loads in new[] { new[] { a, b }, new[] { a, b with { StartX = 210, EndX = 270 } } })
+        {
+            var expected = Fills(loads).Children.Cast<DrawingGroup>().ToArray();
+            var actual = Fills([weight, .. loads]).Children.Cast<DrawingGroup>().ToArray();
+            Assert.Equal(expected.Length, actual.Length);
+            foreach (var (before, after) in expected.Zip(actual))
+                AssertFill(after, before.Opacity, Assert.Single(Geometry(before)).Geometry!.Bounds);
+        }
+    }
+
+    [Theory]
+    [InlineData(-500)] [InlineData(500)] [InlineData(0)]
+    public void SelfWeightSharesNormalHeightInnerArrowsAndKeepsItsOwnEndpointArrows(double q)
+    {
+        var normal = Visual(q: q);
+        var weight = Visual() with { IsSelfWeight = true, CanDragEndpoints = false };
+        foreach (var visuals in new[] { new[] { weight, normal }, new[] { normal, weight } })
+        {
+            var glyphs = DistributedLoadSymbol.InnerGlyphs(visuals);
+            Assert.Equal(new[] { 82d, 114d }, glyphs.Select(g => g.X));
+            foreach (var glyph in glyphs)
+            {
+                var geometry = Geometry(DrawInner(glyph)).ToArray();
+                var shaft = Assert.Single(geometry, g => g.Brush is null);
+                Assert.Equal(new Rect(glyph.X, normal.TopY, 0, 28), shaft.Geometry!.Bounds);
+                var heads = geometry.Where(g => g.Brush is not null).ToArray();
+                Assert.Equal(q > 0 ? 2 : 1, heads.Length);
+                Assert.Contains(heads, h => h.Geometry!.Bounds.Bottom == normal.BottomY);
+                if (q > 0) Assert.Contains(heads, h => h.Geometry!.Bounds.Top == normal.TopY);
+            }
+            var drawing = Canvas(Scene(visuals));
+            var shafts = Geometry(drawing).Where(g => g.Brush is null && g.Geometry!.Bounds.Height > 7).ToArray();
+            Assert.Equal(glyphs.Count + 4, shafts.Length);
+            var endpoints = shafts.Skip(glyphs.Count).ToArray();
+            Assert.Equal(visuals.SelectMany(v => new[] { v.StartX, v.EndX }), endpoints.Select(g => g.Geometry!.Bounds.X));
+            Assert.All(endpoints, g => Assert.Equal(28, g.Geometry!.Bounds.Height));
+        }
+    }
+
+    [Theory]
+    [InlineData(50, 146)] [InlineData(74, 122)] [InlineData(82, 178)]
+    public void FullSpanSelfWeightPreservesNormalArrowLayoutAcrossOverlapsAndGaps(double start, double end)
+    {
+        var a = Visual();
+        var b = Visual() with { StartX = start, EndX = end };
+        var c = Visual() with { StartX = 230, EndX = 326 };
+        DistributedLoadVisual[] normals = [a, b, c];
+        var weight = Visual() with { StartX = 0, EndX = 400, IsSelfWeight = true, CanDragEndpoints = false };
+        var before = DistributedLoadSymbol.InnerGlyphs(normals);
+        var after = DistributedLoadSymbol.InnerGlyphs([weight, .. normals]);
+        var shared = after.Where(g => g.Entities.Any(e => !e.IsSelfWeight)).ToArray();
+        Assert.Equal(before.Select(g => g.X), shared.Select(g => g.X));
+        Assert.Equal(before.SelectMany(g => Geometry(DrawInner(g))).Select(g => g.Geometry!.Bounds),
+            shared.SelectMany(g => Geometry(DrawInner(g))).Select(g => g.Geometry!.Bounds));
+        var weightOnly = after.Except(shared).ToArray();
+        Assert.NotEmpty(weightOnly);
+        foreach (var glyph in weightOnly)
+            Assert.Equal(28, Assert.Single(Geometry(DrawInner(glyph)), g => g.Brush is null).Geometry!.Bounds.Height);
+        var original = Geometry(Canvas(Scene(normals))).Where(g => g.Geometry!.Bounds.Height == 28).ToArray();
+        var combined = Geometry(Canvas(Scene([weight, .. normals])))
+            .Where(g => g.Geometry!.Bounds.Height == 28 && g.Pen!.Brush == Brushes.Gray).ToArray();
+        Assert.Equal(original.Select(g => g.Geometry!.Bounds), combined.Select(g => g.Geometry!.Bounds));
+        Assert.Equal(original.Select(g => g.Pen!.Thickness), combined.Select(g => g.Pen!.Thickness));
+        Assert.Equal(original.Select(g => g.Pen!.Brush), combined.Select(g => g.Pen!.Brush));
+    }
+
+    [Theory]
+    [InlineData(false, false, false)] [InlineData(true, false, false)]
+    [InlineData(false, true, false)] [InlineData(true, true, false)]
+    [InlineData(false, false, true)] [InlineData(false, true, true)] [InlineData(true, true, true)]
+    public void SelfWeightUsesDarkGrayAndKeepsAccentAndErrorPriority(bool highlight, bool shared, bool conflict)
+    {
+        var normal = Visual();
+        var weight = Visual() with { IsSelfWeight = true, CanDragEndpoints = false };
+        var canvas = NewCanvas(Scene(shared ? [weight, normal] : [weight]));
+        canvas.HighlightedDistributedLoadId = highlight ? weight.Id : null;
+        canvas.ConflictEntityIds = conflict ? [weight.Id!.Value] : [];
+        var drawing = new DrawingGroup();
+        using (var context = drawing.Open()) canvas.Render(context);
+        var symbols = drawing.Children.Skip(shared ? 2 : 1).ToArray(); // Fill (if any), then beam.
+        var innerBrush = conflict ? Brushes.Red : highlight ? Brushes.Blue : shared ? Brushes.Gray : Brushes.DimGray;
+        Assert.All(symbols.Take(symbols.Length - (shared ? 2 : 1)).SelectMany(Geometry),
+            g => Assert.Same(innerBrush, g.Pen!.Brush));
+        var weightBrush = conflict ? Brushes.Red : highlight ? Brushes.Blue : Brushes.DimGray;
+        Assert.All(Geometry(symbols[shared ? ^2 : ^1]), g => Assert.Same(weightBrush, g.Pen!.Brush));
+        if (shared) Assert.All(Geometry(symbols[^1]), g => Assert.Same(Brushes.Gray, g.Pen!.Brush));
+    }
+
     [Theory]
     [InlineData(-500)]
     [InlineData(500)]
@@ -381,7 +562,7 @@ public sealed class DesktopDistributedLoadRenderingTests
 
     private static BeamCanvas NewCanvas(BeamRenderState scene) => new()
     {
-        Scene = scene, BeamBrush = Brushes.Gray, CanvasBackgroundBrush = Brushes.White,
+        Scene = scene, BeamBrush = Brushes.Gray, SelfWeightBrush = Brushes.DimGray, CanvasBackgroundBrush = Brushes.White,
         AccentBrush = Brushes.Blue, ErrorBrush = Brushes.Red
     };
 

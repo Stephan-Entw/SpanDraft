@@ -21,12 +21,14 @@ public partial class ProjectOverviewView : UserControl
         if (id is not { } entityId) return;
         // Resolve by identity in the current document, never by the displayed name/type.
         Func<Guid, bool>? edit = editor.Document.Supports.Any(s => s.Id == entityId) ? editor.EditSupport
+            : editor.Document.SelfWeight is { Enabled: true } weight && weight.Id == entityId ? editor.EditSelfWeight
             : editor.Document.Loads.Any(l => l.Id == entityId) ? editor.EditLoad
             : editor.Document.DistributedLoads.Any(l => l.Id == entityId) ? editor.EditDistributedLoad : null;
         if (edit is null) return;
         bool alreadyEditing = editor.IsSupportFlyoutVisible && editor.SupportDraft?.OriginalId == entityId
             || editor.IsLoadFlyoutVisible && editor.LoadDraft?.OriginalId == entityId
-            || editor.IsDistributedLoadFlyoutVisible && editor.DistributedLoadDraft?.OriginalId == entityId;
+            || editor.IsDistributedLoadFlyoutVisible && editor.DistributedLoadDraft?.OriginalId == entityId
+            || editor.IsSelfWeightFlyoutVisible && editor.Document.SelfWeight?.Id == entityId;
         if (!alreadyEditing) editor.CancelEditorInteraction();
         edit(entityId);
         e.Handled = true;

@@ -32,6 +32,7 @@
           <StackPanel Margin="{DynamicResource Padding24}" Spacing="{StaticResource Space16}">
             <TextBlock Text="{x:Static resources:Strings.SetupBeam}" Classes="sectionTitle" />
             <views:BeamSetupCard x:Name="BeamCard" />
+            <TextBlock Text="{Binding MaterialError}" IsVisible="{Binding HasMaterialError}" Classes="validationMessage" TextWrapping="Wrap" />
           </StackPanel>
         </StackPanel>
       </ScrollViewer>

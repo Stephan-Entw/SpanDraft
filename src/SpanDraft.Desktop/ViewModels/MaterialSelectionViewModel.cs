@@ -153,6 +153,13 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
     public void UseSelected()
     {
         if (!CanUseSelected || SelectedEntry is not { } selected) return;
+        if (Setup.ValidateProjectMaterial(selected.Material) is { } error)
+        {
+            _error = error;
+            Notify(nameof(Error)); Notify(nameof(HasError));
+            return;
+        }
+        _error = null;
         if (selected.Material.StrengthType is null)
         {
             BeginEdit(selected.Material, selected.IsUser ? SetupEditorMode.UserLibraryEdit : SetupEditorMode.ProjectDraft);
@@ -172,7 +179,7 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
         if (!CanBrowse) return;
         var originalName = mode == SetupEditorMode.UserLibraryEdit ? material?.Name : null;
         var editor = new MaterialEditorViewModel(Setup, material, mode,
-            result => mode == SetupEditorMode.ProjectDraft ? Task.FromResult<string?>(null)
+            result => mode == SetupEditorMode.ProjectDraft ? Task.FromResult(Setup.ValidateProjectMaterial(result))
                 : Setup.Libraries!.SaveMaterialAsync(result, originalName),
             showNameConflict: mode == SetupEditorMode.UserLibraryCreate && material is not null);
         _editor = editor;

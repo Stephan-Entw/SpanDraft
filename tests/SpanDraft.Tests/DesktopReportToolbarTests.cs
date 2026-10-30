@@ -107,7 +107,7 @@ public sealed class DesktopReportToolbarTests
             Assert.Equal(label, AutomationProperties.GetName(button));
             Assert.Contains("toolbar", button.Classes); Assert.DoesNotContain("primary", button.Classes);
             Assert.Equal(new System.Windows.Input.ICommand[] { main.Editor.ForceToolCommand, main.Editor.MomentToolCommand,
-                main.Editor.DistributedLoadToolCommand, main.Editor.FixedToolCommand, main.Editor.PinnedToolCommand,
+                main.Editor.DistributedLoadToolCommand, main.Editor.ToggleSelfWeightCommand, main.Editor.FixedToolCommand, main.Editor.PinnedToolCommand,
                 main.Editor.RollerToolCommand, main.Editor.ResultProbeToolCommand }, left.Children.OfType<Button>().Select(b => b.Command));
             Assert.Equal(new Control[] { report, button }, right.Children);
             var originalLeftBounds = left.Children.Select(c => c.Bounds).ToArray();

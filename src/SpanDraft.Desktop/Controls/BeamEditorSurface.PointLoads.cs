@@ -49,7 +49,7 @@ public partial class BeamEditorSurface
             Dispatcher.UIThread.Post(() =>
             {
                 if (_loadPopupFocusVersion == version && _shownLoadDraft is null && _editor?.SupportDraft is null && _editor?.DistributedLoadDraft is null
-                    && TopLevel.GetTopLevel(this) is not null) Focus();
+                    && _editor?.IsSelfWeightFlyoutVisible != true && TopLevel.GetTopLevel(this) is not null) Focus();
             }, DispatcherPriority.Input);
     }
 

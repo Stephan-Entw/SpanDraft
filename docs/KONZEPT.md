@@ -1,6 +1,6 @@
 # SpanDraft – Konzept
 
-Stand: 27.10.2026
+Stand: 30.10.2026
 
 Dieses Dokument legt Produktvision, Scope, Architekturgrundsätze und Roadmap
 von SpanDraft fest. Verbindliche Fach-, API- und Dateiverträge stehen in
@@ -49,7 +49,7 @@ aber nicht als zweites Modell führen.
 SpanDraft betrachtet derzeit einen einzelnen geraden Balken mit konstantem
 Werkstoff und konstantem Querschnitt.
 
-Fachmodell und Rechenkern unterstützen:
+Der aktuelle fachliche Umfang umfasst:
 
 - frei definierbare Balkenlänge
 - Einspannung, Festlager und Loslager
@@ -57,6 +57,7 @@ Fachmodell und Rechenkern unterstützen:
 - Punktkräfte
 - Punktmomente
 - konstante Streckenlasten
+- optional aktiviertes Eigengewicht aus Werkstoffdichte und Querschnittsfläche
 - parametrische und manuelle Querschnitte mit wählbarer Biegeachse
 - Werkstoffe mit den für Berechnung und Bewertung benötigten Kennwerten
 
@@ -180,7 +181,6 @@ Mögliche spätere Erweiterungen, ohne festgelegte Reihenfolge:
 
 - Zoom/Pan im Balkeneditor
 - weitere Streckenlastformen
-- Eigengewicht
 - zusätzliche Sprachen
 
 ## 10. Transparenz und Qualität

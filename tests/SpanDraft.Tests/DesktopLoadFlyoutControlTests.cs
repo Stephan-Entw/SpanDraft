@@ -165,10 +165,12 @@ public sealed class DesktopLoadFlyoutControlTests
     [InlineData("en-US", "distributed")]
     [InlineData("de-DE", "support")]
     [InlineData("en-US", "support")]
+    [InlineData("de-DE", "weight")]
+    [InlineData("en-US", "weight")]
     public void FooterKeepsAllActionsTogetherAtTheRightContentEdge(string culture, string kind)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
-        var editor = new EditorViewModel(SupportedDocument(), () => { });
+        var editor = new EditorViewModel(kind == "weight" ? DesktopSelfWeightTests.Document(true) : SupportedDocument(), () => { });
         Control flyout;
         if (kind is "point" or "moment")
         {
@@ -186,16 +188,21 @@ public sealed class DesktopLoadFlyoutControlTests
             Assert.True(editor.ConfirmDistributedLoad()); Assert.True(editor.EditDistributedLoad(editor.Document.DistributedLoads[0].Id));
             flyout = new DistributedLoadFlyout { DataContext = editor };
         }
-        else
+        else if (kind == "support")
         {
             Assert.True(editor.EditSupport(editor.Document.Supports[0].Id));
             flyout = new SupportFlyout { DataContext = editor };
         }
+        else
+        {
+            Assert.True(editor.EditSelfWeight(editor.Document.SelfWeight!.Id));
+            flyout = new SelfWeightFlyout { DataContext = editor };
+        }
 
         var window = Open(flyout);
         var delete = flyout.FindControl<Button>("DeleteAction")!;
-        var neutral = flyout.FindControl<Button>("CancelAction")!;
-        var primary = flyout.FindControl<Button>("ConfirmAction")!;
+        var neutral = flyout.FindControl<Button>(kind == "weight" ? "CloseAction" : "CancelAction")!;
+        var primary = flyout.FindControl<Button>(kind == "weight" ? "VisibilityAction" : "ConfirmAction")!;
         var footer = flyout.FindControl<StackPanel>("Footer")!;
         var content = (Control)footer.Parent!;
         Assert.Equal(new Control[] { delete, neutral, primary }, footer.Children);
