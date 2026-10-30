@@ -2,7 +2,7 @@ using SpanDraft.Core.Units;
 
 namespace SpanDraft.Core.Materials;
 
-/// <summary>A material snapshot. Density and Poisson ratio are currently unused by analysis.</summary>
+/// <summary>A material snapshot with optional density and Poisson ratio.</summary>
 public sealed class Material
 {
     public Material(string name, Pressure youngsModulus, Pressure yieldStrength, MaterialStrengthType strengthType,

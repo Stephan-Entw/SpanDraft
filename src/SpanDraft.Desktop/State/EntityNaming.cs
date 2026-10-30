@@ -3,7 +3,7 @@ using System.Globalization;
 namespace SpanDraft.Desktop.State;
 
 public enum AutoNameKind { Support, Force, Moment, DistributedLoad }
-public enum NameValidationError { None, Empty, Duplicate }
+public enum NameValidationError { None, Empty, Duplicate, Reserved }
 public readonly record struct AutoNameCandidate(AutoNameKind Kind, long Ordinal, string Name);
 
 /// <summary>Project counters, independent of current names. Only successful creation advances them.</summary>
@@ -53,6 +53,7 @@ public sealed record NamingState
 
 public static class EntityNaming
 {
+    public static bool IsReserved(string name) => StringComparer.OrdinalIgnoreCase.Equals(name, EditorSelfWeight.Symbol);
     public static string Normalize(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -62,6 +63,7 @@ public static class EntityNaming
     public static AutoNameCandidate Peek(EditorDocument document, AutoNameKind kind)
     {
         var occupied = document.NamedEntities.Select(e => e.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        occupied.Add(EditorSelfWeight.Symbol);
         long ordinal = document.NamingState.Next(kind);
         while (occupied.Contains(Format(kind, ordinal))) ordinal = checked(ordinal + 1);
         return new(kind, ordinal, Format(kind, ordinal));
@@ -96,6 +98,8 @@ public static class EntityNaming
         string trimmed = name?.Trim() ?? "";
         normalized = trimmed;
         error = trimmed.Length == 0 ? NameValidationError.Empty
+            : IsReserved(trimmed) && !document.NamedEntities.Any(e => e.Id == exclude && e.Name == trimmed)
+                ? NameValidationError.Reserved
             : document.NamedEntities.Any(e => e.Id != exclude && StringComparer.OrdinalIgnoreCase.Equals(e.Name, trimmed))
                 ? NameValidationError.Duplicate : NameValidationError.None;
         return error == NameValidationError.None;

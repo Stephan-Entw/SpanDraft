@@ -380,5 +380,8 @@ public static class Strings
     public static string EngineeringNotation => Get(nameof(EngineeringNotation));
     public static string NotationAutomatic => Get(nameof(NotationAutomatic));
     public static string NotationOff => Get(nameof(NotationOff));
+    public static string SelfWeightMissingDensity => Get(nameof(SelfWeightMissingDensity));
+    public static string SelfWeightNameConflict => Get(nameof(SelfWeightNameConflict));
+    public static string ReservedEntityName => Get(nameof(ReservedEntityName));
     public static string ToggleLoadSign => Get(nameof(ToggleLoadSign));
 }

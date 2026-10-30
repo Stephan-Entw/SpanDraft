@@ -28,7 +28,9 @@ ohne Typ (oder mit null) laden ungeklärt, ohne Ableitung aus Name oder Kategori
 Unbekannte Typwerte sind ungültig. Reguläres Speichern verlangt einen expliziten
 Typ; eine Typänderung gehört zu Inhalt und History, nicht zur Mechanik.
 Fehlende oder null gesetzte optionale Werte bedeuten tatsächlich unbekannt.
-Beim Laden werden keine angenommenen Werte ergänzt. ρ und ν haben derzeit
+Beim Laden werden keine angenommenen Werte ergänzt. ρ bestimmt bei ausdrücklich
+aktiviertem Eigengewicht die abgeleitete Linienlast;
+ohne Eigengewicht bleibt eine Dichteänderung mechanisch irrelevant. ν hat derzeit
 keine Wirkung auf Solver oder Engineering. Kategorie, Werkstoffnummer und
 Normbezeichnungen erweitern den bestehenden Materialvertrag ebenfalls ohne
 Versionswechsel. Historische Projekte ohne Kategorie laden mit `Other`, ohne
@@ -91,6 +93,35 @@ RevisionIds/Savepoint, Dateipfad, Hover/Selection/Werkzeuge, Draft-/Textbuffer,
 Placement-/Drag-Vorschauen, Fehler-/Konfliktzustände sowie Canvas-/Viewport- und
 Stationslayout. Öffnen beginnt mit leerer History und berechnet Analysis neu.
 
+## Eigengewicht
+
+Eigengewicht ist ein optionaler eigener Dokumentzustand, keine benutzerdefinierte
+Streckenlast. `document.selfWeight` enthält ausschließlich eine nichtleere,
+projektweit eindeutige `id` und `enabled`. Fehlend oder null bedeutet aus, ohne
+angelegte Entity. Die ID bleibt beim Deaktivieren und erneuten Aktivieren erhalten.
+Intensität, Wirkungsbereich und Systembezeichnung werden nicht gespeichert:
+Aktives Eigengewicht wird gemäß [DOMAIN.md](DOMAIN.md#materialien) in Core
+abgeleitet und der Analyse als normale konstante Streckenlast über `0 … L`
+zugeführt. Eine bekannte Materialdichte ist dafür zwingend; auch beim
+Materialwechsel darf sie nicht entfallen.
+
+Die feste Systembezeichnung `g` ist kein frei vergebener Entity-Name und verbraucht
+keinen Naming-Zähler. Neue normale Entities dürfen weder `g` noch `G` heißen;
+automatische Lagernamen überspringen `G`. Bereits vorhandene solche Namen bleiben
+beim Laden unverändert. Eigengewicht darf erst nach ihrer Umbenennung aktiviert
+werden; aktives Eigengewicht mit einem solchen Konflikt ist ungültig.
+
+`presentation.selfWeightVisible` ist optional und gilt ohne Feld als true.
+Ausblenden beeinflusst ausschließlich die Darstellung, nicht die mechanische
+Aktivierung. Der relative Label-Offset verwendet dieselbe Annotation-GUID wie
+andere Entities. Auch deaktiviertes Eigengewicht bleibt eine gültige
+Annotationreferenz und erhält Offset und Sichtbarkeit. Diese Daten gehören zum
+Inhaltsvergleich, Dirty-State, Undo/Redo und zur vollständigen Projekt-Recovery.
+
+Diese optionalen Felder erweitern V3 kompatibel ohne Versionssprung. Historische
+V1-/V2-/V3-Dateien ohne Eigengewicht behalten ihre bisherigen Analyseergebnisse;
+der gemeinsame V2-/V3-Dokumentreader akzeptiert die optionalen Erweiterungen.
+
 ## Projektangaben
 
 V3 ergänzt `info` außerhalb von Dokument und Presentation. Es enthält
@@ -127,8 +158,9 @@ auf dieselben kanonischen Formen normalisiert; es gibt keinen Legacy-Wiretyp.
 `Load → Save → Load` erhält den fachlichen Inhalt. Der Inhaltsvergleich verwendet
 Originalparameter beziehungsweise Manual-Eingaben, vollständige Materialdaten
 und Biegeachse. Er ist vom mechanischen Vergleich getrennt: Änderungen nur an
-Name/Kategorie/Werkstoffnummer/Normbezeichnungen/Kennwerttyp/ρ/ν sind
-Projektänderungen ohne Neuberechnung; die Achsenidentität ist
+Name/Kategorie/Werkstoffnummer/Normbezeichnungen/Kennwerttyp/ν sind
+Projektänderungen ohne Neuberechnung; für ρ gilt dies nur ohne aktives Eigengewicht.
+Die Achsenidentität ist
 auch bei gleichen I/W mechanisch relevant.
 
 ## Validierung und Recovery

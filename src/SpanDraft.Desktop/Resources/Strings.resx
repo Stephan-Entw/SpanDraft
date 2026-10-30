@@ -367,5 +367,8 @@ The file is no longer available at the saved location. It may have been deleted,
 Remove the entry from Recent projects?</value></data>
   <data name="RemoveFromRecent" xml:space="preserve"><value>Remove from list</value></data>
   <data name="ResultProbe" xml:space="preserve"><value>Probe</value></data>
+  <data name="SelfWeightMissingDensity" xml:space="preserve"><value>Self-weight cannot be included. No density is specified for the material.</value></data>
+  <data name="SelfWeightNameConflict" xml:space="preserve"><value>Self-weight cannot be included. Rename the existing entity named g or G first.</value></data>
+  <data name="ReservedEntityName" xml:space="preserve"><value>The name g is reserved for self-weight.</value></data>
   <data name="ToggleLoadSign" xml:space="preserve"><value>Change sign</value></data>
 </root>

@@ -66,6 +66,8 @@ public static class ProjectFileCodec
         if (!allowLegacy && state.Document.Material.StrengthType is null)
             throw new ProjectFormatException("The material strength type must be confirmed before saving.");
         var d = state.Document;
+        if (d.SelfWeight?.Enabled == true && d.SelfWeightActivationError is { } error)
+            throw new ProjectFormatException(error);
         var n = d.NamingState;
         return new()
         {
@@ -77,6 +79,7 @@ public static class ProjectFileCodec
                 Length = d.Length.Meters, BendingAxis = AxisToWire(d.BendingAxis), SectionDisplayName = d.SectionDisplayName,
                 Material = MaterialToDto(d.Material),
                 Section = SectionToDto(d.Section),
+                SelfWeight = d.SelfWeight is { } weight ? new() { Id = weight.Id, Enabled = weight.Enabled } : null,
                 Supports = d.Supports.Select(s => new SupportV2 { Id = s.Id, Name = s.Name,
                     Type = s.Type switch { SupportType.Fixed => "fixed", SupportType.Pinned => "pinned",
                         SupportType.Roller => "roller", _ => throw new ProjectFormatException("Unknown support type.") },
@@ -91,7 +94,8 @@ public static class ProjectFileCodec
                 NamingState = new() { NextSupportOrdinal = n.NextSupportOrdinal, NextForceNumber = n.NextForceNumber,
                     NextMomentNumber = n.NextMomentNumber, NextDistributedLoadNumber = n.NextDistributedLoadNumber }
             },
-            Presentation = new() { AnnotationOffsets = state.Presentation.AnnotationOffsets.Select(o =>
+            Presentation = new() { SelfWeightVisible = state.Presentation.SelfWeightVisible,
+                AnnotationOffsets = state.Presentation.AnnotationOffsets.Select(o =>
                 new OffsetV2 { EntityId = o.Key, Dx = o.Value.Dx, Dy = o.Value.Dy }).ToArray() }
         };
     }
@@ -249,7 +253,8 @@ public static class ProjectFileCodec
                 var x = Required(entry, "distributedLoad");
                 return new EditorUniformDistributedLoad(EntityId(x.Id), L(x.StartPosition, "startPosition"),
                     L(x.EndPosition, "endPosition"), ForcePerLength.FromNewtonsPerMeter(Number(x.Intensity, "intensity")), Name(x.Name));
-            }), d.SectionDisplayName);
+            }), d.SectionDisplayName,
+            d.SelfWeight is { } weight ? new EditorSelfWeight(EntityId(weight.Id), weight.Enabled) : null);
         var errors = BeamModelValidator.Validate(document.ToBeamModel()).Where(e => e.Code != ValidationErrorCode.MissingSupports).ToArray();
         if (errors.Length > 0) throw new ProjectFormatException(errors[0].Message);
         if (document.Supports.Select(x => x.Position).Distinct().Count() != document.Supports.Count)
@@ -261,7 +266,7 @@ public static class ProjectFileCodec
             if (!ids.Contains(x.EntityId) || !offsets.TryAdd(x.EntityId, new(Number(x.Dx, "dx"), Number(x.Dy, "dy"))))
                 throw new ProjectFormatException("Annotation offsets must reference existing, unique entities.");
         }
-        return new(document, new(offsets));
+        return new(document, new(offsets, p.SelfWeightVisible));
     }
 
     internal static T Required<T>(T? value, string field) where T : class => value

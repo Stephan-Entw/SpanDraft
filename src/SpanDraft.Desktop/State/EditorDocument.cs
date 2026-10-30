@@ -1,8 +1,10 @@
 using SpanDraft.Core.Beams;
+using SpanDraft.Core.Loads;
 using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Resources;
 
 namespace SpanDraft.Desktop.State;
 
@@ -11,14 +13,16 @@ public sealed record EditorDocument
 {
     public EditorDocument(Length length, Material material, Section section,
         IEnumerable<EditorSupport>? supports = null, IEnumerable<EditorPointLoad>? loads = null, NamingState? namingState = null,
-        IEnumerable<EditorUniformDistributedLoad>? distributedLoads = null, string? sectionDisplayName = null)
-        : this(length, material, section, SectionAxisDesignation.Y, supports, loads, namingState, distributedLoads, sectionDisplayName)
+        IEnumerable<EditorUniformDistributedLoad>? distributedLoads = null, string? sectionDisplayName = null,
+        EditorSelfWeight? selfWeight = null)
+        : this(length, material, section, SectionAxisDesignation.Y, supports, loads, namingState, distributedLoads, sectionDisplayName, selfWeight)
     {
     }
 
     public EditorDocument(Length length, Material material, ISectionDefinition section, SectionAxisDesignation bendingAxis,
         IEnumerable<EditorSupport>? supports = null, IEnumerable<EditorPointLoad>? loads = null, NamingState? namingState = null,
-        IEnumerable<EditorUniformDistributedLoad>? distributedLoads = null, string? sectionDisplayName = null)
+        IEnumerable<EditorUniformDistributedLoad>? distributedLoads = null, string? sectionDisplayName = null,
+        EditorSelfWeight? selfWeight = null)
     {
         ArgumentNullException.ThrowIfNull(material);
         ArgumentNullException.ThrowIfNull(section);
@@ -39,6 +43,7 @@ public sealed record EditorDocument
         Loads = Array.AsReadOnly((loads ?? []).ToArray());
         DistributedLoads = Array.AsReadOnly((distributedLoads ?? []).ToArray());
         NamingState = namingState ?? new();
+        SelfWeight = selfWeight;
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var entity in NamedEntities)
             if (!names.Add(EntityNaming.Normalize(entity.Name)))
@@ -65,24 +70,38 @@ public sealed record EditorDocument
     public IReadOnlyList<EditorPointLoad> Loads { get; }
     public IReadOnlyList<EditorUniformDistributedLoad> DistributedLoads { get; }
     public NamingState NamingState { get; }
+    public EditorSelfWeight? SelfWeight { get; init; }
+    public IEnumerable<Guid> EntityIds => NamedEntities.Select(e => e.Id)
+        .Concat(SelfWeight is { } weight ? [weight.Id] : []);
+    public string? SelfWeightActivationError => Material.Density is null ? Strings.SelfWeightMissingDensity
+        : NamedEntities.Any(e => EntityNaming.IsReserved(e.Name)) ? Strings.SelfWeightNameConflict : null;
+    public UniformDistributedLoad? SelfWeightLoad
+    {
+        get
+        {
+            if (SelfWeight?.Enabled != true) return null;
+            if (SelfWeightActivationError is { } error) throw new ArgumentException(error);
+            return UniformDistributedLoad.FromSelfWeight(Length, Material.Density!.Value, Section.Area);
+        }
+    }
     public IEnumerable<(Guid Id, string Name)> NamedEntities =>
         Supports.Select(s => (s.Id, s.Name)).Concat(Loads.Select(l => (l.Id, l.Name)))
             .Concat(DistributedLoads.Select(l => (l.Id, l.Name)));
 
     public EditorDocument WithSupports(IEnumerable<EditorSupport> supports, NamingState? namingState = null) =>
-        new(Length, Material, Section, BendingAxis, supports, Loads, NextNamingState(namingState), DistributedLoads, SectionDisplayName);
+        new(Length, Material, Section, BendingAxis, supports, Loads, NextNamingState(namingState), DistributedLoads, SectionDisplayName, SelfWeight);
 
     public EditorDocument WithLoads(IEnumerable<EditorPointLoad> loads, NamingState? namingState = null) =>
-        new(Length, Material, Section, BendingAxis, Supports, loads, NextNamingState(namingState), DistributedLoads, SectionDisplayName);
+        new(Length, Material, Section, BendingAxis, Supports, loads, NextNamingState(namingState), DistributedLoads, SectionDisplayName, SelfWeight);
 
     public EditorDocument WithDistributedLoads(IEnumerable<EditorUniformDistributedLoad> loads, NamingState? namingState = null) =>
-        new(Length, Material, Section, BendingAxis, Supports, Loads, NextNamingState(namingState), loads, SectionDisplayName);
+        new(Length, Material, Section, BendingAxis, Supports, Loads, NextNamingState(namingState), loads, SectionDisplayName, SelfWeight);
 
     public EditorDocument WithSection(ISectionDefinition section, SectionAxisDesignation bendingAxis) =>
         WithSection(section, bendingAxis, SectionDisplayName);
 
     public EditorDocument WithSection(ISectionDefinition section, SectionAxisDesignation bendingAxis, string? sectionDisplayName) =>
-        new(Length, Material, section, bendingAxis, Supports, Loads, NamingState, DistributedLoads, sectionDisplayName);
+        new(Length, Material, section, bendingAxis, Supports, Loads, NamingState, DistributedLoads, sectionDisplayName, SelfWeight);
 
     public EditorDocument WithBendingAxis(SectionAxisDesignation bendingAxis) => WithSection(Section, bendingAxis);
 
@@ -98,5 +117,6 @@ public sealed record EditorDocument
 
     public BeamModel ToBeamModel() => new(Length, Material, Section, BendingAxis,
         Supports.Select(s => new Support(s.Position, s.Type)),
-        Loads.Select(l => l.ToCore()).Concat(DistributedLoads.Select(l => l.ToCore())));
+        Loads.Select(l => l.ToCore()).Concat(DistributedLoads.Select(l => l.ToCore()))
+            .Concat(SelfWeightLoad is { } weight ? new BeamLoad[] { weight } : []));
 }

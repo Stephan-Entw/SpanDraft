@@ -18,4 +18,14 @@ public sealed class UniformDistributedLoad : BeamLoad
     public Length StartPosition { get; }
     public Length EndPosition { get; }
     public ForcePerLength Intensity { get; }
+
+    /// <summary>Creates a downward full-span load using standard gravity (9.80665 m/s²).</summary>
+    public static UniformDistributedLoad FromSelfWeight(Length length, MassDensity density, Area area)
+    {
+        DomainGuard.Positive(length.Meters, nameof(length));
+        DomainGuard.Positive(density.KilogramsPerCubicMeter, nameof(density));
+        DomainGuard.Positive(area.SquareMeters, nameof(area));
+        return new(default, length, ForcePerLength.FromNewtonsPerMeter(
+            -density.KilogramsPerCubicMeter * area.SquareMeters * 9.80665));
+    }
 }

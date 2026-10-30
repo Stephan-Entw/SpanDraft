@@ -60,11 +60,17 @@ abgewiesen. `PoissonRatio` ist ein kleiner dimensionsloser Werttyp mit
 `FromValue` und `Value`; es gilt strikt −1 < ν < 0,5. Seine Grenzen und
 nicht endliche Werte sind ungültig; der Zahlenwert 0 ist zulässig.
 
-Der Solver verwendet E, Engineering den numerischen Festigkeitskennwert. Dichte und Poissonzahl
-werden derzeit ausschließlich validiert, gehalten und persistiert; sie
-aktivieren weder Eigengewicht noch Schubverformung. Materialname und Änderungen
-nur an Kategorie, Werkstoffnummer, Normbezeichnungen oder Kennwerttyp/ρ/ν ändern
-den Projektinhalt, erfordern aber keine Neuberechnung.
+Der Solver verwendet E, Engineering den numerischen Festigkeitskennwert.
+`UniformDistributedLoad.FromSelfWeight(length, density, area)` in Core leitet aus
+bekannter Dichte und aktueller Fläche eine abwärts gerichtete konstante Linienlast
+`q_g = −ρ · A · g₀` mit `g₀ = 9.80665 m/s²` über die gesamte Balkenlänge ab.
+Länge, Dichte und Fläche müssen streng positiv sein; nicht endliche Lastintensitäten
+werden abgelehnt. Desktop ruft diese Factory bei ausdrücklich aktiviertem
+Eigengewicht auf. Der Solver verarbeitet den bestehenden Lasttyp unverändert.
+Ohne Eigengewicht ist eine reine Dichteänderung mechanisch irrelevant.
+Die Poissonzahl aktiviert keine Schubverformung.
+Materialname und Änderungen nur an Kategorie, Werkstoffnummer, Normbezeichnungen
+oder Kennwerttyp/ν ändern den Projektinhalt, erfordern aber keine Neuberechnung.
 Die vollständigen Materialdaten gehören zum eigenständigen Projektsnapshot.
 
 ## Querschnitte

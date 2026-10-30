@@ -111,6 +111,7 @@ public sealed class SupportDraftViewModel : ObservableObject
         {
             NameValidationError.Empty => Strings.EmptyEntityName,
             NameValidationError.Duplicate => Strings.DuplicateEntityName,
+            NameValidationError.Reserved => Strings.ReservedEntityName,
             _ => null
         };
         string? error = null;

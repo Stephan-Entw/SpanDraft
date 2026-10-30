@@ -14,7 +14,7 @@ public sealed record ProjectState(EditorDocument Document, EditorPresentationSta
         && a.BendingAxis == b.BendingAxis && a.SectionDisplayName == b.SectionDisplayName
         && MaterialContentEquals(a.Material, b.Material) && SectionContentEquals(a.Section, b.Section)
         && a.Supports.SequenceEqual(b.Supports) && a.Loads.SequenceEqual(b.Loads)
-        && a.DistributedLoads.SequenceEqual(b.DistributedLoads) && a.NamingState == b.NamingState;
+        && a.DistributedLoads.SequenceEqual(b.DistributedLoads) && a.NamingState == b.NamingState && a.SelfWeight == b.SelfWeight;
 
     internal static bool MaterialContentEquals(Material a, Material b) => a.Name == b.Name
         && a.YoungsModulus == b.YoungsModulus && a.YieldStrength == b.YieldStrength && a.StrengthType == b.StrengthType

@@ -19,10 +19,16 @@ public readonly record struct AnnotationOffset
 /// <summary>Immutable presentation data belonging to an open project session. Missing offset means Auto.</summary>
 public sealed class EditorPresentationState
 {
-    public EditorPresentationState(IEnumerable<KeyValuePair<Guid, AnnotationOffset>>? offsets = null) =>
+    public EditorPresentationState(IEnumerable<KeyValuePair<Guid, AnnotationOffset>>? offsets = null, bool selfWeightVisible = true)
+    {
         AnnotationOffsets = new ReadOnlyDictionary<Guid, AnnotationOffset>((offsets ?? []).ToDictionary());
+        SelfWeightVisible = selfWeightVisible;
+    }
 
     public IReadOnlyDictionary<Guid, AnnotationOffset> AnnotationOffsets { get; }
+    public bool SelfWeightVisible { get; }
+    public EditorPresentationState WithSelfWeightVisibility(bool visible) => visible == SelfWeightVisible ? this
+        : new(AnnotationOffsets, visible);
 
     public EditorPresentationState WithOffset(Guid id, AnnotationOffset? offset)
     {
@@ -30,16 +36,17 @@ public sealed class EditorPresentationState
             || offset is null && !AnnotationOffsets.ContainsKey(id)) return this;
         var copy = AnnotationOffsets.ToDictionary();
         if (offset is { } next) copy[id] = next; else copy.Remove(id);
-        return new(copy);
+        return new(copy, SelfWeightVisible);
     }
 
     public EditorPresentationState RetainEntities(EditorDocument document)
     {
-        var ids = document.NamedEntities.Select(e => e.Id).ToHashSet();
+        var ids = document.EntityIds.ToHashSet();
         return AnnotationOffsets.Keys.All(ids.Contains) ? this
-            : new(AnnotationOffsets.Where(e => ids.Contains(e.Key)));
+            : new(AnnotationOffsets.Where(e => ids.Contains(e.Key)), SelfWeightVisible);
     }
 
-    public bool ContentEquals(EditorPresentationState other) => AnnotationOffsets.Count == other.AnnotationOffsets.Count
+    public bool ContentEquals(EditorPresentationState other) => SelfWeightVisible == other.SelfWeightVisible
+        && AnnotationOffsets.Count == other.AnnotationOffsets.Count
         && AnnotationOffsets.All(e => other.AnnotationOffsets.TryGetValue(e.Key, out var value) && value == e.Value);
 }

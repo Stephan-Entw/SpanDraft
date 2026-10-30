@@ -107,6 +107,7 @@ public sealed class PointLoadDraftViewModel : ObservableObject
         {
             NameValidationError.Empty => Strings.EmptyEntityName,
             NameValidationError.Duplicate => Strings.DuplicateEntityName,
+            NameValidationError.Reserved => Strings.ReservedEntityName,
             _ => null
         };
         bool positionValid;

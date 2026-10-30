@@ -322,7 +322,9 @@ Der Solver liefert keine Festigkeitsbewertung. Reine elastische Biegespannung
 und ein einfaches Verhältnis zum gewählten Festigkeitskennwert werden als getrenntes Postprocessing
 in [SpanDraft.Engineering](ENGINEERING.md) ausgewertet. Normative
 Festigkeits-/Gebrauchstauglichkeitsnachweise, Schubverformung, geometrische
-Nichtlinearität und Eigengewicht sind nicht implementiert.
+Nichtlinearität sind nicht implementiert. Eigengewicht wird in Core
+als bestehende konstante Streckenlast aus Dichte, Fläche und Erdbeschleunigung
+abgeleitet; der Solver benötigt dafür keine besondere Behandlung.
 Core hat derzeit keinen axialen Lasttyp; der axiale Gleichungsanteil
 wird einschließlich u(x) und N(x) separat intern getestet. Öffentliche
 Lastmodelle liefern normalerweise N = 0. Globale N-Extrema sind nicht Teil

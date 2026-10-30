@@ -49,6 +49,7 @@ public sealed class ProjectFileV1MigrationTests
         var loaded = ProjectFileCodec.Deserialize(bytes);
         Assert.Null(loaded.Info);
         var doc = loaded.Document;
+        Assert.Null(doc.SelfWeight); Assert.True(loaded.Presentation.SelfWeightVisible);
         var expectedType = kind switch { 0 => typeof(RectangleSectionGeometry), 1 => typeof(RectangularHollowSectionGeometry),
             2 => typeof(CircleSectionGeometry), 3 => typeof(CircularHollowSectionGeometry), _ => typeof(ManualSectionDefinition) };
         Assert.Equal(expectedType, doc.Section.GetType());

@@ -8,7 +8,7 @@ namespace SpanDraft.Desktop.State;
 /// The single explicit definition of current solver/engineering input equivalence.
 /// When Domain semantics grow, update this comparer and its behavioral tests together.
 /// Section definitions are compared through their selected mechanical properties.
-/// Material name, density and Poisson ratio are not used by the current analysis.
+/// Material metadata is not compared directly; density affects the derived self-weight load.
 /// Unknown support/load variants are never considered equivalent, even by reference identity.
 /// </summary>
 public static class BeamModelMechanicalComparer

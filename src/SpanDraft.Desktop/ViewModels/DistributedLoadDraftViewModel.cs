@@ -100,6 +100,7 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         {
             NameValidationError.Empty => Strings.EmptyEntityName,
             NameValidationError.Duplicate => Strings.DuplicateEntityName,
+            NameValidationError.Reserved => Strings.ReservedEntityName,
             _ => null
         };
         _startError = TryPosition(StartText, _referenceStartText, _referenceStart, document.Length, out var start) ? null : Strings.PositionInsideBeam;

@@ -23,6 +23,13 @@ public sealed record DocumentV2
     public required PointLoadV2[] PointLoads { get; init; }
     public required DistributedLoadV2[] DistributedLoads { get; init; }
     public required NamingV2 NamingState { get; init; }
+    public SelfWeightV2? SelfWeight { get; init; }
+}
+
+public sealed record SelfWeightV2
+{
+    public required Guid Id { get; init; }
+    public required bool Enabled { get; init; }
 }
 
 public sealed record MaterialV2
@@ -75,6 +82,7 @@ public sealed record NamingV2
 public sealed record PresentationV2
 {
     public required OffsetV2[] AnnotationOffsets { get; init; }
+    public bool SelfWeightVisible { get; init; } = true;
 }
 
 public sealed record OffsetV2
