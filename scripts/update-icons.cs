@@ -13,17 +13,12 @@ if (args.Length > 1 || (args.Length == 1 && args[0] != "--check"))
     return 1;
 }
 
-// Pin the upstream paint fix and a renderer that honors SVG text baselines.
+// The published 11.2.0 CLI drops solid brushes/pens. Pin the upstream fix, unmodified.
 const string revision = "1beb52777c564c218f460ee0510f73cba21c6d69";
 const string archiveHash = "9D1352AC988D81CA870CB54238477E014D56B196EB13941C64185866D869799C";
-const string svgSkiaVersion = "5.1.1";
-// The SVG's STIX Two Text needs the same font on every build host (SIL OFL 1.1).
-const string fontUrl = "https://raw.githubusercontent.com/stipub/stixfonts/37308d44583ef882dc8b544aaa2e80ac8c406ebf/fonts/static_ttf/STIXTwoText-Regular.ttf";
-const string fontHash = "5B7503D88E9F88DB351A6E879B468925B01D9BAE2FC29806F6A1953D28E53116";
 var root = Path.GetFullPath(Path.Combine(ScriptDirectory(), ".."));
 var icons = Path.Combine(root, "src", "SpanDraft.Desktop", "Assets", "Icons");
-var cache = Path.Combine(root, ".artifacts", "icon-converter", revision, "svg-skia-" + svgSkiaVersion, "stix-2.13");
-var fontPath = Path.Combine(cache, "STIXTwoText-Regular.ttf");
+var cache = Path.Combine(root, ".artifacts", "icon-converter", revision);
 var source = Path.Combine(cache, "SvgToXaml-" + revision);
 var converter = Path.Combine(source, "src", "svgxaml", "bin", "Release", "net8.0", "svgxaml.dll");
 var temporary = Path.Combine(Path.GetTempPath(), "spandraft-icons-" + Guid.NewGuid().ToString("N"));
@@ -40,37 +35,8 @@ try
         if (Convert.ToHexString(SHA256.HashData(bytes)) != archiveHash)
             throw new InvalidOperationException("SvgToXaml source archive checksum mismatch.");
         Directory.CreateDirectory(cache);
-        var fontBytes = await client.GetByteArrayAsync(fontUrl);
-        if (Convert.ToHexString(SHA256.HashData(fontBytes)) != fontHash)
-            throw new InvalidOperationException("STIX Two Text checksum mismatch.");
-        await File.WriteAllBytesAsync(fontPath, fontBytes);
         using var archive = new ZipArchive(new MemoryStream(bytes));
         archive.ExtractToDirectory(cache, overwriteFiles: true);
-        // The converter's original Svg.Skia 4.1.0 ignores dominant-baseline.
-        var rendererPropsPath = Path.Combine(source, "build", "Svg.Skia.props");
-        var rendererProps = XDocument.Load(rendererPropsPath);
-        rendererProps.Descendants().Single(e => e.Name.LocalName == "PackageReference" && (string?)e.Attribute("Include") == "Svg.Skia")
-            .SetAttributeValue("Version", svgSkiaVersion);
-        rendererProps.Save(rendererPropsPath);
-        // Match the renderer's added optional command fields without changing the drawing logic.
-        var drawingGroupPath = Path.Combine(source, "src", "SvgToXaml.Model", "Drawing", "DrawingGroup.cs");
-        var drawingGroup = await File.ReadAllTextAsync(drawingGroupPath);
-        drawingGroup = drawingGroup
-            .Replace("SaveLayerCanvasCommand(_, var skPaint)", "SaveLayerCanvasCommand(_, var skPaint, _)")
-            .Replace("DrawTextCanvasCommand(var text, var x, var y, var skPaint)", "DrawTextCanvasCommand(var text, var x, var y, var skPaint, _, _)")
-            .Replace("DrawTextOnPathCanvasCommand(var text, var skPath, var hOffset, var vOffset, var skPaint)", "DrawTextOnPathCanvasCommand(var text, var skPath, var hOffset, var vOffset, var skPaint, _, _)")
-            .Replace("DrawImageCanvasCommand(var skImage, var skRect, var dest, var skPaint)", "DrawImageCanvasCommand(var skImage, var skRect, var dest, var skPaint, _)");
-        await File.WriteAllTextAsync(drawingGroupPath, drawingGroup);
-        // Resolve both SVG layout and glyph outlines from the pinned font, never a system fallback.
-        const string typefaceProviders = "new Svg.Skia.TypefaceProviders.ITypefaceProvider[] { new Svg.Skia.TypefaceProviders.CustomTypefaceProvider(System.Environment.GetEnvironmentVariable(\"SPANDRAFT_ICON_FONT\")!) }";
-        var factoryPath = Path.Combine(source, "src", "SvgToXaml.Model", "Factory.cs");
-        var factory = (await File.ReadAllTextAsync(factoryPath)).Replace("new Svg.Skia.SKSvgSettings()",
-            "new Svg.Skia.SKSvgSettings { TypefaceProviders = " + typefaceProviders + " }");
-        await File.WriteAllTextAsync(factoryPath, factory);
-        var converterPath = Path.Combine(source, "src", "SvgToXaml.Converter", "SvgToXamlConverter.cs");
-        var converterCode = (await File.ReadAllTextAsync(converterPath)).Replace("if (skSvg.FromSvg(inputItem.Content) is null)",
-            "skSvg.Settings.TypefaceProviders = " + typefaceProviders + ";\n                if (skSvg.FromSvg(inputItem.Content) is null)");
-        await File.WriteAllTextAsync(converterPath, converterCode);
         await Dotnet("build", Path.Combine(source, "src", "svgxaml", "svgxaml.csproj"),
             "--configuration", "Release", "--disable-build-servers", "--verbosity", "quiet",
             "-p:ImportDirectoryBuildProps=false", "-p:ImportDirectoryBuildTargets=false");
@@ -90,7 +56,7 @@ try
         if (converted.Length != files.Length)
             throw new InvalidOperationException($"Incomplete {family} conversion: expected {files.Length} resources, got {converted.Length}.");
         var dictionary = new XElement(a + "ResourceDictionary", new XAttribute(XNamespace.Xmlns + "x", x),
-            new XComment($" Generated by scripts/update-icons.cs using SvgToXaml {revision}, Svg.Skia {svgSkiaVersion}. Do not edit. "));
+            new XComment($" Generated by scripts/update-icons.cs using SvgToXaml {revision}. Do not edit. "));
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var file in files)
         {
@@ -171,7 +137,6 @@ async Task Dotnet(params string[] arguments)
     start.Environment["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "1";
     start.Environment["DOTNET_ROLL_FORWARD"] = "Major";
     start.Environment["DOTNET_CLI_UI_LANGUAGE"] = "en-US";
-    start.Environment["SPANDRAFT_ICON_FONT"] = fontPath;
     foreach (var argument in arguments) start.ArgumentList.Add(argument);
     using var process = Process.Start(start) ?? throw new InvalidOperationException("Cannot start dotnet.");
     await process.WaitForExitAsync();

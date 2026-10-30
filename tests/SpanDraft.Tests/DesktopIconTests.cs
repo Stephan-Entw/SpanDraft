@@ -1,4 +1,6 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Xml.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -23,6 +25,24 @@ public sealed class DesktopIconTests
     private static readonly string[] Fluent = ["DocumentAdd", "FolderOpen", "BookOpen", "Document", "Info", "Edit", "Star", "ErrorCircle", "Delete",
         "ZoomIn", "ZoomOut", "Add", "Subtract", "Print", "DocumentPdf", "ChevronLeft", "ChevronRight", "CheckmarkCircle", "LockClosed", "Eye", "EyeOff"];
     private static readonly string[] Fluent24 = ["DocumentFit", "DocumentWidth", "DocumentData"];
+
+    [Fact]
+    public void ToolbarSourcesHaveNoTextFontsOrExternalReferences()
+    {
+        var files = Directory.GetFiles(Path.Combine(Repository(), "src", "SpanDraft.Desktop", "Assets", "Icons", "Toolbar"), "*.svg");
+        Assert.NotEmpty(files);
+        foreach (var file in files)
+        {
+            var svg = XDocument.Load(file);
+            Assert.DoesNotContain(svg.Descendants(), e => e.Name.LocalName is "text" or "tspan" or "textPath" ||
+                e.Name.LocalName.StartsWith("font", StringComparison.OrdinalIgnoreCase));
+            var content = string.Join("\n", svg.Descendants().Attributes().Where(a => !a.IsNamespaceDeclaration).Select(a => a.ToString())
+                .Concat(svg.DescendantNodes().OfType<XText>().Select(t => t.Value)));
+            Assert.DoesNotMatch(@"(?i)\bfont\b|(?:https?:)?//", content);
+        }
+
+        static string Repository([CallerFilePath] string source = "") => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(source)!, "../.."));
+    }
 
     [Fact]
     public void NativeArtworkKeepsArtboardsAndRendersInBothThemes()

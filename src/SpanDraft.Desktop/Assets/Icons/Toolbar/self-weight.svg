@@ -1,55 +1,12 @@
-<svg width="48" xmlns="http://www.w3.org/2000/svg" height="48" id="screenshot-46796036-7a88-8097-8008-de27eb699289" viewBox="0 0 48 48" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1"><style>/* cyrillic-ext */
-@font-face {
-  font-family: 'STIX Two Text';
-  font-style: normal;
-  font-weight: 400;
-  font-display: block;
-  src: url(https://design.penpot.app/internal/gfonts/font/stixtwotext/v18/YA9Gr02F12Xkf5whdwKf11l0jbKkeidMTtZ5Yihg2ROSURB8Nw.woff2) format('woff2');
-  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-/* cyrillic */
-@font-face {
-  font-family: 'STIX Two Text';
-  font-style: normal;
-  font-weight: 400;
-  font-display: block;
-  src: url(https://design.penpot.app/internal/gfonts/font/stixtwotext/v18/YA9Gr02F12Xkf5whdwKf11l0jbKkeidMTtZ5Yihg2RObURB8Nw.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-/* greek */
-@font-face {
-  font-family: 'STIX Two Text';
-  font-style: normal;
-  font-weight: 400;
-  font-display: block;
-  src: url(https://design.penpot.app/internal/gfonts/font/stixtwotext/v18/YA9Gr02F12Xkf5whdwKf11l0jbKkeidMTtZ5Yihg2ROcURB8Nw.woff2) format('woff2');
-  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
-}
-/* vietnamese */
-@font-face {
-  font-family: 'STIX Two Text';
-  font-style: normal;
-  font-weight: 400;
-  font-display: block;
-  src: url(https://design.penpot.app/internal/gfonts/font/stixtwotext/v18/YA9Gr02F12Xkf5whdwKf11l0jbKkeidMTtZ5Yihg2ROQURB8Nw.woff2) format('woff2');
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-/* latin-ext */
-@font-face {
-  font-family: 'STIX Two Text';
-  font-style: normal;
-  font-weight: 400;
-  font-display: block;
-  src: url(https://design.penpot.app/internal/gfonts/font/stixtwotext/v18/YA9Gr02F12Xkf5whdwKf11l0jbKkeidMTtZ5Yihg2RORURB8Nw.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-/* latin */
-@font-face {
-  font-family: 'STIX Two Text';
-  font-style: normal;
-  font-weight: 400;
-  font-display: block;
-  src: url(https://design.penpot.app/internal/gfonts/font/stixtwotext/v18/YA9Gr02F12Xkf5whdwKf11l0jbKkeidMTtZ5Yihg2ROfURA.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-</style><g id="shape-46796036-7a88-8097-8008-de27eb699289"><defs><clipPath id="frame-clip-46796036-7a88-8097-8008-de27eb699289-render-1" class="frame-clip frame-clip-def"><rect rx="0" ry="0" x="0" y="0" width="48" height="48" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)"/></clipPath></defs><g class="frame-container-wrapper"><g class="frame-container-blur"><g class="frame-container-shadows"><g clip-path="url(#frame-clip-46796036-7a88-8097-8008-de27eb699289-render-1)" fill="none"><g class="fills" id="fills-46796036-7a88-8097-8008-de27eb699289"><rect rx="0" ry="0" x="0" y="0" width="48" height="48" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="frame-background"/></g><g class="frame-children"><g id="shape-46796036-7a88-8097-8008-de2f160211b8" rx="0" ry="0"><g id="shape-46796036-7a88-8097-8008-de2915ef7a7b" rx="0" ry="0"><g id="shape-46796036-7a88-8097-8008-de289d6ba65d"><g class="fills" id="fills-46796036-7a88-8097-8008-de289d6ba65d"><path d="M32.59503173828125,10.175003051757812L32.59503173828125,36.17500305175781" fill="none" stroke-linecap="round" stroke-linejoin="round" style="fill: none;"/></g><g fill="none" stroke-linecap="round" stroke-linejoin="round" id="strokes-f8bd7960-4f5e-80f9-8008-de2f84393935-46796036-7a88-8097-8008-de289d6ba65d" class="strokes"><g class="stroke-shape"><path d="M32.59503173828125,10.175003051757812L32.59503173828125,36.17500305175781" style="fill: none; stroke-width: 3; stroke: rgb(0, 115, 254); stroke-opacity: 1; stroke-linecap: round;"/></g></g></g><g id="shape-46796036-7a88-8097-8008-de289d6ba65e"><g class="fills" id="fills-46796036-7a88-8097-8008-de289d6ba65e"><path d="M26.60003662109375,34.375L38.60003662109375,34.375L32.60003662109375,41.77500915527344Z" style="fill: rgb(0, 115, 254);"/></g></g></g><g id="shape-46796036-7a88-8097-8008-de28fe054d90"><g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="9.399999618530273" y="-1.7750007629394418" width="15" height="41" rx="0" ry="0"><defs><pattern patternUnits="objectBoundingBox" width="16.4609375" height="34" id="fill-0-render-6-0"><g><rect width="16.4609375" height="34" style="fill: rgb(0, 0, 0); fill-opacity: 1;"/></g></pattern></defs><g class="fills" id="fills-46796036-7a88-8097-8008-de28fe054d90"><text x="9.399999618530273" y="35.22499923706056" dominant-baseline="ideographic" textLength="16.4609375" lengthAdjust="spacingAndGlyphs" style="text-transform: none; font-family: &quot;STIX Two Text&quot;; letter-spacing: normal; font-style: normal; font-weight: 400; white-space: pre; font-size: 34px; text-decoration: none; direction: ltr; fill: rgb(0, 0, 0); fill-opacity: 1;">g</text></g></g></g></g></g></g></g></g></g></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <clipPath id="frame-clip"><rect width="48" height="48"/></clipPath>
+  </defs>
+  <g clip-path="url(#frame-clip)">
+    <path d="M32.59503173828125,10.175003051757812L32.59503173828125,36.17500305175781" stroke="#0073fe" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M26.60003662109375,34.375L38.60003662109375,34.375L32.60003662109375,41.77500915527344Z" fill="#0073fe"/>
+    <g>
+      <path d="M15.894 35.1228Q13.684 35.1228 12.409 34.5788Q11.134 34.0348 10.624 33.1678Q10.114 32.3008 10.114 31.3828Q10.114 30.5328 10.811 29.5978Q11.508 28.6628 12.868 27.3368L12.868 27.2008Q12.154 26.8948 11.559 26.2148Q10.964 25.5348 10.964 24.7528Q10.964 23.8348 11.763 22.8148Q12.562 21.7948 13.752 20.8768L13.752 20.8088Q12.528 20.0948 11.831 18.9728Q11.134 17.8508 11.134 16.1848Q11.134 13.6348 12.868 12.1388Q14.602 10.6428 17.288 10.6428Q19.43 10.6428 21.096 11.4928L25.448 11.2548L25.448 13.0908L22.252 12.9888L22.252 13.1588Q22.626 13.6688 23.051 14.5188Q23.476 15.3688 23.476 16.6608Q23.476 19.0408 21.81 20.4348Q20.144 21.8288 17.458 21.8288Q16.642 21.8288 15.928 21.6928Q15.214 21.5568 14.534 21.3188Q14.296 21.6588 13.973 22.4068Q13.65 23.1548 13.65 23.5968Q13.65 24.3448 14.483 24.6508Q15.316 24.9568 17.662 24.9568Q19.804 24.9568 21.521 25.1608Q23.238 25.3648 24.224 26.2148Q25.21 27.0648 25.21 29.0028Q25.21 30.7028 24.377 31.8758Q23.544 33.0488 22.167 33.7628Q20.79 34.4768 19.141 34.7998Q17.492 35.1228 15.894 35.1228ZM13.718 27.4728Q13.174 28.4248 12.97 29.0538Q12.766 29.6828 12.766 30.2268Q12.766 33.1848 17.866 33.1848Q19.872 33.1848 21.113 32.6748Q22.354 32.1648 22.915 31.4168Q23.476 30.6688 23.476 29.9548Q23.476 29.0708 22.932 28.5778Q22.388 28.0848 21.521 27.8808Q20.654 27.6768 19.685 27.6088Q18.716 27.5408 17.866 27.5408Q17.662 27.5408 17.56 27.5408Q16.2 27.5408 15.452 27.5238Q14.704 27.5068 14.33 27.4898Q13.956 27.4728 13.718 27.4728ZM17.492 20.6388Q18.784 20.6388 19.617 19.7548Q20.45 18.8708 20.45 16.4568Q20.45 14.3828 19.566 13.1248Q18.682 11.8668 17.05 11.8668Q15.724 11.8668 14.925 12.8868Q14.126 13.9068 14.126 16.0488Q14.126 18.2248 14.976 19.4318Q15.826 20.6388 17.492 20.6388Z" fill="#000000"/>
+    </g>
+  </g>
+</svg>
