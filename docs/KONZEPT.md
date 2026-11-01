@@ -123,7 +123,7 @@ Implementiert sind:
 - Platzieren und Bearbeiten von Lagern und Lasten
 - Undo/Redo
 - eigenständige Projektdateien
-- Projektangaben mit Berechnungstitel, Ersteller und optionalen Projekt- und Referenzangaben
+- Projektangaben mit verpflichtendem Berechnungstitel und optionalem Ersteller sowie optionalen Projekt- und Referenzangaben
 - Crash-Wiederherstellung
 - Wiederherstellung bestätigter Werte noch nicht erstellter Projekte
 - konfigurierbare Einheiten

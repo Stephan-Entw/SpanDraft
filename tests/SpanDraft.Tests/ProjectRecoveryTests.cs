@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
@@ -336,4 +337,25 @@ public sealed class ProjectRecoveryTests
         }
     }
 
+    [Fact]
+    public async Task AuthorlessProjectRecoveryWritesVersionFourAndPreservesEveryValueWithoutLearningAnAuthor()
+    {
+        var state = State() with { Info = new("Beam", "Project", "Drawing", null) };
+        var bytes = ProjectRecovery.Encode(new(state, TestPath("original.spandraft"), Now));
+        var json = JsonNode.Parse(bytes)!;
+        Assert.Equal(1, json["recoveryVersion"]!.GetValue<int>());
+        Assert.Equal(4, json["project"]!["formatVersion"]!.GetValue<int>());
+        Assert.False(json["project"]!["info"]!.AsObject().ContainsKey("author"));
+        var files = new Files(); files.Data[App.Slot] = bytes;
+        var recovery = new ProjectRecovery(files, App.Slot);
+        var snapshot = (await recovery.ReadAsync())!;
+        Assert.True(state.ContentEquals(snapshot.State)); Assert.Equal(Now, snapshot.WrittenAtUtc);
+        Assert.Equal(TestPath("original.spandraft"), snapshot.OriginalFilePath);
+        var main = new MainWindowViewModel(files: files, recovery: recovery,
+            dialogs: new Dialogs(), settings: UserSettings.Default with { LastAuthor = "Local author" },
+            userNameProvider: () => "windows.user");
+        Assert.True(await main.InitializeRecoveryAsync()); Assert.True(main.Session!.IsDirty);
+        Assert.True(state.ContentEquals(main.Session.CurrentRevision.State));
+        Assert.Equal("Local author", main.Settings.LastAuthor);
+    }
 }

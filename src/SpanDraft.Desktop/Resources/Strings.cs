@@ -42,7 +42,6 @@ public static class Strings
     public static string Author => Get(nameof(Author));
     public static string Reference => Get(nameof(Reference));
     public static string CalculationTitleRequired => Get(nameof(CalculationTitleRequired));
-    public static string ProjectAuthorRequired => Get(nameof(ProjectAuthorRequired));
 
     public static string Start => Get(nameof(Start));
     public static string Project => Get(nameof(Project));

@@ -63,7 +63,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         CalculationTitleInput = new(this, recoveredDraft is not null ? recoveredDraft.CalculationTitle : originalInfo?.CalculationTitle, Strings.CalculationTitleRequired);
         ProjectTitleInput = new(this, recoveredDraft is not null ? recoveredDraft.ProjectTitle : originalInfo?.ProjectTitle);
         ReferenceInput = new(this, recoveredDraft is not null ? recoveredDraft.Reference : originalInfo?.Reference);
-        AuthorInput = new(this, recoveredDraft is not null ? recoveredDraft.Author : IsEdit ? originalInfo?.Author : suggestedAuthor, Strings.ProjectAuthorRequired);
+        AuthorInput = new(this, recoveredDraft is not null ? recoveredDraft.Author : IsEdit ? originalInfo?.Author : suggestedAuthor);
         _confirmedDraft = Draft;
         OriginalMaterial = IsEdit ? material : null;
         _resultPresentation = resultPresentation ?? ResultPresentationOptions.Default;
@@ -90,12 +90,12 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public bool RequiresProjectInfo => !IsEdit || _originalInfo is not null
         || InfoInputs.Any(i => !string.IsNullOrWhiteSpace(i.Text));
     private IEnumerable<ProjectInfoInput> InfoInputs => [CalculationTitleInput, AuthorInput, ProjectTitleInput, ReferenceInput];
-    public ProjectInfo? Info => CalculationTitleInput.ConfirmedValue is { } title && AuthorInput.ConfirmedValue is { } author
-        ? new(title, ProjectTitleInput.ConfirmedValue, ReferenceInput.ConfirmedValue, author) : null;
+    public ProjectInfo? Info => CalculationTitleInput.ConfirmedValue is { } title
+        ? new(title, ProjectTitleInput.ConfirmedValue, ReferenceInput.ConfirmedValue, AuthorInput.ConfirmedValue) : null;
     internal void RefreshInfo() { Notify(nameof(CanApply)); ApplyCommand?.Refresh(); }
     internal void InfoCommitted() { RefreshInfo(); DraftCommitted(); }
     private bool HasValidInfoInput => !RequiresProjectInfo
-        || !string.IsNullOrWhiteSpace(CalculationTitleInput.Text) && !string.IsNullOrWhiteSpace(AuthorInput.Text);
+        || !string.IsNullOrWhiteSpace(CalculationTitleInput.Text);
     private void DraftCommitted()
     {
         if (IsEdit) return;

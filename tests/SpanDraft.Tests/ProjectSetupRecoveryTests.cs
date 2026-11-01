@@ -502,13 +502,35 @@ public sealed class ProjectSetupRecoveryTests
         Assert.Equal("Beam", (await f.Recovery.ReadAsync())!.Draft.CalculationTitle);
         Assert.Null((await f.Recovery.ReadAsync())!.Draft.Author);
         int waits = f.Delay.Waiters.Count;
-        setup.AuthorInput.Begin(); setup.AuthorInput.Text = " "; Assert.False(setup.AuthorInput.Confirm());
-        Assert.True(setup.AuthorInput.HasError); Assert.Equal(waits, f.Delay.Waiters.Count);
+        setup.AuthorInput.Begin(); setup.AuthorInput.Text = " "; Assert.True(setup.AuthorInput.Confirm());
+        Assert.False(setup.AuthorInput.HasError); Assert.Equal(waits, f.Delay.Waiters.Count);
         setup.AuthorInput.Text = "Author"; setup.AuthorInput.Cancel();
         Assert.Null(setup.Draft.Author); Assert.Empty(setup.AuthorInput.Text); Assert.Equal(waits, f.Delay.Waiters.Count);
         setup.AuthorInput.Text = " Author "; Assert.True(setup.AuthorInput.Confirm()); await f.Publish();
         Assert.Equal("Author", (await f.Recovery.ReadAsync())!.Draft.Author);
+        setup.AuthorInput.Text = " \t "; Assert.True(setup.AuthorInput.Confirm()); await f.Publish();
+        Assert.Null((await f.Recovery.ReadAsync())!.Draft.Author);
+        Assert.Equal(2, JsonNode.Parse(f.Files.Data[Slot])!["recoveryVersion"]!.GetValue<int>());
+        var bytes = f.Files.Data[Slot]; f.Start(UserSettings.Default with { LastAuthor = "Other author" }, () => "windows.user");
+        Assert.True(await f.Main.InitializeRecoveryAsync());
+        Assert.Empty(f.Main.Setup.AuthorInput.Text); Assert.Equal("Beam", f.Main.Setup.CalculationTitleInput.Text);
+        Assert.Equal(bytes, f.Files.Data[Slot]); Assert.Equal("Other author", f.Main.Settings.LastAuthor);
         Assert.Null(f.Main.Session);
+    }
+
+    [Fact]
+    public async Task RecoveredCompleteDraftWithoutAuthorCanBeCreatedAndClearsLastAuthor()
+    {
+        var f = new Fixture(); f.Seed(Draft() with { Author = null });
+        f.Start(UserSettings.Default with { LastAuthor = "Local author" }, () => "windows.user");
+        Assert.True(await f.Main.InitializeRecoveryAsync());
+        Assert.Empty(f.Main.Setup.AuthorInput.Text); Assert.True(f.Main.Setup.CanApply);
+        Assert.Equal("Local author", f.Main.Settings.LastAuthor);
+        Assert.True(await f.Main.Setup.ConfirmAsync());
+        Assert.Equal(new ProjectInfo("Calculation", null, null, null), f.Main.Session!.CurrentRevision.State.Info);
+        Assert.Null(f.Main.Settings.LastAuthor); Assert.Null(await f.Recovery.ReadAsync());
+        f.ProjectDelay.ReleaseAll(); await WaitFor(f.NormalRecovery.DrainAsync());
+        Assert.True(f.Main.Session.CurrentRevision.State.ContentEquals((await f.NormalRecovery.ReadAsync())!.State));
     }
 
 }

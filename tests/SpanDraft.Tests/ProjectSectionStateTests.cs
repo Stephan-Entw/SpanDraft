@@ -66,13 +66,13 @@ public sealed class ProjectSectionStateTests
         var recovered = (await app.Recovery.ReadAsync())!;
         Assert.True(after.ContentEquals(recovered.State));
         Assert.Equal(path, recovered.OriginalFilePath);
-        Assert.Equal(3, JsonNode.Parse(app.Files.Data[App.Slot])!["project"]!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(4, JsonNode.Parse(app.Files.Data[App.Slot])!["project"]!["formatVersion"]!.GetValue<int>());
         Assert.True(ProjectSession.Restore(recovered.State, recovered.OriginalFilePath).IsDirty);
         Assert.True(await app.Main.SaveAsync(saveAs: true));
         var savedPath = app.Dialogs.SavePath!;
         Assert.Equal(savedPath, session.FilePath); Assert.False(session.IsDirty);
         Assert.Equal(original, app.Files.Data[path]);
-        Assert.Equal(3, JsonNode.Parse(app.Files.Data[savedPath])!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(4, JsonNode.Parse(app.Files.Data[savedPath])!["formatVersion"]!.GetValue<int>());
         Assert.True(after.ContentEquals(ProjectFileCodec.Deserialize(app.Files.Data[savedPath])));
         Assert.Null(await app.Recovery.ReadAsync());
         Assert.True(app.Main.Undo()); Assert.True(session.IsDirty); Assert.True(before.ContentEquals(session.CurrentRevision.State));

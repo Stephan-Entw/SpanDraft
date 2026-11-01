@@ -32,7 +32,7 @@ The current desktop application supports:
 - undo and redo
 - versioned `.spandraft` project files
 - crash recovery
-- project information with calculation title, author, optional project title and reference
+- project information with a required calculation title and optional author, project title and reference
 - automatic analysis after committed model changes
 - compact display of maximum deflection, bending moment, bending stress and
   safety factor against the material's yield or proof strength

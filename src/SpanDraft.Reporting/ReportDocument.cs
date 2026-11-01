@@ -414,7 +414,7 @@ internal sealed class ReportDocument : IDisposable
             return layout.Height;
         }
 
-        // Reserve the measured header before pagination; missing fields still need readable placeholders.
+        // Reserve the measured header before pagination; project and reference retain their placeholders.
         float y = Margin + 13;
         foreach (string line in Wrap(Data.Title, width, titleSize, true))
             y += Math.Max(17, Add(new(line, PageWidth / 2, y, titleSize, Strong: true, Align: SKTextAlign.Center)) + 2);
@@ -422,6 +422,7 @@ internal sealed class ReportDocument : IDisposable
         float x = Margin, labelHeight = 0;
         for (int i = 0; i < labels.Length; i++)
         {
+            if (i == 2 && string.IsNullOrWhiteSpace(Data.Author)) continue;
             labelHeight = Math.Max(labelHeight, Add(new(labels[i], x, y, 7, Secondary: true)));
             x += widths[i] + gap;
         }
@@ -429,6 +430,7 @@ internal sealed class ReportDocument : IDisposable
         x = Margin;
         for (int i = 0; i < labels.Length; i++)
         {
+            if (i == 2 && string.IsNullOrWhiteSpace(Data.Author)) continue;
             string? value = Data.Metadata.FirstOrDefault(m => m.Label == labels[i]).Value;
             y = valueTop;
             foreach (string line in Wrap(string.IsNullOrWhiteSpace(value) ? "-" : value, widths[i], 8.5f))

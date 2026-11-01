@@ -312,7 +312,6 @@
   <data name="Author" xml:space="preserve"><value>Created by</value></data>
   <data name="Reference" xml:space="preserve"><value>Reference</value></data>
   <data name="CalculationTitleRequired" xml:space="preserve"><value>Title is missing.</value></data>
-  <data name="ProjectAuthorRequired" xml:space="preserve"><value>Name is missing.</value></data>
   <data name="Optional" xml:space="preserve"><value>(optional)</value></data>
   <data name="ReportCommand" xml:space="preserve"><value>Report…</value></data>
   <data name="ReportHeading" xml:space="preserve"><value>Calculation report</value></data>

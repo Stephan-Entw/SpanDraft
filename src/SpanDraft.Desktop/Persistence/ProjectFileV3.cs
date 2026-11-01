@@ -1,6 +1,6 @@
 namespace SpanDraft.Desktop.Persistence;
 
-// Current envelope; document and presentation retain their V2 contracts.
+// Historical envelope; an existing info object requires a non-empty author.
 public sealed record ProjectFileV3
 {
     public required string Format { get; init; }

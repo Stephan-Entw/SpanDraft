@@ -4,8 +4,8 @@
 
 Dateiendung: `.spandraft` (beim Speichern ohne Beachtung der Groß-/Kleinschreibung).
 Projektdateien sind lesbares, eingerücktes UTF-8-JSON mit `format = "SpanDraft.Project"`,
-`formatVersion`, optionalem `info`, `document` und `presentation`. **V3 ist das einzige
-aktuelle Schreibformat; V1 und V2 bleiben historische Leseverträge.**
+`formatVersion`, optionalem `info`, `document` und `presentation`. **V4 ist das einzige
+aktuelle Schreibformat; V1–V3 bleiben historische Leseverträge.**
 DTOs und Codec-Tests definieren die technischen Felder und Typen; dieser Text
 beschreibt die dauerhaften fachlichen Regeln. Core- und Editorobjekte werden
 nicht direkt serialisiert. Es gibt weder CLR-Typnamen noch numerische Enumwerte.
@@ -120,29 +120,35 @@ Inhaltsvergleich, Dirty-State, Undo/Redo und zur vollständigen Projekt-Recovery
 
 Diese optionalen Felder erweitern V3 kompatibel ohne Versionssprung. Historische
 V1-/V2-/V3-Dateien ohne Eigengewicht behalten ihre bisherigen Analyseergebnisse;
-der gemeinsame V2-/V3-Dokumentreader akzeptiert die optionalen Erweiterungen.
+der gemeinsame Dokumentreader für V2–V4 akzeptiert die optionalen Erweiterungen.
 
 ## Projektangaben
 
 V3 ergänzt `info` außerhalb von Dokument und Presentation. Es enthält
 `calculationTitle` (Berechnung des konkreten Bauteils/Modells), `author`
-(Ersteller als natürliche Person), optional `projectTitle` (übergeordnetes
-Projekt) und `reference` (freie externe Zuordnung, etwa Zeichnungs- oder
-Auftragsnummer). Berechnung und Ersteller sind nach Trim nichtleer; optionale
-Leerwerte werden null. Alle gespeicherten Angaben sind getrimmt. Es gibt keine
-weiteren Dokumentmanagement-Felder oder Ableitungen aus dem Dateinamen.
+(Ersteller), optional `projectTitle` (übergeordnetes Projekt) und `reference`
+(freie externe Zuordnung, etwa Zeichnungs- oder Auftragsnummer).
+Der historische V3-Lesevertrag verlangt bei vorhandenem `info` weiterhin einen
+nach Trim nichtleeren Berechnungstitel und Ersteller. Ein fehlender, null
+oder leer gesetzter Ersteller ist dort ungültig.
 
-Neue Projekte besitzen vollständige Angaben. Bei migrierten Legacy-Projekten
-darf `info` fehlen oder null sein, auch nach erneutem Speichern als V3. Ein
-vorhandenes `info` muss beide Pflichtwerte gültig enthalten. Legacy-Bearbeitung
-mit vier leeren Angaben erhält null; bei angelegten Angaben werden beide
-Pflichtwerte verlangt. Projektangaben gehören zu Inhaltsvergleich, Dirty-State,
-Undo/Redo und Recovery. Ihre Änderung allein löst keine Analysis aus.
+V4 macht `author` optional: fehlende, null und nach Trim leere Werte werden null.
+`calculationTitle` bleibt bei vorhandenem `info` verpflichtend und nach Trim
+nichtleer. Auch die übrigen optionalen Leerwerte werden null. Alle gespeicherten
+Angaben sind getrimmt. Es gibt keine weiteren Dokumentmanagement-Felder oder
+Ableitungen aus dem Dateinamen.
+
+Neue Projekte besitzen einen Berechnungstitel; ein Ersteller ist freiwillig.
+Bei migrierten Legacy-Projekten darf `info` fehlen oder null sein, auch nach
+erneutem Speichern als V4. Legacy-Bearbeitung mit vier leeren Angaben erhält null;
+sobald Angaben angelegt werden, wird ausschließlich der Berechnungstitel verlangt.
+Projektangaben gehören zu Inhaltsvergleich, Dirty-State, Undo/Redo und Recovery.
+Ihre Änderung allein löst keine Analysis aus.
 
 ## V1-/V2-Migration und Legacy-Kompatibilität
 
 V1 und V2 werden mit fehlenden Projektangaben (`Info == null`) gelesen.
-V3 verwendet weiterhin die Dokument-/Presentation-Struktur aus V2.
+V3 und V4 verwenden weiterhin die Dokument-/Presentation-Struktur aus V2.
 V1 wird beim Laden unmittelbar ins aktuelle In-Memory-Modell migriert:
 Rechteck, Rechteckrohr, Kreis und Rundrohr werden parametrische Definitionen;
 Rechteckrohre erhalten Außenradius 0. V1-`custom` wird Manual mit originalem
@@ -151,8 +157,8 @@ bleiben null. Ihre mechanischen Kennwerte und Berechnungsergebnisse bleiben erha
 
 Bloßes Öffnen verändert keine Benutzerdatei und macht das geöffnete Projekt
 nicht allein wegen der Migration dirty. Erst ein tatsächliches Speichern nach
-expliziter Klärung des Kennwerttyps schreibt V3; ursprünglicher Dateipfad und normales Save-/Save-As-Verhalten bleiben erhalten.
-Es gibt keinen V1-/V2-Writer. Noch verwendete Legacy-Sections werden beim V3-Schreiben
+expliziter Klärung des Kennwerttyps schreibt V4; ursprünglicher Dateipfad und normales Save-/Save-As-Verhalten bleiben erhalten.
+Es gibt keinen V1-/V2-/V3-Writer. Noch verwendete Legacy-Sections werden beim V4-Schreiben
 auf dieselben kanonischen Formen normalisiert; es gibt keinen Legacy-Wiretyp.
 
 `Load → Save → Load` erhält den fachlichen Inhalt. Der Inhaltsvergleich verwendet
@@ -181,7 +187,7 @@ Lagerung bleiben persistierbar; Analysis beschreibt ihre Berechenbarkeit.
 Recovery ist ein privater lokaler Slot, kein Autosave der Benutzerdatei.
 Das bestehende interne Envelope bleibt bei `recoveryVersion = 1`, optionalem
 Originalpfad und UTC-Zeitstempel. Sein eingebettetes Projekt verwendet genau
-denselben Codec: neue Recovery schreibt V3; historische V1-/V2-Projekte bleiben lesbar.
+denselben Codec: neue Recovery schreibt V4; historische V1-/V2-/V3-Projekte bleiben lesbar.
 Ausschließlich private Recovery darf ungeklärte Legacy-Materialien weiterhin
 verlustfrei sichern; dieselben Materialmappings erhalten den fehlenden Typ.
 Das gilt auch für Setup-Recovery. Reguläres Projektspeichern und neue
@@ -196,7 +202,7 @@ mit `recoveryVersion = 2` und UTC-Zeitstempel; Version 1 bleibt ohne
 Projektangaben lesbar. Er enthält ausschließlich
 bestätigte, auch unvollständige Setup-Werte in SI sowie einen optionalen expliziten
 Querschnittsnamen sowie die vier einzeln bestätigten Projektangaben, auch wenn
-Berechnung oder Ersteller noch fehlen; keine Session, Eingabepuffer oder UI-Zustände.
+der Berechnungstitel noch fehlt; keine Session, Eingabepuffer oder UI-Zustände.
 Querschnitte und Materialien verwenden die bestehenden V2-DTOs. Beim Start wird zuerst die
 Projekt-Recovery bearbeitet, danach der Create-Draft über dem restaurierten Editor
 oder eigenständig ohne Session geöffnet. Cancel im Recovery-Dialog erhält den Slot.
@@ -217,7 +223,8 @@ Die Migration der numerischen Anzeigeeinstellungen steht in
 Settings-Version und Projektformatversion sind unabhängig.
 
 Ausschließlich erfolgreiche Neuanlagen aktualisieren den Wert mit dem normalisierten
-Ersteller des aktivierten Projekts. Die lokale Persistierung erfolgt best-effort;
+Ersteller des aktivierten Projekts, auch wenn dieser null ist. Die lokale
+Persistierung erfolgt best-effort;
 ein Schreibfehler beeinflusst weder das erstellte Projekt noch den laufenden
 Komfortwert. Eingaben, Abbruch, Edit, Öffnen, Speichern, Undo/Redo und normale
 Projekt-Recovery ändern ihn nicht. Ein frischer Create-Draft erhält einmalig eine

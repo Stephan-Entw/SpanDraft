@@ -33,7 +33,7 @@ internal static class ProjectReport
             metadata.Add((Strings.CalculationTitle, info.CalculationTitle));
             if (info.ProjectTitle is { } project) metadata.Add((Strings.Project, project));
             if (info.Reference is { } reference) metadata.Add((Strings.Reference, reference));
-            metadata.Add((Strings.Author, info.Author));
+            if (info.Author is { } author) metadata.Add((Strings.Author, author));
         }
         var axis = analysis.Beam.BendingAxisProperties;
         string axisName = state.Document.BendingAxis.ToString().ToLowerInvariant();

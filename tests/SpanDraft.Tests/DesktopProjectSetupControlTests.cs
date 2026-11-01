@@ -46,7 +46,7 @@ public sealed class DesktopProjectSetupControlTests
         Arrange(window, width, height);
         Capture("create-empty");
         Assert.False(main.Setup.CalculationTitleInput.HasError); Assert.False(main.Setup.AuthorInput.HasError);
-        Assert.False(main.Setup.CalculationTitleInput.Confirm()); Assert.False(main.Setup.AuthorInput.Confirm());
+        Assert.False(main.Setup.CalculationTitleInput.Confirm()); Assert.True(main.Setup.AuthorInput.Confirm());
         Capture("create-info-invalid");
         main.Setup.CalculationTitleInput.Cancel(); main.Setup.AuthorInput.Cancel();
         var emptyCard = Assert.Single(window.GetVisualDescendants().OfType<BeamSetupCard>());
@@ -470,14 +470,16 @@ public sealed class DesktopProjectSetupControlTests
             Assert.True(label.Bounds.Width + 1 >= label.TextLayout.WidthIncludingTrailingWhitespace);
         }
         var optionalLabels = card.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Text == Strings.Optional).ToArray();
-        Assert.Equal(2, optionalLabels.Length);
+        Assert.Equal(3, optionalLabels.Length);
         Assert.All(optionalLabels, label =>
         {
             Assert.Contains("caption", label.Classes);
             Assert.True(label.FontSize < title.FontSize);
             Assert.Equal(Application.Current!.FindResource("TextSecondary"), label.Foreground);
-            Assert.True(Position(label).Y >= Position(project).Y);
-            Assert.True(Position(label).Y + label.Bounds.Height <= Position(project).Y + project.Bounds.Height);
+            var input = ReferenceEquals(label.Parent, card.FindControl<TextBlock>("AuthorLabel")!.Parent) ? author
+                : ReferenceEquals(label.Parent, card.FindControl<TextBlock>("ProjectLabel")!.Parent) ? project : reference;
+            Assert.True(Position(label).Y >= Position(input).Y);
+            Assert.True(Position(label).Y + label.Bounds.Height <= Position(input).Y + input.Bounds.Height);
         });
         Assert.All(inputs, input => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(input))));
         var beam = view.FindControl<BeamSetupCard>("BeamCard")!;
@@ -501,7 +503,12 @@ public sealed class DesktopProjectSetupControlTests
         Assert.True(setup.CalculationTitleInput.HasError); Assert.False(setup.CanApply); Assert.Equal(bounds, card.Bounds);
         Assert.Equal(surfaceBounds, surface.Bounds);
         Assert.Equal(culture == "de-DE" ? "Titel fehlt noch." : "Title is missing.", setup.CalculationTitleInput.ErrorText);
-        Assert.Equal(culture == "de-DE" ? "Name fehlt noch." : "Name is missing.", setup.AuthorInput.ErrorText);
+        Assert.Null(setup.AuthorInput.ErrorText);
+        author.Focus(); author.Text = " "; Press(author, Key.Enter);
+        Assert.False(setup.AuthorInput.HasError); Assert.Null(setup.Draft.Author);
+        Assert.Null(author.InnerRightContent); Assert.Null(ToolTip.GetTip(author));
+        Assert.Null(AutomationProperties.GetHelpText(author));
+        author.Text = "Author"; Press(author, Key.Enter); title.Focus();
         Assert.True(setup.ProjectTitleInput.Confirm()); Assert.True(setup.ReferenceInput.Confirm());
         Assert.IsType<PathIcon>(title.InnerRightContent);
         Assert.Equal(setup.CalculationTitleInput.ErrorText, ToolTip.GetTip(title));

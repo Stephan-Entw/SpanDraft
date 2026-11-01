@@ -15,7 +15,7 @@ public sealed class ProjectFormatException(string message, Exception? inner = nu
 public static class ProjectFileCodec
 {
     public const string Format = "SpanDraft.Project";
-    public const int Version = 3;
+    public const int Version = 4;
     internal static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -45,6 +45,7 @@ public static class ProjectFileCodec
                 1 => FromDto(root.Deserialize<ProjectFileV1>(JsonOptions)!),
                 2 => FromDto(root.Deserialize<ProjectFileV2>(JsonOptions)!),
                 3 => FromDto(root.Deserialize<ProjectFileV3>(JsonOptions)!),
+                4 => FromDto(root.Deserialize<ProjectFileV4>(JsonOptions)!),
                 _ => throw new ProjectFormatException("Unsupported project format version.")
             };
         }
@@ -56,12 +57,12 @@ public static class ProjectFileCodec
 
     public static ProjectState FromDto(ProjectFileV1 file) => FromDto(ProjectFileV1Reader.Migrate(file));
 
-    public static ProjectFileV3 ToDto(ProjectState state) => ToDto(state, allowLegacy: false);
+    public static ProjectFileV4 ToDto(ProjectState state) => ToDto(state, allowLegacy: false);
 
     internal static byte[] SerializeRecovery(ProjectState state) =>
         JsonSerializer.SerializeToUtf8Bytes(ToDto(state, allowLegacy: true), JsonOptions);
 
-    private static ProjectFileV3 ToDto(ProjectState state, bool allowLegacy)
+    private static ProjectFileV4 ToDto(ProjectState state, bool allowLegacy)
     {
         if (!allowLegacy && state.Document.Material.StrengthType is null)
             throw new ProjectFormatException("The material strength type must be confirmed before saving.");
@@ -204,11 +205,27 @@ public static class ProjectFileCodec
 
     public static ProjectState FromDto(ProjectFileV3 file)
     {
+        Required(file, "project");
+        if (file.Format != Format || file.FormatVersion != 3)
+            throw new ProjectFormatException("Invalid V3 project format or version.");
+        if (file.Info is { } info && ProjectInfo.Optional(info.Author) is null)
+            throw new ProjectFormatException("A non-empty V3 author is required.");
+        return FromDto(new ProjectFileV4
+        {
+            Format = file.Format, FormatVersion = Version,
+            Document = file.Document, Presentation = file.Presentation,
+            Info = file.Info is { } i ? new() { CalculationTitle = i.CalculationTitle,
+                ProjectTitle = i.ProjectTitle, Reference = i.Reference, Author = i.Author } : null
+        });
+    }
+
+    public static ProjectState FromDto(ProjectFileV4 file)
+    {
         try
         {
             Required(file, "project");
             if (file.Format != Format || file.FormatVersion != Version)
-                throw new ProjectFormatException("Invalid V3 project format or version.");
+                throw new ProjectFormatException("Invalid V4 project format or version.");
             var info = file.Info is { } i ? new ProjectInfo(i.CalculationTitle, i.ProjectTitle, i.Reference, i.Author) : null;
             return MapValidated(file.Document, file.Presentation) with { Info = info };
         }

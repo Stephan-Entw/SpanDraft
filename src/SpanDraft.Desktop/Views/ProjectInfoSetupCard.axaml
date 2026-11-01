@@ -12,7 +12,10 @@
                AutomationProperties.HelpText="{Binding ErrorText}" TabIndex="1"
                GotFocus="InputGotFocus" LostFocus="InputLostFocus" KeyDown="InputKeyDown"
                AutomationProperties.Name="{x:Static resources:Strings.CalculationTitle}" />
-      <TextBlock x:Name="AuthorLabel" Grid.Row="0" Grid.Column="3" Text="{x:Static resources:Strings.Author}" Classes="body" VerticalAlignment="Center" />
+      <StackPanel Grid.Row="0" Grid.Column="3" VerticalAlignment="Center">
+        <TextBlock x:Name="AuthorLabel" Text="{x:Static resources:Strings.Author}" Classes="body" />
+        <TextBlock Text="{x:Static resources:Strings.Optional}" Classes="caption" />
+      </StackPanel>
       <TextBox Grid.Row="0" Grid.Column="4" DataContext="{Binding AuthorInput}"
                x:Name="AuthorInput" x:DataType="vm:ProjectInfoInput" Text="{Binding Text, Mode=TwoWay}"
                Classes="inlineValidation" Classes.error="{Binding HasError}" ToolTip.Tip="{Binding ErrorText}"

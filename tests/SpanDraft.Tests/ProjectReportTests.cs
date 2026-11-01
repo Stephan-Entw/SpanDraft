@@ -687,6 +687,39 @@ public sealed class ProjectReportTests : IDisposable
     }
 
     [Theory]
+    [InlineData("de-DE", true)] [InlineData("en-US", true)]
+    [InlineData("de-DE", false)] [InlineData("en-US", false)]
+    public void MissingAuthorOmitsItsLabelValueAndPlaceholderWithoutAddingHeaderSpace(string culture, bool hasOtherInfo)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        var state = ReportTestProjects.Create();
+        var info = state.Info!;
+        state = state with { Info = new("Authorless calculation", hasOtherInfo ? info.ProjectTitle : null,
+            hasOtherInfo ? info.Reference : null, "Author") };
+        var (main, _) = Open(state); using var full = ProjectReport.Capture(main.Editor!, Now);
+        var (withoutAuthor, _) = Open(state with { Info = new("Authorless calculation", state.Info.ProjectTitle, state.Info.Reference, null) });
+        using var report = ProjectReport.Capture(withoutAuthor.Editor!, Now);
+        Assert.Equal("Authorless calculation", report.Data.Title); Assert.Empty(report.Data.Author);
+        Assert.DoesNotContain(report.Data.Metadata, row => row.Label == report.Data.Labels.Author);
+        Assert.Equal(full.Data.Metadata.Where(row => row.Label != full.Data.Labels.Author), report.Data.Metadata);
+        using var fullBitmap = full.RenderPage(0, 96);
+        using var bitmap = report.RenderPage(0, 96);
+        Assert.DoesNotContain(report.TextRuns, run => run.Text == report.Data.Labels.Author || run.Text == "Author");
+        Assert.True(report.Pages[0].BodyTop <= full.Pages[0].BodyTop);
+        foreach (string label in new[] { report.Data.Labels.Project, report.Data.Labels.Reference, report.Data.Title })
+            Assert.Equal(Assert.Single(full.TextRuns, r => r.Text == label).Bounds,
+                Assert.Single(report.TextRuns, r => r.Text == label).Bounds);
+        var header = report.TextRuns.Where(r => r.Bounds.Top < report.Pages[0].BodyTop - 12).ToArray();
+        Assert.Equal(hasOtherInfo ? 0 : 2, header.Count(r => r.Text == "-"));
+        AssertTextContained(report);
+        using var pdf = new MemoryStream(); report.WritePdf(pdf);
+        string text = Encoding.Latin1.GetString(pdf.ToArray());
+        Assert.Contains("/Title (Authorless calculation)", text);
+        Assert.Contains("/Creator (SpanDraft " + ApplicationMetadata.Version + ")", text);
+        Assert.DoesNotContain("/Author (Author)", text);
+    }
+
+    [Theory]
     [InlineData("de-DE")] [InlineData("en-US")]
     public void MissingMetadataDoesNotShrinkTheTitleOrColumnLabels(string culture)
     {
@@ -1340,7 +1373,8 @@ public sealed class ProjectReportTests : IDisposable
         Assert.Contains("∞", report.Data.Indicators[3].Value);
         Assert.Equal(new[] { Strings.Supports, Strings.Reactions }, report.Data.Tables.Select(t => t.Title));
         using var bitmap = report.RenderPage(0, 96); AssertTextContained(report);
-        string[] labels = [report.Data.Labels.Project, report.Data.Labels.Reference, report.Data.Labels.Author];
+        Assert.DoesNotContain(report.TextRuns, r => r.Text == report.Data.Labels.Author);
+        string[] labels = [report.Data.Labels.Project, report.Data.Labels.Reference];
         var columns = labels.Select(label => Assert.Single(report.TextRuns, r => r.Text == label).Bounds).ToArray();
         Assert.All(columns, bounds => Assert.Equal(columns[0].Top, bounds.Top));
         Assert.All(columns, bounds => Assert.True(bounds.Bottom < report.Pages[0].BodyTop - 12));

@@ -23,7 +23,7 @@ public sealed class ProjectSetupIntegrationTests
 
     [Theory]
     [MemberData(nameof(CreateFields))]
-    public async Task CreateRequiresEveryValueAndOnlyCreatesACompleteDocument(int fields)
+    public async Task CreateRequiresTechnicalValuesAndTitleButAuthorIsOptional(int fields)
     {
         var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
         if ((fields & 1) != 0) { setup.LengthInput.Begin(); setup.LengthInput.Text = "1500"; }
@@ -31,18 +31,18 @@ public sealed class ProjectSetupIntegrationTests
         if ((fields & 4) != 0) setup.SelectedMaterial = ProjectTemplates.Material;
         if ((fields & 8) != 0) setup.CalculationTitleInput.Text = "Calculation";
         if ((fields & 16) != 0) setup.AuthorInput.Text = "Author";
-        Assert.Equal(fields == 31, setup.CanApply); Assert.Equal(fields == 31, setup.ApplyCommand.CanExecute(null));
-        Assert.Equal(fields == 31, await setup.ConfirmAsync());
-        if (fields == 31)
+        Assert.Equal((fields & 15) == 15, setup.CanApply); Assert.Equal((fields & 15) == 15, setup.ApplyCommand.CanExecute(null));
+        Assert.Equal((fields & 15) == 15, await setup.ConfirmAsync());
+        if ((fields & 15) == 15)
         {
             Assert.Equal(M(1.5), app.Main.Editor!.Document.Length);
-            Assert.Equal(new ProjectInfo("Calculation", null, null, "Author"), app.Main.Session!.CurrentRevision.State.Info);
+            Assert.Equal(new ProjectInfo("Calculation", null, null, (fields & 16) != 0 ? "Author" : null), app.Main.Session!.CurrentRevision.State.Info);
         }
         else { Assert.Null(app.Main.Editor); Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses); }
     }
 
     [Theory]
-    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)] [InlineData(4)]
+    [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)]
     public async Task LastRequiredValueRefreshesTheCreateCommand(int last)
     {
         var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;
@@ -51,10 +51,9 @@ public sealed class ProjectSetupIntegrationTests
             if (field == 0) { setup.LengthInput.Begin(); setup.LengthInput.Text = "1500"; }
             else if (field == 1) setup.SelectedSection = ProjectTemplates.Section;
             else if (field == 2) setup.SelectedMaterial = ProjectTemplates.Material;
-            else if (field == 3) setup.CalculationTitleInput.Text = "Calculation";
-            else setup.AuthorInput.Text = "Author";
+            else setup.CalculationTitleInput.Text = "Calculation";
         }
-        foreach (int field in Enumerable.Range(0, 5).Where(i => i != last)) SetField(field);
+        foreach (int field in Enumerable.Range(0, 4).Where(i => i != last)) SetField(field);
         Assert.False(setup.CanApply); bool enabled = false;
         setup.ApplyCommand.CanExecuteChanged += (_, _) => enabled = setup.ApplyCommand.CanExecute(null);
         SetField(last); Assert.True(enabled); Assert.True(setup.CanApply);
@@ -421,13 +420,12 @@ public sealed class ProjectSetupIntegrationTests
         Assert.True(app.Main.Undo()); Assert.True(app.Main.Redo()); Assert.Equal(calls, app.Analyses);
     }
 
-    [Theory]
-    [InlineData("calculationTitle")] [InlineData("author")]
-    public async Task ExistingInfoCannotBeClearedAndCancelPreservesTheRevision(string field)
+    [Fact]
+    public async Task ExistingTitleCannotBeClearedAndCancelPreservesTheRevision()
     {
         var app = new App(); var revision = app.Main.Session!.CurrentRevision;
         app.Main.EditProject(); var setup = app.Main.Setup;
-        var input = field == "author" ? setup.AuthorInput : setup.CalculationTitleInput;
+        var input = setup.CalculationTitleInput;
         input.Begin(); input.Text = " "; Assert.False(setup.CanApply);
         Assert.False(await setup.ConfirmAsync()); Assert.True(input.HasError);
         Assert.Same(revision, app.Main.Session.CurrentRevision);
@@ -447,15 +445,15 @@ public sealed class ProjectSetupIntegrationTests
         setup.LengthInput.Begin(); setup.LengthInput.Text = "2000";
         Assert.True(await setup.ConfirmAsync()); Assert.Null(app.Main.Session.CurrentRevision.State.Info);
         Assert.True(await app.Main.SaveAsync()); Assert.False(app.Main.Session.IsDirty);
-        Assert.Equal(3, JsonNode.Parse(app.Files.Data[path])!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(4, JsonNode.Parse(app.Files.Data[path])!["formatVersion"]!.GetValue<int>());
         app.Main.EditProject(); setup = app.Main.Setup;
         setup.ReferenceInput.Text = "Drawing"; Assert.False(setup.CanApply);
-        Assert.False(await setup.ConfirmAsync()); Assert.True(setup.CalculationTitleInput.HasError); Assert.True(setup.AuthorInput.HasError);
+        Assert.False(await setup.ConfirmAsync()); Assert.True(setup.CalculationTitleInput.HasError); Assert.False(setup.AuthorInput.HasError);
         Assert.Null(app.Main.Session.CurrentRevision.State.Info);
         setup.ReferenceInput.Text = " "; Assert.True(await setup.ConfirmAsync()); Assert.False(app.Main.Session.IsDirty);
         app.Main.EditProject(); setup = app.Main.Setup;
-        setup.CalculationTitleInput.Text = "Beam"; setup.AuthorInput.Text = "Author";
-        Assert.True(await setup.ConfirmAsync()); Assert.NotNull(app.Main.Session.CurrentRevision.State.Info);
+        setup.CalculationTitleInput.Text = "Beam";
+        Assert.True(await setup.ConfirmAsync()); Assert.Equal(new ProjectInfo("Beam", null, null, null), app.Main.Session.CurrentRevision.State.Info);
         Assert.True(app.Main.Undo()); Assert.Null(app.Main.Session.CurrentRevision.State.Info);
         Assert.False(app.Main.Session.IsDirty);
     }
@@ -480,6 +478,49 @@ public sealed class ProjectSetupIntegrationTests
         Assert.True(await main.NewAsync()); Assert.Equal("Second author", main.Setup.AuthorInput.Text);
     }
 
+    [Theory]
+    [InlineData("de-DE", "")] [InlineData("en-US", "")]
+    [InlineData("de-DE", " \t ")] [InlineData("en-US", " \t ")]
+    public async Task SuccessfulCreationWithoutAuthorClearsLastAuthorAndRetainsTheWindowsFallback(string culture, string author)
+    {
+        using var scope = new ResultCultureScope(culture, culture);
+        var files = new Files(); var store = new LocalSettingsStore(files, "settings");
+        var main = new MainWindowViewModel(files: files, settingsStore: store,
+            dialogs: new Dialogs { Leave = LeaveDecision.Discard },
+            settings: UserSettings.Default with { LastAuthor = "Previous author" },
+            userNameProvider: () => "windows.user");
+        Assert.True(await main.NewAsync()); Assert.Equal("Previous author", main.Setup.AuthorInput.Text);
+        CompleteSetup(main); main.Setup.AuthorInput.Text = author;
+        Assert.True(main.Setup.CanApply); Assert.True(await main.Setup.ConfirmAsync());
+        Assert.Null(main.Session!.CurrentRevision.State.Info!.Author);
+        Assert.Null(main.Settings.LastAuthor); Assert.Null((await store.LoadAsync()).LastAuthor);
+        Assert.True(await main.NewAsync()); Assert.Equal("windows.user", main.Setup.AuthorInput.Text);
+    }
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public async Task ClearingAuthorIsAnUndoableMetadataEditAndCancelDoesNotApplyIt(string culture)
+    {
+        using var scope = new ResultCultureScope(culture, culture);
+        var app = new App(); var session = app.Main.Session!;
+        var original = session.CurrentRevision.State;
+        Assert.True(await app.Main.SaveAsync()); int analyses = app.Analyses;
+        app.Main.EditProject(); app.Main.Setup.AuthorInput.Text = " ";
+        Assert.True(app.Main.Setup.CanApply); Assert.True(await app.Main.CancelSetupAsync());
+        Assert.Same(original, session.CurrentRevision.State); Assert.False(session.IsDirty);
+        app.Main.EditProject(); app.Main.Setup.AuthorInput.Text = " \t ";
+        Assert.True(await app.Main.Setup.ConfirmAsync()); Assert.True(session.IsDirty);
+        Assert.Equal(new ProjectInfo(original.Info!.CalculationTitle, original.Info.ProjectTitle, original.Info.Reference, null),
+            session.CurrentRevision.State.Info);
+        Assert.Equal(analyses, app.Analyses);
+        Assert.True(app.Main.Undo()); Assert.Same(original, session.CurrentRevision.State); Assert.False(session.IsDirty);
+        Assert.True(app.Main.Redo()); Assert.Null(session.CurrentRevision.State.Info!.Author);
+        Assert.Equal(analyses, app.Analyses);
+        Assert.Equal(original.Info.Author, app.Main.Settings.LastAuthor);
+        Assert.True(await app.Main.SaveAsync());
+        Assert.True(session.CurrentRevision.State.ContentEquals(ProjectFileCodec.Deserialize(app.Files.Data[session.FilePath!])));
+    }
+
     [Fact]
     public async Task AuthorInputConfirmationInvalidCreationAndCancelDoNotRememberTheAuthor()
     {
@@ -498,8 +539,9 @@ public sealed class ProjectSetupIntegrationTests
     }
 
     [Theory]
-    [InlineData(false)] [InlineData(true)]
-    public async Task LastAuthorPersistenceFailureKeepsTheCreatedSessionAndItsNormalRecovery(bool unauthorized)
+    [InlineData(false, false)] [InlineData(true, false)]
+    [InlineData(false, true)] [InlineData(true, true)]
+    public async Task LastAuthorPersistenceFailureKeepsTheCreatedSessionAndItsNormalRecovery(bool unauthorized, bool withoutAuthor)
     {
         var files = new Files(); var dialogs = new Dialogs(); var delay = new Delay();
         var recovery = new ProjectRecovery(files, "project-recovery", delay.Wait, () => Now);
@@ -509,20 +551,21 @@ public sealed class ProjectSetupIntegrationTests
             if (unauthorized) throw new UnauthorizedAccessException("Injected");
         });
         var main = new MainWindowViewModel(files: files, settingsStore: store, dialogs: dialogs,
-            recovery: recovery, setupRecovery: setupRecovery);
+            recovery: recovery, setupRecovery: setupRecovery, settings: UserSettings.Default with { LastAuthor = "Previous author" });
         Assert.True(await main.NewAsync()); CompleteSetup(main);
         delay.ReleaseAll(); await WaitFor(setupRecovery.DrainAsync());
         if (!unauthorized) files.FailWritePath = "settings";
-        main.Setup.AuthorInput.Text = " New author ";
+        main.Setup.AuthorInput.Text = withoutAuthor ? " " : " New author ";
         Assert.True(await main.Setup.ConfirmAsync());
         var session = main.Session!;
         Assert.Equal(MainViewMode.Editor, main.Mode); Assert.True(session.IsDirty);
-        Assert.Equal("New author", session.CurrentRevision.State.Info!.Author);
-        Assert.Equal("New author", main.Settings.LastAuthor); Assert.Empty(dialogs.Errors);
+        string? expected = withoutAuthor ? null : "New author";
+        Assert.Equal(expected, session.CurrentRevision.State.Info!.Author);
+        Assert.Equal(expected, main.Settings.LastAuthor); Assert.Empty(dialogs.Errors);
         Assert.Null(await setupRecovery.ReadAsync()); Assert.False(files.Data.ContainsKey("settings"));
         delay.ReleaseAll(); await WaitFor(recovery.DrainAsync());
         Assert.True(session.CurrentRevision.State.ContentEquals((await recovery.ReadAsync())!.State));
-        Assert.True(await main.NewAsync()); Assert.Equal("New author", main.Setup.AuthorInput.Text);
+        Assert.True(await main.NewAsync()); Assert.Equal(expected ?? "", main.Setup.AuthorInput.Text);
     }
 
     [Fact]

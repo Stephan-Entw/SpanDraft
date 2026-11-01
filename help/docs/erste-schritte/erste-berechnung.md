@@ -4,8 +4,9 @@ An einem einfach gelagerten Balken mit mittiger Punktkraft wird einmal der volls
 
 ## 1. Projekt definieren
 
-Ein neues Balkenprojekt benötigt zunächst seine Länge, einen Werkstoff und einen Querschnitt. Für das Beispiel sind das:
+Ein neues Balkenprojekt benötigt zunächst einen Berechnungstitel, seine Länge, einen Werkstoff und einen Querschnitt. „Erstellt von“, Projekt und Referenz sind freiwillige Angaben. Ein vorgeschlagener Ersteller kann geändert oder vollständig gelöscht werden. Für das Beispiel sind das:
 
+- Berechnungstitel **Balken mit mittiger Punktlast**;
 - Balkenlänge `L = 2 m`;
 - Werkstoff **S235JR**;
 - Rechteckquerschnitt **40 × 80 mm** mit Breite `b = 40 mm` und Höhe `h = 80 mm`;
