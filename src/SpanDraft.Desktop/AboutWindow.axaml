@@ -40,6 +40,9 @@
               ToolTip.Tip="{x:Static resources:ApplicationMetadata.License}">
         <TextBlock Text="{x:Static resources:ApplicationMetadata.LicenseShortName}" TextDecorations="Underline" />
       </Button>
+      <Button Classes="ghost aboutLink" Click="OpenPrivacy">
+        <TextBlock Text="{x:Static resources:Strings.Privacy}" TextDecorations="Underline" />
+      </Button>
       <Button Classes="ghost aboutLink" Click="OpenLink" Tag="{x:Static resources:ApplicationMetadata.RepositoryUrl}">
         <TextBlock Text="{x:Static resources:Strings.GitHubLink}" TextDecorations="Underline" />
       </Button>

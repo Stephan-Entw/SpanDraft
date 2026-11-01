@@ -67,6 +67,8 @@
   <data name="GitHubLink" xml:space="preserve"><value>GitHub</value></data>
   <data name="LinkOpenError" xml:space="preserve"><value>The link could not be opened in your browser.</value></data>
   <data name="LicenseOpenError" xml:space="preserve"><value>The bundled license text could not be opened.</value></data>
+  <data name="Privacy" xml:space="preserve"><value>Privacy</value></data>
+  <data name="PrivacyOpenError" xml:space="preserve"><value>The bundled privacy notice could not be opened.</value></data>
   <data name="Support" xml:space="preserve"><value>Support</value></data>
   <data name="SupportTypeLabel" xml:space="preserve"><value>Support type</value></data>
   <data name="Position" xml:space="preserve"><value>Position</value></data>

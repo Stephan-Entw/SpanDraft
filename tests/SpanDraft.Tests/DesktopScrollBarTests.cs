@@ -3,8 +3,12 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.VisualTree;
+using ColorTextBlock.Avalonia;
+using Markdown.Avalonia;
 using SpanDraft.Desktop;
+using System.Globalization;
 using Xunit;
 
 namespace SpanDraft.Tests;
@@ -80,6 +84,38 @@ public sealed class DesktopScrollBarTests
         Assert.Equal(size.Height, viewer.Bounds.Height);
         Assert.Equal(viewer.Bounds.Width, bar.Bounds.Right, 6);
         Assert.True(text.Margin.Left > 0 && text.Margin.Top > 0);
+    }
+
+    [Theory]
+    [InlineData("de-DE", "Datenschutzerklärung für SpanDraft", "Anbieter und Kontakt", "Projekt- und Berechnungsdaten")]
+    [InlineData("en-US", "Privacy Policy for SpanDraft", "Provider and Contact", "project and calculation data")]
+    public void PrivacyRendersLocalizedMarkdownInAnInsetScrollableViewer(string culture, string title, string section, string listItem)
+    {
+        var previousCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            using var environment = new DesktopControlEnvironment();
+            var window = new PrivacyWindow();
+            Layout(window, new Size(window.Width, window.Height));
+            var markdown = Assert.IsType<MarkdownScrollViewer>(window.Content);
+            Assert.True(markdown.SelectionEnabled);
+            Assert.True(markdown.Padding.Left > 0 && markdown.Padding.Top > 0);
+            var viewer = Assert.Single(markdown.GetVisualDescendants().OfType<ScrollViewer>());
+            Assert.Equal(ScrollBarVisibility.Disabled, viewer.HorizontalScrollBarVisibility);
+            Assert.True(viewer.Extent.Height > viewer.Viewport.Height);
+            Assert.True(viewer.Extent.Width <= viewer.Viewport.Width + 0.5);
+            var blocks = markdown.GetVisualDescendants().OfType<CTextBlock>().ToArray();
+            var heading = Assert.Single(blocks, block => block.Classes.Contains("Heading1") && block.Text == title);
+            var subheading = Assert.Single(blocks, block => block.Classes.Contains("Heading2") && block.Text.Contains(section));
+            var item = Assert.Single(blocks, block => block.Text.Contains(listItem));
+            Assert.True(heading.FontSize > subheading.FontSize && subheading.FontSize > item.FontSize);
+            Assert.Equal(FontWeight.SemiBold, heading.FontWeight);
+            Assert.Equal(FontWeight.SemiBold, subheading.FontWeight);
+            Assert.Equal(TextWrapping.Wrap, item.TextWrapping);
+            Assert.Contains(markdown.GetVisualDescendants().OfType<Grid>(), grid => grid.Classes.Contains("List"));
+        }
+        finally { CultureInfo.CurrentUICulture = previousCulture; }
     }
 
     private static RepeatButton ScrollButton(ScrollBar bar, string name) =>

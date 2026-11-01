@@ -67,6 +67,8 @@
   <data name="GitHubLink" xml:space="preserve"><value>GitHub</value></data>
   <data name="LinkOpenError" xml:space="preserve"><value>Der Link konnte nicht im Browser geöffnet werden.</value></data>
   <data name="LicenseOpenError" xml:space="preserve"><value>Der mitgelieferte Lizenztext konnte nicht geöffnet werden.</value></data>
+  <data name="Privacy" xml:space="preserve"><value>Datenschutz</value></data>
+  <data name="PrivacyOpenError" xml:space="preserve"><value>Die mitgelieferte Datenschutzerklärung konnte nicht geöffnet werden.</value></data>
   <data name="Support" xml:space="preserve"><value>Lager</value></data>
   <data name="SupportTypeLabel" xml:space="preserve"><value>Lagertyp</value></data>
   <data name="Position" xml:space="preserve"><value>Position</value></data>

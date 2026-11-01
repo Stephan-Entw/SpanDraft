@@ -233,6 +233,8 @@ public static class Strings
     public static string GitHubLink => Get(nameof(GitHubLink));
     public static string LinkOpenError => Get(nameof(LinkOpenError));
     public static string LicenseOpenError => Get(nameof(LicenseOpenError));
+    public static string Privacy => Get(nameof(Privacy));
+    public static string PrivacyOpenError => Get(nameof(PrivacyOpenError));
     public static string SettingsTitle => Get(nameof(SettingsTitle));
     public static string SettingsUnits => Get(nameof(SettingsUnits));
     public static string ProfileMechanical => Get(nameof(ProfileMechanical));

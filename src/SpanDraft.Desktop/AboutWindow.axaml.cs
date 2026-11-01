@@ -8,6 +8,7 @@ namespace SpanDraft.Desktop;
 public partial class AboutWindow : Window
 {
     private LicenseWindow? _licenseWindow;
+    private PrivacyWindow? _privacyWindow;
 
     public AboutWindow()
     {
@@ -53,5 +54,22 @@ public partial class AboutWindow : Window
             LinkError.IsVisible = true;
         }
         finally { _licenseWindow = null; }
+    }
+
+    private async void OpenPrivacy(object? sender, RoutedEventArgs e)
+    {
+        if (_privacyWindow is not null) return;
+        LinkError.Text = Strings.PrivacyOpenError;
+        LinkError.IsVisible = false;
+        try
+        {
+            _privacyWindow = new PrivacyWindow { Icon = Icon };
+            await _privacyWindow.ShowDialog(this);
+        }
+        catch (Exception)
+        {
+            LinkError.IsVisible = true;
+        }
+        finally { _privacyWindow = null; }
     }
 }

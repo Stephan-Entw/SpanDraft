@@ -35,6 +35,29 @@ public sealed class DesktopApplicationMetadataTests
         Assert.Equal(expected, ApplicationLicense.ReadText());
     }
 
+    [Theory]
+    [InlineData("de-DE", "de")]
+    [InlineData("de-CH", "de")]
+    [InlineData("en-US", "en")]
+    [InlineData("fr-FR", "en")]
+    public void BundledPrivacyMatchesTheRepositoryFileForTheUiCulture(string cultureName, string language)
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SpanDraft.sln")))
+            directory = directory.Parent;
+        Assert.NotNull(directory);
+        var expected = File.ReadAllText(Path.Combine(directory.FullName, "legal", "privacy", $"{language}.md"));
+        Assert.False(string.IsNullOrWhiteSpace(expected));
+
+        var previousCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(cultureName);
+            Assert.Equal(expected, ApplicationPrivacy.ReadText());
+        }
+        finally { CultureInfo.CurrentUICulture = previousCulture; }
+    }
+
     [Fact]
     public void AboutInformationComesFromDesktopAssemblyInsteadOfTestHost()
     {
@@ -69,9 +92,10 @@ public sealed class DesktopApplicationMetadataTests
     }
 
     [Theory]
-    [InlineData("de-DE", "Über SpanDraft", "Open-Source-Tool zur Balkenberechnung")]
-    [InlineData("en-US", "About SpanDraft", "Open-source tool for beam analysis")]
-    public void AboutResourcesAreAvailableInBothLanguages(string cultureName, string title, string description)
+    [InlineData("de-DE", "Über SpanDraft", "Open-Source-Tool zur Balkenberechnung", "Datenschutz")]
+    [InlineData("en-US", "About SpanDraft", "Open-source tool for beam analysis", "Privacy")]
+    [InlineData("fr-FR", "About SpanDraft", "Open-source tool for beam analysis", "Privacy")]
+    public void AboutResourcesAreAvailableInBothLanguages(string cultureName, string title, string description, string privacy)
     {
         var resources = new ResourceManager("SpanDraft.Desktop.Resources.Strings", typeof(Strings).Assembly);
         var culture = CultureInfo.GetCultureInfo(cultureName);
@@ -81,5 +105,7 @@ public sealed class DesktopApplicationMetadataTests
         Assert.Equal("Version", resources.GetString(nameof(Strings.VersionLabel), culture));
         Assert.False(string.IsNullOrWhiteSpace(resources.GetString(nameof(Strings.LinkOpenError), culture)));
         Assert.False(string.IsNullOrWhiteSpace(resources.GetString(nameof(Strings.LicenseOpenError), culture)));
+        Assert.Equal(privacy, resources.GetString(nameof(Strings.Privacy), culture));
+        Assert.False(string.IsNullOrWhiteSpace(resources.GetString(nameof(Strings.PrivacyOpenError), culture)));
     }
 }

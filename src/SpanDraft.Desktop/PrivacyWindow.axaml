@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+        xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
+        xmlns:ctxt="clr-namespace:ColorTextBlock.Avalonia;assembly=ColorTextBlock.Avalonia"
+        x:Class="SpanDraft.Desktop.PrivacyWindow"
+        Title="{x:Static resources:Strings.Privacy}"
+        Width="640" Height="560" MinWidth="480" MinHeight="320"
+        ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+  <md:MarkdownScrollViewer x:Name="PrivacyContent" Padding="{DynamicResource Padding24}"
+                           SelectionEnabled="True" SelectionBrush="{DynamicResource Accent}">
+    <md:MarkdownScrollViewer.Styles>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock.Heading1">
+        <Setter Property="FontSize" Value="{DynamicResource PageTitleSize}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock.Heading2">
+        <Setter Property="FontSize" Value="{DynamicResource SectionTitleSize}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer Grid.List">
+        <Setter Property="Margin" Value="16,0,0,0" />
+      </Style>
+    </md:MarkdownScrollViewer.Styles>
+  </md:MarkdownScrollViewer>
+</Window>

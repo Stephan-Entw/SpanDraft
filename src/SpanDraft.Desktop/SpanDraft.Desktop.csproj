@@ -28,11 +28,14 @@
     <PackageReference Include="Avalonia" Version="12.1.3" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+    <PackageReference Include="Markdown.Avalonia.Tight" Version="12.0.2" />
   </ItemGroup>
   <ItemGroup>
     <AssemblyMetadata Include="LicenseDisplayName" Value="$(LicenseDisplayName)" />
     <AssemblyMetadata Include="LicenseShortName" Value="$(LicenseShortName)" />
     <EmbeddedResource Include="../../LICENSE" LogicalName="SpanDraft.Desktop.LICENSE" />
+    <EmbeddedResource Include="../../legal/privacy/de.md" LogicalName="SpanDraft.Desktop.privacy.de.md" />
+    <EmbeddedResource Include="../../legal/privacy/en.md" LogicalName="SpanDraft.Desktop.privacy.en.md" />
     <EmbeddedResource Include="Libraries/material-catalog.json" LogicalName="SpanDraft.Desktop.Libraries.material-catalog.json" />
     <None Include="../../THIRD_PARTY_NOTICES.txt" Link="THIRD_PARTY_NOTICES.txt"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
