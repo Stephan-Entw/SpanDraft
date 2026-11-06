@@ -60,7 +60,8 @@ try {
     foreach ($requiredFile in @(
         (Join-Path $publishDirectory 'SpanDraft.Desktop.exe')
         (Join-Path $publishDirectory 'THIRD_PARTY_NOTICES.txt')
-        (Join-Path $publishDirectory 'Help/index.html')
+        (Join-Path $publishDirectory 'Help/de/index.html')
+        (Join-Path $publishDirectory 'Help/en/index.html')
         (Join-Path $repoRoot 'LICENSE')
     )) {
         if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf) -or (Get-Item -LiteralPath $requiredFile).Length -eq 0) {

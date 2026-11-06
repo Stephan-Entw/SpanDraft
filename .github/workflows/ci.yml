@@ -95,5 +95,21 @@ jobs:
           python-version: '3.11'
       - name: Install help generator
         run: python -m pip install -r help/requirements.txt
-      - name: Build and validate offline help
+      - name: Build offline help with committed assets
+        run: dotnet run --file scripts/build-help.cs -- --no-regenerate-assets
+      - name: Regenerate and validate offline help
         run: dotnet run --file scripts/build-help.cs
+      - name: Verify published offline help
+        shell: pwsh
+        run: |
+          dotnet publish src/SpanDraft.Desktop/SpanDraft.Desktop.csproj --configuration Release --no-self-contained --output artifacts/help-publish
+          if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
+          $source = (Resolve-Path help/site).Path
+          foreach ($file in Get-ChildItem $source -Recurse -File) {
+            $relative = [IO.Path]::GetRelativePath($source, $file.FullName)
+            $published = Join-Path artifacts/help-publish/Help $relative
+            if (-not (Test-Path -LiteralPath $published -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $file.FullName).Hash -ne (Get-FileHash -LiteralPath $published).Hash) {
+              throw "Missing or altered published help file: $relative"
+            }
+          }

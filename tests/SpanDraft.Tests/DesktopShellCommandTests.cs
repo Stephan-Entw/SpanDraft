@@ -256,22 +256,29 @@ public sealed class DesktopShellCommandTests
         main.SetMainMenuOpen(false); host.Close();
     }
     [Theory]
-    [InlineData("de-DE", "Benutzerhandbuch")] [InlineData("en-US", "User Manual (German)")]
-    public async Task ManualLauncherUsesLocalFileAndReportsFailuresWithoutLaunchingWhenMissing(string culture, string title)
+    [InlineData("de-DE", "Benutzerhandbuch", "de")]
+    [InlineData("de-CH", "Benutzerhandbuch", "de")]
+    [InlineData("en-US", "User Manual", "en")]
+    [InlineData("en-GB", "User Manual", "en")]
+    [InlineData("fr-FR", "User Manual", "en")]
+    public async Task ManualLauncherUsesLocalFileAndReportsFailuresWithoutLaunchingWhenMissing(string culture, string title, string language)
     {
         using var scope = new UiCultureScope(culture); Assert.Equal(title, Strings.UserManual);
         string directory = Path.Combine(Path.GetTempPath(), "SpanDraft-manual-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path.Combine(directory, "Help"));
+        Directory.CreateDirectory(Path.Combine(directory, "Help", language));
+        // Number formatting must not select the manual language.
+        var previousCulture = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo(language == "de" ? "en-US" : "de-DE");
         try
         {
             int calls = 0; Uri? opened = null;
             var launcher = new UserManualLauncher(uri => { calls++; opened = uri; return Task.FromResult(true); }, directory);
             Assert.False(await launcher.OpenAsync()); Assert.Equal(0, calls);
-            string path = Path.Combine(directory, "Help", "index.html"); await File.WriteAllTextAsync(path, "<html></html>", TestContext.Current.CancellationToken);
+            string path = Path.Combine(directory, "Help", language, "index.html"); await File.WriteAllTextAsync(path, "<html></html>", TestContext.Current.CancellationToken);
             Assert.True(await launcher.OpenAsync()); Assert.True(opened!.IsFile); Assert.Equal(path, opened.LocalPath);
             Assert.False(await new UserManualLauncher(_ => Task.FromResult(false), directory).OpenAsync());
             Assert.False(await new UserManualLauncher(_ => throw new IOException("failure"), directory).OpenAsync());
         }
-        finally { Directory.Delete(directory, true); }
+        finally { System.Globalization.CultureInfo.CurrentCulture = previousCulture; Directory.Delete(directory, true); }
     }
 }

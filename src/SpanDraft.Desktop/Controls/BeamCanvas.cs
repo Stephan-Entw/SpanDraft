@@ -49,14 +49,27 @@ public sealed class BeamCanvas : Control
         if (Scene is not { } scene) return;
         var frame = scene.Frame;
         double y = frame.Viewport.BeamY;
-        DistributedLoadSymbol.DrawFills(context, scene.DistributedLoads, BeamBrush);
-        var length = BeamConflictGeometry.Create(frame.Layout.Transform, ConstraintConflict);
-        context.DrawLine(new Pen(BeamBrush, SchematicMetrics.BeamStrokeWidth), new(frame.Layout.Stations[0].ScreenX, y), new(length.EndX, y));
-        if (length.HasGhost)
+        // Clip underlying strokes instead of relying on an opaque joint fill.
+        Geometry? beamClip = null;
+        foreach (var support in scene.Supports.Where(s => CanvasBackgroundBrush is not ISolidColorBrush { Color.A: 255, Opacity: 1 }
+            && s.Preview.Type is SupportType.Pinned or SupportType.Roller))
         {
-            using (context.PushOpacity(0.5))
-                context.DrawLine(new Pen(GhostBrush, 1, dashStyle: DashStyle.Dash), new(length.EndX, y), new(frame.Layout.Stations[^1].ScreenX, y));
-            context.DrawLine(new Pen(ErrorBrush, 1.5), new(length.EndX, y - 8), new(length.EndX, y + 8));
+            double radius = SchematicMetrics.SupportJointRadius * SupportSymbolScale;
+            beamClip = new CombinedGeometry(GeometryCombineMode.Exclude,
+                beamClip ?? new RectangleGeometry(new Rect(0, 0, frame.Viewport.Width, frame.Viewport.Height)),
+                new EllipseGeometry(new Rect(support.X - radius, y - radius, 2 * radius, 2 * radius)));
+        }
+        using (beamClip is null ? default : context.PushGeometryClip(beamClip))
+        {
+            DistributedLoadSymbol.DrawFills(context, scene.DistributedLoads, BeamBrush);
+            var length = BeamConflictGeometry.Create(frame.Layout.Transform, ConstraintConflict);
+            context.DrawLine(new Pen(BeamBrush, SchematicMetrics.BeamStrokeWidth), new(frame.Layout.Stations[0].ScreenX, y), new(length.EndX, y));
+            if (length.HasGhost)
+            {
+                using (context.PushOpacity(0.5))
+                    context.DrawLine(new Pen(GhostBrush, 1, dashStyle: DashStyle.Dash), new(length.EndX, y), new(frame.Layout.Stations[^1].ScreenX, y));
+                context.DrawLine(new Pen(ErrorBrush, 1.5), new(length.EndX, y - 8), new(length.EndX, y + 8));
+            }
         }
         foreach (var support in scene.Supports)
             using (context.PushOpacity(support.IsPreview ? 0.75 : 1))
@@ -112,14 +125,24 @@ public sealed class BeamCanvas : Control
             return;
         }
         var hinged = new HingedSupportGeometry(type == SupportType.Roller);
-        foreach (var line in hinged.TriangleLines)
-            Line(line.StartX, line.StartY, line.EndX, line.EndY);
-        var ground = hinged.Ground;
-        var groundPen = new Pen(brush, SchematicMetrics.SupportGroundStrokeWidth, lineCap: PenLineCap.Round);
-        context.DrawLine(groundPen, new(x + ground.StartX, y + ground.StartY), new(x + ground.EndX, y + ground.EndY));
-        foreach (var hatch in hinged.Hatches)
-            Line(hatch.StartX, hatch.StartY, hatch.EndX, hatch.EndY);
         var joint = hinged.Joint;
+        var jointCenter = new Point(x + joint.X, y + joint.Y);
+        var clip = backgroundBrush is ISolidColorBrush { Color.A: 255, Opacity: 1 } ? null
+            : new CombinedGeometry(GeometryCombineMode.Exclude,
+            new RectangleGeometry(new Rect(x - hinged.LeftExtent - 1, y + hinged.Top - 1,
+                hinged.LeftExtent + hinged.RightExtent + 2, hinged.Bottom - hinged.Top + 2)),
+            new EllipseGeometry(new Rect(jointCenter.X - joint.Radius, jointCenter.Y - joint.Radius,
+                2 * joint.Radius, 2 * joint.Radius)));
+        using (clip is null ? default : context.PushGeometryClip(clip))
+        {
+            foreach (var line in hinged.TriangleLines)
+                Line(line.StartX, line.StartY, line.EndX, line.EndY);
+            var ground = hinged.Ground;
+            var groundPen = new Pen(brush, SchematicMetrics.SupportGroundStrokeWidth, lineCap: PenLineCap.Round);
+            context.DrawLine(groundPen, new(x + ground.StartX, y + ground.StartY), new(x + ground.EndX, y + ground.EndY));
+            foreach (var hatch in hinged.Hatches)
+                Line(hatch.StartX, hatch.StartY, hatch.EndX, hatch.EndY);
+        }
         context.DrawEllipse(backgroundBrush, pen, new Point(x + joint.X, y + joint.Y), joint.Radius, joint.Radius);
     }
 }

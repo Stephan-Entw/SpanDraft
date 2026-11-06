@@ -101,7 +101,7 @@ try {
     $setup = Start-Process -FilePath $installer.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-' -PassThru -Wait
     if ($setup.ExitCode -ne 0) { throw "Installation failed (exit code $($setup.ExitCode))." }
 
-    foreach ($relativePath in @('SpanDraft.Desktop.exe', 'spandraft-project.ico', 'THIRD_PARTY_NOTICES.txt', 'LICENSE', 'Help/index.html', 'unins000.exe')) {
+    foreach ($relativePath in @('SpanDraft.Desktop.exe', 'spandraft-project.ico', 'THIRD_PARTY_NOTICES.txt', 'LICENSE', 'Help/de/index.html', 'Help/en/index.html', 'unins000.exe')) {
         $path = Join-Path $installDirectory $relativePath
         if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or (Get-Item -LiteralPath $path).Length -eq 0) {
             throw "Missing or empty installed file: $path"

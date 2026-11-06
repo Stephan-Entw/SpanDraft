@@ -6,6 +6,8 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
+using SkiaSharp;
+using SpanDraft.Desktop.Resources;
 using Avalonia.Skia;
 using SpanDraft.Analysis;
 using SpanDraft.Core.Sections;
@@ -27,33 +29,63 @@ internal static class Program
     {
         try
         {
-            if (args.Length != 1) throw new ArgumentException("Usage: SpanDraft.HelpAssets <output-directory>");
-            CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("de-DE");
+            if (args.Length != 2 || args[0] is not ("--generate" or "--check"))
+                throw new ArgumentException("Usage: SpanDraft.HelpAssets <--generate|--check> <asset-root>");
+            string output = Path.GetFullPath(args[1]);
+            if (args[0] == "--check") { ValidateAssets(output); return 0; }
             // Offscreen Skia initialization mirrors the existing rendering tests and needs no native render timer.
             AppBuilder.Configure<App>().UseWindowingSubsystem(InitializeCursors, "Help assets")
                 .UseStandardRuntimePlatformSubsystem().UseSkia().UseHarfBuzz().SetupWithoutStarting();
             Application.Current!.RequestedThemeVariant = ThemeVariant.Light;
-            string output = Path.GetFullPath(args[0]); Directory.CreateDirectory(output);
-            Save(Example(withLoad: false), "beispiel-lagerung"); Save(Example(withLoad: true), "beispiel-belastung");
-            Save(Support(SupportType.Fixed), "lager-einspannung");
-            Save(Support(SupportType.Pinned), "lager-festlager"); Save(Support(SupportType.Roller), "lager-loslager");
-            Save(LoadSigns(PointLoadKind.Force), "punktkraft-vorzeichen");
-            Save(LoadSigns(PointLoadKind.Moment), "punktmoment-vorzeichen"); Save(LoadSigns(pointKind: null), "streckenlast-vorzeichen");
-            Save(Coordinates(), "koordinaten");
-            Save(Section(), "querschnitt-achsen");
-            foreach (var (name, diagram) in Results()) Save(diagram, name);
-            Console.WriteLine($"Generated thirteen SpanDraft help PNGs in {output}");
+            CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            Save(Support(SupportType.Fixed), "shared/lager-einspannung");
+            Save(Support(SupportType.Pinned), "shared/lager-festlager"); Save(Support(SupportType.Roller), "shared/lager-loslager");
+            Save(LoadSigns(PointLoadKind.Force), "shared/punktkraft-vorzeichen");
+            Save(LoadSigns(PointLoadKind.Moment), "shared/punktmoment-vorzeichen"); Save(LoadSigns(pointKind: null), "shared/streckenlast-vorzeichen");
+            Save(Coordinates(), "shared/koordinaten"); Save(Section(), "shared/querschnitt-achsen");
+            foreach (string language in new[] { "de", "en" })
+            {
+                CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language == "de" ? "de-DE" : "en-US");
+                Save(Example(withLoad: false), language + "/beispiel-lagerung");
+                Save(Example(withLoad: true), language + "/beispiel-belastung");
+                foreach (var (name, diagram) in Results()) Save(diagram, language + "/" + name);
+            }
+            ValidateAssets(output);
+            Console.WriteLine($"Generated eighteen transparent SpanDraft help PNGs in {output}");
             return 0;
             void Save(Control control, string name)
             {
                 var size = new Size(control.Width, control.Height);
-                control.Measure(size); control.Arrange(new Rect(size));
-                using var bitmap = new RenderTargetBitmap(new PixelSize((int)size.Width * 2, (int)size.Height * 2), new Vector(192, 192));
-                bitmap.Render(control);
-                bitmap.Save(Path.Combine(output, name + ".png"), PngBitmapEncoderOptions.Default);
+                // Explicit layout scaling keeps geometric clips aligned without a hidden bitmap DPI transform.
+                var scaled = new Viewbox { Width = size.Width * 2, Height = size.Height * 2, Child = control };
+                var exportSize = new Size(scaled.Width, scaled.Height);
+                scaled.Measure(exportSize); scaled.Arrange(new Rect(exportSize));
+                using var bitmap = new RenderTargetBitmap(new PixelSize((int)exportSize.Width, (int)exportSize.Height));
+                bitmap.Render(scaled);
+                string path = Path.Combine(output, name + ".png");
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                bitmap.Save(path, PngBitmapEncoderOptions.Default);
             }
         }
         catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+    }
+    private static void ValidateAssets(string output)
+    {
+        var files = Directory.GetFiles(output, "*.png", SearchOption.AllDirectories);
+        if (files.Length != 18) throw new InvalidOperationException($"Expected eighteen help PNGs, found {files.Length}.");
+        foreach (string file in files)
+        {
+            using var bitmap = SKBitmap.Decode(file) ?? throw new InvalidOperationException($"Invalid PNG: {file}");
+            if (bitmap.AlphaType == SKAlphaType.Opaque
+                || new[] { bitmap.GetPixel(0, 0), bitmap.GetPixel(bitmap.Width - 1, 0),
+                    bitmap.GetPixel(0, bitmap.Height - 1), bitmap.GetPixel(bitmap.Width - 1, bitmap.Height - 1) }.Any(p => p.Alpha != 0)
+                || !bitmap.Pixels.Any(p => p.Alpha != 0))
+                throw new InvalidOperationException($"Missing transparent exterior or visible drawing: {file}");
+        }
+        foreach (string file in Directory.GetFiles(Path.Combine(output, "de"), "*.png"))
+            if (File.ReadAllBytes(file).SequenceEqual(File.ReadAllBytes(Path.Combine(output, "en", Path.GetFileName(file)))))
+                throw new InvalidOperationException($"Localized PNGs are identical: {file}");
+        Console.WriteLine("Validated eighteen visible PNGs with transparent exteriors and distinct DE/EN assets.");
     }
     private static void InitializeCursors()
     {
@@ -80,10 +112,10 @@ internal static class Program
     }
     private static Canvas Page(double width, double height)
     {
-        var page = new Canvas { Width = width, Height = height, Background = AppBrush("CanvasBackground") };
+        var page = new Canvas { Width = width, Height = height, Background = Brushes.Transparent };
         // Detached controls have no TopLevel resource host. Supply the App's actual light-theme brushes.
         foreach (string key in new[] { "CanvasBackground", "TextSecondary", "TextPrimary", "BeamStroke", "Border", "AxisStroke", "Accent", "Error", "SurfacePressed", "AppBackground" })
-            page.Resources.Add(key, AppBrush(key));
+            page.Resources.Add(key, key is "CanvasBackground" or "AppBackground" ? Brushes.Transparent : AppBrush(key));
         return page;
     }
     private static void Add(Canvas page, Control control, double x, double y, double width, double height)
@@ -99,7 +131,7 @@ internal static class Program
     {
         var frame = new BeamLayoutFrame(StationLayout.Compute(document.Length.Meters, leftMargin, width - rightMargin, []), new(width, height, beamY));
         var scene = BeamRenderState.Create(document, frame, text => SchematicText.Measure(text, Typeface.Default, 13));
-        return new() { Scene = scene with { Annotations = [] }, BeamBrush = AppBrush("BeamStroke"), CanvasBackgroundBrush = AppBrush("CanvasBackground"),
+        return new() { Scene = scene with { Annotations = [] }, BeamBrush = AppBrush("BeamStroke"), CanvasBackgroundBrush = Brushes.Transparent,
             AccentBrush = AppBrush("Accent"), GhostBrush = AppBrush("AxisStroke"), ErrorBrush = AppBrush("Error") };
     }
     private static Canvas Example(bool withLoad)
@@ -114,8 +146,8 @@ internal static class Program
         var beam = Beam(document, 760, 176, 86);
         Add(page, beam, 60, 16, 760, 176);
         double X(double position) => 60 + beam.Scene!.Frame.Layout.Transform.PhysicalToScreen(position);
-        Text(page, "Festlager", X(0) - 90, 145, 180, 18);
-        Text(page, "Loslager", X(document.Length.Meters) - 90, 145, 180, 18);
+        Text(page, Strings.PinnedSupport, X(0) - 90, 145, 180, 18);
+        Text(page, Strings.RollerSupport, X(document.Length.Meters) - 90, 145, 180, 18);
         if (withLoad)
         {
             Text(page, "F", X(middle) - 50, 24, 100);
@@ -186,7 +218,7 @@ internal static class Program
         foreach (var (kind, name) in diagrams)
         {
             var page = Page(760, 254);
-            Add(page, new ResultDiagram { Kind = kind, Presentation = presentation, StationLayout = layout }, 20, 12, 720, 230);
+            Add(page, new ResultDiagram { Kind = kind, Presentation = presentation, StationLayout = layout, BackgroundBrush = Brushes.Transparent }, 20, 12, 720, 230);
             yield return (name, page);
         }
     }

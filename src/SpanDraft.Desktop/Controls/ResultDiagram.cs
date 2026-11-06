@@ -36,6 +36,11 @@ public sealed class ResultDiagram : Control
         _ => Strings.BendingDiagram + " " + TechnicalSymbols.Function(TechnicalSymbols.Moment)
     }) + " [" + Options.Profile[ResultDiagramProjection.QuantityOf(Kind)].Symbol + "]";
 
+    public static readonly StyledProperty<IBrush?> BackgroundBrushProperty =
+        AvaloniaProperty.Register<ResultDiagram, IBrush?>(nameof(BackgroundBrush));
+    public IBrush? BackgroundBrush { get => GetValue(BackgroundBrushProperty); set => SetValue(BackgroundBrushProperty, value); }
+    static ResultDiagram() => AffectsRender<ResultDiagram>(BackgroundBrushProperty);
+
     public ResultDiagram()
     {
         Height = 180;
@@ -155,7 +160,7 @@ public sealed class ResultDiagram : Control
     public override void Render(DrawingContext context)
     {
         base.Render(context);
-        var background = Brush("CanvasBackground");
+        var background = BackgroundBrush ?? Brush("CanvasBackground");
         var text = Brush("TextSecondary");
         context.FillRectangle(background, new Rect(Bounds.Size));
         using var title = SchematicText.Format(TitleText, Typeface.Default, 13, Brush("TextPrimary"),
@@ -170,14 +175,31 @@ public sealed class ResultDiagram : Control
         }
         double left = projection.StationLayout.Stations[0].ScreenX;
         double right = projection.StationLayout.Stations[^1].ScreenX;
-        var gridPen = new Pen(Brush("Border"), 1);
-        foreach (var tick in projection.Ticks.Where(t => t.Index != 0))
-            context.DrawLine(gridPen, new(left, tick.ScreenY), new(right, tick.ScreenY));
-        context.DrawLine(new Pen(Brush("AxisStroke"), 1.25), new(left, projection.Scale.ZeroY), new(right, projection.Scale.ZeroY));
-        var curvePen = new Pen(Brush("Accent"), 1.5);
-        foreach (var section in projection.Sections)
-            for (int i = 1; i < section.Count; i++) context.DrawLine(curvePen, section[i - 1].Screen, section[i].Screen);
-        foreach (var jump in projection.Jumps) context.DrawLine(curvePen, jump.Left.Screen, jump.Right.Screen);
+        Geometry? curveClip = null;
+        if (background is not ISolidColorBrush { Color.A: 255, Opacity: 1 })
+        {
+            curveClip = new RectangleGeometry(new Rect(Bounds.Size));
+            foreach (var tick in projection.Ticks)
+                curveClip = new CombinedGeometry(GeometryCombineMode.Exclude, curveClip,
+                    new RectangleGeometry(TickBounds(projection, tick, TickText(tick, text))));
+            foreach (var label in MarkerLabels)
+                curveClip = new CombinedGeometry(GeometryCombineMode.Exclude, curveClip,
+                    new RectangleGeometry(label.Bounds.Inflate(2)));
+            foreach (var marker in projection.Markers)
+                curveClip = new CombinedGeometry(GeometryCombineMode.Exclude, curveClip,
+                    new EllipseGeometry(new Rect(marker.Screen.X - 3.5, marker.Screen.Y - 3.5, 7, 7)));
+        }
+        using (curveClip is null ? default : context.PushGeometryClip(curveClip))
+        {
+            var gridPen = new Pen(Brush("Border"), 1);
+            foreach (var tick in projection.Ticks.Where(t => t.Index != 0))
+                context.DrawLine(gridPen, new(left, tick.ScreenY), new(right, tick.ScreenY));
+            context.DrawLine(new Pen(Brush("AxisStroke"), 1.25), new(left, projection.Scale.ZeroY), new(right, projection.Scale.ZeroY));
+            var curvePen = new Pen(Brush("Accent"), 1.5);
+            foreach (var section in projection.Sections)
+                for (int i = 1; i < section.Count; i++) context.DrawLine(curvePen, section[i - 1].Screen, section[i].Screen);
+            foreach (var jump in projection.Jumps) context.DrawLine(curvePen, jump.Left.Screen, jump.Right.Screen);
+        }
         foreach (var tick in projection.Ticks)
         {
             var label = TickText(tick, text);

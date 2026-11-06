@@ -1,0 +1,21 @@
+nav = [
+  { "Home" = "index.md" },
+  { "1. Getting started" = [
+    { "Getting to know SpanDraft" = "getting-started/overview.md" },
+    { "First calculation" = "getting-started/first-calculation.md" },
+  ] },
+  { "2. Build the model" = [
+    { "Beam, material and cross-section" = "model/material-cross-section.md" },
+    { "Supports and boundary conditions" = "model/supports.md" },
+    { "Forces, moments and distributed loads" = "model/loads.md" },
+    { "Coordinate system and units" = "model/coordinates-units.md" },
+  ] },
+  { "3. Understand results" = [
+    { "Result diagrams and support reactions" = "results/diagrams-reactions.md" },
+    { "Bending stress and safety factor" = "results/stress-safety.md" },
+  ] },
+  { "4. Calculation and limitations" = [
+    { "What SpanDraft calculates – and what it does not" = "background/model-assumptions.md" },
+    { "Troubleshooting" = "background/troubleshooting.md" },
+  ] },
+]

@@ -1,0 +1,21 @@
+nav = [
+  { "Startseite" = "index.md" },
+  { "1. Erste Schritte" = [
+    { "SpanDraft kennenlernen" = "erste-schritte/ueberblick.md" },
+    { "Erste Berechnung" = "erste-schritte/erste-berechnung.md" },
+  ] },
+  { "2. Modell erstellen" = [
+    { "Balken, Werkstoff und Querschnitt" = "modell/werkstoff-querschnitt.md" },
+    { "Lager und Randbedingungen" = "modell/lager.md" },
+    { "Kräfte, Momente und Streckenlasten" = "modell/lasten.md" },
+    { "Koordinatensystem und Einheiten" = "modell/koordinaten-einheiten.md" },
+  ] },
+  { "3. Ergebnisse verstehen" = [
+    { "Ergebnisdiagramme und Lagerreaktionen" = "ergebnisse/diagramme-reaktionen.md" },
+    { "Spannung und Sicherheitsfaktor" = "ergebnisse/spannung-sicherheit.md" },
+  ] },
+  { "4. Berechnung und Grenzen" = [
+    { "Was SpanDraft berechnet – und was nicht" = "hintergrund/modellannahmen.md" },
+    { "Probleme erkennen und beheben" = "hintergrund/probleme.md" },
+  ] },
+]

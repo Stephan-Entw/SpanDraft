@@ -1,15 +1,20 @@
-# SpanDraft user manual (German)
+# SpanDraft offline user manuals
 
-The Markdown sources in `docs/` are the German manual. The generated PNG assets
-in `docs/assets/` come from SpanDraft's actual Avalonia renderers. Edit
-these technical illustrations in `tools/SpanDraft.HelpAssets`, then regenerate
-them; do not maintain separate engineering drawings. Conceptual explanations use
-semantic HTML and local CSS in the manual.
+`docs/de/` and `docs/en/` contain the eleven German and English pages. German
+remains the reference structure. Shared styles, scripts and templates live in
+`shared/`; `zensical.toml` is the common build template, with language-specific
+navigation in `nav.de.toml` and `nav.en.toml`.
+
+Technical PNGs come from SpanDraft's actual Avalonia renderers. Edit them in
+`tools/SpanDraft.HelpAssets`, then regenerate; do not maintain separate drawings.
+`assets/shared/` contains eight illustrations without language-dependent text.
+`assets/de/` and `assets/en/` each contain two labeled examples and three result
+diagrams. The transparent PNGs need no background correction in HTML or CSS.
 
 ## Build
 
-Install .NET 10 and Python 3.11 or newer. Create and activate a Python virtual
-environment to install the pinned generator once:
+Install .NET 10 and Python 3.11 or newer. Create a Python virtual environment and
+install the pinned generator once:
 
 ```sh
 python -m venv help/.venv
@@ -19,29 +24,33 @@ python -m pip install -r help/requirements.txt
 ```
 
 The build automatically uses Zensical from `help/.venv` when present, with `PATH`
-as a fallback. Activating the environment is not required for the build.
-From the repository root:
+as a fallback. Activating the environment is not required. From the repository root:
 
 ```sh
 dotnet run --file scripts/build-help.cs
 ```
 
-The script regenerates the PNG assets, runs `zensical build --clean --strict`, and
-checks the explicit PNG list and offline output. It never installs Python packages.
-Windows packaging uses `--no-regenerate-assets` to build and validate the complete
-offline help with the existing committed PNGs instead of regenerating them.
-Commit Markdown, configuration, CSS, JavaScript and PNGs; `help/site/`, caches and the
-virtual environment are ignored. The HelpAssets project is deliberately outside
-the product solution.
+The script regenerates and checks the PNGs, stages complete inputs per language,
+runs `zensical build --clean --strict` for each, and validates the resulting local
+links, fragments, resources and MathML. It never installs Python packages.
+Windows packaging uses `--no-regenerate-assets` with the committed PNGs; it still
+checks transparency and builds and validates both complete manuals.
 
-Open `help/site/index.html` directly in a browser, with networking disabled, and
-check navigation, search and images. The manual uses system fonts and a local
-`iframe-worker` polyfill; no web server or runtime CDN is needed. Central
-formulas use native MathML and need no additional runtime. The vendored
+Commit Markdown, configuration, shared resources and PNGs. `help/site/`,
+`help/.build/`, generated configuration, caches and the virtual environment are
+ignored. The HelpAssets project stays outside the product solution.
+
+Open `help/site/de/index.html` or `help/site/en/index.html` directly in a browser,
+with networking disabled, and check navigation, search and images. The build
+places technical PNGs once under `help/site/assets/` and adjusts their HTML links;
+keep the complete `site/` tree together. Each language retains its own theme and
+search resources. The manual uses system fonts, native MathML and a local
+`iframe-worker` polyfill; no web server or runtime CDN is needed. The vendored
 polyfill is iframe-worker 1.0.4 (MIT), from
 https://github.com/squidfunk/iframe-worker; its license is beside the JavaScript.
 
-After a successful help build, normal desktop build/publish copies the site to
-`Help/` beside the application. A product-only .NET build does not require Python
-or Zensical. If help has not been built, the menu reports that the manual cannot
-be opened.
+After a successful help build, normal desktop build/publish copies the complete
+site to `Help/` beside the application. UI language selects `Help/de/index.html`
+or `Help/en/index.html`; number formatting does not affect this selection.
+A product-only .NET build needs neither Python nor Zensical. If the selected
+manual is missing, the menu reports that it cannot be opened.

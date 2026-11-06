@@ -24,7 +24,10 @@ internal static class PackageRules
     [
         "SpanDraft.Desktop.exe", "SpanDraft.Desktop.dll", "SpanDraft.Desktop.deps.json", "SpanDraft.Desktop.runtimeconfig.json",
         "coreclr.dll", "hostfxr.dll", "hostpolicy.dll", "System.Private.CoreLib.dll", "Avalonia.Desktop.dll", "libSkiaSharp.dll",
-        "LICENSE", "THIRD_PARTY_NOTICES.txt", "Help/index.html", "Help/js/spandraft-help.js", "Help/js/iframe-worker-shim.js"
+        "LICENSE", "THIRD_PARTY_NOTICES.txt", "Help/de/index.html", "Help/en/index.html",
+        "Help/de/js/spandraft-help.js", "Help/en/js/spandraft-help.js",
+        "Help/de/js/iframe-worker-shim.js", "Help/en/js/iframe-worker-shim.js",
+        "Help/assets/shared/lager-festlager.png", "Help/assets/de/diagramm-durchbiegung.png", "Help/assets/en/diagramm-durchbiegung.png"
     ];
 
     private static (string Path, int Size)[] CreateAssets()

@@ -17,6 +17,8 @@ using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
 using SpanDraft.Solver;
 using Xunit;
+using SkiaSharp;
+using SpanDraft.Desktop.Resources;
 
 namespace SpanDraft.Tests;
 
@@ -87,6 +89,46 @@ public sealed class DesktopResultDiagramControlTests
         using var bitmap = new RenderTargetBitmap(new PixelSize((int)view.Bounds.Width, (int)view.Bounds.Height));
         bitmap.Render(view);
         bitmap.Save(Path.Combine(directory, name + ".png"), PngBitmapEncoderOptions.Default);
+    }
+
+    [Theory]
+    [InlineData("de-DE", ResultDiagramKind.TransverseDisplacement, "Durchbiegung")]
+    [InlineData("en-US", ResultDiagramKind.TransverseDisplacement, "Deflection")]
+    [InlineData("de-DE", ResultDiagramKind.ShearForce, "Querkraft")]
+    [InlineData("en-US", ResultDiagramKind.ShearForce, "Shear force")]
+    [InlineData("de-DE", ResultDiagramKind.BendingMoment, "Biegemoment")]
+    [InlineData("en-US", ResultDiagramKind.BendingMoment, "Bending moment")]
+    public void TransparentDiagramsRetainLocalizedTitlesAndGeometricLabelClearance(string culture, ResultDiagramKind kind, string title)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var cultures = new ResultCultureScope(culture, culture);
+        var document = Document();
+        var diagram = new ResultDiagram { Width = 720, Height = 230, Kind = kind,
+            BackgroundBrush = Brushes.Transparent,
+            Presentation = AnalysisPresentationState.FromOutcome(BeamAnalysis.Analyze(document.ToBeamModel())),
+            StationLayout = new BeamLayoutState().Update(document, 720, 240)!.Layout };
+        foreach (string key in new[] { "CanvasBackground", "TextSecondary", "TextPrimary", "Border", "AxisStroke", "Accent" })
+            diagram.Resources.Add(key, key == "CanvasBackground" ? Brushes.White : Brushes.Black);
+        diagram.Measure(new Size(720, 230)); diagram.Arrange(new Rect(0, 0, 720, 230));
+        Assert.StartsWith(title, diagram.Title);
+        AssertReadableMarkers(diagram);
+        Assert.All(diagram.MarkerLabels, label => Assert.Contains(
+            label.Marker.Kind switch
+            {
+                ResultDiagramExtremumKind.Minimum => Strings.DiagramMinimum.Split('{')[0],
+                ResultDiagramExtremumKind.Maximum => Strings.DiagramMaximum.Split('{')[0],
+                _ => Strings.DiagramMinimumAndMaximum.Split('{')[0]
+            }, label.Text));
+        var drawing = new DrawingGroup();
+        using (var context = drawing.Open()) diagram.Render(context);
+        var curves = Assert.Single(drawing.Children.OfType<DrawingGroup>(), g => g.ClipGeometry is not null);
+        Assert.All(diagram.MarkerLabels, label => Assert.False(curves.ClipGeometry!.FillContains(label.Bounds.Center)));
+        using var bitmap = new RenderTargetBitmap(new PixelSize(720, 230)); bitmap.Render(diagram);
+        using var stream = new MemoryStream(); bitmap.Save(stream, PngBitmapEncoderOptions.Default); stream.Position = 0;
+        using var pixels = SKBitmap.Decode(stream);
+        Assert.Equal(0, pixels.GetPixel(0, 0).Alpha);
+        Assert.Equal(0, pixels.GetPixel(719, 229).Alpha);
+        Assert.Contains(pixels.Pixels, p => p.Alpha != 0);
     }
 
     [Theory]
