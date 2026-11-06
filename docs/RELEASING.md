@@ -288,5 +288,6 @@ package. Review Store certification results and restricted-capability requests;
 publication remains a manual Partner Center action.
 
 For Store listing images, the independent
-[native screenshot workflow](../tools/StoreScreenshots/README.md) captures the
-current application in German and English. It is not a packaging or release gate.
+[general native screenshot workflow](../tools/Screenshots/README.md) captures the
+current application in German and English for Store and Penpot. Store listing
+screenshots remain a separate manual workflow, not a packaging or release gate.

@@ -12,7 +12,7 @@ using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
 
-namespace SpanDraft.StoreScreenshots;
+namespace SpanDraft.Screenshots;
 
 internal sealed class CaptureApplication(WorkerRequest request, IsolatedFileStore files, string projectPath, RecentProjectEntry[] demoRecents)
 {
@@ -49,7 +49,7 @@ internal sealed class CaptureApplication(WorkerRequest request, IsolatedFileStor
 
     private async Task Calibrate()
     {
-        var currentDisplay = DisplaySnapshot.RequireTarget(NativeWindows.Displays(), request.Display.Target);
+        var currentDisplay = DisplaySnapshot.RequireTarget(NativeWindows.Displays(), request.ScalePercent, request.Display.Target);
         if (!currentDisplay.Devices.SequenceEqual(request.Display.Devices))
             throw new InvalidOperationException("Display configuration changed before window positioning.");
         var display = currentDisplay.CaptureDisplay;
@@ -57,20 +57,24 @@ internal sealed class CaptureApplication(WorkerRequest request, IsolatedFileStor
         var initial = NativeWindows.WindowRect(hwnd);
         NativeWindows.Position(hwnd, display.X + 32, display.Y + 32, initial.Width, initial.Height);
         var deadline = Stopwatch.StartNew();
-        while (NativeWindows.GetDpiForWindow(hwnd) != 192 || window.RenderScaling != 2)
+        while (!CaptureScaling.Matches(NativeWindows.GetDpiForWindow(hwnd), window.RenderScaling, request.ScalePercent))
         {
-            if (deadline.Elapsed > Timeout) throw new TimeoutException("Window did not adopt native 192 DPI on the selected display.");
+            if (deadline.Elapsed > Timeout) throw new TimeoutException($"Window did not adopt native {request.ScalePercent}% scaling on the selected display.");
             await RenderFrame();
         }
         await Settle();
+        NativeWindows.AssertDisplay(hwnd, request.Display.Target);
         var outer = NativeWindows.WindowRect(hwnd); var visible = NativeWindows.DwmRect(hwnd);
-        var size = WindowSizing.OuterSize(request.Size, outer, visible);
+        WindowSizing.AssertMinimum(request.Profile.Size, visible, NativeWindows.ClientRect(hwnd), window.RenderScaling,
+            window.MinWidth, window.MinHeight);
+        var size = WindowSizing.OuterSize(request.Profile.Size, outer, visible);
         sizeOverride = new WindowSizeOverride(hwnd, size.Width, size.Height);
         NativeWindows.Position(hwnd, display.X + (display.Width - size.Width) / 2,
             display.Y + (display.Height - size.Height) / 2, size.Width, size.Height);
         await Settle();
         fixedOuter = NativeWindows.WindowRect(hwnd); fixedVisible = NativeWindows.DwmRect(hwnd);
-        if ((fixedVisible.Width, fixedVisible.Height) != request.Size.Pixels)
+        NativeWindows.AssertDisplay(hwnd, request.Display.Target);
+        if ((fixedVisible.Width, fixedVisible.Height) != request.Profile.Size.Pixels)
             throw new InvalidOperationException("Native window sizing failed; refusing to crop or resize PNGs.");
     }
 
@@ -147,33 +151,42 @@ internal sealed class CaptureApplication(WorkerRequest request, IsolatedFileStor
         {
             if (!request.Scenes.Contains(scene)) return;
             await Settle();
-            var display = DisplaySnapshot.RequireTarget(NativeWindows.Displays(), request.Display.Target);
+            var display = DisplaySnapshot.RequireTarget(NativeWindows.Displays(), request.ScalePercent, request.Display.Target);
             if (!display.Devices.SequenceEqual(request.Display.Devices))
                 throw new InvalidOperationException("Display configuration changed during the capture run.");
             if (main.Workspace != workspace || main.IsWorkspaceBusy) throw new InvalidOperationException("Unexpected or busy screenshot workspace.");
             if (scene == "Start") AssertStartPage();
+            foreach (var text in window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible && t.Text is not null))
+                CaptureFiles.AssertVisibleText(text.Text!, request.RepoRoot);
             var outer = NativeWindows.WindowRect(hwnd); var visible = NativeWindows.DwmRect(hwnd);
             var client = NativeWindows.ClientRect(hwnd);
-            if (outer != fixedOuter || visible != fixedVisible || window.RenderScaling != 2 || NativeWindows.GetDpiForWindow(hwnd) != 192)
+            uint dpi = NativeWindows.GetDpiForWindow(hwnd);
+            NativeWindows.AssertDisplay(hwnd, request.Display.Target);
+            if (outer != fixedOuter || visible != fixedVisible || !CaptureScaling.Matches(dpi, window.RenderScaling, request.ScalePercent))
                 throw new InvalidOperationException("Window bounds or native rasterization changed between motifs.");
-            if (Math.Abs(client.Width - window.ClientSize.Width * 2) > 1 || Math.Abs(client.Height - window.ClientSize.Height * 2) > 1)
-                throw new InvalidOperationException("Native client pixels do not match the application's 2x layout.");
+            if (Math.Abs(client.Width - window.ClientSize.Width * window.RenderScaling) > 1
+                || Math.Abs(client.Height - window.ClientSize.Height * window.RenderScaling) > 1)
+                throw new InvalidOperationException("Native client pixels do not match the application's measured layout scale.");
             var chrome = NativeWindows.Caption(hwnd);
-            string file = CaptureFiles.FileName(scene, request.Language);
+            string file = CaptureFiles.FileName(request.Profile, scene, request.Language);
             string output = Path.Combine(request.RunRoot, file);
             await Program.RunProcess(request.WinApp, ["ui", "screenshot", "--window", hwnd.ToInt64().ToString(System.Globalization.CultureInfo.InvariantCulture),
                 "--output", output, "--json"], Timeout);
             var pixels = CaptureFiles.PngSize(output);
-            if (pixels != request.Size.Pixels || visible != NativeWindows.DwmRect(hwnd))
+            NativeWindows.AssertDisplay(hwnd, request.Display.Target);
+            if (pixels != request.Profile.Size.Pixels || visible != NativeWindows.DwmRect(hwnd)
+                || outer != NativeWindows.WindowRect(hwnd) || client != NativeWindows.ClientRect(hwnd)
+                || NativeWindows.GetDpiForWindow(hwnd) != dpi || !CaptureScaling.Matches(dpi, window.RenderScaling, request.ScalePercent)
+                || !request.Display.Devices.SequenceEqual(NativeWindows.Displays()))
                 throw new InvalidDataException("WinApp PNG does not match the complete native window.");
             using var process = Process.GetCurrentProcess();
             var started = new DateTimeOffset(process.StartTime.ToUniversalTime());
             string executable = process.MainModule!.FileName;
             if (started <= request.BuildFinishedUtc || !Path.GetFullPath(executable).Equals(Path.GetFullPath(Environment.ProcessPath!), StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Capture process provenance check failed.");
-            evidence.Add(new(request.Language, scene, file, pixels.Width, pixels.Height, 192, window.RenderScaling,
+            evidence.Add(new(request.Profile.Name, request.Language, scene, file, pixels.Width, pixels.Height, dpi, window.RenderScaling,
                 outer, visible, client, chrome, hwnd.ToInt64(), Environment.ProcessId,
-                Path.GetRelativePath(request.RepoRoot, executable), started));
+                Path.GetRelativePath(request.RepoRoot, executable), started, DateTimeOffset.UtcNow));
         }
     }
 
@@ -192,14 +205,6 @@ internal sealed class CaptureApplication(WorkerRequest request, IsolatedFileStor
                 || !rows[i].GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == path))
                 throw new InvalidOperationException("A recent-project row does not display its neutral demo path.");
             AssertInViewport(rows[i], viewport);
-        }
-        foreach (var text in view.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible && t.Text is not null))
-        {
-            CaptureFiles.AssertNoPersonalPaths(text.Text!);
-            if (text.Text!.Contains(request.RepoRoot, StringComparison.OrdinalIgnoreCase)
-                || text.Text.Contains("artifacts", StringComparison.OrdinalIgnoreCase)
-                || text.Text.Contains(".runs", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("An internal tooling path is visible on the start page.");
         }
     }
 

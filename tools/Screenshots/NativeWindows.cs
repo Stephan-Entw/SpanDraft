@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
-namespace SpanDraft.StoreScreenshots;
+namespace SpanDraft.Screenshots;
 
 [StructLayout(LayoutKind.Sequential)]
 public readonly record struct NativeRect(int Left, int Top, int Right, int Bottom)
@@ -12,26 +12,34 @@ public readonly record struct NativeRect(int Left, int Top, int Right, int Botto
 }
 
 public sealed record DisplayDevice(string Name, string Description, string Identity, uint State,
-    int Width, int Height, int X, int Y, int ScalePercent)
+    int Width, int Height, int X, int Y, uint Dpi)
 {
     public bool Primary => (State & 4) != 0;
     public bool Active => (State & 1) != 0;
+    public double ScalePercent => Dpi * 100d / 96;
 }
 
 public sealed record DisplaySnapshot(DisplayDevice[] Devices, string Target)
 {
     public DisplayDevice CaptureDisplay => Devices.Single(d => d.Name == Target);
 
-    public static DisplaySnapshot RequireTarget(DisplayDevice[] devices, string? targetName = null)
+    public static DisplaySnapshot RequireTarget(DisplayDevice[] devices, int scalePercent, string? targetName = null)
     {
         if (devices.Count(d => d.Primary) != 1) throw new InvalidOperationException("Cannot identify exactly one primary display.");
-        var target = devices.Where(d => d.Active && d.Width > 0 && d.Height > 0 && d.ScalePercent == 200)
+        uint dpi = CaptureScaling.ExpectedDpi(scalePercent);
+        var target = devices.Where(d => d.Active && d.Width > 0 && d.Height > 0 && d.Dpi == dpi)
             .OrderByDescending(d => d.Primary).ThenBy(d => d.Name, StringComparer.Ordinal)
             .FirstOrDefault(d => targetName is null || d.Name == targetName)
-            ?? throw new InvalidOperationException("An active display at 200% (192 DPI) is required. "
-                + "Found: " + string.Join("; ", devices.Select(d => $"{d.Name}: {d.Width} x {d.Height} px, {d.ScalePercent}%, active={d.Active}"))
+            ?? throw new InvalidOperationException($"An active display at {scalePercent}% ({dpi} DPI) is required. "
+                + "Found: " + string.Join("; ", devices.Select(d => $"{d.Name}: {d.Width} x {d.Height} px, {d.Dpi} DPI, active={d.Active}"))
                 + ". No display was changed.");
         return new(devices, target.Name);
+    }
+
+    public static void AssertScaleOnlyTransition(DisplayDevice[] before, DisplayDevice[] after)
+    {
+        if (!before.Select(d => d with { Dpi = 0 }).SequenceEqual(after.Select(d => d with { Dpi = 0 })))
+            throw new InvalidOperationException("Only scaling may change at a confirmed phase boundary; display identity, activation, resolution and position must remain unchanged.");
     }
 }
 
@@ -54,10 +62,14 @@ internal static class NativeWindows
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool EnumDisplayDevices(string? name, uint index, ref Device device, uint flags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool EnumDisplaySettings(string name, int index, IntPtr data);
-    [DllImport("user32.dll")] private static extern int GetDisplayConfigBufferSizes(uint flags, out uint paths, out uint modes);
-    [DllImport("user32.dll")] private static extern int QueryDisplayConfig(uint flags, ref uint paths, IntPtr path, ref uint modes, IntPtr mode, IntPtr topology);
-    [DllImport("user32.dll")] private static extern int DisplayConfigGetDeviceInfo(IntPtr data);
-    [DllImport("user32.dll")] internal static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+    [DllImport("user32.dll", SetLastError = true)] internal static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr CreateWindowExW(uint extendedStyle, string className, string name, uint style,
+        int x, int y, int width, int height, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr parameter);
+    [DllImport("user32.dll", SetLastError = true)] private static extern bool DestroyWindow(IntPtr hwnd);
+    [DllImport("user32.dll")] private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool GetMonitorInfoW(IntPtr monitor, ref MonitorInfo info);
     [DllImport("user32.dll", SetLastError = true)] private static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int width, int height, uint flags);
     [DllImport("user32.dll")] internal static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll", SetLastError = true)] private static extern bool GetWindowRect(IntPtr hwnd, out NativeRect rect);
@@ -69,6 +81,15 @@ internal static class NativeWindows
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out NativeRect rect, int size);
     [DllImport("dwmapi.dll")] private static extern int DwmFlush();
 
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct MonitorInfo
+    {
+        public int Size;
+        public NativeRect Monitor, Work;
+        public uint Flags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string DeviceName;
+    }
+
     private static IntPtr Allocate(int size)
     {
         var pointer = Marshal.AllocHGlobal(size);
@@ -78,7 +99,6 @@ internal static class NativeWindows
 
     internal static DisplayDevice[] Displays()
     {
-        var scales = DisplayScales();
         var result = new List<DisplayDevice>();
         for (uint i = 0; ; i++)
         {
@@ -89,57 +109,45 @@ internal static class NativeWindows
             {
                 Marshal.WriteInt16(data, 68, 220);
                 bool hasMode = EnumDisplaySettings(device.Name, -1, data);
+                int width = hasMode ? Marshal.ReadInt32(data, 172) : 0, height = hasMode ? Marshal.ReadInt32(data, 176) : 0;
+                int x = hasMode ? Marshal.ReadInt32(data, 76) : 0, y = hasMode ? Marshal.ReadInt32(data, 80) : 0;
                 result.Add(new(device.Name, device.Description, device.Id, device.State,
-                    hasMode ? Marshal.ReadInt32(data, 172) : 0, hasMode ? Marshal.ReadInt32(data, 176) : 0,
-                    hasMode ? Marshal.ReadInt32(data, 76) : 0, hasMode ? Marshal.ReadInt32(data, 80) : 0,
-                    scales.GetValueOrDefault(device.Name)));
+                    width, height, x, y, (device.State & 1) != 0 && width > 0 && height > 0
+                        ? MeasureDpi(device.Name, x + width / 2, y + height / 2) : 0));
             }
             finally { Marshal.FreeHGlobal(data); }
         }
         return result.ToArray();
     }
 
-    private static Dictionary<string, int> DisplayScales()
+    private static uint MeasureDpi(string deviceName, int x, int y)
     {
-        // Read per-source DPI offsets without changing the display configuration.
-        var result = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        int[] percentages = [100, 125, 150, 175, 200, 225, 250, 300, 350, 400, 450, 500];
-        for (int attempt = 0; attempt < 3; attempt++)
+        // Scope awareness here as runner continuations can execute on another thread.
+        IntPtr previous = SetThreadDpiAwarenessContext(new(-4));
+        if (previous == IntPtr.Zero) throw new Win32Exception();
+        IntPtr probe = IntPtr.Zero;
+        try
         {
-            Check(GetDisplayConfigBufferSizes(2, out uint pathsCount, out uint modesCount));
-            var paths = Allocate(checked((int)pathsCount * 72));
-            var modes = Allocate(checked((int)modesCount * 64));
-            try
-            {
-                int status = QueryDisplayConfig(2, ref pathsCount, paths, ref modesCount, modes, IntPtr.Zero);
-                if (status == 122) continue; // Topology changed between the size query and the read.
-                Check(status);
-                for (int i = 0; i < pathsCount; i++)
-                {
-                    var path = IntPtr.Add(paths, i * 72);
-                    var name = Allocate(84); var dpi = Allocate(32);
-                    try
-                    {
-                        void Header(IntPtr pointer, int type, int size)
-                        {
-                            Marshal.WriteInt32(pointer, 0, type); Marshal.WriteInt32(pointer, 4, size);
-                            Marshal.WriteInt64(pointer, 8, Marshal.ReadInt64(path));
-                            Marshal.WriteInt32(pointer, 16, Marshal.ReadInt32(path, 8));
-                        }
-                        Header(name, 1, 84); Check(DisplayConfigGetDeviceInfo(name));
-                        Header(dpi, -3, 32); Check(DisplayConfigGetDeviceInfo(dpi));
-                        string deviceName = Marshal.PtrToStringUni(IntPtr.Add(name, 20))!;
-                        int index = Marshal.ReadInt32(dpi, 24) - Marshal.ReadInt32(dpi, 20);
-                        if (index < 0 || index >= percentages.Length) throw new InvalidOperationException("Unknown display DPI offset.");
-                        result[deviceName] = percentages[index];
-                    }
-                    finally { Marshal.FreeHGlobal(name); Marshal.FreeHGlobal(dpi); }
-                }
-                return result;
-            }
-            finally { Marshal.FreeHGlobal(paths); Marshal.FreeHGlobal(modes); }
+            // A hidden top-level system-class HWND measures custom scaling without a percentage table.
+            probe = CreateWindowExW(0, "STATIC", "", 0x80000000, x, y, 1, 1, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+            if (probe == IntPtr.Zero) throw new Win32Exception();
+            AssertDisplay(probe, deviceName);
+            uint dpi = GetDpiForWindow(probe);
+            return dpi != 0 ? dpi : throw new InvalidOperationException("Native display DPI could not be measured.");
         }
-        throw new InvalidOperationException("Display topology did not stabilize.");
+        finally
+        {
+            try { if (probe != IntPtr.Zero && !DestroyWindow(probe)) throw new Win32Exception(); }
+            finally { if (SetThreadDpiAwarenessContext(previous) == IntPtr.Zero) throw new Win32Exception(); }
+        }
+    }
+
+    internal static void AssertDisplay(IntPtr hwnd, string deviceName)
+    {
+        var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        if (!GetMonitorInfoW(MonitorFromWindow(hwnd, 0), ref info)) throw new Win32Exception();
+        if (!info.DeviceName.Equals(deviceName, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("The native window is on a different display than the selected capture display.");
     }
 
     internal static void AssertOwnWindow(IntPtr hwnd)
@@ -180,12 +188,18 @@ internal static class NativeWindows
             throw new InvalidOperationException("Native caption, icon or caption buttons are missing or outside the capture bounds.");
         return evidence;
     }
-
-    private static void Check(int code) { if (code != 0) throw new Win32Exception(code); }
 }
 
 public static class WindowSizing
 {
+    public static void AssertMinimum(CaptureSize target, NativeRect visible, NativeRect client, double scaling, double minWidth, double minHeight)
+    {
+        var pixels = target.Pixels;
+        if (pixels.Width - (visible.Width - client.Width) + 1 < minWidth * scaling
+            || pixels.Height - (visible.Height - client.Height) + 1 < minHeight * scaling)
+            throw new InvalidOperationException("The capture size at this scale is below the real window minimum. Choose a lower scale for this profile; window minimums are never overridden.");
+    }
+
     public static (int Width, int Height) OuterSize(CaptureSize target, NativeRect outer, NativeRect visible)
     {
         if (!outer.Contains(visible) || visible.Width <= 0 || visible.Height <= 0)

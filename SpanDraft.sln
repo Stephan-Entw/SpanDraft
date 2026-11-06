@@ -23,7 +23,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpanDraft.Analysis", "src\S
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{07C2787E-EAC7-C090-1BA3-A61EC2A24D84}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpanDraft.StoreScreenshots", "tools\StoreScreenshots\SpanDraft.StoreScreenshots.csproj", "{58A81FF6-4FAA-4EE6-BAE8-A1590042799E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpanDraft.Screenshots", "tools\Screenshots\SpanDraft.Screenshots.csproj", "{58A81FF6-4FAA-4EE6-BAE8-A1590042799E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpanDraft.MicrosoftStore", "tools\MicrosoftStore\SpanDraft.MicrosoftStore.csproj", "{A5A07E90-8EF8-4DC9-9F8C-A0555C909D25}"
 EndProject

@@ -7,16 +7,121 @@ using SpanDraft.Desktop;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.ViewModels;
-using SpanDraft.StoreScreenshots;
+using SpanDraft.Screenshots;
 using Xunit;
 using static SpanDraft.Tests.ProjectTestSupport;
 
 namespace SpanDraft.Tests;
 
-public sealed class StoreScreenshotTests
+public sealed class ScreenshotTests
 {
-    private static string Fixture => Path.Combine(AppContext.BaseDirectory, "Fixtures", "Store", "Crane Beam.spandraft");
+    private static string Fixture => Path.Combine(AppContext.BaseDirectory, "Fixtures", "Screenshots", "Crane Beam.spandraft");
     public static bool IsWindows => OperatingSystem.IsWindows();
+
+    [Fact]
+    public void CompleteSelectionHasFourIndependentBatchesAndTwelveUniqueImages()
+    {
+        var batches = CaptureBatch.Select("All", "All", "All", 250, 200);
+        Assert.Equal(4, batches.Length);
+        Assert.Equal(new[] { "Store", "Store", "PenpotHero", "PenpotHero" }, batches.Select(b => b.Profile.Name));
+        Assert.Equal(new[] { "de-DE", "en-US", "de-DE", "en-US" }, batches.Select(b => b.Language));
+        Assert.Equal(new[] { "Start", "Project", "Section", "Report", "Materials" }, batches[0].Scenes);
+        Assert.Equal(batches[0].Scenes, batches[1].Scenes);
+        Assert.Equal(new[] { "Project" }, batches[2].Scenes);
+        Assert.Equal(batches[2].Scenes, batches[3].Scenes);
+        Assert.Equal((3840, 2160), batches[0].Profile.Size.Pixels);
+        Assert.Equal((2400, 1800), batches[2].Profile.Size.Pixels);
+        Assert.Equal(12, batches.SelectMany(b => b.RelativeFiles).Distinct().Count());
+        Assert.Equal(new[] { 250, 200 }, batches.GroupBy(b => b.ScalePercent).Select(g => g.Key));
+        Assert.Single(CaptureBatch.Select("All", "All", "All", 200, 200).GroupBy(b => b.ScalePercent));
+    }
+
+    [Theory]
+    [InlineData("de-DE", "hero-project-de-DE.png")]
+    [InlineData("en-US", "hero-project-en-US.png")]
+    public void PenpotNamesAndProfileSurviveWorkerRequestSerialization(string culture, string expected)
+    {
+        var batch = Assert.Single(CaptureBatch.Select("Penpot", culture, "All", 250, 200));
+        var display = new DisplayDevice("primary", "display", "PCI", 5, 2940, 1846, 0, 0, 192);
+        var request = new WorkerRequest("repo", "run", "fixture", "winapp", culture, batch.Scenes,
+            batch.Profile, batch.ScalePercent, DateTimeOffset.UtcNow, new([display], display.Name));
+        var copy = System.Text.Json.JsonSerializer.Deserialize<WorkerRequest>(
+            System.Text.Json.JsonSerializer.Serialize(request, CaptureFiles.Json), CaptureFiles.Json)!;
+        Assert.Equal(expected, CaptureFiles.FileName(copy.Profile, "Project", culture));
+        Assert.Equal((2400, 1800), copy.Profile.Size.Pixels);
+        Assert.Equal(200, copy.ScalePercent);
+        Assert.Equal(request.Fixture, copy.Fixture);
+        Assert.Throws<ArgumentException>(() => CaptureFiles.FileName(copy.Profile, "Section", culture));
+    }
+
+    [Theory]
+    [InlineData("Penpot", "Section")]
+    [InlineData("All", "Section")]
+    [InlineData("All", "Materials")]
+    [InlineData("Unknown", "All")]
+    [InlineData("Store", "Unknown")]
+    public void InvalidFilterCombinationsAreRejected(string target, string scene) =>
+        Assert.Throws<ArgumentException>(() => CaptureBatch.Select(target, "All", scene, 250, 200));
+
+    [Fact]
+    public void DevelopmentFiltersSelectOnlyTheRequestedImages()
+    {
+        var batch = Assert.Single(CaptureBatch.Select("Store", "en-US", "Section", 260, 200));
+        Assert.Equal(new[] { Path.Combine("store", "03-section-en-US.png") }, batch.RelativeFiles);
+        Assert.Equal(260, batch.ScalePercent);
+        Assert.Equal(4, CaptureBatch.Select("All", "All", "Project", 250, 200).SelectMany(b => b.RelativeFiles).Count());
+        Assert.Throws<ArgumentException>(() => CaptureBatch.Select("Store", "../en-US", "All", 250, 200));
+    }
+
+    [Theory]
+    [InlineData(200, 192u)]
+    [InlineData(240, 230u)]
+    [InlineData(250, 240u)]
+    [InlineData(260, 250u)]
+    public void ArbitraryRequestedScalesUseNativeDpiWithoutChangingPixelTargets(int scale, uint dpi)
+    {
+        Assert.Equal(dpi, CaptureScaling.ExpectedDpi(scale));
+        Assert.True(CaptureScaling.Matches(dpi, dpi / 96d, scale));
+        Assert.False(CaptureScaling.Matches(dpi + 1, dpi / 96d, scale));
+        Assert.False(CaptureScaling.Matches(dpi, dpi / 96d + .01, scale));
+        Assert.False(CaptureScaling.Matches(dpi, double.NaN, scale));
+        var batch = Assert.Single(CaptureBatch.Select("Store", "de-DE", "Project", scale, scale));
+        Assert.Equal((3840, 2160), batch.Profile.Size.Pixels);
+        Assert.Equal((2400, 1800), Assert.Single(CaptureBatch.Select("Penpot", "de-DE", "Project", scale, scale)).Profile.Size.Pixels);
+        var display = new DisplayDevice("primary", "display", "PCI", 5, 2940, 1846, 0, 0, dpi);
+        Assert.Equal(display, DisplaySnapshot.RequireTarget([display], scale).CaptureDisplay);
+    }
+
+    [Theory]
+    [InlineData(0)] [InlineData(-1)]
+    public void InvalidScalesAreRejectedBeforeStartingWorkers(int scale) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => CaptureBatch.Select("All", "All", "All", scale, 200));
+
+    [Fact]
+    public void PhaseBoundaryAllowsOnlyDpiChangesAndActivePhasesRequireFullPreservation()
+    {
+        var display = new DisplayDevice("primary", "display", "PCI", 5, 2940, 1846, 0, 0, 240);
+        var changedScale = display with { Dpi = 192 };
+        DisplaySnapshot.AssertScaleOnlyTransition([display], [changedScale]);
+        var phase = new CapturePhase(250, DateTimeOffset.UtcNow, null, new([display], display.Name));
+        Assert.False(phase.DisplaysUnchanged);
+        phase.DisplaysAfter = [display]; Assert.True(phase.DisplaysUnchanged);
+        phase.DisplaysAfter = [changedScale]; Assert.False(phase.DisplaysUnchanged);
+        foreach (var changed in new[] { display with { Name = "other" }, display with { Identity = "other" }, display with { State = 4 },
+            display with { Width = 1920 }, display with { Height = 1080 }, display with { X = 10 }, display with { Y = 10 } })
+            Assert.Throws<InvalidOperationException>(() => DisplaySnapshot.AssertScaleOnlyTransition([display], [changed]));
+        Assert.Throws<InvalidOperationException>(() => DisplaySnapshot.AssertScaleOnlyTransition([display], []));
+    }
+
+    [Fact]
+    public void HeroRespectsRealWindowMinimumsInsteadOfForcingTheNarrowerLayout()
+    {
+        var visible = new NativeRect(0, 0, 3000, 2000);
+        var client = new NativeRect(0, 0, 3000, 1920);
+        WindowSizing.AssertMinimum(CaptureProfile.PenpotHero.Size, visible, client, 2, 1100, 650);
+        Assert.Throws<InvalidOperationException>(() => WindowSizing.AssertMinimum(CaptureProfile.PenpotHero.Size, visible, client, 2.5, 1100, 650));
+        WindowSizing.AssertMinimum(CaptureProfile.Store.Size, visible, client, 2.5, 1100, 650);
+    }
 
     [Theory]
     [InlineData("Start", "de-DE", "01-start-de-DE.png")]
@@ -29,9 +134,9 @@ public sealed class StoreScreenshotTests
     [InlineData("Section", "en-US", "03-section-en-US.png")]
     [InlineData("Report", "en-US", "04-report-en-US.png")]
     [InlineData("Materials", "en-US", "05-materials-en-US.png")]
-    public void CaptureNamesIdentifyMotifAndCultureInOneFlatDirectory(string scene, string culture, string expected)
+    public void StoreCaptureNamesIdentifyMotifAndCulture(string scene, string culture, string expected)
     {
-        string name = CaptureFiles.FileName(scene, culture);
+        string name = CaptureFiles.FileName(CaptureProfile.Store, scene, culture);
         Assert.Equal(expected, name);
         Assert.Equal(name, Path.GetFileName(name));
     }
@@ -40,7 +145,7 @@ public sealed class StoreScreenshotTests
     [InlineData("Unknown", "de-DE")]
     [InlineData("Start", "../en-US")]
     public void CaptureNamesRejectUnknownMotifsAndCultures(string scene, string culture) =>
-        Assert.Throws<ArgumentException>(() => CaptureFiles.FileName(scene, culture));
+        Assert.Throws<ArgumentException>(() => CaptureFiles.FileName(CaptureProfile.Store, scene, culture));
 
     [Fact]
     public void DemoRecentsContainFiveNeutralWindowsPathsAndPreparedTimestamps()
@@ -83,11 +188,8 @@ public sealed class StoreScreenshotTests
     }
 
     [Fact]
-    public void CentralSizeFitsRequiredDisplayAndOriginalFixtureIsUnchanged()
+    public void OriginalFixtureIsUnchanged()
     {
-        var size = CaptureFiles.Read<CaptureSize>(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Store", "capture-size.json"));
-        Assert.Equal(new CaptureSize(1600, 900), size);
-        Assert.Equal((3200, 1800), size.Pixels);
         CaptureFiles.AssertFixture(Fixture);
         var section = Assert.IsType<ISectionGeometry>(ProjectFileCodec.Deserialize(File.ReadAllBytes(Fixture)).Document.Section);
         Assert.Equal(.1, section.Height.Meters); Assert.Equal(.08, section.Width.Meters);
@@ -95,9 +197,8 @@ public sealed class StoreScreenshotTests
     }
 
     [Theory]
-    [InlineData(0)] [InlineData(-1)] [InlineData(double.NaN)] [InlineData(double.PositiveInfinity)]
-    [InlineData(.1)] [InlineData(double.MaxValue)]
-    public void InvalidDimensionsCannotBecomePixelSizes(double invalid)
+    [InlineData(0)] [InlineData(-1)] [InlineData(int.MinValue)]
+    public void InvalidDimensionsCannotBecomePixelSizes(int invalid)
     {
         Assert.Throws<ArgumentException>(() => new CaptureSize(invalid, 1000).Pixels);
         Assert.Throws<ArgumentException>(() => new CaptureSize(1830, invalid).Pixels);
@@ -109,46 +210,46 @@ public sealed class StoreScreenshotTests
     {
         var outer = new NativeRect(200, 70, 1200, 870);
         var visible = new NativeRect(200 + left, 70 + top, 1200 - right, 870 - bottom);
-        Assert.Equal((3660 + left + right, 2000 + top + bottom), WindowSizing.OuterSize(new(1830, 1000), outer, visible));
-        if (outer != visible) Assert.Throws<ArgumentException>(() => WindowSizing.OuterSize(new(1830, 1000), visible, outer));
+        Assert.Equal((3840 + left + right, 2160 + top + bottom), WindowSizing.OuterSize(new(3840, 2160), outer, visible));
+        if (outer != visible) Assert.Throws<ArgumentException>(() => WindowSizing.OuterSize(new(3840, 2160), visible, outer));
     }
 
     [Theory]
     [InlineData(2940, 1846)] [InlineData(1920, 1080)] [InlineData(4480, 2520)]
     public void CaptureDisplaySelectionDoesNotRequireTheWindowToFitTheDesktop(int width, int height)
     {
-        var primary = new DisplayDevice("primary", "display", "PCI", 5, width, height, 0, 0, 200);
-        Assert.Equal(primary, DisplaySnapshot.RequireTarget([primary]).CaptureDisplay);
-        Assert.Equal((3200, 1800), new CaptureSize(1600, 900).Pixels);
+        var primary = new DisplayDevice("primary", "display", "PCI", 5, width, height, 0, 0, 240);
+        Assert.Equal(primary, DisplaySnapshot.RequireTarget([primary], 250).CaptureDisplay);
+        Assert.Equal((3840, 2160), CaptureProfile.Store.Size.Pixels);
     }
 
     [Theory]
-    [InlineData(4, 200)] [InlineData(5, 175)] [InlineData(5, 0)]
-    public void CaptureDisplayRejectsInactiveWrongAndUnknownScaling(uint state, int scale)
+    [InlineData(4u, 240u)] [InlineData(5u, 192u)] [InlineData(5u, 0u)]
+    public void CaptureDisplayRejectsInactiveWrongAndUnknownScaling(uint state, uint dpi)
     {
-        var primary = new DisplayDevice("primary", "display", "PCI", state, 2940, 1846, 0, 0, scale);
-        var error = Assert.Throws<InvalidOperationException>(() => DisplaySnapshot.RequireTarget([primary]));
-        Assert.Contains("200% (192 DPI)", error.Message);
-        Assert.Contains($"2940 x 1846 px, {scale}%", error.Message);
+        var primary = new DisplayDevice("primary", "display", "PCI", state, 2940, 1846, 0, 0, dpi);
+        var error = Assert.Throws<InvalidOperationException>(() => DisplaySnapshot.RequireTarget([primary], 250));
+        Assert.Contains("250% (240 DPI)", error.Message);
+        Assert.Contains($"2940 x 1846 px, {dpi} DPI", error.Message);
         Assert.Contains("No display was changed", error.Message);
     }
 
     [Fact]
     public void CaptureDisplayPrefersPrimaryThenUsesAnAlreadyScaledExternalDisplay()
     {
-        var primary = new DisplayDevice("primary", "display", "PCI", 5, 2940, 1846, 0, 0, 200);
+        var primary = new DisplayDevice("primary", "display", "PCI", 5, 2940, 1846, 0, 0, 240);
         var external = primary with { Name = "external", State = 1, X = -1920, Width = 1920, Height = 1080 };
-        Assert.Equal(primary, DisplaySnapshot.RequireTarget([external, primary]).CaptureDisplay);
-        Assert.Equal(external, DisplaySnapshot.RequireTarget([primary with { ScalePercent = 175 }, external]).CaptureDisplay);
-        Assert.Equal(external, DisplaySnapshot.RequireTarget([primary, external], external.Name).CaptureDisplay);
-        Assert.Throws<InvalidOperationException>(() => DisplaySnapshot.RequireTarget([primary], "missing"));
-        Assert.Throws<InvalidOperationException>(() => DisplaySnapshot.RequireTarget([primary, external with { State = 5 }]));
+        Assert.Equal(primary, DisplaySnapshot.RequireTarget([external, primary], 250).CaptureDisplay);
+        Assert.Equal(external, DisplaySnapshot.RequireTarget([primary with { Dpi = 168 }, external], 250).CaptureDisplay);
+        Assert.Equal(external, DisplaySnapshot.RequireTarget([primary, external], 250, external.Name).CaptureDisplay);
+        Assert.Throws<InvalidOperationException>(() => DisplaySnapshot.RequireTarget([primary], 250, "missing"));
+        Assert.Throws<InvalidOperationException>(() => DisplaySnapshot.RequireTarget([primary, external with { State = 5 }], 250));
     }
 
     [Theory]
-    [InlineData(2940, 1846, 3222, 1846)]
-    [InlineData(4096, 2160, 4096, 2160)]
-    [InlineData(1920, 1080, 3222, 1811)]
+    [InlineData(2940, 1846, 3862, 2171)]
+    [InlineData(4096, 2300, 4096, 2300)]
+    [InlineData(1920, 1080, 3862, 2171)]
     public void WindowTrackSizeAllowsCompleteOffscreenWindowAndPreservesOtherNativeLimits(
         int originalWidth, int originalHeight, int expectedWidth, int expectedHeight)
     {
@@ -161,7 +262,7 @@ public sealed class StoreScreenshotTests
             Marshal.WriteInt32(memory, 36, originalHeight);
             var outer = new NativeRect(0, 0, 1022, 811);
             var visible = new NativeRect(11, 0, 1011, 800);
-            var size = WindowSizing.OuterSize(new(1600, 900), outer, visible);
+            var size = WindowSizing.OuterSize(CaptureProfile.Store.Size, outer, visible);
             WindowSizeOverride.ApplyTrackSize(memory, size.Width, size.Height);
             var actual = new byte[40]; Marshal.Copy(memory, actual, 0, actual.Length);
             Assert.Equal(original[..32], actual[..32]); // Reserved/maximize/minimum values are untouched.
@@ -235,9 +336,9 @@ public sealed class StoreScreenshotTests
     public void CleanupRefusesParentsSiblingsAndUnnamedDirectories()
     {
         string root = TestPath("runs");
-        Assert.Throws<InvalidOperationException>(() => SpanDraft.StoreScreenshots.Program.DeleteRunDirectory(root, root));
-        Assert.Throws<InvalidOperationException>(() => SpanDraft.StoreScreenshots.Program.DeleteRunDirectory(root, TestPath("elsewhere")));
-        Assert.Throws<InvalidOperationException>(() => SpanDraft.StoreScreenshots.Program.DeleteRunDirectory(root, Path.Combine(root, "not-a-run")));
+        Assert.Throws<InvalidOperationException>(() => SpanDraft.Screenshots.Program.DeleteRunDirectory(root, root));
+        Assert.Throws<InvalidOperationException>(() => SpanDraft.Screenshots.Program.DeleteRunDirectory(root, TestPath("elsewhere")));
+        Assert.Throws<InvalidOperationException>(() => SpanDraft.Screenshots.Program.DeleteRunDirectory(root, Path.Combine(root, "not-a-run")));
     }
 
     [Fact]
@@ -250,11 +351,11 @@ public sealed class StoreScreenshotTests
         try
         {
             File.WriteAllText(Path.Combine(owned, "State", "recovery.json"), "partial state");
-            File.WriteAllText(Path.Combine(owned, CaptureFiles.FileName("Start", "de-DE")), "partial capture");
+            File.WriteAllText(Path.Combine(owned, CaptureFiles.FileName(CaptureProfile.Store, "Start", "de-DE")), "partial capture");
             string keep = Path.Combine(other, "keep.txt"); File.WriteAllText(keep, "other run");
-            SpanDraft.StoreScreenshots.Program.DeleteRunDirectory(runs, owned);
+            SpanDraft.Screenshots.Program.DeleteRunDirectory(runs, owned);
             Assert.False(Directory.Exists(owned)); Assert.Equal("other run", File.ReadAllText(keep));
-            SpanDraft.StoreScreenshots.Program.DeleteRunDirectory(runs, other);
+            SpanDraft.Screenshots.Program.DeleteRunDirectory(runs, other);
         }
         finally { if (Directory.Exists(runs)) Directory.Delete(runs); }
     }
@@ -269,7 +370,7 @@ public sealed class DesktopIsolatedStartupTests
         using var environment = new DesktopControlEnvironment();
         var files = new Files();
         string root = Path.Combine(AppContext.BaseDirectory, "startup-gate-" + Guid.NewGuid().ToString("N"));
-        string fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Store", "Crane Beam.spandraft");
+        string fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Screenshots", "Crane Beam.spandraft");
         var stores = DesktopStateStores.InDirectory(files, root);
         var gate = new TaskCompletionSource();
         files.BeforeRead = path => path == stores.Recents.FilePath ? gate.Task : Task.CompletedTask;
@@ -300,7 +401,7 @@ public sealed class DesktopIsolatedStartupTests
         using var environment = new DesktopControlEnvironment();
         var files = new Files();
         string root = Path.Combine(AppContext.BaseDirectory, "isolated-window-" + Guid.NewGuid().ToString("N"));
-        string fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Store", "Crane Beam.spandraft");
+        string fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Screenshots", "Crane Beam.spandraft");
         var reads = new List<string>(); files.BeforeRead = path => { reads.Add(path); return Task.CompletedTask; };
         files.Data[fixture] = File.ReadAllBytes(fixture);
         var stores = DesktopStateStores.InDirectory(files, root);

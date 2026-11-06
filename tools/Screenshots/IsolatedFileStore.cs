@@ -1,6 +1,6 @@
 using SpanDraft.Desktop.Persistence;
 
-namespace SpanDraft.StoreScreenshots;
+namespace SpanDraft.Screenshots;
 
 /// <summary>No fallback to real user state, including best-effort store reads.</summary>
 public sealed class IsolatedFileStore : IProjectFileStore

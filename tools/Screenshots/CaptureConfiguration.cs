@@ -4,24 +4,50 @@ using System.Text;
 using System.Text.Json;
 using SpanDraft.Desktop.Persistence;
 
-namespace SpanDraft.StoreScreenshots;
+namespace SpanDraft.Screenshots;
 
-public sealed record CaptureSize(double WidthDip, double HeightDip)
+public sealed record CaptureSize(int Width, int Height)
 {
-    public (int Width, int Height) Pixels
+    public (int Width, int Height) Pixels => Width > 0 && Height > 0
+        ? (Width, Height) : throw new ArgumentException("Capture dimensions must be positive pixel counts.");
+}
+
+public sealed record CaptureProfile(string Name, string Directory, CaptureSize Size, string[] Scenes)
+{
+    public static readonly CaptureProfile Store = new("Store", "store", new(3840, 2160), CaptureFiles.Scenes);
+    public static readonly CaptureProfile PenpotHero = new("PenpotHero", "penpot", new(2400, 1800), ["Project"]);
+}
+
+public sealed record CaptureBatch(CaptureProfile Profile, string Language, string[] Scenes, int ScalePercent)
+{
+    public static CaptureBatch[] Select(string target, string language, string scene, int scalePercent, int penpotScalePercent)
     {
-        get
+        CaptureScaling.ExpectedDpi(scalePercent);
+        CaptureScaling.ExpectedDpi(penpotScalePercent);
+        string[] targets = CaptureFiles.Select(target, ["Store", "Penpot"]);
+        string[] languages = CaptureFiles.Select(language, CaptureFiles.Languages);
+        string[] scenes = CaptureFiles.Select(scene, CaptureFiles.Scenes);
+        if (targets.Contains("Penpot") && scenes.Any(s => s != "Project") && !scene.Equals("All", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Penpot supports only Project. Use -Target Store for other individual scenes.");
+        return targets.SelectMany(t =>
         {
-            static int Dimension(double value)
-            {
-                double pixels = value * 2;
-                if (!double.IsFinite(pixels) || pixels <= 0 || pixels > int.MaxValue || pixels != Math.Truncate(pixels))
-                    throw new ArgumentException("Window dimensions must be positive, finite and represent whole pixels at 200%.");
-                return (int)pixels;
-            }
-            return (Dimension(WidthDip), Dimension(HeightDip));
-        }
+            var profile = t == "Store" ? CaptureProfile.Store : CaptureProfile.PenpotHero;
+            return languages.Select(l => new CaptureBatch(profile, l, scenes.Where(profile.Scenes.Contains).ToArray(),
+                t == "Store" ? scalePercent : penpotScalePercent));
+        }).ToArray();
     }
+
+    public string[] RelativeFiles => Scenes.Select(s => Path.Combine(Profile.Directory, CaptureFiles.FileName(Profile, s, Language))).ToArray();
+}
+
+public static class CaptureScaling
+{
+    public static uint ExpectedDpi(int scalePercent) => scalePercent > 0
+        ? checked((uint)Math.Round(scalePercent * 96d / 100, MidpointRounding.AwayFromZero))
+        : throw new ArgumentOutOfRangeException(nameof(scalePercent), "ScalePercent must be a positive integer.");
+
+    public static bool Matches(uint dpi, double renderScaling, int scalePercent) => dpi == ExpectedDpi(scalePercent)
+        && double.IsFinite(renderScaling) && Math.Abs(renderScaling - dpi / 96d) < 0.000001;
 }
 
 public static class CaptureFiles
@@ -34,12 +60,17 @@ public static class CaptureFiles
 
     public static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
 
-    public static string FileName(string scene, string culture)
+    public static string FileName(CaptureProfile profile, string scene, string culture)
     {
         int index = Array.IndexOf(Scenes, scene);
-        if (index < 0) throw new ArgumentException("Unknown screenshot motif.", nameof(scene));
+        if (index < 0 || !profile.Scenes.Contains(scene)) throw new ArgumentException("Unknown screenshot motif for this profile.", nameof(scene));
         if (!Languages.Contains(culture)) throw new ArgumentException("Unknown screenshot culture.", nameof(culture));
-        return $"{index + 1:00}-{scene.ToLowerInvariant()}-{culture}.png";
+        return profile.Name switch
+        {
+            "PenpotHero" => $"hero-project-{culture}.png",
+            "Store" => $"{index + 1:00}-{scene.ToLowerInvariant()}-{culture}.png",
+            _ => throw new ArgumentException("Unknown capture profile.", nameof(profile))
+        };
     }
 
     public static RecentProjectEntry[] DemoRecents(DateTimeOffset referenceTime)
@@ -73,6 +104,14 @@ public static class CaptureFiles
             throw new InvalidOperationException("Personal paths are not allowed in screenshot inputs or visible paths.");
     }
 
+    public static void AssertVisibleText(string text, string repo)
+    {
+        AssertNoPersonalPaths(text);
+        if (text.Contains(repo, StringComparison.OrdinalIgnoreCase) || text.Contains("artifacts", StringComparison.OrdinalIgnoreCase)
+            || text.Contains(".runs", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("An internal tooling path is visible in the captured application.");
+    }
+
     public static (int Width, int Height) PngSize(string path)
     {
         using var stream = File.OpenRead(path);
@@ -92,11 +131,19 @@ public static class CaptureFiles
 }
 
 public sealed record WorkerRequest(string RepoRoot, string RunRoot, string Fixture, string WinApp,
-    string Language, string[] Scenes, CaptureSize Size, DateTimeOffset BuildFinishedUtc, DisplaySnapshot Display);
+    string Language, string[] Scenes, CaptureProfile Profile, int ScalePercent, DateTimeOffset BuildFinishedUtc, DisplaySnapshot Display);
 
-public sealed record CaptureEvidence(string Language, string Scene, string File, int Width, int Height,
+public sealed record CaptureEvidence(string Profile, string Language, string Scene, string File, int Width, int Height,
     uint WindowDpi, double RenderScaling, NativeRect WindowBounds, NativeRect VisibleBounds, NativeRect ClientBounds,
-    CaptionEvidence Chrome, long Hwnd, int ProcessId, string Executable, DateTimeOffset ProcessStartedUtc);
+    CaptionEvidence Chrome, long Hwnd, int ProcessId, string Executable, DateTimeOffset ProcessStartedUtc,
+    DateTimeOffset CapturedUtc);
+
+public sealed record CapturePhase(int ScalePercent, DateTimeOffset StartedUtc, DateTimeOffset? ConfirmedTransitionUtc, DisplaySnapshot Display)
+{
+    public DateTimeOffset? FinishedUtc { get; set; }
+    public DisplayDevice[]? DisplaysAfter { get; set; }
+    public bool DisplaysUnchanged => DisplaysAfter is not null && Display.Devices.SequenceEqual(DisplaysAfter);
+}
 
 public sealed record WorkerResult(CaptureEvidence[] Captures, string FixtureHash, string[] AccessedPaths,
     RecentProjectEntry[] StartRecents, string? SelectedBuiltInMaterial);

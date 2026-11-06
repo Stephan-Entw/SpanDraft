@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
-namespace SpanDraft.StoreScreenshots;
+namespace SpanDraft.Screenshots;
 
 /// <summary>Allows the measured capture size on this HWND, even beyond the desktop bounds.</summary>
 internal sealed class WindowSizeOverride : IDisposable
