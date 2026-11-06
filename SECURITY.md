@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-SpanDraft is currently under active development and has not reached a stable release.
+SpanDraft has reached its first stable release and remains under active development.
 
 Security fixes are applied to the current version on the `main` branch.
 

@@ -1,7 +1,7 @@
 # Releasing SpanDraft
 
 GitHub Windows x64 releases are automatic after a successful push CI run on
-`main`. The published `v0.1.0` tag, release, notes and history remain unchanged.
+`main`. Published tags, releases, assets and release notes must remain unchanged.
 
 ## Version and release preparation
 
@@ -137,10 +137,8 @@ The Store route is local and manual, independent of GitHub/Inno Setup. Neither
 route invokes or requires the other. There is no Store GitHub Action or Partner
 Center upload automation. Both can use the same released source commit.
 
-The MSIX tooling was added after `v0.1.0` and is absent from that tag. Use
-`-Development` from the current unreleased checkout for local checks; the
-Submission instructions below apply to a published tag that includes this
-tooling.
+Submission builds require a clean published tag containing the MSIX tooling.
+Use `-Development` for local checks on dirty or untagged checkouts.
 
 ### Build from the released source
 

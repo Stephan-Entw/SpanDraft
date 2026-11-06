@@ -9,9 +9,8 @@ calculations and large general-purpose FEM systems: define one straight beam,
 place supports and loads directly in a technical sketch, edit exact dimensions
 and inspect the resulting structural response.
 
-SpanDraft has an initial public release, `v0.1.0`, and remains under active
-development. This README describes the current checkout, including changes made
-after that release.
+SpanDraft's first stable release is `v1.0.0`. This README describes the current
+checkout, including subsequent changes.
 
 ## Current capabilities
 
@@ -98,7 +97,8 @@ is intended for development only.
 
 ### Third-party notices
 
-After changing Desktop dependencies, regenerate and commit `THIRD_PARTY_NOTICES.txt`:
+After changing Desktop dependencies or bundled font license notices, regenerate
+and commit `THIRD_PARTY_NOTICES.txt`:
 
 ```sh
 dotnet run --file scripts/generate-third-party-notices.cs
@@ -146,4 +146,5 @@ API rather than implementing mechanical formulas itself.
 
 SpanDraft is licensed under the GNU General Public License v3.0.
 See [LICENSE](LICENSE).
-Third-party package notices are listed in [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt).
+Third-party license notices, including bundled fonts, are listed in
+[THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt).

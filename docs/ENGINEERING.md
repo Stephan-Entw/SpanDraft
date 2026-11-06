@@ -144,9 +144,9 @@ abgelehnt; Einheitensymbole und die ausgegebene `· 10`-Schreibweise sind kein
 Zahleneingabeformat.
 
 Darstellungswechsel verändern weder Berechnung, Projektdatei, Undo/Redo noch
-Dirty-State. Lokale historische Standard-/Detailed-Settings werden mit
-unveränderten Einheiten auf die neuen
-Defaults migriert; das Projektformat bleibt unverändert.
+Dirty-State. Historische Standard-/Detailed-Einstellungen werden unter
+Beibehaltung ihrer Einheiten auf die oben beschriebenen Standardwerte migriert;
+das Projektformat bleibt unverändert.
 
 Diagramm-Achsenticks behalten ihre eigenständige Nice-Tick-Logik. Zoom, Seitenzahlen
 und reine UI-Zähler unterliegen ebenfalls nicht der technischen Präzision.

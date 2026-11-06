@@ -1,7 +1,5 @@
 # SpanDraft – Konzept
 
-Stand: 30.10.2026
-
 Dieses Dokument legt Produktvision, Scope, Architekturgrundsätze und Roadmap
 von SpanDraft fest. Verbindliche Fach-, API- und Dateiverträge stehen in
 den jeweils spezialisierten Dokumenten; Implementierungsdetails in Code und Tests.
@@ -40,9 +38,6 @@ Der Anwender soll:
 - Positionen und Werte exakt numerisch bearbeiten
 - Lager und Lasten durch Anklicken und Ziehen bearbeiten
 - Ergebnisse unmittelbar nach bestätigten Änderungen sehen
-
-Eine spätere Tabellenansicht darf denselben Projektzustand ergänzend darstellen,
-aber nicht als zweites Modell führen.
 
 ## 3. Aktueller fachlicher Scope
 
