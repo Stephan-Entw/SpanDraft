@@ -21,7 +21,7 @@ internal sealed class ReportTextLayout : IDisposable
             var baselineFont = Font(size, strong, false);
             var metrics = baselineFont.Metrics;
             float top = metrics.Ascent, bottom = metrics.Descent, left = 0, right = 0, cursor = 0;
-            foreach (var run in text.Runs)
+            foreach (var run in text.ForDisplay().Runs)
             {
                 var font = Font(size * (float)TechnicalTypography.FontScale(run), strong, TechnicalTypography.IsItalic(run));
                 var groups = new List<(string Text, SKFont Font)>();
@@ -31,10 +31,7 @@ internal sealed class ReportTextLayout : IDisposable
                     var selected = font;
                     if (!font.ContainsGlyphs(character))
                     {
-                        using var face = SKFontManager.Default.MatchCharacter("Arial", font.Typeface.FontStyle, null, rune.Value)
-                            ?? throw new InvalidOperationException($"No report font provides {character}.");
-                        selected = new SKFont(face, font.Size); fonts.Add(selected);
-                        if (!selected.ContainsGlyphs(character)) throw new InvalidOperationException($"Missing report glyph {character}.");
+                        throw new InvalidOperationException($"IBM Plex Sans has no report glyph U+{rune.Value:X4} ({character}).");
                     }
                     if (groups.Count > 0 && ReferenceEquals(groups[^1].Font, selected))
                         groups[^1] = (groups[^1].Text + character, selected);
@@ -72,9 +69,7 @@ internal sealed class ReportTextLayout : IDisposable
 
     private SKFont Font(float size, bool strong, bool italic)
     {
-        var style = strong ? italic ? SKFontStyle.BoldItalic : SKFontStyle.Bold
-            : italic ? SKFontStyle.Italic : SKFontStyle.Normal;
-        using var face = SKTypeface.FromFamilyName("Arial", style);
+        var face = ReportFonts.Face(strong, italic);
         var font = new SKFont(face, size); fonts.Add(font); return font;
     }
     internal void Draw(SKCanvas canvas, float x, float y, SKPaint paint)

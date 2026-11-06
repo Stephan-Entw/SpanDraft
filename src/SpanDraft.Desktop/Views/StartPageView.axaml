@@ -24,7 +24,7 @@
   </UserControl.Styles>
   <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,*">
     <Border Classes="workspaceHeader">
-      <TextBlock Text="{x:Static resources:Strings.Start}" FontSize="22" FontWeight="SemiBold"
+      <TextBlock Text="{x:Static resources:Strings.Start}" Classes="pageTitle"
                  Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
     </Border>
     <Grid Grid.Row="1" Margin="{StaticResource Padding24}" ColumnDefinitions="280,48,720" HorizontalAlignment="Left">
@@ -41,7 +41,7 @@
             </StackPanel>
           </Button>
           <Button x:Name="OpenProjectButton" Command="{Binding OpenCommand}" Classes="secondary"
-                  Height="{DynamicResource PrimaryAction}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                  Height="{DynamicResource StandardControl}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                   AutomationProperties.Name="{x:Static resources:Strings.OpenProject}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
               <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.FolderOpen}"
@@ -86,10 +86,10 @@
                           <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Document}"
                               Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
                           <Grid Grid.Column="1" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space4}" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Name}" Classes="bodyStrong" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Row="1" Text="{Binding FilePath}" Classes="caption" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FilePath}" />
+                            <controls:TechnicalTextBlock Text="{Binding Name}" Classes="bodyStrong" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" />
+                            <controls:TechnicalTextBlock Grid.Row="1" Text="{Binding FilePath}" Classes="caption" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FilePath}" />
                           </Grid>
-                          <TextBlock Grid.Column="2" Text="{Binding LastUsedLabel}" Classes="secondary" VerticalAlignment="Center" TextAlignment="Right" />
+                          <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding LastUsedLabel}" Classes="secondary" VerticalAlignment="Center" TextAlignment="Right" />
                         </Grid>
                       </Button>
                     </DataTemplate>

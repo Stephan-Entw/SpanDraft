@@ -12,10 +12,10 @@
         <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
-          <TextBlock Text="{Binding Name}" Classes="entityName" />
+          <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
         </Button>
-        <TextBlock Grid.Column="1" Text="{Binding Type}" Classes="centered" />
-        <TextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
+        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Type}" Classes="centered" />
+        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
       </Grid>
     </DataTemplate>
     <DataTemplate x:Key="LoadRowTemplate" x:DataType="state:ProjectOverviewItem">
@@ -23,10 +23,10 @@
         <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
-          <TextBlock Text="{Binding Name}" Classes="entityName" />
+          <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
         </Button>
-        <TextBlock Grid.Column="1" Text="{Binding Value}" Classes="number" />
-        <TextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
+        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Value}" Classes="number" />
+        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
       </Grid>
     </DataTemplate>
     <DataTemplate x:Key="ReactionRowTemplate" x:DataType="state:ProjectOverviewReaction">
@@ -34,30 +34,30 @@
         <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
-          <TextBlock Text="{Binding Name}" Classes="entityName" />
+          <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
         </Button>
-        <TextBlock Grid.Column="1" Text="{Binding Rx}" Classes="number" />
-        <TextBlock Grid.Column="2" Text="{Binding Ry}" Classes="number" />
-        <TextBlock Grid.Column="3" Text="{Binding Moment}" Classes="number" />
+        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Rx}" Classes="number" />
+        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Ry}" Classes="number" />
+        <controls:TechnicalTextBlock Grid.Column="3" Text="{Binding Moment}" Classes="number" />
       </Grid>
     </DataTemplate>
   </UserControl.Resources>
   <UserControl.Styles>
-    <Style Selector="TextBlock">
+    <Style Selector=":is(TextBlock)">
       <Setter Property="TextWrapping" Value="Wrap" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
-    <Style Selector="TextBlock.sectionTitle">
+    <Style Selector=":is(TextBlock).sectionTitle">
       <Setter Property="TextAlignment" Value="Center" />
     </Style>
     <Style Selector="Grid.overviewRow">
       <Setter Property="ColumnSpacing" Value="6" />
       <Setter Property="MinHeight" Value="24" />
     </Style>
-    <Style Selector="Grid.overviewRow TextBlock">
+    <Style Selector="Grid.overviewRow :is(TextBlock)">
       <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
     </Style>
-    <Style Selector="Grid.tableHeader TextBlock">
+    <Style Selector="Grid.tableHeader :is(TextBlock)">
       <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
     </Style>
     <!-- Keep dividers within the existing section gaps. -->
@@ -66,7 +66,7 @@
       <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
       <Setter Property="BorderThickness" Value="0,1,0,0" />
     </Style>
-    <Style Selector="TextBlock.entityName">
+    <Style Selector=":is(TextBlock).entityName">
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="TextAlignment" Value="Center" />
       <Setter Property="TextWrapping" Value="NoWrap" />
@@ -81,10 +81,10 @@
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
       <Setter Property="Cursor" Value="Hand" />
     </Style>
-    <Style Selector="TextBlock.centered">
+    <Style Selector=":is(TextBlock).centered">
       <Setter Property="TextAlignment" Value="Center" />
     </Style>
-    <Style Selector="TextBlock.number">
+    <Style Selector=":is(TextBlock).number">
       <Setter Property="TextAlignment" Value="Right" />
     </Style>
     <Style Selector="ItemsControl">
@@ -99,8 +99,8 @@
         <Grid x:Name="ProjectBlock" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space4}">
           <TextBlock Text="{x:Static resources:Strings.BeamModel}" Classes="sectionTitle" />
           <StackPanel Grid.Row="1" Spacing="{StaticResource Space4}" Margin="0,4">
-            <TextBlock Text="{Binding Overview.Section}" Classes="bodyStrong" />
-            <TextBlock x:Name="MaterialDescription" Classes="secondary" Text="{Binding Overview.Material}"
+            <controls:TechnicalTextBlock Text="{Binding Overview.Section}" Classes="bodyStrong" />
+            <controls:TechnicalTextBlock x:Name="MaterialDescription" Classes="secondary" Text="{Binding Overview.Material}"
                        TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Overview.Material}"
                        AutomationProperties.Name="{Binding Overview.Material}" />
           </StackPanel>
@@ -112,7 +112,7 @@
             <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,*,96">
               <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
               <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewType}" Classes="centered" />
-              <TextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
+              <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
             </Grid>
             <ItemsControl x:Name="SupportTable" ItemsSource="{Binding Overview.Supports}" ItemTemplate="{StaticResource SupportRowTemplate}" />
           </StackPanel>
@@ -124,7 +124,7 @@
             <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,0.7*,1.3*">
               <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
               <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
-              <TextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
+              <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
             </Grid>
             <ItemsControl x:Name="ForceTable" ItemsSource="{Binding Overview.Forces}" ItemTemplate="{StaticResource LoadRowTemplate}" />
           </StackPanel>
@@ -136,7 +136,7 @@
             <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,0.7*,1.3*">
               <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
               <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
-              <TextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
+              <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
             </Grid>
             <ItemsControl x:Name="MomentTable" ItemsSource="{Binding Overview.Moments}" ItemTemplate="{StaticResource LoadRowTemplate}" />
           </StackPanel>
@@ -148,7 +148,7 @@
             <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,0.7*,1.3*">
               <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
               <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
-              <TextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
+              <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
             </Grid>
             <ItemsControl x:Name="DistributedLoadTable" ItemsSource="{Binding Overview.DistributedLoads}" ItemTemplate="{StaticResource LoadRowTemplate}" />
           </StackPanel>
@@ -167,23 +167,23 @@
         <StackPanel Spacing="{StaticResource Space4}">
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.Indicators}" Classes="sectionTitle" />
-          <TextBlock x:Name="AnalysisStatus" Text="{Binding Overview.Analysis.StatusText}" IsVisible="{Binding !Overview.Analysis.IsSuccess}" Classes="secondary" />
+          <controls:TechnicalTextBlock x:Name="AnalysisStatus" Text="{Binding Overview.Analysis.StatusText}" IsVisible="{Binding !Overview.Analysis.IsSuccess}" Classes="secondary" />
           <StackPanel x:Name="IndicatorsPanel" IsVisible="{Binding Overview.Analysis.IsSuccess}">
             <Grid Classes="overviewRow" ColumnDefinitions="*,Auto">
               <TextBlock Text="{x:Static resources:Strings.MaximumDeflection}" Classes="propertyLabel" />
-              <TextBlock Grid.Column="1" Text="{Binding Overview.Analysis.Displacement}" Classes="number bodyStrong" />
+              <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Overview.Analysis.Displacement}" Classes="number bodyStrong" />
             </Grid>
             <Grid Classes="overviewRow" ColumnDefinitions="*,Auto">
               <TextBlock Text="{x:Static resources:Strings.GoverningMoment}" Classes="propertyLabel" />
-              <TextBlock Grid.Column="1" Text="{Binding Overview.Analysis.Moment}" Classes="number bodyStrong" />
+              <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Overview.Analysis.Moment}" Classes="number bodyStrong" />
             </Grid>
             <Grid Classes="overviewRow" ColumnDefinitions="*,Auto">
               <TextBlock Text="{x:Static resources:Strings.MaximumBendingStress}" Classes="propertyLabel" />
-              <TextBlock Grid.Column="1" Text="{Binding Overview.Analysis.Stress}" Classes="number bodyStrong" />
+              <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Overview.Analysis.Stress}" Classes="number bodyStrong" />
             </Grid>
             <Grid Classes="overviewRow" ColumnDefinitions="*,Auto">
               <TextBlock Text="{x:Static resources:Strings.SafetyFactorLabel}" Classes="propertyLabel" />
-              <TextBlock Grid.Column="1" Text="{Binding Overview.Analysis.SafetyFactor}" Classes="number bodyStrong" />
+              <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Overview.Analysis.SafetyFactor}" Classes="number bodyStrong" />
             </Grid>
           </StackPanel>
         </StackPanel>

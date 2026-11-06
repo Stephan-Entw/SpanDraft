@@ -82,7 +82,7 @@ public sealed class DesktopMenuControlTests
             Assert.True(project.IsEffectivelyVisible); AssertChrome(project, width);
             Assert.Equal(menuTop, project.Bounds.Top);
             Assert.Single(window.GetVisualDescendants().OfType<Menu>());
-            Assert.Equal(new[] { Strings.File, Strings.Edit, Strings.View, Strings.Help }, project.Items.OfType<MenuItem>().Select(i => i.Header));
+            Assert.Equal(new[] { Strings.File, Strings.Edit, Strings.Help }, project.Items.OfType<MenuItem>().Select(i => i.Header));
             Assert.True(shell.FindControl<MenuItem>("UserManualMenuItem")!.IsEnabled);
             string directory = Path.Combine(AppContext.BaseDirectory, "TestResults", "shell"); Directory.CreateDirectory(directory);
             using var bitmap = new Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize((int)width, (int)height));

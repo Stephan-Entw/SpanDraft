@@ -35,7 +35,7 @@
               <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronLeft}" Width="20" Height="20" />
             </Button>
             <controls:ToolbarTextPresenter x:Name="PageValue" Width="44" Height="{DynamicResource ToolbarButton}">
-              <TextBlock x:Name="PageLabel" FontSize="{DynamicResource ToolbarSize}" Text="{Binding PageLabel}" />
+              <controls:TechnicalTextBlock x:Name="PageLabel" FontSize="{DynamicResource ToolbarSize}" Text="{Binding PageLabel}" />
             </controls:ToolbarTextPresenter>
             <Button x:Name="NextButton" Classes="iconToolbar" Width="24" Padding="0" Command="{Binding NextCommand}"
                     ToolTip.Tip="{x:Static resources:Strings.ReportNext}" AutomationProperties.Name="{x:Static resources:Strings.ReportNext}">
@@ -49,7 +49,7 @@
             </Button>
             <Grid x:Name="ZoomValue" Width="48" IsEnabled="{Binding CanOutput}">
               <controls:ToolbarTextPresenter x:Name="ZoomDisplay" Height="{DynamicResource ToolbarButton}" IsHitTestVisible="False">
-                <TextBlock x:Name="ZoomLabel" FontSize="{DynamicResource ToolbarSize}" Text="{Binding ZoomLabel}"
+                <controls:TechnicalTextBlock x:Name="ZoomLabel" FontSize="{DynamicResource ToolbarSize}" Text="{Binding ZoomLabel}"
                            Foreground="{Binding Foreground, ElementName=ZoomValueButton}" />
               </controls:ToolbarTextPresenter>
               <Button x:Name="ZoomValueButton" Classes="toolbar" HorizontalAlignment="Stretch" Padding="0" Background="Transparent" Click="EditZoom"
@@ -83,7 +83,7 @@
         </Button>
       </Grid>
     </Border>
-    <TextBlock x:Name="ErrorText" Grid.Row="1" Margin="16,8" Classes="validationMessage" TextWrapping="Wrap"
+    <controls:TechnicalTextBlock x:Name="ErrorText" Grid.Row="1" Margin="16,8" Classes="validationMessage" TextWrapping="Wrap"
                IsVisible="{Binding HasError}" Text="{Binding Error}" />
     <ScrollViewer x:Name="PageScroll" Grid.Row="2" Background="{DynamicResource AppBackground}"
                   HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">

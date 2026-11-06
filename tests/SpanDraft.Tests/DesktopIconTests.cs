@@ -123,8 +123,8 @@ public sealed class DesktopIconTests
     {
         using var environment = new DesktopControlEnvironment();
         var drawings = Geometries(Resource<DrawingImage>("ToolbarIcon.SelfWeight").Drawing!).ToArray();
-        var glyph = Assert.Single(drawings, d => d.Brush is ISolidColorBrush { Color: var color } && color == Colors.Black);
-        var arrow = Assert.Single(drawings, d => d.Brush is ISolidColorBrush { Color: var color } && color == Color.Parse("#0073FE"));
+        var glyph = Assert.Single(drawings, d => d.Brush is ISolidColorBrush { Color: var color } && color == ((ISolidColorBrush)Application.Current!.FindResource("SelfWeightStroke")!).Color);
+        var arrow = Assert.Single(drawings, d => d.Brush is ISolidColorBrush { Color: var color } && color == ((ISolidColorBrush)Application.Current!.FindResource("Accent")!).Color);
         var textBounds = glyph.Geometry!.Bounds;
         var arrowBounds = arrow.Geometry!.Bounds;
         Assert.True(textBounds.Right < arrowBounds.Left);

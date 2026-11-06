@@ -40,47 +40,47 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
 
     public Task<LeaveDecision> ConfirmLeaveAsync(string projectFileName) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.LeaveQuestion, projectFileName),
-        [(Strings.Save, LeaveDecision.Save), (Strings.DontSave, LeaveDecision.Discard), (Strings.Cancel, LeaveDecision.Cancel)]);
+        [(Strings.Save, LeaveDecision.Save, "primary"), (Strings.DontSave, LeaveDecision.Discard, "secondary"), (Strings.Cancel, LeaveDecision.Cancel, "secondary")]);
 
     public Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc) => damaged
         ? ShowAsync(Strings.RecoveryDiscardQuestion,
-            [(Strings.Discard, RecoveryDecision.Discard), (Strings.Cancel, RecoveryDecision.Cancel)])
+            [(Strings.Discard, RecoveryDecision.Discard, "primary"), (Strings.Cancel, RecoveryDecision.Cancel, "secondary")])
         : ShowAsync(string.Format(CultureInfo.CurrentUICulture, Strings.RecoveryQuestion,
             writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)),
-            [(Strings.Restore, RecoveryDecision.Restore), (Strings.Discard, RecoveryDecision.Discard)]);
+            [(Strings.Restore, RecoveryDecision.Restore, "primary"), (Strings.Discard, RecoveryDecision.Discard, "secondary")]);
 
     public Task<RecoveryDecision> ConfirmSetupRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc) => damaged
         ? ConfirmRecoveryAsync(true, null)
         : ShowAsync(string.Format(CultureInfo.CurrentUICulture, Strings.SetupRecoveryQuestion,
             writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)),
-            [(Strings.Restore, RecoveryDecision.Restore), (Strings.Discard, RecoveryDecision.Discard)]);
+            [(Strings.Restore, RecoveryDecision.Restore, "primary"), (Strings.Discard, RecoveryDecision.Discard, "secondary")]);
 
-    public async Task ShowErrorAsync(string message) => await ShowAsync(message, [(Strings.OK, true)]);
+    public async Task ShowErrorAsync(string message) => await ShowAsync(message, [(Strings.OK, true, "primary")]);
 
     public Task<bool> ConfirmRemoveMissingRecentAsync(string path) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.MissingRecentQuestion, path),
-        [(Strings.RemoveFromRecent, true), (Strings.Cancel, false)]);
+        [(Strings.RemoveFromRecent, true, "primary"), (Strings.Cancel, false, "secondary")]);
 
     public Task<bool> ConfirmMaterialDeleteAsync(string displayName) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.DeleteMaterialQuestion, displayName),
-        [(Strings.Cancel, false), (Strings.Delete, true)]);
+        [(Strings.Cancel, false, "secondary"), (Strings.Delete, true, "primary")]);
     public Task<bool> ConfirmSectionDeleteAsync(string name) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.DeleteSectionQuestion, name),
-        [(Strings.Cancel, false), (Strings.Delete, true)]);
+        [(Strings.Cancel, false, "secondary"), (Strings.Delete, true, "primary")]);
 
     public Task ShowMaterialEditorAsync(MaterialEditorViewModel editor) =>
         new MaterialEditorWindow(editor) { Icon = owner.Icon }.ShowDialog(owner);
 
     public Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string displayName) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.MaterialNameConflictQuestion, displayName),
-        [(Strings.ReplaceMaterial, MaterialNameConflictDecision.Replace),
-         (Strings.RenameMaterial, MaterialNameConflictDecision.Rename), (Strings.Cancel, MaterialNameConflictDecision.Cancel)]);
+        [(Strings.ReplaceMaterial, MaterialNameConflictDecision.Replace, "primary"),
+         (Strings.RenameMaterial, MaterialNameConflictDecision.Rename, "secondary"), (Strings.Cancel, MaterialNameConflictDecision.Cancel, "secondary")]);
 
     public Task<bool> ConfirmMaterialReplaceAsync(string displayName) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.ReplaceMaterialQuestion, displayName),
-        [(Strings.Cancel, false), (Strings.ReplaceMaterial, true)]);
+        [(Strings.Cancel, false, "secondary"), (Strings.ReplaceMaterial, true, "primary")]);
 
-    private Task<T> ShowAsync<T>(string message, (string Label, T Result)[] choices)
+    private Task<T> ShowAsync<T>(string message, (string Label, T Result, string Role)[] choices)
     {
         var dialog = new Window
         {
@@ -89,10 +89,11 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
             Icon = owner.Icon
         };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
-        foreach (var (label, result) in choices)
+        foreach (var (label, result, role) in choices)
         {
             var button = new Button { Content = label, IsDefault = typeof(T) == typeof(MaterialNameConflictDecision)
                 ? Equals(result, MaterialNameConflictDecision.Cancel) : buttons.Children.Count == 0 };
+            button.Classes.Add(role);
             AutomationProperties.SetName(button, label);
             button.Click += (_, _) => dialog.Close(result);
             buttons.Children.Add(button);

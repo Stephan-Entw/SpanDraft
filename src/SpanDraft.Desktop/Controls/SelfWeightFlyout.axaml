@@ -19,13 +19,13 @@
       <StackPanel x:Name="Footer" Classes="editorFlyoutFooter">
         <Button x:Name="DeleteAction" Content="{x:Static resources:Strings.Delete}" Classes="ghost dangerGhost"
                 Command="{Binding DisableSelfWeightCommand}" />
-        <Button x:Name="CloseAction" Content="{x:Static resources:Strings.Close}" Classes="ghost" Click="Close" />
-        <Button x:Name="VisibilityAction" Classes="primary compactSupportAction"
+        <Button x:Name="CloseAction" Content="{x:Static resources:Strings.Close}" Classes="secondary" Click="Close" />
+        <Button x:Name="VisibilityAction" Classes="primary"
                 AutomationProperties.Name="{Binding SelfWeightVisibilityAction}" Command="{Binding ToggleSelfWeightVisibilityCommand}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
             <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.EyeOff}" IsVisible="{Binding IsSelfWeightVisible}" />
             <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Eye}" IsVisible="{Binding !IsSelfWeightVisible}" />
-            <TextBlock x:Name="VisibilityText" Text="{Binding SelfWeightVisibilityAction}" VerticalAlignment="Center" />
+            <controls:TechnicalTextBlock x:Name="VisibilityText" Text="{Binding SelfWeightVisibilityAction}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
       </StackPanel>

@@ -22,6 +22,28 @@ public sealed class TechnicalText
     public static TechnicalText Join(string separator, IEnumerable<TechnicalText> texts) =>
         new(texts.SelectMany((text, index) => index == 0 ? text.Runs : ((TechnicalText)separator + text).Runs).ToArray());
 
+    public static bool HasExponents(string text) => System.Text.RegularExpressions.Regex.IsMatch(text, "10[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+");
+
+    /// <summary>IBM Plex Sans lacks U+207B; use real superscript runs for the entire exponent.</summary>
+    public TechnicalText ForDisplay()
+    {
+        var output = new List<TechnicalRun>();
+        foreach (var run in Runs)
+        {
+            int offset = 0;
+            if (run.Position == TechnicalPosition.Normal)
+                foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(run.Text, "(?<=10)[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+"))
+                {
+                    if (match.Index > offset) output.Add(run with { Text = run.Text[offset..match.Index] });
+                    string exponent = string.Concat(match.Value.Select(c => c == '⁻' ? '−' : "0123456789"["⁰¹²³⁴⁵⁶⁷⁸⁹".IndexOf(c)]));
+                    output.Add(run with { Text = exponent, Position = TechnicalPosition.Superscript });
+                    offset = match.Index + match.Length;
+                }
+            if (offset < run.Text.Length) output.Add(run with { Text = run.Text[offset..] });
+        }
+        return new(output.ToArray());
+    }
+
     public TechnicalText Slice(int start, int length)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(start);

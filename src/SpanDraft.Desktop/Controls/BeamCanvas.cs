@@ -99,9 +99,12 @@ public sealed class BeamCanvas : Control
         }
         var selfWeightId = scene.DistributedLoads.FirstOrDefault(l => l.IsSelfWeight)?.Id;
         foreach (var label in scene.Annotations)
-            context.DrawText(SchematicText.Format(label.Text, Typeface.Default, LabelFontSize,
+        {
+            using var text = SchematicText.Format(label.Text, AppTypography.Typeface, LabelFontSize,
                 Brush(label.Id, label.IsSupport, label.IsPreview, label.IsInvalid,
-                    label.Id is not null && label.Id == selfWeightId)), label.Bounds.Position);
+                    label.Id is not null && label.Id == selfWeightId));
+            text.Draw(context, label.Bounds.Position);
+        }
     }
 
     private bool Conflict(Guid? id) => id is { } entity && ConflictEntityIds?.Contains(entity) == true;

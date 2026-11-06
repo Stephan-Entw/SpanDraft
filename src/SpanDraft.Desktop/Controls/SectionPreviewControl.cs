@@ -44,7 +44,7 @@ public sealed class SectionPreviewControl : Control
         var fill = Brush("SurfacePressed", Brushes.Transparent);
         var layout = SectionPreviewDrawingLayout.Create(geometry, Bounds.Size, UnitProfile[QuantityKind.SectionDimension], text =>
         {
-            using var formatted = SchematicText.Format(text, Typeface.Default, 12, foreground);
+            using var formatted = SchematicText.Format(text, AppTypography.Typeface, AppTypography.Size("SecondarySize"), foreground);
             return new Size(formatted.Width, formatted.Height);
         }, Compact, Presentation);
         double scale = layout.Scale;
@@ -106,13 +106,13 @@ public sealed class SectionPreviewControl : Control
         }
         if (geometry.Centroid is { } centroid)
             context.DrawEllipse(foreground, new Pen(Brush("AppBackground", Brushes.White), 1), Project(centroid), 3, 3);
-        else Text(context, Strings.SectionDefinitionPreviewHint, new(8, Bounds.Height - 18), secondary, 11);
+        else Text(context, Strings.SectionDefinitionPreviewHint, new(8, Bounds.Height - 18), secondary);
     }
     protected override Size MeasureOverride(Size availableSize) => new(Math.Min(520, availableSize.Width), Math.Min(440, availableSize.Height));
     private IBrush Brush(string name, IBrush fallback) => this.TryFindResource(name,out var resource) && resource is IBrush brush ? brush : fallback;
-    private static void Text(DrawingContext context,TechnicalText text,Point point,IBrush brush,double size=12)
+    private static void Text(DrawingContext context,TechnicalText text,Point point,IBrush brush,double? size=null)
     {
-        using var formatted = SchematicText.Format(text,Typeface.Default,size,brush);
+        using var formatted = SchematicText.Format(text,AppTypography.Typeface,size ?? AppTypography.Size("SecondarySize"),brush);
         formatted.Draw(context,point);
     }
     private static void FilledArrow(DrawingContext context, IBrush brush, IReadOnlyList<Point> points)

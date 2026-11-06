@@ -13,7 +13,7 @@
           <TextBox Grid.Column="1" x:Name="NameInput" Text="{Binding LoadDraft.NameText, Mode=TwoWay}" Classes.error="{Binding LoadDraft.HasNameError}"
                    AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
         </Grid>
-        <TextBlock Text="{Binding LoadDraft.NameError}" IsVisible="{Binding LoadDraft.HasNameError}"
+        <controls:TechnicalTextBlock Text="{Binding LoadDraft.NameError}" IsVisible="{Binding LoadDraft.HasNameError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
@@ -21,33 +21,33 @@
           <TextBlock controls:TechnicalTextPresenter.Content="{Binding LoadDraft.PositionLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="PositionInput" Text="{Binding LoadDraft.PositionText, Mode=TwoWay}"
                    Classes.error="{Binding LoadDraft.HasPositionError}" AutomationProperties.Name="{Binding LoadDraft.PositionLabel.PlainText}" />
-          <TextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding LoadDraft.PositionUnit}" VerticalAlignment="Center" />
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding LoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
-        <TextBlock Text="{Binding LoadDraft.PositionError}" IsVisible="{Binding LoadDraft.HasPositionError}"
+        <controls:TechnicalTextBlock Text="{Binding LoadDraft.PositionError}" IsVisible="{Binding LoadDraft.HasPositionError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
         <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
-          <TextBlock Text="{Binding LoadDraft.ValueLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <controls:TechnicalTextBlock Text="{Binding LoadDraft.ValueLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric loadValue" Grid.Column="1" x:Name="ValueInput" Text="{Binding LoadDraft.ValueText, Mode=TwoWay}"
                    Classes.error="{Binding LoadDraft.HasValueError}" AutomationProperties.Name="{Binding LoadDraft.ValueLabel}">
             <TextBox.InnerLeftContent>
-              <Button x:Name="SignButton" Content="±" Classes="ghost loadSign" Click="ToggleSign"
+              <controls:LoadSignButton x:Name="SignButton" Content="±" Classes="loadSign" Click="ToggleSign"
                       AutomationProperties.Name="{x:Static resources:Strings.ToggleLoadSign}" ToolTip.Tip="{x:Static resources:Strings.ToggleLoadSign}" />
             </TextBox.InnerLeftContent>
           </TextBox>
-          <TextBlock Grid.Column="2" x:Name="ValueUnit" Text="{Binding LoadDraft.Unit}" VerticalAlignment="Center" />
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="ValueUnit" Text="{Binding LoadDraft.Unit}" VerticalAlignment="Center" />
         </Grid>
-        <TextBlock Text="{Binding LoadDraft.ValueError}" IsVisible="{Binding LoadDraft.HasValueError}"
+        <controls:TechnicalTextBlock Text="{Binding LoadDraft.ValueError}" IsVisible="{Binding LoadDraft.HasValueError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
-        <TextBlock Text="{Binding LoadFeedback}" IsVisible="{Binding HasLoadFeedback}"
+        <controls:TechnicalTextBlock Text="{Binding LoadFeedback}" IsVisible="{Binding HasLoadFeedback}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel x:Name="Footer" Classes="editorFlyoutFooter">
         <Button x:Name="DeleteAction" Content="{x:Static resources:Strings.Delete}" Classes="ghost dangerGhost"
                 IsVisible="{Binding LoadDraft.IsExisting}" Command="{Binding DeleteLoadCommand}" />
-        <Button x:Name="CancelAction" Content="{x:Static resources:Strings.Cancel}" Classes="ghost" Command="{Binding CancelLoadCommand}" />
-        <Button x:Name="ConfirmAction" Classes="primary compactSupportAction" AutomationProperties.Name="{x:Static resources:Strings.OK}"
+        <Button x:Name="CancelAction" Content="{x:Static resources:Strings.Cancel}" Classes="secondary" Command="{Binding CancelLoadCommand}" />
+        <Button x:Name="ConfirmAction" Classes="primary" AutomationProperties.Name="{x:Static resources:Strings.OK}"
                 IsEnabled="{Binding LoadDraft.IsValid}" Command="{Binding ConfirmLoadCommand}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
             <TextBlock Text="{x:Static resources:Strings.OK}" VerticalAlignment="Center" />

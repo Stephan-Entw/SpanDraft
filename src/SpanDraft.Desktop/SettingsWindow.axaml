@@ -93,10 +93,10 @@
       <TextBlock Text="{Binding ErrorText}" IsVisible="{Binding HasError}" Classes="validationMessage" />
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Space8}">
         <Button x:Name="CancelButton" Content="{x:Static resources:Strings.Cancel}" Classes="secondary"
-                Height="{DynamicResource PrimaryAction}" MinWidth="80" VerticalAlignment="Center"
+                Height="{DynamicResource StandardControl}" MinWidth="80" VerticalAlignment="Center"
                 IsEnabled="{Binding !IsSaving}" Click="CancelSettings" />
         <Button x:Name="OkButton" Content="{x:Static resources:Strings.OK}" Classes="primary" IsDefault="True"
-                Height="{DynamicResource PrimaryAction}" MinWidth="80" VerticalAlignment="Center"
+                Height="{DynamicResource StandardControl}" MinWidth="80" VerticalAlignment="Center"
                 IsEnabled="{Binding !IsSaving}" Click="ConfirmSettings" />
       </StackPanel>
     </StackPanel>

@@ -11,8 +11,11 @@ namespace SpanDraft.Desktop.Controls;
 public static class SchematicText
 {
     public static TextLayout Format(TechnicalText text, Typeface typeface, double fontSize, IBrush? brush,
-        double maxWidth = double.PositiveInfinity, TextAlignment alignment = TextAlignment.Left)
+        double maxWidth = double.PositiveInfinity, TextAlignment alignment = TextAlignment.Left,
+        TextWrapping wrapping = TextWrapping.Wrap, TextTrimming? trimming = null,
+        double maxHeight = double.PositiveInfinity, int maxLines = 0)
     {
+        text = text.ForDisplay();
         int offset = 0;
         var styles = text.Runs.Select(run =>
         {
@@ -22,18 +25,22 @@ public static class SchematicText
             return span;
         }).ToArray();
         return new TextLayout(text.PlainText, typeface, fontSize, brush, textAlignment: alignment,
-            textWrapping: TextWrapping.Wrap, maxWidth: maxWidth, textStyleOverrides: styles);
+            textWrapping: wrapping, textTrimming: trimming, maxWidth: maxWidth, maxHeight: maxHeight, maxLines: maxLines,
+            fontFeatures: AppTypography.TabularFigures, textStyleOverrides: styles);
     }
     public static Size Measure(TechnicalText text, Typeface typeface, double fontSize)
     {
         using var layout = Format(text, typeface, fontSize, Brushes.Black);
         return new(layout.WidthIncludingTrailingWhitespace, layout.Height);
     }
-    public static FormattedText Format(string text, Typeface typeface, double fontSize, IBrush? brush) =>
-        new(text, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, typeface, fontSize, brush);
+    public static TextLayout Format(string text, Typeface typeface, double fontSize, IBrush? brush,
+        double maxWidth = double.PositiveInfinity, TextAlignment alignment = TextAlignment.Left,
+        TextWrapping wrapping = TextWrapping.Wrap, TextTrimming? trimming = null,
+        double maxHeight = double.PositiveInfinity, int maxLines = 0) =>
+        Format((TechnicalText)text, typeface, fontSize, brush, maxWidth, alignment, wrapping, trimming, maxHeight, maxLines);
     public static Size Measure(string text, Typeface typeface, double fontSize)
     {
-        var formatted = Format(text, typeface, fontSize, Brushes.Black);
+        using var formatted = Format(text, typeface, fontSize, Brushes.Black);
         return new(formatted.WidthIncludingTrailingWhitespace, formatted.Height);
     }
 }

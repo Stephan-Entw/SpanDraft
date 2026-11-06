@@ -222,7 +222,7 @@ public partial class BeamEditorSurface : UserControl
                 frame = _layout.BeginInteraction(_editor.Interaction == SupportInteraction.Placement
                     ? BeamPointerInteraction.SupportPlacement : _editor.LoadState == LoadInteraction.Placement
                         ? BeamPointerInteraction.LoadPlacement : BeamPointerInteraction.DistributedLoadPlacement)!;
-            System.Func<string, Size> measure = text => SchematicText.Measure(text, Typeface.Default, TechnicalCanvas.LabelFontSize);
+            System.Func<string, Size> measure = text => SchematicText.Measure(text, AppTypography.Typeface, TechnicalCanvas.LabelFontSize);
             // Reserve from committed labels, including a spare preview row. Neither
             // hover nor transient text changes the pane's requested height.
             var committed = BeamRenderState.Create(_editor.Document, frame, measure, presentation: _editor.EditorPresentation,

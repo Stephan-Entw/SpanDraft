@@ -29,9 +29,9 @@
         <Border x:Name="SelfWeightAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="SupportAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="SelectionAnchor" Width="1" Height="1" IsHitTestVisible="False" />
-        <TextBlock x:Name="CoordinateOverlay" Text="{Binding CoordinateText}" IsVisible="{Binding HasCoordinate}"
+        <controls:TechnicalTextBlock x:Name="CoordinateOverlay" Text="{Binding CoordinateText}" IsVisible="{Binding HasCoordinate}"
                    Classes="propertyLabel" Background="{DynamicResource CanvasBackground}" IsHitTestVisible="False" />
-        <TextBlock x:Name="FeedbackOverlay" Text="{Binding SupportFeedback}" IsVisible="False"
+        <controls:TechnicalTextBlock x:Name="FeedbackOverlay" Text="{Binding SupportFeedback}" IsVisible="False"
                    Classes="validationMessage" Width="360" TextWrapping="Wrap" IsHitTestVisible="False"
                    Background="{DynamicResource CanvasBackground}" />
       </Canvas>

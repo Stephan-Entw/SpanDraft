@@ -60,7 +60,7 @@ public sealed class SectionDefinitionPrototypeTests
             foreach (var units in new[] { UnitProfile.Default, UnitProfile.UnitedStates })
             {
                 var unit = units[QuantityKind.SectionDimension];
-                Size Measure(TechnicalText text) => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12);
+                Size Measure(TechnicalText text) => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12);
                 var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, size, unit, Measure, compact: true);
                 string context = $"{culture}/{type}/{unit.Symbol}/thin={thinFlange}";
                 Assert.True(vm.Preview!.Dimensions.Count == layout.Dimensions.Count,
@@ -165,7 +165,7 @@ public sealed class SectionDefinitionPrototypeTests
         {
             Size Measure(TechnicalText text)
             {
-                var measured = SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12);
+                var measured = SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12);
                 return new(text.PlainText.Contains(" = ", StringComparison.Ordinal) ? measured.Width * textWidthScale : measured.Width, measured.Height);
             }
             var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, new(side, side),
@@ -800,13 +800,13 @@ public sealed class SectionDefinitionPrototypeTests
         var canvas = view.FindControl<SectionPreviewControl>("SectionPreview")!;
         Assert.InRange(canvas.Bounds.Width, 180, width); Assert.InRange(canvas.Bounds.Height, 180, height);
         var referenceLayout = SectionPreviewDrawingLayout.Create(canvas.Geometry!, canvas.Bounds.Size,
-            canvas.UnitProfile[QuantityKind.SectionDimension], text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+            canvas.UnitProfile[QuantityKind.SectionDimension], text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
         Assert.Equal(new[] { SectionAxisDesignation.Y, SectionAxisDesignation.Z }, referenceLayout.Axes.Select(a => a.Axis));
         Assert.All(referenceLayout.Axes, a => Assert.True(a.IsReference)); Assert.Null(canvas.Geometry!.Centroid);
         Assert.Null(canvas.SelectedAxis);
         Fill(vm, false); Arrange(window, width, height);
         var realLayout = SectionPreviewDrawingLayout.Create(canvas.Geometry!, canvas.Bounds.Size,
-            canvas.UnitProfile[QuantityKind.SectionDimension], text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+            canvas.UnitProfile[QuantityKind.SectionDimension], text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
         Assert.All(realLayout.Axes, a => Assert.False(a.IsReference)); Assert.NotNull(canvas.Geometry!.Centroid);
         Assert.Equal(3, columns.ColumnDefinitions.Count);
         Assert.True(view.FindControl<TextBlock>("AxisSelectionHint")!.IsEffectivelyVisible);
@@ -1015,7 +1015,7 @@ public sealed class SectionDefinitionPrototypeTests
         foreach (var size in new[] { new Size(250, 360), new Size(420, 440), new Size(520, 440) })
         {
             var layout = SectionPreviewDrawingLayout.Create(geometry, size, UnitCatalog.Meter,
-                text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+                text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
             Assert.Equal(geometry.Dimensions.Count, layout.Dimensions.Count);
             Assert.Single(layout.Dimensions.Single(d => d.Key == "r").Lines);
             foreach (var drawing in layout.Dimensions.Where(d => d.Key is "t" or "tw" or "tf"))
@@ -1044,7 +1044,7 @@ public sealed class SectionDefinitionPrototypeTests
         var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.ISection); Fill(vm, false);
         Commit(vm, "tw", thickness); Assert.NotNull(vm.Section);
         var geometry = vm.Preview!;
-        var layout = SectionPreviewDrawingLayout.Create(geometry, new(420, 440), UnitCatalog.Millimeter, text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+        var layout = SectionPreviewDrawingLayout.Create(geometry, new(420, 440), UnitCatalog.Millimeter, text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
         var dimension = layout.Dimensions.Single(d => d.Key == "tw");
         Assert.Equal(2, dimension.Arrows.Count); Assert.True(dimension.Lines.Count >= 3);
         Assert.Equal(geometry.Dimensions["tw"].Value * layout.Scale, ((Vector)(dimension.Arrows[1].Tip - dimension.Arrows[0].Tip)).Length, 10);
@@ -1095,7 +1095,7 @@ public sealed class SectionDefinitionPrototypeTests
             if (complete) Fill(vm, false);
             var geometry = vm.Preview!;
             var layout = SectionPreviewDrawingLayout.Create(geometry, new(520, 440), UnitCatalog.Millimeter,
-                text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+                text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
             var radius = geometry.Dimensions["r"];
             var drawing = layout.Dimensions.Single(d => d.Key == "r");
             var arrow = Assert.Single(drawing.Arrows);
@@ -1134,7 +1134,7 @@ public sealed class SectionDefinitionPrototypeTests
                 foreach (var size in new[] { new Size(250, 360), new Size(250, 400), new Size(300, 320), new Size(380, 360), new Size(520, 440) })
                 {
                     var layout = SectionPreviewDrawingLayout.Create(geometry, size, units[QuantityKind.SectionDimension],
-                        text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+                        text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
                     foreach (var dimension in layout.Dimensions.Where(d => d.Key is "t" or "tw" or "tf"))
                     {
                         Assert.All(dimension.Lines, line =>
@@ -1316,7 +1316,7 @@ public sealed class SectionDefinitionPrototypeTests
                     var texts = new[] { label.Children.OfType<TextBlock>().Single(), row.Children.OfType<TextBlock>().Single() };
                     var input = Assert.IsType<SectionDefinitionInput>(box.DataContext);
                     Assert.Equal(input.DisplayLabel, TechnicalTextPresenter.GetContent(texts[0])!.PlainText); Assert.Equal(input.Unit.Symbol, texts[1].Text);
-                    Assert.Equal(88, box.Bounds.Width); Assert.Equal(14, texts[0].FontSize); Assert.Equal(14, box.FontSize);
+                    Assert.Equal(88, box.Bounds.Width); Assert.Equal((double)Application.Current!.FindResource("BodySize")!, texts[0].FontSize); Assert.Equal(texts[0].FontSize, box.FontSize);
                     Assert.Equal(Avalonia.Media.TextAlignment.Right, box.TextAlignment);
                     Assert.True(box.Bounds.Left - label.Bounds.Right >= 7.5);
                     Assert.InRange(texts[1].Bounds.Left - box.Bounds.Right, 7.5, 8.5);
@@ -1344,7 +1344,7 @@ public sealed class SectionDefinitionPrototypeTests
                     Assert.True(row.Bounds.Height >= 28);
                     foreach (var text in texts)
                     {
-                        Assert.Equal(14, text.FontSize); Assert.True(text.Bounds.Height >= text.TextLayout.Height);
+                        Assert.Equal((double)Application.Current!.FindResource("BodySize")!, text.FontSize); Assert.True(text.Bounds.Height >= text.TextLayout.Height);
                         Assert.True(text.TextLayout.Width <= text.Bounds.Width + 1, $"Clipped property: {text.Text}");
                     }
                     Assert.Equal(Avalonia.Media.FontWeight.Normal, texts[0].FontWeight);
@@ -1365,7 +1365,7 @@ public sealed class SectionDefinitionPrototypeTests
         Commit(vm, "r", "0"); Commit(vm, "tf", "1.7"); Assert.NotNull(vm.Section);
         var geometry = vm.Preview!;
         var layout = SectionPreviewDrawingLayout.Create(geometry, new(420, 440), UnitCatalog.Millimeter,
-            text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+            text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
         var axis = layout.Axes.Single(a => a.Axis == SectionAxisDesignation.Y);
         var initialMeasureY = layout.Project(geometry.Dimensions["tw"].Start).Y - 24;
         Assert.InRange(Math.Abs(initialMeasureY - axis.Start.Y), 0, 1);
@@ -1395,7 +1395,7 @@ public sealed class SectionDefinitionPrototypeTests
             foreach (var size in new[] { new Size(250, 360), new Size(380, 360), new Size(520, 440) })
             {
                 var layout = SectionPreviewDrawingLayout.Create(geometry, size, units[QuantityKind.SectionDimension],
-                    text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+                    text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
                 var web = layout.Dimensions.Single(d => d.Key == "tw");
                 double y = layout.ProfileBounds.Bottom - layout.ProfileBounds.Height * (type == SectionEditorType.TSection ? .25 : .70);
                 Assert.All(web.Arrows, arrow => Assert.Equal(y, arrow.Tip.Y, 10));
@@ -1425,7 +1425,7 @@ public sealed class SectionDefinitionPrototypeTests
             foreach (var size in new[] { new Size(380, 360), new Size(520, 440) })
             {
                 var layout = SectionPreviewDrawingLayout.Create(geometry, size, units[QuantityKind.SectionDimension],
-                    text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+                    text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
                 var web = layout.Dimensions.Single(d => d.Key == "tw");
                 double preferredLeft = layout.Project(geometry.Dimensions["tw"].End).X + 28;
                 if (type != SectionEditorType.TSection || Math.Abs(preferredLeft - web.TextBounds.Left) < 1e-10)
@@ -1459,7 +1459,7 @@ public sealed class SectionDefinitionPrototypeTests
             if (complete) Fill(vm, false);
             var geometry = vm.Preview!;
             var layout = SectionPreviewDrawingLayout.Create(geometry, new(420, 440), UnitCatalog.Millimeter,
-                text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+                text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
             Assert.Equal(geometry.Dimensions.Keys.Order(), layout.Dimensions.Select(d => d.Key).Order());
             foreach (var dimension in layout.Dimensions)
             {
@@ -1507,7 +1507,7 @@ public sealed class SectionDefinitionPrototypeTests
                 {
                     var unit = units[QuantityKind.SectionDimension];
                     var layout = SectionPreviewDrawingLayout.Create(geometry, size, unit,
-                        text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+                        text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
                     var drawing = layout.Dimensions.Single(d => d.Key == "r");
                     var line = Assert.Single(drawing.Lines); var arrow = Assert.Single(drawing.Arrows);
                     Assert.Equal(radius.IsConfirmed ? "r = " + QuantityFormatter.WithUnit(radius.Value, unit) : "r", drawing.Text);
@@ -1558,7 +1558,7 @@ public sealed class SectionDefinitionPrototypeTests
                 foreach (var size in new[] { new Size(250, 360), new Size(380, 360), new Size(520, 440) })
                 {
                     var layout = SectionPreviewDrawingLayout.Create(geometry, size, units[QuantityKind.SectionDimension],
-                        text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+                        text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
                     var width = layout.Dimensions.Single(d => d.Key == "b");
                     Assert.Equal(3, width.Lines.Count); Assert.Equal(2, width.Arrows.Count);
                     Assert.Equal(layout.ProfileBounds.Left, width.Arrows[0].Tip.X, 10);
@@ -1633,7 +1633,7 @@ public sealed class SectionDefinitionPrototypeTests
                 foreach (var size in new[] { new Size(250, 360), new Size(300, 320), new Size(520, 440) })
                 {
                     var layout = SectionPreviewDrawingLayout.Create(geometry, size, units[QuantityKind.SectionDimension],
-                        text => SchematicText.Measure(text, Avalonia.Media.Typeface.Default, 12));
+                        text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
                     Assert.Equal(2, layout.Axes.Count);
                     Assert.All(layout.Axes, axis => Assert.Equal(reference, axis.IsReference));
                     var center = reference ? layout.ProfileBounds.Center : layout.Project(geometry.Centroid!.Value);
@@ -1751,7 +1751,7 @@ public sealed class SectionDefinitionPrototypeTests
         var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, canvas.Bounds.Size, canvas.UnitProfile[QuantityKind.SectionDimension],
             text =>
             {
-                var formatted = SchematicText.Format(text, Avalonia.Media.Typeface.Default, 12, Avalonia.Media.Brushes.Gray);
+                var formatted = SchematicText.Format(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12, Avalonia.Media.Brushes.Gray);
                 return new Size(formatted.Width, formatted.Height);
             });
         Rect LineBounds(Point start, Point end) => new(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y),

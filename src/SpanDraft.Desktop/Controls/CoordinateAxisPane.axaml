@@ -14,7 +14,7 @@
         <controls:LengthInput x:Name="AxisLengthInput" DataContext="{Binding DimensionLength}"
                               IsVisible="{Binding IsEditing}" />
       </Grid>
-      <TextBlock x:Name="LengthError" Text="{Binding DimensionLength.ErrorText}"
+      <controls:TechnicalTextBlock x:Name="LengthError" Text="{Binding DimensionLength.ErrorText}"
                  IsVisible="{Binding DimensionLength.HasError}" Classes="validationMessage"
                  Width="360" TextWrapping="Wrap" IsHitTestVisible="False" />
       <TextBlock x:Name="DistortionHint" Text="{x:Static resources:Strings.SchematicDrawing}"

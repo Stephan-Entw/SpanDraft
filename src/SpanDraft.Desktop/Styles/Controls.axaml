@@ -3,12 +3,12 @@
   <!-- Fluent scrollbars, radio buttons and checkboxes retain their native control templates. -->
   <!-- One button template for all variants, including future ToggleButton tools.
        Focus is a separate overlay: borders never move the content. -->
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton))">
     <Setter Property="Height" Value="{DynamicResource StandardControl}" />
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Padding" Value="{DynamicResource ControlPadding}" />
     <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXS}" />
     <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
     <Setter Property="Background" Value="{DynamicResource Surface}" />
@@ -35,86 +35,86 @@
       </ControlTemplate>
     </Setter>
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)):pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)):pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
     <Setter Property="RenderTransform" Value="none" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).primary">
-    <Setter Property="Height" Value="{DynamicResource PrimaryAction}" />
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).primary">
+    <Setter Property="Height" Value="{DynamicResource StandardControl}" />
     <Setter Property="Background" Value="{DynamicResource Accent}" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).primary:pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).primary:pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource AccentHover}" />
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).primary:pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).primary:pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource AccentPressed}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).secondary">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).secondary">
     <Setter Property="Background" Value="{DynamicResource Surface}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).secondary:pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).secondary:pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).secondary:pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).secondary:pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).ghost, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).ghost, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).toolbar, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).iconToolbar">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).ghost">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).ghost">
     <Setter Property="Height" Value="{DynamicResource CompactControl}" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).toolbar, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).iconToolbar">
     <Setter Property="Height" Value="{DynamicResource ToolbarButton}" />
     <Setter Property="FontSize" Value="{DynamicResource ToolbarSize}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).toolbar">
     <Setter Property="Padding" Value="{DynamicResource ToolbarButtonPadding}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).iconToolbar">
     <Setter Property="Width" Value="{DynamicResource ToolbarButton}" />
     <Setter Property="Padding" Value="{DynamicResource Padding4}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).ghost:pointerover:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar:pointerover:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar:pointerover:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).ghost:pointerover:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).toolbar:pointerover:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).iconToolbar:pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).ghost:pressed:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar:pressed:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar:pressed:not(:disabled)">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).ghost:pressed:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).toolbar:pressed:not(:disabled), :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).iconToolbar:pressed:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar.selected, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar.selected, ToggleButton.toolbar:checked, ToggleButton.iconToolbar:checked">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).toolbar.selected, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).iconToolbar.selected, ToggleButton.toolbar:checked, ToggleButton.iconToolbar:checked">
     <Setter Property="Background" Value="{DynamicResource AccentSubtle}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
     <Setter Property="Foreground" Value="{DynamicResource AccentPressed}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):disabled">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)):disabled">
     <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
     <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
     <Setter Property="Opacity" Value="1" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar:disabled, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).iconToolbar:disabled, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).ghost:disabled">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).toolbar:disabled, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).iconToolbar:disabled, :is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).ghost:disabled">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):focus-visible /template/ Border#FocusRing">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)):focus-visible /template/ Border#FocusRing">
     <Setter Property="IsVisible" Value="True" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).primary /template/ Border#FocusRing">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).primary /template/ Border#FocusRing">
     <Setter Property="BorderBrush" Value="{DynamicResource TextOnAccent}" />
-    <Setter Property="Margin" Value="{DynamicResource Padding4}" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXS}" />
+    <Setter Property="Margin" Value="2" />
+    <Setter Property="CornerRadius" Value="{TemplateBinding CornerRadius}" />
   </Style>
   <Style Selector="Button.axisLength">
     <Setter Property="Padding" Value="0" />
@@ -135,9 +135,9 @@
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
     <Setter Property="Padding" Value="{DynamicResource ControlPadding}" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXS}" />
     <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputBorder}" />
     <Setter Property="Background" Value="{DynamicResource Surface}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
@@ -156,7 +156,7 @@
     <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}" />
   </Style>
   <Style Selector="TextBox.inlineDimension">
-    <Setter Property="Height" Value="{DynamicResource CompactControl}" />
+    <Setter Property="Height" Value="{DynamicResource StandardControl}" />
     <Setter Property="Padding" Value="{DynamicResource InlinePadding}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
@@ -167,7 +167,7 @@
     <Setter Property="HorizontalContentAlignment" Value="Right" />
   </Style>
   <Style Selector="TextBox.loadValue">
-    <Setter Property="Padding" Value="4,4,8,4" />
+    <Setter Property="Padding" Value="4,0,8,0" />
   </Style>
   <Style Selector="TextBox:pointerover:not(:disabled) /template/ Border#PART_BorderElement, ComboBox:pointerover:not(:disabled) /template/ Border#Background">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
@@ -198,7 +198,7 @@
   <Style Selector="ComboBox /template/ Border#PopupBorder">
     <Setter Property="Background" Value="{DynamicResource Surface}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusM}" />
     <Setter Property="Padding" Value="{DynamicResource Padding4}" />
   </Style>
   <Style Selector="controls|SupportFlyout ComboBox /template/ Popup#PART_Popup">
@@ -248,7 +248,7 @@
     <Setter Property="MinWidth" Value="18" />
     <Setter Property="MinHeight" Value="18" />
     <Setter Property="Padding" Value="0" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="CornerRadius" Value="9" />
     <Setter Property="BorderThickness" Value="0" />
@@ -272,7 +272,7 @@
     <Setter Property="Background" Value="{DynamicResource Surface}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
     <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusM}" />
     <Setter Property="Padding" Value="12" />
   </Style>
   <Style Selector="Button.beamSetupSurface">
@@ -281,7 +281,7 @@
     <Setter Property="Padding" Value="16,12" />
     <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
     <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusS}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusM}" />
     <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
@@ -340,7 +340,7 @@
     <Setter Property="Focusable" Value="False" />
     <Setter Property="IsHitTestVisible" Value="False" />
   </Style>
-  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox).toolbar:disabled Image.toolbarIcon">
+  <Style Selector=":is(Button):not(:is(RepeatButton)):not(RadioButton):not(CheckBox):not(:is(controls|LoadSignButton)).toolbar:disabled Image.toolbarIcon">
     <Setter Property="Opacity" Value="0.45" />
   </Style>
   <Style Selector="controls|EngineeringIcon">
@@ -360,6 +360,9 @@
   </Style>
   <Style Selector="controls|CoordinateAxisPane">
     <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+  </Style>
+  <Style Selector="controls|ResultDiagram">
+    <Setter Property="MarkerFontSize" Value="{DynamicResource SecondarySize}" />
   </Style>
   <Style Selector="controls|CoordinateAxisCanvas">
     <Setter Property="AxisBrush" Value="{DynamicResource AxisStroke}" />
@@ -388,6 +391,15 @@
     <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
   </Style>
   <Style Selector="ListBox.materialEntries ListBoxItem, ListBox.materialFilters ListBoxItem">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXS}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                          ContentTemplate="{TemplateBinding ContentTemplate}" Padding="{TemplateBinding Padding}"
+                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                          VerticalContentAlignment="Center" CornerRadius="{TemplateBinding CornerRadius}" />
+      </ControlTemplate>
+    </Setter>
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="Padding" Value="12,0" />
     <Setter Property="Margin" Value="0" />
@@ -409,16 +421,16 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="8,6" />
-    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="MinHeight" Value="0" />
   </Style>
   <Style Selector="Button.materialNavigation.selected, Button.materialNavigation.selected:pointerover">
     <Setter Property="Background" Value="{DynamicResource AccentSubtle}" />
   </Style>
-  <Style Selector="controls|MaterialTableColumns.materialColumns TextBlock, Grid.materialProperties TextBlock">
+  <Style Selector="controls|MaterialTableColumns.materialColumns :is(TextBlock), Grid.materialProperties :is(TextBlock)">
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
   </Style>
-  <Style Selector="controls|MaterialTableColumns.materialHeading TextBlock">
+  <Style Selector="controls|MaterialTableColumns.materialHeading :is(TextBlock)">
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
   </Style>
@@ -451,16 +463,55 @@
     <Setter Property="Spacing" Value="{StaticResource Space8}" />
     <Setter Property="Margin" Value="0,8,0,0" />
   </Style>
-  <Style Selector="Button.compactSupportAction">
-    <Setter Property="Height" Value="{DynamicResource CompactControl}" />
-  </Style>
-  <Style Selector="Button.loadSign">
-    <Setter Property="Width" Value="24" />
-    <Setter Property="Height" Value="24" />
-    <Setter Property="Padding" Value="0" />
-    <Setter Property="Margin" Value="4,0,0,0" />
-  </Style>
   <Style Selector="Button.dangerGhost, Button.dangerGhost:pointerover, Button.dangerGhost:pressed">
     <Setter Property="Foreground" Value="{DynamicResource Error}" />
+  </Style>
+  <Style Selector="controls|LoadSignButton">
+    <Setter Property="Width" Value="{DynamicResource LoadSignButtonSize}" />
+    <Setter Property="Height" Value="{DynamicResource LoadSignButtonSize}" />
+    <Setter Property="MinWidth" Value="{DynamicResource LoadSignButtonSize}" />
+    <Setter Property="MinHeight" Value="{DynamicResource LoadSignButtonSize}" />
+    <Setter Property="MaxWidth" Value="{DynamicResource LoadSignButtonSize}" />
+    <Setter Property="MaxHeight" Value="{DynamicResource LoadSignButtonSize}" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="4,0,0,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="{DynamicResource LoadSignButtonRadius}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <ContentPresenter Content="{TemplateBinding Content}" Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}" Foreground="{TemplateBinding Foreground}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+          <Border Name="SignFocusRing" IsVisible="False" IsHitTestVisible="False"
+                  BorderBrush="{DynamicResource Accent}" BorderThickness="{DynamicResource FocusWidth}"
+                  CornerRadius="{TemplateBinding CornerRadius}" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="controls|LoadSignButton:pointerover:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource AccentSubtle}" />
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+  </Style>
+  <Style Selector="controls|LoadSignButton:pressed:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource SurfacePressed}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentPressed}" />
+  </Style>
+  <Style Selector="controls|LoadSignButton:focus-visible /template/ Border#SignFocusRing">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="controls|LoadSignButton:disabled">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
+    <Setter Property="Opacity" Value="1" />
   </Style>
 </Styles>

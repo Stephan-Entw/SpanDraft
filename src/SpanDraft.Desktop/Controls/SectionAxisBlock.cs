@@ -21,7 +21,7 @@ public sealed class SectionAxisBlock : Border
     public event EventHandler<RoutedEventArgs> Selected { add => AddHandler(SelectedEvent, value); remove => RemoveHandler(SelectedEvent, value); }
     public SectionAxisBlock()
     {
-        Padding = new Thickness(11, 16); Margin = new Thickness(0, 0, 0, 8); BorderThickness = new Thickness(1); CornerRadius = new CornerRadius(6);
+        Padding = new Thickness(11, 16); Margin = new Thickness(0, 0, 0, 8); BorderThickness = new Thickness(1); this.Bind(CornerRadiusProperty, new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("RadiusM"));
         AddHandler(PointerPressedEvent, (_, e) =>
         {
             _pressed = e.GetCurrentPoint(this).Properties.IsLeftButtonPressed ? e.GetPosition(this) : null;

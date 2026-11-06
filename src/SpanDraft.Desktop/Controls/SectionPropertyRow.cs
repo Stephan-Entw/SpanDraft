@@ -10,8 +10,8 @@ public sealed class SectionPropertyRow : Grid
 {
     public static readonly StyledProperty<TechnicalText> LabelProperty = AvaloniaProperty.Register<SectionPropertyRow, TechnicalText>(nameof(Label), (TechnicalText)"");
     public static readonly StyledProperty<string> ValueProperty = AvaloniaProperty.Register<SectionPropertyRow, string>(nameof(Value), "");
-    private readonly TextBlock _label = new() { FontSize = 14, FontWeight = FontWeight.Normal, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _value = new() { FontSize = 14, FontWeight = FontWeight.SemiBold, TextAlignment = TextAlignment.Right };
+    private readonly TextBlock _label = new() { FontWeight = FontWeight.Normal, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _value = new TechnicalTextBlock() { FontWeight = FontWeight.SemiBold, TextAlignment = TextAlignment.Right };
     public TechnicalText Label { get => GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
     public string Value { get => GetValue(ValueProperty); set => SetValue(ValueProperty, value); }
 

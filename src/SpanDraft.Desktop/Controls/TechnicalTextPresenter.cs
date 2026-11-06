@@ -28,7 +28,7 @@ public sealed class TechnicalTextPresenter : AvaloniaObject
     {
         if (GetContent(text) is not { } content) return;
         text.Inlines!.Clear();
-        foreach (var run in content.Runs)
+        foreach (var run in content.ForDisplay().Runs)
             text.Inlines.Add(new Run(run.Text)
             {
                 FontSize = text.FontSize * TechnicalTypography.FontScale(run),
@@ -45,5 +45,6 @@ public sealed class TechnicalTextPresenter : AvaloniaObject
     };
     internal static TextRunProperties Properties(TechnicalRun run, Typeface typeface, double size, IBrush? brush) =>
         new GenericTextRunProperties(new Typeface(typeface.FontFamily, FontStyleOf(run), typeface.Weight, typeface.Stretch),
-            size * TechnicalTypography.FontScale(run), foregroundBrush: brush, baselineAlignment: BaselineOf(run));
+            size * TechnicalTypography.FontScale(run), foregroundBrush: brush, baselineAlignment: BaselineOf(run),
+            fontFeatures: AppTypography.TabularFigures);
 }

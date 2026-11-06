@@ -38,7 +38,7 @@ public sealed class DesktopTextBoxValidationTests
             if (focused) box.Focus(); else next.Focus();
             Layout(window);
             Assert.Equal(new Thickness(focused ? 2 : 1), border.BorderThickness);
-            Assert.Same(Application.Current!.FindResource(error ? "Error" : focused ? "Accent" : hover ? "TextMuted" : "BorderStrong"), border.BorderBrush);
+            Assert.Same(Application.Current!.FindResource(error ? "Error" : focused ? "Accent" : hover ? "TextMuted" : "InputBorder"), border.BorderBrush);
             Assert.Same(Application.Current!.FindResource(error ? "ErrorSubtle" : !focused && hover ? "SurfaceHover" : "Surface"), border.Background);
             if (inline && error)
             {

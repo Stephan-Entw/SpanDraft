@@ -70,9 +70,9 @@ internal sealed class ReportVisuals
         Diagrams = new[] { ResultDiagramKind.TransverseDisplacement, ResultDiagramKind.ShearForce, ResultDiagramKind.BendingMoment }
             .Select(kind =>
             {
-                var diagram = new ResultDiagram { UseLayoutRounding = false, Kind = kind,
+                var diagram = new ResultDiagram { UseLayoutRounding = false, Kind = kind, MarkerFontSize = 11,
                     Presentation = inputs.Presentation };
-                foreach (string key in new[] { "CanvasBackground", "TextSecondary", "TextPrimary", "Border", "AxisStroke", "Accent" })
+                foreach (string key in new[] { "CanvasBackground", "TextSecondary", "TextPrimary", "Border", "AxisStroke", "DiagramStroke", "DiagramHatch", "DiagramExtremum" })
                     diagram.Resources.Add(key, Brush(key));
                 return diagram;
             }).ToArray();
@@ -127,10 +127,10 @@ internal sealed class ReportVisuals
                 Arrange(Diagrams[i], new(width, areas[i + 1].Bounds.Height / drawingScale));
             }
             double tickWidth = Diagrams.Max(d => d.Projection!.Ticks.Max(t =>
-                SchematicText.Measure(d.TickLabel(t), Typeface.Default, 12).Width));
+                SchematicText.Measure(d.TickLabel(t), AppTypography.Typeface, AppTypography.Size("SecondarySize")).Width));
             double startWidth = Measure(Axis.AxisLayout.Labels.Single(l => l.Role == AxisEndpointRole.Start).Text).Width;
             double endWidth = Measure(Axis.AxisLayout.Labels.Single(l => l.Role == AxisEndpointRole.End).Text).Width;
-            double unitWidth = SchematicText.Measure(TechnicalSymbols.Axis("x") + " [" + Axis.AxisLayout.UnitSymbol + "]", Typeface.Default, AnnotationFontSize).Width;
+            double unitWidth = SchematicText.Measure(TechnicalSymbols.Axis("x") + " [" + Axis.AxisLayout.UnitSymbol + "]", AppTypography.Typeface, AnnotationFontSize).Width;
             var next = new StationOuterMargins(
                 Math.Max(margins.Left, Math.Max(minimum.Left, Math.Max(startWidth / 2 + 8, tickWidth + 16))),
                 Math.Max(margins.Right, Math.Max(minimum.Right, Math.Max(endWidth / 2 + 8, unitWidth + 16))));
@@ -158,7 +158,7 @@ internal sealed class ReportVisuals
         }
     }
 
-    private static Size Measure(string text) => SchematicText.Measure(text, Typeface.Default, AnnotationFontSize);
+    private static Size Measure(string text) => SchematicText.Measure(text, AppTypography.Typeface, AnnotationFontSize);
 
     private void Draw(SKCanvas canvas, ReportGraphic kind, SKRect bounds)
     {
@@ -173,7 +173,7 @@ internal sealed class ReportVisuals
         Dispatcher.UIThread.VerifyAccess();
         Control visual = kind == ReportGraphic.Section
             ? section ?? (Control)new TextBlock { Text = Strings.ReportManualSection, TextWrapping = TextWrapping.Wrap,
-                Foreground = Brush("TextSecondary"), FontSize = 12 }
+                Foreground = Brush("TextSecondary"), FontFamily = AppTypography.Family, FontSize = AppTypography.Size("SecondarySize") }
             : kind == ReportGraphic.Beam ? beamRoot : Diagrams[(int)kind - 1];
         double scale = kind == ReportGraphic.Section ? PointsPerDip : drawingScale;
         Arrange(visual, new(bounds.Width / scale, bounds.Height / scale));

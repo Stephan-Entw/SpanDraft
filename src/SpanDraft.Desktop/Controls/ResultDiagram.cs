@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Media.TextFormatting;
 using System.Globalization;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.Presentation;
@@ -22,11 +23,16 @@ public sealed class ResultDiagram : Control
         AvaloniaProperty.Register<ResultDiagram, StationLayoutResult?>(nameof(StationLayout));
     public static readonly StyledProperty<ResultDiagramKind> KindProperty =
         AvaloniaProperty.Register<ResultDiagram, ResultDiagramKind>(nameof(Kind));
+    public static readonly StyledProperty<double> MarkerFontSizeProperty =
+        AvaloniaProperty.Register<ResultDiagram, double>(nameof(MarkerFontSize), 12);
     public AnalysisPresentationState? Presentation { get => GetValue(PresentationProperty); set => SetValue(PresentationProperty, value); }
     public StationLayoutResult? StationLayout { get => GetValue(StationLayoutProperty); set => SetValue(StationLayoutProperty, value); }
     public ResultDiagramKind Kind { get => GetValue(KindProperty); set => SetValue(KindProperty, value); }
+    public double MarkerFontSize { get => GetValue(MarkerFontSizeProperty); set => SetValue(MarkerFontSizeProperty, value); }
     public ResultDiagramProjection? Projection { get; private set; }
     public IReadOnlyList<ResultDiagramMarkerLabel> MarkerLabels { get; private set; } = [];
+    private double SecondarySize => AppTypography.Size("SecondarySize");
+    private double BodySize => AppTypography.Size("BodySize");
     private ResultPresentationOptions Options => Presentation?.Options ?? ResultPresentationOptions.Default;
     public string Title => TitleText.PlainText;
     public TechnicalText TitleText => (Kind switch
@@ -51,10 +57,10 @@ public sealed class ResultDiagram : Control
     {
         base.OnPropertyChanged(change);
         if (change.Property == PresentationProperty || change.Property == StationLayoutProperty
-            || change.Property == KindProperty || change.Property == BoundsProperty)
+            || change.Property == KindProperty || change.Property == BoundsProperty || change.Property == MarkerFontSizeProperty)
         {
             // A precision-only switch needs new labels, not a new scale or adaptive sampling.
-            bool textOnly = change.Property == PresentationProperty
+            bool textOnly = change.Property == MarkerFontSizeProperty || change.Property == PresentationProperty
                 && ReferenceEquals(Presentation?.Result, _projectedPresentation?.Result)
                 && ReferenceEquals(Presentation?.Options.Profile, _projectedPresentation?.Options.Profile);
             if (!textOnly)
@@ -86,27 +92,26 @@ public sealed class ResultDiagram : Control
         ? AxisTickFormatter.Format(tick.Index, projection.Scale.StepMantissa, projection.Scale.StepExponent, CultureInfo.CurrentCulture)
         : "";
 
-    private FormattedText TickText(ResultDiagramTick tick, IBrush brush) =>
-        SchematicText.Format(TickLabel(tick), Typeface.Default, 12, brush);
+    private TextLayout TickText(ResultDiagramTick tick, IBrush brush) =>
+        SchematicText.Format(TickLabel(tick), AppTypography.Typeface, SecondarySize, brush, Math.Max(1, Bounds.Width - 16));
 
-    private Rect TickBounds(ResultDiagramProjection projection, ResultDiagramTick tick, FormattedText text)
+    private Rect TickBounds(ResultDiagramProjection projection, ResultDiagramTick tick, TextLayout text)
     {
         double x = Math.Max(8, projection.StationLayout.Stations[0].ScreenX - text.WidthIncludingTrailingWhitespace - 8);
-        text.MaxTextWidth = Math.Max(1, Bounds.Width - x - 8);
         return new(x, tick.ScreenY - text.Height / 2, text.WidthIncludingTrailingWhitespace, text.Height);
     }
 
     private IReadOnlyList<ResultDiagramMarkerLabel> PlaceMarkerLabels(ResultDiagramProjection projection)
     {
         var area = new Rect(8, 30, Math.Max(1, Bounds.Width - 16), Bounds.Height - 34);
-        var tickBounds = projection.Ticks.Select(t => TickBounds(projection, t, TickText(t, Brushes.Black))).ToArray();
+        var tickBounds = projection.Ticks.Select(t => TickBoundsOf(t)).ToArray();
+        Rect TickBoundsOf(ResultDiagramTick tick) { using var layout = TickText(tick, Brushes.Black); return TickBounds(projection, tick, layout); }
         var segments = projection.Sections.SelectMany(s => s.Zip(s.Skip(1), (a, b) => (a.Screen, b.Screen)))
             .Concat(projection.Jumps.Select(j => (j.Left.Screen, j.Right.Screen))).ToArray();
         var choices = projection.Markers.Select(marker =>
         {
             string text = MarkerText(marker);
-            var formatted = SchematicText.Format(text, Typeface.Default, 11, Brushes.Black);
-            formatted.MaxTextWidth = area.Width;
+            using var formatted = SchematicText.Format(text, AppTypography.Typeface, MarkerFontSize, Brushes.Black, area.Width);
             var size = new Size(formatted.WidthIncludingTrailingWhitespace, formatted.Height);
             double above = marker.Screen.Y - size.Height - 7, below = marker.Screen.Y + 7;
             double[] nearY = marker.Kind == ResultDiagramExtremumKind.Minimum ? [below, above] : [above, below];
@@ -163,14 +168,13 @@ public sealed class ResultDiagram : Control
         var background = BackgroundBrush ?? Brush("CanvasBackground");
         var text = Brush("TextSecondary");
         context.FillRectangle(background, new Rect(Bounds.Size));
-        using var title = SchematicText.Format(TitleText, Typeface.Default, 13, Brush("TextPrimary"),
+        using var title = SchematicText.Format(TitleText, AppTypography.Typeface, BodySize, Brush("TextPrimary"),
             Math.Max(1, Bounds.Width - 16), TextAlignment.Center);
         title.Draw(context, new(8, 8));
         if (Projection is not { } projection)
         {
-            var status = SchematicText.Format(Presentation?.StatusText ?? Strings.CalculationUnavailable, Typeface.Default, 12, text);
-            status.MaxTextWidth = Math.Max(1, Bounds.Width - 16);
-            context.DrawText(status, new(8, 48));
+            using var status = SchematicText.Format(Presentation?.StatusText ?? Strings.CalculationUnavailable, AppTypography.Typeface, SecondarySize, text, Math.Max(1, Bounds.Width - 16));
+            status.Draw(context, new(8, 48));
             return;
         }
         double left = projection.StationLayout.Stations[0].ScreenX;
@@ -180,8 +184,11 @@ public sealed class ResultDiagram : Control
         {
             curveClip = new RectangleGeometry(new Rect(Bounds.Size));
             foreach (var tick in projection.Ticks)
+            {
+                using var tickText = TickText(tick, text);
                 curveClip = new CombinedGeometry(GeometryCombineMode.Exclude, curveClip,
-                    new RectangleGeometry(TickBounds(projection, tick, TickText(tick, text))));
+                    new RectangleGeometry(TickBounds(projection, tick, tickText)));
+            }
             foreach (var label in MarkerLabels)
                 curveClip = new CombinedGeometry(GeometryCombineMode.Exclude, curveClip,
                     new RectangleGeometry(label.Bounds.Inflate(2)));
@@ -195,28 +202,27 @@ public sealed class ResultDiagram : Control
             foreach (var tick in projection.Ticks.Where(t => t.Index != 0))
                 context.DrawLine(gridPen, new(left, tick.ScreenY), new(right, tick.ScreenY));
             context.DrawLine(new Pen(Brush("AxisStroke"), 1.25), new(left, projection.Scale.ZeroY), new(right, projection.Scale.ZeroY));
-            var curvePen = new Pen(Brush("Accent"), 1.5);
+            var curvePen = new Pen(Brush("DiagramStroke"), 1.5);
             foreach (var section in projection.Sections)
                 for (int i = 1; i < section.Count; i++) context.DrawLine(curvePen, section[i - 1].Screen, section[i].Screen);
             foreach (var jump in projection.Jumps) context.DrawLine(curvePen, jump.Left.Screen, jump.Right.Screen);
         }
         foreach (var tick in projection.Ticks)
         {
-            var label = TickText(tick, text);
+            using var label = TickText(tick, text);
             // The scale uses the existing left gutter; long values can extend inward
             // without introducing a different horizontal physical mapping.
             var bounds = TickBounds(projection, tick, label);
             context.FillRectangle(background, bounds);
-            context.DrawText(label, bounds.Position);
+            label.Draw(context, bounds.Position);
         }
         foreach (var label in MarkerLabels)
         {
-            var formatted = SchematicText.Format(label.Text, Typeface.Default, 11, text);
-            formatted.MaxTextWidth = label.Bounds.Width;
+            using var formatted = SchematicText.Format(label.Text, AppTypography.Typeface, MarkerFontSize, text, label.Bounds.Width);
             context.FillRectangle(background, label.Bounds.Inflate(2));
-            context.DrawText(formatted, label.Bounds.Position);
+            formatted.Draw(context, label.Bounds.Position);
         }
         foreach (var marker in projection.Markers)
-            context.DrawEllipse(Brush("Accent"), new Pen(background, 1), marker.Screen, 3, 3);
+            context.DrawEllipse(Brush("DiagramExtremum"), new Pen(background, 1), marker.Screen, 3, 3);
     }
 }

@@ -42,8 +42,8 @@ public sealed class StartPageControlTests
         var create = view.FindControl<Button>("NewProjectButton")!;
         var open = view.FindControl<Button>("OpenProjectButton")!;
         var manual = view.FindControl<Button>("UserManualButton")!;
-        Assert.Equal(280, create.Bounds.Width); Assert.Equal(38, create.Bounds.Height);
-        Assert.Equal(create.Bounds.Size, open.Bounds.Size); Assert.Equal(30, manual.Bounds.Height);
+        Assert.Equal(280, create.Bounds.Width); Assert.Equal((double)Application.Current!.FindResource("StandardControl")!, create.Bounds.Height);
+        Assert.Equal(create.Bounds.Size, open.Bounds.Size); Assert.Equal((double)Application.Current!.FindResource("CompactControl")!, manual.Bounds.Height);
         Assert.Same(main.NewCommand, create.Command); Assert.Same(main.OpenCommand, open.Command);
         Assert.Same(main.UserManualCommand, manual.Command);
         Assert.Same(main.UserManualCommand, shell.FindControl<MenuItem>("UserManualMenuItem")!.Command);

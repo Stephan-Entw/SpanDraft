@@ -114,7 +114,7 @@ internal static class Program
     {
         var page = new Canvas { Width = width, Height = height, Background = Brushes.Transparent };
         // Detached controls have no TopLevel resource host. Supply the App's actual light-theme brushes.
-        foreach (string key in new[] { "CanvasBackground", "TextSecondary", "TextPrimary", "BeamStroke", "Border", "AxisStroke", "Accent", "Error", "SurfacePressed", "AppBackground" })
+        foreach (string key in new[] { "CanvasBackground", "TextSecondary", "TextPrimary", "BeamStroke", "Border", "AxisStroke", "Accent", "DiagramStroke", "DiagramHatch", "DiagramExtremum", "Error", "SurfacePressed", "AppBackground" })
             page.Resources.Add(key, key is "CanvasBackground" or "AppBackground" ? Brushes.Transparent : AppBrush(key));
         return page;
     }

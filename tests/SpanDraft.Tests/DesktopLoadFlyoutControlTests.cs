@@ -207,7 +207,7 @@ public sealed class DesktopLoadFlyoutControlTests
         var content = (Control)footer.Parent!;
         Assert.Equal(new Control[] { delete, neutral, primary }, footer.Children);
         Assert.Contains("dangerGhost", delete.Classes);
-        Assert.Contains("ghost", neutral.Classes);
+        Assert.Contains("secondary", neutral.Classes);
         Assert.Contains("primary", primary.Classes);
         Assert.All(new[] { delete, neutral, primary }, button =>
         {
@@ -281,10 +281,48 @@ public sealed class DesktopLoadFlyoutControlTests
         var buttonPoint = sign.TranslatePoint(new Point(), input)!.Value;
         var borderPoint = border.TranslatePoint(new Point(), input)!.Value;
         var thickness = border.BorderThickness;
+        Assert.IsType<LoadSignButton>(sign);
+        Assert.Equal(new Size(24, 24), sign.Bounds.Size);
+        Assert.Equal(new CornerRadius(2), sign.CornerRadius);
+        Assert.Equal(buttonPoint.Y, input.Bounds.Height - buttonPoint.Y - sign.Bounds.Height, 6);
         Assert.True(buttonPoint.X >= borderPoint.X + thickness.Left + 1);
         Assert.True(buttonPoint.Y >= borderPoint.Y + thickness.Top + 1);
         Assert.True(buttonPoint.X + sign.Bounds.Width <= borderPoint.X + border.Bounds.Width - thickness.Right - 1);
         Assert.True(buttonPoint.Y + sign.Bounds.Height <= borderPoint.Y + border.Bounds.Height - thickness.Bottom - 1);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void SignAccessoryKeepsItsOwnGeometryWhenActionTokensAndClassesChange(bool distributed)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var editor = new EditorViewModel(SupportedDocument(), () => { });
+        Control flyout;
+        if (distributed)
+        {
+            editor.ToggleDistributedLoadTool(); editor.HoverDistributedLoadPlacement(Length.FromMeters(.2));
+            Assert.True(editor.PlaceDistributedLoadEndpoint()); editor.HoverDistributedLoadPlacement(Length.FromMeters(.8));
+            Assert.True(editor.PlaceDistributedLoadEndpoint()); flyout = new DistributedLoadFlyout { DataContext = editor };
+        }
+        else
+        {
+            editor.ToggleLoadTool(PointLoadKind.Force); editor.HoverLoadPlacement(Length.FromMeters(.5));
+            Assert.True(editor.PlaceLoad()); flyout = new PointLoadFlyout { DataContext = editor };
+        }
+        var window = Open(flyout);
+        var input = flyout.FindControl<TextBox>("ValueInput")!;
+        var sign = flyout.FindControl<Button>("SignButton")!;
+        Assert.Equal(4, sign.TranslatePoint(default, input)!.Value.Y, 6);
+        AssertSignInsideBorder(input, sign);
+        window.Resources["StandardControl"] = 44d; window.Resources["CompactControl"] = 36d;
+        foreach (string variant in new[] { "primary", "secondary", "ghost", "toolbar" }) sign.Classes.Add(variant);
+        Dispatcher.UIThread.RunJobs();
+        window.InvalidateMeasure(); window.Measure(new Size(420, 600)); window.Arrange(new Rect(0, 0, 420, 600));
+        Dispatcher.UIThread.RunJobs();
+        AssertSignInsideBorder(input, sign);
+        sign.IsEnabled = false; Dispatcher.UIThread.RunJobs();
+        Assert.Equal(new Size(24, 24), sign.Bounds.Size);
+        window.Close();
     }
 
     private static void AssertNumericAlignment(Control flyout, string positionName, string unitName)

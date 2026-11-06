@@ -1,5 +1,8 @@
-<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <!-- Inherit the platform UI font; do not ship or force a font family. -->
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls">
+  <Style Selector="UserControl, Window">
+    <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
+    <Setter Property="FontFeatures" Value="tnum" />
+  </Style>
   <!-- Some platform fallback glyphs extend beyond the nominal line box.
        Keep their diacritics visible, including button/menu AccessText. -->
   <Style Selector=":is(TextBlock)">
@@ -10,31 +13,31 @@
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     <Setter Property="Background" Value="{DynamicResource AppBackground}" />
   </Style>
-  <Style Selector="TextBlock.pageTitle">
+  <Style Selector=":is(TextBlock).pageTitle">
     <Setter Property="FontSize" Value="{DynamicResource PageTitleSize}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
-  <Style Selector="TextBlock.sectionTitle">
+  <Style Selector=":is(TextBlock).sectionTitle">
     <Setter Property="FontSize" Value="{DynamicResource SectionTitleSize}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
-  <Style Selector="TextBlock.body, TextBlock.bodyStrong, TextBlock.technicalValue">
+  <Style Selector=":is(TextBlock).body, :is(TextBlock).bodyStrong, :is(TextBlock).technicalValue">
     <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
   </Style>
-  <Style Selector="TextBlock.bodyStrong, TextBlock.technicalValue">
+  <Style Selector=":is(TextBlock).bodyStrong, :is(TextBlock).technicalValue">
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
-  <Style Selector="TextBlock.secondary, TextBlock.caption">
+  <Style Selector=":is(TextBlock).secondary, :is(TextBlock).caption">
     <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
   </Style>
-  <Style Selector="TextBlock.propertyLabel">
+  <Style Selector=":is(TextBlock).propertyLabel">
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
   </Style>
-  <Style Selector="TextBlock.technicalValue">
+  <Style Selector=":is(TextBlock).technicalValue">
     <Setter Property="HorizontalAlignment" Value="Right" />
   </Style>
-  <Style Selector="TextBlock.validationMessage">
+  <Style Selector=":is(TextBlock).validationMessage">
     <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
     <Setter Property="Foreground" Value="{DynamicResource Error}" />
     <Setter Property="TextWrapping" Value="Wrap" />

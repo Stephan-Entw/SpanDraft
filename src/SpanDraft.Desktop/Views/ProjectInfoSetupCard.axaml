@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
              xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
              xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
              x:Class="SpanDraft.Desktop.Views.ProjectInfoSetupCard" x:DataType="vm:ProjectSetupViewModel" KeyboardNavigation.TabNavigation="Local">

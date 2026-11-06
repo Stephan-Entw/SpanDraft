@@ -1,56 +1,78 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <!-- Semantic brushes: all application surfaces and drawing colors originate here. -->
+  <!-- Semantic brushes: all application surfaces and drawing colors originate here.
+       Palette "Stahlblau hell": one interaction color, neutral surfaces, red only for errors.
+       Light comes from the top left; darker always means further back or turned away. -->
+
+  <!-- Surfaces (unchanged) -->
   <SolidColorBrush x:Key="AppBackground">#F5F7FA</SolidColorBrush>
   <SolidColorBrush x:Key="Surface">#FFFFFF</SolidColorBrush>
   <SolidColorBrush x:Key="SurfaceSubtle">#F8FAFC</SolidColorBrush>
   <SolidColorBrush x:Key="SurfaceHover">#F1F4F8</SolidColorBrush>
   <SolidColorBrush x:Key="SurfacePressed">#E7EDF4</SolidColorBrush>
   <SolidColorBrush x:Key="CanvasBackground">#FEFEFF</SolidColorBrush>
+
+  <!-- Borders. InputBorder is new: 3.1:1 on Surface, for text boxes and other inputs. -->
   <SolidColorBrush x:Key="Border">#D9DFE7</SolidColorBrush>
   <SolidColorBrush x:Key="BorderStrong">#C5CDD8</SolidColorBrush>
+  <SolidColorBrush x:Key="InputBorder">#8892A3</SolidColorBrush>
+
+  <!-- Text. TextMuted reaches 5.0:1 on AppBackground. -->
   <SolidColorBrush x:Key="TextPrimary">#202631</SolidColorBrush>
   <SolidColorBrush x:Key="TextSecondary">#5E6878</SolidColorBrush>
-  <SolidColorBrush x:Key="TextMuted">#697586</SolidColorBrush>
+  <SolidColorBrush x:Key="TextMuted">#5F6B7C</SolidColorBrush>
   <SolidColorBrush x:Key="TextDisabled">#737E8C</SolidColorBrush>
-  <SolidColorBrush x:Key="Accent">#2563EB</SolidColorBrush>
-  <SolidColorBrush x:Key="AccentHover">#1D4ED8</SolidColorBrush>
-  <SolidColorBrush x:Key="AccentPressed">#1E40AF</SolidColorBrush>
-  <SolidColorBrush x:Key="AccentSubtle">#EFF6FF</SolidColorBrush>
+
+  <!-- Accent "Stahlblau hell": buttons, focus, selection. White on Accent 6.5:1. -->
+  <SolidColorBrush x:Key="Accent">#2E6098</SolidColorBrush>
+  <SolidColorBrush x:Key="AccentHover">#275287</SolidColorBrush>
+  <SolidColorBrush x:Key="AccentPressed">#20446F</SolidColorBrush>
+  <SolidColorBrush x:Key="AccentSubtle">#DCE7F4</SolidColorBrush>
   <SolidColorBrush x:Key="TextOnAccent">#FFFFFF</SolidColorBrush>
+  <!-- left marker stripe of a selected list row, so selection differs clearly from hover. -->
+
+  <!-- Status. Red is reserved for errors. -->
   <SolidColorBrush x:Key="Error">#B42318</SolidColorBrush>
   <SolidColorBrush x:Key="ErrorSubtle">#FEF3F2</SolidColorBrush>
+
+  <!-- Drawing -->
   <SolidColorBrush x:Key="BeamStroke">#374151</SolidColorBrush>
   <SolidColorBrush x:Key="SelfWeightStroke">#666666</SolidColorBrush>
   <SolidColorBrush x:Key="AxisStroke">#697586</SolidColorBrush>
+  <!-- result diagrams in a lighter steel step than the Accent, so curves never look like controls.
+       DiagramHatch is the same hue at 35 % opacity for the hatching under the curve.
+       DiagramExtremum marks max/min points with a filled dot. -->
+  <SolidColorBrush x:Key="DiagramStroke">#3A6DA6</SolidColorBrush>
+  <SolidColorBrush x:Key="DiagramHatch">#593A6DA6</SolidColorBrush>
+  <SolidColorBrush x:Key="DiagramExtremum">#2E6098</SolidColorBrush>
+
+  <!-- Sizes and spacing -->
   <x:Double x:Key="Space4">4</x:Double>
   <x:Double x:Key="Space8">8</x:Double>
   <x:Double x:Key="Space12">12</x:Double>
   <x:Double x:Key="Space16">16</x:Double>
   <x:Double x:Key="Space24">24</x:Double>
-  <x:Double x:Key="Space32">32</x:Double>
-  <x:Double x:Key="CompactControl">30</x:Double>
-  <x:Double x:Key="StandardControl">34</x:Double>
-  <x:Double x:Key="PrimaryAction">38</x:Double>
+  <x:Double x:Key="CompactControl">28</x:Double>
+  <x:Double x:Key="StandardControl">32</x:Double>
   <x:Double x:Key="ToolbarButton">36</x:Double>
   <x:Double x:Key="IconSize">24</x:Double>
   <x:Double x:Key="ToolbarIconSize">28</x:Double>
   <x:Double x:Key="IconStroke">1.5</x:Double>
-  <x:Double x:Key="PageTitleSize">24</x:Double>
+  <x:Double x:Key="PageTitleSize">22</x:Double>
+  <x:Double x:Key="SubtitleSize">15</x:Double>
+  <x:Double x:Key="LoadSignButtonSize">24</x:Double>
+  <CornerRadius x:Key="LoadSignButtonRadius">2</CornerRadius>
+  <FontFamily x:Key="AppFont">avares://SpanDraft.Desktop/Assets/Fonts#IBM Plex Sans</FontFamily>
   <x:Double x:Key="SectionTitleSize">17</x:Double>
   <x:Double x:Key="BodySize">13</x:Double>
   <x:Double x:Key="SecondarySize">12</x:Double>
   <x:Double x:Key="ToolbarSize">13</x:Double>
   <CornerRadius x:Key="RadiusXS">4</CornerRadius>
-  <CornerRadius x:Key="RadiusS">6</CornerRadius>
   <CornerRadius x:Key="RadiusM">8</CornerRadius>
   <Thickness x:Key="BorderWidth">1</Thickness>
   <Thickness x:Key="FocusWidth">2</Thickness>
-  <Thickness x:Key="NoBorder">0</Thickness>
   <Thickness x:Key="Padding4">4</Thickness>
-  <Thickness x:Key="Padding8">8</Thickness>
   <Thickness x:Key="Padding16">16</Thickness>
   <Thickness x:Key="Padding24">24</Thickness>
-  <Thickness x:Key="Padding32">32</Thickness>
   <Thickness x:Key="ControlPadding">12,4</Thickness>
   <Thickness x:Key="InlinePadding">8,4</Thickness>
   <Thickness x:Key="ToolbarButtonPadding">2,4,8,4</Thickness>
@@ -58,5 +80,4 @@
   <Thickness x:Key="BottomBorder">0,0,0,1</Thickness>
   <Thickness x:Key="SeparatorMargin">4,8</Thickness>
   <Thickness x:Key="UnitMargin">8,0,0,0</Thickness>
-  <Thickness x:Key="SectionIconMargin">0,0,12,0</Thickness>
 </ResourceDictionary>

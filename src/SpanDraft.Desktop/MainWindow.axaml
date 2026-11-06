@@ -41,9 +41,6 @@
         <Separator />
         <MenuItem Header="{x:Static resources:Strings.Settings}" IsEnabled="{Binding !IsWorkspaceBusy}" Click="ShowSettings" />
       </MenuItem>
-      <MenuItem Header="{x:Static resources:Strings.View}">
-        <MenuItem Header="{x:Static resources:Strings.Zoom}" IsEnabled="False" />
-      </MenuItem>
       <MenuItem Header="{x:Static resources:Strings.Help}">
         <MenuItem x:Name="UserManualMenuItem" Header="{x:Static resources:Strings.UserManual}" Command="{Binding UserManualCommand}" />
         <Separator />

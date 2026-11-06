@@ -13,7 +13,7 @@
           <TextBox Grid.Column="1" x:Name="NameInput" Text="{Binding SupportDraft.NameText, Mode=TwoWay}" Classes.error="{Binding SupportDraft.HasNameError}"
                    AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
         </Grid>
-        <TextBlock Text="{Binding SupportDraft.NameError}" IsVisible="{Binding SupportDraft.HasNameError}"
+        <controls:TechnicalTextBlock Text="{Binding SupportDraft.NameError}" IsVisible="{Binding SupportDraft.HasNameError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
@@ -22,7 +22,7 @@
                   SelectedItem="{Binding SupportDraft.SelectedType, Mode=TwoWay}"
                   HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.SupportTypeLabel}">
           <ComboBox.ItemTemplate>
-            <DataTemplate x:DataType="vm:SupportTypeOption"><TextBlock Text="{Binding Name}" /></DataTemplate>
+            <DataTemplate x:DataType="vm:SupportTypeOption"><controls:TechnicalTextBlock Text="{Binding Name}" /></DataTemplate>
           </ComboBox.ItemTemplate>
         </ComboBox>
       </Grid>
@@ -32,19 +32,19 @@
           <TextBox Classes="numeric" Grid.Column="1" x:Name="PositionInput" Text="{Binding SupportDraft.PositionText, Mode=TwoWay}"
                    Classes.error="{Binding SupportDraft.HasError}"
                    AutomationProperties.Name="{Binding SupportDraft.PositionLabel.PlainText}" />
-          <TextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding SupportDraft.PositionUnit}" VerticalAlignment="Center" />
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding SupportDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
-        <TextBlock Text="{Binding SupportDraft.ErrorText}" IsVisible="{Binding SupportDraft.HasError}"
+        <controls:TechnicalTextBlock Text="{Binding SupportDraft.ErrorText}" IsVisible="{Binding SupportDraft.HasError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
-        <TextBlock Text="{Binding SupportFeedback}" IsVisible="{Binding HasSupportFeedback}"
+        <controls:TechnicalTextBlock Text="{Binding SupportFeedback}" IsVisible="{Binding HasSupportFeedback}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel x:Name="Footer" Classes="editorFlyoutFooter">
         <Button x:Name="DeleteAction" Content="{x:Static resources:Strings.Delete}" Classes="ghost dangerGhost"
                 IsVisible="{Binding SupportDraft.IsExisting}" Command="{Binding DeleteSupportCommand}" />
-        <Button x:Name="CancelAction" Content="{x:Static resources:Strings.Cancel}" Classes="ghost"
+        <Button x:Name="CancelAction" Content="{x:Static resources:Strings.Cancel}" Classes="secondary"
                 Command="{Binding CancelSupportCommand}" />
-        <Button x:Name="ConfirmAction" Classes="primary compactSupportAction"
+        <Button x:Name="ConfirmAction" Classes="primary"
                 AutomationProperties.Name="{x:Static resources:Strings.OK}"
                 IsEnabled="{Binding SupportDraft.IsValid}" Command="{Binding ConfirmSupportCommand}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">

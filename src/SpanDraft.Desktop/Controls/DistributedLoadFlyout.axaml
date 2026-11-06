@@ -13,7 +13,7 @@
           <TextBox Grid.Column="1" x:Name="NameInput" Text="{Binding DistributedLoadDraft.NameText, Mode=TwoWay}" Classes.error="{Binding DistributedLoadDraft.HasNameError}"
                    AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
         </Grid>
-        <TextBlock Text="{Binding DistributedLoadDraft.NameError}" IsVisible="{Binding DistributedLoadDraft.HasNameError}"
+        <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.NameError}" IsVisible="{Binding DistributedLoadDraft.HasNameError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
@@ -21,9 +21,9 @@
           <TextBlock controls:TechnicalTextPresenter.Content="{Binding DistributedLoadDraft.StartLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="StartInput" Text="{Binding DistributedLoadDraft.StartText, Mode=TwoWay}"
                    Classes.error="{Binding DistributedLoadDraft.HasStartError}" AutomationProperties.Name="{Binding DistributedLoadDraft.StartLabel.PlainText}" />
-          <TextBlock Grid.Column="2" x:Name="StartUnit" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="StartUnit" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
-        <TextBlock Text="{Binding DistributedLoadDraft.StartError}" IsVisible="{Binding DistributedLoadDraft.HasStartError}"
+        <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.StartError}" IsVisible="{Binding DistributedLoadDraft.HasStartError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
@@ -31,9 +31,9 @@
           <TextBlock controls:TechnicalTextPresenter.Content="{Binding DistributedLoadDraft.EndLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="EndInput" Text="{Binding DistributedLoadDraft.EndText, Mode=TwoWay}"
                    Classes.error="{Binding DistributedLoadDraft.HasEndError}" AutomationProperties.Name="{Binding DistributedLoadDraft.EndLabel.PlainText}" />
-          <TextBlock Grid.Column="2" x:Name="EndUnit" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="EndUnit" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
-        <TextBlock Text="{Binding DistributedLoadDraft.EndError}" IsVisible="{Binding DistributedLoadDraft.HasEndError}"
+        <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.EndError}" IsVisible="{Binding DistributedLoadDraft.HasEndError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
@@ -42,22 +42,22 @@
           <TextBox Classes="numeric loadValue" Grid.Column="1" x:Name="ValueInput" Text="{Binding DistributedLoadDraft.IntensityText, Mode=TwoWay}"
                    Classes.error="{Binding DistributedLoadDraft.HasIntensityError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedIntensityLabel}">
             <TextBox.InnerLeftContent>
-              <Button x:Name="SignButton" Content="±" Classes="ghost loadSign" Click="ToggleSign"
+              <controls:LoadSignButton x:Name="SignButton" Content="±" Classes="loadSign" Click="ToggleSign"
                       AutomationProperties.Name="{x:Static resources:Strings.ToggleLoadSign}" ToolTip.Tip="{x:Static resources:Strings.ToggleLoadSign}" />
             </TextBox.InnerLeftContent>
           </TextBox>
-          <TextBlock Grid.Column="2" x:Name="ValueUnit" Text="{Binding DistributedLoadDraft.IntensityUnit}" VerticalAlignment="Center" />
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="ValueUnit" Text="{Binding DistributedLoadDraft.IntensityUnit}" VerticalAlignment="Center" />
         </Grid>
-        <TextBlock Text="{Binding DistributedLoadDraft.IntensityError}" IsVisible="{Binding DistributedLoadDraft.HasIntensityError}"
+        <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.IntensityError}" IsVisible="{Binding DistributedLoadDraft.HasIntensityError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
-        <TextBlock Text="{Binding DistributedLoadFeedback}" IsVisible="{Binding HasDistributedLoadFeedback}"
+        <controls:TechnicalTextBlock Text="{Binding DistributedLoadFeedback}" IsVisible="{Binding HasDistributedLoadFeedback}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel x:Name="Footer" Classes="editorFlyoutFooter">
         <Button x:Name="DeleteAction" Content="{x:Static resources:Strings.Delete}" Classes="ghost dangerGhost"
                 IsVisible="{Binding DistributedLoadDraft.IsExisting}" Command="{Binding DeleteDistributedLoadCommand}" />
-        <Button x:Name="CancelAction" Content="{x:Static resources:Strings.Cancel}" Classes="ghost" Command="{Binding CancelDistributedLoadCommand}" />
-        <Button x:Name="ConfirmAction" Classes="primary compactSupportAction" AutomationProperties.Name="{x:Static resources:Strings.OK}"
+        <Button x:Name="CancelAction" Content="{x:Static resources:Strings.Cancel}" Classes="secondary" Command="{Binding CancelDistributedLoadCommand}" />
+        <Button x:Name="ConfirmAction" Classes="primary" AutomationProperties.Name="{x:Static resources:Strings.OK}"
                 IsEnabled="{Binding DistributedLoadDraft.IsValid}" Command="{Binding ConfirmDistributedLoadCommand}">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
             <TextBlock Text="{x:Static resources:Strings.OK}" VerticalAlignment="Center" />

@@ -53,11 +53,11 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Empty(emptyCard.FindControl<TextBox>("SetupLengthInput")!.Text!);
         Assert.Null(emptyCard.FindControl<TextBox>("SetupLengthInput")!.InnerRightContent);
         var sectionButton = emptyCard.FindControl<Button>("SectionCardButton")!;
-        Assert.Equal(new[] { Strings.SectionSelection, "›" }, sectionButton.GetVisualDescendants().OfType<TextBlock>()
+        Assert.Equal(new[] { Strings.SectionSelection }, sectionButton.GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.IsEffectivelyVisible).Select(t => t.Text));
         Assert.DoesNotContain(sectionButton.GetVisualDescendants().OfType<SpanDraft.Desktop.Controls.SectionShapeIcon>(), i => i.IsEffectivelyVisible);
         var materialButton = emptyCard.FindControl<Button>("MaterialCardButton")!;
-        Assert.Equal(new[] { Strings.SelectMaterialRequired, "›" }, materialButton.GetVisualDescendants().OfType<TextBlock>()
+        Assert.Equal(new[] { Strings.SelectMaterialRequired }, materialButton.GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.IsEffectivelyVisible).Select(t => t.Text));
         double emptyHeight = emptyCard.Bounds.Height;
         Assert.Equal(emptyCard.FindControl<Border>("LengthSurface")!.Bounds.Height, sectionButton.Bounds.Height);
@@ -465,8 +465,8 @@ public sealed class DesktopProjectSetupControlTests
         {
             var label = card.FindControl<TextBlock>(pair.Item1)!;
             Assert.True(Position(label).X + label.Bounds.Width < Position(pair.Item2).X);
-            Assert.True(Position(label).Y >= Position(pair.Item2).Y);
-            Assert.True(Position(label).Y + label.Bounds.Height <= Position(pair.Item2).Y + pair.Item2.Bounds.Height);
+            var group = label.Parent is StackPanel ? (Control)label.Parent : label;
+            Assert.InRange(Math.Abs(Position(group).Y + group.Bounds.Height / 2 - Position(pair.Item2).Y - pair.Item2.Bounds.Height / 2), 0, 1 / window.RenderScaling);
             Assert.True(label.Bounds.Width + 1 >= label.TextLayout.WidthIncludingTrailingWhitespace);
         }
         var optionalLabels = card.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Text == Strings.Optional).ToArray();
@@ -478,8 +478,9 @@ public sealed class DesktopProjectSetupControlTests
             Assert.Equal(Application.Current!.FindResource("TextSecondary"), label.Foreground);
             var input = ReferenceEquals(label.Parent, card.FindControl<TextBlock>("AuthorLabel")!.Parent) ? author
                 : ReferenceEquals(label.Parent, card.FindControl<TextBlock>("ProjectLabel")!.Parent) ? project : reference;
-            Assert.True(Position(label).Y >= Position(input).Y);
-            Assert.True(Position(label).Y + label.Bounds.Height <= Position(input).Y + input.Bounds.Height);
+            var group = (Control)label.Parent!;
+            Assert.InRange(Math.Abs(Position(group).Y + group.Bounds.Height / 2 - Position(input).Y - input.Bounds.Height / 2), 0, 1 / window.RenderScaling);
+            Assert.True(label.Bounds.Bottom <= group.Bounds.Height);
         });
         Assert.All(inputs, input => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(input))));
         var beam = view.FindControl<BeamSetupCard>("BeamCard")!;

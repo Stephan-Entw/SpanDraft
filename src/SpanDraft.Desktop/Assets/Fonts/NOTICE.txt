@@ -1,0 +1,5 @@
+IBM Plex Sans — Regular, Italic, SemiBold and SemiBoldItalic.
+Copyright © IBM Corp. 2017. Licensed under the SIL Open Font License 1.1; see OFL.txt.
+Source: https://github.com/IBM/plex/tree/48e8676114c04f29033b4b53da4ec579f8846297/packages/plex-sans/fonts/complete/ttf
+Unmodified complete static TTF files. Default lining figures have equal advances.
+U+207B is absent: scientific exponents are rendered as positioned IBM Plex Sans runs.

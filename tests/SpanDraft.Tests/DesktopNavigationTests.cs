@@ -210,7 +210,7 @@ public sealed class DesktopNavigationTests
             button.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
             return;
         }
-        var source = Assert.IsType<TextBlock>(button.Content);
+        var source = Assert.IsAssignableFrom<TextBlock>(button.Content);
         var point = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
         var pointer = new Pointer(1, PointerType.Mouse, true);
         var editor = (EditorViewModel)button.GetVisualAncestors().OfType<ProjectOverviewView>().Single().DataContext!;
@@ -516,7 +516,7 @@ public sealed class DesktopNavigationTests
                 Assert.True(label.Bounds.Bottom <= canvas.Scene.Frame.Viewport.Height);
             });
             if (dy < 0)
-                Assert.Equal(initial.Viewport.BelowBeamSpace, canvas.Scene.Frame.Viewport.BelowBeamSpace);
+                Assert.Equal(initial.Viewport.BelowBeamSpace, canvas.Scene.Frame.Viewport.BelowBeamSpace, 10);
             else
                 Assert.True(canvas.Scene.Frame.Viewport.BelowBeamSpace > initial.Viewport.BelowBeamSpace);
         }
@@ -662,7 +662,7 @@ public sealed class DesktopNavigationTests
                 Assert.Contains("overviewEntityAction", action.Classes);
                 Assert.True(action.Focusable);
                 Assert.Equal(Avalonia.Layout.HorizontalAlignment.Center, action.HorizontalContentAlignment);
-                var caption = Assert.IsType<TextBlock>(action.Content);
+                var caption = Assert.IsAssignableFrom<TextBlock>(action.Content);
                 Assert.Equal(TextAlignment.Center, caption.TextAlignment);
                 // Check the arranged caption, not just its text-alignment property.
                 // The header's bounds exclude the grid spacing included in ActualWidth.

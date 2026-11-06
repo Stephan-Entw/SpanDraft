@@ -4,7 +4,7 @@
              x:Class="SpanDraft.Desktop.Views.SectionDefinitionView" x:DataType="vm:SectionDefinitionViewModel">
   <UserControl.Resources>
     <DataTemplate x:Key="DefinitionInput" x:DataType="vm:SectionDefinitionInput">
-      <Grid Classes="definitionInputRow" ColumnDefinitions="*,88,Auto" ColumnSpacing="8" MinHeight="36">
+      <Grid Classes="definitionInputRow" ColumnDefinitions="*,88,Auto" ColumnSpacing="8" MinHeight="{DynamicResource StandardControl}">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" VerticalAlignment="Center" HorizontalAlignment="Left">
           <TextBlock controls:TechnicalTextPresenter.Content="{Binding DisplayText}" Classes="definitionLabel" TextWrapping="Wrap" VerticalAlignment="Center" />
           <controls:SectionInputHint Grid.Column="1" Classes="inputHint" IsVisible="{Binding HasRadiusHint}"
@@ -12,11 +12,11 @@
             <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Info}" Foreground="{DynamicResource TextSecondary}" />
           </controls:SectionInputHint>
         </Grid>
-        <TextBox Grid.Column="1" Width="88" Height="36" FontSize="14" Classes.error="{Binding HasError}"
+        <TextBox Grid.Column="1" Width="88" Height="{DynamicResource StandardControl}" FontSize="{DynamicResource BodySize}" Classes.error="{Binding HasError}"
             Classes="numeric inlineValidation" Foreground="{DynamicResource TextPrimary}"
             Text="{Binding PendingText, Mode=TwoWay}" KeyDown="InputKeyDown" LostFocus="InputLostFocus" GotFocus="InputGotFocus"
             ToolTip.Tip="{Binding Error}" AutomationProperties.HelpText="{Binding Error}" AutomationProperties.Name="{Binding Label}" />
-        <TextBlock Grid.Column="2" MinWidth="24" Text="{Binding Unit.Symbol}" VerticalAlignment="Center" Classes="definitionLabel" />
+        <controls:TechnicalTextBlock Grid.Column="2" MinWidth="24" Text="{Binding Unit.Symbol}" VerticalAlignment="Center" Classes="definitionLabel" />
       </Grid>
     </DataTemplate>
   </UserControl.Resources>
@@ -38,25 +38,25 @@
       <Setter Property="MaxWidth" Value="720" />
       <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
-    <Style Selector="TextBlock.definitionLabel, TextBlock.definitionValue">
-      <Setter Property="FontSize" Value="14" />
+    <Style Selector=":is(TextBlock).definitionLabel, :is(TextBlock).definitionValue">
+      <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     </Style>
-    <Style Selector="TextBlock.definitionAxisTitle">
-      <Setter Property="FontSize" Value="15" />
+    <Style Selector=":is(TextBlock).definitionAxisTitle">
+      <Setter Property="FontSize" Value="{DynamicResource SubtitleSize}" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     </Style>
   </UserControl.Styles>
   <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,*">
     <Border Grid.Row="0" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="24,16">
-      <Grid x:Name="CommandHeader" ColumnDefinitions="*,Auto" ColumnSpacing="16" Height="{DynamicResource PrimaryAction}">
+      <Grid x:Name="CommandHeader" ColumnDefinitions="*,Auto" ColumnSpacing="16" Height="{DynamicResource StandardControl}">
         <Grid x:Name="DefinitionHeader" VerticalAlignment="Stretch">
             <Button x:Name="TitleButton" Command="{Binding EditNameCommand}" IsVisible="{Binding !IsEditingName}" Classes="ghost definitionTitleButton"
-                HorizontalAlignment="Left" HorizontalContentAlignment="Stretch" Height="{DynamicResource PrimaryAction}" Padding="0"
+                HorizontalAlignment="Left" HorizontalContentAlignment="Stretch" Height="{DynamicResource StandardControl}" Padding="0"
                 AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionEditName}">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBlock x:Name="DefinitionTitle" Text="{Binding HeaderTitle}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                <controls:TechnicalTextBlock x:Name="DefinitionTitle" Text="{Binding HeaderTitle}" Classes="pageTitle" Foreground="{DynamicResource TextPrimary}"
                     TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding HeaderTitle}" />
                 <PathIcon Classes="fluentIcon" x:Name="TitleEditIcon" Grid.Column="1" Data="{StaticResource FluentIcon.Edit}"
                     IsVisible="{Binding HasDefinition}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
@@ -64,26 +64,26 @@
             </Button>
             <Grid x:Name="NameEditor" ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding IsEditingName}">
               <TextBox x:Name="NameInput" Text="{Binding PendingName, Mode=TwoWay}" Classes="inlineValidation" Classes.error="{Binding HasNameError}"
-                    Height="{DynamicResource PrimaryAction}" FontSize="22" FontWeight="SemiBold"
+                    Height="{DynamicResource StandardControl}" FontSize="{DynamicResource PageTitleSize}" FontWeight="SemiBold"
                     KeyDown="NameKeyDown" ToolTip.Tip="{Binding NameError}" AutomationProperties.HelpText="{Binding NameError}" AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionEditName}" />
               <Button x:Name="ResetNameButton" Grid.Column="1" Content="{x:Static resources:Strings.SectionDefinitionAutomatic}" Command="{Binding ResetNameCommand}"
-                  Classes="ghost" Padding="0" Height="{DynamicResource PrimaryAction}"
+                  Classes="ghost" Padding="0" Height="{DynamicResource StandardControl}"
                   AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionResetName}" />
             </Grid>
         </Grid>
         <StackPanel x:Name="HeaderActions" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
           <Button x:Name="CancelButton" Content="{x:Static resources:Strings.Cancel}" Command="{Binding CancelCommand}"
-              Classes="ghost" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
+              Classes="secondary" Height="{DynamicResource StandardControl}" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
           <Button x:Name="ConfirmButton" Content="{x:Static resources:Strings.Apply}" Command="{Binding ConfirmCommand}"
-              IsVisible="{Binding ShowConfirm}" Classes="primary" Height="{DynamicResource PrimaryAction}" AutomationProperties.Name="{x:Static resources:Strings.Apply}" />
+              IsVisible="{Binding ShowConfirm}" Classes="primary" Height="{DynamicResource StandardControl}" AutomationProperties.Name="{x:Static resources:Strings.Apply}" />
         </StackPanel>
       </Grid>
     </Border>
     <Grid Grid.Row="1">
       <ScrollViewer x:Name="GalleryScroll" IsVisible="{Binding IsChoosingForm}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel x:Name="FormChooser" Spacing="16" MaxWidth="1090" Margin="32" VerticalAlignment="Center" IsEnabled="{Binding !IsBusy}">
-          <TextBlock Text="{x:Static resources:Strings.SectionDefinitionGalleryTitle}" FontSize="24" FontWeight="SemiBold" />
-          <TextBlock Text="{x:Static resources:Strings.SectionDefinitionGalleryLead}" FontSize="15" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,12" />
+          <TextBlock Text="{x:Static resources:Strings.SectionDefinitionGalleryTitle}" Classes="pageTitle" />
+          <TextBlock Text="{x:Static resources:Strings.SectionDefinitionGalleryLead}" FontSize="{DynamicResource SubtitleSize}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,12" />
           <TextBlock Text="{x:Static resources:Strings.SectionDefinitionParametricGroup}" Classes="caption" FontWeight="SemiBold" />
           <ItemsControl ItemsSource="{Binding Forms}" Margin="0,0,-16,0">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -93,7 +93,7 @@
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Label}">
                   <StackPanel Spacing="16" VerticalAlignment="Center">
                     <controls:SectionShapeIcon Type="{Binding Value}" Width="68" Height="68" HorizontalAlignment="Center" />
-                    <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="15" />
+                    <controls:TechnicalTextBlock Text="{Binding Label}" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="{DynamicResource SubtitleSize}" />
                   </StackPanel>
                 </Button>
               </DataTemplate>
@@ -116,12 +116,12 @@
             <StackPanel x:Name="PinnedInputs" Classes="sectionInputs">
               <TextBlock Text="{x:Static resources:Strings.Section}" Classes="sectionTitle" />
               <Border x:Name="ProfileCard" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="1"
-                  CornerRadius="6" MinHeight="70" Padding="12" Margin="0,0,0,8">
+                  CornerRadius="{DynamicResource RadiusM}" MinHeight="70" Padding="12" Margin="0,0,0,8">
                 <Grid x:Name="ProfileCardContent" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                   <controls:SectionShapeIcon x:Name="SelectedFormIcon" Type="{Binding SelectedFormType}" Width="32" Height="32"
                       IsVisible="{Binding ShowPreview}" VerticalAlignment="Center" AutomationProperties.Name="{Binding SelectedFormName}" />
                   <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding SelectedFormName}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <controls:TechnicalTextBlock Text="{Binding SelectedFormName}" FontSize="{DynamicResource BodySize}" FontWeight="SemiBold" TextWrapping="Wrap" />
                     <TextBlock Text="{x:Static resources:Strings.SectionDefinitionParametricForm}" Classes="caption" IsVisible="{Binding !IsManual}" TextWrapping="Wrap" />
                     <TextBlock Text="{x:Static resources:Strings.SectionDefinitionManualFormDescription}" Classes="caption" IsVisible="{Binding IsManual}" TextWrapping="Wrap" />
                   </StackPanel>
@@ -131,7 +131,7 @@
                 </Grid>
               </Border>
               <StackPanel Classes="dimensionsPanel" IsVisible="{Binding !IsManual}">
-                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionDimensions}" FontSize="15" FontWeight="SemiBold" />
+                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionDimensions}" FontSize="{DynamicResource SubtitleSize}" FontWeight="SemiBold" />
                 <ItemsControl x:Name="GeometryInputList" ItemsSource="{Binding GeometryInputs}" ItemTemplate="{StaticResource DefinitionInput}" />
               </StackPanel>
               <StackPanel IsVisible="{Binding IsManual}" Spacing="12">
@@ -141,24 +141,24 @@
               <StackPanel x:Name="LibrarySaveActions" Spacing="8" IsVisible="{Binding ShowLibraryOption}">
                 <Button x:Name="SaveLibraryButton" Command="{Binding SaveLibraryCommand}"
                     IsVisible="{Binding ShowLibraryAction}"
-                    Classes="secondary" Height="{DynamicResource PrimaryAction}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Classes="secondary" Height="{DynamicResource StandardControl}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                     AutomationProperties.Name="{Binding LibraryActionLabel}">
                   <Grid x:Name="LibrarySaveButtonContent" ColumnDefinitions="16,Auto" ColumnSpacing="8" VerticalAlignment="Center">
                     <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Star}" IsVisible="{Binding !IsInLibrary}"
                         Foreground="{Binding Foreground, ElementName=SaveLibraryButton}" VerticalAlignment="Center" />
                     <TextBlock Text="✓" IsVisible="{Binding IsInLibrary}" HorizontalAlignment="Center" VerticalAlignment="Center"
                         Foreground="{Binding Foreground, ElementName=SaveLibraryButton}" />
-                    <TextBlock x:Name="LibrarySaveButtonLabel" Grid.Column="1" Text="{Binding LibraryActionLabel}" VerticalAlignment="Center" />
+                    <controls:TechnicalTextBlock x:Name="LibrarySaveButtonLabel" Grid.Column="1" Text="{Binding LibraryActionLabel}" VerticalAlignment="Center" />
                   </Grid>
                 </Button>
-                <TextBlock x:Name="LibrarySaveMessage" Text="{Binding LibraryMessage}" IsVisible="{Binding HasLibraryMessage}" TextWrapping="Wrap"
+                <controls:TechnicalTextBlock x:Name="LibrarySaveMessage" Text="{Binding LibraryMessage}" IsVisible="{Binding HasLibraryMessage}" TextWrapping="Wrap"
                     Classes="caption" Classes.validationMessage="{Binding HasLibraryError}" AutomationProperties.Name="{Binding LibraryMessage}" />
               </StackPanel>
             </StackPanel>
             <Grid x:Name="LibraryQuickSelection" Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,24" RowDefinitions="Auto,Auto" IsVisible="{Binding ShowLibraryOption}">
               <StackPanel x:Name="LibraryHeading" Classes="libraryHeading">
                 <Border Height="1" Background="{DynamicResource Border}" />
-                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionFromLibrary}" FontSize="15" FontWeight="SemiBold" />
+                <TextBlock Text="{x:Static resources:Strings.SectionDefinitionFromLibrary}" FontSize="{DynamicResource SubtitleSize}" FontWeight="SemiBold" />
               </StackPanel>
                 <StackPanel x:Name="LibraryContent" Grid.Row="1" Spacing="12" Width="{Binding Bounds.Width, ElementName=PinnedInputs}" HorizontalAlignment="Left">
                   <TextBlock Text="{x:Static resources:Strings.SectionDefinitionLibraryEmpty}" IsVisible="{Binding IsLibraryEmpty}" Classes="caption" TextWrapping="Wrap" />
@@ -166,13 +166,13 @@
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:SectionDefinitionPreset">
                         <Border Classes="presetCard" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}"
-                            BorderThickness="{DynamicResource BorderWidth}" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,0,8">
+                            BorderThickness="{DynamicResource BorderWidth}" CornerRadius="{DynamicResource RadiusM}" Margin="0,0,0,8">
                           <Grid ColumnDefinitions="*,Auto" MinHeight="62">
                             <Button Click="LoadPreset" Classes="secondary presetLoad" Height="NaN" Padding="12,10" BorderThickness="0"
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
                               <StackPanel Spacing="4">
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding Summary}" Classes="caption" TextWrapping="Wrap" />
+                                <controls:TechnicalTextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <controls:TechnicalTextBlock Text="{Binding Summary}" Classes="caption" TextWrapping="Wrap" />
                               </StackPanel>
                             </Button>
                             <Button Grid.Column="1" Click="DeletePreset" Classes="ghost presetDelete" Width="32" Height="32" Padding="8"
@@ -194,7 +194,7 @@
         </Border>
         <Grid x:Name="PreviewColumn" Grid.Column="0" IsVisible="{Binding ShowPreview}" Background="{DynamicResource CanvasBackground}" RowDefinitions="Auto,*">
           <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="24,16">
-            <TextBlock Text="{x:Static resources:Strings.SectionDefinitionSketch}" FontSize="15" FontWeight="SemiBold" />
+            <TextBlock Text="{x:Static resources:Strings.SectionDefinitionSketch}" FontSize="{DynamicResource SubtitleSize}" FontWeight="SemiBold" />
           </Border>
           <Border Grid.RowSpan="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0" IsHitTestVisible="False" />
           <controls:SectionPreviewControl x:Name="SectionPreview" Grid.Row="1" Margin="16" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
@@ -202,7 +202,7 @@
               AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionSketch}" />
         </Grid>
         <Grid x:Name="ValuesColumn" Background="{DynamicResource AppBackground}" Classes.manualValues="{Binding IsManual}" Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="16" Margin="12,24,12,24" Grid.IsSharedSizeScope="True" IsVisible="{Binding ShowValues}">
-          <TextBlock Text="{Binding ValuesTitle}" Classes="sectionTitle" TextWrapping="Wrap" Margin="12,0,12,0" />
+          <controls:TechnicalTextBlock Text="{Binding ValuesTitle}" Classes="sectionTitle" TextWrapping="Wrap" Margin="12,0,12,0" />
           <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" IsEnabled="{Binding !IsBusy}">
             <StackPanel Spacing="16">
               <controls:SectionPropertyRow x:Name="CalculatedValues" IsVisible="{Binding !IsManual}" Label="{Binding AreaLabel}" Value="{Binding Area}" Margin="12,0,12,0" />
@@ -217,7 +217,7 @@
                           <Border Width="16" Height="16" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource Accent}" Background="{DynamicResource Surface}" IsVisible="{Binding IsSelectable}" VerticalAlignment="Center">
                             <Ellipse Width="8" Height="8" Fill="{DynamicResource Accent}" IsVisible="{Binding IsSelected}" />
                           </Border>
-                          <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="definitionAxisTitle" TextWrapping="Wrap" VerticalAlignment="Center" />
+                          <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Label}" Classes="definitionAxisTitle" TextWrapping="Wrap" VerticalAlignment="Center" />
                         </Grid>
                         <controls:SectionPropertyRow Label="{Binding InertiaText}" Value="{Binding Inertia}" />
                         <controls:SectionPropertyRow Label="{Binding PositiveText}" Value="{Binding PositiveModulus}" />
@@ -236,7 +236,7 @@
                           <Border Width="16" Height="16" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource Accent}" Background="{DynamicResource Surface}" IsVisible="{Binding IsSelectable}" VerticalAlignment="Center">
                             <Ellipse Width="8" Height="8" Fill="{DynamicResource Accent}" IsVisible="{Binding IsSelected}" />
                           </Border>
-                          <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="definitionAxisTitle" TextWrapping="Wrap" VerticalAlignment="Center" />
+                          <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Label}" Classes="definitionAxisTitle" TextWrapping="Wrap" VerticalAlignment="Center" />
                         </Grid>
                         <ItemsControl ItemsSource="{Binding Inputs}" ItemTemplate="{StaticResource DefinitionInput}" />
                       </StackPanel>

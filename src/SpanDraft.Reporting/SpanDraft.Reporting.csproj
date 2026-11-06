@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <EmbeddedResource Include="../SpanDraft.Desktop/Assets/Fonts/*.ttf" Link="Fonts/%(Filename)%(Extension)" LogicalName="SpanDraft.Reporting.Fonts.%(Filename)%(Extension)" />
     <InternalsVisibleTo Include="SpanDraft.Tests" />
     <InternalsVisibleTo Include="SpanDraft.Desktop" />
     <PackageReference Include="SkiaSharp" Version="3.119.4" />

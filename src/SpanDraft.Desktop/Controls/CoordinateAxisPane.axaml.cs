@@ -58,7 +58,7 @@ public partial class CoordinateAxisPane : UserControl
     private void Repack()
     {
         if (StationLayout is null || _paneWidth <= 0) return;
-        Size Measure(string text) => SchematicText.Measure(text, Typeface.Default, FontSize);
+        Size Measure(string text) => SchematicText.Measure(text, AppTypography.Typeface, FontSize);
         bool editing = _editor?.DimensionLength.IsEditing == true;
         AxisLayout = CoordinateAxisLayout.Create(StationLayout, _paneWidth, Measure, editing,
             _editor?.ResultPresentation.Profile[QuantityKind.BeamLength], _editor?.ResultPresentation);
@@ -111,11 +111,16 @@ public sealed class CoordinateAxisCanvas : Control
         foreach (var station in axis.StationLayout.Stations)
             context.DrawLine(pen, new(station.ScreenX, CoordinateAxisLayout.AxisY - 4), new(station.ScreenX, CoordinateAxisLayout.AxisY + 4));
         foreach (var label in axis.Labels.Where(l => IsStandalone || l.Role != AxisEndpointRole.End))
-            context.DrawText(SchematicText.Format(label.Text, Typeface.Default, LabelFontSize, AxisBrush), label.Bounds.Position);
-        using var unit = SchematicText.Format(TechnicalSymbols.Axis("x") + " [" + axis.UnitSymbol + "]", Typeface.Default, LabelFontSize, AxisBrush);
+        {
+            using var text = SchematicText.Format(label.Text, AppTypography.Typeface, LabelFontSize, AxisBrush);
+            text.Draw(context, label.Bounds.Position);
+        }
+        using var unit = SchematicText.Format(TechnicalSymbols.Axis("x") + " [" + axis.UnitSymbol + "]", AppTypography.Typeface, LabelFontSize, AxisBrush);
         unit.Draw(context, new(axis.StationLayout.Stations[^1].ScreenX + 8, 0));
         if (IsStandalone && axis.StationLayout.IsDistorted)
-            context.DrawText(SchematicText.Format(Strings.SchematicDrawing, Typeface.Default, 12, AxisBrush),
-                new(axis.StationLayout.Stations[0].ScreenX, axis.Packing.PaneHeight));
+        {
+            using var text = SchematicText.Format(Strings.SchematicDrawing, AppTypography.Typeface, AppTypography.Size("SecondarySize"), AxisBrush);
+            text.Draw(context, new(axis.StationLayout.Stations[0].ScreenX, axis.Packing.PaneHeight));
+        }
     }
 }
