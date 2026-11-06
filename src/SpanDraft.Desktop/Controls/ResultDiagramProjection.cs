@@ -152,7 +152,13 @@ public sealed record ResultDiagramProjection(StationLayoutResult StationLayout, 
                   extrema.MinimumBendingMoment.Position, extrema.MaximumBendingMoment.Position,
                   extrema.MinimumBendingMoment.Side, extrema.MaximumBendingMoment.Side)
         };
-        var scale = new ResultDiagramScale(unit.FromSi(minimumSi), unit.FromSi(maximumSi), plotTop, plotHeight);
+        // A negligible opposite-sign roundoff tail must not reserve an entire nice-tick interval.
+        // Keep genuinely small diagrams and all original samples/analytic extrema intact.
+        double plotMinimum = minimumSi < 0 && maximumSi > 0 && -minimumSi < ResultDiagramRegions.ZeroTolerance
+            && -minimumSi / maximumSi < 1e-12 ? 0 : minimumSi;
+        double plotMaximum = maximumSi > 0 && minimumSi < 0 && maximumSi < ResultDiagramRegions.ZeroTolerance
+            && maximumSi / -minimumSi < 1e-12 ? 0 : maximumSi;
+        var scale = new ResultDiagramScale(unit.FromSi(plotMinimum), unit.FromSi(plotMaximum), plotTop, plotHeight);
         // Keep the solver's selected representative and side, including zeros and ties.
         // The analytic value places the dot on the corresponding one-sided limit.
         bool isConstant = minimumSi == maximumSi;

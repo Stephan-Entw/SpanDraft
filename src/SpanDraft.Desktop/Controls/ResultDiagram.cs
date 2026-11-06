@@ -31,8 +31,10 @@ public sealed class ResultDiagram : Control
     public double MarkerFontSize { get => GetValue(MarkerFontSizeProperty); set => SetValue(MarkerFontSizeProperty, value); }
     public ResultDiagramProjection? Projection { get; private set; }
     public IReadOnlyList<ResultDiagramMarkerLabel> MarkerLabels { get; private set; } = [];
+    internal IReadOnlyList<ResultDiagramRegion> Regions { get; private set; } = [];
     private double SecondarySize => AppTypography.Size("SecondarySize");
     private double BodySize => AppTypography.Size("BodySize");
+    private IEnumerable<Point> MarkerPoints => (Projection?.Markers.Select(m => m.Screen) ?? []).Concat(Regions.Select(r => r.Extremum.Screen)).Distinct();
     private ResultPresentationOptions Options => Presentation?.Options ?? ResultPresentationOptions.Default;
     public string Title => TitleText.PlainText;
     public TechnicalText TitleText => (Kind switch
@@ -67,6 +69,7 @@ public sealed class ResultDiagram : Control
                 Projection = Presentation?.Result is { } result && StationLayout is { } layout
                     && Bounds.Width > 0 && Bounds.Height > 48
                     ? ResultDiagramProjection.Create(result.Solution, Kind, layout, 36, Bounds.Height - 48, Options.Profile) : null;
+            Regions = Projection is { } p ? p.Sections.SelectMany(section => ResultDiagramRegions.Create(section, p.Scale.ZeroY)).ToArray() : [];
             _projectedPresentation = Presentation;
             MarkerLabels = Projection is { } projection ? PlaceMarkerLabels(projection) : [];
             InvalidateVisual();
@@ -192,12 +195,16 @@ public sealed class ResultDiagram : Control
             foreach (var label in MarkerLabels)
                 curveClip = new CombinedGeometry(GeometryCombineMode.Exclude, curveClip,
                     new RectangleGeometry(label.Bounds.Inflate(2)));
-            foreach (var marker in projection.Markers)
+            foreach (var marker in MarkerPoints)
                 curveClip = new CombinedGeometry(GeometryCombineMode.Exclude, curveClip,
-                    new EllipseGeometry(new Rect(marker.Screen.X - 3.5, marker.Screen.Y - 3.5, 7, 7)));
+                    new EllipseGeometry(new Rect(marker.X - 3.5, marker.Y - 3.5, 7, 7)));
         }
         using (curveClip is null ? default : context.PushGeometryClip(curveClip))
         {
+            var hatchPen = new Pen(Brush("DiagramHatch"), 1);
+            foreach (var region in Regions)
+                foreach (var line in ResultDiagramRegions.Hatch(region, projection.Scale.ZeroY))
+                    context.DrawLine(hatchPen, line.Start, line.End);
             var gridPen = new Pen(Brush("Border"), 1);
             foreach (var tick in projection.Ticks.Where(t => t.Index != 0))
                 context.DrawLine(gridPen, new(left, tick.ScreenY), new(right, tick.ScreenY));
@@ -207,6 +214,8 @@ public sealed class ResultDiagram : Control
                 for (int i = 1; i < section.Count; i++) context.DrawLine(curvePen, section[i - 1].Screen, section[i].Screen);
             foreach (var jump in projection.Jumps) context.DrawLine(curvePen, jump.Left.Screen, jump.Right.Screen);
         }
+        foreach (var marker in MarkerPoints)
+            context.DrawEllipse(Brush("DiagramExtremum"), new Pen(background, 1), marker, 3, 3);
         foreach (var tick in projection.Ticks)
         {
             using var label = TickText(tick, text);
@@ -222,7 +231,5 @@ public sealed class ResultDiagram : Control
             context.FillRectangle(background, label.Bounds.Inflate(2));
             formatted.Draw(context, label.Bounds.Position);
         }
-        foreach (var marker in projection.Markers)
-            context.DrawEllipse(Brush("DiagramExtremum"), new Pen(background, 1), marker.Screen, 3, 3);
     }
 }
