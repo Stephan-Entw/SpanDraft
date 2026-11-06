@@ -57,6 +57,8 @@
           DestinationFiles="$(_MacOSDevelopmentBundleRoot)Contents/Info.plist" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)/Assets/AppIcon/SpanDraft.icns"
           DestinationFiles="$(_MacOSDevelopmentBundleRoot)Contents/Resources/SpanDraft.icns" SkipUnchangedFiles="true" />
+    <!-- Refresh the bundle timestamp so macOS notices changed icon resources. -->
+    <Exec Command="/usr/bin/touch &quot;$(_MacOSDevelopmentBundleRoot)&quot;" />
     <ItemGroup>
       <FileWrites Include="$(_MacOSDevelopmentBundleRoot)Contents/Info.plist;$(_MacOSDevelopmentBundleRoot)Contents/Resources/SpanDraft.icns" />
     </ItemGroup>

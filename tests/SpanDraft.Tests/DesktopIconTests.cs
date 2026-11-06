@@ -41,7 +41,6 @@ public sealed class DesktopIconTests
             Assert.DoesNotMatch(@"(?i)\bfont\b|(?:https?:)?//", content);
         }
 
-        static string Repository([CallerFilePath] string source = "") => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(source)!, "../.."));
     }
 
     [Fact]
@@ -152,6 +151,17 @@ public sealed class DesktopIconTests
         Assert.DoesNotContain(assets, uri => uri.AbsolutePath.EndsWith(".svg", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Theory]
+    [InlineData("SpanDraft.ico")]
+    [InlineData("app-icon-1024.png")]
+    public void EmbeddedAppIconsMatchTheCurrentSourceAssets(string name)
+    {
+        using var stream = AssetLoader.Open(new Uri("avares://SpanDraft.Desktop/Assets/AppIcon/" + name));
+        using var embedded = new MemoryStream();
+        stream.CopyTo(embedded);
+        Assert.Equal(File.ReadAllBytes(Path.Combine(Repository(), "src", "SpanDraft.Desktop", "Assets", "AppIcon", name)), embedded.ToArray());
+    }
+
     private static PathIcon Icon(string key, int size = 16)
     {
         var icon = new PathIcon { Data = Resource<Geometry>("FluentIcon." + key), Classes = { "fluentIcon" } };
@@ -188,6 +198,8 @@ public sealed class DesktopIconTests
         }
         host?.Close();
     }
+
+    private static string Repository([CallerFilePath] string source = "") => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(source)!, "../.."));
 
     private static string Slug(string name, char separator) => string.Concat(name.Select((c, i) =>
         char.IsUpper(c) && i != 0 ? separator + char.ToLowerInvariant(c).ToString() : char.ToLowerInvariant(c).ToString()));
