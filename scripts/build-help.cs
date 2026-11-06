@@ -16,6 +16,20 @@ string[] shared = ["koordinaten", "querschnitt-achsen", "lager-einspannung", "la
     "punktkraft-vorzeichen", "punktmoment-vorzeichen", "streckenlast-vorzeichen"];
 string[] localized = ["beispiel-lagerung", "beispiel-belastung", "diagramm-durchbiegung", "diagramm-querkraft", "diagramm-biegemoment"];
 string[] names = [.. shared, .. localized];
+(string De, string En)[] pagePairs =
+[
+    ("index.md", "index.md"),
+    ("erste-schritte/ueberblick.md", "getting-started/overview.md"),
+    ("erste-schritte/erste-berechnung.md", "getting-started/first-calculation.md"),
+    ("modell/werkstoff-querschnitt.md", "model/material-cross-section.md"),
+    ("modell/lager.md", "model/supports.md"),
+    ("modell/lasten.md", "model/loads.md"),
+    ("modell/koordinaten-einheiten.md", "model/coordinates-units.md"),
+    ("ergebnisse/diagramme-reaktionen.md", "results/diagrams-reactions.md"),
+    ("ergebnisse/spannung-sicherheit.md", "results/stress-safety.md"),
+    ("hintergrund/modellannahmen.md", "background/model-assumptions.md"),
+    ("hintergrund/probleme.md", "background/troubleshooting.md")
+];
 try
 {
     string zensical = ResolveZensical(help);
@@ -33,8 +47,27 @@ try
         string output = Path.Combine(site, language);
         string[] pages = Directory.GetFiles(source, "*.md", SearchOption.AllDirectories);
         if (pages.Length != 11) throw new InvalidOperationException($"Expected eleven {language} pages, found {pages.Length}.");
+        var pairedPages = pagePairs.Select(pair => language == "de" ? pair.De : pair.En).ToHashSet(StringComparer.Ordinal);
+        if (pairedPages.Count != pagePairs.Length || !pairedPages.SetEquals(pages.Select(page => Path.GetRelativePath(source, page).Replace('\\', '/'))))
+            throw new InvalidOperationException($"Language switch page pairs do not cover the {language} manual exactly once.");
         foreach (string page in pages) ValidateMath(File.ReadAllText(page), page);
         CopyTree(source, staged);
+        foreach (var pair in pagePairs)
+        {
+            string stagedPage = Path.Combine(staged, language == "de" ? pair.De : pair.En);
+            string alternates = $"""
+                ---
+                spandraft_languages:
+                  - name: Deutsch
+                    lang: de
+                    link: ../de/{Path.ChangeExtension(pair.De, ".html")}
+                  - name: English
+                    lang: en
+                    link: ../en/{Path.ChangeExtension(pair.En, ".html")}
+                ---
+                """;
+            File.WriteAllText(stagedPage, alternates + "\n\n" + File.ReadAllText(stagedPage));
+        }
         foreach (string folder in new[] { "js", "stylesheets" }) CopyTree(Path.Combine(help, "shared", folder), Path.Combine(staged, folder));
         foreach (string name in names)
         {
@@ -77,13 +110,37 @@ try
             RequireFile(Path.Combine(output, "js", resource));
     }
     ValidateSite(site, names);
-    Console.WriteLine("Offline help validated: DE/EN, eleven pages each, eighteen shared/localized PNGs, links, MathML and local runtime resources.");
+    foreach (var pair in pagePairs)
+        foreach (string language in new[] { "de", "en" })
+            ValidateLanguageSwitch(Path.Combine(site, language, Path.ChangeExtension(language == "de" ? pair.De : pair.En, ".html")),
+                language, Path.Combine(site, "de", Path.ChangeExtension(pair.De, ".html")), Path.Combine(site, "en", Path.ChangeExtension(pair.En, ".html")));
+    Console.WriteLine("Offline help validated: DE/EN, eleven pages each, eighteen shared/localized PNGs, page-preserving language switches, links, MathML and local runtime resources.");
     return 0;
 }
 catch (Exception error)
 {
     Console.Error.WriteLine($"Help build failed: {error.Message}");
     return 1;
+}
+static void ValidateLanguageSwitch(string file, string language, string germanPage, string englishPage)
+{
+    string content = File.ReadAllText(file);
+    var switchMarkup = Regex.Match(content, "<div\\b[^>]*class=\"[^\"]*\\bspandraft-language-switch\\b[^\"]*\"[^>]*>.*?</div>", RegexOptions.Singleline);
+    if (!switchMarkup.Success) throw new InvalidOperationException($"Missing language switch in {file}");
+    var element = XElement.Parse(switchMarkup.Value);
+    var links = element.Elements("a").ToArray();
+    if (links.Length != 2 || (string?)element.Attribute("role") != "group"
+        || (string?)element.Attribute("aria-label") != (language == "de" ? "Sprache des Handbuchs" : "Manual language"))
+        throw new InvalidOperationException($"Invalid language switch in {file}");
+    foreach (var (targetLanguage, target, label) in new[] { ("de", germanPage, "Deutsch"), ("en", englishPage, "English") })
+    {
+        var link = links.Single(a => (string?)a.Attribute("hreflang") == targetLanguage);
+        string href = (string?)link.Attribute("href") ?? throw new InvalidOperationException($"Missing language link in {file}");
+        if (link.Value.Trim() != label || (string?)link.Attribute("lang") != targetLanguage
+            || (string?)link.Attribute("aria-current") != (language == targetLanguage ? "page" : null)
+            || Path.GetFullPath(Path.Combine(Path.GetDirectoryName(file)!, href)) != Path.GetFullPath(target))
+            throw new InvalidOperationException($"Incorrect {targetLanguage} language link in {file}");
+    }
 }
 static void ValidateSite(string site, string[] names)
 {

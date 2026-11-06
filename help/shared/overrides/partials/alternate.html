@@ -1,0 +1,6 @@
+<div class="md-header__option spandraft-language-switch" role="group" aria-label="{{ 'Sprache des Handbuchs' if config.theme.language == 'de' else 'Manual language' }}">
+  {% for alternate in config.extra.alternate %}
+    {% if not loop.first %}<span aria-hidden="true">|</span>{% endif %}
+    <a href="{{ alternate.link | url }}" lang="{{ alternate.lang }}" hreflang="{{ alternate.lang }}"{% if alternate.lang == config.theme.language %} aria-current="page"{% endif %}>{{ alternate.name }}</a>
+  {% endfor %}
+</div>

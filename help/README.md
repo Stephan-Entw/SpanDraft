@@ -5,6 +5,11 @@ remains the reference structure. Shared styles, scripts and templates live in
 `shared/`; `zensical.toml` is the common build template, with language-specific
 navigation in `nav.de.toml` and `nav.en.toml`.
 
+The header's language links stay on the corresponding page. The explicit page
+pairs in `scripts/build-help.cs` must cover both source trees exactly once; update
+them when adding or moving a page. The build generates and validates the local
+language links and current-language markers without changing the Markdown sources.
+
 Technical PNGs come from SpanDraft's actual Avalonia renderers. Edit them in
 `tools/SpanDraft.HelpAssets`, then regenerate; do not maintain separate drawings.
 `assets/shared/` contains eight illustrations without language-dependent text.
