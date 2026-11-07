@@ -52,7 +52,7 @@ public static class CapturePublication
         {
             var matching = captures.Where(c => c.Profile == batch.Profile.Name && c.Language == batch.Language && c.Scene == scene).ToArray();
             if (matching.Length != 1 || matching[0].File != CaptureFiles.FileName(batch.Profile, scene, batch.Language)
-                || CaptureFiles.PngSize(Path.Combine(staging, batch.Profile.Directory, matching[0].File)) != batch.Profile.Size.Pixels)
+                || CaptureFiles.PngSize(Path.Combine(staging, batch.RelativeDirectory, matching[0].File)) != batch.Profile.Size.Pixels)
                 throw new InvalidDataException("Missing, duplicate or invalid final capture.");
         }
     }
@@ -65,7 +65,10 @@ public static class CapturePublication
         string[] expected = [.. expectedImages, "result.json"];
         string[] actual = Directory.GetFiles(staging, "*", SearchOption.AllDirectories).Select(p => Path.GetRelativePath(staging, p)).ToArray();
         string[] directories = Directory.GetDirectories(staging, "*", SearchOption.AllDirectories).Select(p => Path.GetRelativePath(staging, p)).ToArray();
-        var expectedDirectories = expectedImages.Select(Path.GetDirectoryName).Where(p => !string.IsNullOrEmpty(p)).Distinct(StringComparer.Ordinal);
+        var expectedDirectories = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string image in expectedImages)
+            for (string? parent = Path.GetDirectoryName(image); !string.IsNullOrEmpty(parent); parent = Path.GetDirectoryName(parent))
+                expectedDirectories.Add(parent);
         if (expected.Distinct(StringComparer.OrdinalIgnoreCase).Count() != expected.Length
             || !actual.Order(StringComparer.Ordinal).SequenceEqual(expected.Order(StringComparer.Ordinal))
             || !directories.Order(StringComparer.Ordinal).SequenceEqual(expectedDirectories.Order(StringComparer.Ordinal)))

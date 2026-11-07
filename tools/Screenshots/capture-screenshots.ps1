@@ -23,9 +23,9 @@ try {
     } finally { $env:AVALONIA_TELEMETRY_OPTOUT = $previousTelemetry }
     if ($LASTEXITCODE -ne 0) { throw "Screenshot harness build failed (exit code $LASTEXITCODE)." }
     $buildFinished = [DateTimeOffset]::UtcNow.ToString('O')
-    $target = dotnet msbuild $project -nologo -getProperty:TargetPath -property:Configuration=Release "-property:ArtifactsPath=$buildRoot"
+    $targetPathOutput = dotnet msbuild $project -nologo -getProperty:TargetPath -property:Configuration=Release "-property:ArtifactsPath=$buildRoot"
     if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the newly built harness executable.' }
-    $executable = [IO.Path]::ChangeExtension([IO.Path]::GetFullPath(($target -join "`n").Trim()), '.exe')
+    $executable = [IO.Path]::ChangeExtension([IO.Path]::GetFullPath(($targetPathOutput -join "`n").Trim()), '.exe')
     $arguments = @('run', '--repo', $repoRoot, '--winapp', $winapp.Source,
         '--language', $Language, '--scene', $Scene, '--target', $Target,
         '--scale-percent', $ScalePercent.ToString([Globalization.CultureInfo]::InvariantCulture),

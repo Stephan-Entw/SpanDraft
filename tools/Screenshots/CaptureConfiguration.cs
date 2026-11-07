@@ -14,8 +14,8 @@ public sealed record CaptureSize(int Width, int Height)
 
 public sealed record CaptureProfile(string Name, string Directory, CaptureSize Size, string[] Scenes)
 {
-    public static readonly CaptureProfile Store = new("Store", "store", new(3840, 2160), CaptureFiles.Scenes);
-    public static readonly CaptureProfile PenpotHero = new("PenpotHero", "penpot", new(2400, 1800), ["Project"]);
+    public static readonly CaptureProfile Store = new("Store", "store", new(3312, 1863), CaptureFiles.Scenes);
+    public static readonly CaptureProfile PenpotHero = new("PenpotHero", "penpot", new(2400, 1834), ["Project"]);
 }
 
 public sealed record CaptureBatch(CaptureProfile Profile, string Language, string[] Scenes, int ScalePercent)
@@ -37,7 +37,15 @@ public sealed record CaptureBatch(CaptureProfile Profile, string Language, strin
         }).ToArray();
     }
 
-    public string[] RelativeFiles => Scenes.Select(s => Path.Combine(Profile.Directory, CaptureFiles.FileName(Profile, s, Language))).ToArray();
+    public string RelativeDirectory => Profile.Name == "Store"
+        ? Path.Combine(Profile.Directory, Language switch
+        {
+            "de-DE" => "DE",
+            "en-US" => "EN",
+            _ => throw new ArgumentException("Unknown screenshot culture.")
+        }) : Profile.Directory;
+
+    public string[] RelativeFiles => Scenes.Select(s => Path.Combine(RelativeDirectory, CaptureFiles.FileName(Profile, s, Language))).ToArray();
 }
 
 public static class CaptureScaling
@@ -52,9 +60,9 @@ public static class CaptureScaling
 
 public static class CaptureFiles
 {
-    public const string FixtureHash = "9439FB06C3A36F1B063F4F37DAAD2C1B087A1DDBB3AE3A9DDCE2ED6D20108B8F";
+    public const string FixtureHash = "46EEA4FECFAE14FEAA059F5E3CCD3C6A623191C0FF3E3647754C608B9E046931";
     public static readonly string[] Languages = ["de-DE", "en-US"];
-    public static readonly string[] Scenes = ["Start", "Project", "Section", "Report", "Materials"];
+    public static readonly string[] Scenes = ["Start", "Project", "Section", "Materials", "Report"];
     public static readonly string[] ExampleNames = ["Crane Beam.spandraft", "Cantilever Beam.spandraft", "Simply Supported Beam.spandraft", "Overhang Beam.spandraft", "Fixed-End Beam.spandraft"];
     public static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
@@ -68,7 +76,8 @@ public static class CaptureFiles
         return profile.Name switch
         {
             "PenpotHero" => $"hero-project-{culture}.png",
-            "Store" => $"{index + 1:00}-{scene.ToLowerInvariant()}-{culture}.png",
+            // Capture Start before opening the project, but number it last in the output.
+            "Store" => $"{(index == 0 ? Scenes.Length : index):00}-{scene.ToLowerInvariant()}-{culture}.png",
             _ => throw new ArgumentException("Unknown capture profile.", nameof(profile))
         };
     }
@@ -138,7 +147,7 @@ public sealed record CaptureEvidence(string Profile, string Language, string Sce
     CaptionEvidence Chrome, long Hwnd, int ProcessId, string Executable, DateTimeOffset ProcessStartedUtc,
     DateTimeOffset CapturedUtc);
 
-public sealed record CapturePhase(int ScalePercent, DateTimeOffset StartedUtc, DateTimeOffset? ConfirmedTransitionUtc, DisplaySnapshot Display)
+public sealed record CapturePhase(int ScalePercent, DateTimeOffset StartedUtc, DisplaySnapshot Display)
 {
     public DateTimeOffset? FinishedUtc { get; set; }
     public DisplayDevice[]? DisplaysAfter { get; set; }

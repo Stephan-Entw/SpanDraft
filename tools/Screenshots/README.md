@@ -16,21 +16,28 @@ paths are rejected. From the repository root:
 .\tools\Screenshots\capture-screenshots.ps1
 ```
 
-The defaults are **Store at 250%**, followed by **Penpot at 200%**. Start with an
-active display at 250%. After both Store languages finish and their workers exit,
-the runner pauses. Manually change Windows scaling to 200%, then press Enter in
-the terminal. The runner validates the new native DPI before starting Penpot.
-Type `q` or press Ctrl+C to cancel. The entire selection remains temporary until
-both phases succeed. One display is sufficient; two simultaneously configured
-displays are not required.
+The defaults are **Store at 250%**, followed by **Penpot at 200%**. The runner
+automatically selects an already matching active display, preferring the primary.
+If none matches, it temporarily changes an active display's Windows scaling,
+preferring a secondary display so the primary can remain untouched. One display
+is sufficient: it is automatically switched between phases without a terminal
+pause. Two displays already configured at 250% and 200% need no scaling changes.
 
-The runner never changes Windows scaling, resolution, display activation,
-positions, topology, drivers or guest services, and never restores settings
-at the end. A scale change must become effective within the running Windows
-session. Signing out terminates the run; it cannot resume across sign-out.
+The original scaling of every changed display is restored before publication,
+including after errors or Ctrl+C. Restoration ignores capture cancellation and
+is verified using native DPI. A restoration failure fails the run and publishes
+no PNGs. Force-killing the runner, signing out or shutting down Windows prevents
+cleanup; if that happens, restore Windows scaling manually.
 
-Scaling is deliberately configurable for visual experiments, not a fixed
-production design contract:
+Resolution, display activation, positions, topology, drivers and guest services
+are never changed. Automatic scaling uses the private Windows DisplayConfig DPI
+packets (-3/-4), isolated in `NativeDisplayScaling.cs`; these are undocumented
+and may be unavailable on a Windows/driver combination. Unsupported requests
+fail explicitly instead of substituting another percentage. No registry editing,
+sign-out or display driver installation is used.
+
+The production path uses Store at 250% and Penpot at 200%. Scaling remains
+configurable for visual experiments:
 
 ```powershell
 # Individual Store motif or language:
@@ -40,7 +47,7 @@ production design contract:
 # Penpot alone uses its own requested scale:
 .\tools\Screenshots\capture-screenshots.ps1 -Target Penpot -PenpotScalePercent 200
 
-# Both Project motifs, or both profiles at one common scale without a phase pause:
+# Both Project motifs, or both profiles at one common scale:
 .\tools\Screenshots\capture-screenshots.ps1 -Scene Project
 .\tools\Screenshots\capture-screenshots.ps1 -ScalePercent 200 -PenpotScalePercent 200
 ```
@@ -57,28 +64,43 @@ production design contract:
 For an individual non-Project motif, specify `-Target Store`; unsupported
 combinations fail explicitly. Filters export exactly their selection into a new
 run, without merging earlier results. Free DIP/size overrides are not supported.
-A required phase transition needs an interactive terminal without redirected input.
+Redirected input is supported; no interactive confirmation is needed.
 
 ## Profiles and native validation
 
-| Profile | Complete visible window | Motifs | Languages |
-| --- | --- | --- | --- |
-| Store | **3840 × 2160 px**, PNG | Start, Project, Section, Report, Materials | de-DE, en-US |
-| PenpotHero | **2400 × 1800 px**, PNG | Project | de-DE, en-US |
+| Profile | Complete visible window | Windows scaling | Motifs | Languages |
+| --- | --- | --- | --- | --- |
+| Store | **3312 × 1863 px**, PNG, exactly 16:9 | **250%** | Start, Project, Section, Report, Materials | de-DE, en-US |
+| PenpotHero | **2400 × 1834 px**, PNG | **200%** | Project | de-DE, en-US |
 
 Profiles in `CaptureConfiguration.cs` define actual pixel targets, including the
 native title bar. Scaling determines the effective UI size inside those pixels;
-it never changes the pixel target. Nothing crops, composites, resizes or upscales
-a captured image. Penpot is captured independently, never derived from Store.
+it never changes the pixel target. Nothing crops, composites, resizes, upscales,
+downsamples or otherwise post-processes a captured image. Penpot is captured
+independently, never derived from Store.
+
+The Store resolution is deliberately smaller than 4K: at native 250% it provides
+1324.8 × 745.2 DIP, approximately the logical workspace of 4K at 289.9%.
+The desired look comes solely from the smaller native window at real 250%;
+the runner neither requests 290% Windows DPI nor resamples the screenshot.
+Store requires 240 DPI and Avalonia `RenderScaling = 2.5`; Penpot requires
+192 DPI and `RenderScaling = 2.0` at its unchanged 200% default.
+
+Penpot's native height provides room for all three result diagrams without a
+vertical scrollbar, while retaining the same width and 200% scaling.
+The runner rejects Penpot captures with a remaining vertical scroll range in
+the editor, diagrams or project overview.
 
 Native DPI is measured with short-lived, hidden, per-monitor-aware probe HWNDs.
-There is no whitelist of Windows percentage steps: 240%, 250% and 260% can be
-requested if Windows actually supplies the corresponding DPI. Requested percent
-is converted to the nearest whole DPI (`percent × 96 / 100`). The real application
-HWND must use that DPI on the selected display, and Avalonia RenderScaling must
-match `DPI / 96`. Missing, inactive, wrong or unknown-DPI displays fail with the
-detected values; no automatic correction is attempted. The primary matching
-display is preferred, otherwise an already active matching display is used.
+Automatic changes use Windows' supported discrete steps, including 200% and
+250%, within the selected display's reported range. Custom percentages such as
+240% or 260% can still be captured on an already matching display; they are not
+automatically set. An existing custom scale that differs from the discrete DPI
+offset cannot be changed automatically, since it could not be restored reliably.
+Requested percent is converted to the nearest whole DPI (`percent × 96 / 100`).
+The real application HWND must use that DPI on the selected display, and Avalonia
+RenderScaling must match `DPI / 96`. The runner waits for native DPI after every
+change and fails if Windows does not apply it within the timeout.
 
 The real window minimums are retained. In particular, Penpot at 250% would be
 narrower than MainWindow's 1100-DIP minimum; its separate 200% default avoids
@@ -100,12 +122,12 @@ size, preserving minimum/maximize constraints, and is removed on worker exit.
 Only the worker's own HWND is moved or resized.
 
 Display snapshots are checked before application startup, positioning, each
-capture, phase completion, and final publication after temporary state cleanup.
-Within a phase, the entire snapshot must remain unchanged. Only at the explicit,
-confirmed boundary between different scale groups may DPI change. Identity,
-activation, resolution and position must remain unchanged even at that boundary.
-The manifest records phase snapshots and confirmation times, rather than
-claiming the whole run left scaling unchanged.
+capture, phase completion, and final publication after restoration. Within a
+phase, the entire snapshot must remain unchanged. DPI may change only during
+the runner's automatic transitions and restoration. Identity, activation,
+resolution and position must remain unchanged throughout. The manifest records
+phase snapshots, automatic transitions, and verified restoration of the initial
+display configuration.
 
 ## Historical output and failure behavior
 
@@ -116,16 +138,18 @@ artifacts/screenshots/
 ├── .capture.lock
 └── 2026-11-06_18-22-31.0000000Z/
     ├── store/
-    │   ├── 01-start-de-DE.png
-    │   ├── 02-project-de-DE.png
-    │   ├── 03-section-de-DE.png
-    │   ├── 04-report-de-DE.png
-    │   ├── 05-materials-de-DE.png
-    │   ├── 01-start-en-US.png
-    │   ├── 02-project-en-US.png
-    │   ├── 03-section-en-US.png
-    │   ├── 04-report-en-US.png
-    │   └── 05-materials-en-US.png
+    │   ├── DE/
+    │   │   ├── 01-project-de-DE.png
+    │   │   ├── 02-section-de-DE.png
+    │   │   ├── 03-materials-de-DE.png
+    │   │   ├── 04-report-de-DE.png
+    │   │   └── 05-start-de-DE.png
+    │   └── EN/
+    │       ├── 01-project-en-US.png
+    │       ├── 02-section-en-US.png
+    │       ├── 03-materials-en-US.png
+    │       ├── 04-report-en-US.png
+    │       └── 05-start-en-US.png
     ├── penpot/
     │   ├── hero-project-de-DE.png
     │   └── hero-project-en-US.png
@@ -136,10 +160,17 @@ The runner creates one UTC timestamp for the whole run after acquiring its lock.
 Names use `yyyy-MM-dd_HH-mm-ss.fffffffZ`, sort chronologically, and receive a
 numeric suffix if a name is already occupied. Existing runs are never overwritten.
 `CaptureFiles.FileName` centrally defines Store's `{index}-{scene}-{culture}.png`
-and Penpot's `hero-project-{culture}.png` schema.
+and Penpot's `hero-project-{culture}.png` schema. Store files are grouped under
+`store/DE` and `store/EN`, numbered Project 01, Section 02, Materials 03, Report 04
+and Start 05. The capture sequence still prepares Start before opening the project.
+
+After a successful run, the runner opens the timestamped output directory in
+Explorer. It also prints the absolute directory and `result.json` paths to the
+terminal. If opening Explorer fails, the saved screenshots remain successful
+and the printed path can be opened manually.
 
 The runner stages every requested PNG under its GUID-owned `.runs/` directory.
-Worker state is removed, then fixture preservation, display preservation and the
+Worker state is removed, then fixture preservation, display restoration and the
 complete expected file set are validated. The directory containing just the
 validated PNGs and successful manifest is published with one same-volume rename.
 No final PNGs are exposed while later captures or validations can still fail.
@@ -154,8 +185,9 @@ owned GUID directories and refuses reparse-point traversal. An unsafe cleanup
 failure is reported; such temporary data is never published.
 
 `result.json` records the selection and expected filenames, success/failure,
-run/phase/capture times, manual transition confirmations, before/after display
-snapshots, preservation within phases, fixture SHA-256, profile/language/motif,
+run/phase/capture times, automatic scale transitions, before/after display
+snapshots, preservation within phases, scaling restoration, fixture SHA-256,
+profile/language/motif,
 requested scale and actual native measurements, process provenance, relative
 state-access paths and verified scene state. Diagnostic paths are repo-relative;
 error messages redact checkout and user-profile paths.

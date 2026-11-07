@@ -156,6 +156,15 @@ internal sealed class CaptureApplication(WorkerRequest request, IsolatedFileStor
                 throw new InvalidOperationException("Display configuration changed during the capture run.");
             if (main.Workspace != workspace || main.IsWorkspaceBusy) throw new InvalidOperationException("Unexpected or busy screenshot workspace.");
             if (scene == "Start") AssertStartPage();
+            if (request.Profile.Name == "PenpotHero" && scene == "Project")
+            {
+                var editor = window.GetVisualDescendants().OfType<EditorView>().Single();
+                double overflow = editor.GetVisualDescendants().OfType<ScrollViewer>()
+                    .Where(s => s.Name is "EditorScroll" or "DiagramScroll" or "OverviewScroll")
+                    .Max(s => s.ScrollBarMaximum.Y);
+                if (overflow > 0)
+                    throw new InvalidOperationException($"Penpot Project at {request.Profile.Size.Height} px needs at least {Math.Ceiling(overflow * window.RenderScaling)} additional native pixels of height to avoid scrolling ({request.Language}).");
+            }
             foreach (var text in window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible && t.Text is not null))
                 CaptureFiles.AssertVisibleText(text.Text!, request.RepoRoot);
             var outer = NativeWindows.WindowRect(hwnd); var visible = NativeWindows.DwmRect(hwnd);

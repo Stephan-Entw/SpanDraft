@@ -47,7 +47,7 @@ internal static class Program
         string fixture = Path.Combine(repo, "tools", "Screenshots", "Fixtures", "Crane Beam.spandraft");
         var captures = new List<CaptureEvidence>();
         var phases = new List<CapturePhase>();
-        var transitions = new List<object>();
+        DisplayScalingSession? scaling = null;
         var accessedPaths = new List<string>();
         var sceneStates = new Dictionary<string, object>();
         CaptureBatch[] batches = [];
@@ -72,32 +72,15 @@ internal static class Program
                 if (current.StartTime.ToUniversalTime() <= built.UtcDateTime
                     || !Path.GetFullPath(current.MainModule!.FileName).Equals(executable, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("The screenshot harness was not started from the current build.");
-            // Reject an unsuitable first display before any application state is created.
-            DisplaySnapshot.RequireTarget(before, batches[0].ScalePercent);
             await RunProcess(options["--winapp"], ["--version"], TimeSpan.FromSeconds(20), cancellation.Token);
+            scaling = new(before, NativeWindows.Displays, NativeDisplayScaling.Read, NativeDisplayScaling.Set);
             IsolatedFileStore.EnsureNoReparsePoints(runRoot);
             Directory.CreateDirectory(runRoot);
             foreach (var group in batches.GroupBy(b => b.ScalePercent))
             {
                 cancellation.Token.ThrowIfCancellationRequested();
-                var devices = NativeWindows.Displays();
-                var previous = phases.LastOrDefault();
-                DateTimeOffset? confirmed = null;
-                if (previous is not null)
-                {
-                    if (!previous.DisplaysAfter!.SequenceEqual(devices))
-                        throw new InvalidOperationException("Display configuration changed outside a confirmed phase boundary.");
-                    await ConfirmScaleChange(group.Key, cancellation.Token);
-                    confirmed = DateTimeOffset.UtcNow;
-                    devices = NativeWindows.Displays();
-                    transitions.Add(new { requestedScalePercent = group.Key, confirmedUtc = confirmed,
-                        displaysBefore = previous.DisplaysAfter, displaysAfter = devices });
-                    DisplaySnapshot.AssertScaleOnlyTransition(previous.DisplaysAfter!, devices);
-                }
-                else if (!before.SequenceEqual(devices))
-                    throw new InvalidOperationException("Display configuration changed during preflight.");
-                var display = DisplaySnapshot.RequireTarget(devices, group.Key);
-                var phase = new CapturePhase(group.Key, DateTimeOffset.UtcNow, confirmed, display);
+                var display = await scaling.SelectAsync(group.Key, cancellation.Token);
+                var phase = new CapturePhase(group.Key, DateTimeOffset.UtcNow, display);
                 phases.Add(phase);
                 Console.WriteLine($"Display {display.Target}: {display.CaptureDisplay.Width} x {display.CaptureDisplay.Height} / {group.Key}% ({display.CaptureDisplay.Dpi} DPI); direct HWND capture.");
                 try
@@ -118,7 +101,7 @@ internal static class Program
                             throw new InvalidDataException("Worker executable differs from the current build.");
                         sceneStates[batch.Profile.Name + "/" + batch.Language] = new { result.StartRecents, result.SelectedBuiltInMaterial };
                         accessedPaths.AddRange(result.AccessedPaths);
-                        string staged = Path.Combine(runRoot, batch.Profile.Directory);
+                        string staged = Path.Combine(runRoot, batch.RelativeDirectory);
                         Directory.CreateDirectory(staged);
                         foreach (var capture in result.Captures)
                         {
@@ -139,9 +122,10 @@ internal static class Program
             CapturePublication.ValidateImages(runRoot, batches, captures.ToArray());
             CaptureFiles.AssertFixture(fixture);
             fixtureUnchanged = true;
+            scaling.AssertExpected();
+            await scaling.RestoreAsync();
             after = NativeWindows.Displays();
-            if (!phases[^1].DisplaysAfter!.SequenceEqual(after))
-                throw new InvalidOperationException("Display configuration changed after the final capture phase.");
+            if (!before.SequenceEqual(after)) throw new InvalidOperationException("Display configuration changed after scaling restoration.");
             cancellation.Token.ThrowIfCancellationRequested();
             CaptureFiles.Write(Path.Combine(runRoot, "result.json"), Manifest(true));
             CapturePublication.Publish(runRoot, destination, batches.SelectMany(b => b.RelativeFiles).ToArray());
@@ -150,6 +134,8 @@ internal static class Program
         catch (Exception error)
         {
             failure = error.Message;
+            try { if (scaling is not null) await scaling.RestoreAsync(); }
+            catch (Exception restoreError) { failure += " " + restoreError.Message; }
             try
             {
                 after = NativeWindows.Displays();
@@ -177,9 +163,21 @@ internal static class Program
             }
         }
         finally { Console.CancelKeyPress -= Cancel; }
-        if (published) Console.WriteLine("Run result: " + Path.GetRelativePath(repo, Path.Combine(destination, "result.json")));
+        if (published)
+        {
+            Console.WriteLine("Output directory: " + destination);
+            Console.WriteLine("Run result: " + Path.Combine(destination, "result.json"));
+        }
         if (failure is not null) { Console.Error.WriteLine(Sanitize(failure, repo)); return 1; }
         Console.WriteLine("Direct HWND capture complete; all selected images published together.");
+        try
+        {
+            using var explorer = Process.Start(new ProcessStartInfo(destination) { UseShellExecute = true });
+        }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine("Screenshots were saved, but the output directory could not be opened: " + Sanitize(error.Message, repo));
+        }
         return 0;
 
         object Manifest(bool success) => new
@@ -187,22 +185,11 @@ internal static class Program
             success, startedUtc = started, finishedUtc = DateTimeOffset.UtcNow, error = Sanitize(failure, repo),
             fixtureUnchanged, fixture = "tools/Screenshots/Fixtures/Crane Beam.spandraft", fixtureSha256 = CaptureFiles.FixtureHash,
             displaysBefore = before, displaysAfter = after,
+            scalingRestored = scaling?.Restored ?? (before is not null && after is not null && before.SequenceEqual(after)),
             displaysUnchangedWithinPhases = phases.Count > 0 && phases.All(p => p.DisplaysUnchanged),
-            phases, transitions, selection = batches, expectedFiles = batches.SelectMany(b => b.RelativeFiles).ToArray(),
+            phases, transitions = scaling?.Transitions.ToArray() ?? [], selection = batches, expectedFiles = batches.SelectMany(b => b.RelativeFiles).ToArray(),
             applicationStateAccesses = accessedPaths.ToArray(), sceneStates, captures = captures.ToArray()
         };
-    }
-
-    internal static async Task ConfirmScaleChange(int scalePercent, CancellationToken cancellationToken)
-    {
-        if (Console.IsInputRedirected)
-            throw new InvalidOperationException("A native scale change requires an interactive terminal. Run from PowerShell without redirected input.");
-        Console.WriteLine($"Capture phase complete. Manually set Windows display scaling to {scalePercent}%. "
-            + "Keep display activation, resolution and position unchanged. Press Enter to validate and continue, or type q to cancel. "
-            + "The runner changes no Windows settings.");
-        string? answer = await Task.Run(Console.ReadLine, cancellationToken).WaitAsync(cancellationToken);
-        if (answer is null || answer.Trim().Equals("q", StringComparison.OrdinalIgnoreCase))
-            throw new OperationCanceledException("The scale transition was canceled; no images were published.");
     }
 
     public static void DeleteRunDirectory(string runsRoot, string runRoot)

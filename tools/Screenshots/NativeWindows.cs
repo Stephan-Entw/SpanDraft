@@ -39,14 +39,14 @@ public sealed record DisplaySnapshot(DisplayDevice[] Devices, string Target)
     public static void AssertScaleOnlyTransition(DisplayDevice[] before, DisplayDevice[] after)
     {
         if (!before.Select(d => d with { Dpi = 0 }).SequenceEqual(after.Select(d => d with { Dpi = 0 })))
-            throw new InvalidOperationException("Only scaling may change at a confirmed phase boundary; display identity, activation, resolution and position must remain unchanged.");
+            throw new InvalidOperationException("Only scaling may change at a phase boundary; display identity, activation, resolution and position must remain unchanged.");
     }
 }
 
 public sealed record CaptionEvidence(bool NativeCaption, bool SystemMenu, bool Minimize, bool Maximize,
     bool Icon, NativeRect CaptionButtons);
 
-/// <summary>Display configuration is read-only; only the harness's own HWND is positioned.</summary>
+/// <summary>Measures displays and positions only the harness's own HWND. Scaling writes live in NativeDisplayScaling.</summary>
 internal static class NativeWindows
 {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

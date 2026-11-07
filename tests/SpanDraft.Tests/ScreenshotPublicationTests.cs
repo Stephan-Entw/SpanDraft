@@ -21,7 +21,39 @@ public sealed class ScreenshotPublicationTests
             CapturePublication.Publish(staging, destination, batches.SelectMany(b => b.RelativeFiles).ToArray());
             Assert.False(Directory.Exists(staging));
             Assert.Equal(12, Directory.GetFiles(destination, "*.png", SearchOption.AllDirectories).Length);
+            var store = Directory.GetFiles(Path.Combine(destination, "store"), "*.png", SearchOption.AllDirectories);
+            Assert.Equal(10, store.Length);
+            Assert.All(store, path => Assert.Equal((3312, 1863), CaptureFiles.PngSize(path)));
+            Assert.Empty(Directory.GetFiles(Path.Combine(destination, "store"), "*.png"));
+            Assert.Equal(5, Directory.GetFiles(Path.Combine(destination, "store", "DE"), "*.png").Length);
+            Assert.Equal(5, Directory.GetFiles(Path.Combine(destination, "store", "EN"), "*.png").Length);
+            var penpot = Directory.GetFiles(Path.Combine(destination, "penpot"), "*.png");
+            Assert.Equal(2, penpot.Length);
+            Assert.All(penpot, path => Assert.Equal((2400, 1834), CaptureFiles.PngSize(path)));
             Assert.True(CaptureFiles.Read<System.Text.Json.JsonElement>(Path.Combine(destination, "result.json")).GetProperty("success").GetBoolean());
+        });
+    }
+
+    [Theory]
+    [InlineData("de-DE", "DE", "EN")]
+    [InlineData("en-US", "EN", "DE")]
+    public void FilteredStorePublicationIncludesOnlyTheSelectedLanguageDirectory(string culture, string folder, string otherFolder)
+    {
+        WithDirectory(root =>
+        {
+            var batches = CaptureBatch.Select("Store", culture, "Project", 250, 200);
+            string staging = Path.Combine(root, "staging"), destination = Path.Combine(root, "published");
+            var captures = StageImages(staging, batches);
+            CapturePublication.ValidateImages(staging, batches, captures);
+            CaptureFiles.Write(Path.Combine(staging, "result.json"), new { success = true });
+            string unexpected = Path.Combine(staging, "store", otherFolder);
+            Directory.CreateDirectory(unexpected);
+            Assert.Throws<InvalidDataException>(() => CapturePublication.Publish(staging, destination, batches[0].RelativeFiles));
+            Assert.False(Directory.Exists(destination));
+            Directory.Delete(unexpected);
+            CapturePublication.Publish(staging, destination, batches[0].RelativeFiles);
+            Assert.Equal(new[] { Path.Combine("store", folder, $"01-project-{culture}.png") },
+                Directory.GetFiles(destination, "*.png", SearchOption.AllDirectories).Select(p => Path.GetRelativePath(destination, p)));
         });
     }
 
@@ -51,8 +83,8 @@ public sealed class ScreenshotPublicationTests
             {
                 case "missing-image": File.Delete(first); break;
                 case "duplicate-evidence": captures[^1] = captures[0]; break;
-                case "wrong-size": WritePngHeader(first, new(2400, 1800)); break;
-                case "extra-image": WritePngHeader(Path.Combine(staging, "stale.png"), new(3840, 2160)); break;
+                case "wrong-size": WritePngHeader(first, new(2400, 1834)); break;
+                case "extra-image": WritePngHeader(Path.Combine(staging, "stale.png"), new(3312, 1863)); break;
                 case "unclean-state": Directory.CreateDirectory(Path.Combine(staging, "State")); File.WriteAllText(Path.Combine(staging, "State", "settings.json"), "{}"); break;
                 case "empty-worker-directory": Directory.CreateDirectory(Path.Combine(staging, Guid.NewGuid().ToString("N"))); break;
             }
@@ -129,7 +161,7 @@ public sealed class ScreenshotPublicationTests
                 "language" => captures[0] with { Language = "en-US" },
                 "dpi" => captures[0] with { WindowDpi = 240 },
                 "render-scaling" => captures[0] with { RenderScaling = 2 },
-                "bounds" => captures[0] with { VisibleBounds = new(0, 0, 3800, 2160) },
+                "bounds" => captures[0] with { VisibleBounds = new(0, 0, 3272, 1863) },
                 "stale-process" => captures[0] with { ProcessStartedUtc = built },
                 _ => captures[0]
             };
@@ -151,7 +183,7 @@ public sealed class ScreenshotPublicationTests
     private static CaptureEvidence[] StageImages(string root, CaptureBatch[] batches) => batches.SelectMany(batch => batch.Scenes.Select(scene =>
     {
         string file = CaptureFiles.FileName(batch.Profile, scene, batch.Language);
-        string path = Path.Combine(root, batch.Profile.Directory, file);
+        string path = Path.Combine(root, batch.RelativeDirectory, file);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         WritePngHeader(path, batch.Profile.Size);
         var (width, height) = batch.Profile.Size.Pixels;

@@ -25,12 +25,16 @@ public sealed class ScreenshotTests
         Assert.Equal(4, batches.Length);
         Assert.Equal(new[] { "Store", "Store", "PenpotHero", "PenpotHero" }, batches.Select(b => b.Profile.Name));
         Assert.Equal(new[] { "de-DE", "en-US", "de-DE", "en-US" }, batches.Select(b => b.Language));
-        Assert.Equal(new[] { "Start", "Project", "Section", "Report", "Materials" }, batches[0].Scenes);
+        Assert.Equal(new[] { "Start", "Project", "Section", "Materials", "Report" }, batches[0].Scenes);
         Assert.Equal(batches[0].Scenes, batches[1].Scenes);
         Assert.Equal(new[] { "Project" }, batches[2].Scenes);
         Assert.Equal(batches[2].Scenes, batches[3].Scenes);
-        Assert.Equal((3840, 2160), batches[0].Profile.Size.Pixels);
-        Assert.Equal((2400, 1800), batches[2].Profile.Size.Pixels);
+        Assert.All(batches[..2], b => Assert.Equal((3312, 1863), b.Profile.Size.Pixels));
+        Assert.Equal(16 * batches[0].Profile.Size.Height, 9 * batches[0].Profile.Size.Width);
+        Assert.Equal((1324.8, 745.2), (batches[0].Profile.Size.Width / 2.5, batches[0].Profile.Size.Height / 2.5));
+        Assert.Equal((2400, 1834), batches[2].Profile.Size.Pixels);
+        Assert.Equal(10, batches[..2].SelectMany(b => b.RelativeFiles).Count());
+        Assert.Equal(2, batches[2..].SelectMany(b => b.RelativeFiles).Count());
         Assert.Equal(12, batches.SelectMany(b => b.RelativeFiles).Distinct().Count());
         Assert.Equal(new[] { 250, 200 }, batches.GroupBy(b => b.ScalePercent).Select(g => g.Key));
         Assert.Single(CaptureBatch.Select("All", "All", "All", 200, 200).GroupBy(b => b.ScalePercent));
@@ -48,7 +52,7 @@ public sealed class ScreenshotTests
         var copy = System.Text.Json.JsonSerializer.Deserialize<WorkerRequest>(
             System.Text.Json.JsonSerializer.Serialize(request, CaptureFiles.Json), CaptureFiles.Json)!;
         Assert.Equal(expected, CaptureFiles.FileName(copy.Profile, "Project", culture));
-        Assert.Equal((2400, 1800), copy.Profile.Size.Pixels);
+        Assert.Equal((2400, 1834), copy.Profile.Size.Pixels);
         Assert.Equal(200, copy.ScalePercent);
         Assert.Equal(request.Fixture, copy.Fixture);
         Assert.Throws<ArgumentException>(() => CaptureFiles.FileName(copy.Profile, "Section", culture));
@@ -67,7 +71,7 @@ public sealed class ScreenshotTests
     public void DevelopmentFiltersSelectOnlyTheRequestedImages()
     {
         var batch = Assert.Single(CaptureBatch.Select("Store", "en-US", "Section", 260, 200));
-        Assert.Equal(new[] { Path.Combine("store", "03-section-en-US.png") }, batch.RelativeFiles);
+        Assert.Equal(new[] { Path.Combine("store", "EN", "02-section-en-US.png") }, batch.RelativeFiles);
         Assert.Equal(260, batch.ScalePercent);
         Assert.Equal(4, CaptureBatch.Select("All", "All", "Project", 250, 200).SelectMany(b => b.RelativeFiles).Count());
         Assert.Throws<ArgumentException>(() => CaptureBatch.Select("Store", "../en-US", "All", 250, 200));
@@ -86,8 +90,8 @@ public sealed class ScreenshotTests
         Assert.False(CaptureScaling.Matches(dpi, dpi / 96d + .01, scale));
         Assert.False(CaptureScaling.Matches(dpi, double.NaN, scale));
         var batch = Assert.Single(CaptureBatch.Select("Store", "de-DE", "Project", scale, scale));
-        Assert.Equal((3840, 2160), batch.Profile.Size.Pixels);
-        Assert.Equal((2400, 1800), Assert.Single(CaptureBatch.Select("Penpot", "de-DE", "Project", scale, scale)).Profile.Size.Pixels);
+        Assert.Equal((3312, 1863), batch.Profile.Size.Pixels);
+        Assert.Equal((2400, 1834), Assert.Single(CaptureBatch.Select("Penpot", "de-DE", "Project", scale, scale)).Profile.Size.Pixels);
         var display = new DisplayDevice("primary", "display", "PCI", 5, 2940, 1846, 0, 0, dpi);
         Assert.Equal(display, DisplaySnapshot.RequireTarget([display], scale).CaptureDisplay);
     }
@@ -103,7 +107,7 @@ public sealed class ScreenshotTests
         var display = new DisplayDevice("primary", "display", "PCI", 5, 2940, 1846, 0, 0, 240);
         var changedScale = display with { Dpi = 192 };
         DisplaySnapshot.AssertScaleOnlyTransition([display], [changedScale]);
-        var phase = new CapturePhase(250, DateTimeOffset.UtcNow, null, new([display], display.Name));
+        var phase = new CapturePhase(250, DateTimeOffset.UtcNow, new([display], display.Name));
         Assert.False(phase.DisplaysUnchanged);
         phase.DisplaysAfter = [display]; Assert.True(phase.DisplaysUnchanged);
         phase.DisplaysAfter = [changedScale]; Assert.False(phase.DisplaysUnchanged);
@@ -124,16 +128,16 @@ public sealed class ScreenshotTests
     }
 
     [Theory]
-    [InlineData("Start", "de-DE", "01-start-de-DE.png")]
-    [InlineData("Project", "de-DE", "02-project-de-DE.png")]
-    [InlineData("Section", "de-DE", "03-section-de-DE.png")]
+    [InlineData("Start", "de-DE", "05-start-de-DE.png")]
+    [InlineData("Project", "de-DE", "01-project-de-DE.png")]
+    [InlineData("Section", "de-DE", "02-section-de-DE.png")]
     [InlineData("Report", "de-DE", "04-report-de-DE.png")]
-    [InlineData("Materials", "de-DE", "05-materials-de-DE.png")]
-    [InlineData("Start", "en-US", "01-start-en-US.png")]
-    [InlineData("Project", "en-US", "02-project-en-US.png")]
-    [InlineData("Section", "en-US", "03-section-en-US.png")]
+    [InlineData("Materials", "de-DE", "03-materials-de-DE.png")]
+    [InlineData("Start", "en-US", "05-start-en-US.png")]
+    [InlineData("Project", "en-US", "01-project-en-US.png")]
+    [InlineData("Section", "en-US", "02-section-en-US.png")]
     [InlineData("Report", "en-US", "04-report-en-US.png")]
-    [InlineData("Materials", "en-US", "05-materials-en-US.png")]
+    [InlineData("Materials", "en-US", "03-materials-en-US.png")]
     public void StoreCaptureNamesIdentifyMotifAndCulture(string scene, string culture, string expected)
     {
         string name = CaptureFiles.FileName(CaptureProfile.Store, scene, culture);
@@ -210,8 +214,8 @@ public sealed class ScreenshotTests
     {
         var outer = new NativeRect(200, 70, 1200, 870);
         var visible = new NativeRect(200 + left, 70 + top, 1200 - right, 870 - bottom);
-        Assert.Equal((3840 + left + right, 2160 + top + bottom), WindowSizing.OuterSize(new(3840, 2160), outer, visible));
-        if (outer != visible) Assert.Throws<ArgumentException>(() => WindowSizing.OuterSize(new(3840, 2160), visible, outer));
+        Assert.Equal((3312 + left + right, 1863 + top + bottom), WindowSizing.OuterSize(new(3312, 1863), outer, visible));
+        if (outer != visible) Assert.Throws<ArgumentException>(() => WindowSizing.OuterSize(new(3312, 1863), visible, outer));
     }
 
     [Theory]
@@ -220,7 +224,7 @@ public sealed class ScreenshotTests
     {
         var primary = new DisplayDevice("primary", "display", "PCI", 5, width, height, 0, 0, 240);
         Assert.Equal(primary, DisplaySnapshot.RequireTarget([primary], 250).CaptureDisplay);
-        Assert.Equal((3840, 2160), CaptureProfile.Store.Size.Pixels);
+        Assert.Equal((3312, 1863), CaptureProfile.Store.Size.Pixels);
     }
 
     [Theory]
@@ -247,9 +251,9 @@ public sealed class ScreenshotTests
     }
 
     [Theory]
-    [InlineData(2940, 1846, 3862, 2171)]
+    [InlineData(2940, 1846, 3334, 1874)]
     [InlineData(4096, 2300, 4096, 2300)]
-    [InlineData(1920, 1080, 3862, 2171)]
+    [InlineData(1920, 1080, 3334, 1874)]
     public void WindowTrackSizeAllowsCompleteOffscreenWindowAndPreservesOtherNativeLimits(
         int originalWidth, int originalHeight, int expectedWidth, int expectedHeight)
     {
