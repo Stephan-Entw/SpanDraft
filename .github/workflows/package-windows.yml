@@ -20,12 +20,12 @@ jobs:
         shell: pwsh
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 2
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - name: Validate release candidate
@@ -53,7 +53,7 @@ jobs:
               throw "RELEASE_NOTES.md must contain the exact heading ## $version."
           }
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Install help generator
@@ -61,7 +61,7 @@ jobs:
       - name: Package Windows installer
         run: pwsh ./scripts/package-windows.ps1
       - name: Upload installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SpanDraft-win-x64-setup
           path: artifacts/windows/installer/SpanDraft-*-win-x64-setup.exe
