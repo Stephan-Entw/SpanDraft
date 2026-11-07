@@ -1,5 +1,17 @@
 # Release notes
 
+## 1.1.0
+
+- Add optional beam self-weight to the model, editor and calculation reports.
+- Add a pinnable result probe to inspect deflection, rotation, shear force and bending moment at a position along the beam.
+- Make load editing more compact and add buttons to reverse load signs.
+- Refine the desktop interface, unify typography across the application and reports, and add hatching to result diagrams.
+- Add an English offline user manual and switch between languages without leaving the current topic.
+- Add German and English privacy notices accessible from the application.
+- Make the project author optional; the calculation title remains required for new projects.
+
+**Project compatibility:** SpanDraft 1.1.0 can open projects from earlier versions. Saving a project writes it in format V4, which SpanDraft 1.0.0 cannot open.
+
 ## 1.0.0
 
 SpanDraft 1.0.0 is the first stable release.
