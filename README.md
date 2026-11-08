@@ -91,6 +91,20 @@ dotnet run --project src/SpanDraft.Desktop
 GitHub Actions runs the product, independent validation and [offline help](help/README.md)
 gates on pushes to all branches and pull requests targeting `main`.
 
+The solution test command runs every Product, Desktop, Rendering and Tooling module.
+Each module can also be run separately after building the solution:
+
+```sh
+dotnet test --project tests/SpanDraft.Tests --no-build --no-restore
+dotnet test --project tests/SpanDraft.Desktop.Tests --no-build --no-restore
+dotnet test --project tests/SpanDraft.Rendering.Tests --no-build --no-restore
+dotnet test --project tests/SpanDraft.Tooling.Tests --no-build --no-restore
+```
+
+Follow [TESTING.md](docs/TESTING.md) when choosing a test level. Desktop and
+Rendering execute serially within their separate processes. Independent numerical
+validation remains in its own solution and CI job.
+
 On macOS, Desktop builds also create a development `SpanDraft.app` bundle inside
 the corresponding build output. It uses the locally installed .NET runtime and
 is intended for development only.
@@ -124,7 +138,10 @@ The application is split into small layers with explicit responsibilities:
 | `SpanDraft.Analysis` | application-facing analysis orchestration |
 | `SpanDraft.Desktop` | Avalonia desktop application |
 | `SpanDraft.Reporting` | frozen A4 report composition for preview, PDF export and Windows printing |
-| `SpanDraft.Tests` | product and regression tests |
+| `SpanDraft.Tests` | numerical, state, workflow and persistence tests |
+| `SpanDraft.Desktop.Tests` | Avalonia control, binding, layout and input tests |
+| `SpanDraft.Rendering.Tests` | font, geometry, report and rendered-output tests |
+| `SpanDraft.Tooling.Tests` | screenshot, generated-resource and Store tooling tests |
 
 Core is independent of UI, numerical libraries, persistence and reporting. Desktop consumes the analysis
 API rather than implementing mechanical formulas itself.

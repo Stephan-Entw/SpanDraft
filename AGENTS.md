@@ -32,3 +32,13 @@
   Use types such as `feat:`, `fix:`, `docs:`, `test:`, `refactor:` or `chore:`;
   write the description in English.
   Example: `feat: add beam domain model with SI units and validation`.
+
+## Testing
+
+- Follow `docs/TESTING.md`; test each contract on the cheapest reliable level.
+- Keep exhaustive numerical and state matrices on Product level; use representative
+  cases for Desktop and Rendering where the input dimensions do not interact.
+- Do not weaken analytical or independent numerical validation to improve runtime.
+- Tests sharing global Avalonia or rendering state must remain isolated.
+- Identify the framework-specific behavior before adding Desktop or Rendering tests.
+- Move or replace meaningful assertions when optimizing tests; do not simply delete them.
