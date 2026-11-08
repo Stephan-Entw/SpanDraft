@@ -32,6 +32,8 @@ internal static class MaterialLibraryMapping
     {
         Material = new()
         {
+            Note = entry.Note is { } note ? new() { Default = note.DefaultText,
+                Translations = note.Translations.Count == 0 ? null : note.Translations.ToDictionary() } : null,
             Name = entry.Name,
             YoungsModulus = entry.YoungsModulus.Pascals,
             YieldStrength = entry.YieldStrength.Pascals,
@@ -53,6 +55,7 @@ internal static class MaterialLibraryMapping
             Pressure.FromPascals(Number(m.YieldStrength, "yieldStrength")), m.StrengthType,
             m.Density is { } rho ? MassDensity.FromKilogramsPerCubicMeter(Number(rho, "density")) : null,
             m.PoissonRatio is { } nu ? PoissonRatio.FromValue(Number(nu, "poissonRatio")) : null,
-            MaterialCategoryWire.Read(entry.Category), entry.MaterialNumber, entry.OtherStandards);
+            MaterialCategoryWire.Read(entry.Category), entry.MaterialNumber, entry.OtherStandards,
+            m.Note is { } note ? new MaterialNote(Required(note.Default, "note.default"), note.Translations) : null);
     }
 }

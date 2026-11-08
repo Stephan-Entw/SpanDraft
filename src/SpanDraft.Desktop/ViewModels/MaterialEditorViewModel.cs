@@ -1,3 +1,4 @@
+using System.Globalization;
 using SpanDraft.Core.Materials;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Presentation;
@@ -8,7 +9,9 @@ namespace SpanDraft.Desktop.ViewModels;
 
 public sealed class MaterialEditorViewModel : SetupStepViewModel
 {
-    private string _name, _number, _standards;
+    private string _name, _number, _standards, _noteText;
+    private readonly MaterialNote? _originalNote;
+    private readonly string _originalNoteText;
     private SetupChoice<MaterialCategory>? _category;
     private SetupChoice<MaterialStrengthType>? _strengthType;
     private string? _error, _saveError;
@@ -21,6 +24,8 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
         Func<Material, Task<string?>>? confirm = null, bool showNameConflict = false) : base(setup)
     {
         Mode = mode;
+        _originalNote = material?.Note;
+        _noteText = _originalNoteText = MaterialNoteDisplay.Resolve(_originalNote, CultureInfo.CurrentUICulture) ?? "";
         _confirm = confirm ?? (_ => Task.FromResult<string?>(null));
         _originalName = IsLibraryEdit ? material?.Name : null;
         _name = material?.Name ?? "";
@@ -53,6 +58,7 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
     public new bool IsBusy => _confirming || base.IsBusy;
     public string Title { get; }
     public string Name { get => _name; set { if (!IsBusy && Set(ref _name, value)) Validate(); } }
+    public string NoteText { get => _noteText; set { if (!IsBusy && Set(ref _noteText, value)) Validate(); } }
     public string MaterialNumber { get => _number; set { if (!IsBusy && Set(ref _number, value)) Validate(); } }
     public string OtherStandards { get => _standards; set { if (!IsBusy && Set(ref _standards, value)) Validate(); } }
     public IReadOnlyList<SetupChoice<MaterialCategory>> Categories { get; }
@@ -117,7 +123,9 @@ public sealed class MaterialEditorViewModel : SetupStepViewModel
                 {
                     Draft = new Material(Name.Trim(), Pressure.FromPascals(e!.Value), Pressure.FromPascals(strength!.Value), StrengthType!.Value,
                         rho is { } density ? MassDensity.FromKilogramsPerCubicMeter(density) : null, poisson,
-                        Category!.Value, MaterialNumber, OtherStandards.Split(';'));
+                        Category!.Value, MaterialNumber, OtherStandards.Split(';'),
+                        IsProjectDraft && NoteText.Trim() == _originalNoteText ? _originalNote
+                            : string.IsNullOrWhiteSpace(NoteText) ? null : new MaterialNote(NoteText));
                 }
                 catch (ArgumentException) { _error = Strings.InvalidMaterialInputs; }
             }

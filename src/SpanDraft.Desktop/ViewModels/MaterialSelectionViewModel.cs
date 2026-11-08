@@ -28,6 +28,8 @@ public sealed class MaterialSelectionItem(Material material, MaterialSelectionKi
     public string? ProjectSuffix => IsProject ? Strings.MaterialProjectSuffix : null;
     public string Name => Material.Name;
     public string DisplayName => MaterialDisplay.Format(Material);
+    public string? Note => MaterialNoteDisplay.Resolve(Material.Note, CultureInfo.CurrentUICulture);
+    public bool HasNote => Material.Note is not null;
     public string? MaterialNumber => Material.MaterialNumber;
     public bool HasMaterialNumber => MaterialNumber is not null;
     public bool HasCategory => true;
@@ -49,7 +51,7 @@ public sealed class MaterialSelectionItem(Material material, MaterialSelectionKi
     public string? Density => Material.Density is { } rho ? QuantityFormatter.FormatNumber(rho.KilogramsPerCubicMeter, QuantityKind.Density, Presentation) : null;
     internal void Refresh()
     {
-        foreach (string name in new[] { nameof(YoungsModulus), nameof(StrengthValue), nameof(StrengthSummaryText), nameof(StrengthSummary), nameof(Density), nameof(PoissonRatio), nameof(AccessibleName), nameof(YoungsModulusUnit), nameof(StrengthUnit), nameof(DensityUnit) }) Notify(name);
+        foreach (string name in new[] { nameof(Note), nameof(YoungsModulus), nameof(StrengthValue), nameof(StrengthSummaryText), nameof(StrengthSummary), nameof(Density), nameof(PoissonRatio), nameof(AccessibleName), nameof(YoungsModulusUnit), nameof(StrengthUnit), nameof(DensityUnit) }) Notify(name);
     }
     public string? PoissonRatio => Material.PoissonRatio is { } nu ? QuantityFormatter.FormatNumber(nu.Value, QuantityKind.PoissonRatio, Presentation) : null;
 }
@@ -233,7 +235,8 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
         }
         var material = selected.Material;
         var librarySnapshot = new Material(material.Name.Trim(), material.YoungsModulus, material.YieldStrength, material.StrengthType.Value,
-            material.Density, material.PoissonRatio, material.Category, material.MaterialNumber, material.OtherStandards);
+            material.Density, material.PoissonRatio, material.Category, material.MaterialNumber, material.OtherStandards,
+            MaterialNoteDisplay.Resolve(material.Note, CultureInfo.CurrentUICulture) is { } note ? new MaterialNote(note) : null);
         bool rename = false;
         _error = null;
         _actionBusy = true; NotifyMode();

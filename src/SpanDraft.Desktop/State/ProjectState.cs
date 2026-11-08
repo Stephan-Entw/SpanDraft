@@ -19,7 +19,7 @@ public sealed record ProjectState(EditorDocument Document, EditorPresentationSta
     internal static bool MaterialContentEquals(Material a, Material b) => a.Name == b.Name
         && a.YoungsModulus == b.YoungsModulus && a.YieldStrength == b.YieldStrength && a.StrengthType == b.StrengthType
         && a.Density == b.Density && a.PoissonRatio == b.PoissonRatio
-        && a.Category == b.Category && a.MaterialNumber == b.MaterialNumber && a.OtherStandards.SequenceEqual(b.OtherStandards);
+        && object.Equals(a.Note, b.Note) && a.Category == b.Category && a.MaterialNumber == b.MaterialNumber && a.OtherStandards.SequenceEqual(b.OtherStandards);
 
     internal static bool SectionContentEquals(ISectionDefinition a, ISectionDefinition b)
     {

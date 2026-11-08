@@ -49,6 +49,16 @@ zweite Designation-Property und kein zusätzliches Laufzeitmodell für Metadaten
 Werkstoffnummern sind Strings, keine Zahlen oder Schlüssel. Andere Normen sind
 alternative Bezeichnungen, beispielsweise `AISI 304`, ohne spezielles AISI-Feld.
 
+Optionale Werkstoffhinweise gehören einschließlich aller Übersetzungen zum
+vollständigen Snapshot und zum Dublettenvergleich. Ihre Domainregeln stehen in
+[DOMAIN.md](DOMAIN.md). Direkte Übernahmen ins Projekt bewahren alle Sprachen.
+Beim Kopieren oder Speichern nach „Meine Werkstoffe“ wird dagegen ausschließlich
+der aktuell sichtbare Text als einsprachiger Defaulttext übernommen. Der
+Projekt-Snapshot bleibt dabei unverändert. Im Projekteditor bleiben vorhandene
+Übersetzungen erhalten, solange der getrimmte Endtext dem beim Öffnen sichtbaren
+Text entspricht. Eine tatsächliche Textänderung erzeugt einsprachigen
+Benutzerinhalt, Leeren entfernt den Hinweis vollständig.
+
 Eine Dublette besitzt in sämtlichen Materialfeldern dieselben normalisierten
 Werte. Namen werden dafür getrimmt; Großschreibung, Normreihenfolge und exakte
 SI-Werte bleiben relevant. Dieser Vergleich ist vom lokalen, ohne Beachtung der
@@ -95,6 +105,14 @@ ist gültig. Die Library-Wire-DTOs sind unabhängig von Projekt-DTOs und deren
 Versionen. Benutzer-Materialien und eingebauter Katalog teilen nur ihr
 Library-internes Materialmapping. DTOs und Codec-Tests definieren die Felder.
 Core-Objekte werden nicht direkt serialisiert.
+
+`material.note` ergänzt Katalog und Benutzerbibliothek kompatibel ohne
+Versionswechsel. Die Library-eigenen DTOs speichern einen verpflichtenden
+nichtleeren `default` und optional `translations` mit generischen Sprachschlüsseln.
+Fehlende Hinweise und leere Übersetzungssammlungen werden beim Schreiben
+weggelassen. Historische Dateien ohne Hinweis laden unverändert; ungültige
+vorhandene Hinweise sind Formatfehler. Sprachauflösung erfolgt ausschließlich
+bei der Präsentation, nicht beim Codec-Roundtrip.
 
 `strengthType` erweitert den Materialvertrag kompatibel um `re` oder `rp02`,
 ohne Versionswechsel. Im eingebetteten Katalog ist der Typ für jeden Eintrag

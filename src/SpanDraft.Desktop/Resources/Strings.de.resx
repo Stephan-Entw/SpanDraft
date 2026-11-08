@@ -380,4 +380,5 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="HideSelfWeight" xml:space="preserve"><value>Ausblenden</value></data>
   <data name="ShowSelfWeight" xml:space="preserve"><value>Einblenden</value></data>
   <data name="DisableSelfWeight" xml:space="preserve"><value>Eigengewicht deaktivieren</value></data>
+  <data name="MaterialNote" xml:space="preserve"><value>Hinweis</value></data>
 </root>

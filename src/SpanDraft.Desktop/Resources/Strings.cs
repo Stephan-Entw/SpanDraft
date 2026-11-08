@@ -359,6 +359,7 @@ public static class Strings
     public static string MaterialStrengthUnspecified => Get(nameof(MaterialStrengthUnspecified));
     public static string MaterialStrengthRequired => Get(nameof(MaterialStrengthRequired));
     public static string MaterialStrengthResolve => Get(nameof(MaterialStrengthResolve));
+    public static string MaterialNote => Get(nameof(MaterialNote));
     public static string MaterialDensity => Get(nameof(MaterialDensity));
     public static string MaterialPoissonRatio => Get(nameof(MaterialPoissonRatio));
     public static string MaterialCurrentEntry => Get(nameof(MaterialCurrentEntry));

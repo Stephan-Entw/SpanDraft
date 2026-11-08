@@ -25,10 +25,17 @@ internal sealed record MaterialLibraryEntryV1
 
 internal sealed record LibraryMaterialV1
 {
+    public LibraryMaterialNoteV1? Note { get; init; }
     public required string Name { get; init; }
     public required double YoungsModulus { get; init; }
     public required double YieldStrength { get; init; }
     public string? StrengthType { get; init; }
     public double? Density { get; init; }
     public double? PoissonRatio { get; init; }
+}
+
+internal sealed record LibraryMaterialNoteV1
+{
+    public required string Default { get; init; }
+    public Dictionary<string, string>? Translations { get; init; }
 }

@@ -30,7 +30,7 @@ internal static class LibraryTestSupport
     {
         ArgumentNullException.ThrowIfNull(material);
         return SpanDraft.Desktop.Persistence.MaterialStrengthWire.Read(material.Name, material.YoungsModulus, material.YieldStrength,
-            SpanDraft.Desktop.Persistence.MaterialStrengthWire.Write(material.StrengthType), material.Density, material.PoissonRatio, category, number, standards);
+            SpanDraft.Desktop.Persistence.MaterialStrengthWire.Write(material.StrengthType), material.Density, material.PoissonRatio, category, number, standards, material.Note);
     }
 
     internal static byte[] Bytes(JsonNode json) => Encoding.UTF8.GetBytes(json.ToJsonString());

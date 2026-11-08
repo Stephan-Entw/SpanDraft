@@ -5,6 +5,12 @@
     {
       "material": {
         "name": "S235JR",
+        "note": {
+          "default": "Reference value for t ≤ 16 mm; lower at greater thickness.",
+          "translations": {
+            "de": "Referenzwert für t ≤ 16 mm; bei größerer Dicke geringer."
+          }
+        },
         "youngsModulus": 210000000000,
         "yieldStrength": 235000000,
         "strengthType": "re",
@@ -17,6 +23,12 @@
     {
       "material": {
         "name": "S355JR",
+        "note": {
+          "default": "Reference value for t ≤ 16 mm; lower at greater thickness.",
+          "translations": {
+            "de": "Referenzwert für t ≤ 16 mm; bei größerer Dicke geringer."
+          }
+        },
         "youngsModulus": 210000000000,
         "yieldStrength": 355000000,
         "strengthType": "re",
@@ -29,6 +41,12 @@
     {
       "material": {
         "name": "X5CrNi18-10",
+        "note": {
+          "default": "Reference value for long products at 20 °C.",
+          "translations": {
+            "de": "Referenzwert für Langprodukte bei 20 °C."
+          }
+        },
         "youngsModulus": 200000000000,
         "yieldStrength": 190000000,
         "strengthType": "rp02",
@@ -42,6 +60,12 @@
     {
       "material": {
         "name": "X2CrNiMo17-12-2",
+        "note": {
+          "default": "Reference value for long products at 20 °C.",
+          "translations": {
+            "de": "Referenzwert für Langprodukte bei 20 °C."
+          }
+        },
         "youngsModulus": 200000000000,
         "yieldStrength": 200000000,
         "strengthType": "rp02",
@@ -55,6 +79,12 @@
     {
       "material": {
         "name": "42CrMo4 +QT",
+        "note": {
+          "default": "Reference value for +QT round bar, Ø 40–100 mm.",
+          "translations": {
+            "de": "Referenzwert für +QT-Rundstahl, Ø 40–100 mm."
+          }
+        },
         "youngsModulus": 210000000000,
         "yieldStrength": 650000000,
         "strengthType": "rp02",
@@ -67,6 +97,12 @@
     {
       "material": {
         "name": "34CrNiMo6 +QT",
+        "note": {
+          "default": "Reference value for +QT round bar, Ø 50–100 mm.",
+          "translations": {
+            "de": "Referenzwert für +QT-Rundstahl, Ø 50–100 mm."
+          }
+        },
         "youngsModulus": 210000000000,
         "yieldStrength": 800000000,
         "strengthType": "rp02",
@@ -79,6 +115,12 @@
     {
       "material": {
         "name": "AlMgSi0,5 T66",
+        "note": {
+          "default": "Reference value for T66 profiles up to 25 mm wall thickness.",
+          "translations": {
+            "de": "Referenzwert für T66-Profile bis 25 mm Wanddicke."
+          }
+        },
         "youngsModulus": 69000000000,
         "yieldStrength": 150000000,
         "strengthType": "rp02",
@@ -92,6 +134,12 @@
     {
       "material": {
         "name": "AlMg3 H22",
+        "note": {
+          "default": "Reference value for H22 sheet and plate up to 40 mm thickness.",
+          "translations": {
+            "de": "Referenzwert für H22-Blech und -Platte bis 40 mm Dicke."
+          }
+        },
         "youngsModulus": 70000000000,
         "yieldStrength": 130000000,
         "strengthType": "rp02",

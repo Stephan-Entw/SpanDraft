@@ -103,6 +103,8 @@ public static class ProjectFileCodec
 
     internal static MaterialV2 MaterialToDto(Material material) => new()
     {
+        Note = material.Note is { } note ? new() { Default = note.DefaultText,
+            Translations = note.Translations.Count == 0 ? null : note.Translations.ToDictionary() } : null,
         Name = material.Name, YoungsModulus = material.YoungsModulus.Pascals,
         YieldStrength = material.YieldStrength.Pascals, StrengthType = MaterialStrengthWire.Write(material.StrengthType),
         Density = material.Density?.KilogramsPerCubicMeter,
@@ -117,7 +119,8 @@ public static class ProjectFileCodec
         material.Density is { } rho ? MassDensity.FromKilogramsPerCubicMeter(Number(rho, "density")) : null,
         material.PoissonRatio is { } nu ? PoissonRatio.FromValue(Number(nu, "poissonRatio")) : null,
         material.Category is null ? MaterialCategory.Other : MaterialCategoryWire.Read(material.Category),
-        material.MaterialNumber, material.OtherStandards);
+        material.MaterialNumber, material.OtherStandards,
+        material.Note is { } note ? new MaterialNote(Required(note.Default, "note.default"), note.Translations) : null);
 
     internal static SectionV2 SectionToDto(ISectionDefinition section) =>
         SectionDefinitionCompatibility.Normalize(section) switch

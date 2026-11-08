@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SpanDraft.Core.Materials;
@@ -24,6 +25,40 @@ namespace SpanDraft.Tests;
 [Collection("Schematic text")]
 public sealed class MaterialWorkflowControlTests
 {
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void NoteDetailsAndMultilineEditorKeepTheCompactLayout(string culture)
+    {
+        using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
+        var (owner, main, selection, view) = Open(new Files(), new Dialogs());
+        try
+        {
+            Assert.False(view.FindControl<StackPanel>("MaterialNoteDetails")!.IsVisible);
+            selection.SelectedEntry = selection.BuiltInEntries.Single(e => e.Name == "S235JR"); Arrange(owner);
+            var details = view.FindControl<StackPanel>("MaterialNoteDetails")!;
+            Assert.True(details.IsVisible);
+            Assert.Equal(Strings.MaterialNote, details.Children.OfType<TextBlock>().First().Text);
+            Assert.Equal(selection.SelectedEntry.Note, view.FindControl<TextBlock>("MaterialNoteText")!.Text);
+            selection.EditSelectedCommand.Execute(null); Dispatcher.UIThread.RunJobs();
+            var modal = Modal(owner); Arrange(modal, modal.Width, 900);
+            var input = modal.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "MaterialNoteInput");
+            var name = modal.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "MaterialNameInput");
+            Assert.True(input.AcceptsReturn); Assert.Equal(TextWrapping.Wrap, input.TextWrapping);
+            Assert.Equal(name.Bounds.Width, input.Bounds.Width, 6);
+            Assert.Equal(name.TranslatePoint(default, modal)!.Value.X, input.TranslatePoint(default, modal)!.Value.X, 6);
+            Assert.Equal(Strings.MaterialNote, AutomationProperties.GetName(input));
+            input.Focus(); input.Text = "First line"; Press(input, Key.Enter); Dispatcher.UIThread.RunJobs();
+            Assert.NotNull(selection.Editor); Assert.Contains('\n', input.Text!);
+            input.Text = "First line\nSecond line"; Dispatcher.UIThread.RunJobs();
+            Assert.Equal("First line\nSecond line", selection.Editor!.NoteText);
+            Assert.Equal(input.Text, selection.Editor.Draft!.Note!.DefaultText);
+            VerifyLayout(modal); VerifyLayout(owner);
+            selection.Editor.CancelCommand.Execute(null); Dispatcher.UIThread.RunJobs();
+            Assert.Empty(main.UserMaterials.All);
+        }
+        finally { owner.Close(); }
+    }
+
     [Theory]
     [InlineData("de-DE")] [InlineData("en-US")]
     public void MaterialInputsAndLibraryHeadersFollowTheCentralUnitsWithoutChangingSiValues(string culture)

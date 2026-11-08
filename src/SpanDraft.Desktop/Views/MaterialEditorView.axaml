@@ -107,6 +107,12 @@
         </Grid>
         <controls:TechnicalTextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Error}" IsVisible="{Binding ShowError}" Classes="validationMessage" TextWrapping="Wrap" />
       </Grid>
+      <Grid ColumnDefinitions="140,12,208">
+        <TextBlock Text="{x:Static resources:Strings.MaterialNote}" Classes="propertyLabel" VerticalAlignment="Top" TextWrapping="Wrap" />
+        <TextBox x:Name="MaterialNoteInput" Grid.Column="2" Text="{Binding NoteText, Mode=TwoWay}" AcceptsReturn="True"
+                 TextWrapping="Wrap" MinHeight="72" MaxHeight="120" VerticalContentAlignment="Top"
+                 AutomationProperties.Name="{x:Static resources:Strings.MaterialNote}" />
+      </Grid>
       <controls:TechnicalTextBlock Text="{Binding Error}" IsVisible="{Binding HasFormError}" Classes="validationMessage" TextWrapping="Wrap" />
     </StackPanel>
   </ScrollViewer>

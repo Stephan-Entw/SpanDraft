@@ -380,4 +380,5 @@ Remove the entry from Recent projects?</value></data>
   <data name="HideSelfWeight" xml:space="preserve"><value>Hide</value></data>
   <data name="ShowSelfWeight" xml:space="preserve"><value>Show</value></data>
   <data name="DisableSelfWeight" xml:space="preserve"><value>Disable self-weight</value></data>
+  <data name="MaterialNote" xml:space="preserve"><value>Note</value></data>
 </root>

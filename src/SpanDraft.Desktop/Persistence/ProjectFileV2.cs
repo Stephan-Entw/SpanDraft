@@ -34,6 +34,7 @@ public sealed record SelfWeightV2
 
 public sealed record MaterialV2
 {
+    public MaterialNoteV2? Note { get; init; }
     public string? Category { get; init; }
     public string? MaterialNumber { get; init; }
     public string[]? OtherStandards { get; init; }
@@ -178,4 +179,10 @@ public sealed record ManualAxisV2
     public required string Designation { get; init; }
     public required double SecondMomentOfArea { get; init; }
     public required double SectionModulus { get; init; }
+}
+
+public sealed record MaterialNoteV2
+{
+    public required string Default { get; init; }
+    public Dictionary<string, string>? Translations { get; init; }
 }

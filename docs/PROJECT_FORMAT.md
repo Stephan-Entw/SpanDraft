@@ -19,6 +19,16 @@ Wiederverwendung; übernommene Daten bleiben vollständig unabhängig.
 
 ## Material, Querschnitt und Biegeachse
 
+Der optionale Materialhinweis wird kompatibel ohne Versionswechsel als
+`note: { "default": "…", "translations": { "de": "…" } }` gespeichert.
+`default` ist bei vorhandenem Hinweis verpflichtend und nichtleer; Übersetzungen
+sind optional. Ohne Hinweis entfällt `note`, ohne Übersetzungen entfällt
+`translations`. Die Schlüsselreihenfolge ist deterministisch. Der vollständige
+Hinweis bleibt auch in Projekt- und Setup-Recovery erhalten. Fehlende historische
+Hinweise bleiben null; sie werden niemals aus dem aktuellen Katalog ergänzt.
+Hinweise verändern Projektinhalt und History, aber keine Berechnung.
+
+
 Material speichert Name, Kategorie, optionale Werkstoffnummer, geordnete andere
 Normbezeichnungen, E und den numerischen Festigkeitskennwert
 (`yieldStrength`) sowie `strengthType` mit den stabilen Stringwerten `re` und

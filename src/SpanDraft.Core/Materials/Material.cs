@@ -7,13 +7,13 @@ public sealed class Material
 {
     public Material(string name, Pressure youngsModulus, Pressure yieldStrength, MaterialStrengthType strengthType,
         MassDensity? density = null, PoissonRatio? poissonRatio = null, MaterialCategory category = MaterialCategory.Other,
-        string? materialNumber = null, IEnumerable<string>? otherStandards = null)
-        : this(name, youngsModulus, yieldStrength, (MaterialStrengthType?)strengthType, density, poissonRatio, category, materialNumber, otherStandards)
+        string? materialNumber = null, IEnumerable<string>? otherStandards = null, MaterialNote? note = null)
+        : this(name, youngsModulus, yieldStrength, (MaterialStrengthType?)strengthType, density, poissonRatio, category, materialNumber, otherStandards, note)
     {
     }
 
     private Material(string name, Pressure youngsModulus, Pressure yieldStrength, MaterialStrengthType? strengthType,
-        MassDensity? density, PoissonRatio? poissonRatio, MaterialCategory category, string? materialNumber, IEnumerable<string>? otherStandards)
+        MassDensity? density, PoissonRatio? poissonRatio, MaterialCategory category, string? materialNumber, IEnumerable<string>? otherStandards, MaterialNote? note)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         DomainGuard.Positive(youngsModulus.Pascals, nameof(youngsModulus));
@@ -23,6 +23,7 @@ public sealed class Material
             throw new ArgumentOutOfRangeException(nameof(strengthType));
         if (!Enum.IsDefined(category)) throw new ArgumentOutOfRangeException(nameof(category));
 
+        Note = note;
         Name = name;
         YoungsModulus = youngsModulus;
         YieldStrength = yieldStrength;
@@ -38,6 +39,7 @@ public sealed class Material
         }).Where(value => value.Length > 0).ToArray());
     }
 
+    public MaterialNote? Note { get; }
     public string Name { get; }
     public Pressure YoungsModulus { get; }
     public Pressure YieldStrength { get; }
@@ -51,6 +53,6 @@ public sealed class Material
 
     internal static Material FromLegacy(string name, Pressure youngsModulus, Pressure yieldStrength,
         MassDensity? density, PoissonRatio? poissonRatio, MaterialCategory category = MaterialCategory.Other,
-        string? materialNumber = null, IEnumerable<string>? otherStandards = null) =>
-        new(name, youngsModulus, yieldStrength, null, density, poissonRatio, category, materialNumber, otherStandards);
+        string? materialNumber = null, IEnumerable<string>? otherStandards = null, MaterialNote? note = null) =>
+        new(name, youngsModulus, yieldStrength, null, density, poissonRatio, category, materialNumber, otherStandards, note);
 }

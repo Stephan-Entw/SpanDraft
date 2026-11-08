@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
 using SpanDraft.Analysis;
@@ -19,6 +20,86 @@ namespace SpanDraft.Tests;
 [Collection("Schematic text")]
 public sealed class MaterialWorkflowRegressionTests
 {
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public async Task NotesPreserveProjectSnapshotsAndFlattenOnlyAtUserBoundaries(string culture)
+    {
+        using var scope = new UiCultureScope(culture);
+        var f = new Fixture(); await f.Load();
+        var selection = f.Select();
+        selection.SelectedEntry = selection.BuiltInEntries.Single(e => e.Name == "S235JR");
+        var builtIn = selection.SelectedEntry.Material;
+        var visible = MaterialNoteDisplay.Resolve(builtIn.Note, CultureInfo.CurrentUICulture)!;
+        selection.UseSelected(); Assert.Same(builtIn.Note, f.Main.Setup.SelectedMaterial!.Note);
+        selection = f.Select(); selection.EditSelectedCommand.Execute(null);
+        var editor = selection.Editor!;
+        Assert.Equal(visible, editor.NoteText);
+        editor.MaterialNumber = "New number";
+        Assert.Same(builtIn.Note, editor.Draft!.Note);
+        editor.NoteText = "Changed";
+        Assert.Equal("Changed", editor.Draft!.Note!.DefaultText); Assert.Empty(editor.Draft.Note.Translations);
+        editor.NoteText = "  " + visible + "  "; Assert.Same(builtIn.Note, editor.Draft!.Note);
+        editor.NoteText = " "; Assert.Null(editor.Draft!.Note);
+        editor.CancelCommand.Execute(null);
+        Assert.Same(builtIn.Note, selection.CurrentEntry!.Material.Note);
+
+        selection.SelectedEntry = selection.BuiltInEntries.Single(e => e.Name == "S235JR");
+        selection.EditSelectedCommand.Execute(null); editor = selection.Editor!;
+        editor.Name = "Own copy";
+        Assert.Equal(visible, editor.Draft!.Note!.DefaultText); Assert.Empty(editor.Draft.Note.Translations);
+        Assert.True(await editor.ConfirmAsync());
+        Assert.Equal(visible, f.Main.UserMaterials.Find("Own copy")!.Note!.DefaultText);
+        Assert.Empty(f.Main.UserMaterials.Find("Own copy")!.Note!.Translations);
+
+        var project = new Material("Project copy", builtIn.YoungsModulus, builtIn.YieldStrength, builtIn.StrengthType!.Value,
+            note: builtIn.Note);
+        f.Main.Setup.ShowOverview(); f.Main.Setup.SelectedMaterial = project; selection = f.Select();
+        Assert.True(await selection.SaveSelectedAsync());
+        var saved = f.Main.UserMaterials.Find("Project copy")!;
+        Assert.Equal(visible, saved.Note!.DefaultText); Assert.Empty(saved.Note.Translations);
+        Assert.Same(builtIn.Note, selection.CurrentEntry!.Material.Note);
+        selection.SearchText = visible; Assert.Empty(selection.FilteredEntries);
+    }
+
+    [Theory]
+    [InlineData(MaterialNameConflictDecision.Cancel)]
+    [InlineData(MaterialNameConflictDecision.Replace)]
+    [InlineData(MaterialNameConflictDecision.Rename)]
+    public async Task ProjectNoteLibraryConflictsKeepTheProjectAndFlattenTheSavedCopy(MaterialNameConflictDecision decision)
+    {
+        using var scope = new UiCultureScope("de-DE");
+        var f = new Fixture(); await f.Load(Entry("Project"));
+        var original = MaterialNoteTests.WithNote(Entry("Project"), new MaterialNote("Default", [new("de", "Sichtbar")]));
+        f.Main.Setup.SelectedMaterial = original;
+        f.Dialogs.MaterialConflict = decision; f.Dialogs.ConfirmMaterialReplace = true;
+        var selection = f.Select();
+        Assert.Equal(decision == MaterialNameConflictDecision.Replace, await selection.SaveSelectedAsync());
+        if (decision == MaterialNameConflictDecision.Rename)
+        {
+            var editor = selection.Editor!; editor.Name = "Renamed copy";
+            Assert.True(await editor.ConfirmAsync());
+        }
+        var saved = f.Main.UserMaterials.Find(decision == MaterialNameConflictDecision.Rename ? "Renamed copy" : "Project")!;
+        if (decision == MaterialNameConflictDecision.Cancel) Assert.Null(saved.Note);
+        else { Assert.Equal("Sichtbar", saved.Note!.DefaultText); Assert.Empty(saved.Note.Translations); }
+        Assert.Same(original, selection.CurrentEntry!.Material);
+    }
+
+    [Fact]
+    public async Task OnlyAnInvisibleTranslationChangesHistoryWithoutReanalysis()
+    {
+        var f = new Fixture(); await f.Load();
+        var material = MaterialNoteTests.WithNote(Entry(), new MaterialNote("Default", [new("fr", "First")]));
+        f.Main.Setup.SelectedMaterial = material; CompleteSetup(f.Main); Assert.True(await f.Main.Setup.ConfirmAsync());
+        var analysis = f.Main.Editor!.Presentation; int count = f.Analyses;
+        var updated = MaterialNoteTests.WithNote(material, new MaterialNote("Default", [new("fr", "Second")]));
+        f.Main.Editor.ApplySetup(f.Main.Editor.Document.Section, f.Main.Editor.Document.BendingAxis, updated);
+        Assert.Same(analysis, f.Main.Editor.Presentation); Assert.Equal(count, f.Analyses);
+        Assert.True(f.Main.Undo()); Assert.Equal(material.Note, f.Main.Editor.Document.Material.Note);
+        Assert.True(f.Main.Redo()); Assert.Equal(updated.Note, f.Main.Editor.Document.Material.Note);
+        Assert.Same(analysis, f.Main.Editor.Presentation); Assert.Equal(count, f.Analyses);
+    }
+
     private sealed class Fixture
     {
         public Files Files { get; } = new();
@@ -283,7 +364,7 @@ public sealed class MaterialWorkflowRegressionTests
     }
 
     [Theory]
-    [InlineData("name")] [InlineData("category")] [InlineData("number")] [InlineData("standards")] [InlineData("E")]
+    [InlineData("name")] [InlineData("category")] [InlineData("number")] [InlineData("standards")] [InlineData("note")] [InlineData("E")]
     [InlineData("strength")] [InlineData("strengthType")] [InlineData("rho")] [InlineData("nu")]
     public async Task DuplicateDetectionIncludesEveryMaterialField(string field)
     {
@@ -294,7 +375,8 @@ public sealed class MaterialWorkflowRegressionTests
             field == "strengthType" ? MaterialStrengthType.Rp02 : MaterialStrengthType.Re,
             field == "rho" ? null : m.Density, field == "nu" ? null : m.PoissonRatio,
             field == "category" ? MaterialCategory.Other : m.Category, field == "number" ? null : m.MaterialNumber,
-            field == "standards" ? m.OtherStandards.Reverse() : m.OtherStandards);
+            field == "standards" ? m.OtherStandards.Reverse() : m.OtherStandards,
+            field == "note" ? new MaterialNote("Workshop value") : null);
         Assert.True(f.Select().ShowSave);
     }
 
@@ -328,7 +410,7 @@ public sealed class MaterialWorkflowRegressionTests
     }
 
     [Theory]
-    [InlineData("name")] [InlineData("category")] [InlineData("number")] [InlineData("standards")]
+    [InlineData("name")] [InlineData("category")] [InlineData("number")] [InlineData("standards")] [InlineData("note")]
     public async Task EachMetadataChangeParticipatesInHistoryAndRecoveryWithoutAnalysis(string field)
     {
         var f = new Fixture(); await f.Load(); f.Main.Setup.SelectedMaterial = Entry(); CompleteSetup(f.Main);
@@ -338,6 +420,7 @@ public sealed class MaterialWorkflowRegressionTests
         if (field == "name") editor.Name = "Renamed project material";
         else if (field == "category") editor.Category = editor.Categories.Single(c => c.Value == MaterialCategory.Other);
         else if (field == "number") editor.MaterialNumber = "New number";
+        else if (field == "note") editor.NoteText = "Workshop value";
         else editor.OtherStandards = "Different standard";
         Assert.True(await editor.ConfirmAsync()); selection.UseSelected(); Assert.True(await f.Main.Setup.ConfirmAsync());
         var changed = f.Main.Session.CurrentRevision.State;

@@ -53,6 +53,18 @@ Die Kategorien sind `StructuralSteel`, `StainlessSteel`, `AlloySteel`,
 entfallen. Die Normliste wird defensiv kopiert und nur lesbar angeboten; fehlend
 bedeutet leer. Die Kategorie bestimmt weder Kennwerttyp noch mechanische Werte.
 
+`Material.Note` ist ein optionaler immutable `MaterialNote` mit verpflichtendem,
+getrimmtem, nichtleerem `DefaultText` und optionalen Übersetzungen unter generischen
+Sprach-/Culture-Tags. Übersetzungstexte und Schlüssel sind ebenfalls getrimmt und
+nichtleer; Schlüssel sind invariant kleingeschrieben, eindeutig ohne Beachtung
+der Großschreibung und deterministisch sortiert. Die Sammlung ist defensiv kopiert
+und nur lesbar. Ein leerer Benutzerhinweis wird als `Note == null` gespeichert.
+Core kennt keine aktuelle Sprache; Desktop löst exakten Culture-Tag, Parent-Cultures
+und schließlich den Defaulttext auf. Die Texte sind Klartext ohne Markup- oder
+Quellenmodell. Defaulttext und alle Übersetzungen gehören zum vollständigen
+Materialinhalt, zu Dirty-State, History und Report, niemals zur mechanischen
+Eingabeäquivalenz oder Berechnung.
+
 `MassDensity` speichert kg/m³ über `FromKilogramsPerCubicMeter` und
 `KilogramsPerCubicMeter`. Ein angegebener Wert muss endlich und streng positiv
 sein; auch der sonst unvermeidliche Null-Standardwert wird im Material

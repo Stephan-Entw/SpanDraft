@@ -65,7 +65,7 @@ public sealed class BuiltInMaterialCatalogTests
             bool hasStandards = expected[3] is not null;
             Assert.Equal(hasStandards ? new[] { "category", "material", "materialNumber", "otherStandards" }
                 : ["category", "material", "materialNumber"], entry.EnumerateObject().Select(p => p.Name).Order());
-            Assert.Equal(new[] { "density", "name", "poissonRatio", "strengthType", "yieldStrength", "youngsModulus" },
+            Assert.Equal(new[] { "density", "name", "note", "poissonRatio", "strengthType", "yieldStrength", "youngsModulus" },
                 material.EnumerateObject().Select(p => p.Name).Order());
             Assert.Equal((string)expected[2], entry.GetProperty("materialNumber").GetString());
             if (hasStandards)

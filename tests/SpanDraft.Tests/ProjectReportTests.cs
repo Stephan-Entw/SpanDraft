@@ -51,6 +51,60 @@ public sealed class ProjectReportTests : IDisposable
     public void Dispose() { environment.Dispose(); CultureInfo.CurrentCulture = originalCulture; CultureInfo.CurrentUICulture = originalUi; }
     private static readonly DateTimeOffset Now = new(2026, 10, 23, 12, 34, 56, TimeSpan.FromHours(2));
 
+    [Fact]
+    public void LongMaterialNoteContinuesWithoutClippingOrLosingText()
+    {
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var original = ProjectReport.Capture(main.Editor!, Now);
+        var text = string.Join("\n", Enumerable.Range(1, 130).Select(i => $"Note line {i}."));
+        using var report = new ReportDocument(original.Data with { MaterialNote = text }, new(130, (_, _, _) => { }));
+        Assert.True(report.Pages.Count > original.Pages.Count);
+        var lines = new List<string>();
+        for (int page = 0; page < report.Pages.Count; page++)
+        {
+            using var bitmap = report.RenderPage(page);
+            lines.AddRange(report.TextRuns.Where(r => r.Text.StartsWith("Note line ", StringComparison.Ordinal)).Select(r => r.Text));
+            AssertTextContained(report);
+            foreach (var run in report.TextRuns.Where(r => r.Text.StartsWith("Note line ", StringComparison.Ordinal)))
+            {
+                Assert.True(run.Bounds.Bottom < ReportDocument.FooterTop);
+                Assert.True(run.Bounds.Left >= ReportDocument.Margin + ReportDocument.LeftWidth + ReportDocument.Gutter);
+                Assert.True(run.Bounds.Right <= ReportDocument.PageWidth - ReportDocument.Margin + 1);
+                Assert.All(report.Pages[page].Tables, table => Assert.True(run.Bounds.Bottom <= table.Bounds.Top));
+            }
+        }
+        Assert.Equal(text.Split('\n'), lines);
+    }
+
+    [Theory]
+    [InlineData("de-DE", "en-US")] [InlineData("en-US", "de-DE")]
+    public void MaterialNotesUseReportLanguageFreezeAndWrapBelowProperties(string ui, string numbers)
+    {
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(ui); CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(numbers);
+        var state = ReportTestProjects.Create();
+        var note = new SpanDraft.Core.Materials.MaterialNote("Reference value for a test specimen.\nSecond line.",
+            [new("de", "Referenzwert für einen Probekörper.\nZweite Zeile.")]);
+        state = state with { Document = state.Document with { Material = MaterialNoteTests.WithNote(state.Document.Material, note) } };
+        var (main, _) = Open(state);
+        using var report = ProjectReport.Capture(main.Editor!, Now);
+        var expected = Strings.MaterialNote + ": " + MaterialNoteDisplay.Resolve(note, CultureInfo.CurrentUICulture);
+        Assert.Equal(expected, report.Data.MaterialNote);
+        using var without = new ReportDocument(report.Data with { MaterialNote = null }, new(130, (_, _, _) => { }));
+        using var bitmap = report.RenderPage(0);
+        var properties = report.TextRuns.Where(r => report.Data.MaterialProperties.Any(p => r.Text.Contains(p.PlainText))).ToArray();
+        Assert.Contains(report.TextRuns, r => r.Text.StartsWith(Strings.MaterialNote + ":", StringComparison.Ordinal));
+        Assert.Contains(report.TextRuns, r => r.Text == (ui == "de-DE" ? "Zweite Zeile." : "Second line."));
+        var noteStart = report.TextRuns.Single(r => r.Text.StartsWith(Strings.MaterialNote + ":", StringComparison.Ordinal));
+        Assert.True(noteStart.Bounds.Top > properties.Max(p => p.Bounds.Bottom));
+        AssertTextContained(report);
+        Assert.True(report.Pages[0].Tables.First().Bounds.Top > without.Pages[0].Tables.First().Bounds.Top);
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(ui == "de-DE" ? "en-US" : "de-DE");
+        Assert.Equal(expected, report.Data.MaterialNote);
+        var clean = state with { Document = state.Document with { Material = MaterialNoteTests.WithNote(state.Document.Material, null) } };
+        var (cleanMain, _) = Open(clean); using var cleanReport = ProjectReport.Capture(cleanMain.Editor!, Now);
+        Assert.Null(cleanReport.Data.MaterialNote);
+    }
+
     [Theory]
     [InlineData("de-DE")] [InlineData("en-US")]
     public void SummaryUsesFullWidthWithInlinePositionsAndAlignedValues(string culture)
