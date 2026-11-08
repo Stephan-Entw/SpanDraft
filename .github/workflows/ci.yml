@@ -32,12 +32,38 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Restore product solution
         run: dotnet restore SpanDraft.sln
+      - name: Identify icon converter cache
+        id: icon-cache
+        shell: pwsh
+        run: |
+          $converterScript = Get-Content -Raw scripts/update-icons.cs
+          $converterRevision = [regex]::Match($converterScript, 'const string revision = "([a-f0-9]{40})";').Groups[1].Value
+          if ($converterRevision.Length -ne 40) { throw 'Cannot identify the pinned icon converter.' }
+          $sdkVersion = dotnet --version
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot identify the .NET SDK.' }
+          "path=.artifacts/icon-converter/$converterRevision/SvgToXaml-$converterRevision/src/svgxaml/bin/Release/net8.0" | Add-Content $env:GITHUB_OUTPUT
+          "sdk=$sdkVersion" | Add-Content $env:GITHUB_OUTPUT
+      - name: Cache pinned icon converter and runtime files
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.icon-cache.outputs.path }}
+          key: ${{ runner.os }}-${{ runner.arch }}-icon-converter-${{ steps.icon-cache.outputs.sdk }}-${{ hashFiles('scripts/update-icons.cs', 'global.json') }}
       - name: Verify generated icon resources
         run: dotnet run --file scripts/update-icons.cs -- --check
       - name: Build product solution
         run: dotnet build SpanDraft.sln --configuration Release --no-restore
-      - name: Run product tests
-        run: dotnet test --solution SpanDraft.sln --configuration Release --no-build --no-restore
+      - name: Run Product, Desktop, Rendering and Tooling tests
+        run: >-
+          dotnet test --solution SpanDraft.sln --configuration Release --no-build --no-restore
+          --max-parallel-test-modules 2 --report-xunit-xml --results-directory artifacts/test-results
+      - name: Upload test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: product-test-results
+          path: artifacts/test-results
+          if-no-files-found: warn
+          retention-days: 7
 
   validation:
     name: Validation
