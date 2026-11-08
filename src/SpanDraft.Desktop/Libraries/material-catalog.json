@@ -98,9 +98,9 @@
       "material": {
         "name": "34CrNiMo6 +QT",
         "note": {
-          "default": "Reference value for +QT round bar, Ø 50–100 mm.",
+          "default": "Reference value for +QT round bar, Ø 40–100 mm.",
           "translations": {
-            "de": "Referenzwert für +QT-Rundstahl, Ø 50–100 mm."
+            "de": "Referenzwert für +QT-Rundstahl, Ø 40–100 mm."
           }
         },
         "youngsModulus": 210000000000,

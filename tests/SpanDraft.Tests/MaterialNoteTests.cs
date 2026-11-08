@@ -59,7 +59,7 @@ public sealed class MaterialNoteTests
     [InlineData("X5CrNi18-10", "Reference value for long products at 20 °C.", "Referenzwert für Langprodukte bei 20 °C.")]
     [InlineData("X2CrNiMo17-12-2", "Reference value for long products at 20 °C.", "Referenzwert für Langprodukte bei 20 °C.")]
     [InlineData("42CrMo4 +QT", "Reference value for +QT round bar, Ø 40–100 mm.", "Referenzwert für +QT-Rundstahl, Ø 40–100 mm.")]
-    [InlineData("34CrNiMo6 +QT", "Reference value for +QT round bar, Ø 50–100 mm.", "Referenzwert für +QT-Rundstahl, Ø 50–100 mm.")]
+    [InlineData("34CrNiMo6 +QT", "Reference value for +QT round bar, Ø 40–100 mm.", "Referenzwert für +QT-Rundstahl, Ø 40–100 mm.")]
     [InlineData("AlMgSi0,5 T66", "Reference value for T66 profiles up to 25 mm wall thickness.", "Referenzwert für T66-Profile bis 25 mm Wanddicke.")]
     [InlineData("AlMg3 H22", "Reference value for H22 sheet and plate up to 40 mm thickness.", "Referenzwert für H22-Blech und -Platte bis 40 mm Dicke.")]
     public void BuiltInNotesMatchTheCuratedTexts(string name, string english, string german)
