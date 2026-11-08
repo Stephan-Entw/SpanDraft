@@ -4,7 +4,6 @@ using SpanDraft.Core.Sections;
 using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
-using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
@@ -16,7 +15,6 @@ using static SpanDraft.Tests.ProjectTestSupport;
 
 namespace SpanDraft.Tests;
 
-[Collection("Schematic text")]
 public sealed class ProjectSetupIntegrationTests
 {
     public static IEnumerable<object[]> CreateFields() => Enumerable.Range(0, 32).Select(i => new object[] { i });
@@ -234,7 +232,7 @@ public sealed class ProjectSetupIntegrationTests
     [InlineData(4)] [InlineData(5)] [InlineData(6)] [InlineData(7)]
     public async Task EveryParametricFormLoadsItsValuesAxisAndExplicitName(int kind)
     {
-        var section = ParametricSectionTestSupport.Shape(kind, r: .5); var axis = section.Axes[^1].AxisDesignation;
+        var section = SectionTestShapes.Shape(kind, r: .5); var axis = section.Axes[^1].AxisDesignation;
         var initial = new SectionDefinitionInitialState(section, axis, "HEB 200");
         var vm = new SectionDefinitionViewModel(initialState: initial);
         Assert.False(vm.IsChoosingForm); Assert.True(vm.CanConfirm); Assert.Equal(axis, vm.ResultAxis);

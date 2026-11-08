@@ -19,10 +19,6 @@ public sealed class DesktopResultPresentationTests
         // The persistence fixture deliberately has an epsilon-sized final span.
         return state with { Document = state.Document with { Length = M(1) } };
     }
-    internal static UnitProfile Mixed => UnitProfile.UnitedStates
-        .WithUnit(QuantityKind.AxialForce, UnitCatalog.Newton)
-        .WithUnit(QuantityKind.Moment, UnitCatalog.KilonewtonMeter)
-        .WithUnit(QuantityKind.TransverseDisplacement, UnitCatalog.Meter);
 
     public static IEnumerable<object[]> Cases()
     {
@@ -32,18 +28,12 @@ public sealed class DesktopResultPresentationTests
             yield return [culture, mode, profile];
     }
 
-    internal static UnitProfile Profile(int index) => index switch
-    {
-        0 => UnitProfile.Default, 1 => UnitProfile.StructuralEngineering,
-        2 => UnitProfile.UnitedStates, _ => Mixed
-    };
-
     [Theory]
     [MemberData(nameof(Cases))]
     public void ResultsReactionsAndSectionPropertiesUseThePhaseOnePipeline(string culture, int mode, int index)
     {
         using var cultures = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
-        var profile = Profile(index);
+        var profile = PresentationTestProfiles.Profile(index);
         var state = LoadedState();
         var options = new ResultPresentationOptions(profile, mode);
         var editor = EditorViewModel.ForSession(ProjectSession.Create(state), () => { }, resultPresentation: options);
@@ -113,7 +103,7 @@ public sealed class DesktopResultPresentationTests
         session.Changed += () => changed++;
         session.StateApplied += (_, _, _) => applied++;
         editor.PropertyChanged += (_, e) => notifications.Add(e.PropertyName);
-        foreach (var profile in new[] { UnitProfile.UnitedStates, Mixed, UnitProfile.Default })
+        foreach (var profile in new[] { UnitProfile.UnitedStates, PresentationTestProfiles.Mixed, UnitProfile.Default })
         foreach (var mode in new[] { 3, 6 })
         {
             Assert.Equal(UserSettings.SameUnits(profile, UnitProfile.Default), app.Main.SetResultPresentation(profile, mode));
@@ -160,7 +150,7 @@ public sealed class DesktopResultPresentationTests
     {
         var app = new App(create: false);
         Assert.True(await app.Main.NewAsync());
-        app.Main.SetResultPresentation(Mixed, 6);
+        app.Main.SetResultPresentation(PresentationTestProfiles.Mixed, 6);
         var section = app.Main.Setup.SelectedSection;
         var material = app.Main.Setup.SelectedMaterial;
         Assert.Same(section, app.Main.Setup.SelectedSection);
@@ -191,7 +181,7 @@ public sealed class DesktopResultPresentationTests
         ProjectTestSupport.CompleteSetup(app.Main); app.Main.Setup.ApplyCommand.Execute(null);
         Assert.Equal(app.Main.ResultPresentation, app.Main.Editor!.ResultPresentation);
         var restored = new App(create: false);
-        restored.Main.SetResultPresentation(Mixed, 6);
+        restored.Main.SetResultPresentation(PresentationTestProfiles.Mixed, 6);
         restored.Files.Data[App.Slot] = ProjectRecovery.Encode(new(LoadedState(), app.Dialogs.OpenPath, Now));
         Assert.True(await restored.Main.InitializeRecoveryAsync());
         Assert.Equal(restored.Main.ResultPresentation, restored.Main.Editor!.ResultPresentation);
@@ -205,7 +195,7 @@ public sealed class DesktopResultPresentationTests
     {
         var document = new EditorDocument(M(1), ProjectTemplates.Material, ProjectTemplates.Section,
             [new(Guid.NewGuid(), M(0), SupportType.Pinned, "A"), new(Guid.NewGuid(), M(1), SupportType.Roller, "B")]);
-        foreach (var profile in new[] { UnitProfile.Default, UnitProfile.StructuralEngineering, UnitProfile.UnitedStates, Mixed })
+        foreach (var profile in new[] { UnitProfile.Default, UnitProfile.StructuralEngineering, UnitProfile.UnitedStates, PresentationTestProfiles.Mixed })
         foreach (var mode in new[] { 3, 6 })
         {
             var options = new ResultPresentationOptions(profile, mode);
@@ -230,7 +220,7 @@ public sealed class DesktopResultPresentationTests
         Assert.NotNull(editor.Presentation.Result);
         Assert.True(session.Commit(session.CurrentRevision.State with { Document = editor.Document.WithSupports([]) }));
         var failed = editor.Presentation;
-        var updated = failed.WithPresentation(new(Mixed, 6));
+        var updated = failed.WithPresentation(new(PresentationTestProfiles.Mixed, 6));
         Assert.Null(updated.Result);
         Assert.Empty(updated.Displacement); Assert.Empty(updated.Moment);
         Assert.Empty(updated.Stress); Assert.Empty(updated.SafetyFactor);
@@ -256,7 +246,7 @@ public sealed class DesktopResultPresentationTests
     {
         var outcome = BeamAnalysis.Analyze(LoadedState().Document.ToBeamModel());
         var original = AnalysisPresentationState.FromOutcome(outcome);
-        var switched = original.WithPresentation(new(Mixed, 6));
+        var switched = original.WithPresentation(new(PresentationTestProfiles.Mixed, 6));
         Assert.Same(outcome.Result, switched.Result);
         var nextAnalysis = AnalysisPresentationState.FromOutcome(BeamAnalysis.Analyze(LoadedState().Document.ToBeamModel()));
         Assert.NotSame(switched.Result, nextAnalysis.Result);
@@ -267,7 +257,7 @@ public sealed class DesktopResultPresentationTests
     {
         using var cultures = new ResultCultureScope("de-DE", "en-US");
         foreach (var mode in new[] { 3, 6 })
-        foreach (var profile in new[] { UnitProfile.Default, UnitProfile.StructuralEngineering, UnitProfile.UnitedStates, Mixed })
+        foreach (var profile in new[] { UnitProfile.Default, UnitProfile.StructuralEngineering, UnitProfile.UnitedStates, PresentationTestProfiles.Mixed })
         foreach (var kind in new[] { QuantityKind.AxialForce, QuantityKind.TransverseForce, QuantityKind.Moment })
         foreach (double value in new[] { 0, -0.0, 1e-12, -1234.5678 })
         {
@@ -280,25 +270,5 @@ public sealed class DesktopResultPresentationTests
         Assert.Equal("2,5", AxisTickFormatter.Format(1, 2.5, 0, CultureInfo.CurrentCulture));
         Assert.Equal("2,5", AxisTickFormatter.Format(1, 2.5, 0));
         Assert.Equal("2.5", AxisTickFormatter.Format(1, 2.5, 0, CultureInfo.CurrentUICulture));
-    }
-}
-
-internal sealed class ResultCultureScope : IDisposable
-{
-    private readonly CultureInfo _culture = CultureInfo.CurrentCulture;
-    private readonly CultureInfo _uiCulture = CultureInfo.CurrentUICulture;
-    private readonly CultureInfo? _defaultCulture = CultureInfo.DefaultThreadCurrentCulture;
-    private readonly CultureInfo? _defaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
-    public ResultCultureScope(string culture, string uiCulture)
-    {
-        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
-        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(uiCulture);
-    }
-    public void Dispose()
-    {
-        CultureInfo.DefaultThreadCurrentCulture = _defaultCulture;
-        CultureInfo.DefaultThreadCurrentUICulture = _defaultUiCulture;
-        CultureInfo.CurrentCulture = _culture;
-        CultureInfo.CurrentUICulture = _uiCulture;
     }
 }

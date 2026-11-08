@@ -17,7 +17,6 @@ using static SpanDraft.Tests.ProjectTestSupport;
 
 namespace SpanDraft.Tests;
 
-[Collection("Schematic text")]
 public sealed class MaterialWorkflowRegressionTests
 {
     [Theory]
@@ -68,8 +67,8 @@ public sealed class MaterialWorkflowRegressionTests
     public async Task ProjectNoteLibraryConflictsKeepTheProjectAndFlattenTheSavedCopy(MaterialNameConflictDecision decision)
     {
         using var scope = new UiCultureScope("de-DE");
-        var f = new Fixture(); await f.Load(Entry("Project"));
-        var original = MaterialNoteTests.WithNote(Entry("Project"), new MaterialNote("Default", [new("de", "Sichtbar")]));
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry("Project"));
+        var original = MaterialNoteTestSupport.WithNote(MaterialTestEntries.Entry("Project"), new MaterialNote("Default", [new("de", "Sichtbar")]));
         f.Main.Setup.SelectedMaterial = original;
         f.Dialogs.MaterialConflict = decision; f.Dialogs.ConfirmMaterialReplace = true;
         var selection = f.Select();
@@ -89,10 +88,10 @@ public sealed class MaterialWorkflowRegressionTests
     public async Task OnlyAnInvisibleTranslationChangesHistoryWithoutReanalysis()
     {
         var f = new Fixture(); await f.Load();
-        var material = MaterialNoteTests.WithNote(Entry(), new MaterialNote("Default", [new("fr", "First")]));
+        var material = MaterialNoteTestSupport.WithNote(MaterialTestEntries.Entry(), new MaterialNote("Default", [new("fr", "First")]));
         f.Main.Setup.SelectedMaterial = material; CompleteSetup(f.Main); Assert.True(await f.Main.Setup.ConfirmAsync());
         var analysis = f.Main.Editor!.Presentation; int count = f.Analyses;
-        var updated = MaterialNoteTests.WithNote(material, new MaterialNote("Default", [new("fr", "Second")]));
+        var updated = MaterialNoteTestSupport.WithNote(material, new MaterialNote("Default", [new("fr", "Second")]));
         f.Main.Editor.ApplySetup(f.Main.Editor.Document.Section, f.Main.Editor.Document.BendingAxis, updated);
         Assert.Same(analysis, f.Main.Editor.Presentation); Assert.Equal(count, f.Analyses);
         Assert.True(f.Main.Undo()); Assert.Equal(material.Note, f.Main.Editor.Document.Material.Note);
@@ -127,9 +126,6 @@ public sealed class MaterialWorkflowRegressionTests
             Fill(editor); return editor;
         }
     }
-    internal static Material Entry(string name = "Shop stainless", MaterialCategory category = MaterialCategory.StainlessSteel) =>
-        new(name, Pressure.FromPascals(200e9), Pressure.FromMegapascals(300), MaterialStrengthType.Re,
-            MassDensity.FromKilogramsPerCubicMeter(7800), PoissonRatio.FromValue(.3), category, "1.4567", ["UNS Example", "AISI Shop"]);
     private static void Fill(MaterialEditorViewModel editor)
     { editor.Name = "Shop material"; editor.Inputs[0].Text = "210"; editor.Inputs[1].Text = "355"; editor.StrengthType = editor.StrengthTypes[0]; }
 
@@ -137,7 +133,7 @@ public sealed class MaterialWorkflowRegressionTests
     [InlineData("shop STAINLESS")] [InlineData("1.4567")] [InlineData("uns example")] [InlineData("  AISI SHOP  ")]
     public async Task SearchMatchesNameNumberAndStandardsIgnoringCase(string query)
     {
-        var f = new Fixture(); await f.Load(Entry()); var selection = f.Select();
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry()); var selection = f.Select();
         selection.SearchText = query;
         var row = Assert.Single(selection.FilteredEntries); Assert.True(row.IsUser); Assert.Equal("Shop stainless", row.Name);
         Assert.Equal("1.4567", row.MaterialNumber); Assert.Equal("UNS Example · AISI Shop", row.OtherStandards);
@@ -146,8 +142,8 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task EveryFilterIsExclusiveAndCategoriesIncludeBothLibrarySources()
     {
-        var f = new Fixture(); await f.Load(Entry(), Entry("Shop structural", MaterialCategory.StructuralSteel));
-        f.Main.Setup.SelectedMaterial = Entry("Project"); var selection = f.Select();
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry(), MaterialTestEntries.Entry("Shop structural", MaterialCategory.StructuralSteel));
+        f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry("Project"); var selection = f.Select();
         Assert.Equal(9, selection.Filters.Count);
         Assert.Equal(selection.BuiltInEntries.Count + 3, selection.FilteredEntries.Count);
         Assert.Same(selection.CurrentEntry, selection.FilteredEntries[0]);
@@ -193,8 +189,8 @@ public sealed class MaterialWorkflowRegressionTests
     [InlineData(" project only ")] [InlineData("1.4567")] [InlineData("uns EXAMPLE")]
     public async Task ProjectSnapshotParticipatesInSearchAndCategoryFiltersUsingItsOwnData(string query)
     {
-        var f = new Fixture(); await f.Load(Entry("Library", MaterialCategory.StructuralSteel));
-        f.Main.Setup.SelectedMaterial = Entry("Project only", MaterialCategory.Other); var selection = f.Select();
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry("Library", MaterialCategory.StructuralSteel));
+        f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry("Project only", MaterialCategory.Other); var selection = f.Select();
         selection.SearchText = query; Assert.Same(selection.CurrentEntry, selection.FilteredEntries[0]);
         selection.SelectedFilter = selection.Filters.Single(c => c.Category == MaterialCategory.Other);
         Assert.Same(selection.CurrentEntry, Assert.Single(selection.FilteredEntries));
@@ -229,7 +225,7 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task ProjectSourceWithoutSnapshotIsEmptyAndDoesNotSelectATemplate()
     {
-        var f = new Fixture(); await f.Load(Entry()); var selection = f.Select(); Assert.Null(selection.CurrentEntry);
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry()); var selection = f.Select(); Assert.Null(selection.CurrentEntry);
         selection.ShowProjectCommand.Execute(null);
         Assert.True(selection.IsEmpty); Assert.Empty(selection.FilteredEntries); Assert.Null(selection.SelectedEntry); Assert.False(selection.CanUseSelected);
         selection.SelectedFilter = selection.Filters[0]; Assert.Equal(selection.BuiltInEntries.Count + 1, selection.FilteredEntries.Count);
@@ -240,7 +236,7 @@ public sealed class MaterialWorkflowRegressionTests
     [InlineData(false, false)] [InlineData(false, true)] [InlineData(true, false)] [InlineData(true, true)]
     public async Task ProjectEditingCorrectsOnlyFiltersThatWouldHideTheConfirmedSnapshot(bool rename, bool recategorize)
     {
-        var f = new Fixture(); await f.Load(); f.Main.Setup.SelectedMaterial = Entry(); var original = f.Main.Setup.SelectedMaterial;
+        var f = new Fixture(); await f.Load(); f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry(); var original = f.Main.Setup.SelectedMaterial;
         var selection = f.Select(); selection.SearchText = "Shop stainless";
         selection.SelectedFilter = selection.Filters.Single(c => c.Category == MaterialCategory.StainlessSteel);
         var filter = selection.SelectedFilter; selection.EditSelectedCommand.Execute(null); var editor = selection.Editor!;
@@ -256,7 +252,7 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task DeletingOwnMaterialsNeverSelectsAProjectHiddenByTheSourceFilter()
     {
-        var f = new Fixture(); await f.Load(Entry("First"), Entry("Second")); f.Main.Setup.SelectedMaterial = Entry("Project");
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry("First"), MaterialTestEntries.Entry("Second")); f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry("Project");
         f.Dialogs.ConfirmLibraryDelete = true; var selection = f.Select(); selection.SelectedFilter = selection.UserFilter;
         selection.SelectedEntry = selection.FilteredEntries[0]; Assert.True(await selection.DeleteSelectedAsync());
         Assert.Equal("First (1.4567) · UNS Example · AISI Shop", f.Dialogs.MaterialDeleteDisplayName);
@@ -318,7 +314,7 @@ public sealed class MaterialWorkflowRegressionTests
     [InlineData(false)] [InlineData(true)]
     public async Task UserEditPersistsDirectlyAndOnlyCorrectsFiltersThatHideTheResult(bool hide)
     {
-        var f = new Fixture(); await f.Load(Entry()); f.Main.Setup.SelectedMaterial = Entry("Project"); var project = f.Main.Setup.SelectedMaterial;
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry()); f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry("Project"); var project = f.Main.Setup.SelectedMaterial;
         var selection = f.Select(); selection.SearchText = "shop stainless";
         selection.SelectedFilter = selection.Filters.Single(c => c.Category == MaterialCategory.StainlessSteel);
         var filter = selection.SelectedFilter; selection.SelectedEntry = selection.UserEntries.Single(); selection.EditSelectedCommand.Execute(null);
@@ -333,7 +329,7 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task ModalCancelPreservesBrowseStateAndLibraryBytes()
     {
-        var f = new Fixture(); await f.Load(Entry()); var selection = f.Select(); selection.SelectedFilter = selection.UserFilter; selection.SearchText = "shop";
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry()); var selection = f.Select(); selection.SelectedFilter = selection.UserFilter; selection.SearchText = "shop";
         var selected = selection.SelectedEntry = selection.UserEntries.Single(); var rows = selection.FilteredEntries;
         selection.EditSelectedCommand.Execute(null); Assert.False(selection.CanBrowse);
         selection.SearchText = "ignored"; selection.SelectedFilter = selection.Filters[0];
@@ -345,7 +341,7 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task UserRenameConflictIsVisibleAtNameAndNeverReplacesAnotherEntry()
     {
-        var f = new Fixture(); await f.Load(Entry("First"), Entry("Second")); var selection = f.Select();
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry("First"), MaterialTestEntries.Entry("Second")); var selection = f.Select();
         selection.SelectedEntry = selection.UserEntries[0]; selection.EditSelectedCommand.Execute(null); var editor = selection.Editor!;
         editor.Name = " SECOND "; editor.CompleteNameInput(); Assert.True(editor.ShowNameError); Assert.False(editor.CanConfirm);
         Assert.Equal(Strings.LibraryNameConflict, editor.NameError); Assert.False(await editor.ConfirmAsync()); Assert.Empty(f.Files.Writes);
@@ -355,7 +351,7 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task FailedWritesKeepEditorInputsSelectionAndPublishedLibraryAndCanBeRetried()
     {
-        var f = new Fixture(); await f.Load(Entry()); var selection = f.Select(); selection.SelectedEntry = selection.UserEntries.Single();
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry()); var selection = f.Select(); selection.SelectedEntry = selection.UserEntries.Single();
         var selected = selection.SelectedEntry; var before = f.Files.Data["materials"].ToArray();
         selection.EditSelectedCommand.Execute(null); var editor = selection.Editor!; editor.Name = "Renamed"; f.Files.FailWritePath = "materials";
         Assert.False(await editor.ConfirmAsync()); Assert.Same(editor, selection.Editor); Assert.Equal("Renamed", editor.Name); Assert.True(editor.HasFormError);
@@ -368,7 +364,7 @@ public sealed class MaterialWorkflowRegressionTests
     [InlineData("strength")] [InlineData("strengthType")] [InlineData("rho")] [InlineData("nu")]
     public async Task DuplicateDetectionIncludesEveryMaterialField(string field)
     {
-        var f = new Fixture(); var m = Entry(); await f.Load(m);
+        var f = new Fixture(); var m = MaterialTestEntries.Entry(); await f.Load(m);
         f.Main.Setup.SelectedMaterial = new Material(field == "name" ? "Other" : m.Name,
             field == "E" ? Pressure.FromPascals(201e9) : m.YoungsModulus,
             field == "strength" ? Pressure.FromMegapascals(301) : m.YieldStrength,
@@ -383,17 +379,17 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task DuplicateNormalizationTrimsButKeepsCaseAndStandardOrderSignificant()
     {
-        var f = new Fixture(); var m = Entry(); await f.Load(m);
+        var f = new Fixture(); var m = MaterialTestEntries.Entry(); await f.Load(m);
         f.Main.Setup.SelectedMaterial = new Material(" " + m.Name + " ", m.YoungsModulus, m.YieldStrength, MaterialStrengthType.Re,
             m.Density, m.PoissonRatio, m.Category, " " + m.MaterialNumber + " ", [" UNS Example ", "", " AISI Shop "]);
         Assert.False(f.Select().ShowSave);
-        f.Main.Setup.ShowOverview(); f.Main.Setup.SelectedMaterial = Entry(m.Name.ToUpperInvariant()); Assert.True(f.Select().ShowSave);
+        f.Main.Setup.ShowOverview(); f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry(m.Name.ToUpperInvariant()); Assert.True(f.Select().ShowSave);
     }
 
     [Fact]
     public async Task SavingProjectAddsCompleteSnapshotWithoutChangingProjectRowOrMergingIt()
     {
-        var f = new Fixture(); await f.Load(); f.Main.Setup.SelectedMaterial = Entry(); var selection = f.Select(); var row = selection.CurrentEntry;
+        var f = new Fixture(); await f.Load(); f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry(); var selection = f.Select(); var row = selection.CurrentEntry;
         Assert.True(await selection.SaveSelectedAsync()); Assert.Same(row, selection.CurrentEntry); Assert.Same(row, selection.SelectedEntry);
         Assert.False(selection.ShowSave); Assert.True(MaterialSnapshotComparison.Equals(row!.Material, Assert.Single(f.Main.UserMaterials.All)));
         Assert.Equal(0, f.Dialogs.MaterialConflictQuestions);
@@ -402,7 +398,7 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task SavingHistoricalProjectNameTrimsOnlyTheLibrarySnapshot()
     {
-        var f = new Fixture(); await f.Load(); f.Main.Setup.SelectedMaterial = Entry("  Historical  ");
+        var f = new Fixture(); await f.Load(); f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry("  Historical  ");
         var selection = f.Select(); Assert.True(await selection.SaveSelectedAsync());
         Assert.Equal("Historical", Assert.Single(f.Main.UserMaterials.All).Name);
         Assert.Equal("  Historical  ", selection.CurrentEntry!.Name);
@@ -413,7 +409,7 @@ public sealed class MaterialWorkflowRegressionTests
     [InlineData("name")] [InlineData("category")] [InlineData("number")] [InlineData("standards")] [InlineData("note")]
     public async Task EachMetadataChangeParticipatesInHistoryAndRecoveryWithoutAnalysis(string field)
     {
-        var f = new Fixture(); await f.Load(); f.Main.Setup.SelectedMaterial = Entry(); CompleteSetup(f.Main);
+        var f = new Fixture(); await f.Load(); f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry(); CompleteSetup(f.Main);
         Assert.True(await f.Main.Setup.ConfirmAsync()); var original = f.Main.Session!.CurrentRevision.State;
         int analyses = f.Analyses; f.Main.EditProject(); var selection = f.Select(); selection.EditSelectedCommand.Execute(null);
         var editor = selection.Editor!;
@@ -480,9 +476,9 @@ public sealed class MaterialWorkflowRegressionTests
     [InlineData(MaterialNameConflictDecision.Rename, false)]
     public async Task ProjectNameConflictRequiresExplicitChoiceAndReplacementConfirmation(MaterialNameConflictDecision choice, bool confirm)
     {
-        var existing = LibraryTestSupport.WithMetadata(Entry(category: MaterialCategory.Other), MaterialCategory.Other, "9.8765", ["Existing standard"]);
+        var existing = LibraryTestSupport.WithMetadata(MaterialTestEntries.Entry(category: MaterialCategory.Other), MaterialCategory.Other, "9.8765", ["Existing standard"]);
         var f = new Fixture(); await f.Load(existing); var before = f.Files.Data["materials"].ToArray();
-        f.Main.Setup.SelectedMaterial = Entry(); var project = f.Main.Setup.SelectedMaterial; var selection = f.Select();
+        f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry(); var project = f.Main.Setup.SelectedMaterial; var selection = f.Select();
         f.Dialogs.MaterialConflict = choice; f.Dialogs.ConfirmMaterialReplace = confirm;
         bool saved = await selection.SaveSelectedAsync(); Assert.Equal(choice == MaterialNameConflictDecision.Replace && confirm, saved);
         Assert.Equal(1, f.Dialogs.MaterialConflictQuestions); Assert.Equal(choice == MaterialNameConflictDecision.Replace ? 1 : 0, f.Dialogs.MaterialReplaceQuestions);
@@ -511,7 +507,7 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task RenameCancelAndFailedReplacementKeepTheOriginalBytes()
     {
-        var f = new Fixture(); await f.Load(Entry(category: MaterialCategory.Other)); f.Main.Setup.SelectedMaterial = Entry(); var selection = f.Select();
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry(category: MaterialCategory.Other)); f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry(); var selection = f.Select();
         var before = f.Files.Data["materials"].ToArray(); f.Dialogs.MaterialConflict = MaterialNameConflictDecision.Rename;
         await selection.SaveSelectedAsync(); selection.Editor!.CancelCommand.Execute(null); Assert.Equal(before, f.Files.Data["materials"]);
         f.Dialogs.MaterialConflict = MaterialNameConflictDecision.Replace; f.Dialogs.ConfirmMaterialReplace = true; f.Files.FailWritePath = "materials";
@@ -521,8 +517,8 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task LegacyStrengthResolutionPrecedesLibrarySaveAndRetainsAllConflictChoices()
     {
-        var f = new Fixture(); await f.Load(Entry(category: MaterialCategory.Other));
-        var state = State() with { Document = State().Document with { Material = Entry() } };
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry(category: MaterialCategory.Other));
+        var state = State() with { Document = State().Document with { Material = MaterialTestEntries.Entry() } };
         var json = JsonNode.Parse(ProjectFileCodec.Serialize(state))!;
         json["document"]!["material"]!.AsObject().Remove("strengthType");
         f.Main.Setup.SelectedMaterial = ProjectFileCodec.Deserialize(Encoding.UTF8.GetBytes(json.ToJsonString())).Document.Material;
@@ -538,7 +534,7 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task DeleteCancellationAndFailedWritesRetainSelectionAndBytes()
     {
-        var f = new Fixture(); await f.Load(Entry()); f.Main.Setup.SelectedMaterial = Entry(); var selection = f.Select(); selection.SelectedEntry = selection.UserEntries.Single();
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry()); f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry(); var selection = f.Select(); selection.SelectedEntry = selection.UserEntries.Single();
         var selected = selection.SelectedEntry; var bytes = f.Files.Data["materials"].ToArray();
         f.Dialogs.ConfirmLibraryDelete = false; await selection.DeleteSelectedAsync(); Assert.Same(selected, selection.SelectedEntry); Assert.Equal(bytes, f.Files.Data["materials"]);
         f.Dialogs.ConfirmLibraryDelete = true; f.Files.FailWritePath = "materials"; Assert.False(await selection.DeleteSelectedAsync()); Assert.Same(selected, selection.SelectedEntry);
@@ -552,7 +548,7 @@ public sealed class MaterialWorkflowRegressionTests
     {
         var f = new Fixture(store: damaged);
         if (damaged) { f.Files.Data["materials"] = [123]; await f.Main.InitializeLibrariesAsync(); }
-        f.Main.Setup.SelectedMaterial = Entry(); var selection = f.Select(); Assert.False(selection.NewCommand.CanExecute(null));
+        f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry(); var selection = f.Select(); Assert.False(selection.NewCommand.CanExecute(null));
         Assert.False(selection.CanSaveSelected); selection.EditSelectedCommand.Execute(null); selection.Editor!.Name = "Project only";
         Assert.True(await selection.Editor.ConfirmAsync()); selection.UseSelected(); Assert.Equal("Project only", f.Main.Setup.SelectedMaterial!.Name);
         selection = f.Select(); selection.SelectedEntry = selection.BuiltInEntries[0]; Assert.False(selection.CanEditSelected); Assert.True(selection.CanUseSelected); Assert.Empty(f.Files.Writes);
@@ -561,7 +557,7 @@ public sealed class MaterialWorkflowRegressionTests
     [Fact]
     public async Task CompleteProjectAndBothRecoverySnapshotsPreserveMetadataWithoutLibraryReferences()
     {
-        var f = new Fixture(); await f.Load(Entry()); var selection = f.Select(); selection.SelectedEntry = selection.UserEntries.Single(); selection.UseSelected();
+        var f = new Fixture(); await f.Load(MaterialTestEntries.Entry()); var selection = f.Select(); selection.SelectedEntry = selection.UserEntries.Single(); selection.UseSelected();
         CompleteSetup(f.Main); Assert.True(await f.Main.Setup.ConfirmAsync()); var state = f.Main.Session!.CurrentRevision.State;
         var bytes = ProjectFileCodec.Serialize(state); var wire = JsonNode.Parse(bytes)!["document"]!["material"]!;
         Assert.Equal("stainlessSteel", wire["category"]!.GetValue<string>()); Assert.Equal("1.4567", wire["materialNumber"]!.GetValue<string>());
@@ -570,7 +566,7 @@ public sealed class MaterialWorkflowRegressionTests
         Assert.True(state.ContentEquals((await recovery.ReadAsync())!.State));
         var draft = new ProjectSetupDraft(Material: state.Document.Material); f.Files.Data["setup-recovery"] = ProjectSetupRecovery.Encode(new(draft, Now));
         Assert.True(draft.ContentEquals((await new ProjectSetupRecovery(f.Files, "setup-recovery").ReadAsync())!.Draft));
-        await f.Main.SaveMaterialAsync(Entry("Renamed", MaterialCategory.Other), Entry().Name);
+        await f.Main.SaveMaterialAsync(MaterialTestEntries.Entry("Renamed", MaterialCategory.Other), MaterialTestEntries.Entry().Name);
         Assert.Equal(bytes, ProjectFileCodec.Serialize(state));
         foreach (var key in new[] { "libraryId", "source", "provenance" }) Assert.DoesNotContain("\"" + key + "\"", Encoding.UTF8.GetString(bytes));
     }

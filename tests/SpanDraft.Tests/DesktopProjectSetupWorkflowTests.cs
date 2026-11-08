@@ -1,22 +1,18 @@
-using System.Globalization;
 using System.Text;
 using SpanDraft.Analysis;
 using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Core.Units;
-using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
-using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
 using static SpanDraft.Tests.ProjectTestSupport;
 
 namespace SpanDraft.Tests;
 
-[Collection("Schematic text")]
 public sealed class DesktopProjectSetupWorkflowTests
 {
     private sealed class Fixture

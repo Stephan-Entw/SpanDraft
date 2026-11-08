@@ -5,7 +5,7 @@
     <ApplicationIcon>../../src/SpanDraft.Desktop/Assets/AppIcon/SpanDraft.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="SpanDraft.Tests" />
+    <InternalsVisibleTo Include="SpanDraft.Tooling.Tests" />
     <ProjectReference Include="../../src/SpanDraft.Desktop/SpanDraft.Desktop.csproj" />
   </ItemGroup>
 </Project>

@@ -13,9 +13,6 @@ namespace SpanDraft.Tests;
 
 public sealed class MaterialNoteTests
 {
-    internal static Material WithNote(Material material, MaterialNote? note) => MaterialStrengthWire.Read(
-        material.Name, material.YoungsModulus, material.YieldStrength, MaterialStrengthWire.Write(material.StrengthType),
-        material.Density, material.PoissonRatio, material.Category, material.MaterialNumber, material.OtherStandards, note);
 
     [Fact]
     public void NormalizesCopiesAndComparesTheCompleteNote()
@@ -78,7 +75,7 @@ public sealed class MaterialNoteTests
     public async Task FullSnapshotRoundTripsAcrossIndependentWireContractsAndRecoveries(bool translated)
     {
         var note = new MaterialNote("Default\nSecond line", translated ? [new("fr", "Français"), new("de", "Deutsch")] : null);
-        var state = State(); state = state with { Document = state.Document with { Material = WithNote(state.Document.Material, note) } };
+        var state = State(); state = state with { Document = state.Document with { Material = MaterialNoteTestSupport.WithNote(state.Document.Material, note) } };
         var libraryBytes = MaterialLibraryCodec.Serialize(new([state.Document.Material]));
         Assert.Equal(note, Assert.Single(MaterialLibraryCodec.Deserialize(libraryBytes).All).Note);
         Assert.Equal(libraryBytes, MaterialLibraryCodec.Serialize(MaterialLibraryCodec.Deserialize(libraryBytes)));
@@ -102,7 +99,7 @@ public sealed class MaterialNoteTests
     [Fact]
     public void MissingNotesRemainMissingEvenWhenTheNameMatchesTheCatalog()
     {
-        var material = WithNote(MaterialCatalogCodec.LoadBuiltIn().Find("S235JR")!, null);
+        var material = MaterialNoteTestSupport.WithNote(MaterialCatalogCodec.LoadBuiltIn().Find("S235JR")!, null);
         var library = MaterialLibraryCodec.Serialize(new([material]));
         Assert.DoesNotContain("\"note\"", Encoding.UTF8.GetString(library));
         Assert.Null(Assert.Single(MaterialLibraryCodec.Deserialize(library).All).Note);
@@ -132,8 +129,8 @@ public sealed class MaterialNoteTests
         var state = State();
         var first = new MaterialNote("Default", [new("de", "Deutsch"), new("fr", "First")]);
         var second = new MaterialNote("Default", [new("de", "Deutsch"), new("fr", "Second")]);
-        state = state with { Document = state.Document with { Material = WithNote(state.Document.Material, first) } };
-        var next = state with { Document = state.Document with { Material = WithNote(state.Document.Material, second) } };
+        state = state with { Document = state.Document with { Material = MaterialNoteTestSupport.WithNote(state.Document.Material, first) } };
+        var next = state with { Document = state.Document with { Material = MaterialNoteTestSupport.WithNote(state.Document.Material, second) } };
         Assert.False(MaterialSnapshotComparison.Equals(state.Document.Material, next.Document.Material));
         Assert.False(state.ContentEquals(next));
         Assert.True(BeamModelMechanicalComparer.AreEquivalent(state.Document.ToBeamModel(), next.Document.ToBeamModel()));

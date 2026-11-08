@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using SpanDraft.Analysis;
-using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Core.Units;
@@ -50,9 +49,9 @@ public sealed class LibrarySnapshotTests
         state = state with { Document = state.Document.WithSection(library.Find("FIXTURE SECTION")!.Section,
             section.Axes[0].AxisDesignation) };
         byte[] snapshot = ProjectFileCodec.Serialize(state); var result = Analyze(state);
-        library.Replace("Fixture section", new("Fixture section", ParametricSectionTestSupport.Shape(2)));
+        library.Replace("Fixture section", new("Fixture section", SectionTestShapes.Shape(2)));
         Assert.Equal(snapshot, ProjectFileCodec.Serialize(state));
-        library.Replace("Fixture section", new("Renamed", ParametricSectionTestSupport.Shape(3)));
+        library.Replace("Fixture section", new("Renamed", SectionTestShapes.Shape(3)));
         Assert.Equal(snapshot, ProjectFileCodec.Serialize(state));
         Assert.True(library.Remove("Renamed")); Assert.Empty(library.All);
         var files = new Files(); await new SectionLibraryStore(files, "sections").SaveAsync(library, TestContext.Current.CancellationToken);
@@ -86,7 +85,7 @@ public sealed class LibrarySnapshotTests
 
     private static ISectionDefinition Definition(int kind)
     {
-        if (kind < 8) return ParametricSectionTestSupport.Shape(kind, r: kind is 1 or >= 4 ? .5 : 0);
+        if (kind < 8) return SectionTestShapes.Shape(kind, r: kind is 1 or >= 4 ? .5 : 0);
         return new ManualSectionDefinition(Area.FromSquareMeters(.01),
             new(kind == 10 ? SectionAxisDesignation.V : SectionAxisDesignation.Z,
                 SecondMomentOfArea.FromMetersToTheFourth(1e-5), SectionModulus.FromCubicMeters(2e-4)),

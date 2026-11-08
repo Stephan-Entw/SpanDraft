@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/SpanDraft.Desktop/SpanDraft.Desktop.csproj" />
+    <ProjectReference Include="../../tools/MicrosoftStore/SpanDraft.MicrosoftStore.csproj" />
+    <ProjectReference Include="../../tools/Screenshots/SpanDraft.Screenshots.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Support/AvaloniaCollection.cs" Link="Support/AvaloniaCollection.cs" />
+    <Compile Include="../Support/DesktopControlEnvironment.cs" Link="Support/DesktopControlEnvironment.cs" />
+    <Compile Include="../Support/DesktopIconTestSupport.cs" Link="Support/DesktopIconTestSupport.cs" />
+    <Compile Include="../Support/ProjectTestSupport.cs" Link="Support/ProjectTestSupport.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../tools/Screenshots/Fixtures/Crane Beam.spandraft" Link="Fixtures/Screenshots/Crane Beam.spandraft" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -13,7 +13,6 @@ using static SpanDraft.Tests.ProjectTestSupport;
 
 namespace SpanDraft.Tests;
 
-[Collection("Schematic text")]
 public sealed class ProjectSetupRecoveryTests
 {
     private static readonly string Slot = TestPath("setup-recovery.json");
@@ -70,7 +69,7 @@ public sealed class ProjectSetupRecoveryTests
     [InlineData(5)] [InlineData(6)] [InlineData(7)] [InlineData(8)] [InlineData(9)]
     public async Task AllSectionKindsAndManualAxisConfigurationsUseTheProjectConverter(int kind)
     {
-        ISectionDefinition section = kind < 8 ? ParametricSectionTestSupport.Shape(kind, .12345678901234567, .23456789012345678, .005, .01)
+        ISectionDefinition section = kind < 8 ? SectionTestShapes.Shape(kind, .12345678901234567, .23456789012345678, .005, .01)
             : new ManualSectionDefinition(Area.FromSquareMeters(.0012345678901234567),
                 new(SectionAxisDesignation.U, SecondMomentOfArea.FromMetersToTheFourth(1.2345678901234567e-6),
                     SectionModulus.FromCubicMeters(2.3456789012345678e-5)),

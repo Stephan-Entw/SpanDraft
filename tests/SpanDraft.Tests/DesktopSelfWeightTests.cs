@@ -1,9 +1,6 @@
 using SpanDraft.Analysis;
 using SpanDraft.Core.Loads;
-using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
-using SpanDraft.Core.Supports;
-using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
@@ -15,12 +12,6 @@ namespace SpanDraft.Tests;
 
 public sealed class DesktopSelfWeightTests
 {
-    internal static Material Steel(double? density = 7850) => new("Steel", Pressure.FromPascals(210e9),
-        Pressure.FromPascals(235e6), MaterialStrengthType.Re,
-        density is { } rho ? MassDensity.FromKilogramsPerCubicMeter(rho) : null, null);
-    internal static EditorDocument Document(bool enabled = false) => new(M(3), Steel(),
-        new SpanDraft.Core.Sections.Parametric.RectangleSectionGeometry(M(.1), M(.2)), SectionAxisDesignation.Y, [new(Guid.NewGuid(), M(0), SupportType.Fixed, "A")],
-        selfWeight: enabled ? new(Guid.NewGuid(), true) : null);
 
     private sealed class Observed
     {
@@ -33,7 +24,7 @@ public sealed class DesktopSelfWeightTests
     [Fact]
     public void FormulaMapsToExistingUdlAndMatchesCantileverReference()
     {
-        var document = Document(true);
+        var document = SelfWeightTestProjects.Document(true);
         var load = Assert.IsType<UniformDistributedLoad>(Assert.Single(document.ToBeamModel().Loads));
         Assert.Equal(-1539.64405, load.Intensity.NewtonsPerMeter, 8);
         Assert.Equal(M(0), load.StartPosition); Assert.Equal(M(3), load.EndPosition);
@@ -52,7 +43,7 @@ public sealed class DesktopSelfWeightTests
     [Fact]
     public void ToggleAndPresentationUseHistoryWithoutLosingIdentityOrReanalyzingMetadata()
     {
-        var s = new Observed(Document()); var editor = s.Editor;
+        var s = new Observed(SelfWeightTestProjects.Document()); var editor = s.Editor;
         editor.Session.MarkSaved(editor.Session.CurrentRevision, TestPath("saved.spandraft"));
         editor.ToggleDistributedLoadTool();
         Assert.True(editor.ToggleSelfWeight());
@@ -90,7 +81,7 @@ public sealed class DesktopSelfWeightTests
     public void MissingDensityRejectsActivationWithoutIdentityHistoryOrAnalysis()
     {
         using var culture = new UiCultureScope("de-DE");
-        var s = new Observed(Document() with { Material = Steel(null) }); var editor = s.Editor;
+        var s = new Observed(SelfWeightTestProjects.Document() with { Material = SelfWeightTestProjects.Steel(null) }); var editor = s.Editor;
         var revision = editor.Session.CurrentRevision;
         Assert.False(editor.ToggleSelfWeight());
         Assert.Equal("Eigengewicht kann nicht berücksichtigt werden. Für den Werkstoff ist keine Dichte angegeben.", editor.SelfWeightFeedback);
@@ -103,9 +94,9 @@ public sealed class DesktopSelfWeightTests
     [InlineData(false)] [InlineData(true)]
     public void DensityHasMechanicalEffectOnlyWhenEnabled(bool enabled)
     {
-        var s = new Observed(Document(enabled)); var editor = s.Editor;
+        var s = new Observed(SelfWeightTestProjects.Document(enabled)); var editor = s.Editor;
         var before = editor.Session.CurrentRevision.State;
-        editor.ApplySetup(editor.Document.Section, editor.Document.BendingAxis, Steel(8000));
+        editor.ApplySetup(editor.Document.Section, editor.Document.BendingAxis, SelfWeightTestProjects.Steel(8000));
         Assert.Equal(enabled ? 2 : 1, s.Calls);
         Assert.Equal(enabled ? EditorChangeKind.Mechanical : EditorChangeKind.MetadataOnly,
             EditorChangeClassifier.Classify(before, editor.Session.CurrentRevision.State));
@@ -117,9 +108,9 @@ public sealed class DesktopSelfWeightTests
     [Fact]
     public void SectionAndLengthChangesDeriveCurrentLoadAndAllDocumentCopiesPreserveIt()
     {
-        var s = new Observed(Document(true)); var editor = s.Editor;
+        var s = new Observed(SelfWeightTestProjects.Document(true)); var editor = s.Editor;
         var identity = editor.Document.SelfWeight;
-        editor.ApplySetup(new RectangleSection(M(.2), M(.2)), Steel());
+        editor.ApplySetup(new RectangleSection(M(.2), M(.2)), SelfWeightTestProjects.Steel());
         Assert.Equal(-3079.2881, editor.Document.SelfWeightLoad!.Intensity.NewtonsPerMeter, 8);
         Assert.Equal(2, s.Calls);
         editor.DimensionLength.Begin(); editor.DimensionLength.Text = "4000";
@@ -135,15 +126,15 @@ public sealed class DesktopSelfWeightTests
     [Fact]
     public void DirectAndSetupMaterialFlowsRejectMissingDensityAndKeepActiveWeight()
     {
-        var s = new Observed(Document(true)); var editor = s.Editor;
+        var s = new Observed(SelfWeightTestProjects.Document(true)); var editor = s.Editor;
         var revision = editor.Session.CurrentRevision;
-        editor.ApplySetup(editor.Document.Section, editor.Document.BendingAxis, Steel(null));
-        Assert.False(editor.ApplySetup(M(3), editor.Document.Section, editor.Document.BendingAxis, Steel(null), null));
+        editor.ApplySetup(editor.Document.Section, editor.Document.BendingAxis, SelfWeightTestProjects.Steel(null));
+        Assert.False(editor.ApplySetup(M(3), editor.Document.Section, editor.Document.BendingAxis, SelfWeightTestProjects.Steel(null), null));
         Assert.Same(revision, editor.Session.CurrentRevision); Assert.True(editor.IsSelfWeightEnabled); Assert.Equal(1, s.Calls);
         var d = editor.Document;
         var setup = new ProjectSetupViewModel(ProjectSetupMode.Edit, d.Section, d.BendingAxis, d.Material,
             _ => Task.FromResult(true), () => { }, originalDocument: d);
-        setup.SelectedMaterial = Steel(null);
+        setup.SelectedMaterial = SelfWeightTestProjects.Steel(null);
         Assert.False(setup.CanApply); Assert.Equal(Strings.SelfWeightMissingDensity, setup.MaterialError);
         setup.ShowMaterials();
         var selection = Assert.IsType<MaterialSelectionViewModel>(setup.CurrentStep);
@@ -155,7 +146,7 @@ public sealed class DesktopSelfWeightTests
     [Fact]
     public async Task ProjectMaterialEditorRejectsMissingDensityButLibraryEditorStillAllowsIt()
     {
-        var d = Document(true);
+        var d = SelfWeightTestProjects.Document(true);
         var setup = new ProjectSetupViewModel(ProjectSetupMode.Edit, d.Section, d.BendingAxis, d.Material,
             _ => Task.FromResult(true), () => { }, originalDocument: d);
         setup.ShowMaterials(); var selection = Assert.IsType<MaterialSelectionViewModel>(setup.CurrentStep);
@@ -165,7 +156,7 @@ public sealed class DesktopSelfWeightTests
         Assert.False(await editor.ConfirmAsync());
         Assert.Equal(Strings.SelfWeightMissingDensity, editor.Error); Assert.True(editor.HasFormError);
         Assert.Same(d.Material, setup.SelectedMaterial);
-        var libraryEditor = new MaterialEditorViewModel(setup, Steel(null), SetupEditorMode.UserLibraryCreate);
+        var libraryEditor = new MaterialEditorViewModel(setup, SelfWeightTestProjects.Steel(null), SetupEditorMode.UserLibraryCreate);
         Assert.True(await libraryEditor.ConfirmAsync());
     }
 
@@ -173,7 +164,7 @@ public sealed class DesktopSelfWeightTests
     [InlineData("g")] [InlineData("G")]
     public void ReservedNamesKeepLegacyEntitiesButBlockActivationUntilRenamed(string name)
     {
-        var d = Document(); var support = d.Supports[0] with { Name = name };
+        var d = SelfWeightTestProjects.Document(); var support = d.Supports[0] with { Name = name };
         var editor = new EditorViewModel(d.WithSupports([support]), () => { });
         Assert.False(editor.ToggleSelfWeight()); Assert.Equal(Strings.SelfWeightNameConflict, editor.SelfWeightFeedback);
         Assert.Null(editor.Document.SelfWeight);
@@ -190,7 +181,7 @@ public sealed class DesktopSelfWeightTests
     [Fact]
     public void DisplayOptionsRefreshActiveWeightWithoutChangingTheProjectOrAnalysis()
     {
-        var s = new Observed(Document(true)); var editor = s.Editor;
+        var s = new Observed(SelfWeightTestProjects.Document(true)); var editor = s.Editor;
         var revision = editor.Session.CurrentRevision; var result = editor.Presentation.Result;
         string original = editor.SelfWeightLabel;
         var changed = new List<string?>();
@@ -215,11 +206,11 @@ public sealed class DesktopSelfWeightTests
     public void FlyoutValuesUseCurrentSectionAndMaterialAndFollowUndo(string culture, string expectedWeight)
     {
         using var scope = new UiCultureScope(culture);
-        var editor = new EditorViewModel(Document(true), () => { });
+        var editor = new EditorViewModel(SelfWeightTestProjects.Document(true), () => { });
         string initialArea = editor.SelfWeightArea.PlainText;
         string initialDensity = editor.SelfWeightDensity.PlainText;
         var changed = new List<string?>(); editor.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
-        editor.ApplySetup(new RectangleSection(M(.06), M(.06)), Steel(800));
+        editor.ApplySetup(new RectangleSection(M(.06), M(.06)), SelfWeightTestProjects.Steel(800));
         Assert.Equal(expectedWeight, editor.SelfWeightValue.PlainText);
         Assert.Equal("A = 3\u202f600 mm²", editor.SelfWeightArea.PlainText);
         Assert.Equal("ρ = 800 kg/m³", editor.SelfWeightDensity.PlainText);
@@ -232,7 +223,7 @@ public sealed class DesktopSelfWeightTests
     [Fact]
     public void WeightIsFirstInOverviewAndDoesNotConsumeDistributedLoadNames()
     {
-        var editor = new EditorViewModel(Document(), () => { });
+        var editor = new EditorViewModel(SelfWeightTestProjects.Document(), () => { });
         void Add()
         {
             editor.ToggleDistributedLoadTool(); editor.HoverDistributedLoadPlacement(M(.5)); editor.PlaceDistributedLoadEndpoint();

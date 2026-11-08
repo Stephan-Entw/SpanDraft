@@ -5,8 +5,6 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../tools/MicrosoftStore/SpanDraft.MicrosoftStore.csproj" />
-    <ProjectReference Include="../../tools/Screenshots/SpanDraft.Screenshots.csproj" />
     <ProjectReference Include="../../src/SpanDraft.Desktop/SpanDraft.Desktop.csproj" />
     <ProjectReference Include="../../src/SpanDraft.Core/SpanDraft.Core.csproj" />
     <ProjectReference Include="../../src/SpanDraft.Solver/SpanDraft.Solver.csproj" />
@@ -18,7 +16,28 @@
     <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.1" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="../Support/DesktopDistributedLoadRenderingTestSupport.cs" Link="Support/DesktopDistributedLoadRenderingTestSupport.cs" />
+    <Compile Include="../Support/DesktopHingedSupportTestSupport.cs" Link="Support/DesktopHingedSupportTestSupport.cs" />
+    <Compile Include="../Support/DesktopLayoutFixture.cs" Link="Support/DesktopLayoutFixture.cs" />
+    <Compile Include="../Support/LibraryTestSupport.cs" Link="Support/LibraryTestSupport.cs" />
+    <Compile Include="../Support/MaterialNoteTestSupport.cs" Link="Support/MaterialNoteTestSupport.cs" />
+    <Compile Include="../Support/MaterialStrengthTestSupport.cs" Link="Support/MaterialStrengthTestSupport.cs" />
+    <Compile Include="../Support/MaterialTestEntries.cs" Link="Support/MaterialTestEntries.cs" />
+    <Compile Include="../Support/PresentationTestProfiles.cs" Link="Support/PresentationTestProfiles.cs" />
+    <Compile Include="../Support/ProbeTestProjects.cs" Link="Support/ProbeTestProjects.cs" />
+    <Compile Include="../Support/ProcessCultureScope.cs" Link="Support/ProcessCultureScope.cs" />
+    <Compile Include="../Support/SolverTestSupport.cs" Link="Support/SolverTestSupport.cs" />
+    <Compile Include="../Support/SectionTestShapes.cs" Link="Support/SectionTestShapes.cs" />
+    <Compile Include="../Support/ProjectTemplates.cs" Link="Support/ProjectTemplates.cs" />
+    <Compile Include="../Support/ProjectTestSupport.cs" Link="Support/ProjectTestSupport.cs" />
+    <Compile Include="../Support/ReportTestProjects.cs" Link="Support/ReportTestProjects.cs" />
+    <Compile Include="../Support/ResultCultureScope.cs" Link="Support/ResultCultureScope.cs" />
+    <Compile Include="../Support/SectionDefinitionPrototypeTestSupport.cs" Link="Support/SectionDefinitionPrototypeTestSupport.cs" />
+    <Compile Include="../Support/SectionDefinitionRedesignTestSupport.cs" Link="Support/SectionDefinitionRedesignTestSupport.cs" />
+    <Compile Include="../Support/SelfWeightTestProjects.cs" Link="Support/SelfWeightTestProjects.cs" />
+    <Compile Include="../Support/UiCultureScope.cs" Link="Support/UiCultureScope.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <None Update="Fixtures/**/*.spandraft" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="../../tools/Screenshots/Fixtures/Crane Beam.spandraft" Link="Fixtures/Screenshots/Crane Beam.spandraft" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

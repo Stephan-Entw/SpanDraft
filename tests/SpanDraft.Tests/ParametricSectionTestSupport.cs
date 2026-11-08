@@ -1,7 +1,6 @@
 using SpanDraft.Core.Sections.Geometry;
 using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Core.Units;
-using Xunit;
 using static SpanDraft.Tests.SectionGeometryTestSupport;
 
 namespace SpanDraft.Tests;
@@ -9,19 +8,6 @@ namespace SpanDraft.Tests;
 internal static class ParametricSectionTestSupport
 {
     internal static Length M(double value) => Length.FromMeters(value);
-
-    internal static IParametricSectionDefinition Shape(int kind, double b = 6, double h = 10, double t = 1, double tf = 1, double r = 0) => kind switch
-    {
-        0 => new RectangleSectionGeometry(M(b), M(h)),
-        1 => new RectangularHollowSectionGeometry(M(b), M(h), M(t), M(r)),
-        2 => new CircleSectionGeometry(M(b)),
-        3 => new CircularHollowSectionGeometry(M(b), M(t)),
-        4 => new ISectionGeometry(M(h), M(b), M(t), M(tf), M(r)),
-        5 => new USectionGeometry(M(h), M(b), M(t), M(tf), M(r)),
-        6 => new TSectionGeometry(M(h), M(b), M(t), M(tf), M(r)),
-        7 => new AngleSectionGeometry(M(b), M(h), M(t), M(r)),
-        _ => throw new ArgumentOutOfRangeException(nameof(kind))
-    };
 
     internal static SectionGeometry Geometry(object shape) =>
         ((IParametricSectionDefinition)shape).Geometry;

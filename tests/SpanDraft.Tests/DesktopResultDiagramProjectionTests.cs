@@ -21,7 +21,7 @@ public sealed class DesktopResultDiagramProjectionTests
         var layout = StationLayout.Compute(L, 72, 480, [new(.02, 24, 24), new(.03, 24, 24)]);
         var original = Project(solution, kind, layout);
         foreach (var profile in new[] { UnitProfile.Default, UnitProfile.StructuralEngineering,
-            UnitProfile.UnitedStates, DesktopResultPresentationTests.Mixed })
+            UnitProfile.UnitedStates, PresentationTestProfiles.Mixed })
         {
             var plot = ResultDiagramProjection.Create(solution, kind, layout, 36, 132, profile);
             var unit = profile[ResultDiagramProjection.QuantityOf(kind)];

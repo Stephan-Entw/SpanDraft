@@ -1,4 +1,3 @@
-using System.Globalization;
 using SpanDraft.Analysis;
 using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
@@ -482,12 +481,4 @@ public sealed class DesktopProjectOverviewTests
         Assert.Equal(AnalysisPresentationKind.MissingSupports, editor.Overview.Analysis.Kind);
         Assert.Equal(1, analyses());
     }
-}
-
-internal sealed class UiCultureScope : IDisposable
-{
-    private readonly CultureInfo _previous = CultureInfo.CurrentUICulture;
-    private readonly CultureInfo _previousNumeric = CultureInfo.CurrentCulture;
-    public UiCultureScope(string culture) => CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
-    public void Dispose() { CultureInfo.CurrentUICulture = _previous; CultureInfo.CurrentCulture = _previousNumeric; }
 }

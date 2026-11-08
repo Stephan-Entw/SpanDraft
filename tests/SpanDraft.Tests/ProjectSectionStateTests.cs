@@ -101,7 +101,7 @@ public sealed class ProjectSectionStateTests
     [InlineData(7, SectionAxisDesignation.V)]
     public void DocumentMutationsPreserveTheExplicitAxis(int kind, SectionAxisDesignation axis)
     {
-        var section = ParametricSectionTestSupport.Shape(kind);
+        var section = SectionTestShapes.Shape(kind);
         var d = State().Document.WithSection(section, axis);
         foreach (var changed in new[] { d.WithSupports(d.Supports), d.WithLoads(d.Loads), d.WithDistributedLoads(d.DistributedLoads),
             d with { Length = M(2) }, d with { Material = ProjectTemplates.Material } })
@@ -115,7 +115,7 @@ public sealed class ProjectSectionStateTests
     [Fact]
     public void InvalidSectionAxisPairIsRejectedDuringConstructionAndMutation()
     {
-        var i = ParametricSectionTestSupport.Shape(4); var angle = ParametricSectionTestSupport.Shape(7);
+        var i = SectionTestShapes.Shape(4); var angle = SectionTestShapes.Shape(7);
         Assert.Throws<ArgumentException>(() => new EditorDocument(M(1), ProjectTemplates.Material, i, SectionAxisDesignation.U));
         Assert.Throws<ArgumentException>(() => new EditorDocument(M(1), ProjectTemplates.Material, angle, SectionAxisDesignation.Y));
         Assert.Throws<ArgumentOutOfRangeException>(() => new EditorDocument(M(1), ProjectTemplates.Material, i, (SectionAxisDesignation)999));
@@ -164,11 +164,11 @@ public sealed class ProjectSectionStateTests
     [MemberData(nameof(ParameterChanges))]
     public void EachOriginalShapeParameterAffectsContentEquality(int kind, string field)
     {
-        var shape = ParametricSectionTestSupport.Shape(kind, r: .5);
-        var next = ParametricSectionTestSupport.Shape(kind, b: field == "b" ? 6.1 : 6, h: field == "h" ? 10.1 : 10,
+        var shape = SectionTestShapes.Shape(kind, r: .5);
+        var next = SectionTestShapes.Shape(kind, b: field == "b" ? 6.1 : 6, h: field == "h" ? 10.1 : 10,
             t: field == "t" ? 1.1 : 1, tf: field == "tf" ? 1.1 : 1, r: field == "r" ? .6 : .5);
         var before = State() with { Document = State().Document.WithSection(shape, shape.Axes[0].AxisDesignation) };
-        var same = before with { Document = before.Document.WithSection(ParametricSectionTestSupport.Shape(kind, r: .5), before.Document.BendingAxis) };
+        var same = before with { Document = before.Document.WithSection(SectionTestShapes.Shape(kind, r: .5), before.Document.BendingAxis) };
         var after = before with { Document = before.Document.WithSection(next, before.Document.BendingAxis) };
         Assert.True(before.ContentEquals(same));
         Assert.False(before.ContentEquals(after)); Assert.False(after.ContentEquals(before));

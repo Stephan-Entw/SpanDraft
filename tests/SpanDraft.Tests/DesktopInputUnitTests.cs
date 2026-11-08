@@ -107,7 +107,7 @@ public sealed class DesktopInputUnitTests
 
     private static EditorDocument Document() => new(Length.FromMeters(1), ProjectTemplates.Material, ProjectTemplates.Section);
     private static UnitProfile Profile(int index) => index == 4
-        ? UnitProfile.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Inch) : DesktopResultPresentationTests.Profile(index);
+        ? UnitProfile.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Inch) : PresentationTestProfiles.Profile(index);
 
     [Theory]
     [MemberData(nameof(DraftCases))]

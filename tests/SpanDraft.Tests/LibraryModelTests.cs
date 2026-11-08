@@ -39,8 +39,8 @@ public sealed class LibraryModelTests
     [Fact]
     public void SectionCrudUsesLocalCaseInsensitiveNamesAndKeepsOrder()
     {
-        var first = new SectionLibraryEntry("Fixture A", ParametricSectionTestSupport.Shape(0));
-        var second = new SectionLibraryEntry("Fixture B", ParametricSectionTestSupport.Shape(1));
+        var first = new SectionLibraryEntry("Fixture A", SectionTestShapes.Shape(0));
+        var second = new SectionLibraryEntry("Fixture B", SectionTestShapes.Shape(1));
         var library = new UserSectionLibrary();
         Assert.Empty(library.All); Assert.Null(library.Find("absent")); Assert.False(library.Remove("absent"));
         library.Add(first); library.Add(second);
@@ -49,7 +49,7 @@ public sealed class LibraryModelTests
         Assert.Throws<ArgumentException>(() => library.Replace("Fixture A", new("fixture b", first.Section)));
         Assert.Throws<KeyNotFoundException>(() => library.Replace("absent", first));
         Assert.Equal(new[] { first, second }, library.All);
-        var replacement = new SectionLibraryEntry("Fixture A", ParametricSectionTestSupport.Shape(2));
+        var replacement = new SectionLibraryEntry("Fixture A", SectionTestShapes.Shape(2));
         library.Replace("fixture a", replacement);
         Assert.Same(replacement, library.All[0]);
         var renamed = new SectionLibraryEntry("Renamed", replacement.Section);
@@ -110,7 +110,7 @@ public sealed class LibraryModelTests
     {
         Assert.Throws<ArgumentException>(() => new UserMaterialLibrary([
             new Material(name, Pressure.FromPascals(1), Pressure.FromPascals(1), MaterialStrengthType.Re)]));
-        Assert.Throws<ArgumentException>(() => new SectionLibraryEntry(name, ParametricSectionTestSupport.Shape(0)));
+        Assert.Throws<ArgumentException>(() => new SectionLibraryEntry(name, SectionTestShapes.Shape(0)));
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public sealed class LibraryModelTests
         var entry = MaterialEntry();
         Assert.Throws<ArgumentException>(() => new UserMaterialLibrary([entry, MaterialEntry("fixture a")]));
         Assert.Throws<ArgumentException>(() => new BuiltInMaterialCatalog([entry, MaterialEntry("fixture a")]));
-        var section = new SectionLibraryEntry("A", ParametricSectionTestSupport.Shape(0));
+        var section = new SectionLibraryEntry("A", SectionTestShapes.Shape(0));
         Assert.Throws<ArgumentException>(() => new UserSectionLibrary([section, new("a", section.Section)]));
         Assert.Throws<ArgumentNullException>(() => new UserMaterialLibrary([null!]));
         Assert.Throws<ArgumentNullException>(() => new UserSectionLibrary([null!]));

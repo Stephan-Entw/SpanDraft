@@ -1,0 +1,372 @@
+using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Automation.Peers;
+using Avalonia.Controls;
+using Avalonia.Controls.Documents;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using SpanDraft.Core.Supports;
+using SpanDraft.Core.Units;
+using SpanDraft.Desktop;
+using SpanDraft.Desktop.Controls;
+using SpanDraft.Desktop.Presentation;
+using SpanDraft.Desktop.Resources;
+using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.ViewModels;
+using SpanDraft.Desktop.Views;
+using SpanDraft.Reporting.Notation;
+using Xunit;
+
+namespace SpanDraft.Tests;
+
+[Collection("Avalonia")]
+public sealed class DesktopSettingsControlTests
+{
+    [Theory]
+    [InlineData("de-DE", 900, 780)]
+    [InlineData("en-US", 900, 780)]
+    [InlineData("de-DE", 820, 450)]
+    [InlineData("en-US", 820, 450)]
+    public void DialogKeepsOneScrollablePageWithAlignedFormsAndReachableActions(string culture, double width, double height)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new ResultCultureScope(culture, culture);
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
+        var window = new SettingsWindow(model);
+        Arrange(window, width, height);
+        var scroll = window.FindControl<ScrollViewer>("SettingsScroll")!;
+        Assert.Null(window.FindControl<TextBox>("DefaultAuthorInput"));
+        var headings = window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Classes.Contains("sectionTitle"));
+        Assert.Equal(Strings.SettingsUnits, headings.First().Text);
+        var language = window.FindControl<ComboBox>("LanguagePicker")!;
+        var region = window.FindControl<ComboBox>("RegionalFormatPicker")!;
+        Assert.True(language.IsEnabled); Assert.True(region.IsEnabled);
+        Assert.Equal(3, language.Items.Count); Assert.Equal(3, region.Items.Count);
+        Assert.Equal(220, language.Bounds.Width, 6); Assert.Equal(220, region.Bounds.Width, 6);
+        Assert.Equal(language.Bounds.Left, region.Bounds.Left, 6);
+        Assert.Equal(UiLanguagePreference.System, language.SelectedValue);
+        Assert.Equal(RegionalFormatPreference.System, region.SelectedValue);
+        var restart = window.FindControl<TextBlock>("LocaleRestartHint")!;
+        Assert.Equal(Strings.LocaleRestartHint, restart.Text);
+        Assert.True(restart.Bounds.Height >= restart.TextLayout.Height);
+        Assert.Null(window.FindControl<Button>("ApplyButton"));
+        Assert.True(window.FindControl<Button>("OkButton")!.IsEnabled);
+        Assert.Equal(Strings.OK, window.FindControl<Button>("OkButton")!.Content);
+        Assert.Equal(Strings.Cancel, window.FindControl<Button>("CancelButton")!.Content);
+        var ok = window.FindControl<Button>("OkButton")!;
+        var cancel = window.FindControl<Button>("CancelButton")!;
+        Assert.Equal(ok.Bounds.Height, cancel.Bounds.Height);
+        Assert.Equal(ok.Bounds.Top, cancel.Bounds.Top);
+        Assert.Equal(ok.VerticalAlignment, cancel.VerticalAlignment);
+        Assert.Equal(ok.Padding, cancel.Padding);
+        Assert.Equal(ok.MinWidth, cancel.MinWidth);
+        Assert.True(ok.Bounds.Width >= 80); Assert.True(cancel.Bounds.Width >= 80);
+        Assert.Contains("primary", ok.Classes); Assert.Contains("secondary", cancel.Classes);
+        Assert.False(window.FindControl<RadioButton>("CustomProfileOption")!.IsVisible);
+        var profiles = window.FindControl<StackPanel>("ProfileRow")!;
+        var radios = profiles.Children.OfType<RadioButton>().Where(r => r.IsVisible).ToArray();
+        Assert.Equal(3, radios.Length);
+        Assert.True(radios[1].Bounds.Left >= radios[0].Bounds.Right);
+        Assert.True(radios[2].Bounds.Left >= radios[1].Bounds.Right);
+        Assert.Empty(window.GetVisualDescendants().OfType<TabControl>());
+        foreach (var radio in window.GetVisualDescendants().OfType<RadioButton>().Where(r => r.GroupName == "Presentation"))
+        {
+            var description = radio.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Classes.Contains("secondary"));
+            var origin = description.TranslatePoint(default, radio)!.Value;
+            Assert.True(origin.Y + description.Bounds.Height <= radio.Bounds.Height);
+            Assert.True(description.Bounds.Height >= description.TextLayout.Height);
+        }
+        foreach (string name in new[] { "LeftUnitList", "RightUnitList" })
+        {
+            var list = window.FindControl<ItemsControl>(name)!;
+            var combos = list.GetVisualDescendants().OfType<ComboBox>().Where(c => c.IsVisible).ToArray();
+            Assert.Equal(name == "LeftUnitList" ? 7 : 7, combos.Length);
+            Assert.All(combos, c => Assert.Equal(132, c.Bounds.Width, 6));
+            double x = combos[0].TranslatePoint(default, list)!.Value.X;
+            Assert.All(combos, c => Assert.Equal(x, c.TranslatePoint(default, list)!.Value.X, 6));
+            foreach (var label in list.GetVisualDescendants().OfType<TextBlock>().Where(t => TechnicalTextPresenter.GetContent(t) is not null))
+            {
+                var row = Assert.IsType<UnitSettingViewModel>(label.DataContext);
+                var symbol = row.Quantity switch
+                {
+                    QuantityKind.Area => TechnicalSymbols.Area,
+                    QuantityKind.SecondMomentOfArea => TechnicalSymbols.Inertia(),
+                    QuantityKind.SectionModulus => TechnicalSymbols.Modulus(),
+                    _ => null
+                };
+                Assert.Equal(row.Label, new TextBlockAutomationPeer(label).GetName());
+                var picker = ((Grid)label.Parent!).Children.OfType<ComboBox>().Single();
+                Assert.Equal(row.Label, AutomationProperties.GetName(picker));
+                var runs = label.Inlines!.Cast<Run>().ToArray();
+                if (symbol is not null)
+                {
+                    Assert.Equal(symbol.Runs, row.LabelText.Runs.TakeLast(symbol.Runs.Count));
+                    Assert.EndsWith(" " + symbol.PlainText, row.Label);
+                    Assert.Equal(FontStyle.Italic, runs[^1].FontStyle);
+                    Assert.Equal(FontStyle.Normal, runs[0].FontStyle);
+                }
+                else Assert.All(runs, run => Assert.Equal(FontStyle.Normal, run.FontStyle));
+                Assert.True(label.TextLayout.Width <= label.Bounds.Width + .01);
+                Assert.True(label.TextLayout.Height <= label.Bounds.Height + .01);
+            }
+        }
+        Export(scroll, $"settings-{culture}-{width}x{height}-top.png", width, height);
+        model.ChangeUnit(QuantityKind.BeamLength, UnitCatalog.Inch);
+        Arrange(window, width, height);
+        Assert.True(window.FindControl<RadioButton>("CustomProfileOption")!.IsVisible);
+        Assert.True(window.FindControl<Button>("OkButton")!.IsEnabled);
+        if (height == 450)
+        {
+            Assert.True(scroll.Extent.Height > scroll.Viewport.Height);
+            scroll.Offset = new(0, scroll.Extent.Height);
+            Arrange(window, width, height);
+            var button = window.FindControl<Button>("OkButton")!;
+            var origin = button.TranslatePoint(default, scroll)!.Value;
+            Assert.InRange(origin.Y, 0, scroll.Viewport.Height - button.Bounds.Height);
+        }
+        Export(scroll, $"settings-{culture}-{width}x{height}-custom.png", width, height);
+    }
+
+    [Theory]
+    [InlineData("de-DE", "Signifikante Stellen", "Technische Schreibweise")]
+    [InlineData("en-US", "Significant digits", "Engineering notation")]
+    public void NumericPickersBindBothDirectionsAndRestoreDiscardedPreferences(string culture, string precisionLabel, string notationLabel)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new ResultCultureScope(culture, culture);
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
+        var window = new SettingsWindow(model); Arrange(window, 900, 780);
+        var digits = window.FindControl<ComboBox>("SignificantDigitsPicker")!;
+        var notation = window.FindControl<ComboBox>("NotationPicker")!;
+        Assert.Equal(precisionLabel, AutomationProperties.GetName(digits));
+        Assert.Equal(notationLabel, AutomationProperties.GetName(notation));
+        Assert.Equal(digits.Bounds.Width, notation.Bounds.Width);
+        Assert.Equal(digits.Bounds.Left, notation.Bounds.Left);
+        Assert.Equal(3, digits.SelectedItem);
+        Assert.Equal(EngineeringNotation.Automatic, notation.SelectedValue);
+        Assert.Equal(Enumerable.Range(1, 15), model.SignificantDigitChoices);
+        digits.SelectedItem = 8;
+        notation.SelectedItem = model.Notations.Single(n => n.Value == EngineeringNotation.Off);
+        Assert.Equal(8, model.Pending.SignificantDigits);
+        Assert.Equal(EngineeringNotation.Off, model.Pending.Notation);
+        model.SignificantDigits = 4;
+        Assert.Equal(4, digits.SelectedItem);
+        model.DiscardPending();
+        Assert.Equal(3, digits.SelectedItem);
+        Assert.Equal(EngineeringNotation.Automatic, notation.SelectedValue);
+        Assert.DoesNotContain(window.GetVisualDescendants().OfType<RadioButton>(), r => r.GroupName == "Presentation");
+    }
+
+    [Fact]
+    public void LocalePickersBindTypedValuesInBothDirectionsAndRestoreDiscardedSelections()
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new ResultCultureScope("de-DE", "en-US");
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
+        var window = new SettingsWindow(model); Arrange(window, 900, 780);
+        var language = window.FindControl<ComboBox>("LanguagePicker")!;
+        var region = window.FindControl<ComboBox>("RegionalFormatPicker")!;
+        language.SelectedItem = model.UiLanguages.Single(o => o.Value == UiLanguagePreference.English);
+        region.SelectedItem = model.RegionalFormats.Single(o => o.Value == RegionalFormatPreference.GermanGermany);
+        Assert.Equal(UiLanguagePreference.English, model.SelectedUiLanguage);
+        Assert.Equal(RegionalFormatPreference.GermanGermany, model.SelectedRegionalFormat);
+        Assert.True(model.HasChanges); Assert.Same(UnitProfile.Default, model.Pending.Profile);
+        model.SelectedUiLanguage = UiLanguagePreference.German;
+        model.SelectedRegionalFormat = RegionalFormatPreference.EnglishUnitedStates;
+        Assert.Equal(UiLanguagePreference.German, language.SelectedValue);
+        Assert.Equal(RegionalFormatPreference.EnglishUnitedStates, region.SelectedValue);
+        model.DiscardPending();
+        Assert.Equal(UiLanguagePreference.System, language.SelectedValue);
+        Assert.Equal(RegionalFormatPreference.System, region.SelectedValue);
+        Assert.False(model.HasChanges);
+        Assert.Equal(new[] { "System language", "Deutsch", "English" }, model.UiLanguages.Select(o => o.Label));
+        Assert.Equal(new[] { "System setting", "German (Germany)", "English (United States)" }, model.RegionalFormats.Select(o => o.Label));
+    }
+
+    [Fact]
+    public void OkSavesChangesAndClosesTheWindow()
+    {
+        using var environment = new DesktopControlEnvironment();
+        UserSettings? published = null;
+        var model = new SettingsViewModel(UserSettings.Default, settings =>
+        { published = settings; return Task.FromResult<string?>(null); });
+        var window = new SettingsWindow(model);
+        bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
+        model.SignificantDigits = 6;
+        model.SelectedUiLanguage = UiLanguagePreference.English;
+        model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
+        Click(window, "OkButton");
+        Assert.True(closeApproved);
+        Assert.Equal(6, published!.SignificantDigits);
+        Assert.Equal(UiLanguagePreference.English, published.UiLanguage);
+        Assert.Equal(RegionalFormatPreference.GermanGermany, published.RegionalFormat);
+        Assert.Equal(6, model.SignificantDigits); Assert.False(model.HasChanges);
+    }
+
+    [Fact]
+    public void UnchangedOkClosesWithoutSaving()
+    {
+        using var environment = new DesktopControlEnvironment();
+        int writes = 0;
+        var model = new SettingsViewModel(UserSettings.Default, _ =>
+        { writes++; return Task.FromResult<string?>(null); });
+        var window = new SettingsWindow(model);
+        bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
+        Click(window, "OkButton");
+        Assert.True(closeApproved); Assert.Equal(0, writes);
+    }
+
+    [Theory]
+    [InlineData("cancel")]
+    [InlineData("escape")]
+    [InlineData("close")]
+    public void CancelEscapeAndCloseDiscardPendingChangesWithoutSaving(string action)
+    {
+        using var environment = new DesktopControlEnvironment();
+        int writes = 0;
+        var model = new SettingsViewModel(UserSettings.Default, _ =>
+        { writes++; return Task.FromResult<string?>(null); });
+        var window = new SettingsWindow(model);
+        bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
+        model.Select(UnitProfileKind.UnitedStates); model.SignificantDigits = 6;
+        model.SelectedUiLanguage = UiLanguagePreference.English;
+        model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
+        if (action == "cancel") Click(window, "CancelButton");
+        else if (action == "escape") Escape(window);
+        else window.Close();
+        Assert.True(closeApproved); Assert.Equal(0, writes);
+        Assert.True(model.Pending.ContentEquals(UserSettings.Default));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RejectedOkKeepsWindowAndPendingChangesForCorrectionOrCancel(bool activeDraft)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new ProjectTestSupport.Files();
+        if (!activeDraft) files.FailWritePath = "settings";
+        var main = new MainWindowViewModel(files: files,
+            settingsStore: new SpanDraft.Desktop.Persistence.LocalSettingsStore(files, "settings")); main.NewCommand.Execute(null);
+        if (activeDraft)
+        {
+            ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
+            main.Editor!.DimensionLength.Begin(); main.Editor.DimensionLength.Text = "1200";
+        }
+        var applied = main.Settings;
+        var model = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
+        var window = new SettingsWindow(model);
+        bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
+        model.Select(UnitProfileKind.UnitedStates);
+        model.SelectedUiLanguage = UiLanguagePreference.English;
+        model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
+        Click(window, "OkButton");
+        Assert.False(closeApproved); Assert.True(model.IsUnitedStates); Assert.True(model.HasError);
+        Assert.Equal(UiLanguagePreference.English, model.SelectedUiLanguage);
+        Assert.Equal(RegionalFormatPreference.GermanGermany, model.SelectedRegionalFormat);
+        Assert.Same(applied, main.Settings);
+        if (activeDraft) main.Editor!.DimensionLength.Cancel();
+        else files.FailWritePath = null;
+        Click(window, "OkButton");
+        Assert.True(closeApproved); Assert.True(main.Settings.ContentEquals(model.Pending));
+    }
+
+    [Fact]
+    public void SavingRejectsRepeatedOkCancelEscapeAndCloseThenClosesOnSuccess()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var completion = new TaskCompletionSource<string?>();
+        int writes = 0;
+        var model = new SettingsViewModel(UserSettings.Default, _ => { writes++; return completion.Task; });
+        var window = new SettingsWindow(model);
+        bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
+        model.SignificantDigits = 6;
+        Click(window, "OkButton");
+        Assert.True(model.IsSaving);
+        Assert.False(window.FindControl<Button>("OkButton")!.IsEnabled);
+        Assert.False(window.FindControl<Button>("CancelButton")!.IsEnabled);
+        Click(window, "OkButton"); Click(window, "CancelButton"); Escape(window); window.Close();
+        Assert.False(closeApproved); Assert.Equal(6, model.SignificantDigits); Assert.Equal(1, writes);
+        completion.SetResult(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(closeApproved); Assert.False(model.IsSaving); Assert.False(model.HasChanges);
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("en-US")]
+    public void UnitChangesRefreshTextsWithoutChangingStationsGlyphAnchorsOrDiagramSources(string culture)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new ResultCultureScope(culture, culture);
+        int analyses = 0;
+        var document = new EditorDocument(Length.FromMeters(1), ProjectTemplates.Material, ProjectTemplates.Section,
+            [new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Fixed, "A")],
+            [new EditorPointForce(Guid.NewGuid(), Length.FromMeters(.4), Force.FromNewtons(-1000), "F1"),
+             new EditorPointMoment(Guid.NewGuid(), Length.FromMeters(.6), Moment.FromNewtonMeters(50), "M1")],
+            distributedLoads: [new(Guid.NewGuid(), Length.FromMeters(.2), Length.FromMeters(.8), ForcePerLength.FromNewtonsPerMeter(-500), "q1")]);
+        var main = new MainWindowViewModel(b => { analyses++; return SpanDraft.Analysis.BeamAnalysis.Analyze(b); }); main.NewCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
+        var editor = main.Editor!;
+        editor.Session.Commit(new(document, new()));
+        int initialAnalyses = analyses;
+        var view = new EditorView { DataContext = editor }; var window = new Window { Content = view };
+        Arrange(window, 1250, 800);
+        var surface = view.GetVisualDescendants().OfType<BeamEditorSurface>().Single();
+        var canvas = view.GetVisualDescendants().OfType<BeamCanvas>().Single();
+        var axis = view.GetVisualDescendants().OfType<CoordinateAxisPane>().Single();
+        var layout = surface.StationLayout!; var frame = canvas.Scene!.Frame;
+        var positions = canvas.Scene.Loads.Select(l => l.X).ToArray();
+        var result = editor.Presentation.Result;
+        var revision = editor.Session.CurrentRevision;
+        foreach (var profile in new[] { UnitProfile.StructuralEngineering, UnitProfile.UnitedStates, PresentationTestProfiles.Mixed, UnitProfile.Default })
+        {
+            Assert.True(main.SetResultPresentation(profile, 3));
+            Arrange(window, 1250, 800);
+            Assert.Same(layout, surface.StationLayout);
+            Assert.Equal(frame.Viewport, canvas.Scene!.Frame.Viewport);
+            Assert.Equal(positions, canvas.Scene.Loads.Select(l => l.X));
+            Assert.Equal(profile[QuantityKind.BeamLength].Symbol, axis.AxisLayout!.UnitSymbol);
+            Assert.Equal(profile[QuantityKind.BeamLength].Symbol, editor.DimensionLength.Unit);
+            Assert.Same(revision, editor.Session.CurrentRevision);
+            Assert.Same(result, editor.Presentation.Result);
+            Assert.Equal(initialAnalyses, analyses);
+            Assert.Contains(canvas.Scene.Annotations, a => a.Text == PointLoadSymbol.Label(new(document.Loads[0].Position,
+                PointLoadKind.Force, -1000), "F1", profile));
+            Assert.All(view.GetVisualDescendants().OfType<ResultDiagram>(), d => Assert.Same(layout, d.Projection!.StationLayout));
+        }
+    }
+
+    private static void Click(SettingsWindow window, string name) =>
+        window.FindControl<Button>(name)!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+    private static void Escape(SettingsWindow window) =>
+        window.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
+
+    private static void Arrange(Window window, double width, double height)
+    {
+        window.ApplyTemplate();
+        for (int pass = 0; pass < 3; pass++)
+        {
+            window.Measure(new Size(width, height)); window.Arrange(new Rect(0, 0, width, height));
+            var content = (Control)window.Content!;
+            foreach (var child in content.GetVisualDescendants().OfType<Control>())
+            { child.InvalidateMeasure(); child.InvalidateArrange(); }
+            content.InvalidateMeasure(); content.InvalidateArrange();
+            content.Measure(new Size(width, height)); content.Arrange(new Rect(0, 0, width, height));
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    private static void Export(Control control, string name, double width, double height)
+    {
+        if (Environment.GetEnvironmentVariable("SPANDRAFT_VISUAL_TEST_OUTPUT") is not { Length: > 0 } directory) return;
+        Directory.CreateDirectory(directory);
+        using var bitmap = new RenderTargetBitmap(new PixelSize((int)width, (int)height), new Vector(96, 96));
+        bitmap.Render(control); bitmap.Save(Path.Combine(directory, name), PngBitmapEncoderOptions.Default);
+    }
+}

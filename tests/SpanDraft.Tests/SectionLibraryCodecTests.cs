@@ -19,7 +19,7 @@ public sealed class SectionLibraryCodecTests
         ["height", "width", "webThickness", "flangeThickness", "radius"],
         ["height", "width", "webThickness", "flangeThickness", "radius"], ["width", "height", "thickness", "innerRadius"]];
 
-    private static IParametricSectionDefinition Shape(int kind, double r) => ParametricSectionTestSupport.Shape(kind,
+    private static IParametricSectionDefinition Shape(int kind, double r) => SectionTestShapes.Shape(kind,
         b: .125, h: .25, t: .015625, tf: .03125, r: r);
 
     private static JsonNode Json(int kind = 4) => JsonNode.Parse(SectionLibraryCodec.Serialize(

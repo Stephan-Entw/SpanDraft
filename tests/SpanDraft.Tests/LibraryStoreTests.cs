@@ -1,5 +1,4 @@
 using System.Text;
-using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Persistence;
 using Xunit;
 using static SpanDraft.Tests.LibraryTestSupport;
@@ -20,7 +19,7 @@ public sealed class LibraryStoreTests
         }
         var sections = new SectionLibraryStore(files, path, ensureDirectory);
         return (async () => (await sections.LoadAsync()).All.Count,
-            token => sections.SaveAsync(new([new("Fixture section", ParametricSectionTestSupport.Shape(4, r: .5))]), token));
+            token => sections.SaveAsync(new([new("Fixture section", SectionTestShapes.Shape(4, r: .5))]), token));
     }
 
     [Theory]

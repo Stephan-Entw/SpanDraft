@@ -1,5 +1,6 @@
 using Xunit;
 using static SpanDraft.Tests.ParametricSectionTestSupport;
+using static SpanDraft.Tests.SectionTestShapes;
 using static SpanDraft.Tests.SectionGeometryTestSupport;
 
 namespace SpanDraft.Tests;

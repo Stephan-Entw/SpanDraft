@@ -46,7 +46,7 @@ public sealed class ProjectFileV2Tests
     public void EveryShapeRadiusAndAxisPreservesOriginalInputsAndDerivedProperties(int kind, double radius,
         SectionAxisDesignation axis)
     {
-        var section = ParametricSectionTestSupport.Shape(kind, r: radius);
+        var section = SectionTestShapes.Shape(kind, r: radius);
         var state = State() with { Document = State().Document.WithSection(section, axis) };
         var bytes = ProjectFileCodec.Serialize(state);
         var root = JsonNode.Parse(bytes)!;
@@ -84,7 +84,7 @@ public sealed class ProjectFileV2Tests
     [MemberData(nameof(RequiredParameters))]
     public void EachOriginalParameterIsRequiredIncludingZeroRadius(int kind, string field, bool nullValue)
     {
-        var section = ParametricSectionTestSupport.Shape(kind);
+        var section = SectionTestShapes.Shape(kind);
         var root = JsonNode.Parse(ProjectFileCodec.Serialize(State() with
             { Document = State().Document.WithSection(section, section.Axes[0].AxisDesignation) }))!;
         var wire = root["document"]!["section"]!.AsObject();
@@ -113,7 +113,7 @@ public sealed class ProjectFileV2Tests
     [MemberData(nameof(InvalidParameters))]
     public void InvalidGeometryIsRejectedWithoutRepair(int kind, string field, double value)
     {
-        var section = ParametricSectionTestSupport.Shape(kind);
+        var section = SectionTestShapes.Shape(kind);
         var root = JsonNode.Parse(ProjectFileCodec.Serialize(State() with
             { Document = State().Document.WithSection(section, section.Axes[0].AxisDesignation) }))!;
         root["document"]!["section"]![field] = value;
@@ -130,7 +130,7 @@ public sealed class ProjectFileV2Tests
     [InlineData(2, "1")]
     public void UnavailableOrUnknownBendingAxisIsRejected(int kind, string axis)
     {
-        var section = ParametricSectionTestSupport.Shape(kind);
+        var section = SectionTestShapes.Shape(kind);
         var root = JsonNode.Parse(ProjectFileCodec.Serialize(State() with
             { Document = State().Document.WithSection(section, section.Axes[0].AxisDesignation) }))!;
         root["document"]!["bendingAxis"] = axis;
@@ -315,7 +315,7 @@ public sealed class ProjectFileV2Tests
     [MemberData(nameof(RequiredParameters))]
     public void NonFiniteOriginalInputsAreRejected(int kind, string field, bool quoted)
     {
-        var section = ParametricSectionTestSupport.Shape(kind);
+        var section = SectionTestShapes.Shape(kind);
         foreach (var token in new[] { "NaN", "Infinity", "-Infinity", "1e999" })
         {
             var root = JsonNode.Parse(ProjectFileCodec.Serialize(State() with

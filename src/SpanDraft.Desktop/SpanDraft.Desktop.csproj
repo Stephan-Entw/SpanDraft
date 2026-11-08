@@ -20,6 +20,9 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="SpanDraft.Tests" />
+    <InternalsVisibleTo Include="SpanDraft.Desktop.Tests" />
+    <InternalsVisibleTo Include="SpanDraft.Rendering.Tests" />
+    <InternalsVisibleTo Include="SpanDraft.Tooling.Tests" />
     <ProjectReference Include="../SpanDraft.Core/SpanDraft.Core.csproj" />
     <ProjectReference Include="../SpanDraft.Analysis/SpanDraft.Analysis.csproj" />
     <ProjectReference Include="../SpanDraft.Reporting/SpanDraft.Reporting.csproj" />

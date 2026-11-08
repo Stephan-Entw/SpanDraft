@@ -4,7 +4,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="SpanDraft.Tests" />
+    <InternalsVisibleTo Include="SpanDraft.Tooling.Tests" />
     <PackageReference Include="SkiaSharp" Version="3.119.4" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/SpanDraft.Desktop/SpanDraft.Desktop.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Support/AvaloniaCollection.cs" Link="Support/AvaloniaCollection.cs" />
+    <Compile Include="../Support/DesktopControlEnvironment.cs" Link="Support/DesktopControlEnvironment.cs" />
+    <Compile Include="../Support/DesktopDistributedLoadRenderingTestSupport.cs" Link="Support/DesktopDistributedLoadRenderingTestSupport.cs" />
+    <Compile Include="../Support/DesktopHingedSupportTestSupport.cs" Link="Support/DesktopHingedSupportTestSupport.cs" />
+    <Compile Include="../Support/DesktopIconTestSupport.cs" Link="Support/DesktopIconTestSupport.cs" />
+    <Compile Include="../Support/DesktopLayoutFixture.cs" Link="Support/DesktopLayoutFixture.cs" />
+    <Compile Include="../Support/DesktopResultDiagramControlTestSupport.cs" Link="Support/DesktopResultDiagramControlTestSupport.cs" />
+    <Compile Include="../Support/LibraryTestSupport.cs" Link="Support/LibraryTestSupport.cs" />
+    <Compile Include="../Support/MaterialNoteTestSupport.cs" Link="Support/MaterialNoteTestSupport.cs" />
+    <Compile Include="../Support/MaterialStrengthTestSupport.cs" Link="Support/MaterialStrengthTestSupport.cs" />
+    <Compile Include="../Support/PresentationTestProfiles.cs" Link="Support/PresentationTestProfiles.cs" />
+    <Compile Include="../Support/SolverTestSupport.cs" Link="Support/SolverTestSupport.cs" />
+    <Compile Include="../Support/ProjectTemplates.cs" Link="Support/ProjectTemplates.cs" />
+    <Compile Include="../Support/ProjectTestSupport.cs" Link="Support/ProjectTestSupport.cs" />
+    <Compile Include="../Support/ReportTestProjects.cs" Link="Support/ReportTestProjects.cs" />
+    <Compile Include="../Support/ResultCultureScope.cs" Link="Support/ResultCultureScope.cs" />
+    <Compile Include="../Support/SectionDefinitionPrototypeTestSupport.cs" Link="Support/SectionDefinitionPrototypeTestSupport.cs" />
+    <Compile Include="../Support/SelfWeightTestProjects.cs" Link="Support/SelfWeightTestProjects.cs" />
+    <Compile Include="../Support/UiCultureScope.cs" Link="Support/UiCultureScope.cs" />
+  </ItemGroup>
+</Project>

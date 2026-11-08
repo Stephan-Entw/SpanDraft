@@ -14,11 +14,6 @@ namespace SpanDraft.Tests;
 
 public sealed class DesktopResultProbeTests
 {
-    internal static EditorDocument Document() => DesktopLayoutFixture.Document().WithSupports([
-        new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Pinned, "A"),
-        new(Guid.NewGuid(), Length.FromMeters(1), SupportType.Roller, "B")]).WithLoads([
-        new EditorPointForce(Guid.NewGuid(), Length.FromMillimeters(333.37), Force.FromNewtons(-6000), "F1"),
-        new EditorPointMoment(Guid.NewGuid(), Length.FromMillimeters(333.37), Moment.FromNewtonMeters(3000), "M1")]);
 
     [Theory]
     [InlineData(54.318, 54)]
@@ -134,8 +129,8 @@ public sealed class DesktopResultProbeTests
     public void StationUsesBothSolverLimitsAndExactXWithCurrentResultFormatting(string culture, int digits, int profile)
     {
         using var scope = new ResultCultureScope(culture, culture);
-        var options = new ResultPresentationOptions(DesktopResultPresentationTests.Profile(profile), digits);
-        var editor = new EditorViewModel(Document(), () => { }, resultPresentation: options);
+        var options = new ResultPresentationOptions(PresentationTestProfiles.Profile(profile), digits);
+        var editor = new EditorViewModel(ProbeTestProjects.Document(), () => { }, resultPresentation: options);
         var position = editor.Document.Loads[0].Position;
         editor.ToggleResultProbeTool();
         editor.HoverResultProbe(position, atStation: true);
@@ -160,7 +155,7 @@ public sealed class DesktopResultProbeTests
     [InlineData(1)]
     public void EndpointsShowOnlyInwardResults(double x)
     {
-        var editor = new EditorViewModel(Document(), () => { });
+        var editor = new EditorViewModel(ProbeTestProjects.Document(), () => { });
         editor.ToggleResultProbeTool();
         editor.HoverResultProbe(Length.FromMeters(x), atStation: true);
         Assert.Equal(new[] { "x", "w", "θ", "V", "M" }, editor.ResultProbeRows.Select(r => r.Label));
@@ -174,7 +169,7 @@ public sealed class DesktopResultProbeTests
     [InlineData(10, true)]
     public void LimitRowsSplitOnlyWhenDifferentAtTheCurrentPresentationPrecision(int digits, bool split)
     {
-        var document = Document();
+        var document = ProbeTestProjects.Document();
         var moment = (EditorPointMoment)document.Loads[1];
         document = document.WithLoads([document.Loads[0], moment with { Moment = Moment.FromNewtonMeters(.0001) }]);
         var editor = new EditorViewModel(document, () => { }, resultPresentation: new(significantDigits: digits));
@@ -190,7 +185,7 @@ public sealed class DesktopResultProbeTests
     public void LiveFixedUnfixedAndCancelledProbeNeverTouchesProjectState(bool dirty)
     {
         int analyses = 0;
-        var state = ProjectTestSupport.State() with { Document = Document() };
+        var state = ProjectTestSupport.State() with { Document = ProbeTestProjects.Document() };
         var session = ProjectSession.Open(state, ProjectTestSupport.TestPath("probe.spandraft"));
         if (dirty) session.Commit(state with { Document = state.Document with { Length = Length.FromMeters(1.1) } });
         var editor = EditorViewModel.ForSession(session, () => { }, b => { analyses++; return BeamAnalysis.Analyze(b); });
@@ -234,7 +229,7 @@ public sealed class DesktopResultProbeTests
     [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)]
     public void ToolSwitchesCancelEachOtherWithoutCommittingDrafts(int tool)
     {
-        var editor = new EditorViewModel(Document(), () => { });
+        var editor = new EditorViewModel(ProbeTestProjects.Document(), () => { });
         var revision = editor.Session.CurrentRevision;
         void OtherTool()
         {
@@ -263,7 +258,7 @@ public sealed class DesktopResultProbeTests
         Assert.False(editor.CanResultProbe);
         editor.ToggleResultProbeTool();
         Assert.False(editor.IsResultProbeTool);
-        editor.Session.Commit(editor.Session.CurrentRevision.State with { Document = Document() });
+        editor.Session.Commit(editor.Session.CurrentRevision.State with { Document = ProbeTestProjects.Document() });
         Assert.True(editor.CanResultProbe);
         editor.Session.SetBusy(true);
         Assert.False(editor.ResultProbeToolCommand.CanExecute(null));
@@ -275,7 +270,7 @@ public sealed class DesktopResultProbeTests
         editor.Session.Commit(editor.Session.CurrentRevision.State with { Document = editor.Document.WithSupports([]) });
         Assert.False(editor.IsResultProbeTool);
         Assert.Null(editor.ResultProbePosition);
-        editor.Session.Commit(editor.Session.CurrentRevision.State with { Document = Document() });
+        editor.Session.Commit(editor.Session.CurrentRevision.State with { Document = ProbeTestProjects.Document() });
         editor.ToggleResultProbeTool();
         editor.ChangeProjectCommand.Execute(null);
         Assert.False(editor.IsResultProbeTool);

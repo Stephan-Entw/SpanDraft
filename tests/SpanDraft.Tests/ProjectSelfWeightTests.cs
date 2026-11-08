@@ -13,7 +13,7 @@ public sealed class ProjectSelfWeightTests
     [InlineData(true, true)] [InlineData(true, false)] [InlineData(false, true)] [InlineData(false, false)]
     public void V4RoundTripRetainsWeightIdentityVisibilityAndAnnotation(bool enabled, bool visible)
     {
-        var d = DesktopSelfWeightTests.Document(true);
+        var d = SelfWeightTestProjects.Document(true);
         d = d with { SelfWeight = d.SelfWeight! with { Enabled = enabled } };
         var state = new ProjectState(d, new([new(d.SelfWeight!.Id, new(31.25, -17.75))], visible));
         var bytes = ProjectFileCodec.Serialize(state);
@@ -36,7 +36,7 @@ public sealed class ProjectSelfWeightTests
     [InlineData(2)] [InlineData(3)]
     public void HistoricalDocumentsWithoutWeightPreserveTheirMechanicalResults(int version)
     {
-        var state = new ProjectState(DesktopSelfWeightTests.Document(), new());
+        var state = new ProjectState(SelfWeightTestProjects.Document(), new());
         var json = JsonNode.Parse(ProjectFileCodec.Serialize(state))!.AsObject();
         json["formatVersion"] = version;
         json["document"]!.AsObject().Remove("selfWeight");
@@ -53,7 +53,7 @@ public sealed class ProjectSelfWeightTests
     [InlineData("orphanOffset")] [InlineData("duplicateOffset")]
     public void MalformedWeightDataIsRejected(string field)
     {
-        var d = DesktopSelfWeightTests.Document(true);
+        var d = SelfWeightTestProjects.Document(true);
         var state = new ProjectState(d, new([new(d.SelfWeight!.Id, new(1, 2))]));
         var json = JsonNode.Parse(ProjectFileCodec.Serialize(state))!;
         var document = json["document"]!; var weight = document["selfWeight"]!.AsObject();
@@ -74,8 +74,8 @@ public sealed class ProjectSelfWeightTests
     [Fact]
     public void LegacyReservedNamesRoundTripWithoutWeightAndDisabledWeightDoesNotRequireDensity()
     {
-        var d = DesktopSelfWeightTests.Document();
-        d = d.WithSupports([d.Supports[0] with { Name = "G" }]) with { Material = DesktopSelfWeightTests.Steel(null),
+        var d = SelfWeightTestProjects.Document();
+        d = d.WithSupports([d.Supports[0] with { Name = "G" }]) with { Material = SelfWeightTestProjects.Steel(null),
             SelfWeight = new(Guid.NewGuid(), false) };
         var state = new ProjectState(d, new([new(d.SelfWeight.Id, new(5, 6))], false));
         Assert.True(state.ContentEquals(ProjectFileCodec.Deserialize(ProjectFileCodec.Serialize(state))));
@@ -86,7 +86,7 @@ public sealed class ProjectSelfWeightTests
     public async Task RecoveryRetainsDisabledAndActiveWeightIncludingPresentation(bool enabled)
     {
         var app = new ProjectTestSupport.App();
-        var d = DesktopSelfWeightTests.Document(true);
+        var d = SelfWeightTestProjects.Document(true);
         d = d with { SelfWeight = d.SelfWeight! with { Enabled = enabled } };
         var state = new ProjectState(d, new([new(d.SelfWeight!.Id, new(-24, 30))], false));
         Assert.True(app.Main.Session!.Commit(state));
