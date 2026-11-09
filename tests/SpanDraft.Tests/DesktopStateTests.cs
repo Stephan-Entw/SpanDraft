@@ -296,7 +296,6 @@ public class DesktopStateTests
     [Theory]
     [InlineData(AnalysisPresentationKind.IncompleteModel)]
     [InlineData(AnalysisPresentationKind.UnstableModel)]
-    [InlineData(AnalysisPresentationKind.IllConditionedSystem)]
     [InlineData(AnalysisPresentationKind.NumericalFailure)]
     public void StructuredAnalysisFailuresMapToLocalizedPresentation(AnalysisPresentationKind kind)
     {
@@ -307,9 +306,6 @@ public class DesktopStateTests
             AnalysisPresentationKind.IncompleteModel => AnalysisBeam([new(Length.FromMeters(3), SupportType.Fixed)]),
             AnalysisPresentationKind.UnstableModel => AnalysisBeam([new(Length.FromMeters(0), SupportType.Roller),
                 new(Length.FromMeters(2), SupportType.Roller)]),
-            AnalysisPresentationKind.IllConditionedSystem => AnalysisBeam([fixedSupport],
-                [new PointForce(Length.FromMeters(1), Force.FromNewtons(-1000)),
-                 new PointForce(Length.FromMeters(1 + 1e-6), Force.FromNewtons(0))]),
             _ => AnalysisBeam([fixedSupport],
                 [new PointForce(Length.FromMeters(2), Force.FromNewtons(double.MaxValue)),
                  new PointForce(Length.FromMeters(2), Force.FromNewtons(double.MaxValue))])

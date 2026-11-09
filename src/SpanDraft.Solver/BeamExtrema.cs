@@ -55,6 +55,12 @@ public sealed class BeamExtrema
                     BeamSectionResult result = field.EvaluateNormalized(t);
                     w.Add(new(result.TransverseDisplacement.Meters, result.Position, SideAt(field, result.Position)));
                 }
+            foreach (double t in field.StationaryShears())
+                if (t > 0 && t < 1)
+                {
+                    BeamSectionResult result = field.EvaluateNormalized(t);
+                    v.Add(new(result.ShearForce.Newtons, result.Position, SideAt(field, result.Position)));
+                }
             foreach (double t in field.StationaryMoments())
                 if (t > 0 && t < 1)
                 {

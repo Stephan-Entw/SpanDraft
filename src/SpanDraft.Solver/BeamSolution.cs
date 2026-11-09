@@ -17,6 +17,16 @@ public sealed class BeamSolution
         Extrema = BeamExtrema.Find(fields);
     }
 
+    internal BeamSolution(BeamModel beam, IEnumerable<BeamNodeResult> nodes, SolverModel model,
+        IReadOnlyList<SegmentState> segments, IReadOnlyList<double> rotationsLeft)
+    {
+        Beam = beam;
+        Nodes = Array.AsReadOnly(nodes.ToArray());
+        fields = model.Elements.Select(element => new ElementField(beam, element, Nodes[element.Left.Index],
+            Nodes[element.Right.Index], segments[element.Left.Index], rotationsLeft[element.Right.Index])).ToArray();
+        Extrema = BeamExtrema.Find(fields);
+    }
+
     public BeamModel Beam { get; }
     public IReadOnlyList<BeamNodeResult> Nodes { get; }
     public BeamExtrema Extrema { get; }

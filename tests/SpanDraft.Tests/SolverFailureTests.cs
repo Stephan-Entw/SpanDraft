@@ -115,12 +115,14 @@ public class SolverFailureTests
     }
 
     [Fact]
-    public void VeryShortAdjacentElementIsRejectedWithoutMergingItsNodes()
+    public void VeryShortAdjacentElementIsSolvedWithoutMergingItsNodes()
     {
         BeamModel beam = Cantilever(Point(1, -1000), Point(1 + 1e-6, 0));
         Assert.Equal(4, SolverModel.Create(beam).Nodes.Count);
-        BeamSolverException exception = Assert.Throws<BeamSolverException>(() => Solve(beam));
-        Assert.Equal(SolverErrorCode.IllConditionedSystem, exception.Code);
+        BeamSolution solution = Solve(beam);
+        Assert.Equal(4, solution.Nodes.Count);
+        ForceClose(1000, At(solution, 0).ReactionY);
+        MomentClose(1000, At(solution, 0).ReactionMoment);
     }
 
     [Fact]

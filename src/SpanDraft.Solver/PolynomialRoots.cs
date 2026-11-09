@@ -1,6 +1,6 @@
 namespace SpanDraft.Solver;
 
-/// <summary>Deterministic real roots of degree ≤ 3 on [0,1], not a sampling search.</summary>
+/// <summary>Deterministic real roots of degree ≤ 4 on [0,1], not a sampling search.</summary>
 internal static class PolynomialRoots
 {
     // double.Epsilon is the smallest subnormal, not floating-point relative precision.
@@ -10,8 +10,8 @@ internal static class PolynomialRoots
 
     internal static IReadOnlyList<double> InUnitInterval(params double[] coefficients)
     {
-        if (coefficients.Length is < 1 or > 4)
-            throw new ArgumentException("Expected a polynomial of degree at most three.", nameof(coefficients));
+        if (coefficients.Length is < 1 or > 5)
+            throw new ArgumentException("Expected a polynomial of degree at most four.", nameof(coefficients));
         NumericalGuard.AllFinite(coefficients, "Root polynomial");
         double scale = coefficients.Max(Math.Abs);
         if (scale == 0) return Array.Empty<double>(); // A constant field needs endpoints only.
@@ -23,19 +23,20 @@ internal static class PolynomialRoots
             Add(roots, -c[0] / c[1]);
         else if (degree == 2)
             Quadratic(c[0], c[1], c[2], roots);
-        else if (degree == 3)
+        else if (degree >= 3)
         {
-            // Derivative roots partition a cubic into monotone intervals. Checking
+            // Derivative roots partition the polynomial into monotone intervals. Checking
             // those roots also finds even-multiplicity roots without a sign change.
             var boundaries = new List<double> { 0 };
-            foreach (double t in InUnitInterval(c[1], 2 * c[2], 3 * c[3]))
+            double[] derivative = Enumerable.Range(1, degree).Select(k => k * c[k]).ToArray();
+            foreach (double t in InUnitInterval(derivative))
                 if (t > 0 && t < 1) boundaries.Add(t);
             boundaries.Add(1);
             // If both stationary values are zero to coefficient roundoff,
             // the three roots form an unresolved multiple-root cluster.
             // Represent it once at the inflection instead of reporting two
             // almost identical stationary candidates as separate roots.
-            if (boundaries.Count == 4 && NearZero(c, boundaries[1]) && NearZero(c, boundaries[2]))
+            if (degree == 3 && boundaries.Count == 4 && NearZero(c, boundaries[1]) && NearZero(c, boundaries[2]))
             {
                 Add(roots, -c[2] / (3 * c[3]));
                 return roots.AsReadOnly();

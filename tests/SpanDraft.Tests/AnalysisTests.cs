@@ -72,10 +72,11 @@ public class AnalysisTests
     }
 
     [Fact]
-    public void IllConditionedModelReturnsFailureWithoutResult()
+    public void VeryCloseLoadsReturnAResult()
     {
-        Assert.Empty(Failure(BeamAnalysis.Analyze(Cantilever(Point(1, -1000), Point(1 + 1e-6, 0))),
-            BeamAnalysisFailureCode.IllConditionedSystem).ValidationErrors);
+        BeamAnalysisOutcome outcome = BeamAnalysis.Analyze(Cantilever(Point(1, -1000), Point(1 + 1e-6, 0)));
+        Assert.Null(outcome.Failure);
+        Assert.NotNull(outcome.Result);
     }
 
     [Fact]

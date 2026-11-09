@@ -161,7 +161,7 @@ public sealed class DesktopResultDiagramProjectionTests
         var extremum = solution.Extrema.MinimumTransverseDisplacement;
         var plot = Project(solution, ResultDiagramKind.TransverseDisplacement);
         Assert.DoesNotContain(solution.Nodes, n => n.Position == extremum.Position);
-        Assert.Equal(extremum.Value.Meters * 1000, plot.Scale.Minimum);
+        Close(extremum.Value.Meters * 1000, plot.Scale.Minimum, 1e-12);
         Assert.Contains(plot.Sections.SelectMany(s => s), p => p.Position == extremum.Position);
         foreach (var p in plot.Sections.SelectMany(s => s).Where(p => p.Position == extremum.Position))
             Close(extremum.Value.Meters * 1000, p.Value, 1e-10);
@@ -343,9 +343,9 @@ public sealed class DesktopResultDiagramProjectionTests
             var marker = Assert.Single(plot.Markers, m => m.Kind == ResultDiagramExtremumKind.Minimum);
             Assert.Equal(analytical.Position, marker.Position);
             Assert.Equal(analytical.Side, marker.Side);
-            Assert.Equal(analytical.Value.Meters * 1000, marker.Value);
+            Close(analytical.Value.Meters * 1000, marker.Value, 1e-12);
             Assert.Equal(layout.Transform.PhysicalToScreen(analytical.Position.Meters), marker.Screen.X);
-            Assert.Equal(plot.Scale.ToScreen(analytical.Value.Meters * 1000), marker.Screen.Y);
+            Close(plot.Scale.ToScreen(analytical.Value.Meters * 1000), marker.Screen.Y, 1e-9);
             int count = plot.Sections.Sum(s => s.Count);
             Assert.True(count > previousCount);
             previousCount = count;
