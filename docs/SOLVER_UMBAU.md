@@ -1,6 +1,6 @@
 # SpanDraft – Plan Solver-Umbau
 
-Stand: 9. November 2026. Dieser Plan gilt für den Branch `stantipin/solver-umbau`.
+Stand: 9. November 2026. Dieser Plan gilt für den Branch `features/solver-umbau`.
 Der Branch bleibt von `main` und von der Webseite getrennt, bis der Umbau
 fachlich abgenommen und die Übernahme ausdrücklich entschieden ist.
 
