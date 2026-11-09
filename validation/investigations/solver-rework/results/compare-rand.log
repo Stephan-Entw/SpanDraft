@@ -1,0 +1,14 @@
+Zufall Abstand/L=0.01      n= 1000 | abgelehnt alt     0 neu    0 crash 0 | MaxAbw alt 1.4e-08 neu 3.4e-15 | Extremwerte alt 1.4e-08 neu 3.4e-15 | >1e-6 alt    0 neu   0 | alt-neu 1.4e-08
+Zufall Abstand/L=0.005     n= 1000 | abgelehnt alt     0 neu    0 crash 0 | MaxAbw alt 5.2e-08 neu 5.8e-15 | Extremwerte alt 5.2e-08 neu 5.8e-15 | >1e-6 alt    0 neu   0 | alt-neu 5.2e-08
+Zufall Abstand/L=0.001     n= 1000 | abgelehnt alt     0 neu    0 crash 0 | MaxAbw alt 5.7e-05 neu 1.2e-13 | Extremwerte alt 5.7e-05 neu 1.2e-13 | >1e-6 alt   27 neu   0 | alt-neu 5.7e-05
+Zufall Abstand/L=0.0001    n= 1000 | abgelehnt alt   367 neu    0 crash 0 | MaxAbw alt 1.2e-04 neu 3.6e-14 | Extremwerte alt 1.2e-04 neu 3.6e-14 | >1e-6 alt  207 neu   0 | alt-neu 1.2e-04
+Zufall Abstand/L=1e-05     n= 1000 | abgelehnt alt   692 neu    0 crash 0 | MaxAbw alt 1.6e-03 neu 1.4e-12 | Extremwerte alt 1.6e-03 neu 1.4e-12 | >1e-6 alt   69 neu   0 | alt-neu 1.6e-03
+Zufall Abstand/L=1e-07     n= 1000 | abgelehnt alt   702 neu    0 crash 0 | MaxAbw alt 2.0e-01 neu 1.3e-14 | Extremwerte alt 1.9e-01 neu 1.3e-14 | >1e-6 alt  101 neu   0 | alt-neu 2.0e-01
+Zufall Abstand/L=1e-09     n= 1000 | abgelehnt alt   660 neu    0 crash 0 | MaxAbw alt 4.9e+03 neu 2.3e-08 | Extremwerte alt 4.9e+03 neu 2.3e-08 | >1e-6 alt  140 neu   0 | alt-neu 4.9e+03
+    schlechtester neu: ('1e-09|227', 2.3149326183156425e-08, 2.3149326183156425e-08)
+Zufall Abstand/L=1e-11     n= 1000 | abgelehnt alt   741 neu    0 crash 0 | MaxAbw alt 8.2e+05 neu 6.9e-07 | Extremwerte alt 8.2e+05 neu 6.9e-07 | >1e-6 alt   82 neu   0 | alt-neu 8.2e+05
+    schlechtester neu: ('1e-11|115', 6.869829474743807e-07, 6.869829474743807e-07)
+Fuzz normal                n= 1500 | abgelehnt alt     1 neu    0 crash 0 | MaxAbw alt 6.2e-06 neu 5.8e-15 | Extremwerte alt 6.2e-06 neu 5.6e-15 | >1e-6 alt    2 neu   0 | alt-neu 6.2e-06
+Fuzz wide                  n= 1000 | abgelehnt alt     3 neu    0 crash 0 | MaxAbw alt 5.1e-06 neu 4.1e-15 | Extremwerte alt 5.1e-06 neu 4.1e-15 | >1e-6 alt    2 neu   0 | alt-neu 5.1e-06
+Fuzz cluster               n= 1000 | abgelehnt alt    82 neu    0 crash 0 | MaxAbw alt 4.4e-02 neu 3.0e-11 | Extremwerte alt 4.3e-03 neu 3.0e-11 | >1e-6 alt   68 neu   0 | alt-neu 4.4e-02
+Fuzz many                  n=  100 | abgelehnt alt     3 neu    0 crash 0 | MaxAbw alt 3.5e-06 neu 4.4e-15 | Extremwerte alt 2.5e-06 neu 4.4e-15 | >1e-6 alt    8 neu   0 | alt-neu 3.5e-06

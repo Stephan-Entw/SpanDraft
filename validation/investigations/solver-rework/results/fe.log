@@ -1,0 +1,14 @@
+a=0.001: exakt Summe 630.273 N, Moment 119.951 Nm, w 2.85518, M(F) 110.918
+  N=10    roh      cond 1.6e+03 Summe 1.0e-02 Moment 3.6e-02 w 4.2e-02 M(F) 1.7e-02
+  N=10    skaliert cond 7.8e+02 Summe 1.0e-02 Moment 3.6e-02 w 4.2e-02 M(F) 1.7e-02
+  N=100   roh      cond 6.8e+06 Summe 6.5e-04 Moment 2.3e-03 w 2.5e-03 M(F) 1.1e-03
+  N=100   skaliert cond 6.8e+06 Summe 6.5e-04 Moment 2.3e-03 w 2.5e-03 M(F) 1.1e-03
+  N=1000  roh      cond nan Summe 7.3e-06 Moment 2.7e-05 w 3.1e-05 M(F) 1.4e-05
+  N=1000  skaliert cond nan Summe 7.3e-06 Moment 2.7e-05 w 3.1e-05 M(F) 1.4e-05
+a=6e-09: exakt Summe 629.734 N, Moment 119.592 Nm, w 2.86472, M(F) 111.08
+  N=10    roh      cond 1.8e+13 Summe 1.1e-02 Moment 3.8e-02 w 4.4e-02 M(F) 1.8e-02
+  N=10    skaliert cond 7.8e+02 Summe 1.1e-02 Moment 3.7e-02 w 4.3e-02 M(F) 1.8e-02
+  N=100   roh      cond 1.6e+10 Summe 9.1e-04 Moment 3.2e-03 w 3.5e-03 M(F) 1.5e-03
+  N=100   skaliert cond 6.7e+06 Summe 9.1e-04 Moment 3.2e-03 w 3.5e-03 M(F) 1.5e-03
+  N=1000  roh      cond nan Summe 9.9e-05 Moment 3.5e-04 w 3.9e-04 M(F) 1.7e-04
+  N=1000  skaliert cond nan Summe 9.9e-05 Moment 3.5e-04 w 3.9e-04 M(F) 1.7e-04

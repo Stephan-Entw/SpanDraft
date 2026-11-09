@@ -1,0 +1,144 @@
+=== A Paar am Rand
+a=0.001   R1=1.872e+05 N=-687.875 C=-187.875
+   roh          cond 1.1e+07  R 8.9e-14  Summe 1.6e-14  Moment 8.9e-14  M(x) 3.5e-14  w(x) 1.1e-13
+   1.Diff       cond 1.7e+01  R 1.6e-16  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 5.9e-16
+   Newton       cond 1.7e+01  R 1.6e-16  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 5.9e-16
+   Newton-naiv  cond 1.7e+01  R 1.3e-14  Summe 3.5e-15  Moment 1.3e-14  M(x) 7.6e-15  w(x) 1.5e-14
+a=1e-05   R1=1.875e+07 N=-687.504 C=-187.504
+   roh          cond 1.1e+11  R 2.7e-14  Summe 1.9e-12  Moment 2.7e-14  M(x) 7.8e-12  w(x) 9.5e-13
+   1.Diff       cond 1.7e+01  R 4.0e-16  Summe 0.0e+00  Moment 3.0e-16  M(x) 1.8e-16  w(x) 9.7e-16
+   Newton       cond 1.7e+01  R 4.0e-16  Summe 0.0e+00  Moment 3.0e-16  M(x) 1.8e-16  w(x) 9.7e-16
+   Newton-naiv  cond 1.7e+01  R 2.4e-12  Summe 6.6e-13  Moment 2.4e-12  M(x) 1.5e-12  w(x) 8.3e-12
+a=1e-07   R1=1.875e+09 N=-687.5 C=-187.5
+   roh          cond 1.2e+15  R 8.4e-10  Summe 2.5e-10  Moment 8.4e-10  M(x) 5.4e-10  w(x) 5.4e-11
+   1.Diff       cond 1.7e+01  R 2.5e-16  Summe 0.0e+00  Moment 1.5e-16  M(x) 3.6e-16  w(x) 5.8e-16
+   Newton       cond 1.7e+01  R 2.5e-16  Summe 0.0e+00  Moment 1.5e-16  M(x) 3.6e-16  w(x) 5.8e-16
+   Newton-naiv  cond 1.7e+01  R 1.7e-10  Summe 4.5e-11  Moment 1.7e-10  M(x) 1.0e-10  w(x) 1.7e-09
+a=6e-09   R1=3.125e+10 N=-687.5 C=-187.5
+   roh          cond 1.2e+16  R 4.7e-09  Summe 2.3e-09  Moment 4.7e-09  M(x) 5.0e-09  w(x) 3.1e-09
+   1.Diff       cond 1.7e+01  R 3.7e-16  Summe 0.0e+00  Moment 3.0e-16  M(x) 1.8e-16  w(x) 9.7e-16
+   Newton       cond 1.7e+01  R 3.7e-16  Summe 0.0e+00  Moment 3.0e-16  M(x) 1.8e-16  w(x) 9.7e-16
+   Newton-naiv  cond 1.7e+01  R 6.2e-10  Summe 1.7e-10  Moment 6.2e-10  M(x) 3.7e-10  w(x) 2.6e-09
+a=1e-11   R1=1.875e+13 N=-687.5 C=-187.5
+   roh          cond 1.1e+16  R 2.9e-06  Summe 5.5e-12  Moment 2.9e-06  M(x) 1.2e-11  w(x) 1.5e-06
+   1.Diff       cond 1.7e+01  R 0.0e+00  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 1.9e-16
+   Newton       cond 1.7e+01  R 0.0e+00  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 1.9e-16
+   Newton-naiv  cond 1.7e+01  R 2.1e-06  Summe 5.7e-07  Moment 2.1e-06  M(x) 1.2e-06  w(x) 4.4e-06
+a=1e-13   R1=1.875e+15 N=-687.5 C=-187.5
+   roh          cond 1.7e+16  R 5.0e-04  Summe 5.5e-14  Moment 5.0e-04  M(x) 8.0e-04  w(x) 1.1e-03
+   1.Diff       cond 1.7e+01  R 2.7e-16  Summe 0.0e+00  Moment 1.5e-16  M(x) 3.6e-16  w(x) 1.9e-16
+   Newton       cond 1.7e+01  R 2.7e-16  Summe 0.0e+00  Moment 1.5e-16  M(x) 3.6e-16  w(x) 1.9e-16
+   Newton-naiv  cond 1.7e+01  R 3.9e-06  Summe 1.1e-06  Moment 3.9e-06  M(x) 2.3e-06  w(x) 9.8e-04
+a=1e-15   R1=1.875e+17 N=-687.5 C=-187.5
+   roh          cond 4.5e+16  R 3.5e-02  Summe 2.4e-02  Moment 3.5e-02  M(x) 2.4e-02  w(x) 5.8e-02
+   1.Diff       cond 1.7e+01  R 1.7e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 3.9e-16
+   Newton       cond 1.7e+01  R 1.7e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 3.9e-16
+   Newton-naiv  cond 1.7e+01  R 5.8e-03  Summe 1.6e-03  Moment 5.8e-03  M(x) 3.5e-03  w(x) 5.4e-02
+=== B Paar Mitte
+a=0.001   R1=-9.434e+04 N=-686.938 C=93.6567
+   roh          cond 5.5e+07  R 1.2e-12  Summe 3.6e-14  Moment 1.2e-12  M(x) 3.0e-13  w(x) 6.9e-13
+   1.Diff       cond 1.5e+02  R 1.6e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 5.8e-16
+   Newton       cond 1.5e+02  R 1.6e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 5.8e-16
+   Newton-naiv  cond 1.5e+02  R 2.2e-14  Summe 3.1e-15  Moment 2.2e-14  M(x) 2.7e-15  w(x) 2.7e-14
+a=1e-05   R1=-9.376e+06 N=-687.494 C=93.7491
+   roh          cond 5.5e+11  R 1.6e-08  Summe 1.5e-12  Moment 1.6e-08  M(x) 4.8e-09  w(x) 1.0e-08
+   1.Diff       cond 1.5e+02  R 4.0e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 0.0e+00  w(x) 5.8e-16
+   Newton       cond 1.5e+02  R 4.0e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 0.0e+00  w(x) 5.8e-16
+   Newton-naiv  cond 1.5e+02  R 8.5e-13  Summe 3.0e-13  Moment 8.5e-13  M(x) 5.8e-13  w(x) 3.5e-13
+a=1e-07   R1=-9.375e+08 N=-687.5 C=93.75
+   roh          cond 4.6e+15  R 2.0e-07  Summe 3.2e-10  Moment 2.0e-07  M(x) 5.9e-08  w(x) 1.3e-07
+   1.Diff       cond 1.5e+02  R 1.3e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 5.8e-16
+   Newton       cond 1.5e+02  R 1.3e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 5.8e-16
+   Newton-naiv  cond 1.5e+02  R 1.7e-10  Summe 1.0e-11  Moment 1.7e-10  M(x) 3.9e-11  w(x) 1.5e-10
+a=6e-09   R1=-1.563e+10 N=-687.5 C=93.75
+   roh          cond 2.4e+16  R 5.7e-09  Summe 2.1e-09  Moment 5.7e-09  M(x) 1.1e-09  w(x) 4.3e-09
+   1.Diff       cond 1.5e+02  R 7.3e-16  Summe 1.7e-16  Moment 7.6e-16  M(x) 0.0e+00  w(x) 1.9e-16
+   Newton       cond 1.5e+02  R 7.3e-16  Summe 1.7e-16  Moment 7.6e-16  M(x) 0.0e+00  w(x) 1.9e-16
+   Newton-naiv  cond 1.5e+02  R 2.4e-09  Summe 6.5e-10  Moment 2.4e-09  M(x) 4.0e-12  w(x) 4.0e-09
+a=1e-11   R1=-9.375e+12 N=-687.5 C=93.75
+   roh          cond 1.5e+17  R 2.1e-06  Summe 8.2e-12  Moment 2.1e-06  M(x) 1.2e-11  w(x) 1.2e-07
+   1.Diff       cond 1.5e+02  R 2.1e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 3.9e-16
+   Newton       cond 1.5e+02  R 2.1e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 3.9e-16
+   Newton-naiv  cond 1.5e+02  R 1.1e-06  Summe 1.4e-07  Moment 1.1e-06  M(x) 4.8e-07  w(x) 1.4e-07
+a=1e-13   R1=-9.372e+14 N=-687.5 C=93.75
+   roh          cond 4.3e+16  R 2.4e-04  Summe 1.8e-04  Moment 2.4e-04  M(x) 1.2e-13  w(x) 5.2e-04
+   1.Diff       cond 1.5e+02  R 1.3e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 0.0e+00  w(x) 5.8e-16
+   Newton       cond 1.5e+02  R 1.3e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 0.0e+00  w(x) 5.8e-16
+   Newton-naiv  cond 1.5e+02  R 2.3e-04  Summe 3.8e-05  Moment 2.3e-04  M(x) 2.8e-05  w(x) 3.0e-04
+a=1e-15   R1=-9.382e+16 N=-687.5 C=93.75
+   roh          cond 2.7e+16  R 8.9e-02  Summe 2.4e-02  Moment 8.9e-02  M(x) 2.7e-02  w(x) 1.3e-01
+   1.Diff       cond 1.5e+02  R 1.7e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 5.8e-16
+   Newton       cond 1.5e+02  R 1.7e-16  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 5.8e-16
+   Newton-naiv  cond 1.5e+02  R 3.9e-02  Summe 3.6e-03  Moment 3.9e-02  M(x) 7.7e-03  w(x) 3.9e-02
+=== K Kragarm
+a=0.001   R1=9.990e+05 N=-1000 C=-1000
+   roh          cond 2.7e+00  R 1.2e-16  Summe 0.0e+00  Moment 1.1e-16  M(x) 0.0e+00  w(x) 7.1e-14
+   1.Diff       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 0.0e+00
+   Newton       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 0.0e+00
+   Newton-naiv  cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 4.1e-14
+a=1e-05   R1=1.000e+08 N=-1000 C=-1000
+   roh          cond 2.7e+00  R 1.5e-16  Summe 0.0e+00  Moment 2.3e-16  M(x) 0.0e+00  w(x) 8.0e-13
+   1.Diff       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 0.0e+00
+   Newton       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 0.0e+00
+   Newton-naiv  cond 1.0e+00  R 3.0e-16  Summe 0.0e+00  Moment 2.3e-16  M(x) 4.5e-16  w(x) 7.3e-13
+a=1e-07   R1=1.000e+10 N=-1000 C=-1000
+   roh          cond 2.7e+00  R 1.9e-16  Summe 0.0e+00  Moment 2.3e-16  M(x) 0.0e+00  w(x) 9.1e-10
+   1.Diff       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 1.4e-16
+   Newton       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 1.4e-16
+   Newton-naiv  cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 5.1e-10
+a=6e-09   R1=1.667e+11 N=-1000 C=-1000
+   roh          cond 2.7e+00  R 1.8e-16  Summe 0.0e+00  Moment 2.3e-16  M(x) 0.0e+00  w(x) 2.8e-09
+   1.Diff       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 0.0e+00
+   Newton       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 0.0e+00
+   Newton-naiv  cond 1.0e+00  R 1.8e-16  Summe 0.0e+00  Moment 2.3e-16  M(x) 4.5e-16  w(x) 6.6e-09
+a=1e-11   R1=1.000e+14 N=-1000 C=-1000
+   roh          cond 2.8e+00  R 0.0e+00  Summe 0.0e+00  Moment 1.1e-16  M(x) 0.0e+00  w(x) 1.3e-06
+   1.Diff       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 1.4e-16
+   Newton       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 1.4e-16
+   Newton-naiv  cond 1.0e+00  R 1.6e-16  Summe 0.0e+00  Moment 2.3e-16  M(x) 4.5e-16  w(x) 1.7e-06
+a=1e-13   R1=1.000e+16 N=-1000 C=-1000
+   roh          cond 2.8e+00  R 4.0e-16  Summe 0.0e+00  Moment 3.4e-16  M(x) 0.0e+00  w(x) 4.9e-05
+   1.Diff       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 1.4e-16
+   Newton       cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 1.4e-16
+   Newton-naiv  cond 1.0e+00  R 0.0e+00  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 3.2e-04
+a=1e-15   R1=1.000e+18 N=-1000 C=-1000
+   roh          cond 2.8e+00  R 1.3e-16  Summe 2.4e-02  Moment 1.1e-16  M(x) 2.4e-02  w(x) 4.1e-02
+   1.Diff       cond 1.0e+00  R 1.3e-16  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 0.0e+00
+   Newton       cond 1.0e+00  R 1.3e-16  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 0.0e+00
+   Newton-naiv  cond 1.0e+00  R 1.3e-16  Summe 0.0e+00  Moment 0.0e+00  M(x) 0.0e+00  w(x) 7.0e-02
+=== D Drei dicht
+a=0.001   R1=-1.177e+05 N=-687.22 C=93.5627
+   roh          cond 2.3e+10  R 1.5e-09  Summe 6.7e-13  Moment 2.2e-12  M(x) 6.7e-14  w(x) 1.6e-13
+   1.Diff       cond 6.5e+03  R 1.5e-13  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 5.8e-16
+   Newton       cond 1.5e+02  R 1.9e-15  Summe 1.7e-16  Moment 1.5e-16  M(x) 1.8e-16  w(x) 3.9e-16
+   Newton-naiv  cond 1.5e+02  R 6.1e-13  Summe 3.6e-15  Moment 2.4e-14  M(x) 3.1e-15  w(x) 2.7e-14
+a=1e-05   R1=-1.172e+07 N=-687.497 C=93.7481
+   roh          cond 5.9e+16  R 2.4e-03  Summe 9.8e-09  Moment 3.2e-08  M(x) 1.2e-09  w(x) 2.6e-09
+   1.Diff       cond 6.5e+05  R 4.4e-11  Summe 1.7e-16  Moment 3.0e-16  M(x) 0.0e+00  w(x) 1.9e-16
+   Newton       cond 1.5e+02  R 2.4e-15  Summe 1.7e-16  Moment 3.0e-16  M(x) 0.0e+00  w(x) 5.8e-16
+   Newton-naiv  cond 1.5e+02  R 2.1e-07  Summe 3.5e-13  Moment 3.4e-12  M(x) 6.2e-13  w(x) 2.2e-12
+a=1e-07   R1=-1.172e+09 N=-687.5 C=93.75
+   roh          cond 2.6e+16  R 1.2e+03  Summe 5.0e-05  Moment 4.2e-08  M(x) 5.5e-05  w(x) 1.2e-04
+   1.Diff       cond 6.5e+07  R 2.6e-09  Summe 3.3e-16  Moment 3.0e-16  M(x) 5.5e-16  w(x) 5.8e-16
+   Newton       cond 1.5e+02  R 1.8e-15  Summe 1.7e-16  Moment 0.0e+00  M(x) 1.8e-16  w(x) 5.8e-16
+   Newton-naiv  cond 1.5e+02  R 9.7e-04  Summe 1.1e-10  Moment 7.4e-11  M(x) 2.2e-11  w(x) 2.1e-10
+a=6e-09   R1=-1.953e+10 N=-687.5 C=93.75
+   roh          cond 3.9e+18  R 5.6e+00  Summe 1.9e-08  Moment 3.7e-08  M(x) 6.3e-09  w(x) 3.0e-08
+   1.Diff       cond 1.1e+09  R 1.4e-07  Summe 1.7e-16  Moment 1.5e-16  M(x) 3.6e-16  w(x) 1.9e-16
+   Newton       cond 1.5e+02  R 1.7e-15  Summe 1.7e-16  Moment 7.6e-16  M(x) 0.0e+00  w(x) 1.9e-16
+   Newton-naiv  cond 1.5e+02  R 6.0e-01  Summe 2.2e-09  Moment 6.1e-09  M(x) 6.0e-10  w(x) 3.1e-09
+a=1e-11   R1=-1.172e+13 N=-687.5 C=93.75
+   roh          cond 1.5e+17  R 3.4e+05  Summe 1.2e-01  Moment 4.9e-01  M(x) 2.3e-01  w(x) 9.9e-02
+   1.Diff       cond 6.5e+11  R 1.1e-05  Summe 1.7e-16  Moment 1.5e-16  M(x) 0.0e+00  w(x) 1.9e-16
+   Newton       cond 1.5e+02  R 3.3e-15  Summe 1.7e-16  Moment 1.5e-16  M(x) 0.0e+00  w(x) 1.9e-16
+   Newton-naiv  cond 1.5e+02  R 4.0e+05  Summe 2.1e-03  Moment 1.5e-01  M(x) 4.4e-02  w(x) 1.6e-01
+a=1e-13   R1=-1.172e+15 N=-687.5 C=93.75
+   roh          cond 8.8e+16  R 1.1e+01  Summe 7.3e-04  Moment 1.9e-03  M(x) 1.0e-13  w(x) 3.1e-04
+   1.Diff       cond 6.5e+13  R 4.4e-04  Summe 0.0e+00  Moment 0.0e+00  M(x) 1.8e-16  w(x) 5.8e-16
+   Newton       cond 1.5e+02  R 2.0e-15  Summe 0.0e+00  Moment 1.5e-16  M(x) 1.8e-16  w(x) 3.9e-16
+   Newton-naiv  cond 2.2e+03  R 1.9e+05  Summe 1.1e+00  Moment 2.6e+00  M(x) 4.0e-01  w(x) 1.4e+00
+a=1e-15   R1=-1.173e+17 N=-687.5 C=93.75
+   roh          cond 4.6e+17  R 2.1e+02  Summe 1.0e+00  Moment 5.1e+00  M(x) 1.0e+00  w(x) 8.2e-01
+   1.Diff       cond 6.1e+15  R 2.3e-01  Summe 0.0e+00  Moment 4.5e-16  M(x) 0.0e+00  w(x) 9.7e-16
+   Newton       cond 1.5e+02  R 1.4e-15  Summe 0.0e+00  Moment 1.5e-16  M(x) 0.0e+00  w(x) 5.8e-16
+   Newton-naiv  cond 1.2e+09  R 5.8e+03  Summe 1.4e+00  Moment 8.4e+00  M(x) 9.6e-01  w(x) 3.5e+00

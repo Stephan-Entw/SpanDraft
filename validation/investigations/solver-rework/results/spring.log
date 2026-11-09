@@ -1,0 +1,76 @@
+=== S1 zwei Federn Mitte, starr aussen
+  schlechtest roh       cond 1.3e+12 R 6.4e-07 w 2.7e-08 M 1.4e-08
+  schlechtest skaliert  cond 1.5e+02 R 1.6e-15 w 1.4e-15 M 6.8e-16
+  schlechtest naiv      cond 1.5e+02 R 1.5e-07 w 1.7e-13 M 4.0e-13
+  schlechtest knoten    cond 6.1e+16 R 1.0e+07 w 3.5e+00 M 0.0e+00
+  k=1e+06 a=0.001   R=-7.997e+00 | roh c4e+00 R0e+00 w3e-16 | ska c8e+00 R8e-16 w3e-16 | nai c8e+00 R8e-16 w2e-16 | kno c2e+09 R2e-08 w2e-08
+  k=1e+06 a=6e-09   R=-7.997e+00 | roh c4e+00 R4e-16 w2e-16 | ska c8e+00 R2e-15 w5e-16 | nai c8e+00 R1e-15 w5e-16 | kno c3e+16 R1e+00 w1e+00
+  k=1e+06 a=1e-13   R=-7.997e+00 | roh c4e+00 R3e-16 w5e-16 | ska c8e+00 R3e-16 w5e-16 | nai c8e+00 R4e-16 w5e-16 | kno c6e+16 R1e+00 w4e-01
+  k=1e+09 a=0.001   R=-3.320e+02 | roh c1e+03 R9e-16 w0e+00 | ska c1e+02 R3e-16 w2e-16 | nai c1e+02 R3e-16 w2e-16 | kno c7e+07 R8e-10 w1e-10
+  k=1e+09 a=6e-09   R=-3.299e+02 | roh c1e+03 R2e-15 w2e-16 | ska c1e+02 R5e-16 w1e-15 | nai c1e+02 R3e-16 w1e-15 | kno c3e+16 R1e+01 w3e+00
+  k=1e+09 a=1e-13   R=-3.299e+02 | roh c1e+03 R1e-15 w2e-16 | ska c2e+02 R2e-16 w8e-16 | nai c2e+02 R3e-16 w8e-16 | kno c6e+16 R1e+00 w2e+00
+  k=1e+12 a=0.001   R=-2.526e+03 | roh c1e+06 R4e-13 w5e-15 | ska c1e+02 R1e-15 w4e-16 | nai c1e+02 R3e-14 w1e-16 | kno c7e+04 R4e-12 w4e-14
+  k=1e+12 a=6e-09   R=-3.437e+02 | roh c1e+06 R8e-13 w2e-16 | ska c1e+02 R3e-16 w4e-16 | nai c1e+02 R9e-14 w1e-16 | kno c3e+16 R1e+04 w3e+00
+  k=1e+12 a=1e-13   R=-3.437e+02 | roh c1e+06 R9e-13 w2e-16 | ska c2e+02 R2e-16 w9e-16 | nai c2e+02 R2e-13 w1e-15 | kno c6e+16 R1e+00 w2e+00
+  k=1e+18 a=0.001   R=-9.434e+04 | roh c6e+07 R1e-11 w6e-12 | ska c1e+02 R0e+00 w8e-16 | nai c1e+02 R2e-14 w3e-14 | kno c6e+00 R2e-16 w2e-16
+  k=1e+18 a=6e-09   R=-1.374e+04 | roh c1e+12 R2e-07 w5e-14 | ska c1e+02 R6e-16 w4e-16 | nai c1e+02 R2e-09 w2e-15 | kno c3e+14 R9e-03 w3e-08
+  k=1e+18 a=1e-13   R=-3.440e+02 | roh c1e+12 R6e-07 w0e+00 | ska c1e+02 R2e-16 w0e+00 | nai c1e+02 R2e-07 w0e+00 | kno c6e+16 R5e+01 w2e+00
+=== S2 nur Federn, Paar am Rand
+  schlechtest roh       cond 1.1e+12 R 2.8e-05 w 9.8e-12 M 5.3e-12
+  schlechtest skaliert  cond 1.7e+01 R 1.4e-15 w 1.0e-15 M 8.0e-16
+  schlechtest naiv      cond 1.7e+01 R 7.7e-06 w 7.0e-12 M 1.4e-12
+  schlechtest knoten    cond 9.7e+17 R 1.9e+10 w 1.0e+00 M 0.0e+00
+  k=1e+06 a=0.001   R=-2.500e+02 | roh c6e+00 R7e-16 w8e-16 | ska c6e+00 R9e-16 w8e-16 | nai c6e+00 R1e-15 w8e-16 | kno c7e+10 R1e-06 w3e-07
+  k=1e+06 a=6e-09   R=-2.500e+02 | roh c6e+00 R5e-16 w8e-16 | ska c6e+00 R6e-16 w8e-16 | nai c6e+00 R6e-16 w8e-16 | kno c2e+16 R1e+00 w1e+00
+  k=1e+06 a=1e-13   R=-2.500e+02 | roh c6e+00 R6e-16 w8e-16 | ska c6e+00 R6e-16 w8e-16 | nai c6e+00 R6e-16 w8e-16 | kno c3e+16 R1e+00 w9e-01
+  k=1e+09 a=0.001   R=-2.322e+02 | roh c1e+03 R2e-14 w5e-16 | ska c3e+00 R4e-16 w5e-16 | nai c3e+00 R1e-15 w5e-16 | kno c7e+07 R1e-09 w1e-11
+  k=1e+09 a=6e-09   R=-2.500e+02 | roh c1e+03 R2e-14 w2e-16 | ska c3e+00 R1e-16 w7e-16 | nai c3e+00 R6e-16 w3e-16 | kno c5e+16 R2e+01 w8e-01
+  k=1e+09 a=1e-13   R=-2.500e+02 | roh c1e+03 R2e-14 w2e-16 | ska c3e+00 R5e-16 w5e-16 | nai c3e+00 R4e-15 w5e-16 | kno c4e+16 R2e+01 w8e-01
+  k=1e+12 a=0.001   R=1.604e+04 | roh c1e+06 R3e-14 w1e-15 | ska c4e+00 R2e-16 w5e-16 | nai c4e+00 R1e-14 w7e-16 | kno c7e+04 R4e-12 w5e-13
+  k=1e+12 a=6e-09   R=-2.499e+02 | roh c1e+06 R3e-11 w5e-16 | ska c3e+00 R2e-16 w2e-16 | nai c3e+00 R7e-13 w2e-16 | kno c6e+16 R2e+04 w8e-01
+  k=1e+12 a=1e-13   R=-2.500e+02 | roh c1e+06 R4e-13 w2e-16 | ska c3e+00 R5e-16 w2e-16 | nai c3e+00 R4e-12 w2e-16 | kno c2e+16 R2e+04 w8e-01
+  k=1e+18 a=0.001   R=1.872e+05 | roh c1e+07 R1e-13 w1e-13 | ska c2e+01 R2e-16 w6e-16 | nai c2e+01 R1e-14 w1e-14 | kno c6e+00 R3e-16 w0e+00
+  k=1e+18 a=6e-09   R=1.069e+05 | roh c1e+12 R2e-08 w3e-14 | ska c3e+00 R3e-16 w2e-16 | nai c3e+00 R2e-09 w5e-15 | kno c3e+14 R8e-04 w1e-07
+  k=1e+18 a=1e-13   R=-2.482e+02 | roh c1e+12 R1e-05 w2e-16 | ska c3e+00 R1e-16 w9e-16 | nai c3e+00 R4e-06 w9e-16 | kno c3e+16 R2e+10 w8e-01
+=== S3 starres Lager + Feder daneben
+  schlechtest roh       cond 2.6e+12 R 1.2e-03 w 2.3e-08 M 1.1e-08
+  schlechtest skaliert  cond 1.5e+02 R 1.1e-15 w 7.7e-16 M 5.6e-16
+  schlechtest naiv      cond 1.5e+02 R 2.3e-04 w 2.4e-13 M 4.7e-13
+  schlechtest knoten    cond 4.1e+13 R 1.6e+09 w 6.5e-04 M 0.0e+00
+  k=1e+06 a=0.001   R=-6.875e+02 | roh c2e+02 R2e-13 w5e-16 | ska c1e+02 R6e-16 w2e-16 | nai c1e+02 R2e-14 w2e-16 | kno c4e+03 R1e-11 w2e-14
+  k=1e+06 a=6e-09   R=-6.875e+02 | roh c2e+02 R3e-08 w5e-16 | ska c1e+02 R7e-16 w5e-16 | nai c1e+02 R2e-09 w5e-16 | kno c7e+08 R2e+00 w2e-08
+  k=1e+06 a=1e-13   R=-6.875e+02 | roh c2e+02 R1e-03 w5e-16 | ska c1e+02 R2e-16 w5e-16 | nai c1e+02 R2e-04 w5e-16 | kno c4e+13 R2e+09 w7e-04
+  k=1e+09 a=0.001   R=-6.920e+02 | roh c3e+03 R2e-14 w4e-16 | ska c1e+02 R4e-16 w1e-16 | nai c1e+02 R2e-14 w1e-16 | kno c4e+03 R1e-12 w7e-14
+  k=1e+09 a=6e-09   R=-6.875e+02 | roh c3e+03 R1e-08 w1e-16 | ska c1e+02 R1e-15 w2e-16 | nai c1e+02 R2e-09 w2e-16 | kno c7e+08 R2e+00 w2e-08
+  k=1e+09 a=1e-13   R=-6.875e+02 | roh c3e+03 R1e-05 w1e-16 | ska c1e+02 R1e-16 w5e-16 | nai c1e+02 R2e-04 w5e-16 | kno c4e+13 R2e+09 w7e-04
+  k=1e+12 a=0.001   R=-4.938e+03 | roh c3e+06 R2e-13 w7e-15 | ska c1e+02 R4e-16 w1e-16 | nai c1e+02 R2e-14 w5e-16 | kno c4e+03 R3e-12 w5e-14
+  k=1e+12 a=6e-09   R=-6.875e+02 | roh c3e+06 R3e-08 w4e-16 | ska c1e+02 R6e-16 w1e-16 | nai c1e+02 R2e-09 w1e-16 | kno c7e+08 R2e+00 w2e-08
+  k=1e+12 a=1e-13   R=-6.875e+02 | roh c3e+06 R1e-03 w5e-16 | ska c1e+02 R2e-16 w5e-16 | nai c1e+02 R2e-04 w5e-16 | kno c4e+13 R2e+09 w7e-04
+  k=1e+18 a=0.001   R=-9.434e+04 | roh c6e+07 R6e-12 w3e-12 | ska c1e+02 R5e-16 w4e-16 | nai c1e+02 R2e-14 w3e-14 | kno c6e+00 R6e-16 w2e-16
+  k=1e+18 a=6e-09   R=-2.748e+04 | roh c3e+12 R2e-07 w1e-13 | ska c1e+02 R1e-15 w6e-16 | nai c1e+02 R2e-09 w5e-15 | kno c7e+08 R2e-02 w2e-08
+  k=1e+18 a=1e-13   R=-6.879e+02 | roh c3e+12 R6e-04 w2e-16 | ska c1e+02 R4e-16 w1e-16 | nai c1e+02 R2e-04 w1e-16 | kno c4e+13 R2e+09 w7e-04
+=== Physik: Grenzwerte, Feder k an 0,5 und 0,5+a, starr bei 0 und 1, F=1 kN bei 0,25
+  a=0.1     k=1e+06 N/m  R1=      -8.011 R2=     -7.2382 N  M(F)=-185.7748 Nm  w(F)=0.0065799 mm
+  a=0.1     k=1e+09 N/m  R1=     -523.77 R2=     -126.86 N  M(F)=-109.3433 Nm  w(F)=0.00147088 mm
+  a=0.1     k=1e+12 N/m  R1=       -1518 R2=      879.92 N  M(F)=-85.7399 Nm  w(F)=0.000788096 mm
+  a=0.1     k=1e+15 N/m  R1=     -1524.2 R2=      886.29 N  M(F)=-85.6094 Nm  w(F)=0.000785006 mm
+  a=0.01    k=1e+06 N/m  R1=     -7.9979 R2=     -7.9498 N  M(F)=-185.5264 Nm  w(F)=0.00656891 mm
+  a=0.01    k=1e+09 N/m  R1=     -351.57 R2=      -306.6 N  M(F)=-105.9961 Nm  w(F)=0.00132498 mm
+  a=0.01    k=1e+12 N/m  R1=     -7081.2 R2=      6398.1 N  M(F)=-86.1183 Nm  w(F)=0.000797637 mm
+  a=0.01    k=1e+15 N/m  R1=     -9963.7 R2=      9281.8 N  M(F)=-79.0497 Nm  w(F)=0.000667827 mm
+  a=0.001   k=1e+06 N/m  R1=     -7.9974 R2=     -7.9929 N  M(F)=-185.5032 Nm  w(F)=0.00656822 mm
+  a=0.001   k=1e+09 N/m  R1=     -332.05 R2=     -327.58 N  M(F)=-105.1292 Nm  w(F)=0.00129974 mm
+  a=0.001   k=1e+12 N/m  R1=     -2526.3 R2=        1839 N  M(F)=-101.1306 Nm  w(F)=0.00106354 mm
+  a=0.001   k=1e+15 N/m  R1=      -90549 R2=       89862 N  M(F)=-79.1653 Nm  w(F)=0.000669932 mm
+  a=1e-05   k=1e+06 N/m  R1=     -7.9973 R2=     -7.9973 N  M(F)=-185.5007 Nm  w(F)=0.00656815 mm
+  a=1e-05   k=1e+09 N/m  R1=     -329.92 R2=     -329.88 N  M(F)=-105.0261 Nm  w(F)=0.00129683 mm
+  a=1e-05   k=1e+12 N/m  R1=     -366.07 R2=      -321.4 N  M(F)=-101.5671 Nm  w(F)=0.00107026 mm
+  a=1e-05   k=1e+15 N/m  R1=      -22621 R2=       21934 N  M(F)=-101.5079 Nm  w(F)=0.00106903 mm
+  a=6e-09   k=1e+06 N/m  R1=     -7.9973 R2=     -7.9973 N  M(F)=-185.5007 Nm  w(F)=0.00656815 mm
+  a=6e-09   k=1e+09 N/m  R1=      -329.9 R2=      -329.9 N  M(F)=-105.0251 Nm  w(F)=0.0012968 mm
+  a=6e-09   k=1e+12 N/m  R1=     -343.75 R2=     -343.72 N  M(F)=-101.5661 Nm  w(F)=0.00107023 mm
+  a=6e-09   k=1e+15 N/m  R1=     -357.15 R2=     -330.35 N  M(F)=-101.5625 Nm  w(F)=0.00107 mm
+  eine Feder 2k=2e6                          M(F)=-185.5007 Nm  w(F)=0.00656815 mm
+  eine Feder 2k=2e9                          M(F)=-105.0251 Nm  w(F)=0.0012968 mm
+  ein starres Lager                          M(F)=-101.5625 Nm  w(F)=0.00107 mm
+  Einspannung-Grenzwert ueber a=6e-9 starr   M(F)=-78.1250 Nm  w(F)=0.000651302 mm

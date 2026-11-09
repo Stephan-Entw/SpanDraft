@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Development-only harness. The assembly name matches the test project so that Solver internals are visible. -->
+  <PropertyGroup><OutputType>Exe</OutputType><AssemblyName>SpanDraft.Tests</AssemblyName><IsPackable>false</IsPackable><TreatWarningsAsErrors>false</TreatWarningsAsErrors><GenerateDocumentationFile>false</GenerateDocumentationFile></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../../src/SpanDraft.Core/SpanDraft.Core.csproj" />
+    <ProjectReference Include="../../../../src/SpanDraft.Solver/SpanDraft.Solver.csproj" />
+  </ItemGroup>
+</Project>
