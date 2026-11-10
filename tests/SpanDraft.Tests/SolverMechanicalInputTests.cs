@@ -54,6 +54,21 @@ public sealed class SolverMechanicalInputTests
         Assert.Equal(stations.MechanicalStations[^1], stations.EventStations[^1].MechanicalStation);
     }
 
+    [Fact]
+    public void AdapterRejectsAnExactEiBelowNormalEvenWhenItRoundsToNormal()
+    {
+        const double normal = 2.2250738585072014e-308;
+        var material = new Material("Test material", Pressure.FromPascals(normal), Pressure.FromPascals(1),
+            MaterialStrengthType.Re);
+        var axis = new ManualSectionAxis(SectionAxisDesignation.Y,
+            SecondMomentOfArea.FromMetersToTheFourth(Math.BitDecrement(1)), SectionModulus.FromCubicMeters(1));
+        var section = new ManualSectionDefinition(Area.FromSquareMeters(1), axis);
+        var beam = new BeamModel(M(L), material, section, SectionAxisDesignation.Y,
+            [SupportAt(0, SupportType.Fixed)], []);
+
+        Assert.Throws<NumericalRangeException>(() => BeamModelAdapter.Adapt(beam));
+    }
+
     [Theory]
     [InlineData(SupportType.Fixed, (int)(U | W | Theta))]
     [InlineData(SupportType.Pinned, (int)(U | W))]

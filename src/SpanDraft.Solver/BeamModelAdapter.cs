@@ -45,7 +45,7 @@ internal static class BeamModelAdapter
             _ => throw new ArgumentOutOfRangeException(nameof(support), support.Type, "Unknown support type.")
         });
 
-    // shortcut: store the rounded product here until M1.3 adds the EI range contract.
     private static double BendingStiffness(BeamModel beam) =>
-        beam.Material.YoungsModulus.Pascals * beam.BendingAxisProperties.SecondMomentOfArea.MetersToTheFourth;
+        Binary64.StiffnessProduct(beam.Material.YoungsModulus.Pascals,
+            beam.BendingAxisProperties.SecondMomentOfArea.MetersToTheFourth);
 }
