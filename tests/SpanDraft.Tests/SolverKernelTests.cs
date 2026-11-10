@@ -1,3 +1,5 @@
+using System.Reflection;
+using SpanDraft.Core.Beams;
 using SpanDraft.Solver.Kernel;
 using Xunit;
 
@@ -9,5 +11,29 @@ public sealed class SolverKernelTests
     public void SolverKernelIsInternal()
     {
         Assert.True(typeof(SolverKernel).IsNotPublic);
+    }
+
+    [Fact]
+    public void KernelSignaturesUseNoCoreTypes()
+    {
+        const BindingFlags members = BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Static |
+            BindingFlags.Public | BindingFlags.NonPublic;
+        Type[] types = typeof(SolverKernel).Assembly.GetTypes();
+        foreach (Type type in types.Where(type => type.Namespace == typeof(SolverKernel).Namespace))
+        {
+            Assert.All(type.GetFields(members), field => AssertCoreIndependent(field.FieldType));
+            Assert.All(type.GetMethods(members), method => AssertCoreIndependent(method.ReturnType));
+            var methods = type.GetMethods(members).Cast<MethodBase>().Concat(type.GetConstructors(members));
+            Assert.All(methods.SelectMany(method => method.GetParameters()),
+                parameter => AssertCoreIndependent(parameter.ParameterType));
+        }
+    }
+
+    private static void AssertCoreIndependent(Type type)
+    {
+        Assert.NotEqual(typeof(BeamModel).Assembly, type.Assembly);
+        if (type.GetElementType() is { } element)
+            AssertCoreIndependent(element);
+        Assert.All(type.GetGenericArguments(), AssertCoreIndependent);
     }
 }
