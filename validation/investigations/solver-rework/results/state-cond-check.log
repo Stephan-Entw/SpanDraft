@@ -1,0 +1,37 @@
+QR rejected, GEPP delivered
+  s|1e-09|120              kappa_inf 2.1e+17  Skeel cond 8.6e+16  cond(S,y) 1.8e+01  smallest/largest entry per column 4.7e-28  u*kappa 2.3e+01
+  s|1e-09|560              kappa_inf 3.1e+17  Skeel cond 1.7e+17  cond(S,y) 1.1e+01  smallest/largest entry per column 2.1e-27  u*kappa 3.5e+01
+  s|1e-09|1070             kappa_inf 1.2e+20  Skeel cond 5.0e+19  cond(S,y) 1.1e+01  smallest/largest entry per column 2.7e-28  u*kappa 1.4e+04
+  s|1e-09|1270             kappa_inf 4.6e+16  Skeel cond 1.7e+16  cond(S,y) 1.3e+01  smallest/largest entry per column 4.3e-28  u*kappa 5.1e+00
+  s|1e-11|375              kappa_inf 2.7e+22  Skeel cond 1.3e+22  cond(S,y) 2.1e+01  smallest/largest entry per column 5.7e-34  u*kappa 3.0e+06
+  s|1e-11|965              kappa_inf 3.2e+23  Skeel cond 1.6e+23  cond(S,y) 2.2e+01  smallest/largest entry per column 2.3e-34  u*kappa 3.5e+07
+  s|1e-11|1150             kappa_inf 3.1e+18  Skeel cond 1.1e+18  cond(S,y) 1.1e+01  smallest/largest entry per column 8.0e-30  u*kappa 3.4e+02
+  f|1e-09|25               kappa_inf 6.3e+19  Skeel cond 2.0e+19  cond(S,y) 7.7e+01  smallest/largest entry per column 5.7e-28  u*kappa 7.0e+03
+  f|1e-11|840              kappa_inf 1.7e+23  Skeel cond 8.3e+22  cond(S,y) 3.1e+01  smallest/largest entry per column 2.9e-34  u*kappa 1.9e+07
+  adv|1017|1.39            (not regenerated)
+  gemischt|1e-07|-3        kappa_inf 1.2e+21  Skeel cond 4.0e+20  cond(S,y) 1.3e+01  smallest/largest entry per column 2.1e-22  u*kappa 1.3e+05
+  gemischt|1e-07|0         kappa_inf 1.5e+21  Skeel cond 4.0e+20  cond(S,y) 1.3e+01  smallest/largest entry per column 2.1e-22  u*kappa 1.6e+05
+  gemischt|1e-07|3         kappa_inf 8.7e+18  Skeel cond 1.6e+18  cond(S,y) 1.3e+01  smallest/largest entry per column 5.3e-20  u*kappa 9.7e+02
+  gemischt|1e-09|-3        kappa_inf 1.2e+27  Skeel cond 4.0e+26  cond(S,y) 1.3e+01  smallest/largest entry per column 2.1e-28  u*kappa 1.3e+11
+  gemischt|1e-09|0         kappa_inf 1.3e+27  Skeel cond 4.0e+26  cond(S,y) 1.3e+01  smallest/largest entry per column 2.1e-28  u*kappa 1.5e+11
+  gemischt|1e-09|3         kappa_inf 8.7e+24  Skeel cond 1.6e+24  cond(S,y) 1.3e+01  smallest/largest entry per column 5.3e-26  u*kappa 9.7e+08
+  gemischt|1e-09|6         kappa_inf 8.5e+21  Skeel cond 1.5e+21  cond(S,y) 1.3e+01  smallest/largest entry per column 5.5e-23  u*kappa 9.4e+05
+  gemischt|1e-09|9         kappa_inf 8.5e+18  Skeel cond 1.5e+18  cond(S,y) 1.3e+01  smallest/largest entry per column 5.6e-20  u*kappa 9.4e+02
+  gemischt|1e-09|12        kappa_inf 8.8e+15  Skeel cond 1.6e+15  cond(S,y) 1.4e+01  smallest/largest entry per column 5.7e-17  u*kappa 9.8e-01
+  gemischt|1e-11|-3        kappa_inf 1.2e+33  Skeel cond 4.0e+32  cond(S,y) 1.3e+01  smallest/largest entry per column 2.1e-34  u*kappa 1.3e+17
+  gemischt|1e-11|0         kappa_inf 1.4e+33  Skeel cond 4.0e+32  cond(S,y) 1.3e+01  smallest/largest entry per column 2.1e-34  u*kappa 1.6e+17
+  gemischt|1e-11|3         kappa_inf 8.7e+30  Skeel cond 1.6e+30  cond(S,y) 1.3e+01  smallest/largest entry per column 5.3e-32  u*kappa 9.7e+14
+  gemischt|1e-11|6         kappa_inf 8.5e+27  Skeel cond 1.5e+27  cond(S,y) 1.3e+01  smallest/largest entry per column 5.5e-29  u*kappa 9.4e+11
+  gemischt|1e-11|9         kappa_inf 8.3e+24  Skeel cond 1.5e+24  cond(S,y) 1.3e+01  smallest/largest entry per column 5.6e-26  u*kappa 9.2e+08
+  gemischt|1e-11|12        kappa_inf 8.7e+21  Skeel cond 1.6e+21  cond(S,y) 1.4e+01  smallest/largest entry per column 5.7e-23  u*kappa 9.6e+05
+QR delivered (sample)
+  s|0.01|5                 kappa_inf 1.0e+02  Skeel cond 5.3e+01  cond(S,y) 5.8e+00  smallest/largest entry per column 2.8e-07  u*kappa 1.1e-14
+  s|0.01|330               kappa_inf 1.1e+03  Skeel cond 4.0e+02  cond(S,y) 3.2e+01  smallest/largest entry per column 1.3e-05  u*kappa 1.3e-13
+  s|0.01|575               kappa_inf 2.2e+02  Skeel cond 1.2e+02  cond(S,y) 7.2e+00  smallest/largest entry per column 4.4e-05  u*kappa 2.4e-14
+  s|0.01|860               kappa_inf 1.8e+03  Skeel cond 6.7e+02  cond(S,y) 8.3e+00  smallest/largest entry per column 9.2e-06  u*kappa 2.0e-13
+  s|0.01|1100              kappa_inf 3.9e+02  Skeel cond 1.8e+02  cond(S,y) 2.4e+00  smallest/largest entry per column 9.9e-06  u*kappa 4.3e-14
+  s|0.01|1360              kappa_inf 1.3e+04  Skeel cond 6.7e+03  cond(S,y) 4.9e+00  smallest/largest entry per column 1.7e-07  u*kappa 1.4e-12
+  s|0.0001|115             kappa_inf 3.3e+02  Skeel cond 1.6e+02  cond(S,y) 6.1e+00  smallest/largest entry per column 2.5e-13  u*kappa 3.7e-14
+  s|0.0001|395             kappa_inf 2.1e+02  Skeel cond 1.0e+02  cond(S,y) 7.0e+00  smallest/largest entry per column 3.3e-05  u*kappa 2.3e-14
+  s|0.0001|640             kappa_inf 2.9e+03  Skeel cond 1.5e+03  cond(S,y) 3.3e+00  smallest/largest entry per column 9.0e-08  u*kappa 3.2e-13
+  s|0.0001|935             kappa_inf 5.3e+02  Skeel cond 2.1e+02  cond(S,y) 1.0e+01  smallest/largest entry per column 7.5e-06  u*kappa 5.9e-14

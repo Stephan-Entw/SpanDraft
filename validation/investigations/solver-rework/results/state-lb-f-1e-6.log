@@ -1,0 +1,6 @@
+  exact below LB: f|1e-06|872      V x 0.30028519388233194 side R | |Q exact| 4.279501e+00 LB 4.280101e+00 |Q computed| 4.285287e+00 beta(x1-) 5.18e-03 actual error here 5.79e-03 | model station gate 1.0e-03 (rejected)
+  exact below LB: f|1e-06|872      V x 0.3002897578780121 side R | |Q exact| 4.279497e+00 LB 4.280101e+00 |Q computed| 4.285282e+00 beta(x1-) 5.18e-03 actual error here 5.79e-03 | model station gate 1.0e-03 (rejected)
+  exact below LB: f|1e-06|872      V x 0.30028977570612025 side R | |Q exact| 4.279497e+00 LB 4.280101e+00 |Q computed| 4.285282e+00 beta(x1-) 5.18e-03 actual error here 5.79e-03 | model station gate 1.0e-03 (rejected)
+  exact below LB: f|1e-06|872      V x 0.30028977577576127 side R | |Q exact| 4.279497e+00 LB 4.280101e+00 |Q computed| 4.285282e+00 beta(x1-) 5.18e-03 actual error here 5.79e-03 | model station gate 1.0e-03 (rejected)
+  exact below LB: f|1e-06|872      V x 0.30028977577603438 side L | |Q exact| 4.279497e+00 LB 4.280101e+00 |Q computed| 4.285282e+00 beta(x1-) 5.18e-03 actual error here 5.79e-03 | model station gate 1.0e-03 (rejected)
+f L/1e+06: models 767, pieces with LB > 0: 6119 | |Q computed| < LB: 0, |Q exact| < LB: 5 | smallest |Q|/LB 1.000000 | 139 s

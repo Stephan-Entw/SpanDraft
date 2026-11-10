@@ -1,0 +1,301 @@
+DATA {"id": "s|1e-06|0", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.9807216657149605e-15, "mu": 6.101029410291757e-15, "r4": "delivered", "viol": 0, "err": 4.704748528972284e-17}
+DATA {"id": "s|1e-06|5", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.604925520189928e-15, "mu": 7.489270518068692e-15, "r4": "delivered", "viol": 0, "err": 1.0775486623886064e-16}
+DATA {"id": "s|1e-06|10", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.6238746349022437e-15, "mu": 3.4210620747034372e-15, "r4": "delivered", "viol": 0, "err": 1.9907113796001908e-16}
+DATA {"id": "s|1e-06|15", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|20", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|25", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.307506400226838e-15, "mu": 4.103069394530604e-15, "r4": "delivered", "viol": 0, "err": 1.1596817682862636e-16}
+DATA {"id": "s|1e-06|30", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.606709452099884e-13, "mu": 2.3310065365011682e-14, "r4": "delivered", "viol": 0, "err": 3.639878080708105e-15}
+DATA {"id": "s|1e-06|35", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.3177229301339673e-14, "mu": 1.2298330443503192e-14, "r4": "delivered", "viol": 0, "err": 7.209768256446092e-17}
+DATA {"id": "s|1e-06|40", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.094931337676302e-15, "mu": 5.52122935499583e-15, "r4": "delivered", "viol": 0, "err": 5.704303894537169e-17}
+DATA {"id": "s|1e-06|45", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.3176368200748138e-15, "mu": 8.754372771011743e-15, "r4": "delivered", "viol": 0, "err": 7.885358938889726e-17}
+DATA {"id": "s|1e-06|50", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.905615426858858e-15, "mu": 6.140639797491873e-15, "r4": "delivered", "viol": 0, "err": 8.216921456080851e-17}
+DATA {"id": "s|1e-06|55", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.2912264403884239e-14, "mu": 3.0640182190568576e-14, "r4": "delivered", "viol": 0, "err": 4.876190867916604e-16}
+DATA {"id": "s|1e-06|60", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 9.864997153046289e-15, "mu": 1.566215562432112e-14, "r4": "delivered", "viol": 0, "err": 2.883457075390929e-16}
+DATA {"id": "s|1e-06|65", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.8370646302712522e-14, "mu": 2.591728044276295e-14, "r4": "delivered", "viol": 0, "err": 3.2991889619789376e-16}
+DATA {"id": "s|1e-06|70", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0795017396669703e-14, "mu": 4.031534236386791e-15, "r4": "delivered", "viol": 0, "err": 2.8969575746647605e-16}
+DATA {"id": "s|1e-06|75", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.203959670961272e-15, "mu": 7.0339928969893976e-15, "r4": "delivered", "viol": 0, "err": 4.3375510202388647e-17}
+DATA {"id": "s|1e-06|80", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.864893834785651e-15, "mu": 7.391570484201557e-15, "r4": "delivered", "viol": 0, "err": 3.391152720049474e-17}
+DATA {"id": "s|1e-06|85", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|90", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.2451970228069909e-15, "mu": 2.5586324688194593e-15, "r4": "delivered", "viol": 0, "err": 1.0598391352256039e-16}
+DATA {"id": "s|1e-06|95", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.2516968271544274e-15, "mu": 8.754575229958464e-15, "r4": "delivered", "viol": 0, "err": 7.896018377046405e-17}
+DATA {"id": "s|1e-06|100", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0060027331701046e-14, "mu": 5.204763960777774e-15, "r4": "delivered", "viol": 0, "err": 1.9994509837888618e-16}
+DATA {"id": "s|1e-06|105", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.2792541381920898e-15, "mu": 2.063789740565448e-14, "r4": "delivered", "viol": 0, "err": 5.7955370150795956e-18}
+DATA {"id": "s|1e-06|110", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.614150502783235e-15, "mu": 6.163020040641682e-15, "r4": "delivered", "viol": 0, "err": 6.229253541160216e-17}
+DATA {"id": "s|1e-06|115", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|120", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0288638209202445e-15, "mu": 8.805528743606123e-15, "r4": "delivered", "viol": 0, "err": 8.171597563385556e-17}
+DATA {"id": "s|1e-06|125", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|130", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|135", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0806501768788396e-15, "mu": 6.027592894847903e-15, "r4": "delivered", "viol": 0, "err": 2.5846454542256046e-17}
+DATA {"id": "s|1e-06|140", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.5963284697038097e-15, "mu": 2.608066262912982e-15, "r4": "delivered", "viol": 0, "err": 5.5493848147528345e-17}
+DATA {"id": "s|1e-06|145", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|150", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.030981781252139e-15, "mu": 7.557385816407285e-11, "r4": "delivered", "viol": 0, "err": 3.147349610641973e-17}
+DATA {"id": "s|1e-06|155", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.2611154839702948e-15, "mu": 3.278272428891494e-15, "r4": "delivered", "viol": 0, "err": 2.8715620260623324e-17}
+DATA {"id": "s|1e-06|160", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.7043139218741923e-14, "mu": 9.766111384669695e-15, "r4": "delivered", "viol": 0, "err": 1.4951494072599272e-16}
+DATA {"id": "s|1e-06|165", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 5.571326020778271e-15, "mu": 1.5097805926197762e-14, "r4": "delivered", "viol": 0, "err": 4.5712390301192476e-17}
+DATA {"id": "s|1e-06|170", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.529787486495418e-15, "mu": 3.871625570107447e-15, "r4": "delivered", "viol": 0, "err": 7.200265813464982e-17}
+DATA {"id": "s|1e-06|175", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.18306413471014e-15, "mu": 1.4252775484525305e-14, "r4": "delivered", "viol": 0, "err": 2.429311698874911e-16}
+DATA {"id": "s|1e-06|180", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|185", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.813296158387048e-15, "mu": 2.4290921908837206e-14, "r4": "delivered", "viol": 0, "err": 3.5891642160719304e-16}
+DATA {"id": "s|1e-06|190", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|195", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.9557012916815924e-15, "mu": 4.336544541725542e-15, "r4": "delivered", "viol": 0, "err": 8.26779642655629e-17}
+DATA {"id": "s|1e-06|200", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.813361578134337e-15, "mu": 1.1773407836157243e-14, "r4": "delivered", "viol": 0, "err": 4.8954928683803057e-17}
+DATA {"id": "s|1e-06|205", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.5412376209388082e-15, "mu": 2.469834650988351e-14, "r4": "delivered", "viol": 0, "err": 4.41048507050349e-17}
+DATA {"id": "s|1e-06|210", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.4768384716293004e-14, "mu": 4.175318689492998e-15, "r4": "delivered", "viol": 0, "err": 1.155413086391757e-15}
+DATA {"id": "s|1e-06|215", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.15392970106787e-14, "mu": 7.258900233660893e-15, "r4": "delivered", "viol": 0, "err": 7.044463459504097e-17}
+DATA {"id": "s|1e-06|220", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|225", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|230", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0913804098234186e-14, "mu": 1.726437114605921e-14, "r4": "delivered", "viol": 0, "err": 9.83131906378472e-17}
+DATA {"id": "s|1e-06|235", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|240", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.3570289777391324e-15, "mu": 1.8563787949148103e-14, "r4": "delivered", "viol": 0, "err": 9.445204083719757e-17}
+DATA {"id": "s|1e-06|245", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.7398005311618502e-14, "mu": 4.2024023799858215e-14, "r4": "delivered", "viol": 0, "err": 1.1175657711842664e-16}
+DATA {"id": "s|1e-06|250", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.497760805680044e-14, "mu": 1.2214905514410216e-14, "r4": "delivered", "viol": 0, "err": 3.641510170869288e-16}
+DATA {"id": "s|1e-06|255", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.259025249096046e-16, "mu": 6.9934262952254e-15, "r4": "delivered", "viol": 0, "err": 2.7180575932011888e-17}
+DATA {"id": "s|1e-06|260", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.09512154478392e-15, "mu": 2.352094703834499e-15, "r4": "delivered", "viol": 0, "err": 1.96549337122894e-16}
+DATA {"id": "s|1e-06|265", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.7713076045437138e-14, "mu": 1.9463424081564032e-14, "r4": "delivered", "viol": 0, "err": 2.2796963342907304e-16}
+DATA {"id": "s|1e-06|270", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.5153819389349664e-15, "mu": 3.908104926851625e-15, "r4": "delivered", "viol": 0, "err": 6.403501930440565e-17}
+DATA {"id": "s|1e-06|275", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|280", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.4430981163138406e-14, "mu": 3.813047236954608e-14, "r4": "delivered", "viol": 0, "err": 7.192578402059144e-17}
+DATA {"id": "s|1e-06|285", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.2637295596555802e-15, "mu": 7.442738436577716e-15, "r4": "delivered", "viol": 0, "err": 1.7906120454701466e-17}
+DATA {"id": "s|1e-06|290", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|295", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.9556805875924576e-14, "mu": 2.4197368133881403e-14, "r4": "delivered", "viol": 0, "err": 1.0885310454433859e-16}
+DATA {"id": "s|1e-06|300", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|305", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.210065883614708e-15, "mu": 2.098480277472236e-15, "r4": "delivered", "viol": 0, "err": 2.5465022633166507e-16}
+DATA {"id": "s|1e-06|310", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.802476611433797e-15, "mu": 1.7339946591688516e-14, "r4": "delivered", "viol": 0, "err": 6.240439762697293e-17}
+DATA {"id": "s|1e-06|315", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.2950547147336702e-14, "mu": 1.2976957549875717e-14, "r4": "delivered", "viol": 0, "err": 5.208965177426518e-16}
+DATA {"id": "s|1e-06|320", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0506079853759657e-14, "mu": 1.2489230203390094e-14, "r4": "delivered", "viol": 0, "err": 1.8326223117324937e-16}
+DATA {"id": "s|1e-06|325", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.321769663986889e-15, "mu": 1.2123144659933942e-14, "r4": "delivered", "viol": 0, "err": 5.2769393257199785e-17}
+DATA {"id": "s|1e-06|330", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.8778149589578288e-15, "mu": 1.0138993005645347e-14, "r4": "delivered", "viol": 0, "err": 5.078286107020566e-17}
+DATA {"id": "s|1e-06|335", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.3992238670173066e-15, "mu": 3.27718775796309e-15, "r4": "delivered", "viol": 0, "err": 1.111085435396691e-16}
+DATA {"id": "s|1e-06|340", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|345", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.2090321468852311e-14, "mu": 1.4153062985144145e-14, "r4": "delivered", "viol": 0, "err": 2.411490860700605e-16}
+DATA {"id": "s|1e-06|350", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.321743114190876e-15, "mu": 2.7040150937367576e-14, "r4": "delivered", "viol": 0, "err": 8.753163684065044e-17}
+DATA {"id": "s|1e-06|355", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0334072553237044e-14, "mu": 4.349669092312272e-15, "r4": "delivered", "viol": 0, "err": 2.4050725724020955e-16}
+DATA {"id": "s|1e-06|360", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|365", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 9.33466513192315e-15, "mu": 3.829408978157498e-15, "r4": "delivered", "viol": 0, "err": 1.0952925514827941e-16}
+DATA {"id": "s|1e-06|370", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.276009427575185e-13, "mu": 1.1143032507344005e-14, "r4": "delivered", "viol": 0, "err": 2.0766062881527275e-15}
+DATA {"id": "s|1e-06|375", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0215678412422596e-14, "mu": 1.1022994154116728e-14, "r4": "delivered", "viol": 0, "err": 4.8423732362686944e-17}
+DATA {"id": "s|1e-06|380", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.352945080157845e-14, "mu": 8.899008243636607e-15, "r4": "delivered", "viol": 0, "err": 2.353313743716527e-16}
+DATA {"id": "s|1e-06|385", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|390", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.0205603333291037e-14, "mu": 1.757766598219548e-14, "r4": "delivered", "viol": 0, "err": 5.262849995614096e-16}
+DATA {"id": "s|1e-06|395", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.2835467829766348e-14, "mu": 7.516218940501184e-15, "r4": "delivered", "viol": 0, "err": 1.0288651961978377e-16}
+DATA {"id": "s|1e-06|400", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0503382982454272e-14, "mu": 4.596227072153995e-15, "r4": "delivered", "viol": 0, "err": 5.293229839195107e-16}
+DATA {"id": "s|1e-06|405", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|410", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.875561673019414e-15, "mu": 6.634405073704641e-15, "r4": "delivered", "viol": 0, "err": 4.295465460441937e-17}
+DATA {"id": "s|1e-06|415", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 9.965185934551012e-15, "mu": 1.4381073291695608e-14, "r4": "delivered", "viol": 0, "err": 1.4399282612898354e-16}
+DATA {"id": "s|1e-06|420", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.848090061140553e-15, "mu": 6.216380780083714e-15, "r4": "delivered", "viol": 0, "err": 1.704481456596397e-16}
+DATA {"id": "s|1e-06|425", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.2416481595900193e-14, "mu": 6.5010438197967e-14, "r4": "delivered", "viol": 0, "err": 1.1300677422282574e-15}
+DATA {"id": "s|1e-06|430", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|435", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.451220459781344e-15, "mu": 1.2158202900465919e-14, "r4": "delivered", "viol": 0, "err": 9.586652389733322e-17}
+DATA {"id": "s|1e-06|440", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.1276701800646513e-14, "mu": 1.4168805048458676e-14, "r4": "delivered", "viol": 0, "err": 7.777118647178387e-16}
+DATA {"id": "s|1e-06|445", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.421386050237363e-15, "mu": 1.9792386310294814e-14, "r4": "delivered", "viol": 0, "err": 7.17099248466395e-17}
+DATA {"id": "s|1e-06|450", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.9901285781482534e-14, "mu": 3.117264395881696e-14, "r4": "delivered", "viol": 0, "err": 2.1127025310275275e-16}
+DATA {"id": "s|1e-06|455", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.006497449492433e-16, "mu": 3.754409900339847e-15, "r4": "delivered", "viol": 0, "err": 7.355719986220462e-18}
+DATA {"id": "s|1e-06|460", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.2000479854352393e-15, "mu": 7.6485803803417e-15, "r4": "delivered", "viol": 0, "err": 3.7313026281942383e-17}
+DATA {"id": "s|1e-06|465", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.7551529108430765e-15, "mu": 1.1155376824678205e-14, "r4": "delivered", "viol": 0, "err": 8.762170139848478e-17}
+DATA {"id": "s|1e-06|470", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|475", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|480", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.413698242825307e-15, "mu": 4.18967693553235e-14, "r4": "delivered", "viol": 0, "err": 3.5074402076117066e-17}
+DATA {"id": "s|1e-06|485", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.046148336948539e-15, "mu": 1.4690137976714138e-14, "r4": "delivered", "viol": 0, "err": 1.879037666522464e-17}
+DATA {"id": "s|1e-06|490", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.451365086379375e-14, "mu": 5.270012270370135e-14, "r4": "delivered", "viol": 0, "err": 5.407132373819101e-16}
+DATA {"id": "s|1e-06|495", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.9068368434765493e-15, "mu": 7.814832950019951e-15, "r4": "delivered", "viol": 0, "err": 8.435743350383712e-17}
+DATA {"id": "s|1e-06|500", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|505", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.2367396972377766e-14, "mu": 2.2884983651365045e-14, "r4": "delivered", "viol": 0, "err": 9.48312720784713e-16}
+DATA {"id": "s|1e-06|510", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|515", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.959907987151501e-15, "mu": 9.016251075687298e-13, "r4": "delivered", "viol": 0, "err": 6.946003039739341e-17}
+DATA {"id": "s|1e-06|520", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.25655826470409e-15, "mu": 7.151436285572106e-15, "r4": "delivered", "viol": 0, "err": 3.7890830052636703e-17}
+DATA {"id": "s|1e-06|525", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.6263010623291763e-15, "mu": 5.564256349257081e-15, "r4": "delivered", "viol": 0, "err": 9.174860825542117e-17}
+DATA {"id": "s|1e-06|530", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.558614293591756e-15, "mu": 6.531451051143676e-15, "r4": "delivered", "viol": 0, "err": 2.0582769909864874e-17}
+DATA {"id": "s|1e-06|535", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.4764572949520764e-14, "mu": 1.2446500986350036e-14, "r4": "delivered", "viol": 0, "err": 3.4162576974702775e-16}
+DATA {"id": "s|1e-06|540", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.1109279051770055e-16, "mu": 1.0242120011564162e-14, "r4": "delivered", "viol": 0, "err": 3.2533768065662174e-17}
+DATA {"id": "s|1e-06|545", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|550", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.697226842660544e-15, "mu": 6.82754467595936e-15, "r4": "delivered", "viol": 0, "err": 2.0089523278567468e-16}
+DATA {"id": "s|1e-06|555", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|560", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.7821697100411687e-15, "mu": 2.2324019680243927e-14, "r4": "delivered", "viol": 0, "err": 5.125039438270674e-17}
+DATA {"id": "s|1e-06|565", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|570", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.813088166838061e-15, "mu": 4.494786159561675e-15, "r4": "delivered", "viol": 0, "err": 8.10089054910629e-17}
+DATA {"id": "s|1e-06|575", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.7488871901510685e-15, "mu": 8.176848809080621e-15, "r4": "delivered", "viol": 0, "err": 6.169788147545048e-17}
+DATA {"id": "s|1e-06|580", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|585", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|590", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0132588802709107e-14, "mu": 3.766727947693479e-14, "r4": "delivered", "viol": 0, "err": 1.9349846493651422e-16}
+DATA {"id": "s|1e-06|595", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.197575456909942e-15, "mu": 3.2914505429498232e-15, "r4": "delivered", "viol": 0, "err": 1.9970427142545592e-16}
+DATA {"id": "s|1e-06|600", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.0780191330572498e-14, "mu": 2.2490043902306897e-14, "r4": "delivered", "viol": 0, "err": 2.9897689845098774e-16}
+DATA {"id": "s|1e-06|605", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 5.1412660440563707e-14, "mu": 2.068209519288693e-14, "r4": "delivered", "viol": 0, "err": 9.389807853695997e-16}
+DATA {"id": "s|1e-06|610", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.624603738745856e-14, "mu": 1.7148123631899274e-14, "r4": "delivered", "viol": 0, "err": 4.645870488946243e-16}
+DATA {"id": "s|1e-06|615", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|620", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.1566109725993241e-14, "mu": 1.4100680021490045e-14, "r4": "delivered", "viol": 0, "err": 9.258837590927648e-17}
+DATA {"id": "s|1e-06|625", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.4275745236309532e-15, "mu": 5.45871625734098e-15, "r4": "delivered", "viol": 0, "err": 1.6785765915877337e-17}
+DATA {"id": "s|1e-06|630", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.929202364480497e-15, "mu": 8.735879812614957e-15, "r4": "delivered", "viol": 0, "err": 1.0584991084410318e-16}
+DATA {"id": "s|1e-06|635", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 5.209767928064743e-15, "mu": 1.9938598019864895e-14, "r4": "delivered", "viol": 0, "err": 1.4864741027779986e-16}
+DATA {"id": "s|1e-06|640", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.3507991750744009e-14, "mu": 4.644584235303717e-14, "r4": "delivered", "viol": 0, "err": 2.1424836880058714e-16}
+DATA {"id": "s|1e-06|645", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.5659983615896915e-15, "mu": 8.433968093224591e-15, "r4": "delivered", "viol": 0, "err": 6.118159411061269e-17}
+DATA {"id": "s|1e-06|650", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.104154551822562e-15, "mu": 4.414984783484771e-15, "r4": "delivered", "viol": 0, "err": 1.3383925218534272e-16}
+DATA {"id": "s|1e-06|655", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.164723225022669e-15, "mu": 1.6133286292000097e-14, "r4": "delivered", "viol": 0, "err": 1.4306053617179554e-16}
+DATA {"id": "s|1e-06|660", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|665", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.532025842416195e-14, "mu": 3.4202408666859193e-13, "r4": "delivered", "viol": 0, "err": 2.4850104822583866e-16}
+DATA {"id": "s|1e-06|670", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.1339781140647166e-14, "mu": 1.9695025433624085e-14, "r4": "delivered", "viol": 0, "err": 1.834693249167868e-16}
+DATA {"id": "s|1e-06|675", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|680", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|685", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.841942150575453e-15, "mu": 3.4349979828331855e-14, "r4": "delivered", "viol": 0, "err": 2.476996181727468e-16}
+DATA {"id": "s|1e-06|690", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.040720885178742e-15, "mu": 1.8349605178869336e-14, "r4": "delivered", "viol": 0, "err": 7.393748371385745e-17}
+DATA {"id": "s|1e-06|695", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.076099691834332e-15, "mu": 1.1702049658972627e-14, "r4": "delivered", "viol": 0, "err": 2.1095959223102043e-16}
+DATA {"id": "s|1e-06|700", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|705", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.37771747047612e-15, "mu": 1.7283112047968137e-14, "r4": "delivered", "viol": 0, "err": 1.1065382095082588e-16}
+DATA {"id": "s|1e-06|710", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|715", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.109958770186471e-15, "mu": 9.963414450270776e-15, "r4": "delivered", "viol": 0, "err": 2.440870175519181e-16}
+DATA {"id": "s|1e-06|720", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.6841282637601814e-14, "mu": 1.8105232521979645e-14, "r4": "delivered", "viol": 0, "err": 6.277870318136202e-16}
+DATA {"id": "s|1e-06|725", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.1627608359671414e-14, "mu": 2.6221177726250953e-15, "r4": "delivered", "viol": 0, "err": 1.1230135391872113e-16}
+DATA {"id": "s|1e-06|730", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.128704408472986e-15, "mu": 5.0149068438759274e-12, "r4": "delivered", "viol": 0, "err": 9.718829656511067e-17}
+DATA {"id": "s|1e-06|735", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.3248388140739656e-15, "mu": 1.0406736584894275e-14, "r4": "delivered", "viol": 0, "err": 2.384528442039692e-17}
+DATA {"id": "s|1e-06|740", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|745", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.574494773905055e-15, "mu": 2.650093980673875e-14, "r4": "delivered", "viol": 0, "err": 1.0299735845489924e-16}
+DATA {"id": "s|1e-06|750", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.519352450672137e-15, "mu": 1.2948257168687769e-14, "r4": "delivered", "viol": 0, "err": 1.3971336473894822e-16}
+DATA {"id": "s|1e-06|755", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.9608094566085346e-15, "mu": 1.2549902208712495e-14, "r4": "delivered", "viol": 0, "err": 5.870139528945121e-17}
+DATA {"id": "s|1e-06|760", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.5557063613874424e-15, "mu": 3.991025804224871e-15, "r4": "delivered", "viol": 0, "err": 6.866559453636753e-17}
+DATA {"id": "s|1e-06|765", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|770", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.847587186667207e-15, "mu": 4.87508519754778e-15, "r4": "delivered", "viol": 0, "err": 1.1572123396098564e-16}
+DATA {"id": "s|1e-06|775", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.692282747573155e-15, "mu": 3.799066950633048e-15, "r4": "delivered", "viol": 0, "err": 2.0712790406353825e-16}
+DATA {"id": "s|1e-06|780", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.0887883774901605e-15, "mu": 1.2329565051069036e-14, "r4": "delivered", "viol": 0, "err": 1.3995579400138027e-16}
+DATA {"id": "s|1e-06|785", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.646245316423178e-15, "mu": 7.856898148921715e-15, "r4": "delivered", "viol": 0, "err": 4.261282444934937e-17}
+DATA {"id": "s|1e-06|790", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 5.1772145671324255e-15, "mu": 9.950091688460292e-15, "r4": "delivered", "viol": 0, "err": 1.0050982360968568e-16}
+DATA {"id": "s|1e-06|795", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|800", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.474876383304259e-15, "mu": 8.083945693178262e-15, "r4": "delivered", "viol": 0, "err": 1.4353676780237864e-16}
+DATA {"id": "s|1e-06|805", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.606667739393192e-14, "mu": 4.1813767752094535e-15, "r4": "delivered", "viol": 0, "err": 3.3105093681945266e-16}
+DATA {"id": "s|1e-06|810", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|815", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.776356839400784e-15, "mu": 6.8340685544491216e-15, "r4": "delivered", "viol": 0, "err": 5.95261606469536e-17}
+DATA {"id": "s|1e-06|820", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 9.870280396625739e-15, "mu": 7.40138147100195e-15, "r4": "delivered", "viol": 0, "err": 1.2731434139780645e-16}
+DATA {"id": "s|1e-06|825", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.1749915980185556e-14, "mu": 6.595962870753901e-15, "r4": "delivered", "viol": 0, "err": 6.546822399962057e-17}
+DATA {"id": "s|1e-06|830", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.641970877803238e-15, "mu": 7.043105828618828e-15, "r4": "delivered", "viol": 0, "err": 8.863753631449307e-17}
+DATA {"id": "s|1e-06|835", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|840", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.716327583852521e-16, "mu": 2.371295958330904e-15, "r4": "delivered", "viol": 0, "err": 3.629245927949413e-17}
+DATA {"id": "s|1e-06|845", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.1843611443025966e-15, "mu": 3.149027915396985e-15, "r4": "delivered", "viol": 0, "err": 3.33073773075036e-17}
+DATA {"id": "s|1e-06|850", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.4408385553023297e-14, "mu": 1.0571922707392795e-14, "r4": "delivered", "viol": 0, "err": 5.960707260166828e-17}
+DATA {"id": "s|1e-06|855", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.6519967699406895e-15, "mu": 2.2821477092925446e-15, "r4": "delivered", "viol": 0, "err": 8.816921923755143e-17}
+DATA {"id": "s|1e-06|860", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.0681482466074874e-15, "mu": 5.703573180324692e-15, "r4": "delivered", "viol": 0, "err": 1.53368316476781e-16}
+DATA {"id": "s|1e-06|865", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.5851479854513386e-14, "mu": 8.165854528402929e-12, "r4": "delivered", "viol": 0, "err": 1.400384803395133e-15}
+DATA {"id": "s|1e-06|870", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.184097019198217e-14, "mu": 2.7430308024634382e-14, "r4": "delivered", "viol": 0, "err": 3.554919095429646e-16}
+DATA {"id": "s|1e-06|875", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.9762814871104683e-15, "mu": 5.060102852459916e-15, "r4": "delivered", "viol": 0, "err": 4.388659874218581e-17}
+DATA {"id": "s|1e-06|880", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|885", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|890", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 5.551161766782744e-16, "mu": 6.205399910013914e-15, "r4": "delivered", "viol": 0, "err": 3.672499342189941e-17}
+DATA {"id": "s|1e-06|895", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|900", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.3995638252856e-15, "mu": 5.317274173209141e-15, "r4": "delivered", "viol": 0, "err": 8.682822854994997e-17}
+DATA {"id": "s|1e-06|905", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|910", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.3191749096243999e-15, "mu": 2.1931774135577693e-15, "r4": "delivered", "viol": 0, "err": 8.126170839726494e-17}
+DATA {"id": "s|1e-06|915", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|920", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.4797935059312457e-15, "mu": 2.5785993921666966e-15, "r4": "delivered", "viol": 0, "err": 6.340110081406424e-17}
+DATA {"id": "s|1e-06|925", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 5.942722086937695e-15, "mu": 7.535941432120434e-13, "r4": "delivered", "viol": 0, "err": 1.5237016477703393e-16}
+DATA {"id": "s|1e-06|930", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 9.93282192854936e-15, "mu": 1.4913635384144825e-14, "r4": "delivered", "viol": 0, "err": 2.7277785803476197e-17}
+DATA {"id": "s|1e-06|935", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.851505878872403e-15, "mu": 1.1184348808474287e-14, "r4": "delivered", "viol": 0, "err": 1.4687759532972662e-16}
+DATA {"id": "s|1e-06|940", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.76982601180707e-14, "mu": 1.4933171172816436e-14, "r4": "delivered", "viol": 0, "err": 5.941927917741138e-16}
+DATA {"id": "s|1e-06|945", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.8832758950057742e-14, "mu": 5.351660409491908e-14, "r4": "delivered", "viol": 0, "err": 2.8668413630703277e-16}
+DATA {"id": "s|1e-06|950", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.2057674015539878e-15, "mu": 5.708063281745611e-15, "r4": "delivered", "viol": 0, "err": 3.7226985118885403e-17}
+DATA {"id": "s|1e-06|955", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.358420178469144e-15, "mu": 1.6676701585963904e-14, "r4": "delivered", "viol": 0, "err": 3.4761034130582876e-17}
+DATA {"id": "s|1e-06|960", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|965", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 5.066899232503809e-16, "mu": 1.8906590874821106e-14, "r4": "delivered", "viol": 0, "err": 5.788556032594877e-17}
+DATA {"id": "s|1e-06|970", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.958383921862165e-15, "mu": 7.396172463128655e-15, "r4": "delivered", "viol": 0, "err": 1.1481393415125353e-16}
+DATA {"id": "s|1e-06|975", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.485631747781351e-15, "mu": 1.992486486097174e-14, "r4": "delivered", "viol": 0, "err": 1.9074602109103745e-16}
+DATA {"id": "s|1e-06|980", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 9.747802867163806e-15, "mu": 1.2341941501167694e-14, "r4": "delivered", "viol": 0, "err": 6.024165287654665e-17}
+DATA {"id": "s|1e-06|985", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.7755355557052972e-14, "mu": 2.5867640849907118e-14, "r4": "delivered", "viol": 0, "err": 6.71542295830941e-17}
+DATA {"id": "s|1e-06|990", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.4666342728015264e-15, "mu": 3.00866671810895e-14, "r4": "delivered", "viol": 0, "err": 1.0307577139849816e-16}
+DATA {"id": "s|1e-06|995", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.252446807292402e-15, "mu": 7.807536733780066e-15, "r4": "delivered", "viol": 0, "err": 5.2250114324816844e-17}
+DATA {"id": "s|1e-06|1000", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.3930119838122226e-14, "mu": 1.580679220383893e-14, "r4": "delivered", "viol": 0, "err": 1.7206234143539548e-16}
+DATA {"id": "s|1e-06|1005", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0704360055662161e-14, "mu": 4.6354851832852404e-15, "r4": "delivered", "viol": 0, "err": 1.5927759423377633e-16}
+DATA {"id": "s|1e-06|1010", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.718967731725882e-15, "mu": 4.0163034743669466e-15, "r4": "delivered", "viol": 0, "err": 6.56796925759162e-17}
+DATA {"id": "s|1e-06|1015", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.9795634834692785e-15, "mu": 6.539329329017268e-15, "r4": "delivered", "viol": 0, "err": 7.464100567378303e-17}
+DATA {"id": "s|1e-06|1020", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.121657639402672e-15, "mu": 2.9528141006344848e-15, "r4": "delivered", "viol": 0, "err": 2.478099425372111e-16}
+DATA {"id": "s|1e-06|1025", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.3379737795292978e-14, "mu": 1.0351723695783446e-14, "r4": "delivered", "viol": 0, "err": 2.4970770540165917e-16}
+DATA {"id": "s|1e-06|1030", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.973188004474387e-14, "mu": 1.7749271758961864e-14, "r4": "delivered", "viol": 0, "err": 2.9890861300084627e-16}
+DATA {"id": "s|1e-06|1035", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1040", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.290369488375749e-15, "mu": 3.76572013400397e-15, "r4": "delivered", "viol": 0, "err": 1.23198934396165e-16}
+DATA {"id": "s|1e-06|1045", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.5755518638229832e-15, "mu": 9.270861546097498e-15, "r4": "delivered", "viol": 0, "err": 1.0394420432790452e-16}
+DATA {"id": "s|1e-06|1050", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.754777486771134e-14, "mu": 6.714270658667886e-14, "r4": "delivered", "viol": 0, "err": 7.370984460959582e-17}
+DATA {"id": "s|1e-06|1055", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0265309770848423e-14, "mu": 1.9575901553417206e-07, "r4": "delivered", "viol": 0, "err": 9.05789046126893e-17}
+DATA {"id": "s|1e-06|1060", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1065", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.619452493261705e-15, "mu": 6.955187226428354e-15, "r4": "delivered", "viol": 0, "err": 6.251862093767061e-17}
+DATA {"id": "s|1e-06|1070", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.272580968617987e-15, "mu": 2.0479515738476022e-14, "r4": "delivered", "viol": 0, "err": 9.405923528374709e-17}
+DATA {"id": "s|1e-06|1075", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.694522248932239e-15, "mu": 1.8275264998573038e-14, "r4": "delivered", "viol": 0, "err": 4.709889186619114e-17}
+DATA {"id": "s|1e-06|1080", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.038036398891773e-16, "mu": 7.53560991053767e-11, "r4": "delivered", "viol": 0, "err": 3.6147823121345106e-17}
+DATA {"id": "s|1e-06|1085", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.1839735226181252e-14, "mu": 3.766974507002305e-15, "r4": "delivered", "viol": 0, "err": 3.369064922629221e-16}
+DATA {"id": "s|1e-06|1090", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 5.657007118758459e-15, "mu": 2.6816929227760164e-15, "r4": "delivered", "viol": 0, "err": 1.0033297069799552e-16}
+DATA {"id": "s|1e-06|1095", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0964492028745712e-14, "mu": 5.7274792652161564e-15, "r4": "delivered", "viol": 0, "err": 4.1225129349609867e-16}
+DATA {"id": "s|1e-06|1100", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.623955450099204e-15, "mu": 8.869295979176232e-15, "r4": "delivered", "viol": 0, "err": 3.874938511250461e-17}
+DATA {"id": "s|1e-06|1105", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1110", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.463290194704125e-15, "mu": 2.926023648935204e-15, "r4": "delivered", "viol": 0, "err": 4.4186656553231317e-17}
+DATA {"id": "s|1e-06|1115", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1120", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1125", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.976927048105401e-16, "mu": 9.827401431386596e-09, "r4": "delivered", "viol": 0, "err": 5.4868217660141314e-17}
+DATA {"id": "s|1e-06|1130", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.2847246153303543e-14, "mu": 8.151200129211209e-15, "r4": "delivered", "viol": 0, "err": 2.8463973714503983e-16}
+DATA {"id": "s|1e-06|1135", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.005707940276147e-15, "mu": 4.158289463271643e-15, "r4": "delivered", "viol": 0, "err": 2.2565923347641376e-16}
+DATA {"id": "s|1e-06|1140", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.874736452623229e-15, "mu": 5.748812598728611e-15, "r4": "delivered", "viol": 0, "err": 2.3478830858516295e-16}
+DATA {"id": "s|1e-06|1145", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1150", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.821438335256785e-15, "mu": 1.3669256160713678e-14, "r4": "delivered", "viol": 0, "err": 8.996724878838443e-17}
+DATA {"id": "s|1e-06|1155", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1160", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.8662106010398825e-15, "mu": 1.3438386351688209e-14, "r4": "delivered", "viol": 0, "err": 1.8398931755577442e-16}
+DATA {"id": "s|1e-06|1165", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1170", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.676553241039495e-15, "mu": 7.760296649038115e-15, "r4": "delivered", "viol": 0, "err": 2.9019354570018874e-16}
+DATA {"id": "s|1e-06|1175", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.625959701262955e-14, "mu": 2.173463673019055e-14, "r4": "delivered", "viol": 0, "err": 4.787704290929827e-16}
+DATA {"id": "s|1e-06|1180", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.5668678224678583e-14, "mu": 1.1169039535055755e-14, "r4": "delivered", "viol": 0, "err": 3.9216737952376585e-16}
+DATA {"id": "s|1e-06|1185", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.996007207930464e-15, "mu": 1.4418782779003023e-14, "r4": "delivered", "viol": 0, "err": 5.752263292042483e-17}
+DATA {"id": "s|1e-06|1190", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.653691591729112e-15, "mu": 1.1798488988702434e-14, "r4": "delivered", "viol": 0, "err": 4.80547177413018e-17}
+DATA {"id": "s|1e-06|1195", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1200", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 5.1604448115169005e-15, "mu": 8.178082219116835e-15, "r4": "delivered", "viol": 0, "err": 4.5370671573591465e-17}
+DATA {"id": "s|1e-06|1205", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.405338022880447e-15, "mu": 1.3689087842554787e-14, "r4": "delivered", "viol": 0, "err": 2.202461035490875e-16}
+DATA {"id": "s|1e-06|1210", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.615072355320205e-15, "mu": 1.5612387289970484e-14, "r4": "delivered", "viol": 0, "err": 2.098760489593688e-16}
+DATA {"id": "s|1e-06|1215", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 9.790568694074729e-15, "mu": 1.7615411777994205e-14, "r4": "delivered", "viol": 0, "err": 2.750303522578961e-16}
+DATA {"id": "s|1e-06|1220", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0922540385607781e-15, "mu": 2.3433299306092587e-14, "r4": "delivered", "viol": 0, "err": 1.3297160560382288e-17}
+DATA {"id": "s|1e-06|1225", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1230", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1235", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.6607661454329954e-14, "mu": 2.4158316817619973e-14, "r4": "delivered", "viol": 0, "err": 9.685138142688606e-16}
+DATA {"id": "s|1e-06|1240", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1245", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1250", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.7335539082890848e-15, "mu": 1.5631846064371073e-14, "r4": "delivered", "viol": 0, "err": 2.8784619218689784e-17}
+DATA {"id": "s|1e-06|1255", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.717187822601377e-15, "mu": 4.4566478201085945e-15, "r4": "delivered", "viol": 0, "err": 4.077192252321476e-16}
+DATA {"id": "s|1e-06|1260", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.71277902810763e-15, "mu": 2.600915253197977e-14, "r4": "delivered", "viol": 0, "err": 3.482360580570299e-17}
+DATA {"id": "s|1e-06|1265", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.6901694169411745e-14, "mu": 2.4971807869389868e-14, "r4": "delivered", "viol": 0, "err": 2.523354385760377e-15}
+DATA {"id": "s|1e-06|1270", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1275", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.3570537377398985e-15, "mu": 3.4533479450374784e-15, "r4": "delivered", "viol": 0, "err": 8.375409564806126e-17}
+DATA {"id": "s|1e-06|1280", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.88178419700127e-16, "mu": 1.5543122344752215e-15, "r4": "delivered", "viol": 0, "err": 5.08437150510747e-17}
+DATA {"id": "s|1e-06|1285", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1290", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.2828895971279189e-15, "mu": 1.2620843542786057e-14, "r4": "delivered", "viol": 0, "err": 5.029976712092095e-17}
+DATA {"id": "s|1e-06|1295", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1300", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.821645392558834e-15, "mu": 2.0129408392478427e-14, "r4": "delivered", "viol": 0, "err": 8.306140405511852e-17}
+DATA {"id": "s|1e-06|1305", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.1316004321129675e-15, "mu": 1.0233080232675782e-14, "r4": "delivered", "viol": 0, "err": 9.488675356894792e-17}
+DATA {"id": "s|1e-06|1310", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.2177767093442985e-15, "mu": 9.075432095280508e-15, "r4": "delivered", "viol": 0, "err": 7.57748568571786e-17}
+DATA {"id": "s|1e-06|1315", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.842495806564626e-14, "mu": 1.9299745890347954e-14, "r4": "delivered", "viol": 0, "err": 2.8428035444338058e-16}
+DATA {"id": "s|1e-06|1320", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.429203765957984e-15, "mu": 2.354444002345802e-15, "r4": "delivered", "viol": 0, "err": 2.4412814161472403e-17}
+DATA {"id": "s|1e-06|1325", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 8.517696359617137e-15, "mu": 5.2542407469331816e-14, "r4": "delivered", "viol": 0, "err": 2.3887767201756257e-16}
+DATA {"id": "s|1e-06|1330", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1335", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.125229887046616e-14, "mu": 2.4137009085047085e-14, "r4": "delivered", "viol": 0, "err": 1.7686931442681276e-16}
+DATA {"id": "s|1e-06|1340", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.1797381970521023e-15, "mu": 1.047103592311664e-14, "r4": "delivered", "viol": 0, "err": 5.16154161459173e-17}
+DATA {"id": "s|1e-06|1345", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 6.511414501328411e-16, "mu": 1.114603411646681e-09, "r4": "delivered", "viol": 0, "err": 1.310002164984609e-17}
+DATA {"id": "s|1e-06|1350", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0708556560553678e-14, "mu": 7.463307941780995e-15, "r4": "delivered", "viol": 0, "err": 2.3914358279040546e-16}
+DATA {"id": "s|1e-06|1355", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.1802581003475301e-14, "mu": 1.5632953615727968e-14, "r4": "delivered", "viol": 0, "err": 2.1278576620781007e-16}
+DATA {"id": "s|1e-06|1360", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.7226576650427495e-14, "mu": 1.4698990974317707e-14, "r4": "delivered", "viol": 0, "err": 1.5353792587719467e-16}
+DATA {"id": "s|1e-06|1365", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1370", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 5.07264654182912e-14, "mu": 1.974590641148194e-14, "r4": "delivered", "viol": 0, "err": 4.712013540906263e-16}
+DATA {"id": "s|1e-06|1375", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.392936373127575e-15, "mu": 2.4651323414329337e-15, "r4": "delivered", "viol": 0, "err": 1.0921108577682199e-16}
+DATA {"id": "s|1e-06|1380", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1385", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.1760957610187651e-14, "mu": 5.788491459689996e-13, "r4": "delivered", "viol": 0, "err": 5.268193741853137e-16}
+DATA {"id": "s|1e-06|1390", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.3663049525632943e-15, "mu": 2.3506574409552923e-15, "r4": "delivered", "viol": 0, "err": 2.134466039746032e-17}
+DATA {"id": "s|1e-06|1395", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1400", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.089194677545484e-14, "mu": 2.8653352746389384e-14, "r4": "delivered", "viol": 0, "err": 9.316047891162104e-16}
+DATA {"id": "s|1e-06|1405", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.4882987321634222e-15, "mu": 5.9444202420740696e-15, "r4": "delivered", "viol": 0, "err": 1.8021150312998733e-16}
+DATA {"id": "s|1e-06|1410", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.1568476200077404e-15, "mu": 7.256407347622236e-15, "r4": "delivered", "viol": 0, "err": 5.3200126942964295e-17}
+DATA {"id": "s|1e-06|1415", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 3.963596558229002e-15, "mu": 2.962962029190401e-15, "r4": "delivered", "viol": 0, "err": 1.7289763875730033e-16}
+DATA {"id": "s|1e-06|1420", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1425", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 5.3011733121544276e-15, "mu": 3.6262358883643717e-14, "r4": "delivered", "viol": 0, "err": 4.2829760207713095e-17}
+DATA {"id": "s|1e-06|1430", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1435", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.4727087006712704e-15, "mu": 6.8863778256836396e-15, "r4": "delivered", "viol": 0, "err": 1.4523237848486371e-16}
+DATA {"id": "s|1e-06|1440", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 7.660455603349626e-15, "mu": 2.5605287736002754e-12, "r4": "delivered", "viol": 0, "err": 1.2513650496940342e-16}
+DATA {"id": "s|1e-06|1445", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.1669898182918404e-14, "mu": 3.921559663884523e-14, "r4": "delivered", "viol": 0, "err": 5.894327040790793e-16}
+DATA {"id": "s|1e-06|1450", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.0270400262380415e-15, "mu": 7.13410561353792e-15, "r4": "delivered", "viol": 0, "err": 7.226596943759884e-17}
+DATA {"id": "s|1e-06|1455", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1460", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1465", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.0655271907379577e-14, "mu": 1.1195273497311415e-14, "r4": "delivered", "viol": 0, "err": 1.7466704325216275e-16}
+DATA {"id": "s|1e-06|1470", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 4.218861371432862e-15, "mu": 4.139710816883429e-15, "r4": "delivered", "viol": 0, "err": 6.996887878277139e-17}
+DATA {"id": "s|1e-06|1475", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.491633468072828e-15, "mu": 1.474802332759901e-14, "r4": "delivered", "viol": 0, "err": 7.044891306507804e-17}
+DATA {"id": "s|1e-06|1480", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.6059542101755323e-15, "mu": 6.755152703695325e-15, "r4": "delivered", "viol": 0, "err": 8.043237074606563e-17}
+DATA {"id": "s|1e-06|1485", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 1.5912774902888235e-14, "mu": 1.2554788192947023e-13, "r4": "delivered", "viol": 0, "err": 1.8946791528641472e-16}
+DATA {"id": "s|1e-06|1490", "cls": "s L/1e+06", "status": "UnstableModel", "cause": null, "gate": null, "mu": null, "r4": null}
+DATA {"id": "s|1e-06|1495", "cls": "s L/1e+06", "status": "delivered", "cause": null, "gate": 2.14921926928748e-15, "mu": 1.0367216260053567e-14, "r4": "delivered", "viol": 0, "err": 8.38771209401495e-17}
+s L/1e+06: models 300 | 14 s

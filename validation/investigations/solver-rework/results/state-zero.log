@@ -1,0 +1,25 @@
+(6) exactly stable but numerically singular model without excitation
+  F_exc 0.0e+00 | factorisation: zero pivot | exact solution identically 0: True -> rule 7.2: deliver exact zeros without solving
+  same model with a load: factorisation zero pivot -> numerically not reliably solvable
+(1) bending without excitation (no loads at all)
+  bestimmt    F_exc 0.0e+00 | b == 0: True | states exactly 0: True | fields: True | reactions: True | largest indicator 1.4e-316 (underflow term only; no relative measure, scale 0) | refinement steps 1
+  unbestimmt  F_exc 0.0e+00 | b == 0: True | states exactly 0: True | fields: True | reactions: True | largest indicator 1.1e-314 (underflow term only; no relative measure, scale 0) | refinement steps 1
+  federn      F_exc 0.0e+00 | b == 0: True | states exactly 0: True | fields: True | reactions: True | largest indicator 1.9e-315 (underflow term only; no relative measure, scale 0) | refinement steps 1
+  ei_wechsel  F_exc 0.0e+00 | b == 0: True | states exactly 0: True | fields: True | reactions: True | largest indicator 1.2e-315 (underflow term only; no relative measure, scale 0) | refinement steps 1
+  gelenke     F_exc 0.0e+00 | b == 0: True | states exactly 0: True | fields: True | reactions: True | largest indicator 5.8e-315 (underflow term only; no relative measure, scale 0) | refinement steps 1
+  nah         F_exc 0.0e+00 | b == 0: True | states exactly 0: True | fields: True | reactions: True | largest indicator 1.7e-294 (underflow term only; no relative measure, scale 0) | refinement steps 1
+(2) loads with zero resultant and zero resultant moment, but local fields
+  resultant 0.0e+00, resultant moment 0.0e+00, F_exc 4.0e+04, max|M| exact 1.0e+04 | delivered, mixed error 1.5e-17, indicator 2.2e-15
+(3) loads cancelling at one point (P and -P at the same x)
+  F_exc 2.0e+04 | b == 0: True | solution exactly 0: True | mixed error 0.0e+00 (scale from F_exc, no division by zero)
+(4) non-zero load whose nondimensional value underflows (indicator without / with the underflow term)
+  P = 1e+03 N: nondimensional P 7.6e-03 (normal), b == 0: False | actual error 5.7e-17 | indicator without 2.5e-15 (deliver), with 2.5e-15 (deliver)
+  P = 1e-300 N: nondimensional P 7.6e-306 (normal), b == 0: False | actual error 1.2e-16 | indicator without 2.5e-15 (deliver), with 2.6e-15 (deliver)
+  P = 1e-310 N: nondimensional P 7.6e-316 (subnormal), b == 0: False | actual error 7.8e-09 | indicator without 0.0e+00 (deliver), with 8.3e-07 (reject)
+  P = 1e-320 N: nondimensional P 0.0e+00 (zero), b == 0: True | actual error 6.7e-01 | indicator without 0.0e+00 (deliver), with 3.8e+03 (reject)
+(5) axial part
+  without excitation: states exactly 0: True
+  without axial restraint: zero pivot; exact reference: mechanism
+  random L/1e+02: models 300 (mechanisms 0) | largest error, u relative to S_u, N relative to max(|N|, S_N): 2.5e-16
+  random L/1e+06: models 300 (mechanisms 0) | largest error, u relative to S_u, N relative to max(|N|, S_N): 2.9e-16
+  random L/1e+11: models 300 (mechanisms 0) | largest error, u relative to S_u, N relative to max(|N|, S_N): 3.0e-16

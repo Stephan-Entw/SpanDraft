@@ -1,0 +1,49 @@
+models 8779, elastic restraints 21697 (in delivered models 21681)
+=== delivered models: 21681 elastic restraints
+errors relative to max(|R|, S); "chosen" = evaluation with the smaller indicator
+category                      n | jump error  median / max    | law error  median / max     | chosen error  median / max  | chosen worse than other: n, largest ratio
+soft                       2594 | 5e-18 / 2e-10               | 1e-22 / 8e-16               | 1e-22 / 8e-16               | 104, 1.00 (only errors > 1e-15)
+stiff                      8231 | 2e-17 / 1e-09               | 2e-17 / 3e-05               | 2e-17 / 8e-13               | 1472, 2.52 (only errors > 1e-15)
+close springs              3453 | 1e-17 / 1e-09               | 2e-18 / 3e-12               | 1e-18 / 1e-14               | 451, 2.52 (only errors > 1e-15)
+between close supports       24 | 3e-12 / 1e-09               | 6e-30 / 3e-16               | 6e-30 / 3e-16               | 0, 1.00 (only errors > 1e-15)
+springs only               3510 | 2e-17 / 1e-15               | 1e-17 / 3e-05               | 1e-17 / 1e-15               | 390, 1.00 (only errors > 1e-15)
+rotational                 7331 | 4e-18 / 5e-16               | 2e-18 / 4e-06               | 2e-18 / 5e-16               | 1249, 1.00 (only errors > 1e-15)
+all                       21681 | 1e-17 / 1e-09               | 4e-18 / 5e-02               | 3e-18 / 8e-13               | 2902, 2.52 (only errors > 1e-15)
+consistency diagnosis D = |R_jump - R_law| (relative to max(|R|, S)):
+category                 | D  median / max                | D/(beta_jump+beta_law) max     | D/(u*rowscale) p99 / max  
+soft                     | 3e-18 / 2e-10                   | 1.00e+00                      | 1.0 / 9007199254740992.0
+stiff                    | 0e+00 / 3e-05                   | 1.00e+00                      | 67065539.3 / 9007199254740992.0
+close springs            | 3e-18 / 1e-09                   | 8.49e-02                      | 1.0 / 1628391.3
+between close supports   | 3e-12 / 1e-09                   | 8.22e-03                      | 0.4 / 0.4
+springs only             | 0e+00 / 3e-05                   | 2.19e-01                      | 654266.0 / 8998452193341353.0
+rotational               | 3e-19 / 4e-06                   | 9.86e-02                      | 47304.1 / 72518995063.0
+all                      | 7e-19 / 5e-02                   | 1.00e+00                      | 25412.2 / 9007199254740992.0
+  largest D/(u*rowscale): s|0.0001|826         9007199254740992.0  D 2.8e-37  jump error 0.0e+00  law error 2.8e-37
+  largest D/(u*rowscale): s|1e-09|459          9007199254740992.0  D 1.6e-33  jump error 0.0e+00  law error 1.6e-33
+  largest D/(u*rowscale): s|1e-11|757          9007199254740992.0  D 1.3e-47  jump error 0.0e+00  law error 1.3e-47
+  largest D/(u*rowscale): f|1e-06|13           9007199254740992.0  D 2.8e-16  jump error 0.0e+00  law error 2.8e-16
+  largest D/(u*rowscale): f|1e-06|121          9007199254740992.0  D 4.6e-35  jump error 4.6e-35  law error 0.0e+00
+restraints with D > beta_jump + beta_law (normalised): 0
+=== rejected models: 16 elastic restraints
+errors relative to max(|R|, S); "chosen" = evaluation with the smaller indicator
+category                      n | jump error  median / max    | law error  median / max     | chosen error  median / max  | chosen worse than other: n, largest ratio
+soft                          1 | 1e-03 / 1e-03               | 1e-03 / 1e-03               | 1e-03 / 1e-03               | 0, 1.00 (only errors > 1e-15)
+stiff                         7 | 2e-09 / 4e-03               | 2e-09 / 4e-03               | 2e-09 / 4e-03               | 2, 1.00 (only errors > 1e-15)
+close springs                 5 | 3e-08 / 1e-03               | 3e-08 / 1e-03               | 3e-08 / 1e-03               | 0, 1.00 (only errors > 1e-15)
+springs only                  2 | 3e-08 / 3e-08               | 3e-08 / 3e-08               | 3e-08 / 3e-08               | 0, 1.00 (only errors > 1e-15)
+rotational                    5 | 1e-22 / 4e-10               | 7e-26 / 4e-10               | 7e-26 / 4e-10               | 0, 1.00 (only errors > 1e-15)
+all                          16 | 4e-10 / 4e-03               | 4e-10 / 4e-03               | 4e-10 / 4e-03               | 2, 1.00 (only errors > 1e-15)
+consistency diagnosis D = |R_jump - R_law| (relative to max(|R|, S)):
+category                 | D  median / max                | D/(beta_jump+beta_law) max     | D/(u*rowscale) p99 / max  
+soft                     | 0e+00 / 0e+00                   | 0.00e+00                      | 0.0 / 0.0
+stiff                    | 0e+00 / 5e-17                   | 7.10e-10                      | 0.9 / 0.9
+close springs            | 0e+00 / 5e-26                   | 4.17e-02                      | 0.5 / 0.5
+springs only             | 0e+00 / 0e+00                   | 0.00e+00                      | 0.0 / 0.0
+rotational               | 3e-26 / 1e-20                   | 4.17e-02                      | 0.5 / 0.5
+all                      | 0e+00 / 5e-17                   | 4.17e-02                      | 0.9 / 0.9
+  largest D/(u*rowscale): s|1e-09|978          0.9  D 4.6e-17  jump error 2.4e-09  law error 2.4e-09
+  largest D/(u*rowscale): s|1e-09|978          0.7  D 1.4e-21  jump error 2.8e-15  law error 2.8e-15
+  largest D/(u*rowscale): s|1e-09|867          0.5  D 4.6e-26  jump error 4.6e-26  law error 1.3e-29
+  largest D/(u*rowscale): s|1e-09|1222         0.1  D 3.3e-26  jump error 1.0e-22  law error 1.0e-22
+  largest D/(u*rowscale): s|1e-11|460          0.0  D 9.6e-21  jump error 9.6e-21  law error 7.0e-26
+restraints with D > beta_jump + beta_law (normalised): 0

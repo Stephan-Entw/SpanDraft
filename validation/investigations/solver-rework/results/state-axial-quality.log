@@ -1,0 +1,7 @@
+axial L/1e+02: models 300 | gate median 1.8e-15 max 1.8e-14 | error max 2.5e-16 | gate/error p1 8.2 median 35.1
+axial L/1e+06: models 300 | gate median 1.7e-15 max 1.4e-14 | error max 2.6e-16 | gate/error p1 6.5 median 33.3
+axial L/1e+11: models 300 | gate median 1.6e-15 max 8.6e-15 | error max 3.8e-16 | gate/error p1 6.2 median 33.5
+totals: {'models': 900, 'delivered': 900, 'rejected': 0, 'singular': 0, 'under': 0, 'wrong': 0, 'unnecessary': 0} | largest gate 1.8e-14 | largest delivered error 3.8e-16
+  restraints 1e-11 L apart   gate 1.3e-15 error 2.1e-17 values with error > beta 0
+  stiff + soft spring        gate 1.7e-15 error 3.0e-17 values with error > beta 0
+  short load 1e-11 L         gate 2.3e-15 error 7.3e-17 values with error > beta 0

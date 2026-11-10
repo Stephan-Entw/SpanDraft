@@ -1,0 +1,10 @@
+f L/1e+02 models 1000 solved 757 mech 243 (kin only 0, exact only 0) zero pivot 0 exc 0 | 180 s
+  glob             median 1e-16  p99 3e-15  max 7e-15
+  mixed            median 1e-16  p99 2e-15  max 5e-15
+  indicator        median 1e-14  p99 2e-13  max 4e-13
+  indicator/mixed  median 9e+01  p99 5e+02  max 2e+03  min 1e+01
+  refinement steps {1: 487, 2: 243, 3: 27}
+  rejected (indicator > 1e-08): 0 {1e-12: 0, 1e-10: 0, 1e-08: 0, 1e-06: 0}
+  worst mixed 5.4e-15 (indicator 3.2e-13): {'L': 0.011962350460089904, 'E': 70000000000.0, 'I': 9.926889921253017e-15, 'sup': [[0.0005981175230044952, 'Pinned']], 'springs': [[0.0007177410276053942, 89099644630122.06, 0, True]], 'hinges': [], 'ei': [[0.00047849401840359613, 0.00028767349943736766], [0.011089652904857984, 0.0022965928869509745]], 'lin': [[0.0008446441013230829, 0.001724885690725085, 3604.1598902567703, -311464.12778817205]], 'pf': [[0.0009686443866429693, -2302.2241271172024], [0.0012415293440356126, -1985.754724075587], [0.0007177410276053942, -1817.8134639440752]], 'pm': [], 'q': []}
+  violations in accepted models (indicator <= tau): 0 models
+  models with violations: 0, values 0

@@ -1,0 +1,21 @@
+transfer coefficients (a = distance, e = EI/EI_ref):
+  a            k = 1
+  a/e          k = 3
+  a a/2/e      k = 5
+  a a a/6/e    k = 8
+point force v d^(p-1)/(p-1)!  and point couple -v d^(p-2)/(p-2)! (v exact):
+  p = 1  force k = 0
+  p = 2  force k = 2   couple k = 0
+  p = 3  force k = 4   couple k = 2
+  p = 4  force k = 7   couple k = 4
+distributed load, per p: q Difference_p/p! (q a clipped intensity, data error separate) and Ramp_p (rise with k = 1):
+  p = 1  inside: diff k =  2 ramp k =  7 | beyond: diff k =  2 ramp k =  3
+  p = 2  inside: diff k =  4 ramp k = 10 | beyond: diff k =  5 ramp k =  8
+  p = 3  inside: diff k =  7 ramp k = 12 | beyond: diff k =  9 ramp k = 10
+  p = 4  inside: diff k =  9 ramp k = 14 | beyond: diff k = 11 ramp k = 14
+clipped intensity q = v1 + (v2 - v1)((c - la)/(lb - la)): |q^ - q| <= gb(6)|(v2 - v1) f| + u|q^| (derivation in the contract)
+field evaluation at s (g coefficients times state):
+  w: 1, s, s s/2/e, s s s/6/e    k(g) = [0, 1, 5, 8], product with the state k(g) + 1
+  th: 1, s/e, s s/2/e            k(g) = [0, 3, 5], product with the state k(g) + 1
+  M: 1, s                        k(g) = [0, 1], product with the state k(g) + 1
+  V: 1                           k(g) = [0], product with the state k(g) + 1

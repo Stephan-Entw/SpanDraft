@@ -1,0 +1,89 @@
+totals over 11 classes (targeted + 10 random classes), tau = 1e-08
+adjoint refinement none     | values with err > beta in delivered models: 4 (largest err/beta 1.66, largest normalised err 2.4e-35)
+   s=1  delivered  10335  rejected  16  max actual error delivered 2.0e-11  delivered with error > tau 0  rejected with error <= tau 3
+   s=2  delivered  10335  rejected  16  max actual error delivered 2.0e-11  delivered with error > tau 0  rejected with error <= tau 3
+   s=4  delivered  10335  rejected  16  max actual error delivered 2.0e-11  delivered with error > tau 0  rejected with error <= tau 3
+   s=10 delivered  10333  rejected  18  max actual error delivered 5.9e-12  delivered with error > tau 0  rejected with error <= tau 5
+adjoint refinement one      | values with err > beta in delivered models: 0
+   s=1  delivered  10335  rejected  16  max actual error delivered 2.0e-11  delivered with error > tau 0  rejected with error <= tau 3
+   s=2  delivered  10335  rejected  16  max actual error delivered 2.0e-11  delivered with error > tau 0  rejected with error <= tau 3
+   s=4  delivered  10335  rejected  16  max actual error delivered 2.0e-11  delivered with error > tau 0  rejected with error <= tau 3
+   s=10 delivered  10333  rejected  18  max actual error delivered 5.9e-12  delivered with error > tau 0  rejected with error <= tau 5
+adjoint refinement adaptive | values with err > beta in delivered models: 0
+   s=1  delivered  10335  rejected  16  max actual error delivered 2.0e-11  delivered with error > tau 0  rejected with error <= tau 3
+   s=2  delivered  10335  rejected  16  max actual error delivered 2.0e-11  delivered with error > tau 0  rejected with error <= tau 3
+   s=4  delivered  10335  rejected  16  max actual error delivered 2.0e-11  delivered with error > tau 0  rejected with error <= tau 3
+   s=10 delivered  10333  rejected  18  max actual error delivered 5.9e-12  delivered with error > tau 0  rejected with error <= tau 5
+beta/err per value (err > 0), adjoint refinement one step: log10 quantiles min / p1 / median / p99 (0.25-decade bins, lower bin edge)
+w   all classes  n   330894  -0.50 / +1.25 / +2.00 / +4.25
+      f L/1e+02    n    30091  +0.00 / +1.25 / +2.25 / +4.00
+      f L/1e+04    n    31097  +0.00 / +1.25 / +2.25 / +4.25
+      f L/1e+06    n    30142  -0.25 / +1.25 / +2.25 / +4.25
+      f L/1e+09    n    30074  -0.50 / +1.25 / +2.25 / +4.25
+      f L/1e+11    n    29493  -0.25 / +1.25 / +2.25 / +4.50
+      s L/1e+02    n    31167  +0.75 / +1.00 / +2.00 / +4.00
+      s L/1e+04    n    31553  +0.00 / +1.00 / +2.00 / +4.25
+      s L/1e+06    n    30332  +0.00 / +1.00 / +2.00 / +4.00
+      s L/1e+09    n    31236  +0.00 / +1.00 / +2.00 / +4.25
+      s L/1e+11    n    31102  +0.00 / +1.00 / +2.00 / +4.75
+      targeted     n    24607  +1.25 / +1.50 / +2.25 / +4.00
+t   all classes  n   344595  -0.50 / +1.00 / +2.00 / +4.00
+      f L/1e+02    n    31038  +0.75 / +1.25 / +2.00 / +4.00
+      f L/1e+04    n    32160  +0.00 / +1.25 / +2.00 / +4.00
+      f L/1e+06    n    31081  -0.25 / +1.25 / +2.00 / +4.00
+      f L/1e+09    n    31004  -0.50 / +1.25 / +2.00 / +4.00
+      f L/1e+11    n    30461  -0.25 / +1.25 / +2.00 / +4.00
+      s L/1e+02    n    32703  +0.75 / +1.00 / +2.00 / +4.00
+      s L/1e+04    n    33128  +0.50 / +1.00 / +2.00 / +4.00
+      s L/1e+06    n    31798  +0.00 / +1.00 / +2.00 / +3.75
+      s L/1e+09    n    32786  +0.75 / +1.00 / +2.00 / +4.00
+      s L/1e+11    n    32741  +0.75 / +1.00 / +2.00 / +4.00
+      targeted     n    25695  +1.25 / +1.50 / +2.25 / +4.00
+M   all classes  n   293212  -0.50 / +1.00 / +2.00 / +4.00
+      f L/1e+02    n    26680  +0.00 / +1.00 / +2.00 / +4.00
+      f L/1e+04    n    27862  +0.00 / +1.00 / +2.00 / +4.00
+      f L/1e+06    n    26856  -0.25 / +1.00 / +2.00 / +4.00
+      f L/1e+09    n    26879  -0.50 / +1.00 / +2.00 / +4.00
+      f L/1e+11    n    26414  -0.25 / +1.00 / +2.00 / +4.00
+      s L/1e+02    n    26896  +0.00 / +1.00 / +2.00 / +3.75
+      s L/1e+04    n    27400  +0.00 / +0.75 / +2.00 / +3.75
+      s L/1e+06    n    26168  +0.00 / +1.00 / +2.00 / +3.75
+      s L/1e+09    n    26904  +0.00 / +1.00 / +2.00 / +3.75
+      s L/1e+11    n    26667  +0.00 / +1.00 / +2.00 / +3.75
+      targeted     n    24486  +0.00 / +1.50 / +2.25 / +4.00
+V   all classes  n   274540  -0.50 / +1.00 / +2.00 / +3.75
+      f L/1e+02    n    24656  +0.00 / +1.00 / +2.00 / +3.75
+      f L/1e+04    n    26062  +0.00 / +1.00 / +2.00 / +3.75
+      f L/1e+06    n    25064  -0.25 / +1.00 / +2.00 / +3.75
+      f L/1e+09    n    25065  -0.50 / +1.00 / +2.00 / +4.00
+      f L/1e+11    n    24587  -0.25 / +1.00 / +2.00 / +3.75
+      s L/1e+02    n    24802  +0.00 / +1.00 / +1.75 / +3.50
+      s L/1e+04    n    25442  +0.00 / +1.00 / +1.75 / +3.75
+      s L/1e+06    n    23825  +0.00 / +1.00 / +1.75 / +3.75
+      s L/1e+09    n    24713  +0.00 / +1.00 / +1.75 / +3.75
+      s L/1e+11    n    24312  +0.00 / +0.75 / +1.75 / +4.00
+      targeted     n    26012  +1.25 / +1.50 / +2.25 / +4.00
+R   all classes  n    36952  -0.50 / +1.00 / +2.00 / +3.75
+      f L/1e+02    n     2638  +0.00 / +1.00 / +2.00 / +3.50
+      f L/1e+04    n     2858  +0.00 / +1.00 / +2.00 / +3.75
+      f L/1e+06    n     2706  -0.25 / +1.00 / +2.00 / +3.75
+      f L/1e+09    n     2696  -0.50 / +1.00 / +2.00 / +3.75
+      f L/1e+11    n     2654  -0.25 / +0.75 / +2.00 / +3.75
+      s L/1e+02    n     4021  +0.00 / +1.00 / +1.75 / +3.50
+      s L/1e+04    n     4067  +0.00 / +1.00 / +1.75 / +3.75
+      s L/1e+06    n     3864  +0.00 / +1.00 / +1.75 / +3.50
+      s L/1e+09    n     4009  +0.00 / +1.00 / +1.75 / +3.50
+      s L/1e+11    n     3917  +0.00 / +1.00 / +1.75 / +3.75
+      targeted     n     3522  +1.25 / +1.50 / +2.25 / +4.00
+Rm  all classes  n    15158  +0.50 / +1.00 / +2.00 / +3.75
+      f L/1e+02    n     1131  +0.50 / +1.00 / +2.00 / +3.75
+      f L/1e+04    n     1196  +0.75 / +1.00 / +2.00 / +3.75
+      f L/1e+06    n     1192  +1.00 / +1.00 / +2.00 / +3.50
+      f L/1e+09    n     1167  +0.75 / +1.00 / +2.00 / +3.75
+      f L/1e+11    n     1152  +0.75 / +1.00 / +2.00 / +3.75
+      s L/1e+02    n     1720  +0.75 / +1.00 / +1.75 / +3.50
+      s L/1e+04    n     1693  +0.75 / +1.00 / +1.75 / +3.75
+      s L/1e+06    n     1624  +0.75 / +1.00 / +1.75 / +3.50
+      s L/1e+09    n     1681  +0.75 / +1.00 / +1.75 / +3.50
+      s L/1e+11    n     1624  +0.75 / +1.00 / +1.75 / +3.50
+      targeted     n      978  +1.25 / +1.50 / +2.25 / +4.00

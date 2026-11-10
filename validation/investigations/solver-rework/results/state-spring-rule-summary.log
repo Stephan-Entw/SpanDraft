@@ -1,0 +1,54 @@
+models 10322, elastic restraints 25504 (translational 16847, rotational 8657)
+
+(a)-(d) identity, consistency relation and adjoint linearity (all restraints)
+  identity |D - |r_p|/rs_p| <= bound violated: 0; largest ratio to the bound 0.10
+  D / (beta_jump + beta_law): max 1.000   with d reduced to |r| + delta r: max 1.000   restraints with D > sum: 0 / 0 (reduced)
+  adjoint linearity: max_{m != p} |z_j - z_l|_m / |z_j - z_l|_p  p99 2.9e-13 max 8.3e+01;  rs_p |z_j - z_l|_p  min 1.000000 max 1.000000
+  the same off-p deviation relative to u * max|z|: max 2969764973952667.5 (rounding level of the two adjoint solves)
+  delivered n 25484: D/(bj+bl) max 1.000, lin_off max 8.3e+01, rs_p|dz_p| in [1.0000, 1.0000]
+  rejected  n    20: D/(bj+bl) max 0.042, lin_off max 6.0e-08, rs_p|dz_p| in [1.0000, 1.0000]
+
+(e) injected implementation faults detected by D > beta_jump + beta_law
+  k in the law off by 2^-20                  applicable 25504  detected by D > bj + bl 23243 (91.1 %), by the identity check 23447 (91.9 %)
+  station load missing in the jump           applicable   971  detected by D > bj + bl   969 (99.8 %), by the identity check   971 (100.0 %)
+  segment load integral missing in the jump  applicable 15621  detected by D > bj + bl 15223 (97.5 %), by the identity check 15247 (97.6 %)
+
+(f) value per rule: error relative to max(|R_exact|, S) and beta, by category
+  == delivered models
+  category                    n | jump med/max      law med/max       min-beta med/max  star med/max      | min worse: n, max ratio | err > beta     | alpha: in [0,1] / median
+  all                     25484 | 1e-17/1e-09       3e-18/8e-13       3e-18/8e-13       3e-18/8e-13       |    57, 2.52           | 0/0/0/1        | 25483 / 0.112
+  translational           16832 | 2e-17/1e-09       6e-18/8e-13       6e-18/8e-13       6e-18/8e-13       |    56, 2.52           | 0/0/0/1        | 16831 / 0.5
+  rotational               8652 | 4e-18/1e-15       2e-18/1e-15       2e-18/1e-15       2e-18/1e-15       |     1, 1.01           | 0/0/0/0        | 8652 / 0.00127
+  combined                 6153 | 2e-17/3e-14       5e-18/3e-14       5e-18/3e-14       6e-18/3e-14       |     8, 1.17           | 0/0/0/0        | 6153 / 0.528
+  soft                     2900 | 5e-18/2e-10       1e-22/8e-16       1e-22/8e-16       1e-22/8e-16       |     0, 1.00           | 0/0/0/0        | 2900 / 1
+  stiff                    9774 | 2e-17/1e-09       2e-17/8e-13       2e-17/8e-13       2e-17/8e-13       |    54, 2.52           | 0/0/0/1        | 9774 / 7.07e-07
+  close springs            3960 | 1e-17/1e-09       1e-18/1e-14       1e-18/1e-14       1e-18/1e-14       |    19, 2.52           | 0/0/0/0        | 3960 / 0.875
+  between close supports     24 | 3e-12/1e-09       6e-30/3e-16       6e-30/3e-16       6e-30/3e-16       |     0, 1.00           | 0/0/0/0        | 24 / 1
+  springs only             4180 | 2e-17/3e-15       1e-17/3e-15       1e-17/3e-15       1e-17/3e-15       |     0, 1.00           | 0/0/0/0        | 4180 / 1.32e-06
+  star vs min-beta: error smaller 3154, larger 3831, equal 18499; beta_star/beta_min median 1.041 min 9.09e-14 max 2.815
+  == rejected models
+  category                    n | jump med/max      law med/max       min-beta med/max  star med/max      | min worse: n, max ratio | err > beta     | alpha: in [0,1] / median
+  all                        20 | 2e-09/7e-01       2e-09/7e-01       2e-09/7e-01       2e-09/7e-01       |     3, 1.00           | 3/3/3/3        | 20 / 0.104
+  translational              15 | 3e-08/7e-01       3e-08/7e-01       3e-08/7e-01       3e-08/7e-01       |     3, 1.00           | 3/3/3/3        | 15 / 6.22e-05
+  rotational                  5 | 1e-22/4e-10       7e-26/4e-10       7e-26/4e-10       7e-26/4e-10       |     0, 1.00           | 0/0/0/0        | 5 / 1
+  combined                    2 | 2e-09/2e-09       2e-09/2e-09       2e-09/2e-09       2e-09/2e-09       |     1, 1.00           | 0/0/0/0        | 2 / 6.22e-05
+  soft                        1 | 1e-03/1e-03       1e-03/1e-03       1e-03/1e-03       1e-03/1e-03       |     0, 1.00           | 1/1/1/1        | 1 / 0.104
+  stiff                       8 | 3e-08/4e-03       3e-08/4e-03       3e-08/4e-03       3e-08/4e-03       |     2, 1.00           | 1/1/1/1        | 8 / 2.23e-05
+  close springs               9 | 4e-08/7e-01       4e-08/7e-01       4e-08/7e-01       4e-08/7e-01       |     1, 1.00           | 2/2/2/2        | 9 / 0.104
+  springs only                2 | 3e-08/3e-08       3e-08/3e-08       3e-08/3e-08       3e-08/3e-08       |     0, 1.00           | 0/0/0/0        | 2 / 0
+  star vs min-beta: error smaller 1, larger 1, equal 18; beta_star/beta_min median 1.000 min 9.74e-01 max 1.274
+
+model decision per rule (gate = max of field gate incl. piece gate B, rigid reactions, elastic reactions by rule)
+  jump  delivered 10299 rejected  23 | max error delivered 2.1e-11 | delivered with error > tau 0 | rejected with error <= tau 15
+  law   delivered 10311 rejected  11 | max error delivered 2.0e-11 | delivered with error > tau 0 | rejected with error <= tau 3
+  min   delivered 10311 rejected  11 | max error delivered 2.0e-11 | delivered with error > tau 0 | rejected with error <= tau 3
+  star  delivered 10311 rejected  11 | max error delivered 2.0e-11 | delivered with error > tau 0 | rejected with error <= tau 3
+  rejected only with the jump rule: gemischt|1e-09|-3      gate jump 2.6e-07  gate min 4.8e-14  error 3.4e-16
+  rejected only with the jump rule: gemischt|1e-09|0       gate jump 2.6e-07  gate min 4.8e-14  error 1.9e-16
+  rejected only with the jump rule: gemischt|1e-09|3       gate jump 2.6e-07  gate min 4.7e-14  error 1.4e-16
+  rejected only with the jump rule: gemischt|1e-09|6       gate jump 2.6e-07  gate min 4.7e-14  error 4.2e-16
+  rejected only with the jump rule: gemischt|1e-09|9       gate jump 2.6e-07  gate min 4.8e-14  error 1.5e-16
+  rejected only with the jump rule: gemischt|1e-09|12      gate jump 2.4e-07  gate min 6.6e-14  error 3.0e-16
+  rejected only with the jump rule: gemischt|1e-11|-3      gate jump 2.6e-05  gate min 4.7e-14  error 2.4e-16
+  rejected only with the jump rule: gemischt|1e-11|0       gate jump 2.6e-05  gate min 4.7e-14  error 2.4e-16
+  (12 models rejected only with the jump rule, 0 only with the law rule)

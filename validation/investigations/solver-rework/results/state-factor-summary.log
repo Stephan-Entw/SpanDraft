@@ -1,0 +1,69 @@
+all: models 2956, largest n 500, largest number of stations 141
+  structure: lower bandwidth max 2, upper max 2, stations coupled by one row max 1 (1 = neighbours only), unknowns per station max 4
+  GEPP: growth rho max 1.971905 (p99 1.413703), rho_U max 1.971905, largest multiplier 1.000, multiplier distance max 2, band of U max 4, row interchanges per unknown 0.71
+  LU vs QR: compared 2829 | same status 2804 | LU delivered 2827 (QR 2802) | largest error delivered LU 2.50e-13 QR 1.99e-13 | err LU/QR median 1.00 max 1.55e+01 min 7.44e-17
+  LU error > 10x QR error and > 1e-14: 0 []
+  QR error > 10x LU error and > 1e-14: 29 ['adv|1017|1.39 3.1e-16/1.0e+00', 's|1e-09|120 1.8e-16/5.3e-01', 's|1e-09|560 1.7e-16/5.8e-01', 's|1e-09|1070 7.5e-17/1.0e+00', 's|1e-09|1270 1.6e-16/6.4e-04', 's|1e-11|375 1.6e-16/1.0e+00']
+    status differs: adv|1017|1.39 LU delivered QR rejected | gate 7.3e-14 / 1.6e+03 | err 3.1e-16 / 1.0e+00
+    status differs: s|1e-09|120 LU delivered QR rejected | gate 2.4e-14 / 7.3e+00 | err 1.8e-16 / 5.3e-01
+    status differs: s|1e-09|560 LU delivered QR rejected | gate 1.2e-14 / 1.2e+01 | err 1.7e-16 / 5.8e-01
+    status differs: s|1e-09|1070 LU delivered QR rejected | gate 1.6e-14 / 2.6e+06 | err 7.5e-17 / 1.0e+00
+    status differs: s|1e-09|1270 LU delivered QR rejected | gate 9.6e-15 / 6.5e-04 | err 1.6e-16 / 6.4e-04
+    status differs: s|1e-11|375 LU delivered QR rejected | gate 2.7e-14 / 4.0e+00 | err 1.6e-16 / 1.0e+00
+    status differs: s|1e-11|965 LU delivered QR rejected | gate 2.2e-14 / 2.6e+05 | err 2.9e-16 / 1.1e+00
+    status differs: s|1e-11|1150 LU delivered QR rejected | gate 2.4e-14 / 5.1e+09 | err 2.2e-16 / 1.1e+00
+  refinement steps LU 1.37 QR 2.02 | omega LU max 1.0e+00 QR max 1.0e+00
+  zero pivot (GEPP): 2 ['f|1e-11|235', 'f|1e-11|430']
+adversarial: models 18, largest n 140, largest number of stations 42
+  structure: lower bandwidth max 2, upper max 2, stations coupled by one row max 1 (1 = neighbours only), unknowns per station max 4
+  GEPP: growth rho max 1.673548 (p99 1.673548), rho_U max 1.673548, largest multiplier 1.000, multiplier distance max 2, band of U max 4, row interchanges per unknown 0.66
+  LU vs QR: compared 18 | same status 17 | LU delivered 18 (QR 17) | largest error delivered LU 3.16e-15 QR 3.31e-15 | err LU/QR median 0.95 max 2.55e+00 min 3.13e-16
+  LU error > 10x QR error and > 1e-14: 0 []
+  QR error > 10x LU error and > 1e-14: 1 ['adv|1017|1.39 3.1e-16/1.0e+00']
+    status differs: adv|1017|1.39 LU delivered QR rejected | gate 7.3e-14 / 1.6e+03 | err 3.1e-16 / 1.0e+00
+  refinement steps LU 1.94 QR 2.89 | omega LU max 1.6e-16 QR max 1.0e+00
+  zero pivot (GEPP): 0 []
+random 1/5: models 1898, largest n 40, largest number of stations 11
+  structure: lower bandwidth max 2, upper max 2, stations coupled by one row max 1 (1 = neighbours only), unknowns per station max 4
+  GEPP: growth rho max 1.636198 (p99 1.233478), rho_U max 1.636198, largest multiplier 1.000, multiplier distance max 2, band of U max 4, row interchanges per unknown 0.64
+  LU vs QR: compared 1896 | same status 1887 | LU delivered 1894 (QR 1885) | largest error delivered LU 2.50e-13 QR 1.99e-13 | err LU/QR median 1.00 max 1.55e+01 min 7.44e-17
+  LU error > 10x QR error and > 1e-14: 0 []
+  QR error > 10x LU error and > 1e-14: 10 ['s|1e-09|120 1.8e-16/5.3e-01', 's|1e-09|560 1.7e-16/5.8e-01', 's|1e-09|1070 7.5e-17/1.0e+00', 's|1e-09|1270 1.6e-16/6.4e-04', 's|1e-11|375 1.6e-16/1.0e+00', 's|1e-11|965 2.9e-16/1.1e+00']
+    status differs: s|1e-09|120 LU delivered QR rejected | gate 2.4e-14 / 7.3e+00 | err 1.8e-16 / 5.3e-01
+    status differs: s|1e-09|560 LU delivered QR rejected | gate 1.2e-14 / 1.2e+01 | err 1.7e-16 / 5.8e-01
+    status differs: s|1e-09|1070 LU delivered QR rejected | gate 1.6e-14 / 2.6e+06 | err 7.5e-17 / 1.0e+00
+    status differs: s|1e-09|1270 LU delivered QR rejected | gate 9.6e-15 / 6.5e-04 | err 1.6e-16 / 6.4e-04
+    status differs: s|1e-11|375 LU delivered QR rejected | gate 2.7e-14 / 4.0e+00 | err 1.6e-16 / 1.0e+00
+    status differs: s|1e-11|965 LU delivered QR rejected | gate 2.2e-14 / 2.6e+05 | err 2.9e-16 / 1.1e+00
+    status differs: s|1e-11|1150 LU delivered QR rejected | gate 2.4e-14 / 5.1e+09 | err 2.2e-16 / 1.1e+00
+    status differs: f|1e-09|25 LU delivered QR rejected | gate 9.4e-14 / 3.6e+00 | err 5.3e-16 / 9.8e-01
+  refinement steps LU 1.34 QR 2.03 | omega LU max 1.0e+00 QR max 1.0e+00
+  zero pivot (GEPP): 2 ['f|1e-11|235', 'f|1e-11|430']
+stress: models 75, largest n 125, largest number of stations 36
+  structure: lower bandwidth max 2, upper max 2, stations coupled by one row max 1 (1 = neighbours only), unknowns per station max 4
+  GEPP: growth rho max 1.250000 (p99 1.250000), rho_U max 1.250000, largest multiplier 1.000, multiplier distance max 2, band of U max 4, row interchanges per unknown 0.73
+  LU vs QR: compared 75 | same status 75 | LU delivered 75 (QR 75) | largest error delivered LU 2.39e-14 QR 2.78e-14 | err LU/QR median 1.00 max 3.94e+00 min 2.89e-01
+  LU error > 10x QR error and > 1e-14: 0 []
+  QR error > 10x LU error and > 1e-14: 0 []
+  refinement steps LU 1.72 QR 2.21 | omega LU max 2.1e-16 QR max 1.0e+00
+  zero pivot (GEPP): 0 []
+stress (structure and growth only): models 125, largest n 500, largest number of stations 141
+  structure: lower bandwidth max 2, upper max 2, stations coupled by one row max 1 (1 = neighbours only), unknowns per station max 4
+  GEPP: growth rho max 1.250000 (p99 1.249949), rho_U max 1.250000, largest multiplier 1.000, multiplier distance max 2, band of U max 4, row interchanges per unknown 0.74
+targeted: models 840, largest n 36, largest number of stations 10
+  structure: lower bandwidth max 2, upper max 2, stations coupled by one row max 1 (1 = neighbours only), unknowns per station max 4
+  GEPP: growth rho max 1.971905 (p99 1.970935), rho_U max 1.971905, largest multiplier 1.000, multiplier distance max 2, band of U max 4, row interchanges per unknown 0.71
+  LU vs QR: compared 840 | same status 825 | LU delivered 840 (QR 825) | largest error delivered LU 2.26e-14 QR 3.24e-14 | err LU/QR median 1.00 max 8.63e+00 min 9.12e-17
+  LU error > 10x QR error and > 1e-14: 0 []
+  QR error > 10x LU error and > 1e-14: 18 ['gemischt|1e-05|-3 4.7e-16/1.0e-14', 'gemischt|1e-05|0 2.6e-16/1.0e-14', 'gemischt|1e-07|-3 4.4e-16/1.0e+00', 'gemischt|1e-07|0 3.9e-16/1.0e+00', 'gemischt|1e-07|3 2.5e-16/9.2e-01', 'gemischt|1e-07|6 3.9e-16/2.8e-14']
+    status differs: gemischt|1e-07|-3 LU delivered QR rejected | gate 4.7e-14 / 7.5e+02 | err 4.4e-16 / 1.0e+00
+    status differs: gemischt|1e-07|0 LU delivered QR rejected | gate 4.7e-14 / 7.5e+02 | err 3.9e-16 / 1.0e+00
+    status differs: gemischt|1e-07|3 LU delivered QR rejected | gate 4.7e-14 / 8.8e+04 | err 2.5e-16 / 9.2e-01
+    status differs: gemischt|1e-09|-3 LU delivered QR rejected | gate 4.8e-14 / 9.7e-02 | err 3.4e-16 / 1.0e+00
+    status differs: gemischt|1e-09|0 LU delivered QR rejected | gate 4.8e-14 / 2.7e-02 | err 1.9e-16 / 1.0e+00
+    status differs: gemischt|1e-09|3 LU delivered QR rejected | gate 4.7e-14 / 1.8e-01 | err 1.4e-16 / 1.0e+00
+    status differs: gemischt|1e-09|6 LU delivered QR rejected | gate 4.7e-14 / 1.5e+01 | err 4.1e-16 / 1.0e+00
+    status differs: gemischt|1e-09|9 LU delivered QR rejected | gate 4.8e-14 / 1.1e+07 | err 1.5e-16 / 1.2e+00
+  refinement steps LU 1.39 QR 1.99 | omega LU max 1.0e+00 QR max 1.0e+00
+  zero pivot (GEPP): 0 []
+adversarial search (hill climb on rho): -1 1.15 1.4 1.07 1.46 -1 1.23 1.2 1.14 -1 1.33 1.24 1.09 1.19 1.11 1.24 -1 1.39 1.24 -1 1.67 1.33 1.32 -1

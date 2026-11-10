@@ -1,0 +1,45 @@
+all: models 1833 (delivered 1832)
+  phase 3: pieces with LB_C > 0: 18828 | LB_C > min|p_hat| (certified): 0, undecided 0 | LB_C > min|p| (exact field): 0 (in delivered models 0) | smallest margin (min|p_hat| - LB_C)/beta 0.883 | decisions with Bernstein denominator different: 0
+  phase 3: gate with Bernstein denominator / gate C: min 1.000 max 1.000
+  phase 4: exact roots of the derivative in [0,1]: computed 5795 (multiple 2), exact 6308 (multiple 1) | sympy mismatches 1 | candidates 4331, missed local extrema 0 (largest effect 0.0e+00 of the scale), spurious 9 | position effect max 8.7e-29, > beta 147, effect / second-order prediction max 1.41 | reproducible True
+  phase 4: global extrema error (mixed measure, exact reference): delivered max 3.14e-14 | delivered with error > tau 0
+      position effect > beta s|0.01|70 piece 0.060205274151315519 q w mult 1 effect 7.91e-39 beta 0.00e+00
+      position effect > beta s|0.01|100 piece 2.8930662776139209 q w mult 1 effect 7.92e-40 beta 0.00e+00
+      position effect > beta s|0.01|100 piece 7.3618930064422372 q w mult 1 effect 6.29e-43 beta 0.00e+00
+      position effect > beta s|0.01|100 piece 7.9753840903124242 q w mult 1 effect 6.19e-36 beta 0.00e+00
+      position effect > beta s|0.01|230 piece 0.010808908057912469 q w mult 1 effect 4.26e-33 beta 0.00e+00
+      position effect > beta s|0.01|270 piece 0.34663584741082815 q w mult 1 effect 1.33e-34 beta 0.00e+00
+      position effect > beta s|0.01|310 piece 0.030674698814267414 q w mult 1 effect 1.33e-37 beta 0.00e+00
+      position effect > beta s|0.01|380 piece 0.026047795730496266 q w mult 1 effect 2.93e-32 beta 0.00e+00
+      position effect > beta s|0.01|390 piece 0.029466399063832468 q w mult 1 effect 7.67e-37 beta 0.00e+00
+      position effect > beta s|0.01|420 piece 3.7312202092622546 q w mult 1 effect 5.53e-41 beta 0.00e+00
+      position effect > beta s|0.01|430 piece 0.4346063593917967 q w mult 1 effect 7.07e-38 beta 0.00e+00
+      position effect > beta s|0.01|520 piece 0.18620821364382228 q w mult 1 effect 5.25e-37 beta 0.00e+00
+constructed: models 37 (delivered 37)
+  phase 3: pieces with LB_C > 0: 40 | LB_C > min|p_hat| (certified): 0, undecided 0 | LB_C > min|p| (exact field): 0 (in delivered models 0) | smallest margin (min|p_hat| - LB_C)/beta 1.003 | decisions with Bernstein denominator different: 0
+  phase 3: gate with Bernstein denominator / gate C: min 1.000 max 1.000
+  phase 4: exact roots of the derivative in [0,1]: computed 125 (multiple 2), exact 127 (multiple 1) | sympy mismatches 0 | candidates 111, missed local extrema 0 (largest effect 0.0e+00 of the scale), spurious 3 | position effect max 3.2e-30, > beta 0, effect / second-order prediction max 1.00 | reproducible True
+  phase 4: global extrema error (mixed measure, exact reference): delivered max 1.36e-16 | delivered with error > tau 0
+random 1/10: models 956 (delivered 955)
+  phase 3: pieces with LB_C > 0: 9263 | LB_C > min|p_hat| (certified): 0, undecided 0 | LB_C > min|p| (exact field): 0 (in delivered models 0) | smallest margin (min|p_hat| - LB_C)/beta 0.883 | decisions with Bernstein denominator different: 0
+  phase 3: gate with Bernstein denominator / gate C: min 1.000 max 1.000
+  phase 4: exact roots of the derivative in [0,1]: computed 3377 (multiple 0), exact 3807 (multiple 0) | sympy mismatches 1 | candidates 2260, missed local extrema 0 (largest effect 0.0e+00 of the scale), spurious 6 | position effect max 8.7e-29, > beta 146, effect / second-order prediction max 1.41 | reproducible True
+  phase 4: global extrema error (mixed measure, exact reference): delivered max 3.14e-14 | delivered with error > tau 0
+      position effect > beta s|0.01|70 piece 0.060205274151315519 q w mult 1 effect 7.91e-39 beta 0.00e+00
+      position effect > beta s|0.01|100 piece 2.8930662776139209 q w mult 1 effect 7.92e-40 beta 0.00e+00
+      position effect > beta s|0.01|100 piece 7.3618930064422372 q w mult 1 effect 6.29e-43 beta 0.00e+00
+      position effect > beta s|0.01|100 piece 7.9753840903124242 q w mult 1 effect 6.19e-36 beta 0.00e+00
+      position effect > beta s|0.01|230 piece 0.010808908057912469 q w mult 1 effect 4.26e-33 beta 0.00e+00
+      position effect > beta s|0.01|270 piece 0.34663584741082815 q w mult 1 effect 1.33e-34 beta 0.00e+00
+      position effect > beta s|0.01|310 piece 0.030674698814267414 q w mult 1 effect 1.33e-37 beta 0.00e+00
+      position effect > beta s|0.01|380 piece 0.026047795730496266 q w mult 1 effect 2.93e-32 beta 0.00e+00
+      position effect > beta s|0.01|390 piece 0.029466399063832468 q w mult 1 effect 7.67e-37 beta 0.00e+00
+      position effect > beta s|0.01|420 piece 3.7312202092622546 q w mult 1 effect 5.53e-41 beta 0.00e+00
+      position effect > beta s|0.01|430 piece 0.4346063593917967 q w mult 1 effect 7.07e-38 beta 0.00e+00
+      position effect > beta s|0.01|520 piece 0.18620821364382228 q w mult 1 effect 5.25e-37 beta 0.00e+00
+targeted: models 840 (delivered 840)
+  phase 3: pieces with LB_C > 0: 9525 | LB_C > min|p_hat| (certified): 0, undecided 0 | LB_C > min|p| (exact field): 0 (in delivered models 0) | smallest margin (min|p_hat| - LB_C)/beta 0.973 | decisions with Bernstein denominator different: 0
+  phase 3: gate with Bernstein denominator / gate C: min 1.000 max 1.000
+  phase 4: exact roots of the derivative in [0,1]: computed 2293 (multiple 0), exact 2374 (multiple 0) | sympy mismatches 0 | candidates 1960, missed local extrema 0 (largest effect 0.0e+00 of the scale), spurious 0 | position effect max 3.1e-31, > beta 1, effect / second-order prediction max 1.00 | reproducible True
+  phase 4: global extrema error (mixed measure, exact reference): delivered max 2.23e-14 | delivered with error > tau 0
+      position effect > beta federaneinsp|0.1|12 piece 3.6000000000000001 q w mult 1 effect 2.18e-35 beta 1.74e-37

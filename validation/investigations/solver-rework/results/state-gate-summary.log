@@ -1,0 +1,66 @@
+models 10346 (targeted and 10 random classes; numerically singular ones excluded)
+
+== point 2: piece-gate variants (adjoint refinement one step)
+  A: delivered 10072 rejected 274 | largest gate 9.1e+07 | delivered with error > tau 0 | rejected with error <= tau 266 | max error delivered 2.0e-11
+  B: delivered 10335 rejected  11 | largest gate 8.5e-01 | delivered with error > tau 0 | rejected with error <= tau 3 | max error delivered 2.0e-11
+  C: delivered 10335 rejected  11 | largest gate 5.8e+00 | delivered with error > tau 0 | rejected with error <= tau 3 | max error delivered 2.0e-11
+  decisions A != B: 263   C != B: 0
+  ratio gate C / gate B: max 6.843  (C >= B expected only through the margin)
+  ratio gate A / gate B: median 1.00 p99 5.7e+08 max 4.9e+10
+    additional rejections by A in f L/1e+09   40 (largest actual error 2.0e-15)
+    additional rejections by A in f L/1e+11   38 (largest actual error 1.0e-14)
+    additional rejections by A in s L/1e+09   63 (largest actual error 2.3e-12)
+    additional rejections by A in s L/1e+11   61 (largest actual error 8.6e-14)
+    additional rejections by A in targeted    61 (largest actual error 8.5e-15)
+    s|1e-11|104            gate A 1.2e-03 B 1.8e-13 C 1.8e-13 error 8.9e-16 | where: V, piece length 1.0e-11 L, max|Q|/S 6.7e+09
+    f|1e-11|201            gate A 1.1e-03 B 2.3e-14 C 2.3e-14 error 1.3e-16 | where: V, piece length 1.0e-11 L, max|Q|/S 6.1e+10
+    federaneinsp|1e-11|-3  gate A 9.2e-04 B 7.0e-14 C 7.0e-14 error 8.1e-16 | where: V, piece length 5.0e-12 L, max|Q|/S 1.4e+10
+    federaneinsp|1e-11|0   gate A 9.2e-04 B 7.0e-14 C 7.0e-14 error 9.3e-16 | where: V, piece length 5.0e-12 L, max|Q|/S 1.4e+10
+    federaneinsp|1e-11|9   gate A 9.2e-04 B 7.0e-14 C 7.0e-14 error 9.0e-16 | where: V, piece length 5.0e-12 L, max|Q|/S 1.4e+10
+    federaneinsp|1e-11|6   gate A 9.2e-04 B 6.9e-14 C 6.9e-14 error 5.3e-16 | where: V, piece length 5.0e-12 L, max|Q|/S 1.4e+10
+  gate histogram (decades, variant C): -17:0 -16:283 -15:5212 -14:4596 -13:200 -12:32 -11:8 -10:2 -9:2 -8:1 -7:3 -6:3 -5:1 -4:0 -3:2 -2:0 -1:0 0:1
+  gate C in (1e-10, 1e-8]: 4 models, largest actual error 2.0e-11, gate/error min 31.4
+  strict monotonicity (no tolerance) of beta along pieces: decreasing steps 28 in 28 models
+
+== point 3: omega
+  delivered n 10335: omega/u median 0.75 p99 9007199254740992.00 max 9007199254740992.00
+  rejected  n    11: omega/u median 0.79 p99 5231409744613960.00 max 5231409744613960.00
+    largest omega: f|1e-11|11             omega/u 9007199254740992.0 gate 4.9e-15 error 1.2e-16
+    largest omega: f|1e-11|48             omega/u 9007199254740992.0 gate 2.1e-14 error 5.3e-16
+    largest omega: f|1e-11|51             omega/u 9007199254740992.0 gate 8.3e-15 error 2.4e-16
+    largest omega: f|1e-11|52             omega/u 9007199254740992.0 gate 2.7e-15 error 1.1e-16
+    largest omega: f|1e-11|54             omega/u 9007199254740992.0 gate 6.7e-16 error 6.8e-17
+  perturbed LU factors (every 5th model, 2064 models):
+    eps 1e-08   finite 2064 not finite   0 | delivered 2061 (error > tau: 0, error > gate: 0) rejected    3 | error > gate 0 | omega/u among delivered max 9.0e+15, rejected median 2.7e+12
+    eps 0.0001  finite 2064 not finite   0 | delivered 2061 (error > tau: 0, error > gate: 0) rejected    3 | error > gate 1 | omega/u among delivered max 9.0e+15, rejected median 9.0e+15
+      error above gate: f|1e-11|165            error 6.54e+25 gate 1.60e+19 omega/u 9.0e+15
+    eps 0.1     finite 2064 not finite   0 | delivered   72 (error > tau: 0, error > gate: 9) rejected 1992 | error > gate 132 | omega/u among delivered max 9.0e+15, rejected median 7.9e+11
+      error above gate: f|1e-11|0              error 5.43e-07 gate 5.39e-07 omega/u 2.6e+11
+      error above gate: f|1e-11|165            error 1.03e+40 gate 6.06e+27 omega/u 9.0e+15
+      error above gate: f|1e-11|240            error 8.79e-07 gate 8.68e-07 omega/u 3.5e+10
+
+== point 4: adjoint refinement rules (gate with piece variant C)
+  none     delivered 10335 rejected  11 | delivered with error > tau 0 | rejected with error <= tau 3 | refinement steps per adjoint 0.000 (max per model 0.00)
+  one      delivered 10335 rejected  11 | delivered with error > tau 0 | rejected with error <= tau 3 | refinement steps per adjoint 1.000 (max per model 1.00)
+  adaptive delivered 10335 rejected  11 | delivered with error > tau 0 | rejected with error <= tau 3 | refinement steps per adjoint 1.293 (max per model 4.54)
+  beta     delivered 10335 rejected  11 | delivered with error > tau 0 | rejected with error <= tau 3 | refinement steps per adjoint 1.003 (max per model 3.97)
+  gate none     / gate one: min 0.1413 median 1.0000 max 1.0000
+  gate adaptive / gate one: min 1.0000 median 1.0000 max 21805326.1957
+  gate beta     / gate one: min 1.0000 median 1.0000 max 37096642.8842
+  hardest models (largest gate): gate none / one / adaptive / beta | error one | steps per adjoint adaptive / beta
+    f|1e-09|622            8.25e-01 / 5.84e+00 / 1.27e+08 / 2.17e+08 | 7.0e-01 | 1.77 / 3.97
+    f|1e-11|165            2.53e-03 / 3.55e-03 / 4.21e-03 / 4.12e-03 | 4.2e-03 | 3.67 / 2.33
+    f|1e-06|872            7.72e-04 / 1.02e-03 / 1.14e-03 / 1.13e-03 | 1.1e-03 | 4.54 / 2.77
+    s|1e-11|460            6.07e-05 / 6.07e-05 / 6.07e-05 / 6.07e-05 | 1.4e-06 | 1.43 / 1.00
+    s|1e-09|267            5.65e-06 / 5.65e-06 / 5.65e-06 / 5.65e-06 | 3.2e-07 | 1.29 / 1.00
+    f|1e-09|613            5.38e-06 / 5.38e-06 / 5.38e-06 / 5.38e-06 | 4.0e-08 | 1.17 / 1.00
+    s|1e-09|978            1.49e-06 / 1.49e-06 / 1.49e-06 / 1.49e-06 | 4.2e-09 | 1.39 / 1.00
+    s|1e-09|1181           8.86e-07 / 8.86e-07 / 8.86e-07 / 8.86e-07 | 3.4e-08 | 1.39 / 1.00
+    s|1e-09|1359           6.38e-07 / 6.38e-07 / 6.38e-07 / 6.38e-07 | 3.9e-08 | 1.00 / 1.00
+    s|1e-09|1222           4.96e-07 / 4.96e-07 / 4.96e-07 / 4.96e-07 | 2.7e-09 | 1.33 / 1.00
+    s|1e-09|867            4.46e-08 / 4.46e-08 / 4.46e-08 / 4.46e-08 | 2.0e-09 | 1.10 / 1.00
+    s|1e-06|986            2.36e-09 / 2.36e-09 / 2.36e-09 / 2.36e-09 | 1.1e-11 | 1.40 / 1.00
+  gate of none     differs from one step by more than 1 %: 3 models, of these with gate <= tau: 0
+  gate of adaptive differs from one step by more than 1 %: 3 models, of these with gate <= tau: 0
+  gate of beta     differs from one step by more than 1 %: 3 models, of these with gate <= tau: 0
+  (CPU times of the parallel runs are not comparable; cost is given by solves and steps per adjoint)

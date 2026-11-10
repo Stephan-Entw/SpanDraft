@@ -1,0 +1,36 @@
+DATA {"fam": "A1", "mode": "ftz", "n": 20000, "viol": 0, "worst": 0.33333333333333315, "range": 0}
+A1  distance                             ftz      checks   20000 | error > bound    0 | largest error/bound 0.333 | range rule 0
+DATA {"fam": "A1", "mode": "gradual", "n": 20000, "viol": 0, "worst": 0.33333333333333315, "range": 0}
+A1  distance                             gradual  checks   20000 | error > bound    0 | largest error/bound 0.333 | range rule 0
+DATA {"fam": "A2", "mode": "ftz", "n": 67004, "viol": 0, "worst": 0.5981737407158914, "range": 3249}
+A2  coefficients                         ftz      checks   67004 | error > bound    0 | largest error/bound 0.598 | range rule 3249
+DATA {"fam": "A2", "mode": "gradual", "n": 80000, "viol": 0, "worst": 0.6169406871129974, "range": 0}
+A2  coefficients                         gradual  checks   80000 | error > bound    0 | largest error/bound 0.617 | range rule 0
+DATA {"fam": "A3", "mode": "ftz", "n": 116522, "viol": 0, "worst": 0.6358385550491966, "range": 3354}
+A3  point-load terms                     ftz      checks  116522 | error > bound    0 | largest error/bound 0.636 | range rule 3354
+DATA {"fam": "A3", "mode": "gradual", "n": 116487, "viol": 0, "worst": 0.5508920756022062, "range": 3359}
+A3  point-load terms                     gradual  checks  116487 | error > bound    0 | largest error/bound 0.551 | range rule 3359
+DATA {"fam": "A4", "mode": "ftz", "n": 15240, "viol": 0, "worst": 0.38051339169696535, "range": 0}
+A4  load integrals (contract)            ftz      checks   15240 | error > bound    0 | largest error/bound 0.381 | range rule 0
+DATA {"fam": "A4", "mode": "gradual", "n": 15240, "viol": 0, "worst": 0.38051339169696535, "range": 0}
+A4  load integrals (contract)            gradual  checks   15240 | error > bound    0 | largest error/bound 0.381 | range rule 0
+DATA {"fam": "A5", "mode": "ftz", "n": 13280, "viol": 208, "worst": 93824923148398.89, "range": 0}
+A5  load integrals (bound of state.py)   ftz      checks   13280 | error > bound  208 | largest error/bound 9.38e+13 | range rule 0
+DATA {"fam": "A5", "mode": "gradual", "n": 13280, "viol": 208, "worst": 93824923148398.89, "range": 0}
+A5  load integrals (bound of state.py)   gradual  checks   13280 | error > bound  208 | largest error/bound 9.38e+13 | range rule 0
+DATA {"fam": "A6", "mode": "ftz", "n": 20000, "viol": 0, "worst": 0.4999999999999995, "range": 0}
+A6  residual                             ftz      checks   20000 | error > bound    0 | largest error/bound 0.5 | range rule 0
+DATA {"fam": "A6", "mode": "gradual", "n": 20000, "viol": 0, "worst": 0.630208331538222, "range": 0}
+A6  residual                             gradual  checks   20000 | error > bound    0 | largest error/bound 0.63 | range rule 0
+DATA {"fam": "A7", "mode": "ftz", "n": 60000, "viol": 0, "worst": 0.0, "range": 0}
+A7  up/down operations                   ftz      checks   60000 | error > bound    0 | largest error/bound 0 | range rule 0
+DATA {"fam": "A7", "mode": "gradual", "n": 60000, "viol": 0, "worst": 0.0, "range": 0}
+A7  up/down operations                   gradual  checks   60000 | error > bound    0 | largest error/bound 0 | range rule 0
+DATA {"fam": "A8", "mode": "ftz", "n": 11896, "viol": 0, "worst": 0.3185620170542852, "range": 0}
+A8  evaluation (without propagation)     ftz      checks   11896 | error > bound    0 | largest error/bound 0.319 | range rule 0
+DATA {"fam": "A8", "mode": "gradual", "n": 11896, "viol": 0, "worst": 0.3185620170542852, "range": 0}
+A8  evaluation (without propagation)     gradual  checks   11896 | error > bound    0 | largest error/bound 0.319 | range rule 0
+DATA {"fam": "A9", "mode": "ftz", "n": 20000, "viol": 0, "worst": 0.9921874998844937, "range": 0}
+A9  SI back-scaling                      ftz      checks   20000 | error > bound    0 | largest error/bound 0.992 | range rule 0
+DATA {"fam": "A9", "mode": "gradual", "n": 20000, "viol": 0, "worst": 0.9638671874999996, "range": 0}
+A9  SI back-scaling                      gradual  checks   20000 | error > bound    0 | largest error/bound 0.964 | range rule 0

@@ -1,0 +1,31 @@
+size series (continuous beams); times in s of the dense Python research code
+spans  n_m     n  n_r pieces | bandwidth S lo/up, mult, U up |   adj steps |    build LU+refine  quality reactions piece gate
+    2    6    19    4     15 |   2/2    m 2    U 4   nnz    63 |    23    23 |    0.000    0.001    0.003    0.001    0.001
+    4   12    40    7     31 |   2/2    m 2    U 4   nnz   132 |    47    47 |    0.000    0.010    0.022    0.004    0.002
+    8   23    79   13     62 |   2/2    m 2    U 4   nnz   264 |    92    92 |    0.001    0.052    0.393    0.063    0.003
+   16   46   160   25    125 |   2/2    m 2    U 4   nnz   534 |   185   185 |    0.003    0.240    2.924    0.464    0.006
+   32   91   319   49    250 |   2/2    m 2    U 4   nnz  1068 |   368   368 |    0.005    0.829   23.901    3.593    0.032
+growth exponents between the two largest sizes (log time ratio / log n ratio):
+  t_build  0.61
+  t_solve  1.80
+  t_ind    3.04
+  t_react  2.97
+  t_gate   2.50
+operation model (floating-point operations) with the measured bandwidths
+spans      n | band primary band quality quality/prim | dense primary dense quality quality/prim
+    2     19 |     1.15e+03     1.51e+04         13.1 |     6.74e+03     4.98e+04          7.4
+    4     40 |     2.42e+03      6.5e+04         26.8 |     5.23e+04     4.51e+05          8.6
+    8     79 |     4.79e+03     2.52e+05         52.6 |     3.66e+05     3.45e+06          9.4
+   16    160 |     1.53e+04     1.03e+06         67.3 |     2.99e+06     2.84e+07          9.5
+   32    319 |     3.04e+04     4.07e+06        133.8 |     2.27e+07     2.25e+08          9.9
+extrapolation with the per-n constants of the largest size (p, q fixed):
+  n_m    10 (n ~    40): band quality 6.1e+04 flop, dense quality 4.2e+05 flop, dense memory S+LU 0.0 MB, band 0.00 MB
+  n_m    30 (n ~   120): band quality 5.5e+05 flop, dense quality 1.1e+07 flop, dense memory S+LU 0.2 MB, band 0.01 MB
+  n_m   100 (n ~   400): band quality 6.1e+06 flop, dense quality 4.2e+08 flop, dense memory S+LU 2.6 MB, band 0.04 MB
+  n_m   300 (n ~  1200): band quality 5.5e+07 flop, dense quality 1.1e+10 flop, dense memory S+LU 23.0 MB, band 0.13 MB
+  n_m  1000 (n ~  4000): band quality 6.1e+08 flop, dense quality 4.2e+11 flop, dense memory S+LU 256.0 MB, band 0.45 MB
+load series (point loads in one segment): piece gate and one field evaluation
+  loads   10  unknowns 4  piece gate 0.001 s  per evaluation 6.81e-05 s
+  loads   40  unknowns 4  piece gate 0.005 s  per evaluation 1.36e-04 s
+  loads  160  unknowns 4  piece gate 0.158 s  per evaluation 4.29e-04 s
+  loads  640  unknowns 4  piece gate 1.840 s  per evaluation 1.49e-03 s

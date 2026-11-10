@@ -3,3 +3,4 @@ base3/
 harness*/bin/
 harness*/obj/
 *.jsonl
+!results/*.log

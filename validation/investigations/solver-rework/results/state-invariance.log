@@ -1,0 +1,7 @@
+power-of-two scaling: 307 of 307 models bit-identical after exact rescaling
+invariant 1: extra point loads and a line load leave matrix, rounding counts, scaling and unknowns bit-identical: 226 of 226
+unit changes (first 150 models): largest mixed error of delivered results against the exact solution of the own input
+  m, N    delivered 112  rejected  0  max error 2.0e-15
+  mm, N   delivered 112  rejected  0  max error 1.6e-15
+  m, kN   delivered 112  rejected  0  max error 2.6e-15
+  mm, kN  delivered 112  rejected  0  max error 3.9e-15

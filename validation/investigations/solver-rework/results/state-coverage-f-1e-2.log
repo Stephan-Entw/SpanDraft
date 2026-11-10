@@ -1,0 +1,11 @@
+f L/1e+02: models 757 (gate <= 1e-8: 757) | 691 s
+  max interior/end ratio  actual error 14.53   beta 1.00
+  largest actual error    ends 5.4e-15  interior 5.4e-15
+  largest beta            ends 4.0e-13  interior 4.0e-13   gate 4.0e-13
+  beta not monotone along a piece: 0 values
+  beta(x) above its piece gate: 0 values
+  actual error above gate: 0 values (in models with gate <= 1e-8: 0)
+  actual error above pointwise beta: 0 values (in models with gate <= 1e-8: 0)
+   interior-dominated: f|0.01|628               interior/end 14.53 interior err 2.5e-17 end err 1.7e-18
+   interior-dominated: f|0.01|29                interior/end 10.94 interior err 7.4e-17 end err 6.7e-18
+   interior-dominated: f|0.01|397               interior/end 9.10 interior err 7.5e-17 end err 8.3e-18

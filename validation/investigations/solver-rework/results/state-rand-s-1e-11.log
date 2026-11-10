@@ -1,0 +1,11 @@
+s L/1e+11 models 1500 solved 1139 mech 361 (kin only 0, exact only 0) zero pivot 0 exc 0 | 143 s
+  glob             median 1e-16  p99 4e-15  max 2e-06
+  mixed            median 1e-16  p99 3e-15  max 1e-06
+  indicator        median 8e-15  p99 3e-13  max 6e-05
+  indicator/mixed  median 6e+01  p99 7e+02  max 6e+11  min 7e+00
+  refinement steps {1: 814, 2: 299, 3: 24, 4: 2}
+  rejected (indicator > 1e-08): 1 {1e-12: 5, 1e-10: 2, 1e-08: 1, 1e-06: 1}
+  worst mixed 1.4e-06 (indicator 6.1e-05): {'L': 0.6854292275839038, 'E': 210000000000.0, 'I': 1.4005392741516995e-08, 'sup': [[0.17135730689597595, 'Roller'], [0.3084431524127567, 'Fixed'], [0.41125753655034225, 'Fixed'], [0.6511577662047087, 'Fixed']], 'springs': [[0.3084431524059024, 'inf', 12990170.436040659, True], [0.5483433820671231, 719457086347.7986, 183715.9567561212, True]], 'hinges': [], 'ei': [], 'lin': [], 'pf': [[0.17135730690283024, -12.588229917349176], [0.6717854516281214, -8.718244971349193], [0.41125753654348796, -21.10751225026866], [0.41125753654348796, -7.314221610138207]], 'pm': [], 'q': []}
+  violations in accepted models (indicator <= tau): 0 models
+  REJ s|1e-11|460      mixed 1.4e-06 indicator 6.1e-05 | 1-ulp sensitivity E 2e-20 I 2e-20 k 0e+00 kt 2e-25 positions 6e-01 loads 9e-17
+  models with violations: 0, values 0

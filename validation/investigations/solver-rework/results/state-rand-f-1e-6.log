@@ -1,0 +1,104 @@
+f L/1e+06 models 1000 solved 767 mech 233 (kin only 0, exact only 0) zero pivot 0 exc 0 | 181 s
+  glob             median 1e-16  p99 8e-15  max 1e-03
+  mixed            median 1e-16  p99 8e-15  max 1e-03
+  indicator        median 1e-14  p99 7e-13  max 1e-03
+  indicator/mixed  median 9e+01  p99 5e+02  max 5e+07  min 9e-01
+  refinement steps {1: 527, 2: 211, 3: 24, 4: 3, 5: 2}
+  rejected (indicator > 1e-08): 1 {1e-12: 6, 1e-10: 2, 1e-08: 1, 1e-06: 1}
+  worst mixed 1.1e-03 (indicator 1.0e-03): {'L': 10.790093295141169, 'E': 70000000000.0, 'I': 0.002553729213992408, 'sup': [[4.855541982813525, 'Roller']], 'springs': [[0.0, 203.0392062601196, 0, True], [1.079009329514117e-05, 1177436109.1046684, 0, True]], 'hinges': [2.6975233237852922], 'ei': [[1.079009329514117e-05, 11394865292.438406], [3.460094598469478, 192946112.1069402]], 'lin': [], 'pf': [[2.697512533691997, -2.568430159686849], [0.0, -4.147930717932267], [0.3002897757760344, -9.31457365823592]], 'pm': [[8.618082317394345, -5.963632975581326]], 'q': [[0.0, 10.790093295141169, -1.0333632893262115]]}
+  violations in accepted models (indicator <= tau): 0 models
+  REJ f|1e-06|872      mixed 1.1e-03 indicator 1.0e-03 | 1-ulp sensitivity E 1e-37 I 8e-38 k 1e-16 kt 0e+00 positions 5e+04 loads 1e-16
+  models with violations: 1, values 93
+  VIOL f|1e-06|872      w R x=0 err 7.12e+00 ind 6.38e+00 value -6.26e+03 rel 9.1e-10
+  VIOL f|1e-06|872      t R x=0 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      V R x=0 err 1.45e+03 ind 1.30e+03 value 1.27e+06 rel 1.1e-03
+  VIOL f|1e-06|872      t R x=3.2370279885423505e-06 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      M R x=3.2370279885423505e-06 err 4.68e-03 ind 4.19e-03 value 4.11e+00 rel 1.6e-05
+  VIOL f|1e-06|872      V R x=3.2370279885423505e-06 err 1.45e+03 ind 1.30e+03 value 1.27e+06 rel 1.1e-03
+  VIOL f|1e-06|872      t R x=7.5530653065988183e-06 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      M R x=7.5530653065988183e-06 err 1.09e-02 ind 9.78e-03 value 9.60e+00 rel 3.7e-05
+  VIOL f|1e-06|872      V R x=7.5530653065988183e-06 err 1.45e+03 ind 1.30e+03 value 1.27e+06 rel 1.1e-03
+  VIOL f|1e-06|872      t L x=1.0790093295141169e-05 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      M L x=1.0790093295141169e-05 err 1.56e-02 ind 1.40e-02 value 1.37e+01 rel 5.2e-05
+  VIOL f|1e-06|872      V L x=1.0790093295141169e-05 err 1.45e+03 ind 1.30e+03 value 1.27e+06 rel 1.1e-03
+  VIOL f|1e-06|872      w R x=1.0790093295141169e-05 err 1.23e-06 ind 1.10e-06 value 1.08e-03 rel 1.6e-16
+  VIOL f|1e-06|872      t R x=1.0790093295141169e-05 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      M R x=1.0790093295141169e-05 err 1.56e-02 ind 1.40e-02 value 1.37e+01 rel 5.2e-05
+  VIOL f|1e-06|872      V R x=1.0790093295141169e-05 err 5.79e-03 ind 5.18e-03 value 4.59e+00 rel 2.1e-04
+  VIOL f|1e-06|872      w R x=0.090094485798116922 err 5.95e+04 ind 5.33e+04 value 5.22e+07 rel 7.6e-06
+  VIOL f|1e-06|872      t R x=0.090094485798116922 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      M R x=0.090094485798116922 err 1.51e-02 ind 1.44e-02 value 1.41e+01 rel 5.0e-05
+  VIOL f|1e-06|872      V R x=0.090094485798116922 err 5.79e-03 ind 5.18e-03 value 4.50e+00 rel 2.1e-04
+  VIOL f|1e-06|872      w R x=0.21020608007121261 err 1.39e+05 ind 1.24e+05 value 1.22e+08 rel 1.8e-05
+  VIOL f|1e-06|872      t R x=0.21020608007121261 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      V R x=0.21020608007121261 err 5.79e-03 ind 5.18e-03 value 4.37e+00 rel 2.1e-04
+  VIOL f|1e-06|872      w L x=0.30028977577603438 err 1.98e+05 ind 1.78e+05 value 1.74e+08 rel 2.5e-05
+  VIOL f|1e-06|872      t L x=0.30028977577603438 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      V L x=0.30028977577603438 err 5.79e-03 ind 5.18e-03 value 4.28e+00 rel 2.1e-04
+  VIOL f|1e-06|872      w R x=0.30028977577603438 err 1.98e+05 ind 1.78e+05 value 1.74e+08 rel 2.5e-05
+  VIOL f|1e-06|872      t R x=0.30028977577603438 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      V R x=0.30028977577603438 err 5.79e-03 ind 5.18e-03 value -5.04e+00 rel 2.1e-04
+  VIOL f|1e-06|872      w R x=1.0194566031508232 err 6.73e+05 ind 6.03e+05 value 5.91e+08 rel 8.6e-05
+  VIOL f|1e-06|872      t R x=1.0194566031508232 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      V R x=1.0194566031508232 err 5.79e-03 ind 5.18e-03 value -5.78e+00 rel 2.1e-04
+  VIOL f|1e-06|872      w R x=1.9783457063172081 err 1.31e+06 ind 1.17e+06 value 1.15e+09 rel 1.7e-04
+  VIOL f|1e-06|872      t R x=1.9783457063172081 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      V R x=1.9783457063172081 err 5.79e-03 ind 5.18e-03 value -6.77e+00 rel 2.1e-04
+  VIOL f|1e-06|872      w L x=2.6975125336919969 err 1.78e+06 ind 1.59e+06 value 1.56e+09 rel 2.3e-04
+  VIOL f|1e-06|872      t L x=2.6975125336919969 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      V L x=2.6975125336919969 err 5.79e-03 ind 5.18e-03 value -7.51e+00 rel 2.1e-04
+  VIOL f|1e-06|872      w R x=2.6975125336919969 err 1.78e+06 ind 1.59e+06 value 1.56e+09 rel 2.3e-04
+  VIOL f|1e-06|872      t R x=2.6975125336919969 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      V R x=2.6975125336919969 err 5.79e-03 ind 5.18e-03 value -1.01e+01 rel 2.1e-04
+  VIOL f|1e-06|872      w R x=2.6975157707199857 err 1.78e+06 ind 1.59e+06 value 1.56e+09 rel 2.3e-04
+  VIOL f|1e-06|872      t R x=2.6975157707199857 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      V R x=2.6975157707199857 err 5.79e-03 ind 5.18e-03 value -1.01e+01 rel 2.1e-04
+  VIOL f|1e-06|872      w R x=2.6975200867573035 err 1.78e+06 ind 1.59e+06 value 1.56e+09 rel 2.3e-04
+  VIOL f|1e-06|872      t R x=2.6975200867573035 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      V R x=2.6975200867573035 err 5.79e-03 ind 5.18e-03 value -1.01e+01 rel 2.1e-04
+  VIOL f|1e-06|872      w L x=2.6975233237852922 err 1.78e+06 ind 1.59e+06 value 1.56e+09 rel 2.3e-04
+  VIOL f|1e-06|872      t L x=2.6975233237852922 err 6.60e+05 ind 5.91e+05 value 5.80e+08 rel 9.1e-04
+  VIOL f|1e-06|872      V L x=2.6975233237852922 err 5.79e-03 ind 5.18e-03 value -1.01e+01 rel 2.1e-04
+  VIOL f|1e-06|872      w R x=2.6975233237852922 err 1.78e+06 ind 1.59e+06 value 1.56e+09 rel 2.3e-04
+  VIOL f|1e-06|872      t R x=2.6975233237852922 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      V R x=2.6975233237852922 err 5.79e-03 ind 5.18e-03 value -1.01e+01 rel 2.1e-04
+  VIOL f|1e-06|872      t R x=2.9262947061905482 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      M R x=2.9262947061905482 err 1.32e-03 ind 1.19e-03 value -2.33e+00 rel 4.4e-06
+  VIOL f|1e-06|872      V R x=2.9262947061905482 err 5.79e-03 ind 5.18e-03 value -1.03e+01 rel 2.1e-04
+  VIOL f|1e-06|872      t R x=3.2313232160642222 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      M R x=3.2313232160642222 err 3.09e-03 ind 2.77e-03 value -5.53e+00 rel 1.0e-05
+  VIOL f|1e-06|872      V R x=3.2313232160642222 err 5.79e-03 ind 5.18e-03 value -1.06e+01 rel 2.1e-04
+  VIOL f|1e-06|872      t L x=3.4600945984694782 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      M L x=3.4600945984694782 err 4.41e-03 ind 3.95e-03 value -7.99e+00 rel 1.5e-05
+  VIOL f|1e-06|872      V L x=3.4600945984694782 err 5.79e-03 ind 5.18e-03 value -1.09e+01 rel 2.1e-04
+  VIOL f|1e-06|872      w R x=3.4600945984694782 err 1.15e+06 ind 1.03e+06 value 1.01e+09 rel 1.5e-04
+  VIOL f|1e-06|872      t R x=3.4600945984694782 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      M R x=3.4600945984694782 err 4.41e-03 ind 3.95e-03 value -7.99e+00 rel 1.5e-05
+  VIOL f|1e-06|872      V R x=3.4600945984694782 err 5.79e-03 ind 5.18e-03 value -1.09e+01 rel 2.1e-04
+  VIOL f|1e-06|872      t R x=3.8787288137726925 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      M R x=3.8787288137726925 err 6.83e-03 ind 6.12e-03 value -1.26e+01 rel 2.3e-05
+  VIOL f|1e-06|872      V R x=3.8787288137726925 err 5.79e-03 ind 5.18e-03 value -1.13e+01 rel 2.1e-04
+  VIOL f|1e-06|872      t R x=4.436907767510311 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      M R x=4.436907767510311 err 1.01e-02 ind 9.01e-03 value -1.91e+01 rel 3.4e-05
+  VIOL f|1e-06|872      V R x=4.436907767510311 err 5.79e-03 ind 5.18e-03 value -1.19e+01 rel 2.1e-04
+  VIOL f|1e-06|872      t L x=4.8555419828135253 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      M L x=4.8555419828135253 err 1.25e-02 ind 1.12e-02 value -2.42e+01 rel 4.2e-05
+  VIOL f|1e-06|872      V L x=4.8555419828135253 err 5.79e-03 ind 5.18e-03 value -1.23e+01 rel 2.1e-04
+  VIOL f|1e-06|872      t R x=4.8555419828135253 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      w R x=5.9843040831877712 err 9.31e+05 ind 8.34e+05 value -8.18e+08 rel 1.2e-04
+  VIOL f|1e-06|872      t R x=5.9843040831877712 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      w R x=7.489320217020099 err 2.17e+06 ind 1.95e+06 value -1.91e+09 rel 2.8e-04
+  VIOL f|1e-06|872      t R x=7.489320217020099 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      w L x=8.6180823173943448 err 3.10e+06 ind 2.78e+06 value -2.73e+09 rel 4.0e-04
+  VIOL f|1e-06|872      t L x=8.6180823173943448 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      w R x=8.6180823173943448 err 3.10e+06 ind 2.78e+06 value -2.73e+09 rel 4.0e-04
+  VIOL f|1e-06|872      t R x=8.6180823173943448 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      w R x=9.2696856107183923 err 3.64e+06 ind 3.26e+06 value -3.20e+09 rel 4.7e-04
+  VIOL f|1e-06|872      t R x=9.2696856107183923 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      w R x=10.138490001817122 err 4.36e+06 ind 3.90e+06 value -3.83e+09 rel 5.6e-04
+  VIOL f|1e-06|872      t R x=10.138490001817122 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      w L x=10.790093295141169 err 4.90e+06 ind 4.39e+06 value -4.30e+09 rel 6.3e-04
+  VIOL f|1e-06|872      t L x=10.790093295141169 err 8.25e+05 ind 7.39e+05 value -7.25e+08 rel 1.1e-03
+  VIOL f|1e-06|872      R - x=4.8555419828135253 err 5.79e-03 ind 5.18e-03 value 1.84e+01 rel 2.1e-04
+  VIOL f|1e-06|872      R - x=0 err 1.45e+03 ind 1.30e+03 value 1.27e+06 rel 1.1e-03
+  VIOL f|1e-06|872      R - x=1.0790093295141169e-05 err 1.45e+03 ind 1.30e+03 value -1.27e+06 rel 1.1e-03

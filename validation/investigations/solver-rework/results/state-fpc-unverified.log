@@ -1,0 +1,20 @@
+model s|1e-11|105
+  round 4 (Dot2, weights D / beta + 2^-200 D): mu_D 1.188e+07  mu_B 1.188e+07 -> not verified
+  contract, adjoint residual double: status delivered, mu per weight vector (beta + delta D, then 3 Neumann steps): 7.58527e+07 1 1 1
+  contract, adjoint residual dot2  : status delivered, mu per weight vector (beta + delta D, then 3 Neumann steps): 2.23872e+07 1 1 1
+  spectral radius of M (power iteration): 4.483e-15
+  attained at unknown V0 (station x = 0): weight v 3.005e-83 (beta 1.034e-296, D 4.829e-23), (Mv) 2.279e-75, ratio 7.585e+07
+     contribution M[i][j] v_j = 2.279e-75 from t0 (v_j 9.920e-61, M_ij 2.298e-15: residual part 1.732e-15, data part 5.661e-16)
+     contribution M[i][j] v_j = 2.716e-86 from M0 (v_j 1.135e-60, M_ij 2.392e-26: residual part 1.367e-26, data part 1.025e-26)
+     contribution M[i][j] v_j = 9.842e-98 from V0 (v_j 3.005e-83, M_ij 3.275e-15: residual part 1.554e-15, data part 1.721e-15)
+  verified bound after Neumann steps: largest E_j / D_j 2.327e-15 (gate 6.197e-15)
+model s|1e-11|800
+  round 4 (Dot2, weights D / beta + 2^-200 D): mu_D 1.716e+00  mu_B 1.716e+00 -> not verified
+  contract, adjoint residual double: status delivered, mu per weight vector (beta + delta D, then 3 Neumann steps): 0.0173049 0.0170106 0.0170106 0.0170106
+  contract, adjoint residual dot2  : status delivered, mu per weight vector (beta + delta D, then 3 Neumann steps): 0.00259531 0.0025886 0.0025886 0.0025886
+  spectral radius of M (power iteration): 1.021e-14
+  attained at unknown V4 (station x = 2.7749555417676866): weight v 9.737e-73 (beta 3.149e-296, D 1.565e-12), (Mv) 1.685e-74, ratio 1.730e-02
+     contribution M[i][j] v_j = 7.725e-75 from t4 (v_j 8.722e-61, M_ij 8.857e-15: residual part 6.813e-15, data part 2.044e-15)
+     contribution M[i][j] v_j = 7.116e-75 from t5 (v_j 1.744e-60, M_ij 4.080e-15: residual part 4.080e-15, data part 0.000e+00)
+     contribution M[i][j] v_j = 1.233e-75 from w2 (v_j 2.791e-59, M_ij 4.418e-17: residual part 4.418e-17, data part 0.000e+00)
+  verified bound after Neumann steps: largest E_j / D_j 1.096e-62 (gate 6.661e-16)

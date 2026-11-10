@@ -1,0 +1,11 @@
+targeted: models 840 (gate <= 1e-8: 840) | 482 s
+  max interior/end ratio  actual error 3.93   beta 1.00
+  largest actual error    ends 2.2e-14  interior 2.2e-14
+  largest beta            ends 2.7e-12  interior 2.7e-12   gate 2.7e-12
+  beta not monotone along a piece: 0 values
+  beta(x) above its piece gate: 0 values
+  actual error above gate: 0 values (in models with gate <= 1e-8: 0)
+  actual error above pointwise beta: 0 values (in models with gate <= 1e-8: 0)
+   interior-dominated: kraftaufgelenk|1e-11|6   interior/end 3.93 interior err 6.6e-17 end err 1.7e-17
+   interior-dominated: nurfedern|1e-07|0        interior/end 3.92 interior err 3.9e-16 end err 9.9e-17
+   interior-dominated: drei|1e-11|6             interior/end 3.11 interior err 3.8e-17 end err 1.2e-17

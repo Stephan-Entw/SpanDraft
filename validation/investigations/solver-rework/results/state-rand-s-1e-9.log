@@ -1,0 +1,16 @@
+s L/1e+09 models 1500 solved 1136 mech 364 (kin only 0, exact only 0) zero pivot 0 exc 0 | 148 s
+  glob             median 1e-16  p99 5e-15  max 3e-07
+  mixed            median 1e-16  p99 5e-15  max 3e-07
+  indicator        median 8e-15  p99 5e-13  max 6e-06
+  indicator/mixed  median 7e+01  p99 5e+02  max 1e+03  min 7e+00
+  refinement steps {1: 822, 2: 282, 3: 31, 4: 1}
+  rejected (indicator > 1e-08): 6 {1e-12: 9, 1e-10: 7, 1e-08: 6, 1e-06: 2}
+  worst mixed 3.2e-07 (indicator 5.7e-06): {'L': 0.2641091790973908, 'E': 70000000000.0, 'I': 1.94328501761138e-09, 'sup': [[0.09243821268408678, 'Roller']], 'springs': [[0.0924382124199776, 14991018953.584307, 0, True]], 'hinges': [], 'ei': [], 'lin': [], 'pf': [[0.09243821294819596, -17.181388454742393], [0.0924382124199776, -12.575110686945875]], 'pm': [], 'q': []}
+  violations in accepted models (indicator <= tau): 0 models
+  REJ s|1e-09|267      mixed 3.2e-07 indicator 5.7e-06 | 1-ulp sensitivity E 1e-36 I 1e-36 k 1e-16 kt 0e+00 positions 1e+00 loads 4e-16
+  REJ s|1e-09|867      mixed 2.0e-09 indicator 4.5e-08 | 1-ulp sensitivity E 4e-19 I 4e-19 k 3e-38 kt 5e-28 positions 6e-01 loads 7e-17
+  REJ s|1e-09|978      mixed 4.2e-09 indicator 1.5e-06 | 1-ulp sensitivity E 2e-16 I 1e-16 k 1e-21 kt 3e-21 positions 1e+00 loads 2e-16
+  REJ s|1e-09|1181     mixed 3.4e-08 indicator 8.9e-07 | 1-ulp sensitivity E 7e-43 I 4e-43 k 2e-16 kt 0e+00 positions 1e+00 loads 2e-16
+  REJ s|1e-09|1222     mixed 2.7e-09 indicator 5.0e-07 | 1-ulp sensitivity E 3e-19 I 3e-19 k 3e-19 kt 5e-21 positions 2e+00 loads 5e-17
+  REJ s|1e-09|1359     mixed 3.9e-08 indicator 6.4e-07 | 1-ulp sensitivity E 1e-17 I 8e-18 k 0e+00 kt 0e+00 positions 2e+00 loads 1e-16
+  models with violations: 0, values 0
