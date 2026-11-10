@@ -96,8 +96,8 @@ Ein Rechenkern trägt alle Elemente:
 
 Neue Elemente sollen sich einfügen, ohne den Kern umzubauen. Der Prototyp setzt
 das als Schnittverfahren um: Gelenke, Federn und Abschnittswechsel schneiden den
-Balken, die übertragenen Größen sind Unbekannte. Ob das die Zielform ist, wird
-im Architekturentwurf entschieden.
+Balken, die übertragenen Größen sind Unbekannte. Der Architekturentwurf ersetzt es
+durch eine lokale Zustandsformulierung, siehe [SOLVER_ARCHITEKTUR.md](SOLVER_ARCHITEKTUR.md).
 
 ### A5 Stabilität, Kondition und Fehler
 
@@ -186,7 +186,7 @@ Feature freigegeben ist. Bis zur Freigabe ist sie über Produktpfade nicht errei
   - Hält ein Federlager axial? Gibt es axiale Federn?
   - Darf eine Feder an derselben Position wie ein starres Lager liegen (Prototyp: Ablehnung)?
   - Wie wird mit sehr großen und sehr kleinen Steifigkeiten umgegangen, ohne einen Ersatz für starre Lager einzuführen?
-- **Prototyp:** Vorhanden. Die Gruppierung (5 % der Teillänge, k·L³/EI ≥ 1) ist eine Heuristik und wird im Architekturentwurf geprüft.
+- **Prototyp:** Vorhanden. Die Gruppierung (5 % der Teillänge, k·L³/EI ≥ 1) ist eine Heuristik; der Architekturentwurf sieht keine Gruppierung mehr vor (Bestätigung durch die Abnahme offen, [SOLVER_ARCHITEKTUR.md](SOLVER_ARCHITEKTUR.md#54-steife-und-enge-federgruppen)).
 
 ### DEV-11 Mehrsegment-Balken
 
@@ -252,7 +252,7 @@ Bedienung, Persistenz und Report werden in den Feature-Issues separat geplant.
 1. **Numerischer Vertrag:** Siehe A8.
 2. **Ablehnungskriterium:** Weniger Ablehnungen lösbarer Modelle, ohne falsche Ergebnisse durchzulassen (A5).
 3. **Kombinationen an gleicher Position:** Semantik je Feature-Track (A2, B).
-4. **Architekturentwurf:** Ob das Schnittverfahren die Zielform ist und wie Eingabe, Kern und Ergebnis getrennt werden (A4, A9).
+4. **Architekturentwurf:** Entworfen in [SOLVER_ARCHITEKTUR.md](SOLVER_ARCHITEKTUR.md); dessen offene Punkte stehen dort in Abschnitt 13.
 5. **Alter FE-Solver als Vergleichswerkzeug:** Ja oder nein, und wo er liegt.
 6. **Plattform:** Prüfung unter Windows.
 
@@ -274,6 +274,5 @@ mindestens erfüllt sein:
 
 ## Nächster Schritt
 
-Architekturentwurf für Ebene A. Er berücksichtigt die Feature-Tracks aus B, ohne
-deren offene Semantiken vorab zu entscheiden. Ein Produktionsrefactoring folgt
-erst nach dem Entwurf.
+Der Architekturentwurf für Ebene A liegt in [SOLVER_ARCHITEKTUR.md](SOLVER_ARCHITEKTUR.md)
+vor. Nächster Schritt ist ein schrittweiser Implementierungsplan auf dieser Grundlage.

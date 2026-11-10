@@ -76,3 +76,161 @@ Bekannte Grenzen: PyCBA ist selbst nicht exakt (numerische Integration bei Krüm
 Stellenverlust bei sehr weichen oder sehr steifen Federn). Ablehnungen des C#-Solvers treten bei
 fast beweglichen Systemen auf, in seltenen Fällen auch bei lösbaren Modellen mit sehr unterschiedlich
 steifen Federn im Nanometerabstand (5 von 6.000 beziehungsweise 13 von 4.000 Zufallsmodellen).
+
+## Zustandsformulierung (Architekturentwurf)
+
+Der Ordner `state/` prüft die Zielformulierung aus
+[`docs/SOLVER_ARCHITEKTUR.md`](../../../docs/SOLVER_ARCHITEKTUR.md): lokale Zustände je
+mechanischem Abschnitt, Elimination vorgeschriebener Zustandskomponenten, Reaktionen aus Sprüngen.
+Es ist eine Gleitkomma-Implementierung in Python (IEEE double wie .NET), kein Produktionscode. Sie
+wird gegen die exakte Referenz `transfer_ref.py` verglichen. Es wird nur die Standardbibliothek
+gebraucht (kein numpy, kein .NET). Die Bytecode-Caches unterdrückt `PYTHONDONTWRITEBYTECODE=1`.
+
+| Datei | Zweck |
+|---|---|
+| `state/state.py` | Formulierung, Entdimensionierung mit Zweierpotenzen, Ruiz-Äquilibrierung, LU, adaptive Nachiteration (Residual double, kompensiert oder exakt), komponentenweiser Fehlerindikator über adjungierte Lösungen; adjungierte Nachiteration `none`/`one` (Vorgabe, damit ältere Protokolle reproduzierbar bleiben)/`adaptive`/`beta` (Entwurfsregel); Ablationsvarianten |
+| `state/kinematics.py` | Exakte Mechanismusprüfung auf dem kinematischen Modell der Teilkörper (Bareiss) |
+| `state/gen.py` | Generatoren aus `s_fuzz.py`/`f_fuzz.py` ohne numpy; gleiche Zufallsfolgen |
+| `state/metrics.py` | Fehlermaße (globale Feldskala, gemischtes Maß), Indikator-Verletzungen |
+| `state/cases.py`, `state/targeted.py` | Gezielte Grenzfälle: Konfigurationen × Abstände × Steifigkeiten |
+| `state/rand.py` | Zufallsmodelle je Abstandsklasse, Ablehnungs- und Verletzungsaudit |
+| `state/sens.py` | Eingabesensitivität (1-ulp-Probe), nur Diagnose |
+| `state/ablation.py` | Notwendigkeit von Elimination, Nachiteration, Skalierung; Residualvarianten |
+| `state/invariance.py` | Zweierpotenz-Skalierung (bitgleich) und Einheitenwechsel |
+| `state/violations.py` | Zerlegung einer Indikator-Verletzung in Daten-, Lösungs- und Auswertungsanteil |
+| `state/coverage.py` | Dichte Auswertung je Stück: Fehler und β über x, Monotonie von β, Stück-Gate |
+| `state/acceptance.py`, `state/acceptance_summary.py` | Adjungierte Nachiteration (ohne/ein Schritt/adaptiv), Akzeptanzfaktor s, β/Fehler je Größe und Klasse |
+| `state/decoupling.py` | Lösung und Status mit und ohne Sensitivitätsauswertung bitgleich |
+| `state/springs.py` | Federreaktion aus Sprung und Federgesetz, Konsistenzdiagnose |
+| `state/zero.py`, `state/axial.py` | Nullanregung, kompensierte Lasten, Unterlauf; Axialformulierung und exakte Axialreferenz |
+| `state/spring_rule.py`, `state/spring_rule_summary.py` | Identität von Sprung und Federgesetz, Konsistenzrelation mit vollem und gekürztem d, adjungierte Linearität, eingebaute Fehler, Lieferregeln (Sprung, Gesetz, kleineres β, Kombination) |
+| `state/spring_extremes.py` | Gezielte Extremfälle der Lieferregeln (k·L³/EI bis 10¹⁵, Abstände bis L/10¹¹) |
+| `state/gate_study.py`, `state/gate_summary.py` | Stück-Gate-Varianten A/B/C, strenge Monotonie, ω, gestörte Faktorisierung, Regeln der adjungierten Nachiteration (ohne/ein Schritt/adaptiv/β-Regel) |
+| `state/perturb_check.py` | Gestörte Faktorisierung: Regeln der adjungierten Nachiteration im Vergleich |
+| `state/mono_check.py` | Ort und Größe der strengen Monotonieabfälle von β |
+| `state/lb_check.py` | Geschlossene Untergrenze LB_q gegen dicht ausgewertete \|M\|, \|V\| (berechnet und exakt) |
+| `state/axial_quality.py` | Indikator und Gate des Axialanteils gegen die exakte Axialreferenz |
+| `state/cost.py` | Aufwand: Bandbreiten nach Pivotisierung, Zahl adjungierter Lösungen, Operationsmodell Band/dicht, viele Lasten je Abschnitt |
+| `state/factor_study.py`, `state/factor_summary.py` | Runde 4: Struktur der Gleichungsmatrix (Bandbreite, Kopplung), GEPP-Wachstum, LU gegen Householder-QR, Stressfamilien, adversarielle Suche nach Pivotwachstum |
+| `state/cond_check.py` | Runde 4: normweise, Skeel- und komponentenweise Kondition der Modelle, an denen QR scheitert |
+| `state/near_tau.py` | Runde 4: gezielte Modelle mit Gate nahe τ (stetiger Abstandsparameter, Bisektion) |
+| `state/refine_study.py`, `state/refine_summary.py` | Runde 4: Nachiterationsregeln (SpanDraft, `xGERFS`, LAWN 165, 5 Schritte) primär und adjungiert, Verifikation der adjungierten Lösungen (Rump, Satz 10.2), gestörte Faktorisierung |
+| `state/underflow_study.py` | Runde 4: Unterlaufpfade (Lastintegrale, Auswertung, Äquilibrierung, SI-Rückrechnung) |
+| `state/piece_oracle.py` | Runde 4: exakte Stückpolynome, exakte Bernstein-Einschließung, quadratfreie Zerlegung und Sturm-Isolation, Port von `PolynomialRoots` |
+| `state/piece_study.py`, `state/piece_summary.py` | Runde 4: Stück-Gate gegen Bernstein-Oracle, Extremwertkandidaten gegen exakte Wurzelisolation, konstruierte Grenzfälle |
+| `state/fpc.py` | Runde 5: Referenzimplementierung des Gleitkomma-Vertrags (verbindliche Operationsfolgen, Rundungszahlen, λ-Unterlaufterm, Bereichsregeln, Normierung der rechten Seite, gerichtete Schrankenrundung, Verifikation mit Neumann-Gewichten, SI-Rückskalierung; FTZ/DAZ-Emulation) |
+| `state/fpc_counts.py` | Runde 5: mechanische Ableitung der Rundungszahlen aus den Operationsfolgen |
+| `state/fpc_stage_a.py` | Runde 5, Stufe A: jede Formel gegen ihre Schranke, strukturierte Grenzwerte, graduell und FTZ/DAZ; Vergleich mit dem Rundungsmodell von `state.py` |
+| `state/fpc_chain.py` | Runde 5, Stufen B–F: Daten und Residual, Verifikationsvoraussetzung, Funktional, Feld und Gate, SI-Ausgabe gegen exakte Arithmetik auf schwierigen Referenzmodellen |
+| `state/fpc_unverified.py` | Runde 5: Ursache der zwei in Runde 4 nicht verifizierbaren Modelle (μ je Gewicht, Spektralradius von M) |
+| `state/fpc_regress.py` | Runde 5: Vertragslöser auf den Zufallsmengen der Runde 4 (Entscheidungen, Schranken) |
+| `state/fpc_summary.py` | Runde 5: Zusammenfassung der `state-fpc`-Protokolle |
+| `state/o9_sizing.py` | Runde 5: Operations- und Speichermodell des Qualitätsvertrags für n_m = 10 … 5.000 |
+
+Läufe (Protokolle in `results/state-*.log`):
+
+```sh
+export PYTHONDONTWRITEBYTECODE=1
+python3 state/targeted.py
+for r in 1e-2 1e-4 1e-6 1e-9 1e-11; do
+  python3 state/rand.py s 1500 $r; python3 state/rand.py f 1000 $r
+done
+python3 state/ablation.py
+python3 state/invariance.py
+python3 state/zero.py
+python3 state/springs.py
+python3 state/coverage.py targeted
+for r in 1e-2 1e-4 1e-6 1e-9 1e-11; do
+  python3 state/coverage.py s $r 1500; python3 state/coverage.py f $r 1000
+done
+python3 state/decoupling.py              # liest die REJ/SING-Zeilen der state-rand-Protokolle
+python3 state/acceptance.py targeted
+for r in 1e-2 1e-4 1e-6 1e-9 1e-11; do
+  python3 state/acceptance.py s $r 1500; python3 state/acceptance.py f $r 1000
+done
+python3 state/acceptance_summary.py      # fasst die state-acceptance-Protokolle zusammen
+python3 state/violations.py f 1e-2 638      # Beispiel: einzelnes Modell zerlegen
+# Runde 3
+for a in "targeted" "s 1e-2 1500" "s 1e-4 1500" "s 1e-6 1500" "s 1e-9 1500" "s 1e-11 1500" \
+         "f 1e-2 1000" "f 1e-4 1000" "f 1e-6 1000" "f 1e-9 1000" "f 1e-11 1000"; do
+  python3 state/spring_rule.py $a; python3 state/gate_study.py $a; python3 state/lb_check.py $a
+done
+python3 state/spring_rule_summary.py      # fasst die state-spring-rule-Protokolle zusammen
+python3 state/gate_summary.py             # fasst die state-gate-Protokolle zusammen
+python3 state/perturb_check.py            # liest die state-gate-Protokolle
+python3 state/mono_check.py               # liest die state-gate-Protokolle
+python3 state/spring_extremes.py
+python3 state/axial_quality.py
+python3 state/cost.py
+```
+
+Protokollnamen der Runde 3: `state-spring-rule-<Klasse>.log` und `-summary.log`,
+`state-gate-<Klasse>.log` und `-summary.log`, `state-lb-<Klasse>.log`, `state-perturb-check.log`,
+`state-mono-check.log`, `state-spring-extremes.log`, `state-axial-quality.log`, `state-cost.log`.
+Die Zeitwerte in `state-cost.log` stammen aus parallel laufenden Prozessen; aussagekräftig sind
+nur Wachstumsexponenten und Operationszahlen.
+
+Die Läufe sind unabhängig und lassen sich parallel starten (je Klasse ein Prozess). Ausnahmen:
+`decoupling.py` braucht die `state-rand`-Protokolle, `acceptance_summary.py` die
+`state-acceptance`-Protokolle, `spring_rule_summary.py` die `state-spring-rule`-Protokolle und
+`gate_summary.py`, `perturb_check.py` und `mono_check.py` die `state-gate`-Protokolle.
+
+# Runde 4 (Literaturabgleich)
+
+Quellen, Audit-Matrix und Ergebnisse: [`LITERATURE_AUDIT.md`](LITERATURE_AUDIT.md). Läufe mit der
+Umgebung `~/.venvs/spandraft-validation` (numpy, scipy, sympy):
+
+```sh
+export PYTHONDONTWRITEBYTECODE=1
+python3 state/factor_study.py targeted
+python3 state/factor_study.py random 5
+python3 state/factor_study.py stress 10
+python3 state/factor_study.py stressgrowth 40
+python3 state/factor_study.py adversarial 24 300
+python3 state/factor_summary.py           # fasst die state-factor-Protokolle zusammen
+python3 state/cond_check.py               # liest die state-factor-Protokolle
+python3 state/near_tau.py > results/state-near-tau-models.log 2> results/state-near-tau.log
+python3 state/refine_study.py targeted
+python3 state/refine_study.py neartau     # liest state-near-tau-models.log
+for r in 1e-2 1e-4 1e-6 1e-9 1e-11; do
+  python3 state/refine_study.py s $r 1500 5; python3 state/refine_study.py f $r 1000 5
+done
+python3 state/refine_summary.py           # fasst die state-refine-Protokolle zusammen
+python3 state/underflow_study.py
+python3 state/piece_study.py constructed
+python3 state/piece_study.py targeted
+python3 state/piece_study.py random 10
+python3 state/piece_summary.py            # fasst die state-piece-Protokolle zusammen
+```
+
+Protokollnamen der Runde 4: `state-factor-{targeted,random,stress,stressgrowth,adversarial}.log`
+und `-summary.log`, `state-cond-check.log`, `state-near-tau-models.log`, `state-near-tau.log`,
+`state-refine-<Klasse>.log` und `-summary.log`, `state-underflow.log`,
+`state-piece-{constructed,targeted,random}.log` und `-summary.log`. Jeder Befehl schreibt nach
+stdout, die Protokolle entstehen durch Umleitung nach `results/` mit diesen Namen. Der vollständige
+LU/QR-Vergleich der Stressfamilien läuft nur bis 10 Felder; für 20 und 40 Felder ist die exakte
+Bruchrechnungsreferenz in Python zu langsam, dort messen `stressgrowth` nur Struktur und Wachstum.
+
+# Runde 5 (Gleitkomma-Vertrag, O2)
+
+Vertrag und Beweiskette: [`FLOATING_POINT_CONTRACT.md`](FLOATING_POINT_CONTRACT.md). Reines Python
+(ohne numpy):
+
+```sh
+export PYTHONDONTWRITEBYTECODE=1
+python3 state/fpc_counts.py > results/state-fpc-counts.log
+python3 state/fpc_stage_a.py 20000 > results/state-fpc-stage-a.log
+for S in targeted neartau perturbed underflow constructed unverified; do
+  python3 state/fpc_chain.py $S > results/state-fpc-chain-$S.log
+done
+python3 state/fpc_unverified.py > results/state-fpc-unverified.log
+for k in s f; do for r in 1e-2 1e-4 1e-6 1e-9 1e-11; do
+  python3 state/fpc_regress.py $k $r 1500 5 > results/state-fpc-regress-$k-$r.log
+done; done
+python3 state/fpc_summary.py > results/state-fpc-summary.log   # liest alle state-fpc-Protokolle
+python3 state/o9_sizing.py > results/state-o9-sizing.log
+```
+
+`fpc_regress.py` vergleicht mit den `state-refine`-Protokollen der Runde 4, `fpc_chain.py
+neartau` liest `state-near-tau-models.log`. Die Läufe sind unabhängig und lassen sich parallel
+starten.
