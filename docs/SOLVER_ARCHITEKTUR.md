@@ -1,28 +1,28 @@
 # SpanDraft – Solver-Architektur (Ebene A)
 
 Stand: 10. November 2026. Architektur für den Branch `features/solver-umbau`.
-Der Closure-Pass empfiehlt den Freeze für die C#-Implementierungsplanung
-des heutigen Produktumfangs (Abschnitt 15). Die fachliche
-Grundlage ist [SOLVER_UMBAU.md](SOLVER_UMBAU.md); dieses Dokument legt fest, *wie* der Rechenkern die
-Anforderungen A1–A10 erfüllt. Es gibt keine Produktfunktion frei und legt keine Core-Typen der
-Feature-Tracks fest. Der heutige Produktionssolver ist in [SOLVER.md](SOLVER.md) beschrieben.
+Die Zielarchitektur ist nach dem Closure für die C#-Implementierungsplanung
+des heutigen Produktumfangs eingefroren (Abschnitt 15). Dieses Dokument legt
+normativ fest, wie der Rechenkern die Anforderungen A1–A10 aus
+[SOLVER_UMBAU.md](SOLVER_UMBAU.md) erfüllt. Produktfreigaben und Core-Typen
+werden in den Feature-Tracks festgelegt. [SOLVER.md](SOLVER.md) beschreibt
+den FE-Produktpfad auf `main`. Im Umbau-Branch verwendet der öffentliche
+Einstieg bereits den Machbarkeitsprototyp `SupportSpanSolver` aus Abschnitt 2.
 
 Alle Zahlen in diesem Dokument stammen aus reproduzierbaren Läufen in
 [`validation/investigations/solver-rework/`](../validation/investigations/solver-rework/README.md);
 Kennzeichnung: **[Protokollname]** verweist auf `results/<Name>.log`. Die Läufe der neuen
-Formulierung (`state-*`) sind eine Gleitkomma-Implementierung in Python (IEEE double wie .NET), gemessen
-gegen die exakte Bruchrechnungsreferenz `transfer_ref.py`. Es sind Belege für die Architektur,
-keine Abnahme des späteren C#-Codes.
+Formulierung (`state-*`) belegen den Entwurf mit einer Python-Referenz
+auf Host-Binary64 und exakten Gegenproben wie `transfer_ref.py`.
 
-Die numerischen Entscheidungen sind mit der etablierten Theorie zu Mehrfachschießen,
-Randwertproblemen und linearer Algebra abgeglichen:
-[`LITERATURE_AUDIT.md`](../validation/investigations/solver-rework/LITERATURE_AUDIT.md) enthält die
-Quellen mit DOI, ihre Voraussetzungen, die Übertragbarkeit und für jede Regel den Status
-(übernommen, angepasst, bewusste Abweichung, offen). Verweise darauf stehen als [Audit 3.x].
-
-Welche Primitives, Bereichsregeln und Fehlernachweise der Kern erfüllen muss, legt der Gleitkomma-Vertrag
 [`FLOATING_POINT_CONTRACT.md`](../validation/investigations/solver-rework/FLOATING_POINT_CONTRACT.md)
-fest (O2). Verweise darauf stehen als [GV x].
+ist der normative numerische Vertrag für Primitives, Bereichsregeln und
+Fehlernachweise (O2). Verweise darauf stehen als [GV x].
+[`LITERATURE_AUDIT.md`](../validation/investigations/solver-rework/LITERATURE_AUDIT.md)
+ist die nicht-normative Quellen-, Herkunfts- und Begründungsakte (Verweise
+[Audit x]). Sie ordnet Entscheidungen nach ihrer Herkunft ein: direkte
+Übernahme (L), Anpassung (A), SpanDraft-spezifische Entscheidung (S) oder
+verworfene Alternative (V), mit X für rein experimentelle Evidenz.
 
 ## 1. Entscheidungen im Überblick
 
@@ -32,14 +32,14 @@ fest (O2). Verweise darauf stehen als [GV x].
 | E2 | Stationen und Unbekannte | Ereignisstationen (alle Positionen) bestimmen Felder und Ausgaben. Unbekannte sind nur die *freien* Komponenten des rechtsseitigen Zustands (w, θ, M, V) an *mechanischen* Stationen. |
 | E3 | Vorgeschriebene Größen | w = 0, θ = 0, M = 0 rechts am Gelenk, M = V = 0 am Ende sind bekannte Werte und werden eliminiert, nicht als Gleichungszeilen gelöst. |
 | E4 | Reaktionen | Werden nachträglich als Sprung bestimmt und mit einer eigenen adjungierten Lösung bewertet. Bei elastischen Halterungen gibt es zusätzlich das Federgesetz. Beide Wege unterscheiden sich in exakter Arithmetik um das Residual der Federzeile. Geliefert wird der Wert mit dem kleineren `VerifiedOutputBound`. Die Identität beider Wege ist ein interner Selbsttest (Abschnitt 4.2). |
-| E5 | Gleiche Position | Station mit geordneten **Teilpunkten**, verbunden durch einen algebraischen Stationsübergang. Jede Anbindung, auch Punktkraft und Punktmoment, gehört zu einem Teilpunkt. Nicht definierte Kombinationen werden abgelehnt. |
+| E5 | Gleiche Position | Station mit geordneten **Teilpunkten**, verbunden durch einen algebraischen Stationsübergang. Jede Anbindung gehört zu einem Teilpunkt. Die Koinzidenzen des heutigen Umfangs, einschließlich starrer Lager, bleiben erhalten (4.4). Neue Kombinationen brauchen eine fachliche Regel (O6). |
 | E6 | Federgruppen | Keine geometrische Gruppierung und keine Newton-Multipole. Starke Evidenz (Abschnitt 5.4), noch kein Beweis. |
 | E7 | Abstände | Jeder Abstand wird direkt aus zwei gespeicherten globalen Koordinaten gebildet. Abschnittseigenschaften werden nur über die Stationsfolge zugeordnet. |
 | E8 | Skalierungskette | Entdimensionierung mit Zweierpotenzen (nur Geometrie und Steifigkeit) und Normierung der rechten Seite mit einer Zweierpotenz → Ruiz-Äquilibrierung mit Zweierpotenzen → LU mit Teilpivotisierung (Wahl begründet: Band (2,2), nur lokale Kopplung, gemessenes Pivotwachstum, 5.2) → adaptive Nachiteration mit Pflichtschritt → a-posteriori-Fehlerschranke mit Verifikation unter den Voraussetzungen des Gleitkomma-Vertrags. Householder-QR ist für diese graduierten Matrizen keine robustere Alternative. |
 | E9 | Mechanismus | Exakter Rang auf dem kinematischen Modell der Teilkörper (Bareiss), unabhängig von der Lösungsmatrix. |
 | E10 | Numerische Qualität | `RawBound` für den adjungierten Residualanteil, `VerifiedStateBound` nach verifizierter Kontraktion mit μ < 1, `VerifiedOutputBound` für den veröffentlichten SI-Wert. Variante C deckt den ganzen Balken mit gerichteten Stückgrenzen ab. Akzeptanz bei `VerifiedOutputBound` höchstens mathematisch τ = 10⁻⁸ mal Bezugsskala. Kondition und Rückwärtsfehler dienen der Diagnose. |
 | E11 | Eingabesensitivität | Nur Diagnose; ändert weder Lösung noch Status. |
-| E12 | Ergebnis | Internes Ergebnismodell (Stationen mit Seiten und Sprungarten, Stücke, Reaktionen je Halterung, Genauigkeitsbericht). `BeamSolution` wird zur Fassade des heutigen Vertrags. |
+| E12 | Ergebnis | Internes Ergebnismodell (Stationen mit Seiten und Sprungarten, Stücke, Reaktionen einschließlich gemeinsamer starrer Zwangsreaktionen, Genauigkeitsbericht). `BeamSolution` wird zur Fassade des heutigen Vertrags. |
 | E13 | Grenze Core ↔ Solver | Transiente mechanische Eingabe aus generischen Primitiven, je Rechnung aus dem Fachmodell gebaut. `SolverLoads` entfällt. |
 | E14 | Alter FE-Solver | Nach der Migration eingefrorene Testreferenz außerhalb des Produktpfads. |
 | E15 | Anregung | Unbelastet genau dann, wenn jedes gespeicherte Anregungsprimitiv null ist. Für geladene Modelle positive Anregungsnorm in Mantissen und ganzzahligen Binärexponenten (7.2). |
@@ -103,8 +103,9 @@ Fachmodell (Core)
   │                          ohne Anregung: exakte Nullen, weiter mit 8
   ▼
 6 Lösung                     Entdimensionierung → Normierung der rechten Seite → Ruiz → LU →
-  │                          Nachiteration; gespeicherte Vektoren ohne Subnormale
-  │                          Nullpivot → NotReliablySolvable; subnormaler Pivot → NumericalFailure
+  │                          Nachiteration; Bereichsregeln für Operanden und Zwischenwerte [GV 5–7]
+  │                          Nullpivot → NotReliablySolvable (ZeroPivot)
+  │                          0 < |Pivot| ≤ λ → NumericalFailure (NumericalRange)
   ▼
 7 Qualitätsbewertung         adjungierte Lösungen (n + n_r) → RawBound → Verifikation (μ < 1,
   │                          6.3), sonst NotReliablySolvable (NotVerified) → VerifiedStateBound
@@ -128,10 +129,16 @@ Nullsemantik aus 4.3.
 
 ### 3.3 Invarianten
 
-1. **Keine künstliche Steifigkeit.** Eine Ereignisstation ohne mechanische Wirkung ändert weder
-   Unbekannte noch Gleichungsmatrix. Hinzufügen oder Entfernen einer Last lässt Matrix,
-   Rundungszahlen, Skalierung und Unbekannte bitgleich (A1; gemessen in 226 von 226 Modellen
-   **[state-invariance]**).
+1. **Last ohne mechanische Station.** Hinzufügen oder Entfernen einer Last
+   bei unveränderter Mechanik lässt die mechanischen Unbekannten (Auswahl
+   und Reihenfolge), die Gleichungsmatrix, ihre Rundungszahlen und die
+   matrixbezogene Zweierpotenz- und Ruiz-Skalierung bitgleich. Lastvektor,
+   `F_exc`, RHS-Exponent und Anregungs-/RHS-Normierung dürfen sich ändern
+   (5.1, 7.2, [GV 5]). Der historische Lauf
+   [`state/invariance.py`](../validation/investigations/solver-rework/state/invariance.py)
+   verglich beim Hinzufügen von Punktlasten und einer Streckenlast
+   `A`, `S`, `K`, `rs`, `cs` und `free`. In 226 von 226 Modellen
+   waren diese Größen gleich (**[state-invariance]**).
 2. **Gleichungsstruktur.** Nach der Elimination stimmen die Zahl unabhängiger Gleichungen und die
    Zahl der Unbekannten überein: Jede vorgeschriebene Komponente entfernt genau eine Unbekannte, jede
    freigegebene Sprungbedingung genau eine Zeile. Die Kopplung bleibt lokal zwischen benachbarten
@@ -154,7 +161,8 @@ Nullsemantik aus 4.3.
    gespeicherten Koordinaten, geteilt durch eine Zweierpotenz. Er wird nie aus bereits gerundeten
    lokalen Koordinaten gebildet.
 5. **Modelltreue.** Keine Penalty-Steifigkeit, keine Regularisierung, keine Positionsänderung.
-   Skalierungen sind Zweierpotenzen und damit exakt (A3).
+   Zweierpotenzskalierungen sind bei normalem darstellbarem Ergebnis exakt.
+   Für Randfälle gelten die Bereichsregeln und Verlustschranken aus [GV 3, 5] (A3).
 6. **Mechanismus.** Mechanismus genau dann, wenn der exakte Rang der Teilkörper-Kinematik
    unvollständig ist; ohne Toleranz (A5).
 7. **Kein stilles Ergebnis.** Gelieferte Ausgaben haben eine verifizierte SI-Fehlerschranke
@@ -312,22 +320,45 @@ Eine Station mit exakt gleicher Koordinate besteht aus geordneten Teilpunkten T�
 Anbindung (Halterung, Freigabe, Abschnittsgrenze, Punktkraft, Punktmoment) gehört genau einem
 Teilpunkt. Zwischen T_i und T_{i+1} gilt der algebraische Übergang „Zustand rechts von T_i =
 Zustand links von T_{i+1}“, ohne Länge und ohne Material. Jeder Teilpunkt mit mechanischer Wirkung
-trägt seinen eigenen rechtsseitigen Zustand. Damit lassen sich alle offenen Semantiken aus B als
-**Daten** ausdrücken:
+trägt seinen eigenen rechtsseitigen Zustand.
+
+#### Starre Lager im heutigen Migrationsumfang
+
+Maßgeblich sind die [Modellvalidierung](DOMAIN.md#modellvalidierung) und
+der [öffentliche Lager- und Reaktionsvertrag](SOLVER.md#lager-stabilität-und-lösung).
+Gleicher Lagertyp an exakt derselben Position bleibt ein ungültiges Duplikat
+(`DuplicateSupport` in Core). Unterschiedliche starre Lagertypen an exakt
+derselben Position sind zulässig. Für ihre gemeinsame mechanische Station
+gilt auch bei der Abbildung auf Teilpunkte die Vereinigungsmenge der
+gesperrten Freiheitsgrade. Jede Richtung zählt genau einmal für Elimination
+und Mechanismusprüfung. `Pinned + Roller`
+sperrt u und w, lässt aber allein die Starrkörperrotation frei. `Fixed`
+mit weiteren starren Lagern bleibt mechanisch eine Einspannung.
+
+Je gesperrter Richtung ist die gemeinsame Zwangsreaktion der Station
+bestimmbar. Mehrere starre Lager mit derselben Sperre liefern keine
+zusätzliche Gleichung, aus der sich einzelne Reaktionen bestimmen ließen.
+Die Sprungbilanz und `BeamSolution` führen in dieser Richtung die gemeinsame
+Reaktion ohne individuelle Aufteilung (Abschnitte 4.2 und 9).
+
+#### Neue Feature-Koinzidenzen (O6)
+
+Die offenen Semantiken aus B lassen sich als **Daten** ausdrücken:
 
 | Fall (Track) | Ausdruck im Teilpunktmodell |
 |---|---|
 | Punktmoment genau auf Gelenk (DEV-20) | Moment links oder rechts des Gelenkteilpunkts, oder Ablehnung |
 | Gelenk an Einspannung (DEV-20) | Einspannung links oder rechts des Gelenks, oder Ablehnung |
 | Gelenk auf Lager ohne Drehbehinderung (DEV-20) | Lager und Gelenk am selben oder an getrennten Teilpunkten |
-| Feder und starres Lager an gleicher Position (DEV-19) | Ablehnung, oder beide am selben Teilpunkt mit definierter Reaktionsaufteilung |
+| Feder und starres Lager an gleicher Position (DEV-19) | Ablehnung oder fachlich definierte Anbindung am Teilpunkt |
 | Abschnittswechsel an Lager, Gelenk, Einspannung (DEV-11) | Grenze vor oder nach dem Teilpunkt der Halterung |
 | Schräge Kraft am Gelenk oder Lager (DEV-12) | Axial- und Querkomponente am gewählten Teilpunkt |
 
-Die Koinzidenzregeln sind eine Tabelle zulässiger Kombinationen samt Reihenfolge. Fehlt ein
-Eintrag, wird mit eigenem Fehlercode abgelehnt (A2). Der Feature-Track füllt die Tabelle, der Kern
-bleibt unverändert. **Gemessen** sind bisher nur die Kombinationen, die `transfer_ref.py` mit
-fester Reihenfolge abbildet: Gelenk auf Lager, Kraft auf Gelenk, Kraft und Moment auf Feder,
+Die Koinzidenzregeln beschreiben zulässige Kombinationen und ihre Reihenfolge.
+Eine nicht definierte Kombination ergibt `InvalidModel` (6.1, 6.6).
+Jeder Feature-Track ergänzt die Regeln für seine neuen Kombinationen.
+Die Messung für neue Kombinationen umfasst die Fälle, die `transfer_ref.py`
+mit fester Reihenfolge abbildet: Gelenk auf Lager, Kraft auf Gelenk, Kraft und Moment auf Feder,
 EI-Wechsel auf Gelenk und Feder; alle ≤ 4,5·10⁻¹⁵ **[state-targeted]**.
 
 ### 4.5 Erweiterungspunkte
@@ -476,9 +507,11 @@ Folgerungen:
 
 ### 5.6 Aufwand
 
-Bezeichnungen: n_m mechanische Stationen, n ≈ 3,5·n_m Unbekannte, n_r Halterungen (starr und
-elastisch), k_j Lasten im mechanischen Abschnitt j. p = 2 und q = 4 sind die gemessenen Bandbreiten
-der Multiplikatoren und von U nach Teilpivotisierung (Invariante 2).
+Es gibt n_m mechanische Stationen, n ≈ 3,5·n_m Unbekannte, n_r
+Reaktionsfunktionale und k_j Lasten im mechanischen Abschnitt j. Bei
+starren Lagern zählt die gemeinsame Zwangsreaktion je Station und
+gesperrter Richtung. p = 2 und q = 4 sind die gemessenen Bandbreiten der
+Multiplikatoren und von U nach Teilpivotisierung (Invariante 2).
 
 | Schritt | Band | dicht | Bemerkung |
 |---|---|---|---|
@@ -593,8 +626,8 @@ Wirkrichtung, unabhängig vom Wert. Daraus folgt *nicht* w = 0 in der Mechanik. 
 dass in dieser Richtung keine Feder wirkt; sie zählt dann auch nicht für den Rang. Negative oder nicht
 endliche Steifigkeiten sind unzulässige Eingaben. Ob die Oberfläche k = 0 überhaupt anbietet,
 entscheidet DEV-19. Starr ist eine eigene Halterungsart, kein k = ∞. Folge: Ein Balken auf sehr weichen
-Federn ist exakt stabil, kann aber numerisch oder physikalisch nahezu ein Mechanismus sein. Das
-entscheiden dann die Schritte 4, 5, 8 und 9 aus 6.1.
+Federn ist exakt stabil, kann aber numerisch oder physikalisch nahezu ein Mechanismus sein.
+Für die numerische Freigabe gilt die Prüfreihenfolge aus 6.1.
 
 **Äquivalenz:** Bei EI > 0 und k > 0 ist das Gleichungssystem genau dann singulär, wenn die
 Teilkörper-Kinematik einen Mechanismus hat. Begründung: Bei Last null leistet eine homogene Lösung
@@ -674,7 +707,7 @@ echte Mängel, die jetzt im Entwurf verankert sind:
    Lastintegrale bis zum 9,4·10¹³-Fachen; beim Abstand 0 stimmte nicht einmal das Vorzeichen. Auf
    Ausgabewerten war es in den untersuchten Modellen nicht sichtbar (Fehler/Schranke ≤ 0,056),
    weil der Term absolut winzig ist. Abhilfe: eigener Datenterm der abgeschnittenen Intensität im
-   Vertrag (Punkt 8 in [GV 5]); danach 0 Verletzungen.
+   Vertrag (Punkt 4 in [GV 5]); danach 0 Verletzungen.
 
 Im damaligen Versuch mit adjungierter Nachiteration lag der Indikator in gelieferten Modellen
 stets über oder auf dem tatsächlichen Fehler.
@@ -720,14 +753,12 @@ Produktentscheidung (O8).
 | `InvalidModel` | Eingabe verletzt den Definitionsbereich: Validierungsfehler aus Core, nicht endliche Werte, EI/EA ≤ 0, k < 0 oder nicht endlich, Position außerhalb des Balkens; nicht definierte Koinzidenz (Kombination, Teilpunkt); k = 0 je nach DEV-19 |
 | `UnstableModel` | exakter Mechanismus quer (betroffener Teilkörper) oder axial |
 | `IllConditionedSystem` (Bedeutung: *numerisch nicht sicher lösbar*) | `ZeroPivot`: exakt stabil, F_exc > 0 und Nullpivot; `NotVerified`: adjungierte Lösungen nicht verifiziert (μ ≥ 1 für alle Gewichtskandidaten, 6.3), die Genauigkeit ist nicht nachgewiesen, das Ergebnis aber nicht als falsch erkannt; `Gate`: gerichteter SI-Schwellenvergleich fehlgeschlagen |
-| `NumericalFailure` | `NumericalRange`: eine Bereichsregel aus [GV 7] verletzt (Eingabe ≠ 0 nicht normal, L < 2⁻⁹⁶⁸, Koeffizient oder Zwischenwert nicht normal, normiertes Anregungsprimitiv ≠ 0 nicht normal, Streckenlast zu kurz, Eintrag nach Ruiz oder Pivot nicht normal, SI-Bezugsgröße außerhalb [2⁻⁹⁶⁹, 2¹⁰⁰⁰]); `NonFinite`: Lösung, Schranke oder Gate nicht endlich; `InternalInconsistency`: Gleichungszahl ≠ Unbekannte, Federreaktions-Identität verletzt |
+| `NumericalFailure` | `NumericalRange`: eine Bereichsregel aus [GV 7] verletzt (Eingabe ≠ 0 nicht normal, L < 2⁻⁹⁶⁸, Koeffizient oder Zwischenwert nicht normal, normiertes Anregungsprimitiv ≠ 0 nicht normal, Streckenlast zu kurz, Eintrag nach Ruiz außerhalb des zulässigen Bereichs, nicht-null Pivot an oder unter λ, SI-Bezugsgröße außerhalb [2⁻⁹⁶⁹, 2¹⁰⁰⁰]); `NonFinite`: Lösung, Schranke oder Gate nicht endlich; `InternalInconsistency`: Gleichungszahl ≠ Unbekannte, Federreaktions-Identität verletzt |
 
 Die Zuordnung ist vollständig: Jede Ablehnung hat genau einen dieser Codes, und kein anderes
-Kriterium lehnt ab (6.1). Kondition, ω und Eingabesensitivität führen zu keinem Code. Getrennt sind
-vier Bedeutungen: `NumericalRange` (die Garantie ist im Zahlbereich nicht herleitbar, geprüft vor
-jeder Ausgabe), `InternalInconsistency` (Implementierungsfehler), `NotVerified` (Genauigkeit nicht
-nachweisbar) und `ZeroPivot`/`Gate` (numerisch nicht sicher lösbar). Die strukturierte Ursache ist
-neu; die öffentlichen Codes bleiben bis zur Migration unverändert.
+Kriterium lehnt ab (6.1). Kondition, ω und Eingabesensitivität dienen
+ausschließlich der Diagnose. Die strukturierte Ursache ergänzt den
+öffentlichen Code.
 
 Die Umbenennung von `IllConditionedSystem` ist eine Option der Ergebnisschnittstelle. Der Code
 bleibt bis zur Migration erhalten.
@@ -804,8 +835,8 @@ exakte Wurzelisolation validiert [GV 11].
 Der Vertrag gilt für alle Modelle, die:
 
 - Eingabeprüfung und Mechanismusprüfung bestehen,
-- alle Bereichsregeln des Gleitkomma-Vertrags erfüllen ([GV 7]: Eingaben, Koeffizienten mit
-  Zwischenwerten, normierte Anregungen, Einträge nach Ruiz und Pivots normal oder exakt null),
+- alle Bereichsregeln des Gleitkomma-Vertrags erfüllen ([GV 5–7] für
+  Eingaben, Zwischenwerte, normierte Anregung, Skalierung und Pivots),
 - deren adjungierte Lösungen verifiziert sind (μ < 1, 6.3) und die den gerichteten
   SI-Schwellenvergleich bestehen (7.3),
 - deren SI-Bezugsgrößen in [2⁻⁹⁶⁹, 2¹⁰⁰⁰] liegen (7.2),
@@ -928,7 +959,7 @@ Das **interne Ergebnismodell** wird ohne FE-Begriffe gebildet:
 | Teil | Inhalt |
 |---|---|
 | Stationsergebnis | Position, Teilpunkte, Zustand links und rechts (w, θ, M, V, u, N), Sprungarten |
-| Reaktion | je Halterung: Position, Teilpunkt, Richtung, Kraft bzw. Moment |
+| Reaktion | Kraft bzw. Moment mit Station und Richtung. Bei starren Lagern eine gemeinsame Reaktion je wirksamer Zwangsrichtung (4.4) |
 | Stück | Grenzen, Feldpolynome |
 | Extremwerte | w, V, M (N nach DEV-12) mit Ort und Seite |
 | Genauigkeitsbericht | Gate und größter normierter `VerifiedOutputBound` je Größe relativ zu τ, Verifikation (μ), „ohne Anregung“, Nachiterationsschritte. Diagnosen (Sensitivität, ω) getrennt davon und nur in Entwicklung/Validierung |
@@ -936,12 +967,16 @@ Das **interne Ergebnismodell** wird ohne FE-Begriffe gebildet:
 **`BeamSolution` als Fassade** erhält den heutigen Vertrag:
 
 - `Nodes` sind die Ereignisstationen; das sind dieselben Positionen wie die heutigen FE-Knoten.
-  `NodeIndex` ist der Stationsindex. u, w und θ sind die rechtsseitigen Werte, ReactionX/Y/Moment
-  die je Station summierten Reaktionen, wie heute.
+  `NodeIndex` ist der Stationsindex. u, w und θ sind die rechtsseitigen Werte.
+  `ReactionX`, `ReactionY` und `ReactionMoment` enthalten je Station die
+  gemeinsame Reaktion der jeweiligen gesperrten Richtung. Für freie
+  Freiheitsgrade bleibt die Reaktion abwesend. Eine Reaktion mit Wert null
+  an einem gesperrten Freiheitsgrad bleibt vorhanden.
 - `EvaluateAt(position, side)` und `Extrema` bleiben unverändert in Signatur und Semantik,
   einschließlich der Gleichstandsregeln aus [SOLVER.md](SOLVER.md#globale-extremwerte).
-- Neu kommen hinzu: Werte links und rechts je Station (θ am Gelenk), Sprungarten, Reaktionen je
-  Halterung, Genauigkeitsbericht. Ob `Nodes` später umbenannt wird, entscheidet die Integration.
+- Das interne Modell ergänzt Werte links und rechts je Station (θ am
+  Gelenk), Sprungarten und den Genauigkeitsbericht. Ob `Nodes` später
+  umbenannt wird, entscheidet die Integration.
 
 Nutzer heute: `ResultDiagramProjection`, `EditorViewModel.ResultProbe`, `BeamAnalysis`,
 `BeamAnalysisResult`, `BeamEngineeringAnalysis`. Keiner benötigt FE-Interna.
@@ -958,8 +993,9 @@ Nutzer heute: `ResultDiagramProjection`, `EditorViewModel.ResultProbe`, `BeamAna
   Adapter bildet ihn auf Primitive ab. Den Kern kennt nur Primitive.
 - **Bis zur Freigabe** erreichen Tests die Primitive über einen internen Einstieg
   (`InternalsVisibleTo`); der Produktpfad baut sie nur aus Core. `SolverLoads` entfällt.
-- Core bleibt frei von Numerik. Die Koinzidenzregeln liegen im Solver, ihre fachlichen Einträge
-  kommen aus den Tracks.
+- Core bleibt frei von Numerik und prüft weiterhin identische Lagerduplikate.
+  Die mechanischen Koinzidenzregeln des Solvers erhalten die heutige Semantik
+  aus 4.4. Die Tracks liefern die fachlichen Regeln für neue Kombinationen.
 
 ## 11. Validierungsstrategie (A7)
 
@@ -971,9 +1007,9 @@ Nutzer heute: `ResultDiagramProjection`, `EditorViewModel.ResultProbe`, `BeamAna
 | `s_fuzz.py t` / `s_detail2` | Federtabelle (Paar, Nebenlager, nur Federn, elastische Einspannung, am Gelenk, drei, Drehpaar) |
 | Zufall | je Klasse die schwierigsten gelieferten Modelle und alle abgelehnten (erwarteter Code; Sensitivität als Diagnose) |
 | Anregung | die sechs Nullfälle aus `state/zero.py`, kompensierte Lasten, P und −P am selben Ort, Unterlauf 10⁻³¹⁰ und 10⁻³²⁰ N (erwartet `NumericalFailure`, Ursache `NumericalRange`) |
-| Axial | Zufallsmodelle aus `state/zero.py` gegen die exakte Axialreferenz `state/axial.py`, mit Gate (`state/axial_quality.py`) |
+| Belasteter Axialpfad (DEV-12) | Zufallsmodelle aus `state/zero.py` gegen die exakte Axialreferenz `state/axial.py`, mit Gate (`state/axial_quality.py`) |
 | Federn extrem | die 144 Fälle aus `state/spring_extremes.py` (k·L³/EI bis 10¹⁵, Abstände bis L/10¹¹) |
-| Numerisch singulär | Balken nur auf zwei Federn im Abstand 5·10⁻¹² m (erwartet `IllConditionedSystem`) |
+| Numerisch singulär | Balken nur auf zwei Federn im Abstand 5·10⁻¹² m (erwartet `IllConditionedSystem`), ergänzend die `ZeroPivot`-Fälle aus **[state-fpc-regress-f-1e-11]** |
 | Grenzfälle nahe τ | die 75 Modelle aus `state/near_tau.py` (Gate 10⁻¹⁰ … 3·10⁻⁸), erwartete Entscheidung je Fall |
 | Extremwerte | die 37 konstruierten Fälle aus `state/piece_study.py` (Wurzel am Rand, doppelte und fast doppelte Wurzeln, Extremum neben Ereignisstation, kurze Stücke, Skalen), Sollwerte aus exakter Wurzelisolation |
 | Unterlauf | die 64 Fälle aus `state/underflow_study.py`, darunter der Kleinstbalken mit unterlaufender SI-Rückrechnung (erwartet `NumericalRange`) |
@@ -981,14 +1017,16 @@ Nutzer heute: `ResultDiagramProjection`, `EditorViewModel.ResultProbe`, `BeamAna
 | Gleitkomma-Vertrag | Stufen A–F aus `state/fpc_stage_a.py` und `state/fpc_chain.py` mit Sollwerten aus exakter Arithmetik. Formelfamilien mit strukturierten Grenzwerten und 685 Kettenläufe **[state-fpc-summary]**, darunter Fälle nahe τ, gestörte LU, Nulldurchgang, kurze schwere Lasten, EI-Wechsel 1 ulp neben einer Feder und das 6-nm-Paar. Die gezielten Unterlauffälle decken alle vier Unterlaufmodi ab. A5 dokumentiert den historischen Vergleich mit `state.py` [GV 9]. |
 | Bestehend | V01–V15, 6-nm-Fall (`SixNanometerRenderingTests`), 35 CAD-Fälle aus `compare.py`, Prototyp-Tests (Gelenk, Federn, EI, Linearlast) |
 
-Geprüft werden einzelne Reaktionen sowie w, θ, M und V an Stationen (beide Seiten) und im Feld,
-außerdem Extremwerte. Erzeugt werden die Sollwerte von beiden exakten Referenzen, mit `xcheck.py`
+Im heutigen Umfang werden Reaktionen je Station und Richtung geprüft.
+Hinzu kommen w, θ, M und V an Stationen (beide Seiten) und im Feld sowie
+die Extremwerte. Erzeugt werden die Sollwerte von beiden exakten Referenzen, mit `xcheck.py`
 bitgleich gegeneinander geprüft. Für den Axialanteil gibt es bisher eine exakte Referenz
 (`state/axial.py`). Die zweite unabhängige Referenz gehört zu DEV-12 (O4).
 
 **Neue Architekturtests:**
 
-- Phantomstation: Eine zusätzliche Last ändert die Matrix nicht (Invariante 1).
+- Phantomstation: Eine zusätzliche Last lässt mechanische Unbekannte, Matrix, matrixbezogene
+  Rundungszahlen und Matrixskalierung bitgleich (Invariante 1).
 - Strukturzählung: Gleichungen = Unbekannte, Bandbreite höchstens (2,2), Multiplikatoren höchstens 2
   unter der Diagonale (Invariante 2).
 - Verifikation: mit gestörten LU-Faktoren liegen Fehler innerhalb der verifizierten Schranken (6.3, 7.5).
@@ -1032,11 +1070,24 @@ ARM64. Bitgleichheit ist Diagnose [GV 2, 13].
 
 | Phase | Inhalt | Ende |
 |---|---|---|
-| M1 | Neuer Kern im Solverprojekt neben dem bestehenden Pfad, interner Einstieg, Adapter für den heutigen Funktionsumfang | Kern rechnet alle heutigen Modelle |
-| M2 | Sollwertfälle einschließlich axialer Nullausgabe, Architekturtests, Mutationslauf; alter FE-Solver als Vergleich auf V01–V15 und den CAD-Fällen | Abnahme grün auf macOS und Windows |
+| M1 | Neuer Kern im Solverprojekt neben dem Machbarkeitsprototyp, interner Einstieg, Adapter für den heutigen Funktionsumfang | Heutiger Funktionsumfang ist über den neuen Kern abgedeckt |
+| M2 | Sollwertfälle einschließlich axialer Nullausgabe und starrer Lagerkoinzidenz, Architekturtests, Mutationslauf; alter FE-Solver als Vergleich auf V01–V15 und den CAD-Fällen | Abnahme grün auf macOS und Windows |
 | M3 | `EulerBernoulliBeamSolver.Solve` auf den neuen Kern; `BeamSolution`-Fassade; `SupportSpanSolver`, `SolverLoads`, `ReducedSystemSolver`, `DofMap`, `BeamAssembly`, `EulerBernoulliElement` verlassen den Produktpfad | ein Produktionssolver |
 | M4 | [KONZEPT.md](KONZEPT.md), [SOLVER.md](SOLVER.md), [VALIDATION.md](VALIDATION.md), CI-Solver-Hash anpassen | Voraussetzungen für `main` erfüllt |
-| M5 | Feature-Tracks nacheinander (Koinzidenzregeln, Core-Typ, Adapter, Freigabe) | je Track |
+| M5 | Feature-Tracks nacheinander (neue Koinzidenzregeln, Core-Typ, Adapter, Freigabe) | je Track |
+
+**Migrationsabnahme für starre Lager an gleicher Position.** Die bestehenden
+Produkttests definieren die Referenzfälle für Abschnitt 4.4.
+
+- `BeamModelTests.IdenticalSupportsAtTheSamePositionAreReported` prüft
+  `DuplicateSupport`. `BeamModelTests.DifferentSupportTypesAtTheSamePositionAreNotIdentical`
+  prüft die Zulässigkeit unterschiedlicher Lagertypen.
+- `SolverStructureTests.CoincidentDifferentSupportsMergeRestraintsWithoutDuplicatingNodes`
+  prüft den gemeinsamen Knoten und die Vereinigungsmenge der Sperren.
+  `Fixed + Pinned + Roller` liefert dieselben Knotenergebnisse einschließlich
+  der gemeinsamen Reaktionen wie `Fixed` allein.
+- `SolverFailureTests.CoincidentPinnedAndRollerDoNotRestrainRigidRotation`
+  prüft `UnstableModel` für die verbleibende Starrkörperrotation.
 
 **Alter FE-Solver:** Er wird als eingefrorene Kopie in ein Test- oder Validierungsprojekt verschoben
 und gehört nicht mehr zum Produkt. Er ist ein unabhängiges, *nicht exaktes* Verfahren für den
@@ -1054,7 +1105,7 @@ nach M3 entfernt; seine Testfälle bleiben als Sollwertfälle erhalten.
 | O3 | Pessimistische Schranken können korrekte Fälle ablehnen | Akzeptiertes Risiko |
 | O4 | Belasteter Axialvertrag, zweite unabhängige Referenz und Axialfedergesetz. Die heutige axiale Nullausgabe gehört zur Migration | DEV-12 |
 | O5 | Variante B. PolynomialRoots bleibt unabhängig validiert, exakte Yun/Sturm-Isolation bleibt Oracle [GV 11] | Geschlossen |
-| O6 | Fachliche Koinzidenzsemantik je Track. Das generische Teilpunktmodell legt die Architektur fest | Feature-Track |
+| O6 | Fachliche Semantik neuer Feature-Koinzidenzen je Track. Starre Lager am selben Ort gehören zum Migrationsvertrag (4.4) | Feature-Track |
 | O7 | N-Extrema in der Schnittstelle (DEV-12) | Track |
 | O8 | Eingabesensitivität anzeigen ja/nein | Produkt |
 | O9 | Modellgrößen- und Latenzgrenze nach C#-Messung festlegen. [GV 12] liefert eine Größenordnungsschätzung | Produkt nach C#-Messung |
@@ -1075,10 +1126,10 @@ nach M3 entfernt; seine Testfälle bleiben als Sollwertfälle erhalten.
 | Anforderung | Erfüllung im Entwurf | Nachweis / offen |
 |---|---|---|
 | A1 Stationen und Unbekannte | E2, E3, Invariante 1, 2 | Phantomstationstest; gezielte Matrix |
-| A2 Positionen | Invariante 3, 4; E5 Teilpunkte mit Koinzidenztabelle | Verletzungsanalyse 6.4; Semantiken O6 |
+| A2 Positionen | Invariante 3, 4; E5 Teilpunkte mit Koinzidenztabelle | Verletzungsanalyse 6.4; starre Lagerkoinzidenz 4.4 und 12; neue Kombinationen O6 |
 | A3 Modell und Numerik | Invariante 5; nur exakte Skalierungen | Ablation |
 | A4 Gemeinsame Mechanik | Eine Formulierung, Tabelle 4.2, Axial 4.3, Erweiterungen 4.5 | Axialreferenz O4 |
-| A5 Stabilität, Kondition, Fehler | 6.1–6.6; drei Fälle getrennt; vollständige Code-Zuordnung mit strukturierter Ursache (6.6, `NotVerified` neu); Schranke unter dem Gleitkomma-Vertrag und Verifikation statt Pauschalgrenze; ω, Kondition und Sensitivität nur Diagnose; Selbsttests → `NumericalFailure`; Bereichs- und Subnormalvertrag unabhängig von FTZ/DAZ, auch für die SI-Rückrechnung; Literaturabgleich jeder Regel ([Audit]) | Ablehnungen 7.6; O2 (C#-Konformität), O3, O17, O19 |
+| A5 Stabilität, Kondition, Fehler | 6.1–6.6; vier Fehlercodes getrennt; vollständige Code-Zuordnung mit strukturierter Ursache (6.6, `NotVerified` neu); Schranke unter dem Gleitkomma-Vertrag und Verifikation statt Pauschalgrenze; ω, Kondition und Sensitivität nur Diagnose; Selbsttests → `NumericalFailure`; Bereichs- und Subnormalvertrag unabhängig von FTZ/DAZ, auch für die SI-Rückrechnung; Literaturabgleich jeder Regel ([Audit]) | Ablehnungen 7.6; O2 (C#-Konformität), O3, O17, O19 |
 | A6 Felder und Extremwerte | Abschnitt 8, beide θ am Gelenk, Sprungarten; Extremwerte gegen exakte Wurzelisolation geprüft | Vollständigkeit validiert, nicht zertifiziert (O5, Variante B beschlossen); N-Extrema O7 |
 | A7 Validierung | Abschnitt 11, zwei exakte Referenzen, Mutationen, exakte Oracles für Stück-Gate und Extremwerte | Belastetes Axialmodell O4 |
 | A8 Numerischer Vertrag | Abschnitt 7 und Gleitkomma-Vertrag: Anregungsskala und Nullfall, Bereichsregeln einschließlich SI-Rückskalierung, Gate über den ganzen Balken mit Majorante und geschlossener Untergrenze (unabhängig gegen exakte Bernstein-Einschließung geprüft), s = 1 auch nahe τ belegt. `VerifiedOutputBound` gilt auch am ausgegebenen Extremwertkandidaten. Positionsfehler und Vollständigkeit werden getrennt validiert (7.3). Zur Migration gehört die axiale Nullsemantik (4.3). | O1 und O5 geschlossen, C#-Abnahme O2 |
@@ -1090,21 +1141,51 @@ nach M3 entfernt; seine Testfälle bleiben als Sollwertfälle erhalten.
 | DEV-6 Linearlasten | Lastintegrale `Difference`/`Ramp` mit globalen Abständen; Querkraftextremum im Feld | Extrema O5; ein oder zwei Lasttypen ist Core-Frage |
 | DEV-12 Axial/schräg | Entkoppeltes (u, N)-System mit eigenem Qualitätsnachweis und Gate (4.3); Zerlegung im Adapter außerhalb der Vertragsgrenze | Axialreferenz O4; N-Extrema O7 |
 
-## 15. Closure und Freeze-Empfehlung
+## 15. Closure und eingefrorener Stand
 
-C1–C13 sind für den Architekturentwurf bestanden. Die Abschlussprüfung
-umfasst die Primitives, die Beweiskette A–F und die heutige axiale
-Nullsemantik. Die Nachweise stehen in **[state-fpc-summary]**,
-**[state-fpc-boundary]**, **[state-fpc-oracles]** und **[state-fpc-axial-baseline]**.
+Die [Closure-Kriterien C1–C13](#closure-kriterien-c1c13) sind für den
+Architekturentwurf erfüllt. Ebene A ist für die C#-Implementierungsplanung
+des heutigen öffentlichen Funktionsumfangs einschließlich starrer
+Lagerkoinzidenz und axialer Nullsemantik eingefroren. Die C#-Umsetzung und
+ihre fachliche und numerische Abnahme je unterstützter Plattform stehen aus.
+Der belastete Axialvertrag und neue Feature-Koinzidenzen bleiben in ihren
+Feature-Tracks.
 
-Empfehlung: Die Architektur für die Migration des heutigen öffentlichen
-Funktionsumfangs einschließlich der axialen Nullsemantik einfrieren
-und die schrittweise C#-Implementierungsplanung beginnen. Die spätere
-Implementierung besteht eine eigene fachliche und numerische Abnahme je
-unterstützter Plattform. Der belastete Axialvertrag und die fachlichen
-Koinzidenzen bleiben in ihren Feature-Tracks.
+### Closure-Kriterien C1–C13
 
-Eine Wiedereröffnung setzt mindestens eines dieser Ereignisse voraus:
+Der [Gleitkomma-Vertrag][closure-gv] definiert die Beweiskette A–F. Das
+[Closure-Protokoll][closure-summary] indiziert die Formel-, Ketten- und
+Regressionsläufe. Die [Boundary-Suite][closure-boundary] prüft Grenzfälle
+und Mutanten. Die [Oracle-Gegenproben][closure-oracles] vergleichen
+unabhängige exakte Referenzen und die Wurzelisolation. Die
+[axiale Produktbaseline][closure-axial] belegt die Nullsemantik am
+bestehenden öffentlichen Pfad.
+
+| Kriterium | Maßstab | Nachweis |
+|---|---|---|
+| C1 | Keine bestätigte Schrankenverletzung in der Kette A–F. | [Closure-Protokoll][closure-summary], [Oracle-Gegenproben][closure-oracles] |
+| C2 | Kein gelieferter Fall hat einen tatsächlichen normierten Fehler über dem mathematischen τ = 10⁻⁸. | Kettenläufe einschließlich Fällen nahe τ und Regression im [Closure-Protokoll][closure-summary] |
+| C3 | Sichere Anregungsnorm. Exakter Nullanregungstest getrennt von `F_exc`. Kein stiller Unter- oder Überlauf. | [GV 5, 7][closure-gv], `excitation` und `full_cases` in der [Boundary-Suite][closure-boundary] |
+| C4 | Exponentenbasierte Zweierpotenzskalierung mit expliziten Bereichsregeln. | [GV 3, 5, 7][closure-gv], `exponent` und `functional_scaling` in der [Boundary-Suite][closure-boundary] |
+| C5 | Gerichtete Schranken sind auch an ±λ konservativ. Gespeicherte Schranken sind frei von Subnormalen. | [GV 3][closure-gv], `direction` in der [Boundary-Suite][closure-boundary] |
+| C6 | `GammaUpper` ist konservativ nach außen gerundet und prüft seinen Gültigkeitsbereich. | [GV 3][closure-gv], `gamma` in der [Boundary-Suite][closure-boundary] |
+| C7 | Der Residualpfad ist hergeleitet und für graduellen Unterlauf, FTZ, DAZ und deren Kombination geprüft. | [GV 6, 9][closure-gv], `residual` in der [Boundary-Suite][closure-boundary] und Unterlaufläufe im [Closure-Protokoll][closure-summary] |
+| C8 | `RawBound`, `VerifiedStateBound` und `VerifiedOutputBound` sind eindeutig getrennt. | [GV 1, 4, 6][closure-gv], getrennte Prüfungen in den Stufen B–F im [Closure-Protokoll][closure-summary] |
+| C9 | Numerische Konstanten sind als Korrektheitsgrenze, Range-Policy oder Strategie klassifiziert. | [GV 8][closure-gv] |
+| C10 | Die deterministische Boundary-Suite erkennt die geforderten Primitive-Mutanten (`outward`, `lambda`, `exponent`, `contribution`, `gamma`, `unloaded`) und Mechanikmutanten (B3, L1, L2). | [Boundary-Suite][closure-boundary] |
+| C11 | Architektur, Gleitkomma-Vertrag, ausführbare Referenz und Closure-Evidenz sind widerspruchsfrei. | Abgleich mit [GV 4–9][closure-gv], [`state/fpc.py`](../validation/investigations/solver-rework/state/fpc.py), [Closure-Protokoll][closure-summary] und [Oracle-Gegenproben][closure-oracles] |
+| C12 | Die Plattformzusage verlangt fachliche und numerische Konformität. Plattformübergreifende Bitvergleiche dienen der Diagnose. | [GV 2, 13][closure-gv], C#-Abnahme in Abschnitt 11 |
+| C13 | Für den heutigen Migrationsumfang ist kein Architektur- oder Floating-Point-Blocker bekannt. Offen bleiben die ausdrücklich verschobenen Feature-Tracks, Produktentscheidungen und C#-Abnahmen. | Migrationsumfang in Abschnitten 4.3, 4.4 und 12, [axiale Produktbaseline][closure-axial], offene Punkte in Abschnitt 13 |
+
+[closure-gv]: ../validation/investigations/solver-rework/FLOATING_POINT_CONTRACT.md
+[closure-summary]: ../validation/investigations/solver-rework/results/state-fpc-summary.log
+[closure-boundary]: ../validation/investigations/solver-rework/results/state-fpc-boundary.log
+[closure-oracles]: ../validation/investigations/solver-rework/results/state-fpc-oracles.log
+[closure-axial]: ../validation/investigations/solver-rework/results/state-fpc-axial-baseline.log
+
+### Wiedereröffnung
+
+Die folgenden Ereignisse können den Entwurf wieder öffnen.
 
 1. Ein konkreter gelieferter Wert verletzt seine zugesagte Schranke oder τ.
 2. Eine mathematische Voraussetzung der Beweiskette erweist sich als falsch.

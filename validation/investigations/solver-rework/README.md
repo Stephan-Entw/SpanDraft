@@ -1,10 +1,25 @@
 # Untersuchung Solver-Umbau (nur Entwicklung)
 
-Dieser Ordner sichert die Prüfwerkzeuge, mit denen der Prototyp des neuen Solvers
-untersucht wurde. Er gehört nicht zur Abnahme, nicht zur CI und nicht zum Produkt.
-Den Plan für den Umbau beschreibt [`docs/SOLVER_UMBAU.md`](../../../docs/SOLVER_UMBAU.md).
+Dieser Ordner enthält Entwicklungswerkzeuge und dauerhafte Evidenz für den
+Architektur- und Gleitkomma-Closure. Er liegt außerhalb des Produktcodes
+und der normalen Produkt-CI. Den Umbauplan beschreibt [`docs/SOLVER_UMBAU.md`](../../../docs/SOLVER_UMBAU.md).
 
-Alle Werte wurden mit dem Prototyp auf diesem Branch erzeugt, nur auf macOS (arm64).
+- **Historische Prototyp- und Variantenuntersuchungen.** Die folgenden
+  Abschnitte halten Werkzeuge, Befehle und damalige Ergebnisse fest.
+  Die Messungen des frühen C#-Prototyps wurden auf macOS (arm64) erzeugt.
+- **Architektur- und Literatur-Evidenz.** [`LITERATURE_AUDIT.md`](LITERATURE_AUDIT.md)
+  hält Quellen, Herkunft und Begründung der Entscheidungen dauerhaft als
+  interne Auditgrundlage fest. Die [Solver-Architektur](../../../docs/SOLVER_ARCHITEKTUR.md)
+  definiert das Zielmodell.
+- **Numerischer Vertrag und Closure-Nachweise.** [`FLOATING_POINT_CONTRACT.md`](FLOATING_POINT_CONTRACT.md)
+  ist der normative numerische Vertrag des Entwurfs. `state/fpc.py` ist seine
+  ausführbare Python-Referenz. Die
+  [Closure-Kriterien C1–C13](../../../docs/SOLVER_ARCHITEKTUR.md#closure-kriterien-c1c13)
+  verknüpfen den Vertrag mit den abgelegten Nachweisen.
+- **C#-Produkt- und Plattformabnahme.** Die Abnahme der Zielarchitektur
+  folgt mit ihrer Implementierung. Historische Prototypmessungen, die
+  Python-Referenz und die axiale Produktbaseline für den bestehenden Pfad
+  belegen keine Plattformkonformität der späteren C#-Implementierung.
 
 ## Voraussetzungen
 
@@ -72,7 +87,7 @@ Die Protokolle in `results/` stammen aus den Läufen der Untersuchung:
 | `compare-rand.log` | Lasten ohne Knoten, alter gegen neuen Solver. |
 | `proto.log`, `fe.log`, `spring.log`, `branch.log` | Skalierte Lagerbedingung und Federn als Prototyp. |
 
-Bekannte Grenzen: PyCBA ist selbst nicht exakt (numerische Integration bei Krümmung und Teillasten,
+Bekannte Grenzen der Prototypuntersuchung: PyCBA ist selbst nicht exakt (numerische Integration bei Krümmung und Teillasten,
 Stellenverlust bei sehr weichen oder sehr steifen Federn). Ablehnungen des C#-Solvers treten bei
 fast beweglichen Systemen auf, in seltenen Fällen auch bei lösbaren Modellen mit sehr unterschiedlich
 steifen Federn im Nanometerabstand (5 von 6.000 beziehungsweise 13 von 4.000 Zufallsmodellen).
@@ -88,7 +103,7 @@ gebraucht (kein numpy, kein .NET). Die Bytecode-Caches unterdrückt `PYTHONDONTW
 
 | Datei | Zweck |
 |---|---|
-| `state/state.py` | Formulierung, Entdimensionierung mit Zweierpotenzen, Ruiz-Äquilibrierung, LU, adaptive Nachiteration (Residual double, kompensiert oder exakt), komponentenweiser Fehlerindikator über adjungierte Lösungen; adjungierte Nachiteration `none`/`one` (Vorgabe, damit ältere Protokolle reproduzierbar bleiben)/`adaptive`/`beta` (Entwurfsregel); Ablationsvarianten |
+| `state/state.py` | Formulierung, Entdimensionierung mit Zweierpotenzen, Ruiz-Äquilibrierung, LU, adaptive Nachiteration (Residual double, kompensiert oder exakt), komponentenweiser Fehlerindikator über adjungierte Lösungen; adjungierte Nachiteration `none`/`one` (Vorgabe, damit ältere Protokolle reproduzierbar bleiben)/`adaptive`/`beta` (damalige Entwurfsregel); Ablationsvarianten |
 | `state/kinematics.py` | Exakte Mechanismusprüfung auf dem kinematischen Modell der Teilkörper (Bareiss) |
 | `state/gen.py` | Generatoren aus `s_fuzz.py`/`f_fuzz.py` ohne numpy; gleiche Zufallsfolgen |
 | `state/metrics.py` | Fehlermaße (globale Feldskala, gemischtes Maß), Indikator-Verletzungen |
@@ -96,7 +111,7 @@ gebraucht (kein numpy, kein .NET). Die Bytecode-Caches unterdrückt `PYTHONDONTW
 | `state/rand.py` | Zufallsmodelle je Abstandsklasse, Ablehnungs- und Verletzungsaudit |
 | `state/sens.py` | Eingabesensitivität (1-ulp-Probe), nur Diagnose |
 | `state/ablation.py` | Notwendigkeit von Elimination, Nachiteration, Skalierung; Residualvarianten |
-| `state/invariance.py` | Zweierpotenz-Skalierung (bitgleich) und Einheitenwechsel |
+| `state/invariance.py` | Historischer Vergleich der Matrixinvariante bei zusätzlichen Lasten, Zweierpotenz-Skalierung und Einheitenwechsel |
 | `state/violations.py` | Zerlegung einer Indikator-Verletzung in Daten-, Lösungs- und Auswertungsanteil |
 | `state/coverage.py` | Dichte Auswertung je Stück: Fehler und β über x, Monotonie von β, Stück-Gate |
 | `state/acceptance.py`, `state/acceptance_summary.py` | Adjungierte Nachiteration (ohne/ein Schritt/adaptiv), Akzeptanzfaktor s, β/Fehler je Größe und Klasse |
@@ -214,8 +229,8 @@ Bruchrechnungsreferenz in Python zu langsam, dort messen `stressgrowth` nur Stru
 
 # Closure des Gleitkomma-Vertrags (O2)
 
-Vertrag und Beweiskette: [`FLOATING_POINT_CONTRACT.md`](FLOATING_POINT_CONTRACT.md). Reines Python
-(ohne numpy):
+[`FLOATING_POINT_CONTRACT.md`](FLOATING_POINT_CONTRACT.md) definiert Vertrag
+und Beweiskette. Die folgenden Läufe verwenden reines Python ohne numpy.
 
 ```sh
 export PYTHONDONTWRITEBYTECODE=1

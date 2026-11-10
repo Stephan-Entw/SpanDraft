@@ -1,9 +1,10 @@
 # SpanDraft – Solver-Umbau
 
-Stand: 9. November 2026, fachlich freigegeben als Grundlage für den
-Architekturentwurf der Ebene A. Maßgebliches Planungsdokument für den Branch
-`features/solver-umbau`. Der Branch bleibt von `main` und von der Webseite
-getrennt, bis die Übernahme ausdrücklich entschieden ist.
+Stand: 10. November 2026. Ebene A ist nach dem Closure fachlich für die
+C#-Implementierungsplanung eingefroren. Die C#-Produktimplementierung der
+Zielarchitektur und ihre Plattformabnahme stehen aus. Dieses Dokument
+beschreibt den Umbau auf `features/solver-umbau`. Der Branch bleibt bis zur
+ausdrücklichen Übernahmeentscheidung von `main` und der Webseite getrennt.
 
 Dieses Dokument legt fachliche Anforderungen, Architekturgrenzen und Entscheidungen
 fest. Es legt bewusst keine Klassenstrukturen oder Core-Typen fest.
@@ -73,7 +74,7 @@ Die Werte sind Beobachtungen, keine Zusage (siehe A8).
 
 - **Keine Mindestdistanz:** Es gibt kein Snapping und kein automatisches Zusammenführen verschiedener Koordinaten.
 - **Gleich oder verschieden:** Zwei Koordinaten, die in der internen Koordinatendarstellung des Fachmodells numerisch verschieden sind, bleiben zwei verschiedene physikalische Positionen. Der Solver rundet, snappt oder vereinigt sie nicht zusätzlich. Gleich ist eine Position nur bei exakt gleicher interner Zahl. Was beim Einlesen auf dieselbe interne Zahl fällt, kann der Solver nicht mehr unterscheiden.
-- **Gleiche Position, verschiedene Objekte:** Welche Kombinationen an exakt derselben Position zulässig sind und was sie bedeuten, legt jeder Feature-Track fachlich fest (siehe B). Nicht festgelegte Kombinationen werden als nicht eindeutig definiert abgelehnt und nicht implizit interpretiert.
+- **Gleiche Position, verschiedene Objekte:** Die Migration erhält die bestehenden Koinzidenzen einschließlich unterschiedlicher starrer Lagertypen am selben Ort (A10). Die Feature-Tracks legen die Zulässigkeit und Semantik neuer Kombinationen fest (B, O6). Eine fachlich nicht definierte Kombination ergibt `InvalidModel`.
 
 ### A3 Mechanisches Modell und Numerik
 
@@ -101,17 +102,24 @@ durch eine lokale Zustandsformulierung, siehe [SOLVER_ARCHITEKTUR.md](SOLVER_ARC
 
 ### A5 Stabilität, Kondition und Fehler
 
-Drei Fälle werden getrennt:
+Die [Prüfreihenfolge](SOLVER_ARCHITEKTUR.md#61-prüfreihenfolge) und die
+[Zuordnung der Ursachen](SOLVER_ARCHITEKTUR.md#66-fehlercodes) legen die
+Ablehnung fest. Der [Gleitkomma-Vertrag](../validation/investigations/solver-rework/FLOATING_POINT_CONTRACT.md#7-bereiche-und-kontinuierliches-gate)
+definiert die numerischen Bereichsregeln, die Verifikation und das Gate.
 
-| Fall | Erkennung | Folge |
-|---|---|---|
-| **Mechanismus** | Exakt, ohne Toleranz | Ablehnung |
-| **Numerisch nicht sicher lösbar** | Aus der tatsächlichen numerischen Qualität (z. B. Kondition, Rückwärtsfehler, Fehlerschätzung), nicht aus geometrischer Nähe | Ablehnung, kein Ergebnis |
-| **Unzulässige oder nicht definierte Eingabe** | Bei der Eingabeprüfung | Ablehnung |
+| Code | Ablehnungsgrund |
+|---|---|
+| `InvalidModel` | Die Eingabe verletzt den fachlichen Definitionsbereich. |
+| `UnstableModel` | Die exakte kinematische Rangprüfung erkennt einen Mechanismus. |
+| `IllConditionedSystem` | Das exakt stabile, belastete Modell ist numerisch nicht sicher lösbar. Ursachen sind `ZeroPivot`, fehlende Verifikation (`NotVerified`) oder ein gescheiterter gerichteter SI-Schwellenvergleich (`Gate`). |
+| `NumericalFailure` | Eine Bereichsregel ist verletzt (`NumericalRange`), Lösung, Schranke oder Gate sind nicht endlich (`NonFinite`) oder ein interner Selbsttest scheitert (`InternalInconsistency`). |
 
-- **Meldungen** nennen die Ursache so, dass die Oberfläche später eine verständliche Erklärung geben kann. Fehlercodes werden dafür einheitlich festgelegt.
-- **Grundsatz:** Kein stilles Ergebnis außerhalb des numerischen Vertrags (A8).
-- **Offen:** Die heutige Konditionsgrenze lehnt einzelne lösbare Modelle ab. Das Kriterium soll so verbessert werden, dass es weniger lösbare Modelle ablehnt und trotzdem kein falsches Ergebnis durchlässt.
+Für die Annahme gelten die konkreten Prüfungen der Architektur. Es gibt
+keine pauschale geometrische oder Konditionsgrenze. Kondition,
+Rückwärtsfehler und Eingabesensitivität dienen ausschließlich der Diagnose.
+Jede Ablehnung erhält den vorgesehenen Code und, wo definiert, die
+strukturierte Ursache. Außerhalb des numerischen Vertrags wird kein
+Ergebnis ausgegeben (A8).
 
 ### A6 Felder und Extremwerte
 
@@ -132,7 +140,7 @@ Bausteine:
 Überführung in die dauerhafte Validierung:
 
 - **Sollwerte statt Skripte:** Geeignete Fälle werden mit exakt berechneten Sollwerten als eingecheckte Abnahmefälle übernommen. Normale CI und Abnahme laufen weiterhin ohne Python, wie heute in `validation/README.md` festgelegt.
-- **Geprüfte Größen:** Einzelne Reaktionen, V, M, w und θ an Stationen und im Feld. Das gilt ausdrücklich bei sehr nahen Lagern, Federn und Lasten und geht über globale Gleichgewichtsprüfungen hinaus.
+- **Geprüfte Größen:** Reaktionen je Station und Richtung im heutigen Umfang sowie V, M, w und θ an Stationen und im Feld. Das gilt ausdrücklich bei sehr nahen Lagern, Federn und Lasten und geht über globale Gleichgewichtsprüfungen hinaus.
 - **Untersuchungswerkzeuge** bleiben Entwicklungswerkzeuge für neue Grenzfälle und Sollwerte.
 
 ### A8 Numerischer Vertrag
@@ -155,6 +163,7 @@ Bezugsskala ist. Die C#-Abnahme prüft dies auf jeder unterstützten Plattform.
 - **Öffentlicher Vertrag:** Er bleibt für den heutigen Funktionsumfang erhalten, also Knotenergebnisse, `EvaluateAt` und Extremwerte, soweit A6 keine Erweiterung verlangt.
 - **Kein Parallelbetrieb:** Nach erfolgreicher Migration bleibt der alte FE-Solver nicht als zweiter Produktionssolver bestehen.
 - **Als Werkzeug:** Der eingefrorene FE-Pfad bleibt ein unabhängiges Vergleichswerkzeug außerhalb des Produktpfads.
+- **Starre Lager an gleicher Position:** Die Migration erhält die Vereinigungsmenge der Sperren, die gemeinsame Reaktion je Station und Richtung und die bestehende Duplikatprüfung. Die Semantik und die Referenzfälle stehen in [Architektur §4.4](SOLVER_ARCHITEKTUR.md#starre-lager-im-heutigen-migrationsumfang) und [§12](SOLVER_ARCHITEKTUR.md#12-migration-a10).
 - **Axiale Nullsemantik:** Ohne äußere Axiallasten bleiben u, N und vorhandene axiale Reaktionen exakt null. Reaktionen an freien Freiheitsgraden bleiben abwesend.
 - **Nach der Migration:** Solver-Hash in der CI, `docs/KONZEPT.md`, `docs/SOLVER.md`, `docs/VALIDATION.md` und die Abnahme werden angepasst. `docs/KONZEPT.md` beschreibt heute noch das direkte Steifigkeitsverfahren. Die technische Dokumentation der Webseite folgt nach der Übernahme in `main`.
 
@@ -247,19 +256,19 @@ Bedienung, Persistenz und Report werden in den Feature-Issues separat geplant.
 
 ## Offene Punkte
 
-1. **Kombinationen an gleicher Position:** Semantik je Feature-Track (A2, B).
+1. **Neue Feature-Koinzidenzen:** Semantik je Feature-Track (A2, B, O6).
 2. **Plattformen:** Unabhängige fachliche und numerische Abnahme je unterstützter Plattform.
 3. **Produktentscheidungen und C#-Abnahme:** Siehe [Architekturentwurf](SOLVER_ARCHITEKTUR.md).
 
 ## Voraussetzung für die Übernahme in `main`
 
-Der Architekturentwurf darf begonnen und implementiert werden, bevor alle offenen
-Punkte abschließend geklärt sind. Vor der Übernahme in `main` müssen jedoch
-mindestens erfüllt sein:
+Die C#-Implementierung des heutigen Umfangs kann auf der eingefrorenen
+Architektur geplant werden. Vor der Übernahme in `main` müssen mindestens
+folgende Bedingungen erfüllt sein:
 
-- **Festgelegt:** Der numerische Vertrag (A8), das Ablehnungskriterium (A5) und die für den aktuellen Produktumfang relevanten Semantiken.
+- **Vertrag erfüllt:** Die Implementierung erfüllt den numerischen Vertrag (A8), die Ablehnungskriterien (A5) und die Semantik des heutigen Produktumfangs (A10).
 - **Validierung:** Die dauerhafte Validierung ist erfolgreich, einschließlich Windows-CI.
-- **Produktionspfad:** Der bisherige Pfad ist eindeutig ersetzt.
+- **Produktionspfad:** Der neue Kern ersetzt den FE-Pfad auf `main` und löst den Machbarkeitsprototyp des Umbau-Branches ab.
 - **Dokumentation:** `docs/KONZEPT.md`, `docs/SOLVER.md`, `docs/VALIDATION.md` und der CI-Hash entsprechen dem neuen Stand.
 
 ## Folgen außerhalb des Solvers
@@ -269,6 +278,6 @@ mindestens erfüllt sein:
 
 ## Nächster Schritt
 
-Der Closure-Pass empfiehlt den Freeze für die Migration des heutigen Umfangs.
-Nächster Schritt ist der schrittweise C#-Implementierungsplan auf Grundlage der
-[Solver-Architektur](SOLVER_ARCHITEKTUR.md#15-closure-und-freeze-empfehlung).
+Nächster Schritt ist der schrittweise C#-Implementierungsplan auf Grundlage
+der eingefrorenen Solver-Architektur und der bestandenen
+[Closure-Kriterien C1–C13](SOLVER_ARCHITEKTUR.md#closure-kriterien-c1c13).

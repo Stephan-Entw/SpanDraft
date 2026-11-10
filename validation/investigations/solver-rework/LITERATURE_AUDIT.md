@@ -550,6 +550,7 @@ Die Aussagen bleiben in den Abschnitten 1 bis 3 als Historie stehen. Heute gilt 
 | O3 | Pessimistische Ablehnungen bleiben möglich. Akzeptiertes Risiko | Folge verifizierter Schranken. Zahlen zu Ablehnungen in der Architektur 7.6 |
 | O4 | Vollständiger belasteter Axialvertrag, zweite unabhängige Referenz und Axialfedergesetz sind Teil von DEV-12. Die heutige axiale Nullsemantik gehört zur Migration | **[state-fpc-axial-baseline]**; keine Literaturgrundlage nötig |
 | O5 | Geschlossen mit Variante B | Nr. 14 |
+| O6 | Fachliche Regeln für neue Feature-Koinzidenzen, etwa Gelenk/Lager, Feder/starres Lager und Abschnittswechsel/Halterung. Unterschiedliche starre Lagertypen am selben Ort gehören mit vereinigten Sperren und gemeinsamer Stationsreaktion zur Migration. | [Architektur §4.4](../../../docs/SOLVER_ARCHITEKTUR.md#44-gleiche-position-und-teilpunkte), [Migrationsabnahme §12](../../../docs/SOLVER_ARCHITEKTUR.md#12-migration-a10) |
 | O9 | Aufwandsschätzung. Modellgröße und Latenz nach C#-Messung | Nr. 17 |
 | O12, O19 | Fachliche Entscheidungen, Schranken, τ und Fehlerklassen gelten je Plattform. Primitives auf x64 und ARM64 prüfen | Nr. 16 |
 | O17 | Lokale Kopplung und polynomiale Übertragung. Neubewertung im betroffenen Track | Nr. 18 |
@@ -557,8 +558,10 @@ Die Aussagen bleiben in den Abschnitten 1 bis 3 als Historie stehen. Heute gilt 
 
 ### 4.5 Closure-Evidenz in Kürze
 
-Alle Befunde stammen aus der Python-Referenz gegen exakte Bruchrechnung. **[state-fpc-summary]**
-indiziert die Protokolle.
+Die folgenden numerischen Befunde stammen aus der Python-Referenz gegen
+exakte Bruchrechnung. **[state-fpc-summary]** indiziert die Protokolle.
+Die kanonischen [Closure-Kriterien C1–C13](../../../docs/SOLVER_ARCHITEKTUR.md#closure-kriterien-c1c13)
+verknüpfen sie mit den weiteren Nachweisen.
 
 - Stufe A: Primitives und lokale Formeln A1 bis A4 und A6 bis A9 ohne Verletzung in beiden Unterlaufmodi.
 - Konstruierte Fälle (15), nahe τ (75, davon 71 geliefert, größter Fehler 1,99·10⁻⁹ bei Gate 8,57·10⁻⁹),
@@ -612,9 +615,9 @@ Aussagen aus diesem Dokument, die ohne Einordnung missverstanden werden könnten
 2. **„Schranke“ gilt unter Voraussetzungen.** `VerifiedOutputBound` gilt für Modelle, die Eingabe-,
    Mechanismus- und Bereichsprüfung bestehen und verifiziert sind, unter den Plattformvoraussetzungen
    des Vertrags (Architektur 7.4). Es ist kein Fehlerbeweis für beliebige Eingaben.
-3. **Plattformkonformität ist noch nicht belegt.** Alle Evidenz stammt aus der Python-Referenz. Bis
-   zur C#-Abnahme (O2, O12, O19) darf nicht behauptet werden, der ausgelieferte Code habe diese
-   Eigenschaften.
+3. **Plattformkonformität ist noch nicht belegt.** Die Python-Referenz belegt
+   den numerischen Vertrag. Die C#-Abnahme der Zielarchitektur steht aus
+   (O2, O12, O19).
 4. **Zahlen aus den Abschnitten 1 bis 3 gehören zu Prototypen.** Modellzahlen (2.956, 2.811, 1.833),
    ρ ≤ 1,97 und das Verhältnis Gate/Fehler beziehen sich auf bestimmte Modellmengen und teils auf
    die Indikatoren der Runde 4. Sie belegen die Entwurfsentscheidung, sind aber keine Produktzusage
