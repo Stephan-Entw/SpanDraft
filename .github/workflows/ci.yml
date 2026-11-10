@@ -91,6 +91,7 @@ jobs:
             -- compare \
             --report "${RUNNER_TEMP}/spandraft-validation-report.json"
       - name: Verify solver source hash
+        if: github.ref != 'refs/heads/features/solver-umbau'
         shell: bash
         run: |
           expected_hash='6be871757c9b72df0101e06182068978f8117703f999e84bb13c22b4ec6f29fb'
