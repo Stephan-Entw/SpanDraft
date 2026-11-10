@@ -1,115 +1,203 @@
+deterministic boundary checks and mutation detection:
+  PASS direction
+  PASS exponent
+  PASS gamma
+  PASS products_and_gate
+  PASS excitation
+  PASS loads
+  PASS residual
+  PASS functional_scaling
+  PASS full_cases
+  MUTANT detected outward
+  MUTANT detected lambda
+  MUTANT detected exponent
+  MUTANT detected contribution
+  MUTANT detected gamma
+  MUTANT detected unloaded
+  MECHANICAL MUTANT detected B3
+  MECHANICAL MUTANT detected L1
+  MECHANICAL MUTANT detected L2
+
 stage A (single formulas against their bounds, exact reference):
-  A1  distance                             ftz      checks   20000 | error > bound    0 | largest error/bound 0.333 | range rule 0
-  A1  distance                             gradual  checks   20000 | error > bound    0 | largest error/bound 0.333 | range rule 0
-  A2  coefficients                         ftz      checks   67004 | error > bound    0 | largest error/bound 0.598 | range rule 3249
-  A2  coefficients                         gradual  checks   80000 | error > bound    0 | largest error/bound 0.617 | range rule 0
-  A3  point-load terms                     ftz      checks  116522 | error > bound    0 | largest error/bound 0.636 | range rule 3354
-  A3  point-load terms                     gradual  checks  116487 | error > bound    0 | largest error/bound 0.551 | range rule 3359
-  A4  load integrals (contract)            ftz      checks   15240 | error > bound    0 | largest error/bound 0.381 | range rule 0
-  A4  load integrals (contract)            gradual  checks   15240 | error > bound    0 | largest error/bound 0.381 | range rule 0
-  A5  load integrals (bound of state.py)   ftz      checks   13280 | error > bound  208 | largest error/bound 9.38e+13 | range rule 0
+  A1  distance                             ftz_daz  checks   20000 | error > bound    0 | largest error/bound 1 | range rule 0
+  A1  distance                             gradual  checks   20000 | error > bound    0 | largest error/bound 1 | range rule 0
+  A2  coefficients                         ftz_daz  checks   67004 | error > bound    0 | largest error/bound 1 | range rule 3249
+  A2  coefficients                         gradual  checks   66616 | error > bound    0 | largest error/bound 1 | range rule 3346
+  A3  point-load terms                     ftz_daz  checks  116522 | error > bound    0 | largest error/bound 0.989 | range rule 3354
+  A3  point-load terms                     gradual  checks  116487 | error > bound    0 | largest error/bound 1 | range rule 3359
+  A4  load integrals (contract)            ftz_daz  checks   15240 | error > bound    0 | largest error/bound 0.606 | range rule 0
+  A4  load integrals (contract)            gradual  checks   15240 | error > bound    0 | largest error/bound 0.606 | range rule 0
+  A5  load integrals (bound of state.py)   ftz_daz  checks   13280 | error > bound  208 | largest error/bound 9.38e+13 | range rule 0
   A5  load integrals (bound of state.py)   gradual  checks   13280 | error > bound  208 | largest error/bound 9.38e+13 | range rule 0
-  A6  residual                             ftz      checks   20000 | error > bound    0 | largest error/bound 0.5 | range rule 0
-  A6  residual                             gradual  checks   20000 | error > bound    0 | largest error/bound 0.63 | range rule 0
-  A7  up/down operations                   ftz      checks   60000 | error > bound    0 | largest error/bound 0 | range rule 0
+  A6  residual                             ftz_daz  checks   20000 | error > bound    0 | largest error/bound 1 | range rule 0
+  A6  residual                             gradual  checks   20000 | error > bound    0 | largest error/bound 1 | range rule 0
+  A7  up/down operations                   ftz_daz  checks   60000 | error > bound    0 | largest error/bound 0 | range rule 0
   A7  up/down operations                   gradual  checks   60000 | error > bound    0 | largest error/bound 0 | range rule 0
-  A8  evaluation (without propagation)     ftz      checks   11896 | error > bound    0 | largest error/bound 0.319 | range rule 0
-  A8  evaluation (without propagation)     gradual  checks   11896 | error > bound    0 | largest error/bound 0.319 | range rule 0
-  A9  SI back-scaling                      ftz      checks   20000 | error > bound    0 | largest error/bound 0.992 | range rule 0
+  A8  evaluation (without propagation)     ftz_daz  checks   11896 | error > bound    0 | largest error/bound 0.75 | range rule 0
+  A8  evaluation (without propagation)     gradual  checks   11896 | error > bound    0 | largest error/bound 0.75 | range rule 0
+  A9  SI back-scaling                      ftz_daz  checks   20000 | error > bound    0 | largest error/bound 0.992 | range rule 0
   A9  SI back-scaling                      gradual  checks   20000 | error > bound    0 | largest error/bound 0.964 | range rule 0
-constructed (ftz): runs 15 | delivered 15
+constructed (ftz_daz): runs 15 | delivered 15
     B |r*| > d                                       checked models  15, with violation 0
     C |I - R S*| > M                                 checked models  15, with violation 0
+    C Mv > mu v                                      checked models  15, with violation 0
     D |y^ - y*| > E (verified)                       checked models  15, with violation 0
     E/F SI value error > SI bound                    checked models  15, with violation 0
+    E extremum candidate error > SI bound            checked models  15, with violation 0
+    F field bound > tau times scale                  checked models  15, with violation 0
     exact system != transfer_ref at stations         checked models  15, with violation 0
-    worst ratio error/bound: residual 0.326, state 0.0559, reactions 0.0534, field 0.103
-    delivered 15: largest error in the contract measure 1.14e-15, error over gate 0, largest gate 1.11e-13
-    verification: mu < 1 with v = beta + delta D 15 of 15, after Neumann steps 15 of 15; largest final mu 1.75e-14
+    worst ratio error/bound: residual 0.449, state 0.0931, reactions 0.0913, field 0.179
+    delivered 15: largest error in the contract measure 1.15e-15, error over gate 0, largest gate 7.54e-14
+    verification: mu < 1 with v = RawBound + delta D 15 of 15, after Neumann steps 15 of 15; largest final mu 8.16e-15
 constructed (gradual): runs 15 | delivered 15
     B |r*| > d                                       checked models  15, with violation 0
     C |I - R S*| > M                                 checked models  15, with violation 0
+    C Mv > mu v                                      checked models  15, with violation 0
     D |y^ - y*| > E (verified)                       checked models  15, with violation 0
     E/F SI value error > SI bound                    checked models  15, with violation 0
+    E extremum candidate error > SI bound            checked models  15, with violation 0
+    F field bound > tau times scale                  checked models  15, with violation 0
     exact system != transfer_ref at stations         checked models  15, with violation 0
-    worst ratio error/bound: residual 0.326, state 0.0559, reactions 0.0534, field 0.103
-    delivered 15: largest error in the contract measure 1.14e-15, error over gate 0, largest gate 1.11e-13
-    verification: mu < 1 with v = beta + delta D 15 of 15, after Neumann steps 15 of 15; largest final mu 1.75e-14
+    worst ratio error/bound: residual 0.449, state 0.0931, reactions 0.0913, field 0.179
+    delivered 15: largest error in the contract measure 1.15e-15, error over gate 0, largest gate 7.54e-14
+    verification: mu < 1 with v = RawBound + delta D 15 of 15, after Neumann steps 15 of 15; largest final mu 8.16e-15
     round-4 bound (state.py + verification) at the evaluation points: models with error > bound 0 of 15, worst 0.0558
-neartau (gradual): runs 40 | NotReliablySolvable/Gate 10, delivered 30
-    B |r*| > d                                       checked models  40, with violation 0
-    C |I - R S*| > M                                 checked models  40, with violation 0
-    D |y^ - y*| > E (verified)                       checked models  40, with violation 0
-    E/F SI value error > SI bound                    checked models  40, with violation 0
-    exact system != transfer_ref at stations         checked models  40, with violation 0
-    worst ratio error/bound: residual 0.565, state 0.103, reactions 0.118, field 0.456
-    delivered 30: largest error in the contract measure 2.42e-10, error over gate 0, largest gate 3.56e-09
-    verification: mu < 1 with v = beta + delta D 40 of 40, after Neumann steps 40 of 40; largest final mu 8.85e-14
-    round-4 bound (state.py + verification) at the evaluation points: models with error > bound 0 of 40, worst 0.152
-perturbed LU 0.0001 (gradual): runs 89 | NotReliablySolvable/Gate 4, delivered 85
+neartau (gradual): runs 75 | NotReliablySolvable/Gate 4, delivered 71
+    B |r*| > d                                       checked models  75, with violation 0
+    C |I - R S*| > M                                 checked models  75, with violation 0
+    C Mv > mu v                                      checked models  75, with violation 0
+    D |y^ - y*| > E (verified)                       checked models  75, with violation 0
+    E/F SI value error > SI bound                    checked models  75, with violation 0
+    E extremum candidate error > SI bound            checked models  75, with violation 0
+    F field bound > tau times scale                  checked models  75, with violation 0
+    exact system != transfer_ref at stations         checked models  75, with violation 0
+    worst ratio error/bound: residual 0.812, state 0.456, reactions 0.572, field 0.912
+    delivered 71: largest error in the contract measure 1.99e-09, error over gate 0, largest gate 8.57e-09
+    verification: mu < 1 with v = RawBound + delta D 75 of 75, after Neumann steps 75 of 75; largest final mu 7.24e-13
+    round-4 bound (state.py + verification) at the evaluation points: models with error > bound 0 of 75, worst 0.152
+perturbed LU 0.0001 (gradual): runs 89 | NotReliablySolvable/Gate 2, delivered 87
     B |r*| > d                                       checked models  89, with violation 0
-    C |I - R S*| > M                                 checked models  77, with violation 0
+    C |I - R S*| > M                                 checked models  89, with violation 0
+    C Mv > mu v                                      checked models  89, with violation 0
     D |y^ - y*| > E (verified)                       checked models  89, with violation 0
     E/F SI value error > SI bound                    checked models  89, with violation 0
+    E extremum candidate error > SI bound            checked models  89, with violation 0
+    F field bound > tau times scale                  checked models  89, with violation 0
     exact system != transfer_ref at stations         checked models  89, with violation 0
     worst ratio error/bound: residual 1, state 1, reactions 1, field 1
-    delivered 85: largest error in the contract measure 7.35e-09, error over gate 0, largest gate 7.38e-09
+    delivered 87: largest error in the contract measure 7.35e-09, error over gate 0, largest gate 7.38e-09
     rejected with error > tau if it had been delivered: 2 [('gemischt|1e-11|-3', 'Gate'), ('gemischt|1e-11|12', 'Gate')]
-    verification: mu < 1 with v = beta + delta D 84 of 89, after Neumann steps 89 of 89; largest final mu 6.56e-01
+    verification: mu < 1 with v = RawBound + delta D 87 of 89, after Neumann steps 89 of 89; largest final mu 6.54e-01
 perturbed LU 0.1 (gradual): runs 89 | NotReliablySolvable/Gate 89
     B |r*| > d                                       checked models  89, with violation 0
-    C |I - R S*| > M                                 checked models  77, with violation 0
+    C |I - R S*| > M                                 checked models  89, with violation 0
+    C Mv > mu v                                      checked models  89, with violation 0
     D |y^ - y*| > E (verified)                       checked models  89, with violation 0
     E/F SI value error > SI bound                    checked models  89, with violation 0
+    E extremum candidate error > SI bound            checked models  89, with violation 0
+    F field bound > tau times scale                  checked models  89, with violation 0
     exact system != transfer_ref at stations         checked models  89, with violation 0
     worst ratio error/bound: residual 1, state 1, reactions 1, field 1
     rejected with error > tau if it had been delivered: 89 [('acht|1e-09|-3', 'Gate'), ('acht|1e-09|0', 'Gate'), ('acht|1e-09|12', 'Gate'), ('acht|1e-11|-3', 'Gate'), ('acht|1e-11|0', 'Gate'), ('acht|1e-11|12', 'Gate')]
-    verification: mu < 1 with v = beta + delta D 88 of 89, after Neumann steps 89 of 89; largest final mu 5.65e-01
+    verification: mu < 1 with v = RawBound + delta D 88 of 89, after Neumann steps 89 of 89; largest final mu 5.65e-01
+spring-extremes (gradual): runs 144 | delivered 144
+    B |r*| > d                                       checked models 144, with violation 0
+    C |I - R S*| > M                                 checked models 144, with violation 0
+    C Mv > mu v                                      checked models 144, with violation 0
+    D |y^ - y*| > E (verified)                       checked models 144, with violation 0
+    E/F SI value error > SI bound                    checked models 144, with violation 0
+    E extremum candidate error > SI bound            checked models 144, with violation 0
+    F field bound > tau times scale                  checked models 144, with violation 0
+    exact system != transfer_ref at stations         checked models 144, with violation 0
+    worst ratio error/bound: residual 0.47, state 0.139, reactions 0.124, field 0.172
+    delivered 144: largest error in the contract measure 1.61e-14, error over gate 0, largest gate 9.14e-13
+    verification: mu < 1 with v = RawBound + delta D 144 of 144, after Neumann steps 144 of 144; largest final mu 1.55e-14
+    round-4 bound (state.py + verification) at the evaluation points: models with error > bound 0 of 144, worst 0.0458
 targeted (gradual): runs 148 | delivered 148
     B |r*| > d                                       checked models 148, with violation 0
-    C |I - R S*| > M                                 checked models 124, with violation 0
+    C |I - R S*| > M                                 checked models 148, with violation 0
+    C Mv > mu v                                      checked models 148, with violation 0
     D |y^ - y*| > E (verified)                       checked models 148, with violation 0
     E/F SI value error > SI bound                    checked models 148, with violation 0
+    E extremum candidate error > SI bound            checked models 148, with violation 0
+    F field bound > tau times scale                  checked models 148, with violation 0
     exact system != transfer_ref at stations         checked models 148, with violation 0
-    worst ratio error/bound: residual 1, state 1, reactions 0.061, field 1
-    delivered 148: largest error in the contract measure 1.67e-14, error over gate 0, largest gate 7.49e-13
-    verification: mu < 1 with v = beta + delta D 148 of 148, after Neumann steps 148 of 148; largest final mu 5.27e-13
+    worst ratio error/bound: residual 1, state 1, reactions 0.116, field 1
+    delivered 148: largest error in the contract measure 1.75e-14, error over gate 0, largest gate 4.04e-13
+    verification: mu < 1 with v = RawBound + delta D 148 of 148, after Neumann steps 148 of 148; largest final mu 3.00e-13
     round-4 bound (state.py + verification) at the evaluation points: models with error > bound 0 of 148, worst 1
-underflow (ftz): runs 27 | NumericalFailure/NumericalRange 9, delivered 18
-    B |r*| > d                                       checked models  25, with violation 0
-    C |I - R S*| > M                                 checked models  25, with violation 0
-    D |y^ - y*| > E (verified)                       checked models  25, with violation 0
-    E/F SI value error > SI bound                    checked models  25, with violation 0
-    exact system != transfer_ref at stations         checked models  25, with violation 0
-    worst ratio error/bound: residual 1, state 1, reactions 0.0769, field 1
-    delivered 18: largest error in the contract measure 1.41e-16, error over gate 0, largest gate 1.01e-14
-    rejected with error > tau if it had been delivered: 4 [('U4|w~1e-310', 'NumericalRange'), ('U4|w~1e-315', 'NumericalRange'), ('U4|w~9.98013e-322', 'NumericalRange'), ('U4|w~9.99999e-319', 'NumericalRange')]
-    verification: mu < 1 with v = beta + delta D 18 of 18, after Neumann steps 18 of 18; largest final mu 1.17e-14
-underflow (gradual): runs 27 | NumericalFailure/NumericalRange 9, delivered 18
-    B |r*| > d                                       checked models  25, with violation 0
-    C |I - R S*| > M                                 checked models  25, with violation 0
-    D |y^ - y*| > E (verified)                       checked models  25, with violation 0
-    E/F SI value error > SI bound                    checked models  25, with violation 0
-    exact system != transfer_ref at stations         checked models  25, with violation 0
-    worst ratio error/bound: residual 1, state 1, reactions 0.0769, field 1
-    delivered 18: largest error in the contract measure 1.41e-16, error over gate 0, largest gate 1.01e-14
+underflow (daz): runs 27 | NumericalFailure/NumericalRange 10, delivered 17
+    B |r*| > d                                       checked models  24, with violation 0
+    C |I - R S*| > M                                 checked models  24, with violation 0
+    C Mv > mu v                                      checked models  24, with violation 0
+    D |y^ - y*| > E (verified)                       checked models  24, with violation 0
+    E/F SI value error > SI bound                    checked models  24, with violation 0
+    E extremum candidate error > SI bound            checked models  24, with violation 0
+    F field bound > tau times scale                  checked models  24, with violation 0
+    exact system != transfer_ref at stations         checked models  24, with violation 0
+    worst ratio error/bound: residual 1, state 1, reactions 0.308, field 1
+    delivered 17: largest error in the contract measure 1.41e-16, error over gate 0, largest gate 4.99e-15
     rejected with error > tau if it had been delivered: 2 [('U4|w~9.98013e-322', 'NumericalRange'), ('U4|w~9.99999e-319', 'NumericalRange')]
-    verification: mu < 1 with v = beta + delta D 18 of 18, after Neumann steps 18 of 18; largest final mu 1.17e-14
-    round-4 bound (state.py + verification) at the evaluation points: models with error > bound 4 of 25, worst inf
+    verification: mu < 1 with v = RawBound + delta D 17 of 17, after Neumann steps 17 of 17; largest final mu 4.79e-15
+underflow (ftz): runs 27 | NumericalFailure/NumericalRange 10, delivered 17
+    B |r*| > d                                       checked models  24, with violation 0
+    C |I - R S*| > M                                 checked models  24, with violation 0
+    C Mv > mu v                                      checked models  24, with violation 0
+    D |y^ - y*| > E (verified)                       checked models  24, with violation 0
+    E/F SI value error > SI bound                    checked models  24, with violation 0
+    E extremum candidate error > SI bound            checked models  24, with violation 0
+    F field bound > tau times scale                  checked models  24, with violation 0
+    exact system != transfer_ref at stations         checked models  24, with violation 0
+    worst ratio error/bound: residual 1, state 1, reactions 0.308, field 1
+    delivered 17: largest error in the contract measure 1.41e-16, error over gate 0, largest gate 4.99e-15
+    rejected with error > tau if it had been delivered: 4 [('U4|w~1e-310', 'NumericalRange'), ('U4|w~1e-315', 'NumericalRange'), ('U4|w~9.98013e-322', 'NumericalRange'), ('U4|w~9.99999e-319', 'NumericalRange')]
+    verification: mu < 1 with v = RawBound + delta D 17 of 17, after Neumann steps 17 of 17; largest final mu 4.79e-15
+underflow (ftz_daz): runs 27 | NumericalFailure/NumericalRange 10, delivered 17
+    B |r*| > d                                       checked models  24, with violation 0
+    C |I - R S*| > M                                 checked models  24, with violation 0
+    C Mv > mu v                                      checked models  24, with violation 0
+    D |y^ - y*| > E (verified)                       checked models  24, with violation 0
+    E/F SI value error > SI bound                    checked models  24, with violation 0
+    E extremum candidate error > SI bound            checked models  24, with violation 0
+    F field bound > tau times scale                  checked models  24, with violation 0
+    exact system != transfer_ref at stations         checked models  24, with violation 0
+    worst ratio error/bound: residual 1, state 1, reactions 0.308, field 1
+    delivered 17: largest error in the contract measure 1.41e-16, error over gate 0, largest gate 4.99e-15
+    rejected with error > tau if it had been delivered: 4 [('U4|w~1e-310', 'NumericalRange'), ('U4|w~1e-315', 'NumericalRange'), ('U4|w~9.98013e-322', 'NumericalRange'), ('U4|w~9.99999e-319', 'NumericalRange')]
+    verification: mu < 1 with v = RawBound + delta D 17 of 17, after Neumann steps 17 of 17; largest final mu 4.79e-15
+underflow (gradual): runs 27 | NumericalFailure/NumericalRange 10, delivered 17
+    B |r*| > d                                       checked models  24, with violation 0
+    C |I - R S*| > M                                 checked models  24, with violation 0
+    C Mv > mu v                                      checked models  24, with violation 0
+    D |y^ - y*| > E (verified)                       checked models  24, with violation 0
+    E/F SI value error > SI bound                    checked models  24, with violation 0
+    E extremum candidate error > SI bound            checked models  24, with violation 0
+    F field bound > tau times scale                  checked models  24, with violation 0
+    exact system != transfer_ref at stations         checked models  24, with violation 0
+    worst ratio error/bound: residual 1, state 1, reactions 0.308, field 1
+    delivered 17: largest error in the contract measure 1.41e-16, error over gate 0, largest gate 4.99e-15
+    rejected with error > tau if it had been delivered: 2 [('U4|w~9.98013e-322', 'NumericalRange'), ('U4|w~9.99999e-319', 'NumericalRange')]
+    verification: mu < 1 with v = RawBound + delta D 17 of 17, after Neumann steps 17 of 17; largest final mu 4.79e-15
+    round-4 bound (state.py + verification) at the evaluation points: models with error > bound 4 of 24, worst inf
 unverified (gradual): runs 2 | delivered 2
     B |r*| > d                                       checked models   2, with violation 0
     C |I - R S*| > M                                 checked models   2, with violation 0
+    C Mv > mu v                                      checked models   2, with violation 0
     D |y^ - y*| > E (verified)                       checked models   2, with violation 0
     E/F SI value error > SI bound                    checked models   2, with violation 0
+    E extremum candidate error > SI bound            checked models   2, with violation 0
+    F field bound > tau times scale                  checked models   2, with violation 0
     exact system != transfer_ref at stations         checked models   2, with violation 0
-    worst ratio error/bound: residual 0.0828, state 0.0828, reactions 0.0552, field 0.0828
-    delivered 2: largest error in the contract measure 1.95e-16, error over gate 0, largest gate 6.20e-15
-    verification: mu < 1 with v = beta + delta D 1 of 2, after Neumann steps 2 of 2; largest final mu 1.00e+00
+    worst ratio error/bound: residual 0.319, state 0.319, reactions 0.23, field 0.319
+    delivered 2: largest error in the contract measure 1.95e-16, error over gate 0, largest gate 2.38e-15
+    verification: mu < 1 with v = RawBound + delta D 1 of 2, after Neumann steps 2 of 2; largest final mu 1.00e+00
     round-4 bound (state.py + verification) at the evaluation points: models with error > bound 0 of 2, worst 0.0828
 exceptions: []
 regression on the round-4 random sets (every 5th model): exactly stable 2295 (of 3000)
    status: {'delivered': 2291, 'NotReliablySolvable/Gate': 2, 'NotReliablySolvable/ZeroPivot': 2}
    values or reactions with error > contract bound: 0
+   delivered values with bound > tau times scale: 0
+   measurement failures: 0
    delivered 2291: largest error in the contract measure 2.50e-13, error > tau 0
    rejected with error <= tau: 0 of 2 [('f|1e-11|165', 'Gate'), ('s|1e-11|460', 'Gate')]
    compared with round 4 (verification T): 1896 models, same decision 1894, different 2 [('s|1e-11|105', 'unverified', 'delivered', None), ('s|1e-11|800', 'unverified', 'delivered', None)]

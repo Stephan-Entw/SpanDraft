@@ -1,7 +1,8 @@
 # SpanDraft – Solver-Architektur (Ebene A)
 
-Stand: 10. November 2026. Architekturentwurf für den Branch `features/solver-umbau`, **nicht
-freigegeben**; die Freigabe erfolgt nach einem gesonderten Review. Die fachliche
+Stand: 10. November 2026. Architektur für den Branch `features/solver-umbau`.
+Der Closure-Pass empfiehlt den Freeze für die C#-Implementierungsplanung
+des heutigen Produktumfangs (Abschnitt 15). Die fachliche
 Grundlage ist [SOLVER_UMBAU.md](SOLVER_UMBAU.md); dieses Dokument legt fest, *wie* der Rechenkern die
 Anforderungen A1–A10 erfüllt. Es gibt keine Produktfunktion frei und legt keine Core-Typen der
 Feature-Tracks fest. Der heutige Produktionssolver ist in [SOLVER.md](SOLVER.md) beschrieben.
@@ -19,10 +20,9 @@ Randwertproblemen und linearer Algebra abgeglichen:
 Quellen mit DOI, ihre Voraussetzungen, die Übertragbarkeit und für jede Regel den Status
 (übernommen, angepasst, bewusste Abweichung, offen). Verweise darauf stehen als [Audit 3.x].
 
-Welche Gleitkommaoperationen der Kern für jede Formel ausführt, welche Rundungs- und Bereichsfehler
-daraus folgen und unter welchen Voraussetzungen β eine Schranke ist, legt der Gleitkomma-Vertrag
+Welche Primitives, Bereichsregeln und Fehlernachweise der Kern erfüllen muss, legt der Gleitkomma-Vertrag
 [`FLOATING_POINT_CONTRACT.md`](../validation/investigations/solver-rework/FLOATING_POINT_CONTRACT.md)
-fest (O2, Runde 5). Verweise darauf stehen als [GV x].
+fest (O2). Verweise darauf stehen als [GV x].
 
 ## 1. Entscheidungen im Überblick
 
@@ -37,12 +37,12 @@ fest (O2, Runde 5). Verweise darauf stehen als [GV x].
 | E7 | Abstände | Jeder Abstand wird direkt aus zwei gespeicherten globalen Koordinaten gebildet. Abschnittseigenschaften werden nur über die Stationsfolge zugeordnet. |
 | E8 | Skalierungskette | Entdimensionierung mit Zweierpotenzen (nur Geometrie und Steifigkeit) und Normierung der rechten Seite mit einer Zweierpotenz → Ruiz-Äquilibrierung mit Zweierpotenzen → LU mit Teilpivotisierung (Wahl begründet: Band (2,2), nur lokale Kopplung, gemessenes Pivotwachstum, 5.2) → adaptive Nachiteration mit Pflichtschritt → a-posteriori-Fehlerschranke mit Verifikation unter den Voraussetzungen des Gleitkomma-Vertrags. Householder-QR ist für diese graduierten Matrizen keine robustere Alternative. |
 | E9 | Mechanismus | Exakter Rang auf dem kinematischen Modell der Teilkörper (Bareiss), unabhängig von der Lösungsmatrix. |
-| E10 | Numerische Qualität | **Komponentenweise** A-posteriori-Fehlerschranke β aus adjungierten Lösungen mit Unterlaufterm (komponentenweise Form der `xGERFS`-Schranke). β ist eine obere Fehlerschranke unter zwei Voraussetzungen: Das Rundungsmodell des Gleitkomma-Vertrags gilt für die ausgeführte Operationsfolge (Aufbau, Lastintegrale, Lösung, Auswertung), und die adjungierten Lösungen sind verifiziert (Rump 2010, Satz 10.2; μ < 1, Gewichte mit Neumann-Schritten). Ist die Verifikation nicht erfolgreich, wird abgelehnt. Adjungierte Nachiteration: mindestens ein Schritt, weitere nur, solange sich β um mehr als 1/16 ändert, höchstens 5. Ein Stück-Gate mit geschlossener Untergrenze für \|M\| und \|V\| deckt den ganzen Balken ab, ohne Nullstellensuche. Geliefert wird bei Gate ≤ τ (Akzeptanzfaktor s = 1). Weder Konditions- noch Rückwärtsfehlergrenze; ω ist keine Entscheidungsgröße. |
+| E10 | Numerische Qualität | Adjungierte Rohschranken, verifizierte Zustandsschranken nach μ < 1, vollständige SI-Ausgabeschranken. Variante C deckt den ganzen Balken mit gerichteten Stückgrenzen ab. Akzeptanz bei verifizierter Schranke höchstens mathematisch τ = 10⁻⁸ mal Bezugsskala. Kondition und Rückwärtsfehler dienen der Diagnose. |
 | E11 | Eingabesensitivität | Nur Diagnose; ändert weder Lösung noch Status. |
 | E12 | Ergebnis | Internes Ergebnismodell (Stationen mit Seiten und Sprungarten, Stücke, Reaktionen je Halterung, Genauigkeitsbericht). `BeamSolution` wird zur Fassade des heutigen Vertrags. |
 | E13 | Grenze Core ↔ Solver | Transiente mechanische Eingabe aus generischen Primitiven, je Rechnung aus dem Fachmodell gebaut. `SolverLoads` entfällt. |
 | E14 | Alter FE-Solver | Nach der Migration eingefrorene Testreferenz außerhalb des Produktpfads. |
-| E15 | Anregung | Definiert über die Solvereingabe (Summe der Beträge aller Anregungsprimitive), nicht über Resultierende. Ohne Anregung: exakt null, kein relatives Maß. |
+| E15 | Anregung | Unbelastet genau dann, wenn jedes gespeicherte Anregungsprimitiv null ist. Für geladene Modelle positive Anregungsnorm in Mantissen und ganzzahligen Binärexponenten (7.2). |
 | E16 | Aufwand | Primärpfad O(n) in der Zahl mechanischer Stationen. Engpass ist der Qualitätsvertrag mit n + n_r adjungierten Lösungen: Band O(n²), dicht O(n³). Dichte Speicherung ist in M1 zulässig bis zu einer festzulegenden Modellgröße (Abschnitt 5.6). |
 
 ## 2. Befunde zum Prototyp
@@ -106,7 +106,7 @@ Fachmodell (Core)
   │                          Nachiteration; gespeicherte Vektoren ohne Subnormale
   │                          Nullpivot → NotReliablySolvable; subnormaler Pivot → NumericalFailure
   ▼
-7 Qualitätsbewertung         adjungierte Lösungen (n + n_r) mit Residualschranke → β je Größe
+7 Qualitätsbewertung         adjungierte Lösungen (n + n_r) mit verifizierter Schranke je Größe
   │                          → Selbsttests (endlich, Federreaktions-Identität) → NumericalFailure,
   │                          falls verletzt → SI-Bezugsgrößen im Bereich [2⁻⁹⁶⁹, 2¹⁰⁰⁰], sonst
   │                          NumericalFailure (NumericalRange) → Verifikation der adjungierten
@@ -158,15 +158,9 @@ demselben Stationsmodell.
    Skalierungen sind Zweierpotenzen und damit exakt (A3).
 6. **Mechanismus.** Mechanismus genau dann, wenn der exakte Rang der Teilkörper-Kinematik
    unvollständig ist; ohne Toleranz (A5).
-7. **Kein stilles Ergebnis.** Ein Ergebnis wird nur geliefert, wenn alle Bereichsregeln erfüllt
-   sind, die adjungierten Lösungen verifiziert sind und das Gate über den ganzen Balken ≤ τ ist.
-   Danach hat jedes `EvaluateAt(x)` ein normiertes β ≤ Gate (A5, A8, Abschnitt 7.3). Das ist eine
-   Eigenschaft der Konstruktion. Dass damit auch der tatsächliche Fehler ≤ τ ist, folgt aus einer
-   Beweiskette: (1) Das Rundungsmodell liefert für die festgelegte Operationsfolge eine gültige
-   komponentenweise Schranke |r_exakt| ≤ d. (2) Die Verifikation schließt die exakte Lösung in
-   ŷ ± E ein. (3) Daraus folgt die Schranke für jedes Funktional und jeden Feldwert. Die Kette ist
-   unter den Plattformvoraussetzungen V1–V6 hergeleitet [GV 2–4] und auf jeder Stufe gegen exakte
-   Arithmetik geprüft [GV 9]. Sie ist ein Papierbeweis, kein maschinell geprüfter.
+7. **Kein stilles Ergebnis.** Gelieferte Ausgaben haben eine verifizierte SI-Fehlerschranke
+   höchstens τ mal der exakten Bezugsskala. Für geladene Modelle folgt sie aus Bereichsprüfung,
+   Residualschranke, verifizierter Kontraktion und Stück-Gate [GV 2–7].
 8. **Unerreichbarkeit.** Rechenlogik nicht freigegebener Features ist über Produktpfade nicht
    erreichbar (B).
 9. **Diagnosen ohne Rückwirkung.** Diagnosen ändern weder Lösung noch Indikator noch Status.
@@ -243,32 +237,17 @@ z_jump − z_law = ±e_p / rs_p                (adjungierte Lösungen Sᵀz = C�
 Die beiden Wege sind also nicht unabhängig. Ihre Differenz ist das Residual der Federzeile, und ihre
 Fehler unterscheiden sich nur durch den Beitrag dieser einen Zeile. Folgerungen:
 
-1. **Die Relation |R_jump − R_law| ≤ β_jump + β_law ist herleitbar, nicht nur empirisch.** Mit
-   d_p ≥ |r̂_p| + δr_p gilt |R_jump − R_law| ≤ (|r̂_p| + δr_p)/rs_p + Auswertungsrundung
-   ≤ |z_jump − z_law|ᵀd ≤ β_jump + β_law. Für die berechneten adjungierten Lösungen genügt dabei,
-   dass die p-Komponente von z_jump − z_law stimmt; gemessen ist rs_p·|z_jump − z_law|_p = 1,0000 in
-   allen Halterungen. Das gilt für jedes Rundungsmodell, denn die Datenrundung geht nicht ein. Die
-   Relation prüft daher die Implementierung, **nicht** die Güte von β.
-   Gemessen auf 10.322 Modellen mit 25.504 elastischen Halterungen (16.847 Weg-, 8.657 Drehfedern,
-   6.153 davon kombiniert): Das Verhältnis erreicht höchstens 1,000. Ebenso bleibt es bei 1,000, wenn
-   man d auf |r̂| + δr kürzt, also das Rundungsmodell ganz weglässt **[state-spring-rule-summary]**.
-2. **Produktregel: Identitätsprüfung als Selbsttest.** Geprüft wird die scharfe Form ohne
-   adjungierte Lösung: |D − |r̂_p|/rs_p| ≤ δr_p/rs_p + γ(m)·(Σ|Terme des Sprungs| + |k·w⁺|), mit
-   D = |R_jump − R_law|. Sie hängt nur von IEEE-Rundung ab und war nie verletzt (höchstens 10 % der
-   Schranke). Ihre Verletzung bedeutet, dass Gleichungsaufbau und Reaktionsauswertung nicht dieselben
-   Koeffizienten benutzen. Das ist ein Implementierungsfehler und nie schlechte Kondition; Folge ist
-   `NumericalFailure` mit Ursache `InternalInconsistency` (6.1, Schritt 6). Sie ist weder Diagnose
-   noch `IllConditionedSystem`. Die adjungierte Identität z_jump − z_law = ±e_p/rs_p gilt abseits von
-   p nur bis auf die Rundung der beiden Lösungen: In 39 von 25.484 Halterungen gelieferter Modelle
-   liegt die Abweichung über 10⁻⁶·|z_jump − z_law|_p, höchstens beim 83-Fachen. Sie eignet sich
-   deshalb nicht als Prüfung.
-3. **Selbsttest, kein Ersatz für Tests.** Eingebaute Fehler: k im Gesetz um 2⁻²⁰ verfälscht → 91,9 %
-   erkannt; fehlende Stationslast im Sprung → 100 %; fehlendes Abschnittslastintegral → 97,6 %. Nicht
-   erkannt werden Fehler unterhalb der Rundungsschranke der Zeile. Die Prüfung kostet O(1) je Feder,
-   weil beide Werte ohnehin berechnet werden.
-4. **Geliefert wird der Wert mit dem kleineren β; bei Gleichheit der Sprung.** Beide Werte sind
-   exakte Auswertungen derselben Größe. Der Wert mit dem kleineren β ist der weniger empfindliche
-   gegenüber dem Residual der Federzeile. Er geht mit *seinem* β in das Gate ein; eine erkennbare
+1. **Identität.** Sprung und Federgesetz beschreiben dieselbe exakte Reaktion. Die Differenz
+   der berechneten Werte darf die Summe ihrer unabhängig verifizierten Schranken nicht
+   übersteigen. Die gerichtete Vergleichsrechnung ist ein interner Selbsttest.
+2. **Sprung.** Ein adjungiertes Funktional schließt den Lösungsanteil ein. Lastdaten,
+   Auswertung und SI-Skalierung kommen hinzu.
+3. **Federgesetz.** Die geschätzte Zustandskomponente wird mit der skalierten Steifigkeit
+   multipliziert. Ihr verifizierter Zustands- und Auswertungsfehler wird fortgepflanzt.
+
+4. **Geliefert wird der Wert mit der kleineren verifizierten Schranke, bei Gleichheit der Sprung.** Beide Werte sind
+   exakte Auswertungen derselben Größe. Der Wert mit der kleineren verifizierten Schranke ist der weniger empfindliche
+   gegenüber dem Residual der Federzeile. Er geht mit seiner eigenen Schranke in das Gate ein; eine erkennbare
    Inkonsistenz kann die Wahl nicht verdecken, denn diese ist bereits Gegenstand der
    Identitätsprüfung. Kleineres β ist kein Orakel für den tatsächlichen Fehler: In 57 Halterungen
    gelieferter Modelle ist der andere Wert genauer, höchstens um den Faktor 2,5, beide unter ihrem β.
@@ -298,6 +277,13 @@ Sprungbilanz ist deshalb keine eigene Zusage; Tests prüfen sie gegen β_jump + 
 
 ### 4.3 Axialanteil
 
+Zur Migration gehört die axiale Nullsemantik des heutigen öffentlichen
+Vertrags. Ohne äußere Axiallasten sind u und N auch bei Biegelast exakt
+null. An axial gehaltenen Knoten ist `ReactionX` nullwertig, an freien
+Freiheitsgraden fehlt die Reaktion. Die C#-Abnahme prüft diese Ausgaben
+einschließlich beider Ereignisseiten. Die folgende Zustandsarchitektur
+für belastete Modelle wird in DEV-12 vervollständigt.
+
 Gleiche Struktur mit dem Zustand (u, N): EA·u' = N, N' = −n. Axiale Halterung schreibt u⁺ = 0 vor,
 eine Axialfeder (falls DEV-19 sie einführt) lautet N⁺ − N⁻ − k_a·u⁺ = −P_x. EA-Wechsel sind
 Abschnittswechsel. Die Momentenfreigabe überträgt N. Das System ist eigenständig und klein.
@@ -317,8 +303,8 @@ Grenzfällen (Halterungen im Abstand 10⁻¹¹ L, steife und weiche Feder, Strec
 10⁻¹¹ L): alle geliefert, Gate höchstens 1,8·10⁻¹⁴, tatsächlicher Fehler höchstens 3,8·10⁻¹⁶, keine
 Unterschätzung. Gate/Fehler liegt im 1. Perzentil bei 6, im Median bei 34 **[state-axial-quality]**.
 Für eine Axialfeder ist nur die Sprungauswertung untersucht; das Federgesetz als zweiter Weg folgt
-derselben Identität wie in 4.2, ist aber nicht gemessen. Offen bleibt eine zweite unabhängige
-exakte Axialreferenz für A7 (O4).
+derselben Identität wie in 4.2. Der Nachweis des belasteten Axialpfads einschließlich
+der zweiten unabhängigen Referenz gehört zu DEV-12 (O4).
 
 ### 4.4 Gleiche Position und Teilpunkte
 
@@ -350,40 +336,30 @@ Neue Elemente sind neue Stationsregeln oder Abschnittslasten, kein neuer Kern:
 Lagersenkung (vorgeschriebener Wert ≠ 0), Querkraftgelenk (w-Sprung frei, V⁺ = 0), Temperatur-
 krümmung DEV-27 (Abschnittslast im θ- und w-Integral), Axialfeder. Jede neue Regel muss
 Invariante 2 erfüllen und braucht eine eigene Zeile in der exakten Referenz. Jede neue
-Abschnittslast braucht zusätzlich ihre Rundungszahlen, eine β-Majorante je Stück und eine Schranke
+Abschnittslast braucht zusätzlich ihre Rundungszahlen, eine Majorante des VerifiedOutputBound je Stück und eine Schranke
 für die Änderung von |M|, |V| bzw. |N| im Stück (7.3), sonst deckt das Gate sie nicht ab.
 
 ## 5. Numerische Strategie
 
 ### 5.1 Entdimensionierung und Äquilibrierung
 
-Die Skalierung hängt nur von Geometrie und Steifigkeit ab, nicht von den Lasten. Sie funktioniert
-also auch beim unbelasteten System.
+Geometrie und Steifigkeit liefern `e_L = ILogB(L)` und
+`e_EI = ILogB(max EI)`, später auch `e_EA = ILogB(max EA)`.
+Die Referenzgrößen sind vor der Exponentenwahl positiv, endlich und normal.
+Der Adapter prüft E·I bzw. später E·A gegen den normalen darstellbaren
+Bereich. Normierte Referenzwerte liegen in [1, 2). Für w, θ, M, V
+und die Last- und Federterme gelten die Einheiten der mechanischen
+Formeln. Alle Einheitenwechsel kombinieren ganzzahlige Exponenten und
+skalieren in einem Schritt [GV 3, 5].
 
-```text
-L_ref = 2^round(log2 L)      EI_ref = 2^round(log2 max EI)      EA_ref = 2^round(log2 max EA)
-w/L_ref   θ   M·L_ref/EI_ref   V·L_ref²/EI_ref        u/L_ref   N/EA_ref
-k·L_ref³/EI_ref   k_θ·L_ref/EI_ref   k_a·L_ref/EA_ref   (Lasten entsprechend)
-```
-
-**Normierung der rechten Seite (Runde 5).** Zusätzlich wird die rechte Seite mit einer
-Zweierpotenz 2^−e_F skaliert, sodass die Anregung F_exc (7.2) entdimensioniert in [1, 2) liegt. Die
-Matrix bleibt unverändert und lastunabhängig; ohne Anregung entfällt der Schritt (7.2). Weil das
-Problem linear ist, skaliert die Lösung exakt mit. Zweck: Alle Bezugsgrößen sind dann in
-normierten Einheiten von der Größenordnung 1. Damit kostet der plattformunabhängige Unterlaufterm
-λ = 2⁻¹⁰²² je Operation nichts Messbares (6.3, [GV 5, 8]), und große oder kleine Lasten können
-nicht über- oder unterlaufen.
-
-Weil alle Faktoren Zweierpotenzen sind, ist die Entdimensionierung exakt. Eine reine
-Zweierpotenz-Umskalierung des Modells liefert deshalb bitgleich umskalierte Ergebnisse
-(**[state-invariance]**). Danach folgt die Ruiz-Äquilibrierung von Zeilen und Spalten mit auf
-Zweierpotenzen gerundeten Faktoren, ebenfalls exakt. Das entspricht der Ruiz-Iteration (Ruiz
-2001) mit Faktoren als Basispotenzen wie in LAPACK `xGEEQUB` („Barring over- and underflow,
-scaling by these factors introduces no additional rounding errors“). Sie ist für die Genauigkeit
-meist neutral, schützt aber einzelne Fälle vor Stellenverlust in der Pivotwahl (Abschnitt 5.5).
-Eine Konditionsgarantie gibt sie nicht: Die Gradierung *innerhalb* einer Spalte bleibt, normweise
-bis κ∞ = 10³³ bei gutartiger komponentenweiser Kondition [Audit 3.1]. Unterlauf durch die Skalierung
-trat in gezielten Fällen mit Abschnitten bis 2⁻³³⁵ L nicht auf **[state-underflow]**.
+Bei Anregung normiert ein weiterer Exponent die rechte Seite. Die
+positive Norm liegt in den so normierten Einheiten in [1, 2).
+Die Matrix bleibt lastunabhängig. Zu kleine oder zu große normierte
+Anregungsprimitive führen zu `NumericalRange` (7.2). Die nachfolgende
+Ruiz-Äquilibrierung speichert Zeilen- und Spaltenexponenten und kombiniert
+sie vor der Matrixskalierung. Die resultierenden Einträge müssen
+bereichsgültig sein. Ruiz verbessert die Kandidatenerzeugung und gibt
+keine Konditionsgarantie.
 
 ### 5.2 Lösung und Nachiteration
 
@@ -403,7 +379,7 @@ trat in gezielten Fällen mit Abschnitten bis 2⁻³³⁵ L nicht auf **[state-u
   ρ = max|a⁽ᵏ⁾|/max|a| ≤ 1,97 **[state-factor-summary]**. Wichtig für den Vertrag: Die Richtigkeit
   von β hängt nicht von der Stabilität der Faktorisierung ab. β misst das Residual der gespeicherten
   Lösung, und die Verifikation erfasst ungenaue adjungierte Lösungen. Eine schlechtere
-  Faktorisierung führt nur zu mehr Ablehnungen (gestörte LU in 6.3, [GV 9.2]). GEPP ist deshalb
+  Faktorisierung führt nur zu mehr Ablehnungen (gestörte LU in 6.3, [GV 9]). GEPP ist deshalb
   eine Effizienz- und Annahmefrage, keine Voraussetzung der Schranke.
 - **Verworfen: Householder-QR als robustere Referenz.** Auf identisch skalierten Systemen liefert
   QR mit derselben Nachiteration in 29 von 2.829 verglichenen Modellen Vorwärtsfehler O(1), wo GEPP
@@ -464,6 +440,9 @@ Abnahme (Abschnitt 11). Tauchen dort Federgruppen auf, die die Formulierung nich
 Befund dokumentiert und neu entschieden. Eine geometrische Heuristik ist nicht vorgesehen.
 
 ### 5.5 Ablation
+
+Die folgenden Messungen verwenden den Indikator des damaligen Prototyps.
+Der aktuelle Korrektheitsnachweis steht im Gleitkomma-Vertrag.
 
 Notwendigkeit der Bestandteile auf 763 Modellen (gezielte Auswahl + Zufall)
 **[state-ablation]**:
@@ -554,7 +533,7 @@ relevant.
   ist nicht nötig.
 - *Dicht in M1:* sinnvoll, wenn die Faktorisierung hinter einer Schnittstelle liegt (Lösen,
   transponiert Lösen, Residual). Dann ersetzt eine Band-Speicherung sie, ohne Indikator oder Gate zu
-  ändern. Bis dahin gilt eine dokumentierte Modellgrößengrenze (O9).
+  ändern. Die endgültige Modellgrößen- und Latenzgrenze folgt aus der C#-Messung (O9).
 - *Tests vor `main`:* Zähltests (adjungierte Lösungen = n + n_r, Nachiterationsschritte ≤ Obergrenze),
   Bandbreitentest mit wachsender Stationszahl (Invariante 2), ein verfolgter Zeitmesswert bei
   n_m = 10, 30, 100 (Band zusätzlich 1.000) mit Budget statt enger Absolutgrenze, und ein Fall mit
@@ -566,26 +545,21 @@ relevant.
 
 1. Eingabeprüfung (Core-Validierung, Gültigkeit der Primitive, Koinzidenzregeln) → `InvalidModel`.
 2. Exakte Mechanismusprüfung → `UnstableModel`.
-3. Aufbau mit Bereichsprüfung [GV 7]: Eingabewerte ≠ 0 normal, L ≥ 2⁻⁹⁶⁸, Stationsabstände und
-   jeder Koeffizient mit allen Zwischenwerten seiner Formel normal, normierte Anregungsprimitive
-   ≠ 0 normal, skalierte Streckenlastlängen ≥ 2⁻⁹⁶⁹, Einträge nach Ruiz normal (5.3, 7.2) →
-   `NumericalFailure` (Ursache `NumericalRange`).
-4. Ohne Anregung (F_exc = 0 je Teilproblem, 7.2): Ergebnis exakt null, *ohne* Lösung. Das gilt
-   für jedes exakt stabile Modell, auch ein numerisch singuläres, denn die exakte Lösung ist dann
-   unabhängig von der Kondition null.
-5. Lösung: Ein Nullpivot bei exakt stabilem Modell bedeutet, das System ist numerisch singulär →
-   *numerisch nicht sicher lösbar* (Ursache `ZeroPivot`). Ein Pivot 0 < |p| ≤ 2⁻¹⁰²² ist ein
-   Bereichsfall → `NumericalFailure` (`NumericalRange`).
-6. Selbsttests (Invariante 11): ein Wert nicht endlich (Ursache `NonFinite`), Gleichungszahl (schon
-   beim Aufbau geprüft) oder Federreaktions-Identität verletzt (Ursache `InternalInconsistency`) →
-   `NumericalFailure`. Sie stehen vor dem Gate, weil ein verletzter Selbsttest auch β entwertet.
-7. Bereichsregel der Ergebnisse: Jede SI-Bezugsgröße S_q (7.2) liegt in [2⁻⁹⁶⁹, 2¹⁰⁰⁰], und keine
-   Obergrenze von |Q| je Stück läuft in SI über, sonst `NumericalFailure` (Ursache
-   `NumericalRange`) [GV 7]. Gegenbeispiel ohne diese Regel in 6.4, Befund 5.
-8. Verifikation der adjungierten Lösungen: μ ≥ 1 für alle Gewichtskandidaten (6.3) → *numerisch
-   nicht sicher lösbar*, Ursache `NotVerified`. β ist dann nicht nachweislich eine Schranke; das
-   Ergebnis ist damit nicht als falsch erkannt, seine Genauigkeit nur nicht nachgewiesen.
-9. Gate > τ (7.3) → *numerisch nicht sicher lösbar*, Ursache `Gate`.
+3. Eingaben, normierte Primitive, Abstände und Koeffizientenzwischenwerte auf ihre Bereiche prüfen
+   und das reduzierte System aufbauen [GV 5, 7]. Bei Verletzung gilt `NumericalRange`.
+4. Sind alle gespeicherten Anregungsprimitive null, werden nach bestandenem Aufbau exakte
+   Nullen ohne Faktorisierung ausgegeben (7.2).
+5. Geladenes System äquilibrieren und lösen. Ein Nullpivot im exakt stabilen System ergibt
+   `ZeroPivot`. Ein nicht-null Pivot an oder unter λ oder eine Bereichsverletzung bei der
+   Äquilibrierung ergibt `NumericalRange`.
+6. Adjungierte Lösungen verifizieren. Ohne zulässige Kontraktion gilt `NotVerified` (6.3).
+7. Verifizierte Feld- und Reaktionsausgaben einschließlich SI-Referenzskalen einschließen.
+   SI-Bezugsgrößen liegen in [2⁻⁹⁶⁹, 2¹⁰⁰⁰] und die Ausgabeobergrenzen höchstens bei 2¹⁰⁰⁰,
+   andernfalls gilt `NumericalRange`.
+8. Selbsttests gelten am jeweiligen Rechenschritt. Nicht endliche Kandidaten ergeben
+   `NonFinite`. Verletzte Gleichungszahl oder Federreaktionsidentität ergibt
+   `InternalInconsistency`.
+9. Scheitert der gerichtete SI-Schwellenvergleich (7.3), gilt `Gate`.
 
 Andere Ablehnungsgründe gibt es nicht. Insbesondere führen weder Kondition noch Rückwärtsfehler ω
 noch Eingabesensitivität zu einer Ablehnung.
@@ -627,201 +601,40 @@ Mechanismusurteil und exakte Singularität stimmen in allen Fällen überein, un
 gleich dem Bruchrang **[state-rand-*]**. Axial: ohne axiale Freigaben ist das ein Mechanismus genau
 dann, wenn keine axiale Halterung existiert.
 
-### 6.3 Numerische Qualität: τ, β, s
+### 6.3 Numerische Qualität
 
-Drei Größen werden strikt getrennt:
+Die Abschätzung unterscheidet drei Größen. `RawBound` ist der
+adjungierte Residualanteil. `VerifiedStateBound` schließt nach
+verifizierter Kontraktion den Zustandsfehler ein. `VerifiedOutputBound`
+schließt für einen veröffentlichten SI-Wert außerdem Funktional,
+Daten, lokale Auswertung und Rückskalierung ein. Der ausführbare
+Gleitkomma-Vertrag leitet diese Kette und das gemeinsame
+Residuallemma für graduellen Unterlauf, FTZ und DAZ her [GV 3–7].
 
-| Symbol | Bedeutung |
-|---|---|
-| τ | geforderte Genauigkeit des **tatsächlichen** Ergebnisses im Maß aus 7.2 (Produktwert, 7.3) |
-| β | zur Laufzeit berechnete **A-posteriori-Fehlerschranke** einer Ergebnisgröße. Eine obere Schranke des Fehlers gegenüber der exakten Lösung der übergebenen doubles ist sie nur, wenn (1) das Rundungsmodell des Gleitkomma-Vertrags für Aufbau, Lastintegrale, Lösung und Auswertung gilt (Plattformvoraussetzungen V1–V6, [GV 2]) und (2) die adjungierten Lösungen verifiziert sind (μ < 1, unten) |
-| s | Akzeptanzfaktor: geliefert wird, wenn s · Gate ≤ τ (Gate: größtes normiertes β über den ganzen Balken, 7.3). Entscheidung: **s = 1** (7.6) |
+Die Residualschranke d enthält den gemessenen Residualbetrag, seine
+Rundungsschranke und die Matrix- und RHS-Datenfehler. Die verifizierten
+adjungierten Residuen schließen die Abweichung M von der exakten
+Inversenrelation ein. Akzeptiert wird nur ein endliches positives
+Gewicht v mit nachgewiesenem Mv ≤ μv und μ < 1. Der
+`VerifiedStateBound` ist dann die gerichtete Auswertung von
+`RawBound + Mv/(1−μ)`. Gewichtswahl, Neumann-Schritte und
+Nachiterationslimits beeinflussen, welche Kandidaten verifizierbar sind.
+Reaktionen verwenden ein eigenes Funktional oder bei einer Feder den
+unabhängig eingeschlossenen Wert aus dem Federgesetz. Der
+Korrektheitsnachweis hängt an den Schranken, auch bei gestörter
+Faktorisierung.
 
-Sei A*x* = b* das System der exakten Daten und Â, b̂ das gespeicherte. Für die berechnete Lösung
-x̂ gilt exakt
-
-```text
-x̂ − x* = A*⁻¹ r*,   r* = b* − A* x̂,
-|r*| ≤ d := |r̂| + δr + Σ_j γ̄(k_ij + 1)|Â_ij||x̂_j| + δb_i
-```
-
-- r̂ ist das berechnete Residual und δr = γ̄(m+1)(|b̂_i| + Σ|Â_ij||x̂_j|) + 2mλ seine Rundungsschranke
-  (m Nichtnullen der Zeile, Punkt 14 in [GV 5]).
-- k_ij ist die Zahl der Rundungen bei der Bildung des Eintrags A_ij nach der ausgeführten Formel.
-  δb_i ist die Schranke des Datenfehlers der rechten Seite: Lastintegrale, abgeschnittene
-  Intensitäten und Stationslasten, mit eigenem λ-Anteil (Punkte 6–9 in [GV 5]).
-- γ(k) = k·u/(1 − k·u), γ̄(k) = (k + 1)u ≥ γ(k) exakt darstellbar.
-- λ = 2⁻¹⁰²² ist der absolute Fehler einer Operation, deren Ergebnis subnormal wird oder durch
-  FTZ zu 0 wird. Er ersetzt η = 2⁻¹⁰⁷⁴ aus Runde 3/4, das nur bei graduellem Unterlauf galt [GV 8].
-  Ohne diesen Term ist die Schranke bei Unterlauf null, obwohl das Ergebnis falsch ist (Befund 3
-  in 6.4). Jede Komponente hat d_i ≥ 2mλ > 0.
-
-Die Rundungszahlen folgen aus der verbindlichen Operationsfolge jeder Formel [GV 5]. Das Programm
-`state/fpc_counts.py` leitet sie mechanisch mit den Regeln aus [GV 3] ab. Danach wird jede Formel
-mit ihrer Schranke gegen exakte rationale Werte geprüft, auf strukturierten Grenzfällen und mit
-emuliertem FTZ/DAZ (`state/fpc_stage_a.py`). Werden Schranken verletzt, wird die Formel korrigiert,
-nicht die Zahl. So ist in Runde 5 der fehlende Datenterm der abgeschnittenen Linearlast gefunden
-worden (Befund 6 in 6.4).
-
-**Komponentenweiser Indikator** für eine Ergebnisgröße y = cᵀx: Löse Aᵀz = c mit der vorhandenen
-Faktorisierung und Nachiteration (unten), dann β_y = |z|ᵀd. A⁻¹ wird nicht gebildet. Benötigt werden
-n adjungierte Lösungen für die Zustände und n_r für die Reaktionen; die Kosten stehen in 5.6.
-Feldwerte innerhalb eines Stücks und Extremwerte werden über |g|ᵀβ_Zustand plus Auswertungsrundung
-abgeschätzt (7.3). Reaktionen entstehen als Differenz korrelierter Zustände und erhalten deshalb eine
-eigene adjungierte Lösung. Die Summe der Einzelindikatoren kann dort um viele Größenordnungen
-überschätzen (Abschnitt 4.2).
-
-Das ist die komponentenweise Form der Fehlerschranke von LAPACK `xGERFS` (Arioli, Demmel, Duff
-1989): Dort steht \|A⁻¹\|(\|r\| + NZ·ε(\|A\|\|x\| + \|b\|) + SAFE1), normweise über einen Schätzer
-ausgewertet. SpanDraft bildet die Zeilen von \|A⁻¹\| exakt über adjungierte Lösungen und ersetzt
-NZ·ε durch die hergeleiteten Rundungszahlen der Einträge [Audit 2].
-
-**Adjungierte Nachiteration: mindestens ein Schritt; weitere nur, solange sich β der Größe um mehr
-als 1/16 ändert; höchstens 5.** Begründung und Messung **[state-gate-summary]**, 10.346 exakt stabile
-Modelle:
-
-| Regel | geliefert / abgelehnt | Schritte je adjungierter Lösung | Gate gegenüber genau einem Schritt |
-|---|---|---|---|
-| keine Nachiteration | 10.335 / 11 | 0 | bis 86 % kleiner (nur abgelehnte Modelle); 4 Unterschätzungen in gelieferten **[state-acceptance-summary]** |
-| genau ein Schritt | 10.335 / 11 | 1 | – |
-| wie Primärlösung (‖Δz‖ ≤ 2u‖z‖ oder Stagnation) | 10.335 / 11 | 1,293 | bei 3 abgelehnten Modellen um mehr als 1 % anders, sonst gleich |
-| β-Änderung ≤ 1/16 | 10.335 / 11 | 1,003 | bei 3 abgelehnten Modellen um mehr als 1 % anders, sonst gleich |
-
-- Ein Schritt ist nötig. Ohne ihn liegt β an 4 Werten gelieferter Modelle unter dem tatsächlichen
-  Fehler (bis zum 1,66-Fachen, bei Werten ≤ 2,4·10⁻³⁵ der Skala). Das entspricht der bekannten
-  Eigenschaft, dass ein Nachiterationsschritt in Arbeitsgenauigkeit die LU-Lösung komponentenweise
-  rückwärtsstabil macht (Skeel).
-- Weitere Schritte ändern in keinem gelieferten Modell das Gate um mehr als 1 %. In den
-  schwierigsten abgelehnten Modellen erhöhen sie β, etwa bei f|1e-11|165 von 3,6·10⁻³ auf 4,1·10⁻³;
-  der Fehler dort ist 4,2·10⁻³. Eine starre Regel „genau ein Schritt“ ist dort zu optimistisch.
-- Das Abbruchkriterium der Primärlösung kostet 29 % zusätzliche Schritte, weil es volle
-  Konvergenz von z nachweist, die β nicht braucht. Das β-Kriterium misst, was verwendet wird, und
-  kostet im Mittel 0,3 %. 1/16 ist keine angepasste Konstante: β hat typisch zwei Größenordnungen
-  Reserve, eine Änderung unter 6 % ist dafür bedeutungslos.
-- Bei künstlich um 10 % gestörten LU-Faktoren reduziert die Primärregel (bis 5 Schritte) die Fälle
-  „Fehler knapp über Gate“ von 9 auf 1, die β-Regel auf 7 **[state-perturb-check]**. Dort liegt β
-  ohnehin innerhalb von 1 % am Fehler (siehe ω unten); kein gestörter Fall lieferte einen Fehler über τ.
-- **Vergleich mit etablierten Regeln** (Runde 4, 2.811 Modelle, [Audit 3.2, 3.3]): die BERR-Regel von
-  LAPACK `xGERFS`, die Kontraktions- und Stagnationslogik von LAWN 165 und 5 feste Schritte treffen
-  dieselben Entscheidungen. Mit der Verifikation unten bestimmt die Regel nur noch Kosten und
-  Verifizierbarkeit. Die β-Regel kostet 1,002 Schritte je adjungierter Lösung, die BERR-Regel 0,973,
-  LAWN 165 1,114. Bei um 10 % gestörten LU-Faktoren bleiben mit der β-Regel 23, mit der BERR-Regel 69
-  und ohne Nachiteration 241 von 624 Modellen unverifiziert **[state-refine-summary]**. Die β-Regel
-  bleibt deshalb als bewusste Abweichung mit gemessenem Vorteil. Die Konstante 1/16 selbst ist
-  nicht variiert worden.
-
-**Entscheidung: komponentenweise, nicht normweise.** Ein normweiser Vertrag (Higham/Hager-Schätzer
-für ‖A⁻¹‖) würde kleine, fachlich wichtige Größen nicht schützen. Beispiel: die Querkraft außerhalb
-eines Lagerpaars, wenn zwischen den Lagern 10¹⁴-mal größere Werte stehen. Die Messungen zeigen,
-dass die komponentenweise Zusage erreichbar ist (Abschnitt 7.6).
-
-**Verifikation der adjungierten Lösungen (O15, O16; vollständig in [GV 6]).** |z|ᵀd ist nur dann
-eine Schranke, wenn z genau genug ist. Zwei Ungenauigkeiten bleiben: die berechnete ẑᵢ statt der exakten adjungierten
-Lösung und das gespeicherte Â statt A*. Beides lässt sich exakt erfassen, nicht nur in erster
-Ordnung. Mit dem exakten Residual sᵢ = eᵢ − Âᵀẑᵢ und |Â − A*| ≤ Γ|Â| gilt für den Fehler e
-
-```text
-|e_i| ≤ β_i + (M|e|)_i,     M = |S_res| + |Ẑ|ᵀ Γ |Â| ≥ 0      (Zeile i von |S_res|: Schranke von |s_i|)
-μ = max_i (M v)_i / v_i < 1   ⇒   |e_i| ≤ β_i + (M v)_i / (1 − μ)
-```
-
-Das ist Satz 10.2 aus Rump (2010, Acta Numerica) in der mit v gewichteten ∞-Norm, mit den
-berechneten adjungierten Lösungen als genäherter Inverse R. Exakt gilt e = R r* + C e mit
-C = I − R S*, und M ≥ |C| eintragsweise [GV 6]. Gewichte: zuerst v = β + 2⁻²⁰⁰·D (D: Nenner des
-Gates), dann drei Neumann-Schritte v ← β + Mv + 2⁻²⁰⁰·D. Jedes v > 0 ist zulässig; die Schritte
-entscheiden nur, ob μ < 1 *nachweisbar* ist. In Runde 4 fehlten sie, deshalb waren zwei Modelle
-nicht verifizierbar (unten). |sᵢ| wird in double gebildet, mit der rigorosen Schranke
-γ̄(m+1)(|c| + |S|ᵀ|z|) + 2mλ. Dot2 (Ogita, Rump, Oishi 2005) bringt für μ nur einen festen Faktor
-und ist keine Voraussetzung mehr [GV 6]. Es entsteht keine Rekursion: Die n + n_r adjungierten
-Lösungen sind ohnehin berechnet; M braucht ihre Residuen und je Gewichtskandidat einen Durchgang über
-sie. Für Reaktionen gilt dasselbe mit der Zeile ihrer adjungierten Lösung. Ist μ ≥ 1 für alle
-Kandidaten, ist β nicht nachgewiesen, und das Modell wird abgelehnt (6.1 Schritt 8).
-
-**Rigorose Auswertung.** Eine gewöhnlich gerundete Schätzung μ < 1 genügt nicht. d, β, Mv, μ, E
-und das Gate werden mit nach oben gerundeten Operationen gebildet, 1 − μ nach unten. .NET hat keine
-Rundungsmodus-Steuerung. Der Kern emuliert die gerichtete Rundung je Operation mit
-`Math.BitIncrement`/`Math.BitDecrement`, bei Ergebnissen unter 2⁻¹⁰²² mit dem Wert 2⁻¹⁰²² (L5 in
-[GV 3]). Intervallarithmetik ist nicht nötig. Diese Emulation ist Voraussetzung der Architektur.
-
-Die Trust-Größe von `xGERFSX` wird nicht übernommen. Sie schätzt die Kondition der Lösung x in einer
-Norm und setzt Residuen in erhöhter Genauigkeit voraus (LAWN 165, Abschnitt 7). SpanDraft braucht
-dagegen die Genauigkeit der adjungierten Lösung je Funktional bei double-Residual, auch für exakt
-verschwindende Komponenten.
-
-Gemessen **[state-refine-summary]** auf 2.811 Modellen:
-
-- ungestört μ im Median 4·10⁻¹⁵; die Korrektur ändert das Gate höchstens um 3,6 %;
-- 2 Modelle (Lager bzw. starre Feder im Abstand 3·10⁻¹¹ m) waren mit den Gewichten von Runde 4
-  nicht verifizierbar, obwohl ihr Fehler 1,9·10⁻¹⁶ bzw. 0 ist. Runde 5 hat die Ursache geklärt
-  [GV 10]. Eine Komponente mit β auf Unterlaufniveau ist über M_ij ≈ 2·10⁻¹⁵ an eine um 10²² größer
-  gewichtete gekoppelt. M selbst hat aber den Spektralradius 4,5·10⁻¹⁵ bzw. 1,0·10⁻¹⁴, die
-  Information reicht also. Das Scheitern war eine vermeidbare Schwäche der Gewichtswahl. Mit den
-  Neumann-Schritten sind beide rigoros verifiziert, mit Gate 6,2·10⁻¹⁵ bzw. 6,7·10⁻¹⁶, und alle
-  Kettenstufen sind ohne Verletzung **[state-fpc-unverified, state-fpc-chain-unverified]**;
-- bei 10⁻⁴ bzw. 10⁻¹ gestörten LU-Faktoren lag der tatsächliche Fehler in *jedem* verifizierten Modell unter β (Messung). Bei
-  10⁻¹ lag das unkorrigierte β in 311 von 624 Modellen an mindestens einem Wert unter dem Fehler
-  (14 davon geliefert). In 298 davon deckt die korrigierte Schranke den Fehler, die übrigen 13 sind
-  nicht verifiziert und werden abgelehnt.
-
-**Status: Schranke unter benannten Voraussetzungen.** Unter dem Rundungsmodell des
-Gleitkomma-Vertrags und bei erfolgreicher Verifikation ist β eine obere Fehlerschranke gegenüber der
-exakten Lösung der übergebenen doubles. Das gilt für jeden Zustand, über die Feldauswertung für
-jeden Feldwert und für jede Reaktion. Die Beweiskette [GV 4] hat drei Glieder: (1) Rundungsmodell
-⇒ |r_exakt| ≤ d komponentenweise, (2) Verifikation ⇒ exakte Lösung in ŷ ± E, (3) daraus die
-Schranke für das Funktional. Voraussetzungen V1–V6 [GV 2]: IEEE binary64 mit Rundung zur nächsten
-Zahl, keine FMA-Kontraktion, graduelles *oder* abruptes Unterlaufen, kein Überlauf auf
-angenommenen Pfaden (Bereichsregeln), korrekte `ScaleB`/`BitIncrement`, exakt stabiles Modell.
-Geprüft ist die Kette in Runde 5 auf jeder Stufe gegen exakte Arithmetik, auf 452 Referenzläufen und
-2.295 Zufallsmodellen ohne eine Verletzung [GV 9]. Der Beweis ist ein Papierbeweis; ein maschinell
-geprüfter Beweis ist nicht Teil dieses Entwurfs. Offen ist die Konformität der C#-Operationsfolgen
-(O2). Nicht abgedeckt ist der Positionsanteil der Extremwerte (7.3). Gemessene Schärfe je Wert:
-β/Fehler im Median 10², im 1. Perzentil 10¹, im 99. Perzentil 10⁴, für alle Größen und Klassen
-ähnlich **[state-acceptance-summary]**.
-
-**Rolle der klassischen Maße:** Die Kondition wird nicht als Grenze verwendet; sie steckt in |z|.
-Der Rückwärtsfehler ω ist **keine Entscheidungsgröße** und hat keine versteckte Schwelle:
-
-- *Kein Zustand, den nur ω erkennt.* Für jede berechnete Lösung, wie auch immer sie entstanden ist,
-  gilt x̂ − x* = A*⁻¹r*. β verwendet das *gemessene* Residual. Es setzt also keine
-  Rückwärtsstabilität der Faktorisierung voraus, sondern nur eine verifizierte adjungierte Lösung und
-  die Rundungszahlen; beides prüft ω nicht. Gegenprobe mit gestörter Faktorisierung: Die LU-Faktoren
-  werden relativ um 10⁻⁸, 10⁻⁴ und 10⁻¹ verrauscht (jedes 5. Modell, 2.064 Modelle), die Nachiteration
-  läuft gegen das wahre System. Kein Fall lieferte einen Fehler über τ. Bei 10⁻¹ wurden 1.992
-  abgelehnt und 72 geliefert, diese mit Fehler ≤ τ **[state-gate-summary]**. Nichtendliche Werte
-  fängt der Endlichkeitstest, singuläre die Nullpivotprüfung, Unterlauf die Bereichsregeln und der
-  λ-Term.
-- *Eine ω-Grenze wäre falsch.* Der komponentenweise Wert erreicht in *gelieferten, korrekten*
-  Modellen 1 (f|1e-11|11: ω = 1, Gate 4,9·10⁻¹⁵, Fehler 1,2·10⁻¹⁶). Ursache sind Zeilen ohne Last, in
-  denen alle Terme bei 10⁻³⁵ der Skala liegen und das Residual so groß ist wie die Zeile selbst. Ihr
-  Beitrag zu β ist vernachlässigbar.
-- ω bleibt eine Entwicklungsdiagnose (Schritt 11), nicht Teil des Genauigkeitsberichts.
-
-**Schärfe bei dominierendem Residual:** In der Gegenprobe mit 10 % Störung liegt β ohne
-Verifikation bis auf 1 % am tatsächlichen Fehler, in 14 gelieferten von 624 Modellen knapp darunter. Ursache:
-Das gemessene Residual überwiegt dann die Rundungsterme, und |z|ᵀ|r̂| ist bis auf
-Vorzeichenauslöschung gleich |zᵀr̂|; die übliche Reserve von zwei Größenordnungen entfällt. Dass β
-dabei *unter* den Fehler fällt, liegt an der ungenauen adjungierten Lösung und wird von der
-Verifikation erkannt. Mit Verifikation gilt s = 1 auch für einen Löser ohne Rückwärtsstabilität, er
-wird nur öfter ablehnen (O15 geschlossen). Dieselbe Schärfe entsteht, wenn die Primärlösung ohne
-Nachiterationsschritt endet (BERR-Regel, Gate/Fehler 1,1); deshalb bleibt der Pflichtschritt (5.2).
-
-**Unterlauf (Runde 5, [GV 7, 8]):** Vier Klassen werden getrennt. (1) Unzulässige Bereiche lehnen
-die Bereichsregeln *vor* der Operation ab. Danach sind Koeffizienten, Pivots, Divisoren,
-Bezugsgrößen und gespeicherte Operanden normal oder null. (2) Normale Operationen folgen dem
-γ-Modell. (3) Absolute Reste nahe dem Unterlauf deckt λ = 2⁻¹⁰²² je Operation in normierten
-Einheiten; der Term gilt für graduelles wie abruptes Unterlaufen. Das betrifft rechte Seite,
-Residual, Lastintegrale, Auswertung, subnormale Auswertungsstellen x und die Rückskalierung. λ hat
-die Rolle von SAFE1 = NZ·safmin in LAPACK `xGERFS`. (4) Relative Safe-Minimum-Probleme (SAFE2)
-entstehen nicht, weil keine relative Größe einen beliebig kleinen Nenner hat. Gespeicherte Lösungs-
-und adjungierte Vektoren enthalten keine Subnormalen (Software-Flush auf 0; die a-posteriori-
-Beziehungen gelten für jeden gespeicherten Vektor). Damit braucht kein angenommener Pfad
-subnormale Arithmetik, und die Garantie hängt nicht davon ab, ob FTZ/DAZ (x64) oder FZ (ARM64)
-aktiv ist. Das prüft die Untersuchung mit emuliertem FTZ/DAZ auf allen Stufen [GV 9]. Ein
-Starttest auf graduelles Unterlaufen bleibt als Plattformdiagnose ohne Wirkung auf den Status. η =
-2⁻¹⁰⁷⁴ aus Runde 3/4 entfällt. Die Rückrechnung in SI ist Teil des Vertrags (Bereichsregel und
-λ-Anteil in β_SI, 7.2).
+Die C#-Abnahme prüft tatsächliche Fehler gegen die jeweiligen
+verifizierten Schranken. Die Python-Referenz stellt Formeln, Primitives,
+Status und exakte Gegenproben bereit. Bindend sind die erforderlichen
+Zwischenwerte und die bewiesenen Schranken der Operationsfolge
+[GV 2].
 
 ### 6.4 Verletzungsanalyse
+
+Die folgenden Befunde betreffen frühere Prototypen und ihre damaligen
+Indikatoren β. Der aktuelle Vertrag verwendet die drei getrennten
+Schrankentypen aus 6.3.
 
 Jede Stelle, an der der exakte Fehler β überstieg, wurde einzeln zerlegt: Datenanteil am exakten
 Lösungsvektor, Lösungsanteil und Auswertungsanteil (`state/violations.py`, seit Runde 5 die Stufen A–F des Gleitkomma-Vertrags). Dabei fanden sich sechs
@@ -849,7 +662,7 @@ echte Mängel, die jetzt im Entwurf verankert sind:
    Danach wird keiner der 64 gezielten Unterlauffälle falsch geliefert. Seit Runde 5 ist die
    Rückskalierung allgemein Teil des Vertrags: S_q,SI ≥ 2⁻⁹⁶⁹ und λ-Anteil in β_SI, auch mit FTZ (mit
    FTZ hätte der Kleinstbalken 2,1·10⁻² Fehler) **[state-fpc-chain-underflow]**.
-6. **Datenfehler abgeschnittener Linearlasten** (Runde 5, [GV 9.1]). Endet ein Abschnitt nahe dem
+6. **Datenfehler abgeschnittener Linearlasten** (Runde 5, [GV 9]). Endet ein Abschnitt nahe dem
    Nulldurchgang einer Linearlast, hat die abgeschnittene Intensität q_a = v₁ + (v₂ − v₁)f einen
    absoluten Fehler u·|v|, also einen großen relativen. Das Rundungsmodell von Runde 1–4
    (`K_DIST = 40` auf |t₁| + |t₂|) hatte dafür keinen Term und unterschätzte den Fehler dieser
@@ -900,8 +713,8 @@ Produktentscheidung (O8).
 |---|---|
 | `InvalidModel` | Eingabe verletzt den Definitionsbereich: Validierungsfehler aus Core, nicht endliche Werte, EI/EA ≤ 0, k < 0 oder nicht endlich, Position außerhalb des Balkens; nicht definierte Koinzidenz (Kombination, Teilpunkt); k = 0 je nach DEV-19 |
 | `UnstableModel` | exakter Mechanismus quer (betroffener Teilkörper) oder axial |
-| `IllConditionedSystem` (Bedeutung: *numerisch nicht sicher lösbar*) | `ZeroPivot`: exakt stabil, F_exc > 0 und Nullpivot; `NotVerified`: adjungierte Lösungen nicht verifiziert (μ ≥ 1 für alle Gewichtskandidaten, 6.3), die Genauigkeit ist nicht nachgewiesen, das Ergebnis aber nicht als falsch erkannt; `Gate`: Gate > τ (Größe, Ort, erreichter Wert) |
-| `NumericalFailure` | `NumericalRange`: eine Bereichsregel aus [GV 7] verletzt (Eingabe ≠ 0 nicht normal, L < 2⁻⁹⁶⁸, Koeffizient oder Zwischenwert nicht normal, normiertes Anregungsprimitiv ≠ 0 nicht normal, Streckenlast zu kurz, Eintrag nach Ruiz oder Pivot nicht normal, SI-Bezugsgröße außerhalb [2⁻⁹⁶⁹, 2¹⁰⁰⁰]); `NonFinite`: Lösung, β oder Gate nicht endlich; `InternalInconsistency`: Gleichungszahl ≠ Unbekannte, Federreaktions-Identität verletzt |
+| `IllConditionedSystem` (Bedeutung: *numerisch nicht sicher lösbar*) | `ZeroPivot`: exakt stabil, F_exc > 0 und Nullpivot; `NotVerified`: adjungierte Lösungen nicht verifiziert (μ ≥ 1 für alle Gewichtskandidaten, 6.3), die Genauigkeit ist nicht nachgewiesen, das Ergebnis aber nicht als falsch erkannt; `Gate`: gerichteter SI-Schwellenvergleich fehlgeschlagen |
+| `NumericalFailure` | `NumericalRange`: eine Bereichsregel aus [GV 7] verletzt (Eingabe ≠ 0 nicht normal, L < 2⁻⁹⁶⁸, Koeffizient oder Zwischenwert nicht normal, normiertes Anregungsprimitiv ≠ 0 nicht normal, Streckenlast zu kurz, Eintrag nach Ruiz oder Pivot nicht normal, SI-Bezugsgröße außerhalb [2⁻⁹⁶⁹, 2¹⁰⁰⁰]); `NonFinite`: Lösung, Schranke oder Gate nicht endlich; `InternalInconsistency`: Gleichungszahl ≠ Unbekannte, Federreaktions-Identität verletzt |
 
 Die Zuordnung ist vollständig: Jede Ablehnung hat genau einen dieser Codes, und kein anderes
 Kriterium lehnt ab (6.1). Kondition, ω und Eingabesensitivität führen zu keinem Code. Getrennt sind
@@ -913,7 +726,7 @@ neu; die öffentlichen Codes bleiben bis zur Migration unverändert.
 Die Umbenennung von `IllConditionedSystem` ist eine Option der Ergebnisschnittstelle. Der Code
 bleibt bis zur Migration erhalten.
 
-## 7. Numerischer Vertrag (Vorschlag für A8)
+## 7. Numerischer Vertrag (A8)
 
 ### 7.1 Vertragsgrenze und Referenzlösung
 
@@ -927,197 +740,58 @@ Macaulay-Referenz `spring_ref.py`, untereinander bitgleich, `xcheck.py`).
 
 ### 7.2 Anregung und Bezugsgrößen
 
-**Anregungsskala.** Anregung wird auf Ebene der mechanischen Solvereingabe definiert, nicht über
-Resultierende. Jedes Anregungsprimitiv trägt den Betrag seiner rechten Seite in Krafteinheiten bei,
-je Teilproblem (Biegung, Axial) getrennt:
+`unloaded` gilt genau dann, wenn alle gespeicherten Anregungsprimitive
+exakt null sind. Bei stabilem Modell und gültigem Aufbau liefert dieser
+Pfad ohne Faktorisierung exakte Nullen. Kompensierende Lasten bleiben
+geladen. Für Biegung dient folgende positive Trapeznorm der Skalierung.
 
 ```text
-F_exc = Σ|P| + Σ∫|q| + Σ|C|/L                         Biegung (heute)
-F_exc,x = Σ|P_x| + Σ∫|n|                              Axial (heute)
-später zusätzlich, je Primitiv in Krafteinheiten:
-  vorgeschriebene Verschiebung δ:  |δ|·EI_ref/L³      vorgeschriebene Verdrehung φ:  |φ|·EI_ref/L²
-  eingeprägte Krümmung κ (DEV-27): ∫|κ|·EI dx / L²    (entsprechend axial)
+F_exc = Σ|P| + Σ((|q_a| + |q_b|)/2)·l + Σ|C|/L
 ```
 
-Weil nur Beträge eingehen, ist F_exc = 0 genau dann, wenn jedes Anregungsprimitiv null ist. Lasten,
-die sich global aufheben, ergeben F_exc > 0 (gemessen: Resultierende und resultierendes Moment null,
-max|M| = 10⁴ Nm, geliefert mit Fehler 1,5·10⁻¹⁷). Ebenso ergeben P und −P an derselben Stelle
-F_exc > 0, b ≡ 0 und eine exakt verschwindende Lösung, gemessen gegen eine Skala > 0
-**[state-zero]**. Spätere Anregungsarten wie Lagersenkung oder Temperatur tragen bei, sobald sie
-ungleich null sind, und werden nie als „unbelastet“ behandelt.
+Die Norm wird aus Mantissen und Exponenten bestimmt. Sie ist bei
+Vorzeichenwechsel im Allgemeinen verschieden vom Integral des Betrags
+der Intensität. Geometrie und Steifigkeit werden vor der Normierung
+geprüft. Neue Anregungsprimitive erhalten ihre Normbeiträge und
+Bereichsregeln im jeweiligen Feature-Track [GV 5, 7].
 
-**Ohne Anregung** (F_exc = 0 für ein Teilproblem): Dann ist b ≡ 0, und für ein exakt stabiles Modell
-ist die exakte Lösung null. Der Kern liefert exakt null. Gemessen ist das für Einfeldträger,
-Durchlaufträger, Federlagerung, EI-Wechsel, Gelenke, Lagerpaar im Abstand L/10¹¹ und den
-Axialanteil, jeweils mit einem Nachiterationsschritt **[state-zero]**. Ein exakt stabiles, aber
-numerisch singuläres Modell (Balken nur auf zwei Federn im Abstand 5·10⁻¹² m) hat ohne Anregung
-einen Nullpivot, obwohl seine exakte Lösung null ist. Deshalb wird der Nullfall vor der Lösung
-entschieden (6.1, Schritt 4). Es wird *kein* relatives Maß
-gebildet (Skala 0). Zusage: Alle Werte sind exakt 0. Sie werden konstruiert, nicht berechnet; ein
-Test prüft die exakten Nullen. Ein Indikator wird nicht gebildet; die Untersuchung zeigt nur, dass
-auch eine Lösung mit dem Kern exakte Nullen ergäbe und der damalige η-Anteil ≤ 10⁻²⁹⁴ bliebe. Der
-Genauigkeitsbericht weist „ohne Anregung“ aus.
-
-**Bereichsregel (Runde 5, [GV 7]):** Jedes Anregungsprimitiv ≠ 0 muss nach Entdimensionierung und
-Normierung (5.1) eine normale Gleitkommazahl ergeben, sonst `NumericalFailure` (Ursache
-`NumericalRange`). Für die SI-Bezugsgrößen S_q unten gilt S_q,SI ∈ [2⁻⁹⁶⁹, 2¹⁰⁰⁰], und die
-Obergrenzen von |Q| je Stück dürfen in SI nicht überlaufen. Dann ist der absolute Fehler der
-Rückskalierung, auch mit FTZ (< 2⁻¹⁰²²), relativ zu S_q höchstens 2⁻⁵³, und er steht als λ-Anteil
-in β_SI. Das ist eine allgemeine Regel der Ausgabe, kein Sonderfall kleiner Balken: Geliefert wird
-nur, wenn alle für die Zusage nötigen dimensionalen Ergebnisse und Bezugsgrößen ohne
-unkontrollierten Über- oder Unterlauf darstellbar sind. Einzelne SI-Werte unter S_q dürfen
-subnormal sein; ihre Rundung steht in β_SI. Die Grenze 2⁻⁹⁶⁹ statt „normal“ ist der Preis der
-FTZ/DAZ-Unabhängigkeit: Sie lehnt Modelle mit SI-Skalen unter 2·10⁻²⁹² ab, etwa w ≈ 10⁻³⁰⁰ m, die
-bei graduellem Unterlauf richtig wären **[state-fpc-chain-underflow]**. Unterläufe in
-Zwischenergebnissen erfasst der λ-Term von β (6.3). Gegenbeispiele ohne diese Regeln: Befunde 3
-und 5 in 6.4.
-
-**Bezugsgrößen** aus der berechneten Lösung (im Produkt gibt es keine exakte):
+Die exakten Bezugsskalen verwenden Stationsmaxima an den
+Ereignisstationen einschließlich beider vorhandener Seiten.
 
 ```text
-S_M = max(max|M|, F_exc·L)                S_V = max(S_M/L, F_exc)
-S_θ = max(max|θ|, S_M·L/EI_min)           S_w = max(max|w|, S_M·L²/EI_min, S_θ·L)
-S_N = max(max|N|, F_exc,x)                S_u = max(max|u|, S_N·L/EA_min)
+S_M = max(max|M|, F_exc·L)        S_V = max(S_M/L, F_exc)
+S_θ = max(max|θ|, S_M·L/EI_min)   S_w = max(max|w|, S_M·L²/EI_min, S_θ·L)
 ```
 
-Präzisierung (Runde 5, [GV 5] Punkt 21a): Die Maxima laufen über die Ereignisstationen (beide
-Seiten), die Größen sind die der **exakten** Lösung und der exakten Daten. Der verteilte Anteil von
-F_exc ist Σ(|q_a| + |q_b|)/2·Länge, also ∫|q| für Lasten ohne Vorzeichenwechsel. Das Produkt kennt
-die exakte Lösung nicht und rechnet mit rigorosen Untergrenzen: max(|Q̂| − β) nach unten, F_exc nach
-unten, EI_min nach oben gerundet. Damit ist der normierte Wert im Gate eine obere Schranke des
-normierten Fehlers im Vertragsmaß. Kleinere Skalen machen das Gate nur strenger. Das löst auch die Reihenfolge im Datenfluss:
-Qualitätsbewertung (Schritt 7) vor den Extremwerten (Schritt 9).
+Für w und θ gilt S_q als Bezugsskala. Für M, V und Reaktionen
+gilt max(S_q, Betrag des exakten Werts) mit der entsprechenden Einheit.
+Die gerichteten unteren Skalen verwenden Stationswerte abzüglich der
+verifizierten Schranke, eine untere Anregungsnorm und eine obere
+Schranke für EI_min. Für die SI-Range-Prüfung werden die Skalen auch
+nach oben eingeschlossen [GV 7].
 
-| Größe | Fehlermaß |
-|---|---|
-| w, θ, u | \|Fehler\| / S_* |
-| M, N, Reaktionsmoment | \|Fehler\| / max(\|Wert\|, S_M bzw. S_N) |
-| V, Reaktionskraft | \|Fehler\| / max(\|Wert\|, S_V) |
+### 7.3 Kontinuierliches Qualitätsgate und Zusagen
 
-Das gemischte Maß für V und Reaktionen ist bewusst strenger als das globale Feldskalenmaß der
-bisherigen Untersuchungen. Physikalisch große Querkräfte zwischen nahen Lagern (31 GN im 6-nm-Fall)
-dürfen den Maßstab für die übrige Querkraft nicht vergrößern. Gemessen ist es genauso erreichbar wie
-das globale Maß (Abschnitt 7.6).
+Variante C verwendet die verifizierte Fehlermajorante je offenem
+Stück und prüft die Ereignisseiten separat. Für M und V kann eine
+gerichtete Untergrenze des exakten Betrags im Stück die Bezugsskala
+verbessern. Die Untergrenze folgt aus der maximalen Änderung von
+M und V bei eingeschlossenen exakten Streckenlasten. Die Betragsgrenzen
+für die SI-Ausgabe umfassen auch das Innere von w- und θ-Stücken.
+Die Begründung und die Richtung aller Rundungen stehen in [GV 3, 7].
+Exakte Bernstein-Einschließung bleibt die unabhängige Gegenprobe.
 
-### 7.3 Qualitätsgate über den ganzen Balken und Zusagen
+Freigabe erfordert `VerifiedOutputBound ≤ τ · ReferenceScale` mit dem
+exakten Produktwert `τ = 1/100_000_000`. Die Referenz prüft eine nach
+oben eingeschlossene SI-Schranke gegen die nach unten gerundete
+Schwelle aus [GV 7]. Das Gate deckt damit Feldwerte, Stationswerte,
+Reaktionen und Werte an ausgegebenen Extremwertkandidaten ab.
 
-Eine `BeamSolution` wird einmal angenommen und erlaubt danach `EvaluateAt(x)` an *beliebigen*
-Stellen. Das Gate muss deshalb den kontinuierlichen Balken abdecken, nicht nur die Stationen.
-
-**Herleitung.** Im mechanischen Abschnitt j ist an der lokalen Stelle s
-
-```text
-β_q(s) = (1+γ)·Σ_k |g_qk(s)|·β_k  +  Σ_k γ(·)|g_qk(s)·X_k|  +  γ(m)·P_abs,q(s)  +  δP_q(s)  +  c·λ
-g ∈ {1, s, s²/(2EI), s³/(6EI)} (je Komponente)
-```
-
-Dabei sind X_k der Zustand am Abschnittsanfang, β_k sein Indikator, P_abs,q(s) die Summe der Beträge
-der Lastintegralterme und m deren Anzahl. Geprüft, welcher Term in s nichtfallend ist:
-
-| Term | nichtfallend, weil | gilt für |
-|---|---|---|
-| \|g_qk(s)\|·β_k, γ\|g_qk(s)·X_k\| | g ist ein Polynom in s ≥ 0 mit nichtnegativen Koeffizienten | alle Abschnitte |
-| P_abs,q(s) | jeder Lastterm ist \|Intensität\| mal ein Polynom in Abständen (x − Lastort, Lastlänge) mit nichtnegativen Koeffizienten | Punktkraft, Punktmoment, linear veränderliche Streckenlast; ebenso eingeprägte Krümmung (DEV-27: κ·d, κ·d²/2) |
-| m, c·λ | konstant im Stück, denn eine Last wechselt den Zustand nur an Ereignisstationen | alle |
-
-Die Monotonie hängt nicht an der Auslöschungsfreiheit von `Difference`/`Ramp`. Auch die naive
-Macaulay-Form hätte eine monotone Betragssumme, nur eine viel größere. Sie hängt daran, dass der
-Indikator als Summe von Beträgen geschrieben ist, deren jeder in s wächst. In Gleitkomma ist jede
-dieser Operationen monoton (Rundung ist monoton für +, ×, ÷ mit festem Vorzeichen). Potenzen müssen
-dafür als Produkte gebildet werden, nicht über `Math.Pow`; die Rundungszahlen sind ohnehin so
-gezählt. Ausnahme ist das geschlossene linke Stückende, wenn dort eine Streckenlast endet. Dort
-rechnet `Difference`/`Ramp` noch im Zweig x ≤ b, das Innere im Zweig x > b. Gemessen ohne Toleranz:
-28 Abfälle in 28 von 10.346 Modellen, alle an dieser Stelle, höchstens 3,6·10⁻¹⁶ relativ (≈ 2 ulp)
-**[state-gate-summary, state-mono-check]**. Der linke Endwert ist selbst ein Stationswert und wird vom
-Stationsgate erfasst. Im offenen Stück gibt es keinen Zweigwechsel, die Majorante bei x₁⁻ gilt dort
-ohne Zuschlag. Der Faktor (1 + γ(4)) ist deshalb nur eine Reserve für die Auswertung der Majorante,
-nicht die Begründung. Das alles gilt für β, *nicht* für den tatsächlichen Fehler.
-
-**Allgemeine Form, nicht Monotonie als Invariante.** Das Gate braucht je Stück und Größe eine
-berechenbare **Majorante** B_q ≥ sup_{x∈Stück} β_q(x). Mit den heutigen Lastprimitiven ist
-B_q = (1 + γ(4))·β_q(x₁⁻). Ein künftiger Lasttyp, dessen Terme nicht monoton sind (etwa eine
-periodische Last), muss seine eigene Majorante liefern, zum Beispiel jeden Term an seinem Maximum
-über das Stück. Architekturinvariante ist die Majorante, nicht die Monotonie.
-
-**Stück-Gate:** je Stück [x₀, x₁] der Länge h und Größe q
-
-```text
-G_q = B_q / D_q,    D_q = S_q (w, θ)    bzw.    D_q = max(S_q, LB_q)   (M, V)
-LB_V = (max(|V(x₀⁺)|, |V(x₁⁻)|) − h·q_sum − β_V(x₁⁻))·(1 − γ(8))
-LB_M = (max_e (|M_e| − |V_e|·h − q_sum·h²/2) − β_M(x₁⁻))·(1 − γ(8)),   e ∈ {x₀⁺, x₁⁻}
-q_sum = Σ über Streckenlasten des Stücks: max(|q(x₀)|, |q(x₁)|)
-```
-
-LB_q ist eine **geschlossene, beweisbar konservative Untergrenze** von min |Q̂| im Stück, also des
-berechneten Feldes: Es gilt |V(x) − V_e| ≤ ∫|q| ≤ h·q_sum und |M(x) − M_e| ≤ |V_e|·h + q_sum·h²/2. Der
-Abzug von β_q(x₁⁻) deckt die Auswertungsrundung ab. Er deckt auch den Unterschied zum exakten Q, aber
-nur, soweit β den Fehler deckt. Gemessen an allen dichten Punkten von 68.442 Stücken mit LB_q > 0
-**[state-lb-*]**: |Q̂(x)| < LB_q nie. |Q_exakt(x)| < LB_q an 5 Punkten eines einzigen Modells
-(f|1e-06|872), das abgelehnt wird (Gate 10⁻³). Dort ist der Fehler 5,8·10⁻³ größer als β = 5,2·10⁻³,
-die erste Ordnung gilt nicht mehr. In gelieferten Modellen gab es keine Ausnahme. Es gibt weder
-Nullstellensuche noch Stichproben.
-
-**Unabhängige Gegenprüfung** (Runde 4, [Audit 3.5]): Das Stückpolynom p̂ der berechneten Daten und das
-exakte Stückpolynom p werden in Bruchrechnung gebildet. Ihre Bernstein-Koeffizienten werden exakt
-gebildet und exakt unterteilt (Cargo/Shisha-Einschließung). Daraus folgt eine zertifizierte
-Einschließung von min|p̂| und min|p| je Stück. Auf 18.828 Stücken mit LB_q > 0 in 1.833 Modellen
-**[state-piece-*]**: LB_q > min|p̂| nie, LB_q > min|p| nie, kleinster Abstand (min|p̂| − LB_q) = 0,88·β.
-Ein Gate mit der Bernstein-Untergrenze statt LB_q ist identisch (Verhältnis 1,000) und ändert keine
-Entscheidung. Variante C bleibt; Bernstein ist Testoracle, kein Produktverfahren, denn als
-Gleitkommaverfahren bräuchte es gerichtete Rundung. Drei Begriffe sind dabei zu trennen: das mathematisch exakte
-min|Q| (unbekannt), ein numerisch berechnetes min|Q̂| (etwa über `PolynomialRoots`; ohne Fehlerschranke
-keine sichere Untergrenze) und eine wirklich konservative Untergrenze (LB_q). Das Gate verwendet nur
-die letzte. Das Modell-Gate ist das Maximum aus allen G_q, den Stationswerten und den Reaktionen.
-Weil das normierte β_q(x) ≤ G_q für jedes x im Stück gilt, hat nach der Annahme **jeder** Wert von
-`EvaluateAt(x)` und `Extrema` ein normiertes β ≤ τ. Die Lösung wird dabei nicht verändert, und
-spätere Aufrufe rechnen nichts neu. Für den Axialanteil gilt dasselbe mit LB_N (4.3).
-
-**Varianten verglichen** auf allen 10.346 exakt stabilen Modellen (840 gezielte, 9.506 zufällige)
-**[state-gate-summary]**:
-
-| Variante für M, V | geliefert / abgelehnt | davon abgelehnt mit Fehler ≤ τ | Entscheidungen anders als B |
-|---|---|---|---|
-| A: D_q = S_q | 10.072 / 274 | 266 | 263 |
-| B: D_q = max(S_q, min\|Q̂\| aus 65 Stützstellen + Parabel) | 10.335 / 11 | 3 | – |
-| C: D_q = max(S_q, LB_q) | 10.335 / 11 | 3 | 0 |
-
-Variante A lehnt 263 korrekte Modelle zusätzlich ab (größter Fehler 2,3·10⁻¹²): Stücke zwischen
-nahen Lagern und Federn der Länge 10⁻¹¹ L, in denen |V| bis 6·10¹⁰-mal größer ist als S_V; dazu
-gehört die Klasse des 6-nm-Falls. Das ist fachlich nicht vertretbar. C trifft dieselben
-Entscheidungen wie B. Ihr Gate ist in gelieferten Modellen höchstens 7 % größer, das liegt am Abzug
-von β, und C kommt ohne Nullstellensuche aus. **Entscheidung: Variante C.**
-
-**Gemessen** mit dichter Auswertung (Variante B; das Stück-Gate von C ist in allen Modellen ≥ B,
-die Aussagen gelten also auch für C): je Stück 15
-gleichverteilte Punkte und geometrisch an beide Enden heranrückende Punkte bis 2⁻⁴⁰ der Stücklänge,
-auf 840 gezielten und 9.506 Zufallsmodellen **[state-coverage-*]**:
-
-- β war bis auf die oben genannten Abfälle um höchstens 2 ulp am linken Stückende nirgends längs
-  eines Stücks fallend (mit Toleranz 10⁻¹² keine Ausnahme).
-- Das normierte β(x) lag nirgends über seinem Stück-Gate.
-- Das *normierte* β ist im Inneren bis 4 % größer als an den Stückenden, weil |Q(x)| im Nenner
-  variiert. Ein reines Stations-Gate wäre also nicht ausreichend.
-- Der *tatsächliche* Fehler hat sein Maximum teils im Inneren (bis 22,5-fach über dem Endwert, auf
-  Fehlerniveau 10⁻¹⁸). Auch deshalb setzt das Gate auf β und nicht auf Stichproben des Fehlers.
-- In gelieferten Modellen lag der tatsächliche Fehler an keiner der dicht ausgewerteten Stellen über
-  dem Gate, mit adjungierter Nachiteration auch an keiner Stelle über dem punktweisen β(x).
-- Grenzbereich: 4 Modelle mit Gate in (10⁻¹⁰, 10⁻⁸], größter Fehler 2·10⁻¹¹, Gate/Fehler ≥ 31.
-  Gezielt ergänzt (Runde 4): 75 Modelle mit Gate nahe τ (7.6), davon 41 in (10⁻¹⁰, 10⁻⁸].
-
-**Zusagen:**
-
-| Ausgabe | Zusage |
-|---|---|
-| Feldwert an beliebigem x (`EvaluateAt`, beide Seiten), Stationswerte, Reaktionen | Normiertes β ≤ Gate ≤ τ; sonst kein Ergebnis. Unter dem Rundungsmodell des Gleitkomma-Vertrags (V1–V6) und bei erfolgreicher Verifikation ist β eine obere Fehlerschranke, also auch der tatsächliche Fehler ≤ τ (Beweiskette [GV 4], Papierbeweis). Auf jeder Stufe gegen exakte Arithmetik geprüft, ohne Ausnahme ([GV 9], 7.6). Offen ist die Konformität der C#-Implementierung (O2). |
-| Wert eines Extremums | Fehler ≤ β(x_c) + Positionsanteil. β(x_c) ≤ Gate ≤ τ wie bei jedem Feldwert. Der Positionsanteil \|Q(x_c) − Q(x*)\| ist *nicht* in β enthalten. Für einfache Wurzeln ist er zweiter Ordnung (gemessen ≤ 1,41 × \|Q''\|Δx²/2); für mehrfache oder fast mehrfache Wurzeln gilt nur ≤ \|Δx\|·max\|Q'\| zwischen x_c und x*, wo \|Q'\| auf Rundungsniveau liegt. Gemessen ≤ 8,7·10⁻²⁹ der Skala. Voraussetzung, die das Gate nicht abdeckt: Die Nullstellensuche findet jedes lokale Extremum. Geprüft gegen exakte Wurzelisolation (Sturm, quadratfreie Zerlegung, Gegenprobe mit sympy) auf 1.833 Modellen einschließlich doppelter und fast doppelter Wurzeln: kein übersehener Kandidat, Extremwertfehler gelieferter Modelle ≤ 3,1·10⁻¹⁴ **[state-piece-*]**, [Audit 3.6]. Das ist eine experimentell sehr stark validierte, aber keine mathematisch zertifizierte Kandidatenvollständigkeit: `PolynomialRoots` hat keinen Vollständigkeitsbeweis. Vorschlag: keine zertifizierte Vollständigkeitszusage (Variante B, [GV 11]); `PolynomialRoots` bleibt stark validierter Produktalgorithmus, das exakte Oracle wird Testreferenz. Endgültig ist das eine Vertragsentscheidung (O5). |
-| Ort eines Extremums | Keine Genauigkeitszusage. Zugesagt ist die Reproduzierbarkeit: `EvaluateAt` am gemeldeten Ort und der gemeldeten Seite liefert den gemeldeten Wert. Das gilt durch Konstruktion, wenn der Wert erst nach dem Runden von x = x₀ + t·h mit der Seite aus dem exakten Vergleich mit den Stückenden ausgewertet wird (gemessen: alle Kandidaten reproduzierbar). Bei flachen Extrema ist der Ort schlecht konditioniert. |
-| ohne Anregung (7.2) | alle Werte exakt 0 |
-
-τ ist ein **Produktwert**, kein Tuning-Parameter der Numerik. Vorschlag: **τ = 10⁻⁸** im Maß aus 7.2,
-gleich für alle Größen. Begründung: Ergebnisse werden mit bis zu 15 Stellen angezeigt
-([ENGINEERING.md](ENGINEERING.md#numerische-darstellung-in-app-und-bericht)), fachlich relevant sind
-höchstens 4–6. τ lässt damit zwei Größenordnungen Reserve. Gelieferte Ergebnisse hatten tatsächlich
-höchstens 2·10⁻¹¹ Fehler, typisch 10⁻¹⁶ (Median) bis 10⁻¹⁴ (p99) **[state-acceptance-summary]**.
+O5 ist mit Variante B geschlossen. `PolynomialRoots` bleibt
+unabhängig validiert. Der verifizierte Bound für den Kandidatenwert
+gilt am ausgegebenen Ort und auf der ausgegebenen Seite.
+Kandidatenvollständigkeit und Positionsfehler werden getrennt gegen
+exakte Wurzelisolation validiert [GV 11].
 
 ### 7.4 Gültigkeitsbereich
 
@@ -1129,58 +803,28 @@ Der Vertrag gilt für alle Modelle, die:
 - deren adjungierte Lösungen verifiziert sind (μ < 1, 6.3) und deren Gate ≤ τ ist,
 - deren SI-Bezugsgrößen in [2⁻⁹⁶⁹, 2¹⁰⁰⁰] liegen (7.2),
 
-und er gilt unter den Plattformvoraussetzungen V1–V6 [GV 2]. FTZ/DAZ gehört nicht dazu.
+und er gilt unter den Plattformvoraussetzungen aus [GV 2], bei graduellem oder abruptem Unterlauf.
 
 Eine Zusage zum *Anteil* gelieferter Modelle gibt es nicht. Sie hängt von der Kondition des
 Modells ab und ist nur statistisch beschrieben (7.6).
 
 ### 7.5 Prüfbarkeit
 
-- **Vertragstest (hart, ohne Python):** eingecheckte exakte Sollwerte. Jeder Fall prüft entweder
-  „geliefert und tatsächlicher Fehler ≤ τ“ (an Stationen, im Feld und an Extremwerten) oder den
-  erwarteten Ablehnungscode. Nullanregungsfälle prüfen exakte Nullen.
-- **Schranke (hart):** Unter dem Rundungsmodell des Gleitkomma-Vertrags und bei erfolgreicher
-  Verifikation ist β eine Schranke (6.3). „Fehler ≤ β“ an jedem Sollwert wird deshalb harte
-  Testbedingung. Eine Verletzung bedeutet eine Abweichung der Operationsfolge vom Vertrag, eine
-  falsche Rundungszahl oder eine fehlende Aufrundung und wird einzeln untersucht (6.4), nicht durch
-  Kalibrierung behoben. Gemessen: 2.811 Modelle (Runde 4) und 452 Kettenläufe plus 2.295
-  Zufallsmodelle (Runde 5) ohne eine Verletzung **[state-refine-summary, state-fpc-summary]**.
-- **Konformität mit dem Gleitkomma-Vertrag (hart, Runde 5):** die Stufen A–F aus [GV 9] mit
-  eingecheckten exakten Sollwerten. A: jede Formel gegen ihre Schranke auf den strukturierten
-  Grenzfällen. B: |r_exakt| ≤ d. C: |I − R S*| ≤ M. D: Fehler ≤ E. E: Feldwerte, Majorante und
-  Untergrenze im Stück. F: SI-Ausgabe und Bereichsfälle. Dazu ein Bit-Vergleich je Formel gegen
-  `state/fpc.py` auf festen Eingaben und Plattformtests für V1, V2, V5 auf x64 und ARM64. Alle
-  Prüfungen auch mit eingeschaltetem FTZ/DAZ.
-- **Indikatorgüte (überwacht, keine Testinvariante):** Die Verteilung β/Fehler je Größe wird als
-  Qualitätskennzahl gegen ein dokumentiertes Band verfolgt (heute 1. Perzentil ≥ 10¹, Median ≈ 10²,
-  **[state-acceptance-summary]**). Sie misst den Pessimismus (O3), nicht die Gültigkeit.
-- **Gate-Abdeckung (hart):** normiertes β(x) ≤ Stück-Gate an dichten Punkten jedes Stücks; die
-  Untergrenze LB_q ≤ |Q̂(x)| des berechneten Feldes an denselben Punkten (rigoros, daher hart;
-  gegen das exakte Feld nur überwacht, 7.3). Monotonie im *offenen* Stück wird für die
-  heutigen Lastprimitive ohne Toleranz geprüft. Am linken Stückende ist ein Abfall auf
-  Rundungsniveau zulässig, dort greift das Stationsgate.
-- **Selbsttests (hart, mit eingebauten Fehlern):** Identität von Sprung und Federgesetz,
-  Gleichungszahl, Endlichkeit. Ein absichtlich verfälschter Koeffizient (k, Stationslast,
-  Lastintegral) muss als `InternalInconsistency` erkannt werden.
-- **Verifikation (hart, mit gestörter Faktorisierung):** Mit um 10⁻¹ gestörten LU-Faktoren muss jedes
-  gelieferte Modell eine verifizierte Schranke haben (Fehler ≤ β an allen Werten), und die Fälle
-  mit β unter dem Fehler müssen als nicht verifiziert abgelehnt werden (6.3).
-- **Faktorisierung (hart):** Bandbreite (2,2) und Multiplikatorabstand ≤ 2 für die gezielten
-  Familien (Invariante 2); Pivotwachstum ρ protokolliert; ein Beispiel mit Gradierung, bei der QR
-  scheitert und GEPP liefert (`gemischt|1e-09|0`, 5.2).
-- **Exakte Oracles (Testreferenz, nicht Produkt):** Extremwerte gegen exakte Wurzelisolation, Stück-
-  Untergrenze gegen exakte Bernstein-Einschließung (`state/piece_oracle.py`, 7.3).
-- **Unterlauf (hart):** die Fälle aus [Audit 3.4], insbesondere der Kleinstbalken mit unterlaufender
-  SI-Rückrechnung → `NumericalRange`.
-- **Fehlercodes (hart):** Für jede Ursache aus 6.6 mindestens ein Fall mit genau diesem Code.
-  Fälle mit großem ω, aber kleinem Gate werden geliefert (ω ist keine Grenze).
-- **Aufwand (Zähltest hart, Zeit verfolgt):** wie in 5.6.
-- **Diagnosen:** Die 1-ulp-Sensitivität wird zu Referenzfällen als diagnostische Zusatzinformation
-  geführt, nicht als Begründung einer Ablehnung. Ein Test stellt sicher, dass Diagnosen Lösung und
-  Status nicht ändern (6.5).
-- **Untersuchungsläufe** wie in 7.6 bleiben Entwicklungswerkzeuge für neue Grenzfälle.
+- A–F sind harte Konformitätsprüfungen mit exakten Sollwerten. Sie
+  reichen von lokalen Formeln, Daten und Residuen über Kontraktion
+  und Zustandsfehler bis zu Ausgaben, Stückgrenzen und SI-Gate.
+- Range- und Statusfälle prüfen Ablehnung und Fehlerursache. Exakt
+  unbelastete Fälle prüfen exakte Nullen. Die Migration prüft auch
+  exakte axiale Nullausgaben bei nicht-null Biegelast.
+- Auf jeder unterstützten Plattform gelten dieselben fachlichen und
+  numerischen Kriterien. Bitvergleiche einzelner Primitives können
+  die Diagnose unterstützen [GV 2, 9, 13].
 
-### 7.6 Gemessene Folgen
+### 7.6 Historische Messungen vor dem Closure-Pass
+
+Die Kennzahlen dieses Abschnitts beziehen sich auf die jeweils benannten
+früheren Prototypen und ihre Indikatoren. Die aktuellen Nachweise stehen
+in [GV 9].
 
 Zufallsmodelle mit den Generatoren der Prototyp-Untersuchung (Federn: gleiche Seeds wie
 `s_fuzz.py`, also dieselben Modelle; gemischt: Zufallsfolge von `f_fuzz.py`, Krümmung verworfen).
@@ -1238,10 +882,8 @@ werden. Fehler im gemischten Maß, τ = 10⁻⁸ **[state-rand-s-*, state-rand-f
   die neue Formulierung 6. Sein größter Fehler lag bei 2·10⁻⁷ **[s_rand2]**. Der größte
   tatsächliche Fehler gelieferter Modelle der neuen Formulierung liegt auf diesen Klassen bei
   1,1·10⁻¹¹ **[state-gate-summary]**.
-- **Regression Runde 5** (Gleitkomma-Vertrag, jedes 5. Zufallsmodell): 2.295 exakt stabile Modelle,
-  2.291 geliefert, kein Wert über seiner Schranke, größter gelieferter Fehler 2,5·10⁻¹³; dieselbe
-  Entscheidung wie Runde 4 in 1.894 von 1.896 Modellen. Die zwei Abweichungen sind die früher nicht
-  verifizierbaren Modelle, jetzt geliefert **[state-fpc-summary]**.
+- **Round-5-Regressionssatz:** Der Closure-Pass rechnet dieselben Modelle erneut.
+  Aktuelle Entscheidungen und Schrankenvergleiche stehen in **[state-fpc-summary]**.
 - **Einheitenwechsel** (m ↔ mm, N ↔ kN): Auf 112 gelieferten Modellen liegt der Fehler gegen die
   exakte Lösung der jeweils eigenen Eingabe bei ≤ 3,9·10⁻¹⁵, keine zusätzliche Ablehnung. Eine reine
   Zweierpotenz-Umskalierung ist in 307 von 307 Modellen bitgleich **[state-invariance]**.
@@ -1281,7 +923,7 @@ Das **interne Ergebnismodell** wird ohne FE-Begriffe gebildet:
 | Reaktion | je Halterung: Position, Teilpunkt, Richtung, Kraft bzw. Moment |
 | Stück | Grenzen, Feldpolynome |
 | Extremwerte | w, V, M (N nach DEV-12) mit Ort und Seite |
-| Genauigkeitsbericht | Gate und größtes normiertes β je Größe relativ zu τ, Verifikation (μ), „ohne Anregung“, Nachiterationsschritte; Diagnosen (Sensitivität, ω) getrennt davon und nur in Entwicklung/Validierung |
+| Genauigkeitsbericht | Gate und größter normierter VerifiedOutputBound je Größe relativ zu τ, Verifikation (μ), „ohne Anregung“, Nachiterationsschritte; Diagnosen (Sensitivität, ω) getrennt davon und nur in Entwicklung/Validierung |
 
 **`BeamSolution` als Fassade** erhält den heutigen Vertrag:
 
@@ -1334,14 +976,14 @@ Nutzer heute: `ResultDiagramProjection`, `EditorViewModel.ResultProbe`, `BeamAna
 Geprüft werden einzelne Reaktionen sowie w, θ, M und V an Stationen (beide Seiten) und im Feld,
 außerdem Extremwerte. Erzeugt werden die Sollwerte von beiden exakten Referenzen, mit `xcheck.py`
 bitgleich gegeneinander geprüft. Für den Axialanteil gibt es bisher eine exakte Referenz
-(`state/axial.py`); eine zweite unabhängige ist zu ergänzen (O4).
+(`state/axial.py`). Die zweite unabhängige Referenz gehört zu DEV-12 (O4).
 
 **Neue Architekturtests:**
 
 - Phantomstation: Eine zusätzliche Last ändert die Matrix nicht (Invariante 1).
 - Strukturzählung: Gleichungen = Unbekannte, Bandbreite höchstens (2,2), Multiplikatoren höchstens 2
   unter der Diagonale (Invariante 2).
-- Verifikation: mit gestörten LU-Faktoren nie ein verifiziertes β unter dem Fehler (6.3, 7.5).
+- Verifikation: mit gestörten LU-Faktoren liegen Fehler innerhalb der verifizierten Schranken (6.3, 7.5).
 - Zweierpotenz-Skalierung bitgleich; allgemeiner Einheitenwechsel innerhalb des Vertrags (zwei
   getrennte Tests).
 - Spiegelung x → L − x, Superposition, Reihenfolge der Eingabe: innerhalb des Vertrags.
@@ -1349,18 +991,18 @@ bitgleich gegeneinander geprüft. Für den Axialanteil gibt es bisher eine exakt
   geprüft gegen die Summe der beteiligten Indikatoren, nicht exakt und nicht gegen τ (4.2).
 - Vertrag: gelieferte Sollwertfälle haben tatsächlichen Fehler ≤ τ (hart). Die Indikatorgüte
   (β/Fehler-Band) wird überwacht, ist aber keine Testinvariante (7.5).
-- Gate-Abdeckung: β(x) ≤ Stück-Gate und LB_q ≤ |Q̂(x)| an dichten Punkten; Monotonie im offenen
+- Gate-Abdeckung: Ausgabeschranke ≤ Stückmajorante und LB_q ≤ |Q_exact(x)| an dichten Punkten; Monotonie im offenen
   Stück (7.3, 7.5).
 - Nullanregung: exakte Nullen ohne Lösung, auch beim numerisch singulären Modell; Unterlauf der
   Anregung → `NumericalFailure`.
 - Diagnosen ohne Rückwirkung: Lösung und Status mit und ohne Sensitivität bitgleich.
-- Federreaktionen: Identitätsprüfung (4.2) mit eingebauten Fehlern; Wahl nach kleinerem β;
+- Federreaktionen: Identitätsprüfung (4.2) mit eingebauten Fehlern; Wahl nach kleinerer verifizierter Schranke;
   weiche Feder zwischen zwei nahen Lagern und sehr steife Federn als Sollwertfälle.
 - Fehlercodes: je Ursache aus 6.6 ein Fall; Fälle mit mehreren Ursachen prüfen die Reihenfolge aus
   6.1; ein Fall mit ω ≈ 1 und kleinem Gate wird geliefert.
-- Adjungierte Nachiteration: mindestens ein Schritt, Schrittzahl ≤ 5, Abbruch nach der β-Regel.
+- Adjungierte Nachiteration: mindestens ein Schritt, Schrittzahl ≤ 5, Abbruch nach der Änderung des adjungierten Rohterms.
 - Aufwand: Zahl der adjungierten Lösungen = n + n_r, Bandbreite unabhängig von der Stationszahl,
-  Zeitbudget bei n_m = 10, 30, 100 und bei 1.000 Lasten in einem Abschnitt (5.6).
+  C#-Messung bei n_m = 10, 30, 100 und bei 1.000 Lasten in einem Abschnitt (5.6).
 - Mechanismus: Bareiss-Urteil gleich exakter Singularität (Sollwerte).
 - Unerreichbarkeit nicht freigegebener Primitive über `EulerBernoulliBeamSolver.Solve`.
 - Zuordnung: 1-ulp-Abschnitt mit Eigenschaftswechsel; Last 1 ulp vor einer Station.
@@ -1369,21 +1011,20 @@ bitgleich gegeneinander geprüft. Für den Axialanteil gibt es bisher eine exakt
 übertragen (je Stationsregel, Übertragungskoeffizient, Lastintegral, Elimination, Nachiteration,
 Indikator, Extrema). Jeder nicht äquivalente Mutant muss von dauerhaften Tests erkannt werden.
 
-**Plattform:** Der Kern benutzt nur +, −, ×, ÷, √ (nur zur Wahl der Ruiz-Faktoren), `Math.ScaleB`/
-`ILogB` (Zweierpotenzen), `Math.BitIncrement`/`BitDecrement` (gerichtete Rundung der Schranken) und
-exakte Vergleiche. `Math.Pow` für kleine Potenzen und FMA sind ausgeschlossen. Dass der JIT ohne
-ausdrückliches `FusedMultiplyAdd` nicht zu FMA kontrahiert, ist Voraussetzung V2 und wird auf x64 und
-ARM64 getestet [GV 2]. FTZ/DAZ ist keine Voraussetzung der Garantie [GV 7]. Bitgleichheit zwischen macOS
-und Windows ist damit *angestrebt*, aber nicht gemessen (O12). Geprüft wird sie über einen
-Ergebnis-Hash in der Windows-CI. Gemessen ist bisher nur die bitgleiche Zweierpotenz-Invarianz
-innerhalb einer Plattform.
+**Plattform.** Jede unterstützte Plattform muss auf den festen
+Abnahmefällen dieselben fachlichen Entscheidungen und Fehlerklassen
+erfüllen. Jeder gelieferte Wert muss innerhalb seiner verifizierten
+Schranke und der mathematischen Toleranz liegen. Die Abnahme prüft
+benötigte Primitives und Zwischenwerte im Release-Build auf x64 und
+ARM64. Bitgleichheit ist Diagnose [GV 2, 13].
+
 
 ## 12. Migration (A10)
 
 | Phase | Inhalt | Ende |
 |---|---|---|
 | M1 | Neuer Kern im Solverprojekt neben dem bestehenden Pfad, interner Einstieg, Adapter für den heutigen Funktionsumfang | Kern rechnet alle heutigen Modelle |
-| M2 | Sollwertfälle, Architekturtests, Mutationslauf; alter FE-Solver als Vergleich auf V01–V15 und den CAD-Fällen | Abnahme grün auf macOS und Windows |
+| M2 | Sollwertfälle einschließlich axialer Nullausgabe, Architekturtests, Mutationslauf; alter FE-Solver als Vergleich auf V01–V15 und den CAD-Fällen | Abnahme grün auf macOS und Windows |
 | M3 | `EulerBernoulliBeamSolver.Solve` auf den neuen Kern; `BeamSolution`-Fassade; `SupportSpanSolver`, `SolverLoads`, `ReducedSystemSolver`, `DofMap`, `BeamAssembly`, `EulerBernoulliElement` verlassen den Produktpfad | ein Produktionssolver |
 | M4 | [KONZEPT.md](KONZEPT.md), [SOLVER.md](SOLVER.md), [VALIDATION.md](VALIDATION.md), CI-Solver-Hash anpassen | Voraussetzungen für `main` erfüllt |
 | M5 | Feature-Tracks nacheinander (Koinzidenzregeln, Core-Typ, Adapter, Freigabe) | je Track |
@@ -1399,25 +1040,25 @@ nach M3 entfernt; seine Testfälle bleiben als Sollwertfälle erhalten.
 
 | Nr. | Punkt | Art |
 |---|---|---|
-| O1 | τ = 10⁻⁸ bestätigen (Produktwert) | Entscheidung vor `main` |
-| O2 | Mathematisch für die festgelegte Operationsfolge geschlossen (Runde 5): Gleitkomma-Vertrag mit verbindlichen Folgen, Rundungszahlen aus der Folge abgeleitet, Beweiskette unter V1–V6, Stufen A–F ohne Verletzung, auch mit FTZ/DAZ [GV]. Verschoben, nicht geschlossen: die Konformität der C#-Implementierung mit diesen Folgen (Testpflicht: Stufen A–F mit Sollwerten, Bit-Vergleich je Formel) und die Plattformtests V1, V2, V5 auf x64 und ARM64. Der Beweis ist ein Papierbeweis, kein maschinell geprüfter | Implementierung und Abnahme |
-| O3 | Pessimismus von β (Median 10², p99 10⁴) lehnt korrekte Ergebnisse ab: 3 der 16 Ablehnungen der Zufallsläufe, alle 23 Ablehnungen der Grenzfälle nahe τ (Fehler ≤ τ, Gate/Fehler ≥ 11,8) (die 2 in Runde 4 nicht verifizierbaren Modelle sind mit Neumann-Gewichten verifiziert, 6.3). Hebel: adjungierte Lösung je kritischer Größe, genauere Rundungszahlen; kein Sicherheitsfaktor (s = 1). Eine Untergrenze ohne Abzug von β (Variante B) oder mit Bernstein brächte nichts (7.3) | Risiko |
-| O4 | Axial: eine exakte Referenz und ein Indikator mit Gate liegen in `state/axial.py` und `state/axial_quality.py`; zweite unabhängige Referenz, Sollwerte und das Federgesetz der Axialfeder fehlen; der Gleitkomma-Vertrag (Operationsfolgen, Stufen A–F) ist für (u, N) noch nicht umgesetzt [GV 5, Punkt 24] | Vor Implementierung |
-| O5 | Experimentell sehr stark validiert, nicht mathematisch zertifiziert: exakte Wurzelisolation als Oracle, kein übersehener Kandidat auf 1.833 Modellen, Extremwertfehler ≤ 3,1·10⁻¹⁴ (7.3, [Audit 3.6]). `PolynomialRoots` (Toleranzen 64ε, Clusterregel) hat keinen Vollständigkeitsbeweis. Vorschlag Variante B: keine zertifizierte Vollständigkeitszusage, `PolynomialRoots` bleibt validierter Produktalgorithmus, das Oracle wird Testreferenz [GV 11]. Variante A (zertifizierter Fallback) nur, wenn das Produkt Vollständigkeit zusagen will | Vertragsentscheidung |
-| O6 | Koinzidenztabelle je Track (Gelenk auf Lager, Feder auf Lager, Abschnittswechsel an Halterung, Moment auf Gelenk) | Track |
+| O1 | Exakter Produktwert τ = 1/100_000_000, gerichteter SI-Vergleich [GV 7] | Geschlossen |
+| O2 | C#-Konformität mit dem Gleitkomma-Vertrag und seinen Fehlerklassen, nachzuweisen mit A–F und exakten Referenzen [GV 9, 13] | C#-Abnahme |
+| O3 | Pessimistische Schranken können korrekte Fälle ablehnen | Akzeptiertes Risiko |
+| O4 | Belasteter Axialvertrag, zweite unabhängige Referenz und Axialfedergesetz. Die heutige axiale Nullausgabe gehört zur Migration | DEV-12 |
+| O5 | Variante B. PolynomialRoots bleibt unabhängig validiert, exakte Yun/Sturm-Isolation bleibt Oracle [GV 11] | Geschlossen |
+| O6 | Fachliche Koinzidenzsemantik je Track. Das generische Teilpunktmodell legt die Architektur fest | Feature-Track |
 | O7 | N-Extrema in der Schnittstelle (DEV-12) | Track |
 | O8 | Eingabesensitivität anzeigen ja/nein | Produkt |
-| O9 | Aufwand (5.6, Größenordnung in [GV 12]): Engpass ist der Qualitätsvertrag mit n + n_r adjungierten Lösungen und 1 + 3 Verifikationsdurchgängen, nicht die Faktorisierung. Band, alles speichern: bei n_m = 100 etwa 9 ms und 1,9 MB, bei 1.000 etwa 0,9 s und 190 MB, bei 5.000 etwa 23 s und 4,6 GB. Neu lösen statt speichern: Faktor ≈ 3,7 Zeit, Speicher O(n). Dicht ab etwa 250 Stationen im Sekundenbereich. Schätzungen aus Operationszahlen. Zu entscheiden: größte unterstützte Modellgröße, Latenzziel für Live-Diagramme, Speichern oder neu lösen; C#-Zeitmessung fehlt | Produkt und Implementierung |
-| O10 | Bestätigung „keine Federgruppierung nötig“ durch die C#-Abnahme | Implementierung |
+| O9 | Modellgrößen- und Latenzgrenze nach C#-Messung festlegen. [GV 12] liefert eine Größenordnungsschätzung | Produkt nach C#-Messung |
+| O10 | Keine Federgruppierung. Umsetzung an den Federextremen bestätigen | C#-Abnahme |
 | O11 | Umbenennung von `IllConditionedSystem` / `Nodes` | Integration |
-| O12 | Bitgleichheit macOS/Windows nachweisen (bisher nur angestrebt) | Abnahme |
+| O12 | Jede Plattform erfüllt fachliche Entscheidungen, Schranken, τ und Fehlerklassifikation unabhängig. Bitvergleiche dienen der Diagnose | C#-Abnahme |
 | O13 | Geschlossen (Runde 4): 75 gezielte Grenzfälle, 41 mit Gate in (10⁻¹⁰, 10⁻⁸], kein gelieferter Fehler > τ, Gate/Fehler ≥ 11,8 (7.6). Die Fälle werden in die Abnahme übernommen | – |
 | O14 | Anregungsskala für spätere Anregungsarten (Lagersenkung, Temperatur) je Track konkret festlegen; ebenso die Majorante von β und die Schranke für die Änderung von \|Q\| im Stück (7.3) für jeden neuen Lasttyp | Track |
 | O15 | Geschlossen (Runde 4): Ein überwiegendes Residual macht β scharf, aber mit verifizierter adjungierter Lösung nicht falsch; bei 10 % gestörter Faktorisierung lag der Fehler in jedem verifizierten Modell unter β (Messung, 6.3); seit Runde 5 folgt das aus der Beweiskette des Gleitkomma-Vertrags | – |
 | O16 | Geschlossen (Runde 4, präzisiert Runde 5): Verifikation der adjungierten Lösungen nach Rump (2010, Satz 10.2), μ < 1 nach oben gerundet, Gewichte mit Neumann-Schritten, sonst Ablehnung mit Ursache `NotVerified` (6.3, [GV 6, 10]) | – |
-| O17 | Voraussetzungen der Faktorisierungswahl: lokale Kopplung (Band (2,2)) und polynomiale Übertragung. Eine Bedingung zwischen nicht benachbarten Stationen oder Exponentialmoden (elastische Bettung, Theorie II. Ordnung) verlangen eine neue Prüfung (5.2, [Audit 3.1]) | Track |
-| O18 | Geschlossen (Runde 5): Graduelles Unterlaufen ist keine Voraussetzung mehr. Lastnormierung, λ = 2⁻¹⁰²², Software-Flush und Bereichsregeln machen die Garantie unabhängig von FTZ/DAZ/FZ; geprüft mit emuliertem FTZ/DAZ auf allen Stufen [GV 7, 9]. Ein Starttest bleibt Plattformdiagnose. Bitgleichheit über Modi und Plattformen gehört zu O12 | – |
-| O19 | Plattformvoraussetzungen V1, V2, V5 auf x64 und ARM64 im Release-Build messen (keine implizite FMA-Kontraktion, `ScaleB`/`BitIncrement` an Grenzwerten) [GV 2] | Abnahme |
+| O17 | Nichtlokale Kopplungen oder exponentielle Zustandsübertragung lösen eine Neubewertung im jeweiligen Track aus | Feature-Track |
+| O18 | Gradueller und abrupter Unterlauf sind im Vertrag hergeleitet [GV 3, 6, 7] | Geschlossen |
+| O19 | Gerichtete Primitives, Bereichsgrenzen und benötigte Zwischenwerte im Release-Build auf x64 und ARM64 prüfen [GV 2] | C#-Abnahme |
 | O20 | Gerichtete Rundung der Schranken (L5) und Software-Flush sind neue Implementierungspflichten; ihre Kosten sind in [GV 12] nicht gesondert gemessen | Implementierung |
 
 ## 14. Abgleich mit A1–A10 und den Feature-Tracks
@@ -1429,13 +1070,36 @@ nach M3 entfernt; seine Testfälle bleiben als Sollwertfälle erhalten.
 | A3 Modell und Numerik | Invariante 5; nur exakte Skalierungen | Ablation |
 | A4 Gemeinsame Mechanik | Eine Formulierung, Tabelle 4.2, Axial 4.3, Erweiterungen 4.5 | Axialreferenz O4 |
 | A5 Stabilität, Kondition, Fehler | 6.1–6.6; drei Fälle getrennt; vollständige Code-Zuordnung mit strukturierter Ursache (6.6, `NotVerified` neu); Schranke unter dem Gleitkomma-Vertrag und Verifikation statt Pauschalgrenze; ω, Kondition und Sensitivität nur Diagnose; Selbsttests → `NumericalFailure`; Bereichs- und Subnormalvertrag unabhängig von FTZ/DAZ, auch für die SI-Rückrechnung; Literaturabgleich jeder Regel ([Audit]) | Ablehnungen 7.6; O2 (C#-Konformität), O3, O17, O19 |
-| A6 Felder und Extremwerte | Abschnitt 8, beide θ am Gelenk, Sprungarten; Extremwerte gegen exakte Wurzelisolation geprüft | Vollständigkeit validiert, nicht zertifiziert (O5, Variante B vorgeschlagen); N-Extrema O7 |
-| A7 Validierung | Abschnitt 11, zwei exakte Referenzen, Mutationen, exakte Oracles für Stück-Gate und Extremwerte | Axial O4 |
-| A8 Numerischer Vertrag | Abschnitt 7 und Gleitkomma-Vertrag: Anregungsskala und Nullfall, Bereichsregeln einschließlich SI-Rückskalierung, Gate über den ganzen Balken mit Majorante und geschlossener Untergrenze (unabhängig gegen exakte Bernstein-Einschließung geprüft), s = 1 auch nahe τ belegt, getrennte Zusagen für Feldwert, Extremwert (mit Positionsanteil) und Extremort; Axialanteil mit demselben Gate | τ O1, O2, O5 |
+| A6 Felder und Extremwerte | Abschnitt 8, beide θ am Gelenk, Sprungarten; Extremwerte gegen exakte Wurzelisolation geprüft | Vollständigkeit validiert, nicht zertifiziert (O5, Variante B beschlossen); N-Extrema O7 |
+| A7 Validierung | Abschnitt 11, zwei exakte Referenzen, Mutationen, exakte Oracles für Stück-Gate und Extremwerte | Belastetes Axialmodell O4 |
+| A8 Numerischer Vertrag | Abschnitt 7 und Gleitkomma-Vertrag: Anregungsskala und Nullfall, Bereichsregeln einschließlich SI-Rückskalierung, Gate über den ganzen Balken mit Majorante und geschlossener Untergrenze (unabhängig gegen exakte Bernstein-Einschließung geprüft), s = 1 auch nahe τ belegt, getrennte Zusagen für Feldwert, Extremwert (mit Positionsanteil) und Extremort; Axialanteil mit demselben Gate | O1 und O5 geschlossen, C#-Abnahme O2 |
 | A9 Grenze Fachmodell | Abschnitt 10 | – |
-| A10 Migration | Abschnitte 9, 12 | Windows O12 |
+| A10 Migration | Abschnitte 9, 12 | Plattformkonformität O12 |
 | DEV-20 Gelenke | Momentengelenk als Stationsregel; θ links/rechts; exakte Mechanismusprüfung über Teilkörper | Koinzidenz O6 |
 | DEV-19 Federlager | Weg-, Dreh-, Kombi-Federn als Gesetz auf dem lokalen Zustand; keine Gruppierung; Reaktion aus Sprung oder Federgesetz nach kleinerem Indikator, Identität beider Wege als Selbsttest (4.2); k = 0 entscheidet der Track | O10; axiale Feder als Regel möglich, Federgesetz axial O4; Feder an starrem Lager O6 |
 | DEV-11 Mehrsegment | Abschnittswechsel als mechanische Station mit EI und EA; Zuordnung über Stationsfolge | Wechsel an Halterung O6 |
 | DEV-6 Linearlasten | Lastintegrale `Difference`/`Ramp` mit globalen Abständen; Querkraftextremum im Feld | Extrema O5; ein oder zwei Lasttypen ist Core-Frage |
 | DEV-12 Axial/schräg | Entkoppeltes (u, N)-System mit eigenem Indikator und Gate (4.3); Zerlegung im Adapter außerhalb der Vertragsgrenze | Axialreferenz O4; N-Extrema O7 |
+
+## 15. Closure und Freeze-Empfehlung
+
+C1–C13 sind für den Architekturentwurf bestanden. Die Abschlussprüfung
+umfasst die Primitives, die Beweiskette A–F und die heutige axiale
+Nullsemantik. Die Nachweise stehen in **[state-fpc-summary]**,
+**[state-fpc-boundary]**, **[state-fpc-oracles]** und **[state-fpc-axial-baseline]**.
+
+Empfehlung: Die Architektur für die Migration des heutigen öffentlichen
+Funktionsumfangs einschließlich der axialen Nullsemantik einfrieren
+und die schrittweise C#-Implementierungsplanung beginnen. Die spätere
+Implementierung besteht eine eigene fachliche und numerische Abnahme je
+unterstützter Plattform. Der belastete Axialvertrag und die fachlichen
+Koinzidenzen bleiben in ihren Feature-Tracks.
+
+Eine Wiedereröffnung setzt mindestens eines dieser Ereignisse voraus:
+
+1. Ein konkreter gelieferter Wert verletzt seine zugesagte Schranke oder τ.
+2. Eine mathematische Voraussetzung der Beweiskette erweist sich als falsch.
+3. Eine notwendige Primitive ist in C# auf einer unterstützten Plattform
+   nicht zuverlässig realisierbar.
+4. Ein späteres Feature verletzt eine dokumentierte Architekturvoraussetzung,
+   etwa lokale Kopplung oder polynomiale Zustandsübertragung.

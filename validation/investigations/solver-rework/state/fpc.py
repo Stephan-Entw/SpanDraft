@@ -1,52 +1,25 @@
-"""Round 5 (O2): reference implementation of the floating-point operation contract.
+"""Executable bending contract from ../FLOATING_POINT_CONTRACT.md.
 
-This file is the executable form of ../FLOATING_POINT_CONTRACT.md. Every numerically relevant
-formula is written as the operation sequence the C# implementation is bound to (explicit
-products, no pow, no FMA, fixed order), and every bound term follows from that sequence with the
-lemmas of the contract:
-
-  L1  product chain (Higham Lemma 3.1): a value formed by k roundings of products, quotients and
-      sums of same-sign terms from exact inputs satisfies |v^ - v| <= gamma(k) |v|.
-  L2  recursive summation of m computed terms: error <= gamma(m - 1) sum |t^|.
-  L3  conversion to the computed value: gamma(k) |v| <= gamma(k + 1) |v^|.
-  L4  underflow: an operation whose operands are normal or zero has the result
-      (x op y)(1 + d) + e with |d| <= u, |e| <= LAM = 2^-1022, d e = 0; this holds for gradual
-      underflow (|e| <= 2^-1075) and for flush-to-zero / denormals-are-zero alike.
-  L5  upward evaluation: for a single round-to-nearest operation with result r,
-      up(r) = succ(r) if |r| >= 2^-1022 else 2^-1022 is >= the exact result (also under FTZ),
-      dn(r) correspondingly; every bound is evaluated with these operations.
-
-gb(k) = (k + 1) u >= gamma(k) is an exactly representable bound of gamma(k) (k (k+1) u <= 1).
-
-Differences to state.py (the formulation is the same; the contract fixes the arithmetic):
-- right-hand side normalised by a power of two (excitation F_exc in [1, 2) in scaled units);
-- load terms with the intensity first and the ramp as rise*(n/d)*n^p (underflow and overflow
-  safe orders); distributed loads with the data error of the clipped intensities;
-- static rounding counts from the sequences (T class), absolute allowances LAM per operation;
-- stored solution and adjoint vectors contain no subnormal numbers (software flush, exact for
-  the a-posteriori relations);
-- residuals and bounds evaluated with the stated operations; verification of the adjoints with
-  a double residual and its rigorous bound (Dot2 as option), weights by Neumann iteration;
-- range rules (NumericalRange) for every quantity that must be normal;
-- SI back-scaling with its own allowance and range rule; gate with rigorous lower bounds of the
-  reference scales.
-MODE[0] = 'ftz' emulates flush-to-zero and denormals-are-zero for every modelled operation
-(coefficients, load integrals, residuals, evaluation, back-scaling); the LU, the solves and the
-refinement need no model (a-posteriori) and run in host arithmetic.
-Usage: imported by fpc_stage_a.py, fpc_chain.py, fpc_unverified.py."""
+T counts normal coefficient roundings. Bounded propagates local errors and supplies
+monotone magnitude envelopes for Variant C. The factored solution is a candidate
+until the common primary/adjoint residual and the contraction test have verified it.
+MODE selects gradual, ftz, daz or ftz_daz for modeled operations.
+"""
 import math, os, random, sys, zlib
 from fractions import Fraction as Fr
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-U = 2.0 ** -53
-MINN = 2.0 ** -1022         # smallest normal number
+U = float.fromhex('0x1p-53')
+MINN = sys.float_info.min         # smallest normal number
 LAM = MINN                  # absolute allowance per operation (gradual and abrupt underflow)
-DELTA = 2.0 ** -200         # share of the gate denominators in the verification weights
-SI_MIN = 2.0 ** -969        # SI reference scales must be >= SI_MIN (LAM / S <= u)
-SI_MAX = 2.0 ** 1000        # and <= SI_MAX (no overflow of values and bounds)
-LEN_MIN = 2.0 ** -969       # scaled length of a distributed load (|q| LAM <= u)
-TAU = 1e-8
+DELTA = float.fromhex('0x1p-200')         # share of the gate denominators in the verification weights
+SI_MIN = float.fromhex('0x1p-969')        # SI reference scales must be >= SI_MIN (LAM / S <= u)
+SI_MAX = float.fromhex('0x1p1000')        # and <= SI_MAX (no overflow of values and bounds)
+LEN_MIN = float.fromhex('0x1p-969')       # scaled length of a distributed load (|q| LAM <= u)
+TAU_DENOMINATOR = 100_000_000
+TAU = Fr(1, TAU_DENOMINATOR)
+MAX_DOUBLE = sys.float_info.max
 MODE = ['gradual']
 
 
@@ -58,24 +31,58 @@ class NotVerified(Exception):
     pass
 
 
-def gb(k):
-    return 0.0 if k <= 0 else (k + 1) * U
+class InternalInconsistency(ArithmeticError):
+    pass
+
+
+def power_of_two_exponent(x):
+    if not (0 < x < math.inf):
+        raise RangeError('binary exponent')
+    return math.frexp(x)[1] - 1
+
+
+def scale_by_power_of_two(x, e):
+    try:
+        return math.ldexp(x, e)
+    except OverflowError:
+        return math.copysign(math.inf, x)
+
+
+def exact_scale(x, e):
+    return x * (1 << e) if e >= 0 else x / (1 << -e)
+
+
+def exact_exponent(x):
+    e = x.numerator.bit_length() - x.denominator.bit_length()
+    return e - (exact_scale(x, -e) < 1)
+
+
+def stiffness_product(e, i):
+    if not (MINN <= e <= MAX_DOUBLE and MINN <= i <= MAX_DOUBLE):
+        raise RangeError('stiffness inputs')
+    # as_integer_ratio exposes the binary significands and their power-of-two denominators.
+    en, ed = e.as_integer_ratio()
+    inn, ind = i.as_integer_ratio()
+    n, d = en * inn, ed * ind
+    if n << 1022 < d or n > int(MAX_DOUBLE) * d:
+        raise RangeError('stiffness product')
+    return e * i
 
 
 # ------------------------------------------------------------------ modelled float operations
 def _daz(a):
-    return math.copysign(0.0, a) if MODE[0] == 'ftz' and a != 0 and abs(a) < MINN else a
+    return math.copysign(0.0, a) if MODE[0] in ('daz', 'ftz_daz') and 0 < abs(a) < MINN else a
 
 
 def _ftz(r):
-    return math.copysign(0.0, r) if MODE[0] == 'ftz' and r != 0 and abs(r) < MINN else r
+    return math.copysign(0.0, r) if MODE[0] in ('ftz', 'ftz_daz') and 0 < abs(r) < MINN else r
 
 
 def fadd(a, b): return _ftz(_daz(a) + _daz(b))
 def fsub(a, b): return _ftz(_daz(a) - _daz(b))
 def fmul(a, b): return _ftz(_daz(a) * _daz(b))
 def fdiv(a, b): return _ftz(_daz(a) / _daz(b))
-def fscale(a, e): return _ftz(math.ldexp(_daz(a), e))
+def fscale(a, e): return _ftz(scale_by_power_of_two(_daz(a), e))
 
 
 def flush(v):
@@ -85,21 +92,116 @@ def flush(v):
 
 
 # ------------------------------------------------------------------ upward / downward bounds
-def up(r):
-    return math.nextafter(r, math.inf) if abs(r) >= MINN else MINN
+def outward(r, upper):
+    """Enclose a gradual RN result, or an unsigned zero from abrupt underflow."""
+    if math.isnan(r):
+        raise ArithmeticError('NaN in bound')
+    if r == 0:
+        return MINN if upper else -MINN
+    if 0 < r < MINN:
+        return MINN if upper else 0.0
+    if -MINN < r < 0:
+        return 0.0 if upper else -MINN
+    neighbor = math.nextafter(r, math.inf if upper else -math.inf)
+    if 0 < abs(neighbor) < MINN:
+        return (MINN if neighbor > 0 else 0.0) if upper else (0.0 if neighbor > 0 else -MINN)
+    return neighbor
 
 
-def dn(r):
-    return math.nextafter(r, -math.inf) if abs(r) >= MINN else -MINN
+def up(r): return outward(r, True)
+def dn(r): return outward(r, False)
 
 
-def uadd(a, b): return 0.0 if a == 0 and b == 0 else up(a + b)
+def uadd(a, b): return 0.0 if a == -b and math.isfinite(a) else up(a + b)
 def umul(a, b): return 0.0 if a == 0 or b == 0 else up(a * b)
-def udiv(a, b): return 0.0 if a == 0 else up(a / b)
-def dadd(a, b): return 0.0 if a == 0 and b == 0 else dn(a + b)
-def dsub(a, b): return 0.0 if a == b else dn(a - b)
+def udiv(a, b): return 0.0 if a == 0 and b > 0 else up(a / b)
+def dadd(a, b): return 0.0 if a == -b and math.isfinite(a) else dn(a + b)
+def dsub(a, b): return 0.0 if a == b and math.isfinite(a) else dn(a - b)
 def dmul(a, b): return 0.0 if a == 0 or b == 0 else dn(a * b)
-def ddiv(a, b): return 0.0 if a == 0 else dn(a / b)
+def ddiv(a, b): return 0.0 if a == 0 and b > 0 else dn(a / b)
+
+
+def directed_scale(x, e, upper):
+    if not x or math.isinf(x):
+        return x
+    r = scale_by_power_of_two(x, e)
+    if MINN < abs(r) < math.inf:
+        return r                        # scaling into this range is exact
+    if r == 0:
+        return (MINN if upper else 0.0) if x > 0 else (0.0 if upper else -MINN)
+    if abs(r) == MINN and power_of_two_exponent(abs(x)) + e == -1022:
+        return r
+    return outward(r, upper)
+
+
+def gamma_upper(k):
+    if k == 0:
+        return 0.0
+    if not 0 < k < 1 << 53:
+        raise RangeError('rounding count')
+    ku = scale_by_power_of_two(float(k), -53)
+    return udiv(ku, dsub(1.0, ku))
+
+
+def threshold_down(d):
+    if not (0 < d < math.inf):
+        raise RangeError('gate denominator')
+    r = d / TAU_DENOMINATOR
+    rn, rd = r.as_integer_ratio()
+    n, den = d.as_integer_ratio()
+    if rn * TAU_DENOMINATOR * den > n * rd:
+        r = math.nextafter(r, 0.0)
+    return r if r >= MINN else 0.0
+
+
+def is_unloaded(forces, couples, lines):
+    return not (any(v for _, v in forces) or any(v for _, v in couples)
+                or any(qa or qb for _, _, qa, qb in lines))
+
+
+def excitation(length, forces, couples, lines):
+    """Positive mantissa/exponent enclosure and floor binary exponent of its exact sum."""
+    terms = []
+
+    def point(x):
+        m, e = math.frexp(abs(x))
+        return m, m, e
+
+    def product(a, b, divide=False):
+        al, ah, ae = a
+        bl, bh, be = b
+        if divide:
+            return ddiv(al, bh), udiv(ah, bl), ae - be
+        return dmul(al, bl), umul(ah, bh), ae + be
+
+    terms.extend(point(v) for _, v in forces if v)
+    terms.extend(product(point(v), point(length), True) for _, v in couples if v)
+    for a, b, qa, qb in lines:
+        if not (qa or qb):
+            continue
+        width = Fr(b) - Fr(a)
+        if width <= 0:
+            raise RangeError('distributed load length')
+        e = exact_exponent(width) + 1
+        m = float(exact_scale(width, -e))
+        for q in (qa, qb):
+            if q:
+                terms.append(product(point(q), (dn(m), up(m), e - 1)))
+    if not terms:
+        return False, 0, 0.0, 0.0
+    e = max(t[2] for t in terms)
+    lo, hi = 0.0, 0.0
+    for a, b, k in terms:
+        lo = max(lo, dadd(lo, directed_scale(a, k - e, False)))
+        hi = uadd(hi, directed_scale(b, k - e, True))
+    el, eh = power_of_two_exponent(lo), power_of_two_exponent(hi)
+    if el != eh:
+        exact = (sum(abs(Fr(v)) for _, v in forces)
+                 + sum(abs(Fr(v)) / Fr(length) for _, v in couples)
+                 + sum((abs(Fr(qa)) + abs(Fr(qb))) * (Fr(b) - Fr(a)) / 2
+                       for a, b, qa, qb in lines))
+        el = exact_exponent(exact) - e
+    return True, e + el, directed_scale(lo, -el, False), directed_scale(hi, -el, True)
 
 
 def usum(xs):
@@ -114,6 +216,33 @@ def udot(a, b):
     for x, y in zip(a, b):
         s = uadd(s, umul(abs(x), abs(y)))
     return s
+
+
+def local_rounding(result):
+    if not math.isfinite(result):
+        raise ArithmeticError('nonfinite operation')
+    return LAM if abs(result) <= MINN else umul(U, abs(result))
+
+
+def residual(rhs, products):
+    """Enclose the error against the stored RHS and exact products of stored operands."""
+    acc = 0.0 if abs(rhs) < MINN else rhs
+    error = LAM if 0 < abs(rhs) < MINN else 0.0
+    for a, b in products:
+        if not (a and b):
+            continue
+        # Callers supply normal or zero matrix and solution components.
+        p = fmul(a, b)
+        error = uadd(error, local_rounding(p))
+        if abs(p) < MINN:
+            p = 0.0
+        if not p:
+            continue
+        acc = fsub(acc, p)
+        error = uadd(error, local_rounding(acc))
+        if abs(acc) < MINN:
+            acc = 0.0
+    return acc, error
 
 
 # ------------------------------------------------------------------ rounding-count values (L1)
@@ -138,29 +267,29 @@ class T:
             if s.exact:
                 return T(s.v * o)
             r = fmul(s.v, float(o))
-            return T(r, s.k + (0 if o & (o - 1) == 0 else 1), s.sub or s._mark(r))
+            return T(r, s.k + (0 if o & (o - 1) == 0 else 1), s.sub or s._mark(r) or (s.v != 0 and r == 0))
         if s.exact:
             return T(s.v * o.v)
         r = fmul(s.v, o.v)
-        return T(r, s.k + o.k + 1, s.sub or o.sub or s._mark(r))
+        return T(r, s.k + o.k + 1, s.sub or o.sub or s._mark(r) or (s.v != 0 and o.v != 0 and r == 0))
 
     def __truediv__(s, o):
         if isinstance(o, int):
             if s.exact:
                 return T(s.v / o)
             r = fdiv(s.v, float(o))
-            return T(r, s.k + (0 if o & (o - 1) == 0 else 1), s.sub or s._mark(r))
+            return T(r, s.k + (0 if o & (o - 1) == 0 else 1), s.sub or s._mark(r) or (s.v != 0 and r == 0))
         if s.exact:
             return T(s.v / o.v)
         r = fdiv(s.v, o.v)
-        return T(r, s.k + o.k + 1, s.sub or o.sub or s._mark(r))
+        return T(r, s.k + o.k + 1, s.sub or o.sub or s._mark(r) or (s.v != 0 and o.v != 0 and r == 0))
 
     def __add__(s, o):
         if s.exact:
             return T(s.v + o.v)
         assert s.v == 0 or o.v == 0 or (s.v > 0) == (o.v > 0), 'cancellation in a positive chain'
         r = fadd(s.v, o.v)
-        return T(r, max(s.k, o.k) + 1, s.sub or o.sub or s._mark(r))
+        return T(r, max(s.k, o.k) + 1, s.sub or o.sub or s._mark(r) or (s.v != 0 and o.v != 0 and r == 0))
 
     def __neg__(s):
         return T(-s.v, s.k, s.sub)
@@ -174,13 +303,104 @@ def dist(x, c, eL, exact):
     """Scaled distance (x - c) 2^-eL from two stored coordinates: one rounding (invariant 4)."""
     if exact:
         return T((Fr(x) - Fr(c)) * Fr(2) ** -eL)
-    r = fscale(fsub(x, c), -eL)
-    return T(r, 1, r != 0 and abs(r) <= MINN)
+    raw = fsub(x, c)
+    r = fscale(raw, -eL)
+    return T(r, 1, x != c and (abs(raw) <= MINN or abs(r) <= MINN))
+
+
+def computed_bound(k, value):
+    if k == 0:
+        return 0.0
+    gamma = gamma_upper(k)
+    if gamma >= 1:
+        raise RangeError('relative data bound')
+    return umul(udiv(gamma, dsub(1.0, gamma)), abs(value))
 
 
 def bound_T(t):
-    """L3: |t^ - t| <= gb(k + 1) |t^| (relative part only)."""
-    return umul(gb(t.k + 1), abs(t.v)) if t.k > 0 else 0.0
+    return computed_bound(t.k, t.v)
+
+
+class Bounded:
+    """Computed value, absolute error, and a magnitude majorant for the computed value.
+
+    Only the value uses signed arithmetic. Error and magnitude are built from monotone
+    nonnegative expressions, also for cancellation in a sum or difference.
+    """
+    __slots__ = ('v', 'error', 'mag')
+
+    def __init__(self, value, error=0.0, magnitude=None):
+        if not math.isfinite(value):
+            raise RangeError('local formula')
+        self.v = value
+        self.error = error
+        self.mag = abs(value) if magnitude is None else magnitude
+
+    @staticmethod
+    def operand(o):
+        return Bounded(float(o)) if isinstance(o, int) else o
+
+    @property
+    def with_daz(self):
+        return uadd(self.error, min(self.mag, LAM))
+
+    @staticmethod
+    def result(value, error, magnitude):
+        rounding = uadd(umul(U, magnitude), LAM)
+        return Bounded(value, uadd(error, rounding), uadd(magnitude, rounding))
+
+    def __mul__(self, other):
+        other = self.operand(other)
+        if (self.mag == self.error == 0) or (other.mag == other.error == 0):
+            return Bounded(0.0)
+        a, b = self.with_daz, other.with_daz
+        error = uadd(umul(a, uadd(other.mag, b)), umul(self.mag, b))
+        return self.result(fmul(self.v, other.v), error, umul(self.mag, other.mag))
+
+    def __truediv__(self, other):
+        other = self.operand(other)
+        d = abs(other.v)
+        dl = dsub(d, other.error)
+        if not (d >= MINN and dl > 0):
+            raise RangeError('local formula divisor')
+        if self.mag == self.error == 0:
+            return Bounded(0.0)
+        magnitude = udiv(self.mag, d)
+        error = udiv(uadd(self.with_daz, umul(magnitude, other.error)), dl)
+        return self.result(fdiv(self.v, other.v), error, magnitude)
+
+    def __add__(self, other):
+        if self.mag == self.error == 0:
+            return other
+        if other.mag == other.error == 0:
+            return self
+        error = uadd(self.with_daz, other.with_daz)
+        return self.result(fadd(self.v, other.v), error, uadd(self.mag, other.mag))
+
+    def __neg__(self):
+        return Bounded(-self.v, self.error, self.mag)
+
+    def __sub__(self, other):
+        return self + -other
+
+
+def bounded_dist(x, c, exponent):
+    if x == c:
+        return Bounded(0.0)
+    # Stored coordinates are exact even if an evaluation coordinate is subnormal.
+    # The protected subtraction uses gradual RN before one modeled scaling.
+    raw = x - c
+    value = _ftz(scale_by_power_of_two(raw, -exponent))
+    error = uadd(umul(U, abs(value)),
+                 uadd(directed_scale(LAM, -exponent, True), LAM))
+    return Bounded(value, error)
+
+
+def bounded_sum(terms):
+    total = Bounded(0.0)
+    for term in terms:
+        total = total + term
+    return total
 
 
 # ------------------------------------------------------------------ load terms (items 6-8)
@@ -243,7 +463,7 @@ def ramp_term(r, n, far, dd, p, inside):
     return (t * (((dd * dd * dd + ((dd * dd) * far) * 5) + ((dd * far) * far) * 10) + ((far * far) * far) * 10)) / 120
 
 
-def clip(la, lb, v1, v2, ca, cb, exact):
+def clip(la, lb, v1, v2, ca, cb, exact, exponent):
     """Clipped intensities at ca, cb of the linear load v1..v2 on [la, lb] (scaled values) and
     the bounds of their data errors: qa = v1 + (v2 - v1) ((ca - la)/(lb - la))."""
     out = []
@@ -254,37 +474,23 @@ def clip(la, lb, v1, v2, ca, cb, exact):
         if exact:
             out.append((Fr(v1) + (Fr(v2) - Fr(v1)) * ((Fr(c) - Fr(la)) / (Fr(lb) - Fr(la))), 0.0))
             continue
-        r = fsub(v2, v1)
-        if r == 0:
+        if v1 == v2:
             out.append((v1, 0.0))
             continue
-        f = fdiv(fsub(c, la), fsub(lb, la))
-        pr = fmul(r, f)
-        q = fadd(v1, pr)
-        # |q^ - q| <= gamma(5)|r f| + u|q^| (+ LAM per operation, amplified by |r| <= 2 max|v|)
-        bnd = uadd(uadd(umul(gb(6), abs(pr)), umul(U, abs(q))), umul(LAM, uadd(abs(r), 8.0)))
-        out.append((q, bnd))
+        n = bounded_dist(c, la, exponent)
+        d = bounded_dist(lb, la, exponent)
+        q = Bounded(v1) + (Bounded(v2) - Bounded(v1)) * (n / d)
+        out.append((q.v, q.error))
     return out
-
-
-LAMD = [LAM]                # absolute allowance of a scaled distance: LAM 2^-eL (set per model)
-
-
-def lam_term(w, p):
-    """Absolute underflow allowance of one load term with intensity w (L4): every operation of
-    the chain may lose LAM, a distance fl(x - c) 2^-eL may lose LAM 2^-eL (flushed SI
-    difference); later factors are distances <= 2^0.5 or constants; factor 2 for L3."""
-    return umul(LAMD[0], umul(uadd(abs(w), 8.0), 64.0))
 
 
 # ------------------------------------------------------------------ the solver
 class CS:
-    """Contract solver. opts: v_iter (Neumann steps for the verification weights), adj_res
-    ('double' | 'dot2'), LUeps (perturbation of the LU factors), verify_weights ('B' | 'N')."""
+    """Contract solver with optional perturbations of the candidate factorisation."""
 
-    def __init__(s, c, v_iter=3, adj_res='double', LUeps=None, rng=None, exact_twin=False):
+    def __init__(s, c, v_iter=3, LUeps=None, rng=None, exact_twin=False):
         s.c = c
-        s.v_iter, s.adj_res, s.LUeps, s.rng = v_iter, adj_res, LUeps, rng
+        s.v_iter, s.LUeps, s.rng = v_iter, LUeps, rng
         s.status, s.cause = None, None
         s.prepare()
         s.build(exact=False)
@@ -307,29 +513,25 @@ class CS:
                [float(x) for x, _ in c.get('ei', [])]
         if any(v != 0 and (abs(v) < MINN or not math.isfinite(v)) for v in vals):
             raise RangeError('input not normal')
-        EI0 = fmul(E, I)                        # adapter product (counted as data, k = 1)
-        if not (MINN <= EI0 < math.inf):
-            raise RangeError('EI')
+        EI0 = stiffness_product(E, I)
         s.eis = [(0.0, EI0, 1)] + [(float(x), float(v), 0) for x, v in c.get('ei', [])]
+        if not (MINN <= L <= MAX_DOUBLE and all(MINN <= e <= MAX_DOUBLE for _, e, _ in s.eis)):
+            raise RangeError('reference scale')
         s.eis_exact = [(Fr(0), Fr(E) * Fr(I))] + [(Fr(float(x)), Fr(float(v))) for x, v in c.get('ei', [])]
-        s.eL = round(math.log2(L))
-        s.eE = round(math.log2(max(e for _, e, _ in s.eis)))
-        s.Lr, s.EIr = 2.0 ** s.eL, 2.0 ** s.eE
-        if L < SI_MIN * 2:                       # LAM 2^-eL <= u: a flushed coordinate difference
-            raise RangeError('beam length')      # stays at rounding level in scaled units
-        LAMD[0] = max(LAM, math.ldexp(LAM, -s.eL))
-        # excitation (7.2): F = sum|P| + sum (|q_a| + |q_b|)/2 (b - a) + sum |C|/L; only the
-        # exponent of its computed value is used here (any power of two is exact)
-        F = sum(abs(float(v)) for _, v in c['pf']) + sum(abs(float(v)) * (float(b) - float(a)) for a, b, v in c['q']) + \
-            sum((abs(float(v1)) + abs(float(v2))) / 2 * (float(b) - float(a)) for a, b, v1, v2 in c.get('lin', [])) + \
-            sum(abs(float(v)) for _, v in c['pm']) / L
-        s.F_si = F
-        if F == 0:
-            s.eF = 0
-            s.unloaded = True
-        else:
-            s.unloaded = False
-            s.eF = math.frexp(F)[1] - 1 + 2 * s.eL - s.eE        # F_n = F 2^(2eL - eE - eF) in [1, 2)
+        s.eL = power_of_two_exponent(L)
+        s.eE = power_of_two_exponent(max(e for _, e, _ in s.eis))
+        if any(fscale(e, -s.eE) <= MINN for _, e, _ in s.eis):
+            raise RangeError('normalised stiffness')
+        if L < SI_MIN * 2:
+            raise RangeError('beam length')
+        s.pf = [(float(a), float(v)) for a, v in c['pf']]
+        s.pm = [(float(a), float(v)) for a, v in c['pm']]
+        s.lin = [(float(a), float(b), float(v), float(v)) for a, b, v in c['q']] + [tuple(map(float, l)) for l in c.get('lin', [])]
+        s.unloaded = is_unloaded(s.pf, s.pm, s.lin)
+        s.eF, s.excitation_lower, s.excitation_upper = 0, 0.0, 0.0
+        if not s.unloaded:
+            _, force_exp, s.excitation_lower, s.excitation_upper = excitation(L, s.pf, s.pm, s.lin)
+            s.eF = force_exp + 2 * s.eL - s.eE
         eL, eE, eF = s.eL, s.eE, s.eF
         # exponents of the normalised units: x_n = x_SI 2^(-E_q)
         s.Eq = [eL + eF, eF, eE - eL + eF, eE - 2 * eL + eF]         # w, theta, M, V
@@ -350,16 +552,18 @@ class CS:
         st = sorted({0.0, L} | {x for x, _ in tr} | {x for x, _ in ro} | set(s.h) | {x for x, _, _ in s.eis[1:] if 0 < x < L})
         s.st = st
         s.N = len(st) - 1
-        s.pf = [(float(a), float(v)) for a, v in c['pf']]
-        s.pm = [(float(a), float(v)) for a, v in c['pm']]
-        s.lin = [(float(a), float(b), float(v), float(v)) for a, b, v in c['q']] + [tuple(map(float, l)) for l in c.get('lin', [])]
+        for values, exponent in (([v for _, v in s.pf], s.eV),
+                                 ([v for _, v in s.pm], s.eM),
+                                 ([v for line in s.lin for v in line[2:]], s.eq)):
+            if any(v != 0 and not MINN < abs(fscale(v, exponent)) < math.inf for v in values):
+                raise RangeError('normalised excitation')
         for la, lb, v1, v2 in s.lin:
             d = fscale(fsub(lb, la), -eL)
             if d < LEN_MIN:
                 raise RangeError('distributed load length')
         # distances between distinct mechanical stations: normal, and the coefficient chains
         for x0, x1 in zip(st, st[1:]):
-            if fsub(x1, x0) < MINN:
+            if fsub(x1, x0) <= MINN:
                 raise RangeError('station distance')
 
     def sec(s, x):
@@ -388,7 +592,7 @@ class CS:
                 w1, w2 = Fr(v1) * Fr(2) ** s.eq, Fr(v2) * Fr(2) ** s.eq
             else:
                 w1, w2 = fscale(v1, s.eq), fscale(v2, s.eq)
-            (qa, da), (qb, db) = clip(la, lb, w1, w2, ca, cb, exact)
+            (qa, da), (qb, db) = clip(la, lb, w1, w2, ca, cb, exact, s.eL)
             lins.append((ca, cb, qa, qb, da, db))
         return pts, mom, lins
 
@@ -399,54 +603,32 @@ class CS:
         pts, mom, lins = s.loads[j] if not exact else s.loads_x[j]
         eL = s.eL
         out = []
+        distance = (lambda a, b: dist(a, b, eL, True)) if exact else (lambda a, b: bounded_dist(a, b, eL))
+        number = T if exact else Bounded
         for p in (4, 3, 2, 1):
-            terms = []           # (T value, data bound, lam bound)
+            terms = []
             for cpos, v in pts:
                 if x > cpos or (p == 1 and x == cpos and side == 'R'):
-                    d = dist(x, cpos, eL, exact)
-                    t = point_force(T(v) if exact else T(v), d, p)
-                    terms.append((t, 0.0, 0.0 if exact else lam_term(v, p)))
+                    terms.append(point_force(number(v), distance(x, cpos), p))
             for cpos, v in mom:
-                if p == 1:
-                    continue
-                if x > cpos or (p == 2 and x == cpos and side == 'R'):
-                    d = dist(x, cpos, eL, exact)
-                    t = point_couple(T(v), d, p)
-                    terms.append((t, 0.0, 0.0 if exact else lam_term(v, p)))
+                if p >= 2 and (x > cpos or (p == 2 and x == cpos and side == 'R')):
+                    terms.append(point_couple(number(v), distance(x, cpos), p))
             for ca, cb, qa, qb, da, db in lins:
                 if not x > ca:
                     continue
                 inside = x <= cb
-                n = dist(x, ca, eL, exact)
-                far = None if inside else dist(x, cb, eL, exact)
-                dd = dist(cb, ca, eL, exact)
-                if exact:
-                    rise = T(qb - qa)
-                    terms.append((diff_term(T(qa), n, far, dd, p, inside), 0., 0.))
-                    terms.append((ramp_term(rise, n, far, dd, p, inside), 0., 0.))
-                    continue
-                rv = fsub(qb, qa)
-                rise = T(rv, 1)
-                t1 = diff_term(T(qa), n, far, dd, p, inside)
-                t2 = ramp_term(rise, n, far, dd, p, inside)
-                # data: |qa^ - qa| |Diff|/p! + (|qa^ - qa| + |qb^ - qb|) Ramp (unit polynomials)
-                u1 = diff_term(T(1.0), n, far, dd, p, inside)
-                u2 = ramp_term(T(1.0), n, far, dd, p, inside)
-                data1 = umul(da, umul(abs(u1.v), 1 + gb(u1.k + 1))) if da else 0.0
-                data2 = umul(uadd(da, db), umul(abs(u2.v), 1 + gb(u2.k + 1))) if (da or db) else 0.0
-                terms.append((t1, data1, lam_term(qa, p)))
-                terms.append((t2, data2, lam_term(rv, p)))
+                n = distance(x, ca)
+                far = None if inside else distance(x, cb)
+                dd = distance(cb, ca)
+                a, b = (T(qa), T(qb)) if exact else (Bounded(qa, da), Bounded(qb, db))
+                rise = T(qb - qa) if exact else b - a
+                terms.append(diff_term(a, n, far, dd, p, inside))
+                terms.append(ramp_term(rise, n, far, dd, p, inside))
             if exact:
-                out.append((sum((t.v for t, _, _ in terms), Fr(0)), 0., 0., len(terms)))
-                continue
-            val = 0.0
-            for t, _, _ in terms:
-                val = fadd(val, t.v)
-            m = len(terms)
-            mag = usum(abs(t.v) for t, _, _ in terms)
-            bnd = usum(uadd(umul(uadd(gb(t.k + 1) if t.k else 0.0, gb(m - 1)), abs(t.v)), uadd(dt, lt)) for t, dt, lt in terms)
-            bnd = uadd(bnd, umul(LAM, 2.0 * m))
-            out.append((val, bnd, mag, m))
+                out.append((sum((t.v for t in terms), Fr(0)), 0., 0., len(terms)))
+            else:
+                total = bounded_sum(terms)
+                out.append((total.v, total.error, total.mag, len(terms)))
         return out
 
     # -------------------------------------------------------------------------- equations
@@ -489,11 +671,8 @@ class CS:
                 if exact:
                     out.append((coefs, val / e.v, 0.))
                     continue
-                cv = fdiv(val, e.v)
-                # |val^/e^ (1+d) - val/e| <= (bnd + gamma(2)|val^|)(1 + gb(2))/e^ (+ LAM)
-                cb = uadd(udiv(umul(uadd(bnd, umul(gb(2), abs(val))), 1 + gb(2)), abs(e.v)), umul(U, abs(cv)))
-                cb = uadd(cb, LAM if abs(cv) <= MINN else 0.0)
-                out.append((coefs, cv, cb))
+                cv = Bounded(val, bnd, mag) / Bounded(e.v, bound_T(e))
+                out.append((coefs, cv.v, cv.error))
             else:
                 out.append((coefs, val, bnd))
         return out
@@ -521,13 +700,9 @@ class CS:
             else:
                 pv = [fscale(v, s.eV) for v in pfs]
                 cv = [fscale(v, s.eM) for v in pms]
-                Pst = Cst = 0.0
-                for v in pv:
-                    Pst = fadd(Pst, v)
-                for v in cv:
-                    Cst = fadd(Cst, v)
-                Pb = uadd(umul(gb(len(pv) - 1), usum(abs(v) for v in pv)), umul(LAM, 2.0 * len(pv)))
-                Cb = uadd(umul(gb(len(cv) - 1), usum(abs(v) for v in cv)), umul(LAM, 2.0 * len(cv)))
+                P = bounded_sum(Bounded(v) for v in pv)
+                C = bounded_sum(Bounded(v) for v in cv)
+                Pst, Cst, Pb, Cb = P.v, C.v, P.error, C.error
             ktr = [k for a, k in s.tr if a == x]
             kro = [k for a, k in s.ro if a == x]
             hinge = x in s.h
@@ -540,15 +715,21 @@ class CS:
                 kt = sum((Fr(k) for k in kts), Fr(0)) * Fr(2) ** (s.eL - s.eE)
                 kwT, ktT = T(kw), T(kt)
             else:
-                kw = kt = 0.0
-                for k in kws:
-                    kw = fadd(kw, k)
-                for k in kts:
-                    kt = fadd(kt, k)
-                kw, kt = fscale(kw, 3 * s.eL - s.eE), fscale(kt, s.eL - s.eE)
-                for v in (kw, kt):
-                    if v != 0 and not (MINN < v < math.inf):
-                        raise RangeError('spring')
+                scaled = []
+                for springs, exponent in ((kws, 3 * s.eL - s.eE), (kts, s.eL - s.eE)):
+                    terms = []
+                    for k in springs:
+                        v = fscale(k, exponent)
+                        if k and not MINN < v < math.inf:
+                            raise RangeError('spring')
+                        terms.append(v)
+                    total = 0.0
+                    for value in terms:
+                        total = fadd(total, value)
+                    if total and not MINN < total < math.inf:
+                        raise RangeError('spring sum')
+                    scaled.append(total)
+                kw, kt = scaled
                 kwT, ktT = T(kw, max(len(kws) - 1, 0)), T(kt, max(len(kts) - 1, 0))
             o = 4 * i
             interior = i > 0
@@ -563,10 +744,8 @@ class CS:
                 if exact:
                     rows.append((d, sm[q][1] + const, 0.))
                 else:
-                    r = fadd(sm[q][1], const)
-                    rb = uadd(uadd(sm[q][2], cbnd), umul(U, abs(r)))
-                    rb = uadd(rb, LAM if abs(r) <= MINN else 0.0)
-                    rows.append((d, r, rb))
+                    r = Bounded(sm[q][1], sm[q][2]) + Bounded(const, cbnd)
+                    rows.append((d, r.v, r.error))
 
             z = Fr(0) if exact else 0.0
             if interior:
@@ -591,7 +770,7 @@ class CS:
         col = {k: n for n, k in enumerate(free)}
         n = len(free)
         if len(rows) != n:
-            raise RuntimeError('InternalInconsistency: rows %d unknowns %d' % (len(rows), n))
+            raise InternalInconsistency('rows %d unknowns %d' % (len(rows), n))
         if exact:
             Ax = [[Fr(0)] * n for _ in range(n)]
             bx = [Fr(0)] * n
@@ -617,28 +796,34 @@ class CS:
     # -------------------------------------------------------------------------- solution
     def solve(s):
         A, n = s.A, s.n
-        rs, cs = [1.] * n, [1.] * n
-        p2 = lambda v: 2.0 ** round(math.log2(abs(v)))
+        rs, cs = [0] * n, [0] * n
+
+        def correction(entries):
+            maxima = [((m := math.frexp(abs(a)))[1] - 1 + e, m[0]) for a, e in entries if a]
+            if not maxima:
+                return 0
+            e, mantissa = max(maxima)
+            half = e // 2
+            return half + (e % 2 != 0 and (mantissa != 0.5 or half % 2 != 0))
+
         for _ in range(8):
             for i in range(n):
-                m = max(abs(rs[i] * A[i][j] * cs[j]) for j in range(n))
-                if m > 0:
-                    rs[i] = rs[i] / p2(math.sqrt(m))
+                rs[i] -= correction((A[i][j], rs[i] + cs[j]) for j in range(n))
             for j in range(n):
-                m = max(abs(rs[i] * A[i][j] * cs[j]) for i in range(n))
-                if m > 0:
-                    cs[j] = cs[j] / p2(math.sqrt(m))
+                cs[j] -= correction((A[i][j], rs[i] + cs[j]) for i in range(n))
         s.rs, s.cs = rs, cs
-        S = [[fmul(fmul(rs[i], A[i][j]), cs[j]) for j in range(n)] for i in range(n)]
+        S = [[fscale(A[i][j], rs[i] + cs[j]) for j in range(n)] for i in range(n)]
         for i in range(n):
             for j in range(n):
                 if A[i][j] != 0 and not (MINN < abs(S[i][j]) < math.inf):
                     raise RangeError('equilibrated entry')
         s.S = S
-        s.sb = [fmul(rs[i], s.b[i]) for i in range(n)]
+        s.sb = [_ftz(scale_by_power_of_two(s.b[i], rs[i])) for i in range(n)]
+        if not all(map(math.isfinite, s.sb)):
+            raise RangeError('equilibrated RHS')
         # bounds of the data errors of the equilibrated system (L3, exact power-of-two scaling)
-        s.dS = [[umul(gb(s.K[i][j] + 1), abs(S[i][j])) if s.K[i][j] else 0.0 for j in range(n)] for i in range(n)]
-        s.dsb = [uadd(umul(rs[i], s.bb[i]), LAM if s.b[i] != 0 and abs(s.sb[i]) <= MINN else 0.0) for i in range(n)]
+        s.dS = [[computed_bound(s.K[i][j], S[i][j]) for j in range(n)] for i in range(n)]
+        s.dsb = [uadd(directed_scale(s.bb[i], rs[i], True), LAM if s.b[i] != 0 and abs(s.sb[i]) <= MINN else 0.0) for i in range(n)]
         s.nz = [[j for j in range(n) if S[i][j] != 0] for i in range(n)]
         s.cols = [[i for i in range(n) if S[i][j] != 0] for j in range(n)]
         LU = [row[:] for row in S]
@@ -647,7 +832,7 @@ class CS:
             p = max(range(k, n), key=lambda i: abs(LU[i][k]))
             if LU[p][k] == 0:
                 raise ZeroDivisionError('zero pivot')
-            if abs(LU[p][k]) < MINN:
+            if abs(LU[p][k]) <= MINN:
                 raise RangeError('pivot')
             LU[k], LU[p] = LU[p], LU[k]
             piv[k], piv[p] = piv[p], piv[k]
@@ -682,7 +867,9 @@ class CS:
             raise ArithmeticError('NonFinite')
         s.x = [0.] * s.nfull
         for i, k in enumerate(s.free):
-            s.x[k] = fmul(cs[i], y[i])
+            s.x[k] = fscale(y[i], cs[i])
+            if not math.isfinite(s.x[k]):
+                raise RangeError('unscaled state')
         s.residual_and_d()
 
     def lusolve(s, v):
@@ -707,17 +894,11 @@ class CS:
         return z
 
     def residual_and_d(s):
-        """Item 14: r^_i = fl(sb_i - S_i1 y_1 - ... ) (product, then subtraction, column order) and
-        |r^_i - r_i| <= gb(m+1)(|sb_i| + sum|S_ij||y_j|) + 2 m LAM; d_i = |r^| + dr + dS|y| + dsb."""
+        """Add equilibrated data errors to the residual of the stored system."""
         S, n, y = s.S, s.n, s.y
         s.res, s.dr, s.d = [0.] * n, [0.] * n, [0.] * n
         for i in range(n):
-            acc = s.sb[i]
-            for j in s.nz[i]:
-                acc = fsub(acc, fmul(S[i][j], y[j]))
-            m = len(s.nz[i])
-            mag = uadd(abs(s.sb[i]), udot([S[i][j] for j in s.nz[i]], [y[j] for j in s.nz[i]]))
-            dr = uadd(umul(gb(m + 1), mag), umul(LAM, 2.0 * m))
+            acc, dr = residual(s.sb[i], ((S[i][j], y[j]) for j in s.nz[i]))
             data = uadd(udot([s.dS[i][j] for j in s.nz[i]], [y[j] for j in s.nz[i]]), s.dsb[i])
             s.res[i], s.dr[i] = acc, dr
             s.d[i] = uadd(uadd(abs(acc), dr), data)
@@ -739,24 +920,16 @@ class CS:
             if abs(bb - bprev) <= bb / 16:
                 break
             bprev = bb
+        if not all(map(math.isfinite, z)):
+            raise ArithmeticError('nonfinite adjoint')
         s.adj_steps += steps
         s.adj_solves += 1
         sbar = []
         for j in range(n):
             col = s.cols[j]
             m = len(col)
-            mag = uadd(abs(cvec[j]), udot([S[i][j] for i in col], [z[i] for i in col]))
-            if s.adj_res == 'dot2':
-                from state import dot2
-                rj = dot2([(-S[i][j], z[i]) for i in col], cvec[j])
-                g2 = gb(m + 1)
-                b = uadd(udiv(uadd(abs(rj), umul(umul(g2, g2), mag)), 1 - U), umul(LAM, 16.0 * (m + 1)))
-            else:
-                acc = cvec[j]
-                for i in col:
-                    acc = fsub(acc, fmul(S[i][j], z[i]))
-                rj = acc
-                b = uadd(abs(rj), uadd(umul(gb(m + 1), mag), umul(LAM, 2.0 * m)))
+            rj, dr = residual(cvec[j], ((S[i][j], z[i]) for i in col))
+            b = uadd(abs(rj), dr)
             sbar.append(b)
         return z, sbar
 
@@ -767,58 +940,80 @@ class CS:
         return [udot([s.dS[k][j] for j in s.nz[k]], [v[j] for j in s.nz[k]]) for k in range(s.n)]
 
     def verify(s, weights_D):
-        """Items 16, 17: adjoints of all unknowns, beta_i = |z_i|^T d, verification of
-        |e| <= beta + M|e| with M = |S_res| + |Z|^T dS (exact relation C = I - R S*), weights
-        v = beta + DELTA D and Neumann steps v <- beta + M v + DELTA D."""
+        """Items 16, 17: adjoints of all unknowns, RawBound_i = |z_i|^T d, verification of
+        |e| <= raw + M|e| with M = |S_res| + |Z|^T dS (exact relation C = I - R S*), weights
+        v = raw + DELTA D and Neumann steps v <- raw + M v + DELTA D."""
         n = s.n
         s.adj_steps = s.adj_solves = 0
-        Z, SB, beta = [], [], []
+        Z, SB, raw = [], [], []
         for i in range(n):
             z, sbar = s.adjoint([1. if k == i else 0. for k in range(n)])
             Z.append(z)
             SB.append(sbar)
-            beta.append(udot(z, s.d))
-        s.Z, s.SB, s.beta = Z, SB, beta
+            raw.append(udot(z, s.d))
+        s.Z, s.SB, s.raw_bound = Z, SB, raw
         D = weights_D
         cands = []
-        v = [uadd(beta[j], umul(DELTA, D[j])) for j in range(n)]
+        v = [uadd(raw[j], umul(DELTA, D[j])) for j in range(n)]
         for it in range(s.v_iter + 1):
             GSv = s.GS(v)
             Mv = [s.Mv(Z[i], SB[i], GSv, v) for i in range(n)]
-            mu = max([udiv(Mv[i], v[i]) for i in range(n)], default=0.)
+            if not all(MINN <= w < math.inf for w in v) or not all(map(math.isfinite, Mv)):
+                break
+            mu = max((udiv(Mv[i], v[i]) for i in range(n)), default=0.)
             cands.append((mu, v, Mv))
-            v = [uadd(uadd(beta[j], Mv[j]), umul(DELTA, D[j])) for j in range(n)]
+            v = [uadd(uadd(raw[j], Mv[j]), umul(DELTA, D[j])) for j in range(n)]
         s.mus = [c[0] for c in cands]
         ok = [c for c in cands if c[0] < 1]
-        s.verified = bool(ok)
-        s.E = beta[:]
-        if ok:
-            # the last verified candidate (Neumann steps tighten v); any positive v is valid
-            mu, v, Mv = ok[-1]
-            q = dn(1 - mu)
-            s.E = [uadd(beta[i], udiv(Mv[i], q)) for i in range(n)]
-            s.mu, s.v = mu, v
-        else:
-            s.mu, s.v = s.mus[0], cands[0][1]
+        s.verified = False
+        s.verified_state_bound = None
+        if not ok:
+            s.mu, s.v = (s.mus[0], cands[0][1]) if cands else (math.inf, None)
+            return
+        # Any positive weight vector with a verified contraction is valid.
+        s.mu, s.v, Mv = ok[-1]
+        denominator = dsub(1., s.mu)
+        state_bound = [uadd(raw[i], udiv(Mv[i], denominator)) for i in range(n)]
+        if not all(map(math.isfinite, state_bound)):
+            raise RangeError('verified state bound')
         s.Ex = [0.] * s.nfull
+        s.state_scale_error = [0.] * s.nfull
         for i, k in enumerate(s.free):
-            s.Ex[k] = umul(s.cs[i], s.E[i])
+            b = directed_scale(state_bound[i], s.cs[i], True)
+            loss = LAM if s.y[i] and abs(s.x[k]) <= MINN else 0.
+            s.state_scale_error[k] = loss
+            s.Ex[k] = uadd(b, loss) if loss else b
+        if not all(map(math.isfinite, s.Ex)):
+            raise RangeError('unscaled state bound')
+        s.x = flush(s.x)
+        s.verified_state_bound = state_bound
+        s.verified = True
 
     def functional(s, c):
         """Bound of c^T (x^ - x*) for a functional on the full state (c: dict full index -> float):
-        beta_c = |z_c|^T d plus m_c^T E (verified state bounds), with m_c = sbar_c + dS^T |z_c|."""
+        Add m_c^T VerifiedStateBound to RawBound_c = |z_c|^T d, where
+        m_c = sbar_c + dS^T |z_c|. Include both state and coefficient scale losses."""
         v = [0.] * s.n
         for k, ck in c.items():
             if k in s.col:
                 i = s.col[k]
-                v[i] = fmul(ck, s.cs[i])
+                v[i] = fscale(ck, s.cs[i])
+        if not s.verified:
+            raise NotVerified()
+        scaling_error = usum(umul(abs(ck), s.state_scale_error[k]) for k, ck in c.items())
+        for k, ck in c.items():
+            if k in s.col:
+                i = s.col[k]
+                if ck and abs(v[i]) <= MINN:
+                    scaling_error = uadd(scaling_error, umul(LAM, s.verified_state_bound[i]))
+        if not all(map(math.isfinite, v)):
+            raise RangeError('functional scaling')
         if not any(v):
-            return 0.
+            return scaling_error
         z, sbar = s.adjoint(v)
         b = udot(z, s.d)
-        if s.verified:
-            b = uadd(b, uadd(udot(sbar, s.E), udot(z, s.GS(s.E))))
-        return b
+        return usum((b, scaling_error, udot(sbar, s.verified_state_bound),
+                     udot(z, s.GS(s.verified_state_bound))))
 
     # -------------------------------------------------------------------------- evaluation
     def segof(s, x):
@@ -834,72 +1029,54 @@ class CS:
     def evaluate(s, x, side):
         """Item 20: normalised values and bounds (w, th, M, V) at x, side; evaluation directly
         from the start of the mechanical segment. Returns (values_n, bounds_n)."""
+        if s.unloaded:
+            return [0.] * 4, [0.] * 4
         if x in s.st:
             i = s.st.index(x)
             if side == 'R' and i < s.N:
                 return [s.x[4 * i + q] for q in range(4)], [s.Ex[4 * i + q] for q in range(4)]
             j = i - 1
-            sT = s.co[j]['a']
+            sT = bounded_dist(x, s.st[j], s.eL)
             sd = 'L'
         else:
             j = s.segof(x)
-            sT = dist(x, s.st[j], s.eL, False)
+            sT = bounded_dist(x, s.st[j], s.eL)
             sd = side
         e = s.co[j]['e']
+        e = Bounded(e.v, bound_T(e))
         o = 4 * j
-        X = s.x[o:o + 4]
-        E = s.Ex[o:o + 4]
+        X = [Bounded(s.x[k], s.Ex[k]) for k in range(o, o + 4)]
         P = s.loadint(j, x, sd, False)
-        g = [[T(1.0), sT, ((sT * sT) / 2) / e, (((sT * sT) * sT) / 6) / e],
-             [None, T(1.0), sT / e, ((sT * sT) / 2) / e],
-             [None, None, T(1.0), sT],
-             [None, None, None, T(1.0)]]
+        one = Bounded(1.0)
+        a2 = ((sT * sT) / 2) / e
+        g = [[one, sT, a2, (((sT * sT) * sT) / 6) / e],
+             [None, one, sT / e, a2],
+             [None, None, one, sT],
+             [None, None, None, one]]
         vals, bnds = [], []
         for q in range(4):
-            acc = 0.0
-            terms = []
-            for k in range(4):
-                if g[q][k] is None:
-                    continue
-                t = g[q][k] * T(X[k])
-                terms.append(t)
-                acc = fadd(acc, t.v)
-            pv, pb, pm, pmn = P[q]
-            # pm' = pm (1 + gb(pmn + 1)) >= |pv| (L2); only monotone magnitudes enter the bound
-            pm1 = umul(pm, 1 + gb(pmn + 1))
-            if q < 2:
-                pvv = fdiv(pv, e.v)
-                pmag = udiv(umul(pm1, 1 + gb(3)), abs(e.v))           # >= |pvv|
-                pbb = uadd(udiv(umul(uadd(pb, umul(gb(2), pm1)), 1 + gb(2)), abs(e.v)), umul(U, pmag))
-            else:
-                pvv, pbb, pmag = pv, pb, pm1
-            acc = fadd(acc, pvv)
-            m = len(terms) + 1
-            # propagated: sum |g_k| E_k with |g| <= |g^|(1 + gb(kg + 1))
-            prop = usum(umul(umul(abs(g[q][k].v), 1 + gb(g[q][k].k + 1)), E[k]) for k in range(4) if g[q][k] is not None)
-            ev = usum(umul(uadd(gb(t.k + 1) if t.k else 0.0, gb(m - 1)), abs(t.v)) for t in terms)
-            ev = uadd(ev, umul(gb(m - 1), pmag))
-            # underflow allowance: per operation LAM, amplified by |X_k|/e and the constants
-            lam = umul(LAMD[0], umul(64.0, uadd(usum(abs(v) for v in X), 8.0)))
-            lam = uadd(lam, udiv(lam, abs(e.v)))
-            vals.append(acc)
-            bnds.append(usum([prop, ev, pbb, lam]))
+            field = bounded_sum(g[q][k] * X[k] for k in range(4) if g[q][k] is not None)
+            pv, pb, pm, _ = P[q]
+            load = Bounded(pv, pb, pm)
+            field = field + (load / e if q < 2 else load)
+            vals.append(field.v)
+            bnds.append(field.error)
         return vals, bnds
+
+    def to_si_value(s, v, b, q):
+        if s.unloaded:
+            return 0., 0.
+        if 0 < abs(v) < MINN:
+            v, b = 0.0, uadd(b, LAM)
+        v = fscale(v, s.Eq[q])
+        b = directed_scale(b, s.Eq[q], True)
+        if abs(v) <= MINN:
+            b = uadd(b, LAM)
+        return v, b
 
     def to_si(s, vals, bnds):
         """Item 23: one exact power-of-two scaling per value; LAM if the SI value is not normal."""
-        out_v, out_b = [], []
-        for q in range(4):
-            vq, bq = vals[q], bnds[q]
-            if abs(vq) < MINN:                   # software flush before scaling (DAZ-safe)
-                vq, bq = 0.0, uadd(bq, LAM)
-            v = fscale(vq, s.Eq[q])
-            b = umul(bq, 2.0 ** s.Eq[q]) if bq else 0.0
-            if abs(v) <= MINN:                   # a result equal to MINN may be rounded up
-                b = uadd(b, LAM)
-            out_v.append(v)
-            out_b.append(b)
-        return out_v, out_b
+        return tuple(zip(*(s.to_si_value(v, b, q) for q, (v, b) in enumerate(zip(vals, bnds)))))
 
     # -------------------------------------------------------------------------- reactions
     def reactions(s):
@@ -908,6 +1085,9 @@ class CS:
         out = []
         for kind, items, q, loads in (('R', s.tr, 3, s.pf), ('C', s.ro, 2, s.pm)):
             for a, kspring in items:
+                if s.unloaded:
+                    out.append((kind, a, 0., 0., q, 'zero'))
+                    continue
                 i = s.st.index(a)
                 sign = 1. if q == 3 else -1.
                 c = {}
@@ -924,44 +1104,31 @@ class CS:
                     const, cb = -sign * sm[1], sm[2]
                 ev = s.eV if q == 3 else s.eM
                 Pl = [fscale(v, ev) for b_, v in loads if b_ == a]
-                acc = 0.0
-                for k, ck in c.items():
-                    acc = fadd(acc, fmul(ck, s.x[k]))
-                acc = fadd(acc, const)
-                Ps = 0.0
-                for v in Pl:
-                    Ps = fadd(Ps, v)
-                val = fsub(acc, Ps)
-                m = len(c) + 2 + len(Pl)
-                mag = usum([udot(list(c.values()), [s.x[k] for k in c]), abs(const), usum(abs(v) for v in Pl)])
-                bj = s.functional(c)
+                estimate = (bounded_sum(Bounded(ck) * Bounded(s.x[k]) for k, ck in c.items())
+                            + Bounded(const, cb) - bounded_sum(Bounded(v) for v in Pl))
                 coef = usum(umul(bound_T(cT[k]), uadd(abs(s.x[k]), s.Ex[k])) for k in c)
-                bj = usum([bj, coef, umul(gb(m), mag), cb, umul(LAM, 4.0 * m)])
-                choice = ('jump', val, bj)
+                bj = usum((estimate.error, s.functional(c), coef))
+                choice = ('jump', estimate.v, bj)
                 if kspring != math.inf:
                     kk = 0 if q == 3 else 1
                     vp, ip = s.evaluate(a, 'R' if i < s.N else 'L')
                     kn = fscale(kspring, 3 * s.eL - s.eE if q == 3 else s.eL - s.eE)
-                    law = fmul(-kn, vp[kk])
-                    bl = usum([umul(kn, ip[kk]), umul(U, abs(law)), LAM])
-                    if bl < bj:
-                        choice = ('law', law, bl)
+                    if kspring and not MINN < kn < math.inf:
+                        raise RangeError('spring reaction')
+                    law = Bounded(-kn) * Bounded(vp[kk], ip[kk])
+                    if sum(x == a for x, _ in items) == 1:
+                        gap = max(dsub(estimate.v, law.v), dsub(law.v, estimate.v))
+                        if gap > uadd(bj, law.error):
+                            raise InternalInconsistency('spring reaction identity')
+                    if law.error < bj:
+                        choice = ('law', law.v, law.error)
                 out.append((kind, a, choice[1], choice[2], q, choice[0]))
         return out
 
     # -------------------------------------------------------------------------- scales and gate
     def F_low(s):
         """Lower bound of the normalised excitation (7.2, trapezoid of |q| per distributed load)."""
-        t = 0.0
-        for _, v in s.pf:
-            t = dadd(t, abs(fscale(v, s.eV)))
-        for la, lb, v1, v2 in s.lin:
-            w = dmul(dmul(dadd(abs(fscale(v1, s.eq)), abs(fscale(v2, s.eq))), 0.5), dn(fscale(fsub(lb, la), -s.eL)))
-            t = dadd(t, max(w, 0.))
-        Ln = fscale(s.L, -s.eL)
-        for _, v in s.pm:
-            t = dadd(t, ddiv(abs(fscale(v, s.eM)), up(Ln)))
-        return max(t, 0.)
+        return s.excitation_lower
 
     def scales_low(s, stvals):
         """Rigorous lower bounds (normalised units) of S_w, S_th, S_M, S_V (7.2) from the station
@@ -972,20 +1139,34 @@ class CS:
                 mx[q] = max(mx[q], dsub(abs(v[q]), b[q]))
         F = s.F_low()
         Ln = fscale(s.L, -s.eL)
-        eimin_up = min(up(umul(fscale(EI, -s.eE), 1 + gb(2))) for _, EI, _ in s.eis)
+        eimin_up = min(uadd(v, computed_bound(k, v))
+                        for v, k in ((fscale(EI, -s.eE), k) for _, EI, k in s.eis))
         SM = max(mx[2], dmul(F, dn(Ln)))
         SV = max(ddiv(SM, up(Ln)), F)
         St = max(mx[1], ddiv(dmul(SM, dn(Ln)), eimin_up))
         Sw = max(mx[0], ddiv(dmul(dmul(SM, dn(Ln)), dn(Ln)), eimin_up), dmul(St, dn(Ln)))
         return [max(Sw, 0.), max(St, 0.), max(SM, 0.), max(SV, 0.)]
 
+    def scales_high(s, stvals):
+        mx = [max((uadd(abs(v[q]), b[q]) for v, b in stvals), default=0.)
+              for q in range(4)]
+        Ln = fscale(s.L, -s.eL)
+        eimin = min(dsub(v, computed_bound(k, v))
+                    for v, k in ((fscale(EI, -s.eE), k) for _, EI, k in s.eis))
+        F = s.excitation_upper
+        SM = max(mx[2], umul(F, Ln))
+        SV = max(udiv(SM, Ln), F)
+        St = max(mx[1], udiv(umul(SM, Ln), eimin))
+        Sw = max(mx[0], udiv(umul(umul(SM, Ln), Ln), eimin), umul(St, Ln))
+        return [Sw, St, SM, SV]
+
     def qsum_up(s, x0, x1):
-        """Upper bound of |q^| (computed data) on the piece: |qa| + |rise| of each clipped load."""
+        """Upper bound of the sum of exact absolute intensities on the piece."""
         j = s.segof(x0) if x0 < s.L else s.N - 1
         t = 0.0
         for ca, cb, qa, qb, da, db in s.loads[j][2]:
             if ca <= x0 and cb >= x1:
-                t = uadd(t, uadd(abs(qa), up(abs(qb - qa))))
+                t = uadd(t, max(uadd(abs(qa), da), uadd(abs(qb), db)))
         return t
 
     def gate(s, events):
@@ -999,22 +1180,34 @@ class CS:
                 stv.append(s.evaluate(x, sd))
         S = s.scales_low(stv)
         s.S_low = S
+        S_high = s.scales_high(stv)
         # SI range rule
         for q in range(4):
-            Ssi = dmul(S[q], 2.0 ** s.Eq[q]) if S[q] > 0 else 0.
-            if not (SI_MIN <= Ssi):
+            Ssi = directed_scale(S[q], s.Eq[q], False)
+            if not (SI_MIN <= Ssi and directed_scale(S_high[q], s.Eq[q], True) <= SI_MAX):
                 raise RangeError('SI scale %d' % q)
         G = 0.
         where = None
+        s.gate_passed = True
+
+        def check(bound, denominator, q):
+            D = directed_scale(denominator, s.Eq[q], False)
+            B = uadd(directed_scale(uadd(bound, LAM), s.Eq[q], True), LAM)
+            if not math.isfinite(B):
+                raise RangeError('SI bound')
+            s.gate_passed &= B <= threshold_down(D)
+            return udiv(B, D)
         for v, b in stv:
             for q in range(4):
                 Dq = S[q] if q < 2 else max(S[q], dsub(abs(v[q]), b[q]))
-                g = udiv(b[q], Dq)
+                g = check(b[q], Dq, q)
                 if g > G:
                     G, where = g, ('station', q)
         for kind, a, val, bnd, q, how in s.reactions():
+            if directed_scale(abs(val), s.Eq[q], True) > SI_MAX:
+                raise RangeError('SI reaction')
             Dq = max(S[q], dsub(abs(val), bnd))
-            g = udiv(bnd, Dq)
+            g = check(bnd, Dq, q)
             if g > G:
                 G, where = g, ('reaction', q)
         ubmax = [0.] * 4
@@ -1022,7 +1215,7 @@ class CS:
         for x0, x1 in zip(events, events[1:]):
             v0, b0 = s.evaluate(x0, 'R')
             v1, b1 = s.evaluate(x1, 'L')
-            h = up(fscale(up(x1 - x0), -s.eL))
+            h = directed_scale(up(x1 - x0), -s.eL, True)
             qs = s.qsum_up(x0, x1)
             for q in range(4):
                 B = max(b0[q], b1[q])
@@ -1038,23 +1231,24 @@ class CS:
                         lbs.append(dsub(dsub(abs(vv[2]), umul(uadd(abs(vv[3]), BV), h)), umul(umul(qs, umul(h, h)), 0.5)))
                     lb = dsub(max(lbs), umul(2.0, B))
                     Dq = max(S[q], lb)
-                g = udiv(B, Dq)
+                g = check(B, Dq, q)
                 s.pieceinfo.append((x0, x1, q, Dq if q >= 2 and Dq > S[q] else 0., B, Dq))
                 if g > G:
                     G, where = g, ('piece', q)
-            # upper bounds of |Q| on the piece (overflow rule)
-            ubV = uadd(max(abs(v0[3]), abs(v1[3])), umul(h, qs))
-            ubmax[3] = max(ubmax[3], ubV)
-            ubmax[2] = max(ubmax[2], uadd(uadd(abs(v0[2]), umul(ubV, h)), umul(qs, umul(h, h))))
-            ubmax[1] = max(ubmax[1], abs(v0[1]), abs(v1[1]))
-            ubmax[0] = max(ubmax[0], abs(v0[0]), abs(v1[0]))
+            B = [max(a, b) for a, b in zip(b0, b1)]
+            ubV = usum((abs(v0[3]), B[3], umul(h, qs)))
+            ubM = usum((abs(v0[2]), B[2], umul(ubV, h)))
+            e = s.co[s.segof(x0)]['e']
+            el = dsub(e.v, bound_T(e))
+            ubT = usum((abs(v0[1]), B[1], udiv(umul(ubM, h), el)))
+            ubW = usum((abs(v0[0]), B[0], umul(ubT, h)))
+            for q, v in enumerate((ubW, ubT, ubM, ubV)):
+                ubmax[q] = max(ubmax[q], uadd(v, B[q]))
         for q in range(4):
-            if umul(uadd(ubmax[q], S[q]), 2.0 ** s.Eq[q]) > SI_MAX:
+            if directed_scale(ubmax[q], s.Eq[q], True) > SI_MAX:
                 raise RangeError('SI upper %d' % q)
-        # SI allowance of the back-scaling: LAM / D_SI <= LAM / (S_q 2^E_q)
-        Gsi = max(uadd(G, udiv(LAM, dmul(S[q], 2.0 ** s.Eq[q]))) for q in range(4))
-        s.G, s.G_si, s.gate_where = G, Gsi, where
-        return Gsi
+        s.G, s.G_si, s.gate_where = G, G, where
+        return G
 
 
 def weights(m):
@@ -1076,10 +1270,10 @@ def weights(m):
     St = max(mx[1], SM / eimin)
     Sw = max(mx[0], SM / eimin, St)
     Sq = [Sw, St, SM, SV]
-    return [Sq[k % 4] / m.cs[i] for i, k in enumerate(m.free)]
+    return [fscale(Sq[k % 4], -m.cs[i]) for i, k in enumerate(m.free)]
 
 
-def solve_case(c, v_iter=3, adj_res='double', LUeps=None, exact_twin=False, mode='gradual'):
+def solve_case(c, v_iter=3, LUeps=None, exact_twin=False, mode='gradual'):
     """Status per 6.1 (contract order) and the solver object."""
     from kinematics import is_mechanism
     from coverage import events
@@ -1089,9 +1283,11 @@ def solve_case(c, v_iter=3, adj_res='double', LUeps=None, exact_twin=False, mode
             return dict(status='UnstableModel'), None
         rng = random.Random(zlib.crc32(c['id'].encode())) if LUeps else None
         try:
-            m = CS(c, v_iter=v_iter, adj_res=adj_res, LUeps=LUeps, rng=rng, exact_twin=exact_twin)
+            m = CS(c, v_iter=v_iter, LUeps=LUeps, rng=rng, exact_twin=exact_twin)
         except RangeError as e:
             return dict(status='NumericalFailure', cause='NumericalRange', detail=str(e)), None
+        except InternalInconsistency as e:
+            return dict(status='NumericalFailure', cause='InternalInconsistency', detail=str(e)), None
         if m.unloaded:
             return dict(status='zero'), m
         try:
@@ -1102,17 +1298,26 @@ def solve_case(c, v_iter=3, adj_res='double', LUeps=None, exact_twin=False, mode
             return dict(status='NumericalFailure', cause='NumericalRange', detail=str(e)), m
         except ArithmeticError:
             return dict(status='NumericalFailure', cause='NonFinite'), m
-        m.verify(weights(m))
+        try:
+            m.verify(weights(m))
+        except RangeError as e:
+            return dict(status='NumericalFailure', cause='NumericalRange', detail=str(e)), m
+        except ArithmeticError:
+            return dict(status='NumericalFailure', cause='NonFinite'), m
+        if not m.verified:
+            return dict(status='NotReliablySolvable', cause='NotVerified', mu=m.mus), m
         ev = [float(x) for x in events(c)]
         try:
             G = m.gate(ev)
         except RangeError as e:
             return dict(status='NumericalFailure', cause='NumericalRange', detail=str(e)), m
+        except InternalInconsistency as e:
+            return dict(status='NumericalFailure', cause='InternalInconsistency', detail=str(e)), m
+        except ArithmeticError:
+            return dict(status='NumericalFailure', cause='NonFinite'), m
         if not math.isfinite(G):
             return dict(status='NumericalFailure', cause='NonFinite'), m
-        if not m.verified:
-            return dict(status='NotReliablySolvable', cause='NotVerified', gate=G, mu=m.mus), m
-        if G > TAU:
+        if not m.gate_passed:
             return dict(status='NotReliablySolvable', cause='Gate', gate=G, mu=m.mus), m
         return dict(status='delivered', gate=G, mu=m.mus), m
     finally:

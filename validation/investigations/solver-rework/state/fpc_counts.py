@@ -2,7 +2,9 @@
 sequences in fpc.py with the rules of FLOATING_POINT_CONTRACT.md (L1: product/quotient k_a + k_b + 1,
 sum of same-sign terms max(k_a, k_b) + 1, multiplication by a power of two exact, distance
 fl(x - c) 2^-eL one rounding; inputs exact, EI = fl(E I) one rounding). The table of the
-contract document is this output; stage A checks the bounds gb(k + 1)|v^| against exact values.
+contract document is this output; stage A checks the normal coefficient bounds against exact values. The counts
+for other families describe the normal-only model. Their operative bounds use
+local absolute propagation.
 Usage: python3 state/fpc_counts.py"""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -26,7 +28,7 @@ for p in (1, 2, 3, 4):
     print('  p = %d  inside: diff k = %2d ramp k = %2d | beyond: diff k = %2d ramp k = %2d' % (
         p, diff_term(v, n, None, dd, p, True).k, ramp_term(rise, n, None, dd, p, True).k,
         diff_term(v, n, far, dd, p, False).k, ramp_term(rise, n, far, dd, p, False).k))
-print('clipped intensity q = v1 + (v2 - v1)((c - la)/(lb - la)): |q^ - q| <= gb(6)|(v2 - v1) f| + u|q^| (derivation in the contract)')
+print('clipped intensity q = v1 + (v2 - v1)((c - la)/(lb - la)): local propagation (contract §3)')
 print('field evaluation at s (g coefficients times state):')
 s = d
 for name, g in (('w: 1, s, s s/2/e, s s s/6/e', [one, s, ((s * s) / 2) / e, (((s * s) * s) / 6) / e]),

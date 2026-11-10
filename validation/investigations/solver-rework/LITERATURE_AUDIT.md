@@ -384,57 +384,42 @@ Beweis der Vollständigkeit von `PolynomialRoots` liegt nicht vor (Toleranzen
 NearZero = 64ε, Clusterregel bei Grad 3). Das exakte Oracle wird deshalb Testreferenz der
 C#-Abnahme (Extremwerte gegen exakte Isolation), nicht Produktcode.
 
-## 4. Offene Punkte aus dem Audit
+## 4. Einordnung nach dem Closure-Pass
 
-| Nr. | Punkt | Status nach Runde 4 | nächster Nachweis |
-|---|---|---|---|
-| O2 | Rundungszahlen je Formel | Runde 5: für die festgelegte Operationsfolge hergeleitet und geprüft ([FLOATING_POINT_CONTRACT.md](FLOATING_POINT_CONTRACT.md)) | C#-Konformitätstests, Plattformtests V1, V2, V5 |
-| O3 | Pessimismus von β | 23 korrekte Ablehnungen nahe τ; die 2 nicht verifizierbaren Modelle sind seit Runde 5 verifiziert (5) | schärfere Rundungszahlen; Funktional je kritischer Größe |
-| O5 | Extremwerte | experimentell validiert, nicht zertifiziert; Vorschlag Variante B (keine zertifizierte Vollständigkeitszusage) | Oracle als Testreferenz der Abnahme; Vertragsentscheidung |
-| O9 | Aufwand | Verifikation braucht gespeicherte adjungierte Lösungen oder eine zweite Lösung | C#-Zeitmessung, Größengrenze |
-| O13 | Grenzbereich τ | geschlossen (75 gezielte Fälle) | Übernahme in die Abnahme |
-| O15, O16 | Vertrauen in β | geschlossen durch Verifikation | Test mit gestörter Faktorisierung |
-| O17 (neu) | Voraussetzungen von GEPP | lokale Kopplung, polynomiale Übertragung | neue Prüfung bei Koppelbedingungen, Bettung, Theorie II. Ordnung |
-| O18 (neu) | Graduelles Unterlaufen | Runde 5: keine Voraussetzung mehr (λ = SAFE1-artig, 5) | Plattformdiagnose; Bitgleichheit O12 |
-| – | Konstante 1/16 der adjungierten Regel | Vorteil gegen BERR und LAWN 165 gemessen, Konstante selbst nicht variiert | Variation 1/4 … 1/64 in der Abnahme |
-| – | Ruiz | keine Konditionsgarantie; Gradierung innerhalb von Spalten bleibt | keine (GEPP + Nachiteration kommen damit zurecht) |
+| Punkt | Entscheidung | Folge |
+|---|---|---|
+| O2, O12, O19 | Mathematischer Vertrag, gerichtete Primitives und kontrollierte Zwischenwerte | C#-Konformität je Plattform. Bitvergleiche dienen der Diagnose |
+| O3 | Pessimistische Ablehnungen bleiben möglich | Akzeptiertes Risiko |
+| O4 | Vollständiger belasteter Axialvertrag | DEV-12. Die axiale Nullsemantik gehört zur Migration |
+| O5 | Variante B | PolynomialRoots bleibt unabhängig validiert. Yun/Sturm bleibt Oracle |
+| O9 | Aufwandsschätzung | Modellgröße und Latenz nach C#-Messung festlegen |
+| O17 | Lokale Kopplung und polynomiale Übertragung | Neubewertung nur im betroffenen Feature-Track |
+| O18 | Gradueller und abrupter Unterlauf | Explizites Residuallemma und lokale Fehlerfortpflanzung |
 
-Kein Befund dieser Runde stellt die Grundarchitektur infrage. Die Formulierung (lokale
-Zustandsformulierung, Elimination, Band (2,2)) erweist sich als genau die Struktur, unter der die
-Literatur GEPP als stabil ausweist. Der Fehlervertrag wird durch die Verifikation stärker, nicht
-schwächer.
+## 5. Gleitkomma-Vertrag und Closure-Nachweis
 
-## 5. Nachtrag Runde 5: Gleitkomma-Vertrag (O2)
+[Hi02] trägt das Modell normaler Koeffizienten und das allgemeine
+γ_k. Dynamische Rundungszahlen benötigen die gerichtete Auswertung
+von γ_k oder eine direkt fortgepflanzte absolute Schranke.
+Die frühere lineare Näherung unterschätzt γ_k bereits bei k = 2²⁷.
 
-Keine breite neue Recherche. Genutzt wurden die vorhandenen Quellen an konkreten Stellen:
+[Ru10] Satz 10.2 trägt die gewichtete komponentenweise Verifikation.
+Die Rohschranke |R|d gilt für den unmittelbaren Residualanteil.
+Die Ungleichung Mv ≤ μv mit μ < 1 liefert die Korrektur zur
+verifizierten Zustandsschranke. Positive Gewichte und Neumann-Schritte
+sind eine Strategie zur Verifikation.
 
-- [Hi02] Gleichungen (2.4)/(2.5), Lemma 3.1 und Abschnitt 4.2: Rundungsmodell einer Operation,
-  Produktketten und rekursive Summation; daraus die Rundungszahlen je Operationsfolge.
-- [Ru10] Satz 10.2 in komponentenweiser Form mit gewichteter ∞-Norm. Neu gegenüber Runde 4: Die
-  Gewichte werden mit Neumann-Schritten v ← β + Mv + δD gewählt. Rump selbst iteriert in
-  Verifikationsverfahren ähnlich (Krawczyk-Iteration, ε-Inflation). Das ist zulässig, weil der Satz
-  für jedes positive v gilt. Es verifiziert die beiden Modelle, an denen Runde 4 scheiterte
-  (Spektralradius von M ≈ 10⁻¹⁴).
-- [De84] und [LAPACK-RFS]: λ = 2⁻¹⁰²² je Operation entspricht SAFE1 = NZ·safmin und gilt anders als
-  η = 2⁻¹⁰⁷⁴ auch bei abruptem Unterlauf. Mit der Normierung der rechten Seite kostet das nichts.
-- [ORO05]: Dot2 ist für die Verifikation nicht nötig. Der Rundungsanteil des double-Residuals hat
-  dieselbe Struktur wie der Datenanteil von M.
+[De84], [LAPACK-RFS] und der in Runde 5 herangezogene
+Binary64-/FTZ-/DAZ-Abgleich begründen die Trennung relativer
+Rundung und absoluter Verluste. Der Residualpfad weist die
+Verluste seiner RHS, Produkte und Akkumulatoren einzeln nach.
+Normale relative Lemmata setzen normale oder exakt nullwertige
+Operanden voraus. Bei gemischten lokalen Folgen werden absolute
+Fehler einschließlich der Datenfehler abgeschnittener Linearlasten
+durch die tatsächlich verwendeten Operationen fortgepflanzt.
 
-Neu aufgenommen, weil die Plattformfrage (FTZ/DAZ) eine konkrete Aussage verlangt:
-
-| Kürzel | Quelle | Aussage | Konsequenz |
-|---|---|---|---|
-| [IEEE19] | IEEE Standard for Floating-Point Arithmetic, IEEE Std 754-2019. DOI 10.1109/IEEESTD.2019.8766229 (über Crossref aufgelöst) | Rundung zur nächsten Zahl, Unterlauf, Tininess vor oder nach dem Runden zulässig; FTZ/DAZ sind nicht standardkonform, aber verbreitet | L4 und L5 des Vertrags gelten für beide Tininess-Varianten und für FTZ/DAZ |
-| [Intel-SDM] | Intel 64 and IA-32 Architectures Software Developer's Manual, Vol. 1, MXCSR FTZ/DAZ | FTZ setzt subnormale Ergebnisse auf 0, DAZ liest subnormale Operanden als 0 | Software-Flush gespeicherter Vektoren und λ je Operation |
-| [Arm-ARM] | Arm Architecture Reference Manual (A-profile), FPCR.FZ | FZ wirkt auf Operanden und Ergebnisse | wie oben |
-
-### 5.1 Ergebnis Runde 5
-
-Der Gleitkomma-Vertrag legt für jede numerisch relevante Formel die Operationsfolge fest. Er leitet
-die Schranken daraus ab und prüft sie auf jeder Stufe der Beweiskette gegen exakte Arithmetik, auch
-mit emuliertem FTZ/DAZ: 0 Verletzungen in 452 Kettenläufen und 2.295 Zufallsmodellen
-**[state-fpc-summary]**. Gefunden wurde eine Lücke im bisherigen Rundungsmodell. Der Datenfehler
-abgeschnittener Linearlasten nahe ihrem Nulldurchgang fehlte, mit einer Unterschätzung der
-Lastintegrale bis zum 9,4·10¹³-Fachen **[state-fpc-stage-a]**. Status der Regeln: Residual und
-Datenrundung (2 → 2, präzisiert), Unterlauf η → λ (2, jetzt plattformunabhängig), Verifikation
-(2, Gewichte angepasst), Dot2 (nicht nötig).
+Die Abschnitte 1–3 halten Befunde zu früheren Prototypen fest.
+Der aktuelle Vertrag, die Primitives, die Prüfung A–F und die
+reproduzierbaren Protokolle stehen im
+[Gleitkomma-Vertrag](FLOATING_POINT_CONTRACT.md). Die vorhandenen
+Quellen reichen für die Herleitungen dieses Passes aus.

@@ -135,17 +135,14 @@ Bausteine:
 - **Geprüfte Größen:** Einzelne Reaktionen, V, M, w und θ an Stationen und im Feld. Das gilt ausdrücklich bei sehr nahen Lagern, Federn und Lasten und geht über globale Gleichgewichtsprüfungen hinaus.
 - **Untersuchungswerkzeuge** bleiben Entwicklungswerkzeuge für neue Grenzfälle und Sollwerte.
 
-### A8 Numerischer Vertrag (offen)
+### A8 Numerischer Vertrag
 
-Eine pauschale Grenze wie 10⁻⁹ wird nicht übernommen. Die Messungen zeigen je
-nach Problemklasse verschiedene Fehlerniveaus, von 10⁻¹⁶ bis 10⁻⁵. Der Vertrag
-ist sauber zu definieren:
-
-- **Bezugsgrößen:** Absolut, relativ zur Größe selbst oder relativ zur Feldskala, je Ergebnisgröße.
-- **Gültigkeitsbereich:** Problemklassen und Eingabebereiche, für die eine Zusage gilt.
-- **Kondition:** Wie die Zusage von der Kondition des Modells abhängt.
-- **Ablehnung:** Was gilt, wenn eine Zusage nicht erreichbar ist.
-- **Prüfbarkeit:** Wie der Vertrag in Abnahme und CI geprüft wird.
+Der [Architekturentwurf](SOLVER_ARCHITEKTUR.md#7-numerischer-vertrag-a8)
+und der [Gleitkomma-Vertrag](../validation/investigations/solver-rework/FLOATING_POINT_CONTRACT.md)
+definieren Bezugsskalen, Bereichsregeln und verifizierte Fehlerschranken.
+Der mathematische Produktwert ist τ = 10⁻⁸. Die Freigabe setzt voraus,
+dass jede vollständige SI-Fehlerschranke höchstens τ mal der zugehörigen
+Bezugsskala ist. Die C#-Abnahme prüft dies auf jeder unterstützten Plattform.
 
 ### A9 Grenze zum Fachmodell
 
@@ -157,7 +154,8 @@ ist sauber zu definieren:
 
 - **Öffentlicher Vertrag:** Er bleibt für den heutigen Funktionsumfang erhalten, also Knotenergebnisse, `EvaluateAt` und Extremwerte, soweit A6 keine Erweiterung verlangt.
 - **Kein Parallelbetrieb:** Nach erfolgreicher Migration bleibt der alte FE-Solver nicht als zweiter Produktionssolver bestehen.
-- **Als Werkzeug:** Ist er als unabhängiges Vergleichswerkzeug nützlich, kann seine Logik außerhalb des Produktpfads erhalten bleiben.
+- **Als Werkzeug:** Der eingefrorene FE-Pfad bleibt ein unabhängiges Vergleichswerkzeug außerhalb des Produktpfads.
+- **Axiale Nullsemantik:** Ohne äußere Axiallasten bleiben u, N und vorhandene axiale Reaktionen exakt null. Reaktionen an freien Freiheitsgraden bleiben abwesend.
 - **Nach der Migration:** Solver-Hash in der CI, `docs/KONZEPT.md`, `docs/SOLVER.md`, `docs/VALIDATION.md` und die Abnahme werden angepasst. `docs/KONZEPT.md` beschreibt heute noch das direkte Steifigkeitsverfahren. Die technische Dokumentation der Webseite folgt nach der Übernahme in `main`.
 
 ## B. Feature-Tracks
@@ -212,7 +210,7 @@ Feature freigegeben ist. Bis zur Freigabe ist sie über Produktpfade nicht errei
 - **Zu klären:**
   - Normalkraftextrema in der Ergebnisschnittstelle
   - Regeln für axiale Lagerung
-- **Prototyp:** Axialanteil vorhanden, nur intern getestet.
+- **Belasteter Axialvertrag:** Zweite unabhängige Referenz, vollständige Floating-Point-Kette und Axialfedergesetz gehören zu DEV-12. Die heutige axiale Nullsemantik gehört zur Migration (A10).
 
 ## C. Integration und Freigabe
 
@@ -236,7 +234,7 @@ Bedienung, Persistenz und Report werden in den Feature-Issues separat geplant.
 
 | Nr. | Thema | Entscheidung |
 |---|---|---|
-| 1 | Alter FE-Solver | Nach der Migration kein zweiter Produktionssolver. Als Vergleichswerkzeug außerhalb des Produktpfads zulässig. |
+| 1 | Alter FE-Solver | Nach der Migration eingefrorenes unabhängiges Vergleichswerkzeug außerhalb des Produktpfads. |
 | 2 | Sehr nahe Positionen | Keine Mindestdistanz, kein Zusammenführen. Verschiedene Koordinaten sind verschiedene Positionen. |
 | 3 | Sehr nahe Lager und Federn | Große Reaktionen und Querkräfte bleiben unverändert. Stabilisierung nur für die numerische Darstellung. |
 | 4 | Punktmoment genau auf Gelenk | Nicht implizit interpretieren. Bis zu einer fachlichen Semantik nicht eindeutig definiert. |
@@ -245,16 +243,13 @@ Bedienung, Persistenz und Report werden in den Feature-Issues separat geplant.
 | 7 | `SolverLoads` und ähnliche Strukturen | Übergangslösung, nicht Zielarchitektur. |
 | 8 | Nähe-Warnung wie L/1000 | Nicht übernehmen. Diagnosen beruhen auf numerischer Qualität oder Modellgrenzen. |
 | 9 | Validierung | Geeignete Untersuchungsfälle werden dauerhafte Abnahme- und CI-Fälle. |
-| 10 | Genauigkeitsziel | Keine pauschale Toleranz. Numerischer Vertrag ist offen (A8). |
+| 10 | Genauigkeitsziel | Exakter Produktwert τ = 10⁻⁸ mit verifizierten Ausgabeschranken und Bezugsskalen (A8). |
 
 ## Offene Punkte
 
-1. **Numerischer Vertrag:** Siehe A8.
-2. **Ablehnungskriterium:** Weniger Ablehnungen lösbarer Modelle, ohne falsche Ergebnisse durchzulassen (A5).
-3. **Kombinationen an gleicher Position:** Semantik je Feature-Track (A2, B).
-4. **Architekturentwurf:** Entworfen in [SOLVER_ARCHITEKTUR.md](SOLVER_ARCHITEKTUR.md); dessen offene Punkte stehen dort in Abschnitt 13.
-5. **Alter FE-Solver als Vergleichswerkzeug:** Ja oder nein, und wo er liegt.
-6. **Plattform:** Prüfung unter Windows.
+1. **Kombinationen an gleicher Position:** Semantik je Feature-Track (A2, B).
+2. **Plattformen:** Unabhängige fachliche und numerische Abnahme je unterstützter Plattform.
+3. **Produktentscheidungen und C#-Abnahme:** Siehe [Architekturentwurf](SOLVER_ARCHITEKTUR.md).
 
 ## Voraussetzung für die Übernahme in `main`
 
@@ -274,5 +269,6 @@ mindestens erfüllt sein:
 
 ## Nächster Schritt
 
-Der Architekturentwurf für Ebene A liegt in [SOLVER_ARCHITEKTUR.md](SOLVER_ARCHITEKTUR.md)
-vor. Nächster Schritt ist ein schrittweiser Implementierungsplan auf dieser Grundlage.
+Der Closure-Pass empfiehlt den Freeze für die Migration des heutigen Umfangs.
+Nächster Schritt ist der schrittweise C#-Implementierungsplan auf Grundlage der
+[Solver-Architektur](SOLVER_ARCHITEKTUR.md#15-closure-und-freeze-empfehlung).

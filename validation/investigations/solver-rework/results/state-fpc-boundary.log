@@ -1,0 +1,18 @@
+PASS direction
+PASS exponent
+PASS gamma
+PASS products_and_gate
+PASS excitation
+PASS loads
+PASS residual
+PASS functional_scaling
+PASS full_cases
+MUTANT detected outward
+MUTANT detected lambda
+MUTANT detected exponent
+MUTANT detected contribution
+MUTANT detected gamma
+MUTANT detected unloaded
+MECHANICAL MUTANT detected B3
+MECHANICAL MUTANT detected L1
+MECHANICAL MUTANT detected L2

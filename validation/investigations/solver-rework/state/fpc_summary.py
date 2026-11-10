@@ -2,10 +2,17 @@
 Usage: python3 state/fpc_summary.py"""
 import glob, json, math, os
 from collections import Counter
+from fractions import Fraction
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-RES = os.path.join(HERE, '..', 'results')
-TAU = 1e-8
+RES = os.environ.get('FPC_RESULTS', os.path.join(HERE, '..', 'results'))
+TAU = Fraction(1, 100_000_000)
+
+print('deterministic boundary checks and mutation detection:')
+with open(os.path.join(RES, 'state-fpc-boundary.log')) as boundary:
+    for line in boundary:
+        print('  ' + line.rstrip())
+print()
 
 print('stage A (single formulas against their bounds, exact reference):')
 for l in open(os.path.join(RES, 'state-fpc-stage-a.log')):
@@ -19,9 +26,11 @@ for f in sorted(glob.glob(os.path.join(RES, 'state-fpc-chain-*.log'))):
             rows.append(json.loads(l[5:]))
 
 STAGES = [('B_entries', 'B |S^ - S*| > dS'), ('B_rhs', 'B |sb^ - sb*| > dsb'), ('B_res', 'B |r*| > d'),
-          ('C_premise', 'C |I - R S*| > M'), ('C_inverse', 'C |S*^-1 - R| > enclosure'),
+          ('C_premise', 'C |I - R S*| > M'), ('C_contraction', 'C Mv > mu v'), ('C_inverse', 'C |S*^-1 - R| > enclosure'),
           ('D_viol', 'D |y^ - y*| > E (verified)'), ('R_viol', 'D reactions error > bound'),
-          ('E_viol', 'E/F SI value error > SI bound'), ('E_majorant', 'E bound inside piece > majorant'),
+          ('E_viol', 'E/F SI value error > SI bound'), ('E_extrema_viol', 'E extremum candidate error > SI bound'),
+          ('R_gate_viol', 'F reaction bound > tau times scale'), ('F_gate_viol', 'F field bound > tau times scale'),
+          ('F_actual_over_tau', 'F delivered actual error > tau'), ('E_majorant', 'E bound inside piece > majorant'),
           ('E_LB_viol', 'E LB > exact Bernstein upper enclosure of min|Q|'), ('E_LB_undecided', 'E LB inside the enclosure (undecided)'),
           ('formulation_mismatch', 'exact system != transfer_ref at stations')]
 
@@ -43,7 +52,7 @@ for g, rs in sorted(groups.items()):
         vals = [r[key] for r in rs if r.get(key) is not None]
         if vals:
             bad = sum(1 for v in vals if v)
-            if bad or key in ('B_res', 'D_viol', 'E_viol', 'C_premise', 'formulation_mismatch'):
+            if bad or key in ('B_res', 'D_viol', 'E_viol', 'E_extrema_viol', 'C_premise', 'C_contraction', 'F_gate_viol', 'formulation_mismatch'):
                 print('    %-48s checked models %3d, with violation %d' % (text, len(vals), bad))
     def mx(k):
         v = [r[k] for r in rs if r.get(k) is not None]
@@ -62,7 +71,7 @@ for g, rs in sorted(groups.items()):
     if ver:
         first = sum(1 for r in ver if r['mu'][0] < 1)
         anyv = sum(1 for r in ver if min(r['mu']) < 1)
-        print('    verification: mu < 1 with v = beta + delta D %d of %d, after Neumann steps %d of %d; largest final mu %.2e' % (
+        print('    verification: mu < 1 with v = RawBound + delta D %d of %d, after Neumann steps %d of %d; largest final mu %.2e' % (
             first, len(ver), anyv, len(ver), max(min([u for u in r['mu'] if u < 1] or [math.inf]) for r in ver)))
         nv = [r['id'] for r in ver if min(r['mu']) >= 1]
         if nv:
@@ -85,9 +94,11 @@ if reg:
     print('regression on the round-4 random sets (every 5th model): exactly stable %d (of %d)' % (len(st), len(reg)))
     print('   status:', dict(Counter('%s%s' % (r['status'], '/' + r['cause'] if r.get('cause') else '') for r in st)))
     print('   values or reactions with error > contract bound: %d' % sum(r.get('viol', 0) for r in st))
+    print('   delivered values with bound > tau times scale: %d' % sum(r.get('gate_viol', 0) for r in st))
+    print('   measurement failures: %d' % sum('measure' in r or (r['status'] == 'delivered' and 'err' not in r) for r in st))
     dl = [r for r in st if r['status'] == 'delivered']
     print('   delivered %d: largest error in the contract measure %.2e, error > tau %d' % (
-        len(dl), max(r.get('err', 0.) for r in dl), sum(r.get('err', 0.) > TAU for r in dl)))
+        len(dl), max(r.get('err', 0.) for r in dl), sum(r.get('over_tau', False) for r in dl)))
     rj = [r for r in st if r['status'] != 'delivered' and 'err' in r]
     print('   rejected with error <= tau: %d of %d %s' % (sum(r['err'] <= TAU for r in rj), len(rj),
                                                        [(r['id'], r.get('cause')) for r in rj][:8]))

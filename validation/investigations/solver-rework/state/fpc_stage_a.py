@@ -23,8 +23,8 @@ from fractions import Fraction as Fr
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import fpc
-from fpc import (T, dist, bound_T, point_force, point_couple, gb, U, MINN, LAM, fadd, fsub, fmul, fscale,
-                 up, dn, uadd, umul, udiv, dsub, dmul, ddiv, udot, lam_term, RangeError, CS, MODE)
+from fpc import (T, dist, bound_T, point_force, point_couple, U, MINN, LAM, fadd, fsub, fmul, fscale,
+                 up, dn, uadd, umul, udiv, dsub, dmul, ddiv, udot, RangeError, CS, MODE)
 from gen import case, gen_f, gen_s
 from state import StateSolver, gamma, ETA
 
@@ -89,10 +89,9 @@ def fam_dist(st):
     if x <= c:
         return
     eL = R.randint(-5, 5)
-    t = dist(x, c, eL, False)
+    t = fpc.bounded_dist(x, c, eL)
     ex = (Fr(x) - Fr(c)) * Fr(2) ** -eL
-    b = uadd(bound_T(t), LAM if (t.sub or abs(t.v) <= MINN) else 0.)
-    rec(st, abs(Fr(t.v) - ex), b)
+    rec(st, abs(Fr(t.v) - ex), t.error)
 
 
 def fam_coef(st):
@@ -101,11 +100,12 @@ def fam_coef(st):
     if x1 == x0:
         return
     E, I = abs(special()), abs(special())
-    EI = fmul(E, I)
-    if not (MINN <= EI < math.inf):
+    try:
+        EI = fpc.stiffness_product(E, I)
+    except RangeError:
         st['range'] += 1
         return
-    eL, eE = round(math.log2(abs(x1) or 1)), round(math.log2(EI)) + R.randint(-3, 0)
+    eL, eE = fpc.power_of_two_exponent(x1), fpc.power_of_two_exponent(EI) + R.randint(-3, 0)
     a, ax = dist(x1, x0, eL, False), dist(x1, x0, eL, True)
     e, ex = T(fscale(EI, -eE), 1), T(Fr(E) * Fr(I) * Fr(2) ** -eE)
     out, outx = {}, {}
@@ -126,19 +126,18 @@ def fam_point(st):
     x, c = pair_close()
     if x <= c:
         return
-    eL = round(math.log2(x)) if x > 0 else 0
+    eL = fpc.power_of_two_exponent(x)
     if x < 2 * fpc.SI_MIN:                       # beam-length range rule (L >= x)
         st['range'] += 1
         return
-    fpc.LAMD[0] = max(LAM, math.ldexp(LAM, -eL))
-    d, dx = dist(x, c, eL, False), dist(x, c, eL, True)
+    d, dx = fpc.bounded_dist(x, c, eL), dist(x, c, eL, True)
     for p in (1, 2, 3, 4):
         for f in (point_force, point_couple):
             if f is point_couple and p == 1:
                 continue
-            t = f(T(v), d, p)
+            t = f(fpc.Bounded(v), d, p)
             tx = f(T(Fr(v)), dx, p)
-            rec(st, abs(Fr(t.v) - tx.v), uadd(bound_T(t), lam_term(v, p)))
+            rec(st, abs(Fr(t.v) - tx.v), t.error)
 
 
 def residual_case(st):
@@ -150,11 +149,7 @@ def residual_case(st):
         y.append(0. if k < .1 else special() * 2.0 ** (-R.randint(900, 1015) if k < .25 else -R.randint(0, 80)))
     y = fpc.flush(y)
     sb = sum(S[j] * y[j] for j in range(m)) * (1 + R.choice((0, 2.0 ** -40, 1e-3))) if R.random() < .5 else special()
-    acc = sb
-    for j in range(m):
-        acc = fsub(acc, fmul(S[j], y[j]))
-    mag = uadd(abs(sb), udot(S, y))
-    b = uadd(umul(gb(m + 1), mag), umul(LAM, 2.0 * m))
+    acc, b = fpc.residual(sb, zip(S, y))
     ex = Fr(sb) - sum(Fr(S[j]) * Fr(y[j]) for j in range(m))
     rec(st, abs(Fr(acc) - ex), b)
 
@@ -169,7 +164,7 @@ def updown(st):
         if dop and Fr(dop(a, b)) > ex:
             st['viol'] += 1
         # under emulated FTZ the round-to-nearest result may be flushed: up() of the flushed value
-        r = fpc._ftz(op(a, b)) if MODE[0] == 'ftz' else op(a, b)
+        r = fpc._ftz(op(a, b)) if MODE[0] in ('ftz', 'ftz_daz') else op(a, b)
         if ex != 0 and Fr(up(r)) < ex:
             st['viol'] += 1
 
@@ -179,14 +174,14 @@ def backscale(st):
     one power-of-two scaling, LAM if the SI result is not normal."""
     v = special() * 2.0 ** -R.choice((0, 500, 990, 1020))
     E = R.randint(-200, 200)
-    vin, b = v, 0.
-    if abs(vin) < MINN:
-        vin, b = 0.0, umul(LAM, 2.0 ** E)
-    r = fscale(vin, E)
-    if math.isinf(r):
+    class Units:
+        Eq = [E]
+        unloaded = False
+
+    r, b = CS.to_si_value(Units(), v, 0.0, 0)
+    if not math.isfinite(r):
         st['range'] += 1
         return
-    b = uadd(b, LAM if abs(r) <= MINN else 0.)        # a result equal to MINN may be rounded
     rec(st, abs(Fr(r) - Fr(v) * Fr(2) ** E), b)
 
 
@@ -280,9 +275,9 @@ def model_families(stA4, stA5, stA8, mode):
                 # state.py bound of the same integrals, generously gamma(k + 3) ab + (k + 30) eta (its rows use
                 # kb + 1 = k + 3 for w, theta; its evaluation adds up to (k + 30) eta)
                 Po = old.loadint(j, x, sd)
-                for (v, ab, k), (vx, *_) in zip(Po, Px):
+                for (v, ab, k), (vx, *_), p in zip(Po, Px, (4, 3, 2, 1)):
                     # state.py has no right-hand side normalisation: compare in its units
-                    scale = Fr(2) ** cs.eF
+                    scale = Fr(2) ** (cs.eF + (p - 3) * cs.eL + cs.eE) * Fr(old.Lr) ** (3 - p) / Fr(old.EIr)
                     rec(stA5, abs(Fr(v) - vx * scale), gamma(k + 3) * ab + (k + 30) * ETA)
             if m is not None and not (x in m.st and sd == 'R' and m.st.index(x) < m.N):
                 ex = eval_exact_hat(m, x, sd)
@@ -298,7 +293,7 @@ def model_families(stA4, stA5, stA8, mode):
 if __name__ == '__main__':
     N = int(sys.argv[1]) if len(sys.argv) > 1 else 3000
     out = {}
-    for mode in ('gradual', 'ftz'):
+    for mode in ('gradual', 'ftz_daz'):
         MODE[0] = mode
         fams = dict(A1=fam_dist, A2=fam_coef, A3=fam_point, A6=residual_case, A7=updown, A9=backscale)
         for name, f in fams.items():
@@ -317,3 +312,6 @@ if __name__ == '__main__':
         print('DATA ' + json.dumps(dict(fam=name, mode=mode, **st)))
         print('%-3s %-36s %-8s checks %7d | error > bound %4d | largest error/bound %.3g | range rule %d' % (
             name, names[name], mode, st['n'], st['viol'], st['worst'], st['range']))
+
+    if any(st['viol'] for (name, _), st in out.items() if name != 'A5'):
+        raise SystemExit(1)

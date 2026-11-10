@@ -58,31 +58,28 @@ if __name__ == '__main__':
         muD, muB = round4(c)
         print('  round 4 (Dot2, weights D / beta + 2^-200 D): mu_D %.3e  mu_B %.3e -> %s' % (
             muD, muB, 'verified' if min(muD, muB) < 1 else 'not verified'))
-        for res in ('double', 'dot2'):
-            o, m = solve_case(c, v_iter=3, adj_res=res)
-            print('  contract, adjoint residual %-6s: status %s, mu per weight vector (beta + delta D, then 3 Neumann steps): %s' % (
-                res, o['status'], ' '.join('%.6g' % u for u in o['mu'])))
+        o, m = solve_case(c)
+        print('  contract: status %s, mu for RawBound + delta D and Neumann steps: %s' %
+              (o['status'], ' '.join('%.6g' % u for u in o['mu'])))
         o, m = solve_case(c, v_iter=0)
         M = matrix_M(m)
         rho = spectral_radius(M)
         print('  spectral radius of M (power iteration): %.3e' % rho)
         n = m.n
-        v = [uadd(m.beta[j], fpc.umul(fpc.DELTA, 1.)) for j in range(n)]
-        D = fpc.weights(m) if False else None
         # the component attaining mu for the first weight vector
         Dw = fpc.weights(m)
-        v = [uadd(m.beta[j], fpc.umul(fpc.DELTA, Dw[j])) for j in range(n)]
+        v = [uadd(m.raw_bound[j], fpc.umul(fpc.DELTA, Dw[j])) for j in range(n)]
         Mv = [sum(M[i][j] * v[j] for j in range(n)) for i in range(n)]
         i = max(range(n), key=lambda k: Mv[k] / v[k])
         k = m.free[i]
         contrib = sorted(((M[i][j] * v[j], j) for j in range(n)), reverse=True)[:3]
         print('  attained at unknown %s%d (station x = %.17g): weight v %.3e (beta %.3e, D %.3e), (Mv) %.3e, ratio %.3e' % (
-            'wtMV'[k % 4], k // 4, m.st[k // 4], v[i], m.beta[i], Dw[i], Mv[i], Mv[i] / v[i]))
+            'wtMV'[k % 4], k // 4, m.st[k // 4], v[i], m.raw_bound[i], Dw[i], Mv[i], Mv[i] / v[i]))
         for val, j in contrib:
             kj = m.free[j]
             print('     contribution M[i][j] v_j = %.3e from %s%d (v_j %.3e, M_ij %.3e: residual part %.3e, data part %.3e)' % (
                 val, 'wtMV'[kj % 4], kj // 4, v[j], M[i][j], m.SB[i][j], M[i][j] - m.SB[i][j]))
         o, m = solve_case(c, v_iter=3)
         Dw = fpc.weights(m)
-        g = max(m.E[j] / Dw[j] for j in range(n))
+        g = max(m.verified_state_bound[j] / Dw[j] for j in range(n))
         print('  verified bound after Neumann steps: largest E_j / D_j %.3e (gate %.3e)' % (g, o['gate']))

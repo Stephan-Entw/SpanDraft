@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import transfer_ref as T
 import fpc
-from fpc import solve_case, MINN, uadd, umul, udiv, dn, gb, TAU
+from fpc import solve_case, TAU
 from cases import all_cases
 from coverage import events
 from gen import case
@@ -110,7 +110,7 @@ def dense(ev):
     return out
 
 
-def chain(c, mode='gradual', LUeps=None, old=True):
+def chain(c, mode='gradual', LUeps=None, old=True, check_roots=False):
     t0 = time.time()
     o, m = solve_case(c, exact_twin=True, LUeps=LUeps, mode=mode)
     out = dict(id=c['id'], mode=mode, LUeps=LUeps, status=o['status'], cause=o.get('cause'), detail=o.get('detail'),
@@ -123,7 +123,7 @@ def chain(c, mode='gradual', LUeps=None, old=True):
     try:
         n = m.n
         out['n'] = n
-        Rr, Cc = [Fr(v) for v in m.rs], [Fr(v) for v in m.cs]
+        Rr, Cc = [Fr(2) ** e for e in m.rs], [Fr(2) ** e for e in m.cs]
         Sx = [[Rr[i] * m.Ax[i][j] * Cc[j] for j in range(n)] for i in range(n)]
         sbx = [Rr[i] * m.bx[i] for i in range(n)]
         # stage B
@@ -147,56 +147,86 @@ def chain(c, mode='gradual', LUeps=None, old=True):
         out['formulation_mismatch'] = mism
         # stage D
         e = [abs(y[i] - ys[i]) for i in range(n)]
-        out['D_viol'] = sum(e[i] > Fr(m.E[i]) for i in range(n)) if m.verified else None
-        out['D_raw_viol'] = sum(e[i] > Fr(m.beta[i]) for i in range(n))
-        out['D_worst'] = max((float(e[i] / Fr(m.E[i])) for i in range(n) if m.E[i]), default=0.)
+        out['D_viol'] = sum(e[i] > Fr(m.verified_state_bound[i]) for i in range(n)) if m.verified else None
+        out['D_raw_viol'] = sum(e[i] > Fr(m.raw_bound[i]) for i in range(n))
+        out['D_worst'] = None if not m.verified else max((float(e[i] / Fr(m.verified_state_bound[i])) for i in range(n) if m.verified_state_bound[i]), default=0.)
         out['verified'] = m.verified
         # stage C
-        if m.verified and n <= NC:
-            Z = m.Z
-            Mm = [[uadd(m.SB[i][j], sum(abs(Z[i][k]) * m.dS[k][j] for k in range(n)) * (1 + gb(2 * n))) for j in range(n)] for i in range(n)]
-            vc = 0
-            for i in range(n):
-                zi = [Fr(v) for v in Z[i]]
-                for j in range(n):
-                    cij = (1 if i == j else 0) - sum(zi[k] * Sx[k][j] for k in range(n) if Sx[k][j])
-                    if abs(cij) > Fr(Mm[i][j]):
-                        vc += 1
-            inv = exact_inverse(Sx)
-            mu, v = m.mu, m.v
-            vz = 0
-            for k in range(n):
-                col = [abs(Z[l][k]) for l in range(n)]
-                alpha = max(udiv(col[l], v[l]) for l in range(n))
-                for i in range(n):
-                    b = uadd(sum(Mm[i][l] * col[l] for l in range(n)) * (1 + gb(2 * n)),
-                             udiv(umul(umul(alpha, umul(mu, mu)), v[i]), dn(1 - mu)))
-                    if abs(inv[i][k] - Fr(Z[i][k])) > Fr(b):
-                        vz += 1
-            out.update(C_premise=vc, C_inverse=vz)
+        if m.verified:
+            Z = [[Fr(z) for z in row] for row in m.Z]
+            columns = [[(k, Sx[k][j], Fr(m.dS[k][j])) for k in m.cols[j]] for j in range(n)]
+            M = [[Fr(m.SB[i][j]) + sum(abs(zi[k]) * ds for k, _, ds in col)
+                  for j, col in enumerate(columns)] for i, zi in enumerate(Z)]
+            vc = sum(abs((i == j) - sum(zi[k] * a for k, a, _ in col)) > M[i][j]
+                     for i, zi in enumerate(Z) for j, col in enumerate(columns))
+            mu, v = Fr(m.mu), list(map(Fr, m.v))
+            contraction = sum(sum(a * w for a, w in zip(row, v)) > mu * vi
+                              for row, vi in zip(M, v))
+            if not 0 <= mu < 1 or any(w <= 0 for w in v):
+                contraction += 1
+            vz = None
+            if n <= NC:
+                inv = exact_inverse(Sx)
+                vz = 0
+                for k in range(n):
+                    col = [abs(Z[l][k]) for l in range(n)]
+                    alpha = max((a / w for a, w in zip(col, v)), default=Fr(0))
+                    for i in range(n):
+                        b = sum(a * z for a, z in zip(M[i], col)) + alpha * mu**2 * v[i] / (1 - mu)
+                        vz += abs(inv[i][k] - Z[i][k]) > b
+            out.update(C_premise=vc, C_contraction=contraction, C_inverse=vz)
+        if not m.verified:
+            return out
         # reactions (stage D, functionals)
         ert, err_r = ex.reactions()
         exr = {('R', float(a)): R for a, R in ert}
         exr.update({('C', float(a)): R for a, R in err_r})
-        rv = rw = 0
-        rworst = 0.
+        Sc = contract_scales(c, ex)
+        rv = rf = ve = vm = vf = vx = nx = 0
+        rworst = worst = 0.
+        worstn = Fr(0)
+        delivered = o['status'] == 'delivered'
         for kind, a, val, bnd, q, how in m.reactions():
             Rx = exr[(kind, a)]
-            vs = math.ldexp(val, m.Eq[q])
-            bs = umul(bnd, 2.0 ** m.Eq[q]) + (fpc.LAM if abs(vs) <= MINN else 0.)
+            vs, bs = m.to_si_value(val, bnd, q)
             err = abs(Fr(vs) - Rx)
-            if err > Fr(bs):
-                rv += 1
+            rv += err > Fr(bs)
+            D = max(Sc[q], abs(Rx))
+            if D:
+                worstn = max(worstn, err / D)
+            rf += delivered and (not math.isfinite(vs) or Fr(bs) > TAU * D)
             rworst = max(rworst, float(err / Fr(bs)) if bs else (0. if err == 0 else math.inf))
-        out.update(R_viol=rv, R_worst=rworst)
-        # stage E / F
+        out.update(R_viol=rv, R_worst=rworst, R_gate_viol=rf)
         ev = [float(x) for x in events(c)]
-        Sc = contract_scales(c, ex)
-        ve = vm = vg = 0
-        worst = worstn = 0.
         maj = {(x0, x1, q): B for x0, x1, q, lb, B, D in getattr(m, 'pieceinfo', [])}
+        from piece_oracle import NODES, deriv, interpolate, in_unit_interval, roots01
+        from fpc_stage_a import eval_exact_hat
         for (x0, x1), pts in dense(ev):
-            for x, sd in pts:
+            # The candidate polynomial uses the computed state and exact load data.
+            # Independently check the reported field value at its rounded location.
+            X0, X1 = Fr(x0), Fr(x1)
+            args = [X0 + (X1 - X0) * t for t in NODES]
+            hat = [eval_exact_hat(m, X, 'R') for X in args]
+            candidates = set()
+            for q in (0, 2, 3):
+                derivative = deriv(interpolate([v[q] for v in hat]))
+                scale = max(map(abs, derivative), default=Fr(0))
+                if not scale:
+                    continue
+                for t in in_unit_interval(*(float(a / scale) for a in derivative)):
+                    if 0. < t < 1.:
+                        x = float(X0 + (X1 - X0) * Fr(t))
+                        candidates.add((x, 'L' if x == x1 else 'R'))
+                if check_roots:
+                    exact = interpolate([ex.state(X, 'R')[Q[q]] for X in args])
+                    for lo, hi, _, _ in roots01(deriv(exact)) or ():
+                        t = (lo + hi) / 2
+                        if 0 < t < 1:
+                            x = float(X0 + (X1 - X0) * t)
+                            candidates.add((x, 'L' if x == x1 else 'R'))
+            for x, sd in [*pts, *sorted(candidates)]:
+                candidate = (x, sd) in candidates
+                nx += candidate
                 vn, bn = m.evaluate(x, sd)
                 vs, bs = m.to_si(vn, bn)
                 stx = ex.state(Fr(x), sd)
@@ -206,14 +236,18 @@ def chain(c, mode='gradual', LUeps=None, old=True):
                         ve += 1
                     worst = max(worst, float(err / Fr(bs[q])) if bs[q] else (0. if err == 0 else math.inf))
                     B = maj.get((x0, x1, q))
-                    if B is not None and x0 < x <= x1 and bn[q] > B:
+                    if B is not None and (x0 < x < x1 or x == x1 and sd == 'L') and bn[q] > B:
                         vm += 1
                     D = Sc[q] if q < 2 else max(Sc[q], abs(stx[Q[q]]))
                     if D:
-                        worstn = max(worstn, float(err / D))
-        out.update(E_viol=ve, E_worst=worst, E_majorant=vm, E_err_norm=worstn)
-        if o['status'] == 'delivered':
-            out['E_err_over_gate'] = worstn > o['gate']
+                        worstn = max(worstn, err / D)
+                    vx += candidate and err > Fr(bs[q])
+                    vf += delivered and (not math.isfinite(vs[q]) or Fr(bs[q]) > TAU * D)
+        out.update(E_viol=ve, E_worst=worst, E_majorant=vm, E_err_norm=float(worstn),
+                   E_extrema_viol=vx, E_extrema_checked=nx, F_gate_viol=vf,
+                   F_actual_over_tau=delivered and worstn > TAU)
+        if delivered:
+            out['E_err_over_gate'] = worstn > Fr(o['gate'])
         # Bernstein: LB <= min |p| exact
         if n <= NB and getattr(m, 'pieceinfo', None):
             from piece_oracle import NODES, interpolate, min_abs
@@ -331,23 +365,44 @@ if __name__ == '__main__':
     if name == 'targeted':
         runs = [(c, 'gradual', None) for c in targeted()]
     elif name == 'neartau':
-        runs = [(c, 'gradual', None) for c in neartau()[:40]]
+        runs = [(c, 'gradual', None) for c in neartau()]
     elif name == 'perturbed':
         cs = [c for c in targeted() if '|1e-11|' in c['id'] or '|1e-09|' in c['id']] + neartau()[:15]
         runs = [(c, 'gradual', (1e-8, 1e-4)) for c in cs] + [(c, 'gradual', (1e-8, 1e-4, 1e-1)) for c in cs]
+    elif name == 'spring-extremes':
+        from spring_extremes import configs, E, I, L, EI
+        runs = [(case(f'{label}|{gap}|{u}', L, setup['sup'], springs=setup.get('springs', []),
+                      pf=[(.3 * L, -1e4), (.8 * L, -1e4)], pm=setup.get('pm', []),
+                      q=[(0., L, -2e3)], E=E, I=I), 'gradual', None)
+                for gap in (1e-3, 1e-7, 1e-9, 1e-11) for u in (-6, 0, 6, 9, 12, 15)
+                for label, setup in configs(gap * L, 10. ** u * EI / L**3, 10. ** u * EI / L).items()]
     elif name == 'underflow':
-        runs = [(c, md, None) for c in underflow() for md in ('gradual', 'ftz')]
+        runs = [(c, md, None) for c in underflow() for md in ('gradual', 'ftz', 'daz', 'ftz_daz')]
     elif name == 'constructed':
-        runs = [(c, md, None) for c in constructed() for md in ('gradual', 'ftz')]
+        runs = [(c, md, None) for c in constructed() for md in ('gradual', 'ftz_daz')]
     elif name == 'unverified':
         runs = [(c, md, None) for c in unverified() for md in ('gradual',)]
     else:
         raise SystemExit(__doc__)
+    failed = False
+    allowed = {('delivered', None), ('zero', None), ('UnstableModel', None),
+               ('NumericalFailure', 'NumericalRange'), ('NotReliablySolvable', 'ZeroPivot'),
+               ('NotReliablySolvable', 'NotVerified'), ('NotReliablySolvable', 'Gate')}
+    checks = ('B_entries', 'B_rhs', 'B_res', 'C_premise', 'C_contraction', 'C_inverse',
+              'D_viol', 'R_viol', 'R_gate_viol', 'E_viol', 'E_majorant', 'E_extrema_viol',
+              'F_gate_viol', 'F_actual_over_tau', 'E_err_over_gate', 'E_LB_viol', 'formulation_mismatch')
     for c, md, eps in runs:
         try:
-            o = chain(c, md, eps)
+            o = chain(c, md, eps, check_roots=name == 'constructed')
         except Exception as e:          # report, do not hide
             o = dict(id=c['id'], mode=md, LUeps=eps, status='exception', detail=repr(e))
+        failed |= ((o['status'], o.get('cause')) not in allowed or any(o.get(key) for key in checks)
+                   or (o['status'] == 'delivered' and any(o.get(key) is None for key in
+                       ('B_entries', 'B_rhs', 'B_res', 'C_premise', 'C_contraction',
+                        'D_viol', 'R_viol', 'E_viol', 'F_gate_viol'))))
         o['set'] = name
         print('DATA ' + json.dumps(o), flush=True)
     print('%s: runs %d | %.0f s' % (name, len(runs), time.time() - t0))
+
+    if failed:
+        raise SystemExit(1)

@@ -118,13 +118,14 @@ gebraucht (kein numpy, kein .NET). Die Bytecode-Caches unterdrückt `PYTHONDONTW
 | `state/underflow_study.py` | Runde 4: Unterlaufpfade (Lastintegrale, Auswertung, Äquilibrierung, SI-Rückrechnung) |
 | `state/piece_oracle.py` | Runde 4: exakte Stückpolynome, exakte Bernstein-Einschließung, quadratfreie Zerlegung und Sturm-Isolation, Port von `PolynomialRoots` |
 | `state/piece_study.py`, `state/piece_summary.py` | Runde 4: Stück-Gate gegen Bernstein-Oracle, Extremwertkandidaten gegen exakte Wurzelisolation, konstruierte Grenzfälle |
-| `state/fpc.py` | Runde 5: Referenzimplementierung des Gleitkomma-Vertrags (verbindliche Operationsfolgen, Rundungszahlen, λ-Unterlaufterm, Bereichsregeln, Normierung der rechten Seite, gerichtete Schrankenrundung, Verifikation mit Neumann-Gewichten, SI-Rückskalierung; FTZ/DAZ-Emulation) |
-| `state/fpc_counts.py` | Runde 5: mechanische Ableitung der Rundungszahlen aus den Operationsfolgen |
-| `state/fpc_stage_a.py` | Runde 5, Stufe A: jede Formel gegen ihre Schranke, strukturierte Grenzwerte, graduell und FTZ/DAZ; Vergleich mit dem Rundungsmodell von `state.py` |
-| `state/fpc_chain.py` | Runde 5, Stufen B–F: Daten und Residual, Verifikationsvoraussetzung, Funktional, Feld und Gate, SI-Ausgabe gegen exakte Arithmetik auf schwierigen Referenzmodellen |
-| `state/fpc_unverified.py` | Runde 5: Ursache der zwei in Runde 4 nicht verifizierbaren Modelle (μ je Gewicht, Spektralradius von M) |
-| `state/fpc_regress.py` | Runde 5: Vertragslöser auf den Zufallsmengen der Runde 4 (Entscheidungen, Schranken) |
-| `state/fpc_summary.py` | Runde 5: Zusammenfassung der `state-fpc`-Protokolle |
+| `state/fpc.py` | Ausführbarer Gleitkomma-Vertrag mit Exponentenskalierung, lokalen Bounds, verifiziertem Residual und gerichtetem SI-Gate |
+| `state/fpc_boundary.py` | Deterministische Grenzwerte, unabhängige rationale Erwartungen sowie Primitive- und Mechanikmutanten |
+| `state/fpc_counts.py` | mechanische Ableitung der Rundungszahlen aus den Operationsfolgen |
+| `state/fpc_stage_a.py` | Stufe A: jede Formel gegen ihre Schranke, strukturierte Grenzwerte, graduell und FTZ/DAZ; Vergleich mit dem Rundungsmodell von `state.py` |
+| `state/fpc_chain.py` | Stufen B–F: Daten und Residual, Verifikationsvoraussetzung, Funktional, Feld und Gate, SI-Ausgabe gegen exakte Arithmetik auf schwierigen Referenzmodellen |
+| `state/fpc_unverified.py` | Ursache der zwei in Runde 4 nicht verifizierbaren Modelle (μ je Gewicht, Spektralradius von M) |
+| `state/fpc_regress.py` | Vertragslöser auf den Zufallsmengen der Runde 4 (Entscheidungen, Schranken) |
+| `state/fpc_summary.py` | Zusammenfassung der `state-fpc`-Protokolle |
 | `state/o9_sizing.py` | Runde 5: Operations- und Speichermodell des Qualitätsvertrags für n_m = 10 … 5.000 |
 
 Läufe (Protokolle in `results/state-*.log`):
@@ -211,16 +212,17 @@ stdout, die Protokolle entstehen durch Umleitung nach `results/` mit diesen Name
 LU/QR-Vergleich der Stressfamilien läuft nur bis 10 Felder; für 20 und 40 Felder ist die exakte
 Bruchrechnungsreferenz in Python zu langsam, dort messen `stressgrowth` nur Struktur und Wachstum.
 
-# Runde 5 (Gleitkomma-Vertrag, O2)
+# Closure des Gleitkomma-Vertrags (O2)
 
 Vertrag und Beweiskette: [`FLOATING_POINT_CONTRACT.md`](FLOATING_POINT_CONTRACT.md). Reines Python
 (ohne numpy):
 
 ```sh
 export PYTHONDONTWRITEBYTECODE=1
+python3 state/fpc_boundary.py > results/state-fpc-boundary.log
 python3 state/fpc_counts.py > results/state-fpc-counts.log
 python3 state/fpc_stage_a.py 20000 > results/state-fpc-stage-a.log
-for S in targeted neartau perturbed underflow constructed unverified; do
+for S in targeted neartau perturbed underflow constructed unverified spring-extremes; do
   python3 state/fpc_chain.py $S > results/state-fpc-chain-$S.log
 done
 python3 state/fpc_unverified.py > results/state-fpc-unverified.log
@@ -232,5 +234,29 @@ python3 state/o9_sizing.py > results/state-o9-sizing.log
 ```
 
 `fpc_regress.py` vergleicht mit den `state-refine`-Protokollen der Runde 4, `fpc_chain.py
-neartau` liest `state-near-tau-models.log`. Die Läufe sind unabhängig und lassen sich parallel
-starten.
+neartau` liest `state-near-tau-models.log`. Die Läufe sind unabhängig und lassen sich parallel starten. Für
+die deterministische Suite und die Kettenprüfung sind keine externen
+Python-Pakete nötig. Die alten Mechanikmutationsprotokolle bleiben
+historische Evidenz. B3, L1 und L2 werden zusätzlich im ausführbaren
+Biegevertrag gegen die unabhängige Übertragungsreferenz injiziert.
+
+Die ergänzende unabhängige Referenz- und Root-Prüfung verwendet
+`python3 xcheck.py` und `python3 state/piece_study.py constructed`
+mit der Validierungs-Python-Umgebung. Ergebnis: `state-fpc-oracles.log`.
+
+### Axiale Produktbaseline
+
+Vom Repository-Stamm aus den bestehenden Validierungsrunner bauen und
+dessen öffentlichen Ergebnisexport auf exakte Nullwerte prüfen.
+
+```sh
+dotnet run --project validation/dotnet/SpanDraft.Validation.Runner -- export \
+  --output /tmp/spandraft-axial-baseline.json
+python3 validation/investigations/solver-rework/state/fpc_boundary.py \
+  --axial-export /tmp/spandraft-axial-baseline.json
+```
+
+Der Export prüft u und N an den Validierungspunkten sowie nullwertige
+und abwesende axiale Lagerreaktionen. Die bestehenden Klassen
+`SolverAnalyticalTests` und `SolverContinuousResultTests` ergänzen
+die Baseline um Knoten- und Feldprüfungen.

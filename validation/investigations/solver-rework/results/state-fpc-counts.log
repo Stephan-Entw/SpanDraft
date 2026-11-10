@@ -13,7 +13,7 @@ distributed load, per p: q Difference_p/p! (q a clipped intensity, data error se
   p = 2  inside: diff k =  4 ramp k = 10 | beyond: diff k =  5 ramp k =  8
   p = 3  inside: diff k =  7 ramp k = 12 | beyond: diff k =  9 ramp k = 10
   p = 4  inside: diff k =  9 ramp k = 14 | beyond: diff k = 11 ramp k = 14
-clipped intensity q = v1 + (v2 - v1)((c - la)/(lb - la)): |q^ - q| <= gb(6)|(v2 - v1) f| + u|q^| (derivation in the contract)
+clipped intensity q = v1 + (v2 - v1)((c - la)/(lb - la)): local propagation (contract §3)
 field evaluation at s (g coefficients times state):
   w: 1, s, s s/2/e, s s s/6/e    k(g) = [0, 1, 5, 8], product with the state k(g) + 1
   th: 1, s/e, s s/2/e            k(g) = [0, 3, 5], product with the state k(g) + 1
