@@ -42,7 +42,7 @@ Die frühere Statusspalte der Arbeitsmatrix (1 bis 4) entspricht: 1 = L, 2 = A, 
 (bewusste Abweichung bzw. Verwerfung). Eine Klasse „offen“ gibt es heute nicht mehr; offene Punkte
 stehen in 4.4.
 
-**Herkunft der Verfahren.** Mehrfachschießen, Gaußelimination mit Spaltenpivotisierung (GEPP),
+**Herkunft der Verfahren.** Mehrfachschießen, Gaußelimination mit partieller Zeilenpivotisierung (GEPP),
 Nachiteration, Ruiz-Skalierung, komponentenweise Rückwärts- und Vorwärtsfehleranalyse,
 Bareiss-Elimination und die Verifikation über eine genäherte Inverse sind etablierte Verfahren und
 wurden nicht von SpanDraft entwickelt. SpanDraft-spezifisch sind ihre Kombination, die
