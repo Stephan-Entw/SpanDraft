@@ -40,10 +40,10 @@ internal static class BendingExcitation
 
         foreach (ConstantLineLoad load in input.LineLoads)
         {
-            BigInteger width = WidthInUnits(load);
             if (IsZero(load.NewtonsPerMeter))
                 continue;
 
+            BigInteger width = WidthInUnits(load);
             int widthExponent = (int)width.GetBitLength() + UnitExponent;
             double widthMantissa = RoundExact(width, BigInteger.One, UnitExponent - widthExponent);
             ExcitationBounds intensity = Mantissa(load.NewtonsPerMeter);

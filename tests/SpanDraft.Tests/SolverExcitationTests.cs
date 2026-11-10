@@ -51,9 +51,14 @@ public sealed class SolverExcitationTests
     [Theory]
     [InlineData(1, 1, 1)]
     [InlineData(2, 1, 1)]
-    [InlineData(2, 1, 0)]
-    public void ExcitationRejectsNonPositiveExactWidth(double start, double end, double intensity) =>
+    public void ExcitationRejectsNonPositiveExactWidthForNonzeroIntensity(double start, double end, double intensity) =>
         Assert.Throws<NumericalRangeException>(() => BendingExcitation.Excitation(Model(lines: [new(start, end, intensity)])));
+
+    [Theory]
+    [InlineData(1, 1, -0d)]
+    [InlineData(2, 1, 0d)]
+    public void ExcitationIgnoresZeroIntensityWithNonPositiveWidth(double start, double end, double intensity) =>
+        Check(Model(lines: [new(start, end, intensity)]), unloaded: true);
 
     [Fact]
     public void ExcitationRejectsInvalidMomentLengthAndNonFiniteLoads()
