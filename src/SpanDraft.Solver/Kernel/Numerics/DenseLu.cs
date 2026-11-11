@@ -7,6 +7,8 @@ internal sealed class DenseLu
     private readonly int n;
     private readonly double[] lu;
     private readonly int[] piv;
+    internal int SolveCalls { get; private set; }
+    internal int TransposeSolveCalls { get; private set; }
 
     internal DenseLu(int dimension, IReadOnlyList<double> matrix)
     {
@@ -48,6 +50,7 @@ internal sealed class DenseLu
 
     internal double[] Solve(double[] rhs)
     {
+        SolveCalls++;
         KernelFailureException.Require(rhs.Length == n);
         var z = new double[n];
         for (int i = 0; i < n; i++)
@@ -76,6 +79,7 @@ internal sealed class DenseLu
 
     internal double[] SolveTranspose(double[] rhs)
     {
+        TransposeSolveCalls++;
         KernelFailureException.Require(rhs.Length == n);
         var w = rhs.ToArray();
         foreach (double value in w)

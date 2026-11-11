@@ -51,15 +51,15 @@ internal readonly record struct StationBendingLoads(Bounded Force, Bounded Momen
 internal sealed record SegmentBendingLoads(ImmutableArray<ScaledPointLoad> Forces,
     ImmutableArray<ScaledPointLoad> Moments, ImmutableArray<ScaledLineLoad> Lines, int LengthExponent)
 {
-    internal Bounded Integral(double x, int p)
+    internal Bounded Integral(double x, int p, FieldSide side = FieldSide.Left)
     {
         Bounded total = default;
         foreach (ScaledPointLoad force in Forces)
-            if (x > force.Position)
+            if (x > force.Position || p == 1 && x == force.Position && side == FieldSide.Right)
                 total += BendingLoadTerms.PointForce(new(force.Value), Distance(x, force.Position), p);
         if (p >= 2)
             foreach (ScaledPointLoad moment in Moments)
-                if (x > moment.Position)
+                if (x > moment.Position || p == 2 && x == moment.Position && side == FieldSide.Right)
                     total += BendingLoadTerms.PointMoment(new(moment.Value), Distance(x, moment.Position), p);
         foreach (ScaledLineLoad line in Lines)
         {

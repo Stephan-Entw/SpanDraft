@@ -27,6 +27,13 @@ internal static class BendingVerification
         int n = scaled.Dimension;
         var rhs = new double[n];
         rhs[component] = 1;
+        return Adjoint(scaled, lu, d, rhs);
+    }
+
+    internal static AdjointState Adjoint(EquilibratedSystem scaled, DenseLu lu, double[] d, double[] rhs)
+    {
+        int n = scaled.Dimension;
+        KernelFailureException.Require(rhs.Length == n && d.Length == n);
         double[] z = lu.SolveTranspose(rhs);
         BendingStateSolver.FlushStored(z);
         double betaPrevious = UpperDot(z, d);

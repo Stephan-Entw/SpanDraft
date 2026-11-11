@@ -5,8 +5,11 @@ namespace SpanDraft.Solver.Kernel;
 
 internal static class BendingStateSolver
 {
-    internal static VerifiedBendingState Solve(BendingSystem system)
+    internal static VerifiedBendingState Solve(BendingSystem system) => Solve(system, out _);
+
+    internal static VerifiedBendingState Solve(BendingSystem system, out BendingSolveContext? context)
     {
+        context = null;
         int n = system.Dimension, full = system.ReducedColumns.Length;
         KernelFailureException.Require(n >= 0 && (long)n * n == system.A.Length &&
             system.K.Length == system.A.Length && system.B.Length == n && system.BB.Length == n &&
@@ -33,6 +36,7 @@ internal static class BendingStateSolver
         double[] weights = Weights(system, x, scaled.CS);
         BendingVerification.Result verification = BendingVerification.Verify(scaled, lu, d, weights);
         var (bounds, scaleError) = UnscaleBounds(system, scaled.CS, y, x, verification.Proof.Bound);
+        context = new(scaled, lu);
 
         return new(system, false, true, scaled.RS.ToImmutableArray(), scaled.CS.ToImmutableArray(),
             scaled.S.ToImmutableArray(), scaled.DS.ToImmutableArray(), scaled.SB.ToImmutableArray(),
