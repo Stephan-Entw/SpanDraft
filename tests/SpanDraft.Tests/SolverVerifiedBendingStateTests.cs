@@ -129,7 +129,7 @@ public sealed class SolverVerifiedBendingStateTests
     }
 
     [Fact]
-    public void WeightsUseOnlyUnflushedRightSideStatesAndAllFourComponentMaxima()
+    public void WeightsFollowFpcReferenceScalesAndUseUnflushedRightSideStates()
     {
         BendingSystem system = SolverKernel.BuildSystem(Model(ei: 1.25,
             restraints: [new(0, U | W | Theta), new(1, W)], forces: [new(2, 1)]));
