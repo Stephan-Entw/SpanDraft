@@ -108,6 +108,12 @@ V01–V15 und V04-S01/S02/S03 bestehen über denselben Validation-Katalog.
 Die V14-N/A-Regel und sämtliche Golden-Toleranzen bleiben unverändert.
 Der alte Solver ist ergänzende Regression und weiterhin öffentlicher Produktpfad.
 
+Der erste zusätzliche native Windows-Validation-Lauf zeigte ausschließlich
+Provenienzfehler: Der Standard-Checkout wandelte die byteweise gehashten Eingabe-JSONs,
+Python-Quellen und den Lockfile nach CRLF um. Die gezielten LF-Regeln in
+[.gitattributes](../../../.gitattributes) sichern die unveränderten versionierten
+Bytes. Keine Referenz wird neu erzeugt und keine Hashprüfung abgeschwächt.
+
 Die Befehle für Product und beide Acceptance-Pfade stehen in
 [validation/README.md](../../README.md). Alle Abnahmen benötigen ausschließlich .NET
 und eingecheckte Daten; die Python-Dateien werden nur als Provenienz gelesen/gehasht.

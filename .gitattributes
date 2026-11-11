@@ -4,3 +4,8 @@ src/SpanDraft.Desktop/Assets/Fonts/*.txt text eol=lf
 
 # The icon generator also checks its committed resources byte-for-byte.
 src/SpanDraft.Desktop/Assets/Icons/Generated/*.axaml text eol=lf
+
+# Validation provenance hashes the committed bytes on every platform.
+validation/cases/*.json text eol=lf
+validation/python/*.py text eol=lf
+validation/python/requirements.txt text eol=lf
