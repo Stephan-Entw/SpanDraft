@@ -2,6 +2,8 @@ namespace SpanDraft.Solver.Kernel;
 
 internal static class SolverKernel
 {
+    internal static VerifiedBendingState SolveSystem(BendingSystem system) => BendingStateSolver.Solve(system);
+
     internal static BendingSystem BuildSystem(MechanicalInput input)
     {
         StationModel stations = StationModel.Create(input);

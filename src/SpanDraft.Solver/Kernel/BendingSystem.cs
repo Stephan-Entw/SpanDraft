@@ -9,7 +9,7 @@ internal sealed record BendingSystem(int Dimension, ImmutableArray<double> A, Im
     ImmutableArray<double> B, ImmutableArray<double> BB, ImmutableArray<MechanicalStation> Stations,
     ImmutableArray<FreeBendingComponent> FreeComponents, ImmutableArray<int> ReducedColumns,
     int EL, int EEI, int EF, ImmutableArray<int> StateExponents, int ForceExponent, int MomentExponent,
-    int LineLoadExponent, bool IsUnloaded, ExcitationBounds Excitation);
+    int LineLoadExponent, bool IsUnloaded, ExcitationBounds Excitation, RoundCounted NormalizedEI);
 
 internal static class BendingSystemBuilder
 {
@@ -112,6 +112,6 @@ internal static class BendingSystemBuilder
         return new(n, a.ToImmutableArray(), k.ToImmutableArray(), b.ToImmutableArray(), bb.ToImmutableArray(),
             stations, free.ToImmutable(), columns.ToImmutableArray(), preparation.EL, preparation.EEI, preparation.EF,
             preparation.StateExponents, preparation.ForceExponent, preparation.MomentExponent,
-            preparation.LineLoadExponent, preparation.IsUnloaded, preparation.Excitation);
+            preparation.LineLoadExponent, preparation.IsUnloaded, preparation.Excitation, preparation.NormalizedEI);
     }
 }

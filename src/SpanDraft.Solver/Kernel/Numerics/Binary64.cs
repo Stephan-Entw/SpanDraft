@@ -134,4 +134,7 @@ internal static class Binary64
     }
 }
 
-internal sealed class NumericalRangeException(string message) : ArithmeticException(message);
+internal sealed class NumericalRangeException(string message) : ArithmeticException(message)
+{
+    internal KernelFailureCause Cause => KernelFailureCause.NumericalRange;
+}

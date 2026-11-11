@@ -15,7 +15,7 @@ public sealed class SolverBendingSystemTests
         "short-udl", "ulp-stations", "signed-zero", "right-fixed", "interior-fixed"
     };
 
-    private static MechanicalInput Case(string name) => name switch
+    internal static MechanicalInput Case(string name) => name switch
     {
         "unloaded" => Model(),
         "end-force" => Model(forces: [new(2, -7)]),
@@ -103,6 +103,8 @@ public sealed class SolverBendingSystemTests
                     moments: [new(0, -37), new(1, 41)], lines: [new(0, 2, -43)])
             ];
             BendingSystem baseline = SolverKernel.BuildSystem(inputs[0]);
+            EquilibratedSystem baselineScaled = EquilibratedSystem.Create(baseline.Dimension,
+                baseline.A, baseline.K, baseline.B, baseline.BB);
             foreach (MechanicalInput input in inputs.Skip(1))
             {
                 BendingSystem loaded = SolverKernel.BuildSystem(input);
@@ -113,6 +115,12 @@ public sealed class SolverBendingSystemTests
                 Assert.Equal(baseline.K, loaded.K);
                 Assert.Equal(baseline.EL, loaded.EL);
                 Assert.Equal(baseline.EEI, loaded.EEI);
+                EquilibratedSystem scaled = EquilibratedSystem.Create(loaded.Dimension, loaded.A, loaded.K, loaded.B, loaded.BB);
+                Assert.Equal(baselineScaled.RS, scaled.RS);
+                Assert.Equal(baselineScaled.CS, scaled.CS);
+                AssertBits(baselineScaled.S, scaled.S);
+                AssertBits(baselineScaled.DS, scaled.DS);
+                Assert.Equal(baselineScaled.S.Select(v => v != 0), scaled.S.Select(v => v != 0));
                 CheckStructure(loaded);
             }
         }
@@ -241,9 +249,11 @@ public sealed class SolverBendingSystemTests
                     Assert.True(Math.Abs(row - col) <= 2, $"Entry ({row}, {col}) is outside band (2,2).");
     }
 
-    private static void CheckExactMechanics(MechanicalInput input, BendingSystem system)
+    internal static (SolverExactNumber[,] A, SolverExactNumber[] B) CheckExactMechanics(MechanicalInput input, BendingSystem system)
     {
         BendingPreparation units = Prepare(input);
+        var exactA = new SolverExactNumber[system.Dimension, system.Dimension];
+        var exactB = new SolverExactNumber[system.Dimension];
         int row = 0;
         for (int i = 0; i < system.Stations.Length; i++)
             for (int q = 0; q < 4; q++)
@@ -277,6 +287,7 @@ public sealed class SolverBendingSystemTests
                         };
                     }
                     int index = row * system.Dimension + col;
+                    exactA[row, col] = coefficient;
                     Assert.Equal(count, system.K[index]);
                     // Independent gamma expression bounds the stored matrix entry.
                     SolverExactNumber gamma = Integer(count) / (PowerOfTwo(53) - Integer(count));
@@ -295,9 +306,11 @@ public sealed class SolverBendingSystemTests
                         rhs += From(force.Newtons) * PowerOfTwo(system.ForceExponent);
                 Assert.True((From(system.B[row]) - rhs).Abs().CompareTo(From(system.BB[row])) <= 0,
                     $"RHS row {row} disagrees with exact mechanics.");
+                exactB[row] = rhs;
                 row++;
             }
         Assert.Equal(system.Dimension, row);
+        return (exactA, exactB);
     }
 
     private static void AssertBits(IEnumerable<double> expected, IEnumerable<double> actual) =>
