@@ -1,4 +1,5 @@
 using SpanDraft.Core.Units;
+using SpanDraft.Solver.Kernel;
 
 namespace SpanDraft.Solver;
 
@@ -23,6 +24,25 @@ public sealed class BeamExtremum<T>
 /// </summary>
 public sealed class BeamExtrema
 {
+    internal BeamExtrema(BendingExtrema extrema)
+    {
+        MinimumTransverseDisplacement = Map(extrema.W.Minimum, Displacement.FromMeters);
+        MaximumTransverseDisplacement = Map(extrema.W.Maximum, Displacement.FromMeters);
+        MinimumShearForce = Map(extrema.V.Minimum, Force.FromNewtons);
+        MaximumShearForce = Map(extrema.V.Maximum, Force.FromNewtons);
+        MinimumBendingMoment = Map(extrema.M.Minimum, Moment.FromNewtonMeters);
+        MaximumBendingMoment = Map(extrema.M.Maximum, Moment.FromNewtonMeters);
+
+        static BeamExtremum<T> Map<T>(BendingExtremum value, Func<double, T> factory) =>
+            new(factory(value.Output.Value), Length.FromMeters(value.Position), value.Side switch
+            {
+                FieldSide.Left => EvaluationSide.Left,
+                FieldSide.Right => EvaluationSide.Right,
+                FieldSide.Interior => null,
+                _ => throw new InvalidOperationException("Unknown kernel extremum side.")
+            });
+    }
+
     private BeamExtrema(Range w, Range v, Range m)
     {
         MinimumTransverseDisplacement = w.Minimum.ToExtremum(Displacement.FromMeters);

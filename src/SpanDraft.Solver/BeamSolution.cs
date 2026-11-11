@@ -1,12 +1,15 @@
 using SpanDraft.Core.Beams;
 using SpanDraft.Core.Units;
+using SpanDraft.Solver.Kernel;
 
 namespace SpanDraft.Solver;
 
 /// <summary>Immutable nodal and analytical, piecewise continuous results for the original beam.</summary>
 public sealed class BeamSolution
 {
-    private readonly ElementField[] fields;
+    // Each constructor initializes exactly one evaluation path.
+    private readonly ElementField[]? fields;
+    private readonly BendingResult? kernelResult;
 
     internal BeamSolution(BeamModel beam, IEnumerable<BeamNodeResult> nodes, SolverModel model)
     {
@@ -27,6 +30,28 @@ public sealed class BeamSolution
         Extrema = BeamExtrema.Find(fields);
     }
 
+    internal BeamSolution(BeamModel beam, BendingResult result)
+    {
+        Beam = beam;
+        kernelResult = result;
+        var reactions = new Dictionary<(double Position, RestrainedDirections Direction), double>();
+        foreach (BendingReaction reaction in result.Reactions)
+            if (!reactions.TryAdd((reaction.Position, reaction.Direction), reaction.Output.Value))
+                throw new InvalidOperationException("Duplicate kernel reaction at the same position and direction.");
+
+        Nodes = Array.AsReadOnly(result.Stations.Select((station, index) =>
+        {
+            BendingField field = (station.Position == beam.Length.Meters ? station.Left : station.Right)
+                ?? throw new InvalidOperationException("Kernel station is missing its required inward or right field.");
+            return new BeamNodeResult(index, Length.FromMeters(station.Position), default,
+                Displacement.FromMeters(field.Bending[0].Value), field.Bending[1].Value,
+                reactions.TryGetValue((station.Position, RestrainedDirections.U), out double rx) ? Force.FromNewtons(rx) : null,
+                reactions.TryGetValue((station.Position, RestrainedDirections.W), out double ry) ? Force.FromNewtons(ry) : null,
+                reactions.TryGetValue((station.Position, RestrainedDirections.Theta), out double rm) ? Moment.FromNewtonMeters(rm) : null);
+        }).ToArray());
+        Extrema = new BeamExtrema(result.Extrema);
+    }
+
     public BeamModel Beam { get; }
     public IReadOnlyList<BeamNodeResult> Nodes { get; }
     public BeamExtrema Extrema { get; }
@@ -43,6 +68,15 @@ public sealed class BeamSolution
         if (position.Meters > Beam.Length.Meters)
             throw new ArgumentOutOfRangeException(nameof(position), position, "Position is outside the beam.");
 
+        if (kernelResult is { } result)
+        {
+            BendingField field = result.EvaluateAt(position.Meters,
+                side == EvaluationSide.Left ? FieldSide.Left : FieldSide.Right);
+            return new BeamSectionResult(position, 0, field.Bending[0].Value, field.Bending[1].Value,
+                0, field.Bending[3].Value, field.Bending[2].Value);
+        }
+
+        ElementField[] elementFields = fields ?? throw new InvalidOperationException("Missing solution evaluation path.");
         int low = 0, high = Nodes.Count - 1;
         while (low <= high)
         {
@@ -53,10 +87,10 @@ public sealed class BeamSolution
             else
             {
                 int index = side == EvaluationSide.Left ? middle - 1 : middle;
-                return fields[Math.Clamp(index, 0, fields.Length - 1)].EvaluateAt(position);
+                return elementFields[Math.Clamp(index, 0, elementFields.Length - 1)].EvaluateAt(position);
             }
         }
-        return fields[high].EvaluateAt(position);
+        return elementFields[high].EvaluateAt(position);
     }
 }
 
