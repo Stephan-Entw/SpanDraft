@@ -4,6 +4,7 @@ using Xunit;
 using static SpanDraft.Tests.SolverExactNumber;
 using static SpanDraft.Tests.SolverExactLinearAlgebra;
 using static SpanDraft.Tests.SolverOutputOracle;
+using static SpanDraft.Tests.SolverBendingTestSupport;
 using static SpanDraft.Solver.Kernel.RestrainedDirections;
 
 namespace SpanDraft.Tests;
@@ -187,4 +188,58 @@ public sealed class SolverBendingOutputTests
             Assert.Equal(range.Minimum, range.Maximum);
         }
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void InteriorRejectsEveryEventKindWhilePhysicalSidesRemainValid(bool unloaded)
+    {
+        BendingResult result = EventResult(unloaded);
+        Assert.Equal(new[] { 0d, 0.5, 0.75, 1, 1.5, 1.75, 2 }, result.Fields.EventPositions);
+        foreach (double x in result.Fields.EventPositions)
+        {
+            Assert.Equal("side", Assert.Throws<ArgumentException>(() => result.EvaluateAt(x, FieldSide.Interior)).ParamName);
+            Assert.Throws<ArgumentException>(() => result.Fields.EvaluateNormalized(x, FieldSide.Interior));
+            BendingField left = result.EvaluateAt(x, FieldSide.Left), right = result.EvaluateAt(x, FieldSide.Right);
+            if (x == 0 || x == 2)
+            {
+                Assert.Equal(x == 0 ? FieldSide.Right : FieldSide.Left, left.Side);
+                Assert.Equal(left.Side, right.Side);
+                Assert.Equal(left.Bending, right.Bending);
+            }
+            if (x == 1 || x == 1.5)
+                Assert.Equal(left.Bending, right.Bending);
+        }
+        if (!unloaded)
+        {
+            Assert.Equal(-2, result.EvaluateAt(0.5, FieldSide.Right).Bending[3].Value -
+                result.EvaluateAt(0.5, FieldSide.Left).Bending[3].Value);
+            Assert.Equal(-3, result.EvaluateAt(0.75, FieldSide.Right).Bending[2].Value -
+                result.EvaluateAt(0.75, FieldSide.Left).Bending[2].Value);
+        }
+    }
+
+    [Fact]
+    public void InteriorWithinEveryOpenEventPieceMatchesBothPhysicalQueriesIncludingBounds()
+    {
+        BendingResult result = EventResult(unloaded: false);
+        foreach (double x in new[] { 0.25, 0.625, 0.875, 1.25, 1.625, 1.875,
+            Math.BitDecrement(0.5), Math.BitIncrement(0.5) })
+        {
+            BendingField interior = result.EvaluateAt(x, FieldSide.Interior);
+            Assert.Equal(FieldSide.Interior, interior.Side);
+            NormalizedBendingField normalized = result.Fields.EvaluateNormalized(x, FieldSide.Interior);
+            foreach (FieldSide side in new[] { FieldSide.Left, FieldSide.Right })
+            {
+                Assert.Equal(interior.Bending, result.EvaluateAt(x, side).Bending);
+                NormalizedBendingField other = result.Fields.EvaluateNormalized(x, side);
+                Assert.Equal(normalized.Values, other.Values);
+                Assert.Equal(normalized.Bounds, other.Bounds);
+            }
+        }
+    }
+
+    private static BendingResult EventResult(bool unloaded) => SolverKernel.Solve(Model(
+        restraints: [new(0, U | W | Theta), new(1.75, U)], forces: [new(0.5, unloaded ? 0 : -2)],
+        moments: [new(0.75, unloaded ? 0 : 3)], lines: [new(1, 1.5, unloaded ? 0 : 4)]));
 }

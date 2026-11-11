@@ -168,4 +168,34 @@ public sealed class SolverBendingOutputQualityTests
         // Two edge subtractions and the final 2B subtraction, all directed down.
         Assert.Equal(Math.BitDecrement(Math.BitDecrement(Math.BitDecrement(1))), m.Denominators[2]);
     }
+
+    [Theory]
+    [InlineData("reaction")]
+    [InlineData("piece")]
+    [InlineData("station")]
+    public void GateLocationsHaveASideOnlyForStationChecks(string kind)
+    {
+        MechanicalInput input = kind == "piece" ? Model(length: 1,
+            restraints: [new(0, RestrainedDirections.U | RestrainedDirections.W | RestrainedDirections.Theta), new(0.5, RestrainedDirections.U)],
+            forces: [new(1, 12)], moments: [new(1, -6)], lines: [new(0, 0.5, -48)]) : Case("udl").Input;
+        VerifiedBendingState state = BendingStateSolver.Solve(SolverKernel.BuildSystem(input), out var context);
+        if (kind == "piece")
+        {
+            // Conservative low-level fixture data make the piece's V check dominate,
+            // independently of ties between ordinary station and piece diagnostics.
+            state = state with { FullStateBound = state.FullStateBound.SetItem(3, 1e-10),
+                System = state.System with { Excitation = state.System.Excitation with { Lower = 0.01 } } };
+        }
+        var reactions = BendingReactions.Calculate(state, context);
+        if (kind == "reaction")
+            reactions = reactions.Select(r => r.Direction == RestrainedDirections.W ? r with { Bound = 1e-10 } : r).ToImmutableArray();
+        BendingQuality quality = BendingOutputQuality.Evaluate(state, BendingFields.From(state),
+            state.System.EventStations, reactions, context);
+        GateLocation location = Assert.IsType<GateLocation>(quality.Worst);
+        Assert.Equal(kind, location.Kind);
+        if (kind == "station")
+            Assert.True(location.Side is FieldSide.Left or FieldSide.Right);
+        else
+            Assert.Null(location.Side);
+    }
 }

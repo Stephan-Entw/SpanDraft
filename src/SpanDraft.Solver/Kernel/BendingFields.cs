@@ -13,11 +13,13 @@ internal sealed record BendingField(double Position, FieldSide Side, ImmutableAr
 }
 
 // Only the immutable data needed for direct evaluation survives the numerical solve.
-internal sealed record BendingFields(ImmutableArray<MechanicalStation> Stations, PreparedBendingLoads Loads,
+internal sealed record BendingFields(ImmutableArray<MechanicalStation> Stations, ImmutableArray<double> EventPositions,
+    PreparedBendingLoads Loads,
     ImmutableArray<double> State, ImmutableArray<double> StateBound, int EL,
     ImmutableArray<int> Exponents, RoundCounted EI, bool IsUnloaded)
 {
     internal static BendingFields From(VerifiedBendingState state) => new(state.System.Stations,
+        state.System.EventStations.Select(s => s.Position).ToImmutableArray(),
         state.System.Loads, state.FullState, state.FullStateBound, state.System.EL,
         state.System.StateExponents, state.System.NormalizedEI, state.IsUnloaded);
 
@@ -105,8 +107,7 @@ internal sealed record BendingFields(ImmutableArray<MechanicalStation> Stations,
             throw new ArgumentOutOfRangeException(nameof(x));
         if (!Enum.IsDefined(side))
             throw new ArgumentOutOfRangeException(nameof(side));
-        if (side == FieldSide.Interior && (x == 0 || x == Stations[^1].Position ||
-            Stations.Any(s => s.Position == x)))
-            throw new ArgumentException("Interior requires a position inside a mechanical segment.", nameof(side));
+        if (side == FieldSide.Interior && EventPositions.Contains(x))
+            throw new ArgumentException("Interior requires a position inside an open event piece.", nameof(side));
     }
 }

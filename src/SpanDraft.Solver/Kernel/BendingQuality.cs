@@ -7,7 +7,7 @@ namespace SpanDraft.Solver.Kernel;
 internal sealed record PieceQuality(double Start, double End, ImmutableArray<double> Bounds,
     ImmutableArray<double> Denominators, ImmutableArray<double> UpperValues);
 internal readonly record struct OutputGateCheck(double BoundSI, double DenominatorSI, double Ratio, bool Passed);
-internal readonly record struct GateLocation(string Kind, double Position, FieldSide Side, BendingComponent Component);
+internal readonly record struct GateLocation(string Kind, double Position, FieldSide? Side, BendingComponent Component);
 internal sealed record BendingQuality(bool IsUnloaded, bool IsVerified, bool GatePassed,
     ImmutableArray<double> ScalesLow, ImmutableArray<double> ScalesHigh,
     ImmutableArray<double> ScalesLowSI, ImmutableArray<double> ScalesHighSI,
@@ -131,7 +131,7 @@ internal static class BendingOutputQuality
         GateLocation? worst = null;
         double max = 0;
         int stationChecks = 0, reactionChecks = 0, pieceChecks = 0;
-        void Test(double bound, double denominator, int q, string kind, double position, FieldSide side)
+        void Test(double bound, double denominator, int q, string kind, double position, FieldSide? side)
         {
             OutputGateCheck check = Check(bound, denominator, fields.Exponents[q]);
             passed &= check.Passed;
@@ -160,7 +160,7 @@ internal static class BendingOutputQuality
             int q = reaction.Component;
             CheckMagnitude(Abs(reaction.Value), fields.Exponents[q]);
             Test(reaction.Bound, Math.Max(low[q], Subtract(Abs(reaction.Value), reaction.Bound, false)),
-                q, "reaction", reaction.Position, FieldSide.Interior);
+                q, "reaction", reaction.Position, null);
         }
         var pieces = ImmutableArray.CreateBuilder<PieceQuality>(events.Length - 1);
         for (int i = 1; i < events.Length; i++)
@@ -170,7 +170,7 @@ internal static class BendingOutputQuality
                 fields.EvaluateNormalized(x1, FieldSide.Left), low);
             for (int q = 0; q < 4; q++)
             {
-                Test(piece.Bounds[q], piece.Denominators[q], q, "piece", x0, FieldSide.Interior);
+                Test(piece.Bounds[q], piece.Denominators[q], q, "piece", x0, null);
                 CheckMagnitude(piece.UpperValues[q], fields.Exponents[q]);
             }
             pieces.Add(piece);
