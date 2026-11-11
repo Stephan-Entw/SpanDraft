@@ -11,6 +11,53 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
     (double X, RestrainedDirections Direction, SolverExactNumber Value)[] Reactions)
 {
     internal static SolverExactNumber Q(long a, long b = 1) => Integer(a) / Integer(b);
+
+    // Global force method: unknown initial kinematics and support reactions, rather than
+    // the kernel's local right-state unknowns. Exact compatibility plus global equilibrium.
+    internal static SolverOutputOracle FromCompatibility(MechanicalInput input)
+    {
+        var keys = input.Restraints.SelectMany(r => new[] { W, Theta }.Where(d => r.Directions.HasFlag(d))
+            .Select(d => (X: r.Position, Direction: d))).Distinct().OrderBy(r => r.X).ThenBy(r => r.Direction).ToArray();
+        int n = keys.Length + 2;
+        var zeroLoads = new MechanicalInput(input.Length, input.EI, input.Restraints, [], [], []);
+        var basis = new SolverOutputOracle[n];
+        basis[0] = new(zeroLoads, Q(1), Q(0), []);
+        basis[1] = new(zeroLoads, Q(0), Q(1), []);
+        for (int j = 2; j < n; j++)
+            basis[j] = new(zeroLoads, Q(0), Q(0), [(keys[j - 2].X, keys[j - 2].Direction, Q(1))]);
+        var applied = new SolverOutputOracle(input, Q(0), Q(0), []);
+        var a = new SolverExactNumber[n, n];
+        var b = new SolverExactNumber[n];
+        SolverExactNumber[] Conditions(SolverOutputOracle oracle)
+        {
+            SolverExactNumber force = Q(0), moment = Q(0);
+            foreach (var (x, value) in oracle.Input.PointForces.Select(p => (p.Position, From(p.Newtons)))
+                .Concat(oracle.Reactions.Where(r => r.Direction == W).Select(r => (r.X, r.Value))))
+            {
+                force += value;
+                moment += value * From(x);
+            }
+            foreach (var value in oracle.Input.PointMoments.Select(p => From(p.NewtonMeters))
+                .Concat(oracle.Reactions.Where(r => r.Direction == Theta).Select(r => r.Value)))
+                moment += value;
+            foreach (var line in oracle.Input.LineLoads)
+            {
+                SolverExactNumber resultant = From(line.NewtonsPerMeter) * (From(line.End) - From(line.Start));
+                force += resultant;
+                moment += resultant * (From(line.Start) + From(line.End)) / Q(2);
+            }
+            return [.. keys.Select(k => oracle.Field(k.X, FieldSide.Right)[k.Direction == W ? 0 : 1]), force, moment];
+        }
+        SolverExactNumber[] loads = Conditions(applied);
+        for (int j = 0; j < n; j++)
+        {
+            SolverExactNumber[] column = Conditions(basis[j]);
+            for (int i = 0; i < n; i++) a[i, j] = column[i];
+        }
+        for (int i = 0; i < n; i++) b[i] = Q(0) - loads[i];
+        SolverExactNumber[] solved = SolverExactLinearAlgebra.Solve(a, b);
+        return new(input, solved[0], solved[1], keys.Select((k, i) => (k.X, k.Direction, solved[i + 2])).ToArray());
+    }
     internal static SolverOutputOracle Case(string name)
     {
         SolverExactNumber z = Q(0);

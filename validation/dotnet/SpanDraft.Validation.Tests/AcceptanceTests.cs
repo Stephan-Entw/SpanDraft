@@ -5,42 +5,61 @@ namespace SpanDraft.Validation.Tests;
 
 public class AcceptanceTests
 {
-    public static IEnumerable<object[]> Cases => Catalog.CaseIds.Select(id => new object[] { id });
+    public static IEnumerable<object[]> Cases => Catalog.CaseIds.SelectMany(id => new[] { false, true }
+        .Select(kernel => new object[] { id, kernel }));
     public static IEnumerable<object[]> References => Catalog.CaseIds.SelectMany(id =>
-        Catalog.ExternalSolvers.Concat(Catalog.AnalyticalIds.Contains(id) ? new[] { "analytical" } : []).Select(s => new object[] {id,s}));
+        Catalog.ExternalSolvers.Concat(Catalog.AnalyticalIds.Contains(id) ? new[] { "analytical" } : [])
+            .SelectMany(s => new[] { false, true }.Select(kernel => new object[] {id,s,kernel})));
     public static IEnumerable<object[]> Transformations => Catalog.CaseIds.SelectMany(id =>
-        new[] { "load2", "load-1", "E2", "I2", "zeroNode" }.Select(op => new object[] {id,op}));
-    public static IEnumerable<object[]> Superpositions => Physics.SuperpositionIds.Select(id => new object[] {id});
+        new[] { "load2", "load-1", "E2", "I2", "zeroNode" }
+            .SelectMany(op => new[] { false, true }.Select(kernel => new object[] {id,op,kernel})));
+    public static IEnumerable<object[]> Superpositions => Physics.SuperpositionIds.SelectMany(id => new[] { false, true }
+        .Select(kernel => new object[] {id,kernel}));
     private static void Pass(CheckReport report) => Assert.True(report.Status == "PASS", System.Text.Json.JsonSerializer.Serialize(report.Failures,Catalog.Json));
 
     [Theory, MemberData(nameof(References))]
-    public void GoldenReferenceMatchesPublicSolver(string id, string solver)
+    public void GoldenReferenceMatchesSelectedSolver(string id, string solver, bool kernel)
     {
         var input = Catalog.Load(id);
         var reference = Catalog.ReadReference(id,solver);
-        Pass(Comparison.Compare(input,Results.Export(input),reference,solver));
+        Pass(Comparison.Compare(input,Results.Export(input,kernel:kernel),reference,solver));
         Pass(Physics.ReferenceEquilibrium(input,reference));
     }
 
     [Theory, MemberData(nameof(Cases))]
-    public void GlobalEquilibrium(string id)
+    public void GlobalEquilibrium(string id, bool kernel)
     {
         var input = Catalog.Load(id);
-        Pass(Physics.Equilibrium(input,ValidationCase.Solve(input)));
+        Pass(Physics.Equilibrium(input,ValidationCase.Solve(input,kernel)));
     }
 
     [Theory, MemberData(nameof(Cases))]
-    public void AxialConsistencyJumpsAndIndependentDifferentialChecks(string id)
+    public void AxialConsistencyJumpsAndIndependentDifferentialChecks(string id, bool kernel)
     {
         var input = Catalog.Load(id);
-        Pass(Physics.Fields(input,ValidationCase.Solve(input)));
+        var solution = ValidationCase.Solve(input,kernel);
+        Pass(Physics.Fields(input,solution));
+        if (!kernel) return;
+        foreach (var evaluation in input.Evaluations)
+        {
+            var section = solution.EvaluateAt(ValidationCase.M(evaluation.Position),
+                Enum.Parse<SpanDraft.Solver.EvaluationSide>(evaluation.Side));
+            Assert.Equal(0UL, BitConverter.DoubleToUInt64Bits(section.AxialDisplacement.Meters));
+            Assert.Equal(0UL, BitConverter.DoubleToUInt64Bits(section.AxialForce.Newtons));
+        }
+        foreach (var node in solution.Nodes)
+        {
+            bool held = input.Supports.Any(s => s.Position == node.Position.Meters && s.Type is "Fixed" or "Pinned");
+            Assert.Equal(held, node.ReactionX.HasValue);
+            if (held) Assert.Equal(0UL, BitConverter.DoubleToUInt64Bits(node.ReactionX!.Value.Newtons));
+        }
     }
 
     [Theory, MemberData(nameof(Transformations))]
-    public void MetamorphicRelation(string id, string operation) => Pass(Physics.Metamorphic(Catalog.Load(id),operation));
+    public void MetamorphicRelation(string id, string operation, bool kernel) => Pass(Physics.Metamorphic(Catalog.Load(id),operation,kernel));
 
     [Theory, MemberData(nameof(Superpositions))]
-    public void IndependentLoadGroupsSuperpose(string id) => Pass(Physics.Superposition(Catalog.Load(id)));
+    public void IndependentLoadGroupsSuperpose(string id, bool kernel) => Pass(Physics.Superposition(Catalog.Load(id),kernel));
 
     [Fact]
     public void CatalogAndReferenceInventoryIsComplete()

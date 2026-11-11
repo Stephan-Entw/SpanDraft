@@ -24,6 +24,10 @@ The full acceptance gate requires **both** test runs and the acceptance comparis
 ```sh
 dotnet run --project validation/dotnet/SpanDraft.Validation.Runner -- compare \
   --report validation/results/local-run/acceptance.json
+
+# M2: same cases, references and checks through the internal kernel.
+dotnet run --project validation/dotnet/SpanDraft.Validation.Runner -- compare --kernel \
+  --report validation/results/local-run/kernel-acceptance.json
 ```
 
 Python and external solvers are only needed for deliberate reference regeneration,
@@ -108,11 +112,16 @@ limitations; other incomplete extraction requirements remain PARTIAL.
 - `cases/`: 18 neutral versioned SI input definitions; source of truth for every adapter.
 - `references/`: 36 external and 9 analytical golden files, with provenance and input SHA-256.
 - `python/`: isolated external adapters, analytical provider and explicit generation/promotion commands.
-- `dotnet/`: public-API-only comparisons, physical checks, metamorphic tests and CLI.
+- `dotnet/`: public-solver and internal-kernel comparisons, physical checks, metamorphic tests and CLI.
 - `results/`: reviewed acceptance evidence; transient candidate/export/run files are ignored.
 
 The runner's `export` and `compare` commands accept `--output` and `--report`
 respectively; `compare` also accepts `--references` and `--actual`. It writes a
 structured report and returns nonzero for failed/incomplete comparisons.
+`--kernel` selects the internal migration entry for either command, including
+physical and metamorphic checks. Exports and reports identify the entry point;
+`compare --actual` rejects exports from the other path. The public production
+entry remains unchanged. The M2 coverage audit and exact-test mapping are in
+[M2_ACCEPTANCE.md](investigations/solver-rework/M2_ACCEPTANCE.md).
 Relative deviation is undefined (JSON null) for a zero reference. Timestamps do
 not constitute a numerical difference; input hashes, versions and coverage do.

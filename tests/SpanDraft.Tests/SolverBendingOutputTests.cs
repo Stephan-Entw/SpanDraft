@@ -20,8 +20,10 @@ public sealed class SolverBendingOutputTests
     [Theory]
     [MemberData(nameof(Cases))]
     public void StagesEAndFEncloseFixedIndependentExactMechanicsThroughoutEveryPiece(string name)
+        => CheckExactOutputs(Case(name));
+
+    internal static void CheckExactOutputs(SolverOutputOracle oracle)
     {
-        SolverOutputOracle oracle = Case(name);
         BendingResult result = SolverKernel.Solve(oracle.Input);
         Assert.True(result.Quality.IsVerified && result.Quality.GatePassed);
         double[] events = oracle.Input.Restraints.Select(s => s.Position)

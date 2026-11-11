@@ -1,5 +1,6 @@
 using System.Reflection;
 using SpanDraft.Core.Beams;
+using SpanDraft.Solver;
 using SpanDraft.Solver.Kernel;
 using Xunit;
 
@@ -7,6 +8,21 @@ namespace SpanDraft.Tests;
 
 public sealed class SolverKernelTests
 {
+    [Fact]
+    public void MigrationEntriesCannotAcceptFutureFeaturePrimitivesOrSolverLoads()
+    {
+        const BindingFlags methods = BindingFlags.DeclaredOnly | BindingFlags.Static | BindingFlags.NonPublic;
+        foreach (var (type, name) in new[] { (typeof(BeamModelAdapter), "Adapt"), (typeof(KernelBeamSolver), "Solve") })
+        {
+            MethodInfo entry = Assert.Single(type.GetMethods(methods), m => m.Name == name);
+            Assert.Equal(typeof(BeamModel), Assert.Single(entry.GetParameters()).ParameterType);
+            Assert.True(type.IsNotPublic);
+        }
+        Assert.Equal(new[] { "EI", "Length", "LineLoads", "PointForces", "PointMoments", "Restraints" },
+            typeof(MechanicalInput).GetProperties(BindingFlags.Instance | BindingFlags.NonPublic)
+                .Select(p => p.Name).Order(StringComparer.Ordinal));
+    }
+
     [Fact]
     public void SolverKernelIsInternal()
     {
