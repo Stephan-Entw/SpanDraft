@@ -1,4 +1,22 @@
-# Unabhängige Verifikation des bestehenden V1-Solvers
+# SpanDraft – Solvervalidierung
+
+Die Nachweise sind nach dem jeweils geprüften Solverstand getrennt:
+
+1. [Historische externe V1-Abnahme](#1-historische-externe-v1-abnahme) vom 03.10.2026.
+2. [M1/M2-Kernelnachweise](#2-m1m2-nachweise-des-neuen-kernels).
+3. [M3-Produktintegration](#3-m3-produktintegration).
+4. [Finale M4-Produktabnahme](#4-finale-m4-produktabnahme).
+
+Der aktuelle Produktvertrag steht in [SOLVER.md](SOLVER.md), die Befehle zur
+Reproduktion in [validation/README.md](../validation/README.md). Historische
+Reports werden bei neuen Abnahmen nicht überschrieben. Testzahlen und
+Plattformangaben gehören ausschließlich zu den jeweils ausgewiesenen Läufen.
+
+## 1. Historische externe V1-Abnahme
+
+Der gesamte folgende V1-Teil beschreibt den damaligen FE-Produktpfad und seine
+externen Referenzen. Er ist Herkunftsevidenz, keine Abnahme des späteren Kernels.
+Die damaligen Reports und Golden References bleiben unverändert erhalten.
 
 Nachweisstand: 2026-10-03. **SpanDraft Euler-Bernoulli solver: validated for the V1 scope described in this report.**
 
@@ -16,7 +34,7 @@ definierten Scope. Bei der Validierung einschließlich der V14-Untersuchung wurd
 Produktcode in `src/`, bestehende Produkttests, `SpanDraft.sln`, Toleranzen und
 alle 45 Golden References nicht verändert.
 
-## Zweck, Ausgangsbasis und Grenzen
+### Zweck, Ausgangsbasis und Grenzen
 
 Die Ausgangsbasis bilden [KONZEPT.md](KONZEPT.md), [DOMAIN.md](DOMAIN.md),
 [SOLVER.md](SOLVER.md), README und die bestehende Implementierung samt ihren
@@ -40,7 +58,7 @@ u und N werden hier nur hinsichtlich ihres Nullverlaufs geprüft. Ein belasteter
 axialer Solverpfad ist damit nicht unabhängig abgenommen. Auch variierende
 Steifigkeiten, elastische Lager und Gelenkfreigaben sind nicht Gegenstand.
 
-## Trennung und versionierte Eingaben
+### Trennung und versionierte Eingaben
 
 `SpanDraft.sln` bleibt die Haupt-Solution. Die eigenständige
 [`validation/SpanDraft.Validation.sln`](../validation/SpanDraft.Validation.sln)
@@ -96,7 +114,7 @@ geprüft. Alle inneren Ereignisse besitzen Left und Right; an den Balkenenden
 stehen ausschließlich Right@0 und Left@L. Katalogprüfungen erzwingen diese
 Abdeckung und verhindern fehlende oder doppelte Auswertungszeilen.
 
-## Referenzquellen und reproduzierbare Umgebung
+### Referenzquellen und reproduzierbare Umgebung
 
 | Referenz | Festgelegte Version | Quelle / Methode |
 | --- | --- | --- |
@@ -119,7 +137,7 @@ noch Runtime-/Build-Abhängigkeiten; kein Fremdsolver-Code wird in SpanDraft
 kopiert. .NET liest für Provenienzprüfungen lediglich die eingecheckten
 Python-Quelltexte und Lockdatei als Bytes und startet keinen Interpreter.
 
-## Vorzeichen und externe Adapter
+### Vorzeichen und externe Adapter
 
 Verbindlich: x nach rechts, w nach oben, θ gegen den Uhrzeigersinn; aufgebrachte
 Kräfte nach oben und Momente gegen den Uhrzeigersinn positiv; N > 0 Zug,
@@ -167,7 +185,7 @@ keine Produkt-APIs. Eine neue Fremdsolverversion verlangt bewusste Adapterprüfu
 und Referenzregeneration. Fehlende axiale Größen werden niemals durch erfundene
 Fremdsolver-Nullwerte ersetzt.
 
-## Sprungstellen, Extrema und PyCBA-Konvergenz
+### Sprungstellen, Extrema und PyCBA-Konvergenz
 
 IndeterminateBeam: Die passende Ausdrucksbranche wird im offenen Teilintervall
 gewählt und bis zum **exakten** Randpunkt fortgesetzt. PyCBA: Die getrennten
@@ -213,7 +231,7 @@ behauptetes PASS ohne Konvergenz wird abgewiesen.
 | V08 | 32768 | V04-S02 | 32768 |
 | V09 | 16384 | V04-S03 | 131072 |
 
-## Analytische Referenzen
+### Analytische Referenzen
 
 Die Referenzrechnung ruft SpanDraft nicht auf und verwendet keine dessen
 Ergebnisse. Sie beginnt mit rationalen SI-Eingaben, statischem Gleichgewicht und
@@ -259,7 +277,7 @@ den Golden Files):
 | V04-S02 | Ry=30;30 | wMin=−0,000139508928571 @0,5 | MMax=7,5 | Wie V01: PASS |
 | V04-S03 | Ry=3000;3000 | wMin=−0,00465029761905 @5 | MMax=7500 | Wie V01: PASS |
 
-## Toleranzmodell und physikalische Prüfungen
+### Toleranzmodell und physikalische Prüfungen
 
 Für jeden Zahlenvergleich gilt |actual−reference| ≤ absTol+relTol·|reference|.
 Die vorgeschlagenen externen Starttoleranzen wurden **unverändert** verwendet:
@@ -307,7 +325,7 @@ Trunkationsfehler dieser Ableitungen besitzt; die zweite Schrittweite prüft die
 numerische Stabilität. Zusammen mit Nullgrößen, Kontinuität und Gleichgewicht:
 **1163 physikalische Zahlenvergleiche, alle PASS** (Metamorphiezahlen separat).
 
-## Gefundene Abweichungen und Untersuchung
+### Gefundene Abweichungen und Untersuchung
 
 Jede Abweichung wird in der Reihenfolge Modell/Lagerung, Theorie, Einheiten,
 Lastdefinition, Vorzeichen, Seite, numerische Toleranz und Ursache untersucht.
@@ -324,7 +342,7 @@ abschließender Acceptance-Nachweis.
 | V13 / beide | VMin@3,5 Left wurde beim Entfernen redundanter Plateaugrenzpunkte im Adapter verloren; der Ort stimmte exakt überein, die zulässige Seite fehlte. Bei PyCBA betrug der verbleibende Unterschied zum Plateauwert nur ungefähr 2·10⁻¹¹ N. Kein Kraftsprung an dieser UDL-Grenze. | Nur tatsächlich plateauinnere Seiten entfernen; gegenüberliegende Seite mit ihrem expliziten nativen Grenzwert nach vorhandener Krafttoleranz prüfen. Guard gegen echte Kraftsprünge ergänzt. PASS. |
 | V14 / IndeterminateBeam | Die Kraft sitzt genau auf einem gesperrten Verschiebungsfreiheitsgrad. Physikalisch Ry=1250 N dort, alle übrigen Reaktionen und inneren Felder null. Die native floating-point `linsolve`-/`float(ans)`-Substitution hinterlässt winzige Restpolynome; deren stationäre Orte repräsentieren kein belastbares Nullplateau. | Native Zahlen und Orte unverändert behalten; ausschließlich die sechs Positionsvergleiche als NOT APPLICABLE bewerten. Alle Extremwerte verpflichtend vergleichen. V14 PASS; kein erfundenes Nullplateau, keine Toleranzänderung und kein Solver-Fix. |
 
-### V14: Prüfung der nativen IndeterminateBeam-Felder
+#### V14: Prüfung der nativen IndeterminateBeam-Felder
 
 Die reproduzierbare, ausschließlich auf V14 begrenzte Untersuchung
 [`v14_native_fields.py`](../validation/investigations/v14_native_fields.py)
@@ -395,7 +413,7 @@ Relative Abweichung bei Referenz null ist JSON null. N/A-Berichte enthalten
 separat Größe, Status und ausdrückliche Begründung; keine erfundene numerische
 Ortsabweichung wird dafür angegeben.
 
-## Acceptance-Matrix
+### Acceptance-Matrix
 
 `NOT APPLICABLE` bei Analytical heißt: kein geplanter geschlossener
 Referenzanbieter für diesen Fall. Verfügbarkeitsgrenzen gelten pro Größe gemäß
@@ -426,7 +444,7 @@ Referenzspalten. Die damaligen 200 Produkttests bestanden insgesamt.
 | V04-S02 | PASS | PASS | PASS | PASS | PASS | PASS | L=1 m, E=70 GPa |
 | V04-S03 | PASS | PASS | PASS | PASS | PASS | PASS | L=10 m |
 
-## Reproduktion, Golden Files und Abschlussprüfung
+### Reproduktion, Golden Files und Abschlussprüfung
 
 Die Befehle für Builds, Tests, Referenzregeneration und Vergleich stehen in
 [validation/README.md](../validation/README.md). Neue Prüfläufe schreiben in
@@ -484,3 +502,128 @@ also **14381**. Guard-Tests werden als Tests gezählt, nicht nochmals als
 Acceptance-Zahlenvergleiche. Die sechs N/A-Positionen sind separat ausgewiesen.
 Produktquellen und Golden Files wurden zusätzlich per SHA-256 gegen den Stand
 vor dieser V14-Untersuchung geprüft: **keine Änderungen**.
+
+
+## 2. M1/M2-Nachweise des neuen Kernels
+
+M1 implementierte und prüfte die numerische Kette des internen Kernels:
+Binary64-Primitives, analytische Lastintegrale, reduzierte Mechanik, Daten- und
+Residualschranken, verifizierte Zustandsfehler sowie Felder, Reaktionen und
+SI-Ausgabe-Gate. Unabhängige rationale Oracles prüfen die Stufen einzeln;
+ein Vergleich mit dem alten FE-Rechner allein wäre dafür nicht ausreichend.
+
+Die [M2-Abnahmeakte](../validation/investigations/solver-rework/M2_ACCEPTANCE.md)
+ordnet die festen Tests den Closure-Kriterien und Fehlerursachen zu. Sie enthält
+die damalige Eingangsbaseline, Mutantenzuordnung und Referenzherkunft. Zu M2
+gehörten auch der bestehende Katalog mit 18 Fällen und 45 Golden References über
+einen damals internen Kerneleinstieg. Der öffentliche Produkteinstieg blieb
+während dieser Abnahme noch der alte Solver. Diese zeitliche Aussage der Akte
+bleibt erhalten; der interne Einstieg und der damalige CLI-Schalter sind seit M3
+entfernt.
+
+Die M2-Grenz-/Exakttests laufen heute in der vollständigen Product-Suite, nicht
+im Acceptance-CLI: unter anderem mathematisches τ, konservative Ablehnung,
+SI-Unterlauf, Zweierpotenz-Umskalierung, CAD-/6-nm-Modelle, benachbarte belastete
+Ereignisse und UDL-Überlagerungen. Der separate `compare` prüft den festen
+Validation-Katalog mit externen/analytischen, physikalischen und metamorphischen
+Vergleichen. Beide Nachweisarten sind für die Gesamtfreigabe erforderlich.
+
+Die [Investigations](../validation/investigations/solver-rework/README.md)
+enthalten historische Architektur-/Prototypmessungen und Closure-Herkunft.
+Sie sind keine aktuellen C#-Plattformläufe und werden nicht rückwirkend dazu
+erklärt. Exakte Sollwerte und bestehende Toleranzen werden durch M4 nicht verändert.
+
+## 3. M3-Produktintegration
+
+Seit `ae6cc2b` läuft ausschließlich
+`EulerBernoulliBeamSolver.Solve(BeamModel) → SolverKernel → BeamSolution`.
+`b1a9b03` stellt zusätzlich die gemeinsame Stationskinematik sicher: w und θ
+stimmen auf beiden Seiten bitgleich mit dem veröffentlichten Knotenergebnis
+überein, einschließlich exakt null gesperrter Komponenten.
+
+Strukturtests sichern die unveränderte öffentliche API, den einzigen
+Produktpfad, die Core-/Kernelgrenze und den Ausschluss von Future-Feature-
+Primitiven ab. Der eingefrorene FE-Rechner und der Machbarkeitsprototyp samt
+Math.NET liegen ausschließlich im Testprojekt. Die öffentliche axiale
+Nullsemantik und vorhandene gegenüber abwesenden Reaktionen werden ausdrücklich
+geprüft. Produktketten-, Desktop- und Rendering-Tests prüfen die Weitergabe an
+Analysis, Engineering, Reaktionsübersicht, Diagramme, Probe und Bericht.
+Diese Integrationsnachweise ersetzen die unabhängige numerische Abnahme nicht.
+
+## 4. Finale M4-Produktabnahme
+
+Abnahme vom **11.11.2026**, nativ auf **macOS 27.2.1 ARM64**, .NET SDK
+**10.0.403**, Runtime **10.0.14**. Der öffentliche Solverquellstand ist
+[`b1a9b037661b7afd34ae14da6597cea512d1ab84`](https://github.com/Stephan-Entw/SpanDraft/commit/b1a9b037661b7afd34ae14da6597cea512d1ab84);
+M4 verändert keine Core-/Solverquelle und keine numerische Assertion.
+
+Der finale Report
+[`acceptance-m4.json`](../validation/results/acceptance-m4.json) wurde am
+**2026-11-11T21:16:59.3629130+00:00** durch einen frischen `compare` ohne
+`--actual` erzeugt. Sein `entryPoint` ist `EulerBernoulliBeamSolver`;
+sämtliche Lösungen laufen über den öffentlichen Produktpfad aus Abschnitt 3.
+[`acceptance.json`](../validation/results/acceptance.json) bleibt unverändert die
+historische V1-Abnahme. Der M4-Report wird nach dieser Abnahme nicht überschrieben.
+
+**SolverSourceSha256:**
+
+```text
+cc92d41a80ecefdcc9b811870d7698b5f015abd00e89242a4418fa01fe59f4c6
+```
+
+Maßgeblich bleibt `Acceptance.SolverHash()`: Die `.cs`- und `.csproj`-Dateien
+unter Core und Solver werden je Projekt ordinal sortiert, ohne bin/obj, und
+byteweise in derselben Reihenfolge gehasht. Die Definition wurde nicht verändert.
+Die CI-Baseline ist separat als `expected_hash` in
+[ci.yml](../.github/workflows/ci.yml) festgeschrieben und stimmt bei M4 exakt mit
+dem Report überein. CI erzeugt einen eigenen aktuellen Report und vergleicht
+dessen Hash mit dieser Baseline; die temporäre Branch-Ausnahme ist entfernt.
+Der gespeicherte M4-Report ist keine dauerhafte CI-Hashquelle.
+
+Spätere Änderungen gehashter Quellen müssen erneut abgenommen und durch eine
+explizite CI-Baselineänderung freigegeben werden. Die M4-Evidenz bleibt dabei
+historisch erhalten. Eine Änderung gehashter Quellen während M4 erfordert vor
+Abschluss erneut die vollständige Acceptance und die dazugehörige Hashfestlegung.
+
+### Lokale Plattform- und Acceptance-Ergebnisse
+
+Beide Solutions wurden separat restauriert und in Release mit **0 Warnungen
+und 0 Fehlern** gebaut. Die vollständige Haupt-Suite lief mit den CI-Optionen
+`--max-parallel-test-modules 2 --report-xunit-xml`; Avalonia-/Rendering-Isolation
+blieb unverändert. Alle folgenden Pflichtbefehle endeten mit Exitcode 0:
+
+| Prüfung | Ergebnis |
+| --- | --- |
+| Product einschließlich M2-Grenz-/Exakttests | 3916 / 3916 PASS |
+| Desktop | 330 / 330 PASS |
+| Rendering | 389 / 389 PASS |
+| Tooling | 175 PASS, 1 plattformbedingt übersprungen |
+| Separate Validation-Suite | 195 / 195 PASS, 0 übersprungen |
+| Acceptance-`compare` | 18 / 18 Fälle PASS |
+| Externe Vergleiche | 2837 PASS |
+| Analytische Vergleiche | 639 PASS |
+| Physikalische Vergleiche | 1163 PASS |
+| Metamorphische Prüfungen | 96 Tests, 8833 Vergleiche PASS |
+| Acceptance-Gesamtsumme | 13472 PASS, separat genau 6 V14-IB-Ortsvergleiche N/A |
+| Generierte Icons / Third-party Notices | beide `--check` PASS; 25 Runtimepakete |
+| Help mit eingecheckten Assets / mit Regeneration | beide PASS, DE/EN vollständig validiert |
+| Release-Publish der Help | 72 Dateien vollständig und bytegleich kopiert |
+
+Der einzige übersprungene Test ist
+`ScreenshotTests.DemoRecentsRoundTripWithoutReadingTheExampleFilesOnWindows`:
+Seine native Windows-Fixture benötigt absolute Windows-Pfade. Es ist kein
+numerischer Test; auf Windows ist er Bestandteil der Tooling-Suite.
+Die M2-Grenz-/Exakttests gehören zum Product-Lauf und nicht zu `compare`.
+
+Das CI-Hashskript wurde lokal mit dem echten M4-Hash erfolgreich ausgeführt;
+ein absichtlich abweichender Hash wurde mit Exitcode 1 abgewiesen. Dieser
+negative Guard-Lauf ist ein erwarteter Fehlernachweis, keine fehlgeschlagene
+Produktabnahme. Der nach dem Push ausgeführte CI-Lauf wird im Abschlussbericht
+anhand des exakten Commit-SHA und seiner Job-URLs ausgewiesen.
+
+Die 45 Golden References, Eingabefälle, Vergleichsregeln und historischen
+Reports wurden weder regeneriert noch verändert. Die beiden regenerierten
+DE-/EN-Help-Biegemomentgrafiken zeigen im bestehenden Beispiel nun das exakte
+Minimum 0 N·m statt des früheren FE-Rundungsrests. Der
+[Investigations-Audit](../validation/investigations/solver-rework/README.md#m4-prüfung-der-abgelegten-evidenz)
+erhält die verknüpften Rohdaten und Herkunftsnachweise.

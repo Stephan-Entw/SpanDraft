@@ -10,28 +10,47 @@ Both solutions build and test independently, without Python:
 ```sh
 # From the repository root: normal product build and existing tests.
 dotnet restore SpanDraft.sln
-dotnet build SpanDraft.sln --no-restore
-dotnet test --solution SpanDraft.sln --no-build --no-restore
+dotnet build SpanDraft.sln --configuration Release --no-restore
+dotnet test --solution SpanDraft.sln --configuration Release --no-build --no-restore \
+  --max-parallel-test-modules 2 --report-xunit-xml --results-directory artifacts/test-results
 
 # Separate validation build and tests against checked-in golden files.
 dotnet restore validation/SpanDraft.Validation.sln
-dotnet build validation/SpanDraft.Validation.sln --no-restore
-dotnet test --solution validation/SpanDraft.Validation.sln --no-build --no-restore
+dotnet build validation/SpanDraft.Validation.sln --configuration Release --no-restore
+dotnet test --solution validation/SpanDraft.Validation.sln --configuration Release --no-build --no-restore
 ```
 
 The full acceptance gate requires **both** test runs and the acceptance comparison:
 
 ```sh
-dotnet run --project validation/dotnet/SpanDraft.Validation.Runner -- compare \
+dotnet run --project validation/dotnet/SpanDraft.Validation.Runner --configuration Release --no-build -- compare \
   --report validation/results/local-run/acceptance.json
 ```
+
+The M2 boundary/exact tests run in the complete Product suite. They are separate
+from `compare`, which checks the 18 cases and 45 golden references, including
+external/analytical comparisons, physical checks and metamorphic relations.
+Use a fresh `compare` without `--actual` for product acceptance so all results
+come from the current public solver in that run.
 
 Python and external solvers are only needed for deliberate reference regeneration,
 never for restore, build, .NET tests, acceptance against golden files or the
 desktop application. See [VALIDATION.md](../docs/VALIDATION.md) for the reference
 methods, conventions, acceptance matrix and limitations.
 
-Recorded acceptance (2026-10-03) is **PASS**: all 18 cases pass. Only V14's six
+The current M4 product acceptance is recorded separately in
+[acceptance-m4.json](results/acceptance-m4.json), with its solver source hash and
+public entry point. [VALIDATION.md](../docs/VALIDATION.md#4-finale-m4-produktabnahme)
+records the actual local platform/build/test evidence. The historical
+[acceptance.json](results/acceptance.json) from 2026-10-03 remains unchanged.
+Neither dated report is overwritten by routine runs or used as the CI baseline.
+CI pins its expected hash separately in `.github/workflows/ci.yml` and compares
+it with `Acceptance.SolverHash()` from a fresh acceptance run. At M4 closure the
+pinned baseline and M4 report hashes must match exactly. Later hashed-source
+changes require new acceptance evidence and an explicit baseline update, while
+the M4 report remains historical evidence.
+
+Both acceptances are **PASS**: all 18 cases pass. Only V14's six
 IndeterminateBeam extremum-position comparisons are **NOT APPLICABLE**, because
 its native roundoff fields cannot establish the physical zero-field location
 set. All six extremum values remain mandatory and pass. See
@@ -69,8 +88,8 @@ dotnet run --project validation/dotnet/SpanDraft.Validation.Runner -- compare \
 
 Use a new reference directory for each regeneration; replace `local-run` consistently
 in the commands when repeating it. Generated files under `results/local-run/` are
-ignored. The versioned reports in `results/` record the historical acceptance and
-are retained. Generation refuses to overwrite reference files or write into
+ignored. The versioned reports in `results/` record dated acceptances and
+are retained unchanged. Generation refuses to overwrite reference files or write into
 `references/`. Review provenance, coverage, convergence and comparison reports
 before explicitly promoting candidates:
 

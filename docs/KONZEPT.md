@@ -60,14 +60,16 @@ Eigene Werkstoffe und Querschnitte können lokal gespeichert und wiederverwendet
 werden. Die vollständigen Formen und fachlichen Verträge stehen in
 [DOMAIN.md](DOMAIN.md).
 
-Der aktuelle Lastumfang enthält noch keine axialen äußeren Lasten.
+Der aktuelle Lastumfang enthält keine axialen äußeren Lasten. Axiale
+Verschiebung u und Normalkraft N bleiben deshalb im Produktpfad exakt null;
+ein belastetes Axialsystem wird nicht berechnet.
 
 ## 4. Ergebnisse
 
 Der Rechenkern liefert unter anderem:
 
 - Lagerreaktionen
-- axiale Verschiebung und Normalkraft
+- axiale Verschiebung und Normalkraft als exakte Nullgrößen im heutigen Lastumfang
 - transversale Verschiebung
 - Rotation
 - Querkraft
@@ -93,8 +95,10 @@ keinen Projektinhalt; die State-Rationale steht in [UI.md](UI.md#berichte-als-ei
 ## 5. Rechenmodell
 
 SpanDraft verwendet einen eigenen transparenten Euler-Bernoulli-Balkensolver
-mit dem direkten Steifigkeitsverfahren. Math.NET Numerics übernimmt ausschließlich
-generische lineare Algebra. Details stehen in [SOLVER.md](SOLVER.md).
+mit einem internen Kernel aus lokalen Biegezuständen und analytischen
+Lastintegralen. Er verifiziert die numerische Genauigkeit der Ausgabe und lehnt
+nicht sicher lieferbare Lösungen ab. Reine Lastpositionen erzeugen keine
+zusätzlichen mechanischen Unbekannten. Details stehen in [SOLVER.md](SOLVER.md).
 
 Der Solver ist unabhängig gegen analytische Lösungen, IndeterminateBeam und PyCBA
 validiert. Die Evidenz steht in [VALIDATION.md](VALIDATION.md).

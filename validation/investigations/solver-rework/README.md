@@ -16,10 +16,11 @@ und der normalen Produkt-CI. Den Umbauplan beschreibt [`docs/SOLVER_UMBAU.md`](.
   ausführbare Python-Referenz. Die
   [Closure-Kriterien C1–C13](../../../docs/SOLVER_ARCHITEKTUR.md#closure-kriterien-c1c13)
   verknüpfen den Vertrag mit den abgelegten Nachweisen.
-- **C#-Produkt- und Plattformabnahme.** Die Abnahme der Zielarchitektur
-  folgt mit ihrer Implementierung. Historische Prototypmessungen, die
-  Python-Referenz und die axiale Produktbaseline für den bestehenden Pfad
-  belegen keine Plattformkonformität der späteren C#-Implementierung.
+- **C#-Produkt- und Plattformabnahme.** Die [M2-Abnahmeakte](M2_ACCEPTANCE.md)
+  ordnet die Kernelnachweise zu; die aktuelle öffentliche Produktabnahme steht
+  in [VALIDATION.md](../../../docs/VALIDATION.md#4-finale-m4-produktabnahme).
+  Historische Prototypmessungen, die Python-Referenz und die damalige axiale
+  Produktbaseline belegen keine Plattformkonformität der C#-Implementierung.
 
 ## Voraussetzungen
 
@@ -275,3 +276,16 @@ Der Export prüft u und N an den Validierungspunkten sowie nullwertige
 und abwesende axiale Lagerreaktionen. Die bestehenden Klassen
 `SolverAnalyticalTests` und `SolverContinuousResultTests` ergänzen
 die Baseline um Knoten- und Feldprüfungen.
+
+## M4-Prüfung der abgelegten Evidenz
+
+Der Bestand wurde einschließlich direkter Dokumentverweise, Glob-Verwendungen
+und Skripteingaben geprüft. Es gibt keine leeren oder bytegleichen Protokolle.
+Die Rohdaten der Varianten-/Sweep-Läufe bleiben erhalten: Summary-, Diagnose-
+und Regressionsskripte lesen sie weiterhin, und die Zusammenfassungen enthalten
+nicht sämtliche Einzelfalldaten. Auch kurze Protokolle dokumentieren eigenständige
+Prüfungen. Insbesondere `state-fpc-oracles.log`, die FPC-Kettennachweise und
+`state-near-tau-models.log` bleiben Herkunfts- bzw. Reproduktionsevidenz.
+Es wurde deshalb kein Protokoll als eindeutig entbehrlicher Scratch-Output
+entfernt und keine neue Archivstruktur eingeführt. Der Bestand beschreibt
+weiterhin die historischen Untersuchungen, nicht den aktuellen Produktlauf.

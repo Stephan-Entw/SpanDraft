@@ -165,7 +165,7 @@ Bezugsskala ist. Die C#-Abnahme prüft dies auf jeder unterstützten Plattform.
 - **Als Werkzeug:** Der eingefrorene FE-Pfad bleibt ein unabhängiges Vergleichswerkzeug außerhalb des Produktpfads.
 - **Starre Lager an gleicher Position:** Die Migration erhält die Vereinigungsmenge der Sperren, die gemeinsame Reaktion je Station und Richtung und die bestehende Duplikatprüfung. Die Semantik und die Referenzfälle stehen in [Architektur §4.4](SOLVER_ARCHITEKTUR.md#starre-lager-im-heutigen-migrationsumfang) und [§12](SOLVER_ARCHITEKTUR.md#12-migration-a10).
 - **Axiale Nullsemantik:** Ohne äußere Axiallasten bleiben u, N und vorhandene axiale Reaktionen exakt null. Reaktionen an freien Freiheitsgraden bleiben abwesend.
-- **Nach der Migration:** Solver-Hash in der CI, `docs/KONZEPT.md`, `docs/SOLVER.md`, `docs/VALIDATION.md` und die Abnahme werden angepasst. `docs/KONZEPT.md` beschreibt heute noch das direkte Steifigkeitsverfahren. Die technische Dokumentation der Webseite folgt nach der Übernahme in `main`.
+- **Nach der Migration:** Solver-Hash in der CI, `docs/KONZEPT.md`, `docs/SOLVER.md`, `docs/VALIDATION.md` und die Abnahme werden angepasst. `docs/KONZEPT.md` beschreibt den produktiven Zustandskernel. Die technische Dokumentation der Webseite folgt nach der Übernahme in `main`.
 
 ## B. Feature-Tracks
 

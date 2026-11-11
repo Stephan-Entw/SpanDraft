@@ -1,230 +1,187 @@
 # SpanDraft – Solver
 
-## Ansatz und Schnittstelle
+## Produkteinstieg und mechanischer Umfang
 
-`EulerBernoulliBeamSolver.Solve(BeamModel)` berechnet einen einzelnen geraden
-Balken mit konstantem E, A und I mittels direktem Steifigkeitsverfahren.
-Math.NET Numerics 5.0.0 übernimmt dichte Matrizen, Vektoren, SVD und Cholesky.
-Core enthält weiterhin ausschließlich das Fachmodell.
+`EulerBernoulliBeamSolver.Solve(BeamModel)` ist der einzige Produkteinstieg.
+Er validiert das unveränderte Core-Modell, bildet dessen freigegebene Mechanik
+auf den internen `SolverKernel` ab und liefert eine unveränderliche
+`BeamSolution`. Core bleibt unabhängig von Numerik, UI und Persistenz.
 
-Die Fläche stammt aus `beam.Section.Area`, das Trägheitsmoment ausschließlich aus
-`beam.BendingAxisProperties.SecondMomentOfArea`: EA = E·A und EI = E·I der
-ausgewählten Achse. Assembly, Elementfelder und Schnittgrößenauswertung verwenden
-diese Kennwerte konsistent. Die fachlichen Bezeichnungen Y/Z/U/V werden bereits
-im BeamModel aufgelöst; die Solvermechanik benötigt nur das ausgewählte I.
+Berechnet wird ein einzelner gerader Euler-Bernoulli-Balken mit konstantem
+Werkstoff und Querschnitt, linear elastisch bei kleinen Verschiebungen und
+Rotationen. Querschnitte bleiben eben und senkrecht zur verformten Balkenachse;
+Schubverformung wird vernachlässigt. Unterstützt sind starre Einspannungen,
+Fest- und Loslager, Überhänge, transversale Punktkräfte, Punktmomente und
+konstante, auch überlappende Streckenlasten. Eigengewicht wird bereits im
+Fachmodell als konstante Streckenlast abgeleitet. Alle Werte verwenden SI.
 
-Pro Berechnung wird genau eine planare Biegeebene modelliert. Die positive
-transversale Richtung w gehört zu dieser ausgewählten 2D-Biegeebene und zeigt
-in der Balkendarstellung nach oben. Sie ist nicht generell mit der geometrischen
-+z-Richtung des Querschnitts gleichzusetzen. Y/Z/U/V wählen Iy/Iz/Iu/Iv ohne
-Änderung der mathematischen 2D-Solverformulierung. Eine räumliche Profilorientierung,
-3D-Lastvektortransformation oder gleichzeitige biaxiale Biegung wird nicht modelliert.
+Die Biegesteifigkeit ist `EI = E · I` mit E aus dem Werkstoff und I ausschließlich
+aus `beam.BendingAxisProperties.SecondMomentOfArea`. Y/Z/U/V wählen die
+zugehörige Querschnittsachse, ohne die planare Solverformulierung zu ändern.
+Die positive transversale Richtung w gehört zu dieser ausgewählten Biegeebene
+und zeigt in der Balkendarstellung nach oben; sie ist nicht allgemein die
+geometrische +z-Richtung des Querschnitts. Räumliche Profilorientierung,
+3D-Lasttransformation und gleichzeitige biaxiale Biegung sind nicht modelliert.
 
-Die Berechnung ist linear elastisch mit kleinen Verschiebungen und Rotationen.
-Euler-Bernoulli setzt voraus, dass Querschnitte eben und senkrecht zur verformten
-Balkenachse bleiben; Schubverformung wird vernachlässigt. Axiale Dehnung wird
-über EA berücksichtigt. Alle Elemente liegen entlang der globalen x-Achse;
-eine Koordinatentransformation ist nicht erforderlich.
+Der öffentliche Lastumfang enthält keine äußeren Axiallasten. Deshalb sind
+u und N an allen Positionen und auf beiden Seiten exakt +0. An axial gehaltenen
+Stationen ist `ReactionX` vorhanden und exakt +0; an freien fehlt die Reaktion.
+Ein belastetes Axialsystem wird nicht gelöst, `EA` wird nicht gebildet.
+Die Fläche bleibt unter anderem für Eigengewicht und Engineering relevant.
 
-## Knoten, Freiheitsgrade und Vorzeichen
+## Stationen, Ereignisse und Lager
 
-Knoten entstehen exakt an 0, Balkenlänge, allen Lagerpositionen, Positionen
-von Punktkräften und Punktmomenten sowie Grenzen jeder Streckenlast.
-Exakt gleiche Meterwerte erzeugen einen gemeinsamen Knoten. Nahe, aber
-unterschiedliche Positionen werden nicht zusammengelegt. Aufsteigend sortierte
-Nachbarknoten bilden jeweils ein Element positiver Länge; es gibt keine
-zusätzliche gleichmäßige Unterteilung.
+Mechanische Stationen liegen an beiden Balkenenden und an allen Lagerpositionen.
+Nur dort entstehen freie Komponenten des lokalen Biegezustands `(w, θ, M, V)`.
+Vorgeschriebene Komponenten werden exakt eliminiert. Reine Lastpositionen,
+Streckenlastgrenzen und spätere Auswertungspositionen erzeugen keine zusätzlichen
+mechanischen Unbekannten und verändern die Mechanikmatrix nicht.
 
-Die verbindlichen Vorzeichen aus [DOMAIN.md](DOMAIN.md) gelten:
-x und u nach rechts, w sowie aufgebrachte Kräfte und Streckenlasten nach oben,
-θ sowie aufgebrachte Momente und Reaktionsmomente gegen den Uhrzeigersinn.
-Die Rotation ist θ = dw/dx, in rad. Für interne Schnittgrößen gilt gesondert:
+Ereignisstationen sind die sortierte Vereinigung von Balkenenden, Lagern,
+Punktkräften, Punktmomenten und Streckenlastgrenzen, einschließlich Positionen
+nullwertiger Lasten. Sie bestimmen die öffentlichen `Nodes` und die Grenzen der
+Feldstücke. Exakt gleiche gespeicherte Meterwerte bilden eine gemeinsame
+Station. Verschiedene Werte bleiben verschieden, auch bei benachbarten
+Binary64-Zahlen; es gibt kein Snapping und keine Abstandstoleranz.
+±0 bezeichnet dieselbe Position. Abstände stammen aus gespeicherten globalen
+Koordinaten und nicht aus einer gerundeten lokalen Koordinatendifferenz.
 
-- N > 0 bedeutet Zug.
-- M > 0 bedeutet positives/sagendes Biegemoment.
-- V ist über `dM/dx = V` definiert, nicht als aufgebrachte Knotenkraft.
-
-Eine mittige Kraft −P (P > 0) auf einem einfach gelagerten Balken ergibt daher
-V = +P/2 links und −P/2 rechts der Last sowie M = +PL/4 unter der Last.
-Beim links eingespannten Kragarm mit Endkraft −P ist V = +P, M(0) = −PL,
-M(L) = 0 und das Reaktionsmoment an der Einspannung +PL.
-
-Globale DOFs eines Knotens i sind `[u, w, θ]` mit Indizes
-`[3i, 3i+1, 3i+2]`. Lokal gilt `[u1, w1, θ1, u2, w2, θ2]`.
-Eingaben und Berechnungen verwenden ausschließlich SI-Werte.
-
-## Element und Lastvektor
-
-Für `a = EA/L`, `b = 12EI/L³`, `c = 6EI/L²`, `d = 4EI/L`, `e = 2EI/L`
-lautet die symmetrische Elementmatrix:
-
-```text
-       u1  w1  θ1  u2  w2  θ2
-u1      a   0   0  -a   0   0
-w1      0   b   c   0  -b   c
-θ1      0   c   d   0  -c   e
-u2     -a   0   0   a   0   0
-w2      0  -b  -c   0   b  -c
-θ2      0   c   e   0  -c   d
-```
-
-Die Elementbeiträge werden über ihre globalen DOF-Indizes addiert.
-Die globale Matrix hat bei N Knoten die Dimension `3N × 3N`.
-Punktkräfte gehen unmittelbar in den w-DOF, Punktmomente in den θ-DOF ein.
-Lasten am gleichen Ort werden addiert, einschließlich Lasten an Lagern.
-
-Für ξ = x/L lauten die transversalen kubischen Hermite-Formfunktionen:
-
-```text
-N1 = 1 − 3ξ² + 2ξ³        N2 = L(ξ − 2ξ² + ξ³)
-N3 = 3ξ² − 2ξ³            N4 = L(−ξ² + ξ³)
-```
-
-Integration von `p · [N1, N2, N3, N4]` über das Element ergibt für eine
-vorzeichenbehaftete konstante Intensität p [N/m]:
-
-```text
-Fe = [0, pL/2, pL²/12, 0, pL/2, −pL²/12]
-```
-
-UDL-Grenzen erzeugen Knoten. Daher ist jedes Element für jede einzelne UDL
-vollständig überdeckt oder nicht überdeckt. Überlappende UDLs werden unabhängig
-assembliert und addiert; es findet keine Ersetzung durch viele Punktkräfte statt.
-
-## Lager, Stabilität und Lösung
-
-| Lager | Gesperrte DOFs | Freie DOFs |
+| Lager | Gesperrte Richtungen | Freie Richtungen |
 | --- | --- | --- |
-| Fixed | u, w, θ | keine |
-| Pinned | u, w | θ |
-| Roller | w | u, θ |
+| Fixed / Einspannung | u, w, θ | keine |
+| Pinned / Festlager | u, w | θ |
+| Roller / Loslager | w | u, θ |
 
-Alle gesperrten Verschiebungen sind null. Unterschiedliche Lagertypen am
-gleichen Knoten vereinigen ihre Sperren. Ihre gemeinsame Reaktion wird je
-Knoten ausgegeben; eine Aufteilung auf dort übereinanderliegende Lager ist
-nicht eindeutig und wird nicht vorgenommen.
+Alle vorgeschriebenen Verschiebungen und Rotationen sind exakt null.
+Verschiedene Lagertypen an derselben Position vereinigen ihre Sperren.
+Die Reaktion wird einmal je Station und gesperrter Richtung ausgegeben;
+eine Aufteilung auf übereinanderliegende Lager ist nicht eindeutig und wird
+nicht vorgenommen. Die Core-Prüfung gleicher Lagerduplikate bleibt vorgeschaltet.
+Es gibt keine Strafsteifigkeiten, künstlichen Federn oder Regularisierung.
 
-Zuerst wird `BeamModelValidator.Validate` ausgeführt. Bei Modellfehlern wird
-nicht assembliert oder gelöst. Danach prüft der Solver die Starrkörpermoden
-des verbundenen Balkens: axiale Translation `u = c` sowie transversale Bewegung
-`w = a + bx`, `θ = b`. Mindestens eine u-Sperre und entweder eine Einspannung
-oder w-Sperren an zwei unterschiedlichen Positionen sind erforderlich. Diese
-Prüfung erfolgt auch bei unbelasteten Modellen.
+## Vorzeichen und Lastabbildung
 
-Aus der unveränderten vollständigen Matrix K und dem Lastvektor F werden
-nur die freien DOFs extrahiert: `Kff · qf = Ff`. Es gibt keine Strafwerte oder
-künstlichen Federn. Zur numerischen Skalierung werden
-`Dii = 1/√Kff,ii`, `A = D Kff D`, `b = D Ff` verwendet.
-Die Skalierung verändert das Gleichungssystem nicht: `qf = Dy` für `Ay = b`.
+Die Vorzeichen aus [DOMAIN.md](DOMAIN.md) gelten: x und u nach rechts,
+w und aufgebrachte Kräfte/Streckenlasten nach oben, θ und aufgebrachte Momente
+gegen den Uhrzeigersinn. `θ = dw/dx`, N > 0 bedeutet Zug, M > 0 positives/sagendes
+Biegemoment; `dM/dx = V` und `dV/dx = q` auf offenen Laststücken.
+Für die Biegung gilt `EI · w'' = M` und `EI · w'''' = q`.
 
-Math.NET-SVD ohne Singulärvektoren prüft A. Bei `σmin/σmax ≤ 1e-12` wird die
-Berechnung als numerisch unzureichend konditioniert abgebrochen. Ansonsten löst
-Cholesky das symmetrisch positiv definite System. Der Rückwärtsfehler
+Punktkräfte und Punktmomente wirken mit ihrer tatsächlichen Position über
+analytische Lastintegrale und Stationssprünge. Konstante Streckenlasten werden
+über ihre tatsächlichen Grenzen integriert, nicht durch Punktkräfte ersetzt.
+Überlappungen und Lasten an Lagern werden additiv berücksichtigt. Innerhalb
+eines mechanischen Abschnitts bleiben sämtliche Last-Ereignisse erhalten,
+ohne den Abschnitt in Steifigkeitselemente zu zerlegen.
 
-```text
-||Ay − b||∞ / (||A||∞ · ||y||∞ + ||b||∞)
-```
+Eine mittige Kraft −P auf einem einfach gelagerten Balken ergibt V = +P/2 links,
+V = −P/2 rechts und M = +PL/4 unter der Last. Beim links eingespannten Kragarm
+mit Endkraft −P gilt V = +P, M(0) = −PL, M(L) = 0; das Reaktionsmoment ist +PL.
 
-muss höchstens `1e-10` sein. Beim Nullfall mit Nenner null muss auch das Residuum
-null sein. Nicht endliche Werte, nichtpositive Steifigkeits-/Skalierungswerte
-und Faktorierungsfehler führen zum Abbruch. Sind sämtliche DOFs gesperrt,
-bleibt q null und die reduzierte Lösung entfällt.
+## Stabilität, Lösung und verifizierte Ausgabe
 
-`BeamSolverException.Code` unterscheidet `InvalidModel` (mit allen ursprünglichen
-Validierungsfehlern), `UnstableModel` (freie Starrkörpermoden),
-`IllConditionedSystem` (numerische Singularität/Kondition) und `NumericalFailure`
-(Arithmetik, Faktorisierung oder Rückwärtsfehler). Es gibt keine Teilresultate,
-Pseudoinverse oder automatische Reparatur. Null als Modelleingabe erzeugt
-`ArgumentNullException`.
+Zuerst läuft `BeamModelValidator.Validate`. Bei Modellfehlern wird nicht gelöst.
+Danach prüft der Kernel die Starrkörpermoden unabhängig von Lasten und
+Steifigkeit: axiale Translation `u = c` und Biegebewegung `w = a + bx`, `θ = b`.
+Er verwendet den exakten Rang der Lagerbedingungen auf den gespeicherten
+Binary64-Koordinaten, ohne numerische Rangschwelle. Nötig sind mindestens eine
+u-Sperre und entweder eine Einspannung oder w-Sperren an zwei verschiedenen
+Positionen. Die Mechanismusprüfung hat Vorrang vor numerischen Bereichsfehlern,
+auch wenn bereits das Adapterprodukt E·I nicht darstellbar wäre.
+Sie findet auch bei unbelasteten Modellen statt.
 
-## Ergebnisse und Reaktionen
+Analytische Lastintegrale übertragen lokale Biegezustände zwischen mechanischen
+Stationen. Rand-, Stetigkeits- und Sprungbedingungen ergeben ein reduziertes
+lineares System ausschließlich freier Zustandskomponenten. Es ist kein globales
+FE-Verschiebungssystem. Zweierpotenz-Normierung und Ruiz-Äquilibrierung schützen
+die Darstellung unterschiedlicher Größenordnungen. Eine dichte LU-Zerlegung
+mit partieller Pivotisierung und Nachiteration erzeugt einen Lösungskandidaten.
 
-Die Reaktionen werden ausschließlich aus dem vollständigen ursprünglichen
-System bestimmt: `R = Kq − F`. Damit werden auch Lagerlasten und statisch
-unbestimmte Systeme berücksichtigt. Freie DOFs haben nur ein numerisches
-Residuum; dieses wird nicht als Lagerreaktion veröffentlicht.
+Die Freigabe hängt nicht allein von einem kleinen Residuum, einer geschätzten
+Kondition oder dem Erfolg der Faktorisierung ab. Daten- und Rundungsfehler
+werden eingeschlossen. Verifizierte adjungierte Residuen und ein gerichteter
+Kontraktionsnachweis mit μ < 1 begrenzen den Zustandsfehler. Feld- und
+Reaktionsauswertung führen daraus eigene Ausgabeschranken fort, einschließlich
+Lastintegralen, Auswertung und Rückskalierung in SI.
 
-`BeamSolution` verweist auf das unveränderte ursprüngliche `BeamModel` und
-enthält eine unveränderliche Liste sortierter `BeamNodeResult`-Einträge:
-Knotenindex, Position als Core-`Length`, u/w als solver-eigener signed
-`Displacement` mit `Meters`-Property, Rotation als `RotationRadians` sowie
-nullable Reaktionen in Core-`Force` und Core-`Moment`.
-`null` kennzeichnet freie DOFs; auch eine Reaktion von null N bzw. Nm an einem
-gesperrten DOF bleibt ein vorhandener Wert. `Displacement` akzeptiert nur endliche
-Werte einschließlich negativer Werte und null. Core-`Length` bleibt unverändert.
-
-## Kontinuierliche Elementfunktionen
-
-Die vorhandene Knotenlösung wird je Element durch eine analytische Feldfunktion
-ergänzt. Knotengenerierung, Elementsteifigkeit, Assembly, reduzierte Lösung und
-Reaktionen werden weiterverwendet; es gibt keinen zweiten Solver.
-
-Die lokale Elementkoordinate ist `s = x − x1`, mit `0 ≤ s ≤ Le`. x1 ist die
-globale Position des linken Knotens, Le die Elementlänge. Für das unbelastete
-Element ist `wH(s)` die kubische Hermite-Funktion aus `[w1, θ1, w2, θ2]` mit
-den oben angegebenen Formfunktionen, ausgewertet bei ξ = s/Le.
-
-Die resultierende Linienlast q ist innerhalb eines Elements konstant: Alle
-UDL-Grenzen sind Elementgrenzen, und alle überdeckenden Intensitäten werden
-vorzeichenbehaftet addiert. q bezeichnet hier die Linienlast [N/m], nicht den
-globalen Verschiebungsvektor. Die kontinuierliche Lösung lautet:
+Ein gerichtetes Ausgabe-Gate prüft Ereignisseiten, Reaktionen und kontinuierliche
+Stückgrenzen über den ganzen Balken. Für gelieferte Größen gilt am ausgegebenen
+Ort und auf der ausgegebenen Seite:
 
 ```text
-w(s) = wH(s) + q·s²·(Le − s)²/(24·EI)
-EI·w''''(s) = q
-
-w(0) = w1       w'(0) = θ1
-w(Le) = w2      w'(Le) = θ2
+|berechneter Wert − exakter Wert| ≤ VerifiedOutputBound ≤ τ · ReferenceScale
+τ = 1 / 100 000 000
 ```
 
-Der Zusatzterm hat an beiden Elementenden sowohl Wert als auch erste
-Ableitung null. Er erhält daher die vorhandenen Knotenergebnisse und erzeugt
-die korrekte quartische Durchbiegung unter konstanter UDL. Bei q = 0 verbleibt
-die kubische Hermite-Lösung. Das gilt auch bei vollständig gesperrten Endknoten:
-Eine volle UDL erzeugt zwischen zwei Einspannungen eine Durchbiegung, obwohl
-alle Knotenverschiebungen und -rotationen null sind.
+Die Referenz ist die exakte Mechanik auf den gespeicherten Solvereingaben.
+Die Implementierung schließt zusätzlich die Rundung des Adapterprodukts E·I ein.
+`ReferenceScale` ist eine mechanisch definierte Bezugsskala aus Anregung und
+verifizierten Feldgrößen, bei Schnittgrößen zusätzlich dem lokalen Betrag.
+Die Aussage ist keine relative Fehlergarantie gegenüber einem einzelnen
+verschwindenden Feldwert und kein Nachweis der Genauigkeit realer Eingabedaten.
+Der Schwellenvergleich berücksichtigt das mathematisch exakte τ; ein gerundeter
+Fehlerquotient entscheidet die Freigabe nicht. Die Schranken bleiben intern.
 
-Intern wird das Polynom in der dimensionslosen Koordinate t = s/Le einmal
-aufgebaut und mit dem Horner-Schema ausgewertet. Ableitungen berücksichtigen
-jeweils die notwendigen Faktoren von Le. Alle physikalischen Eingabe- und
-Ausgabewerte bleiben SI-Werte.
+Nur wenn jedes gespeicherte Lastprimitiv exakt null ist, darf nach erfolgreicher
+Modell-, Mechanismus- und Aufbauprüfung der Nullpfad ohne Faktorisierung exakte
+Nullergebnisse liefern. Kompensierende nicht-null Lasten oder ein nullwertiger
+rechter Vektor bleiben belastete Systeme und durchlaufen die Verifikation.
 
-Die weiteren Feldgrößen stammen aus derselben Funktion beziehungsweise dem
-axialen Elementanteil:
+Kann ein Bereich, die Verifikation oder das Gate nicht eingehalten werden,
+lehnt `Solve` das Modell ohne Teilresultat ab. Es gibt keinen alternativen
+Produktsolver, keine Pseudoinverse und keine automatische Modellreparatur.
+Den Detailvertrag beschreiben [SOLVER_ARCHITEKTUR.md](SOLVER_ARCHITEKTUR.md)
+und der [Gleitkomma-Vertrag](../validation/investigations/solver-rework/FLOATING_POINT_CONTRACT.md).
+Deren Erweiterungsentwürfe sind keine zusätzlichen Produktfunktionen.
 
-```text
-u(s) = u1 + (u2 − u1)·s/Le
-θ(s) = dw/ds                    [rad]
-N(s) = EA·(u2 − u1)/Le           [N], konstant im Element
-M(s) = EI·w''(s)                [Nm], höchstens quadratisch
-V(s) = dM/ds = EI·w'''(s)        [N], höchstens linear
-dV/ds = q                      [N/m]
-```
+## Öffentlicher Fehlervertrag
 
-Die Funktionen werden analytisch/stückweise ausgewertet. Es gibt weder eine
-Sampling-Auflösung noch künstliche Zwischenknoten. Die Darstellung
-kann die Funktionen unabhängig davon beliebig fein abtasten.
+`Solve(null)` wirft `ArgumentNullException`. Erwartete Modell- und numerische
+Ablehnungen werden als `BeamSolverException` mit unverändertem `SolverErrorCode`
+veröffentlicht:
 
-## Auswertungs-API und einseitige Grenzwerte
+| Code | Bedeutung |
+| --- | --- |
+| `InvalidModel` | Core-Modellprüfung fehlgeschlagen; `ValidationErrors` enthält alle ursprünglichen Fehler. |
+| `UnstableModel` | Exakte Lagerprüfung lässt eine axiale oder transversale Starrkörpermode frei. |
+| `IllConditionedSystem` | Ein exakt stabiles belastetes System ist numerisch nicht sicher lieferbar: Nullpivot (`ZeroPivot`), fehlender Verifikationsnachweis (`NotVerified`) oder überschrittenes Ausgabe-Gate (`Gate`). |
+| `NumericalFailure` | Bereichsregel verletzt (`NumericalRange`), erforderlicher Wert nicht endlich (`NonFinite`) oder interne Struktur inkonsistent (`InternalInconsistency`). |
+
+`IllConditionedSystem` bedeutet „numerisch nicht sicher lösbar“, nicht
+„eine Konditionsschwelle wurde überschritten“. Ein winziger nicht-null Pivot
+an oder unter der Normalgrenze ist ein Bereichsfehler; ein Nullpivot ist davon
+getrennt. Bei Kernelablehnungen bleibt die ursprüngliche Ausnahme als
+`InnerException` für Diagnose erhalten. Die internen Ursachentypen sind keine
+zusätzliche öffentliche API. Außer bei `InvalidModel` ist `ValidationErrors` leer.
+
+## Ergebnisse, Reaktionen und Auswertung
+
+`BeamSolution.Beam` verweist auf das ursprüngliche unveränderte `BeamModel`.
+`Nodes` ist eine unveränderliche, nach Ereignisposition sortierte Liste von
+`BeamNodeResult`: fortlaufender Index, Position als Core-`Length`, u/w als
+solver-eigener signed `Displacement` mit `Meters`, Rotation als
+`RotationRadians` und nullable Reaktionen in Core-`Force` bzw. Core-`Moment`.
+`null` bezeichnet eine freie Richtung. Eine nullwertige Reaktion an einer
+gesperrten Richtung bleibt ein vorhandener Wert.
+
+Biegereaktionen folgen aus den Zustands- und Lastsprüngen an der jeweiligen
+mechanischen Station; ihre Fehler werden mit eigenen Reaktionsfunktionalen
+verifiziert. Lasten unmittelbar am Lager sind eingeschlossen. Freie Richtungen
+veröffentlichen kein numerisches Residuum als Reaktion.
 
 `BeamSolution.EvaluateAt(Length position, EvaluationSide side)` liefert einen
-unveränderlichen `BeamSectionResult` mit folgenden Properties:
+unveränderlichen `BeamSectionResult` mit Position, `AxialDisplacement`,
+`TransverseDisplacement`, `RotationRadians`, `AxialForce`, `ShearForce` und
+`BendingMoment`, jeweils in SI. Die Seite ist verpflichtend; es gibt keinen
+Default und keine Überladung ohne Seite.
 
-| Property | Typ / Einheit |
-| --- | --- |
-| Position | Core-`Length`, m |
-| AxialDisplacement | Solver-`Displacement`, signed m |
-| TransverseDisplacement | Solver-`Displacement`, signed m |
-| RotationRadians | `double`, rad |
-| AxialForce | Core-`Force`, N |
-| ShearForce | Core-`Force`, N |
-| BendingMoment | Core-`Moment`, Nm |
-
-Die Seitenangabe ist ausdrücklich erforderlich; es gibt keinen Default und
-keine Überladung ohne Seite. An inneren Knoten wählt `Left` den Grenzwert
-aus dem linken Element, `Right` den aus dem rechten Element. Innerhalb eines
-Elements liefern beide Angaben identische Ergebnisse. An x = 0 liefern beide
-Angaben den vorhandenen Grenzwert 0+, an x = L den Grenzwert L−.
+An inneren Ereignissen wählt `Left` den linksseitigen und `Right` den
+rechtsseitigen Grenzwert. Innerhalb eines offenen Stücks liefern beide Seiten
+dieselben Werte. An x = 0 liefern beide den vorhandenen inneren Grenzwert 0+,
+an x = L beide L−. An exakten Stationen stimmen w und θ auf beiden Seiten
+bitgleich mit dem gemeinsamen Knotenergebnis überein; gesperrte Komponenten
+bleiben exakt null. V und M behalten dagegen ihre jeweilige Seite und werden
+weder gemittelt noch geglättet. u und N bleiben auf beiden Seiten exakt +0.
 
 ```csharp
 BeamSolution solution = new EulerBernoulliBeamSolver().Solve(beam);
@@ -233,118 +190,85 @@ BeamSectionResult after = solution.EvaluateAt(loadPosition, EvaluationSide.Right
 BeamExtremum<Displacement> minimumW = solution.Extrema.MinimumTransverseDisplacement;
 ```
 
-An exakten Knoten werden u, w und θ aus dem gemeinsamen Knotenergebnis
-übernommen. N, V und M stammen immer aus dem gewählten Element. Schnittgrößen
-werden weder gemittelt noch geglättet. Für einen inneren Knoten gilt:
+Für innere Ereignisse gelten die Sprünge:
 
 ```text
-V(x+) − V(x−) = Summe Punktkräfte + ReaktionY
-M(x+) − M(x−) = −(Summe Punktmomente + Reaktionsmoment)
+V(x+) − V(x−) = Summe Punktkräfte + ReactionY
+M(x+) − M(x−) = −(Summe Punktmomente + ReactionMoment)
 ```
 
-Fehlende Reaktionen werden hier als null behandelt. Eine Punktkraft erzeugt
-einen Querkraftsprung, ein Punktmoment einen Momentsprung mit entgegengesetztem
-Vorzeichen zum aufgebrachten Moment. Auch innere Lager können durch ihre
-Reaktionen Sprünge erzeugen. Beispielsweise ergibt C = +400 Nm bei x = 0,75 m
-auf einem einfach gelagerten Balken mit L = 2 m: V beidseitig +200 N,
-M(x−) = +150 Nm und M(x+) = −250 Nm, also einen Sprung von −400 Nm.
-Die beiden Endmomente sind null.
+Fehlende Reaktionen zählen hier als null. Eine Änderung der Streckenlastintensität
+ändert Ableitungen, erzeugt aber keinen Sprung in V oder M. Ohne konzentrierte
+Last/Reaktion sind w, θ, V und M stetig.
 
-An einem Knoten ohne konzentrierte Last/Reaktion sind w, θ, M und V stetig.
-Eine Änderung der UDL-Intensität erzeugt keinen Sprung in V oder M, sondern
-ändert deren Ableitungen.
-
-Die Elementzuordnung erfolgt binär mit exakt verglichenen Meterwerten. Eine
-Position direkt neben einem Knoten wird nicht auf diesen gerundet.
-Positionen außerhalb des Balkens und unbekannte `EvaluationSide`-Werte erzeugen
-`ArgumentOutOfRangeException`; negative/nicht endliche Positionen werden bereits
-durch Core-`Length` ausgeschlossen. Nicht endliche Feldberechnungen erzeugen
-`BeamSolverException` mit `NumericalFailure`.
+Die Felder sind analytisch und stückweise: w ist bei konstanten Streckenlasten
+höchstens quartisch, θ kubisch, M quadratisch und V linear. Es gibt keine
+Solver-Samplingauflösung und keine künstlichen Zwischenknoten. Diagramm-Sampling
+und Rendering liegen außerhalb des Solvers. Die Zuordnung verwendet binäre
+Suche und exakte Metervergleiche; eine Position neben einer Station wird nicht
+auf diese gerundet. Positionen außerhalb des Balkens und unbekannte Seiten
+erzeugen `ArgumentOutOfRangeException`; negative oder nicht endliche Positionen
+verhindert bereits Core-`Length`.
 
 ## Globale Extremwerte
 
-`BeamSolution.Extrema` enthält die globalen vorzeichenbehafteten Minima und
-Maxima von w, V und M. Die Properties sind `MinimumTransverseDisplacement`,
-`MaximumTransverseDisplacement`, `MinimumShearForce`, `MaximumShearForce`,
-`MinimumBendingMoment` und `MaximumBendingMoment`.
+`BeamSolution.Extrema` enthält globale vorzeichenbehaftete Minima und Maxima:
+`MinimumTransverseDisplacement`, `MaximumTransverseDisplacement`,
+`MinimumShearForce`, `MaximumShearForce`, `MinimumBendingMoment` und
+`MaximumBendingMoment`. Jeder unveränderliche `BeamExtremum<T>` enthält `Value`,
+globale `Position` und nullable `Side`. Im offenen Stück ist `Side` null, an
+Grenzen bezeichnet es den untersuchten Grenzwert. An den Balkenenden wird nur
+die innere Seite veröffentlicht: Right bei 0 und Left bei L.
 
-Jeder `BeamExtremum<T>` enthält `Value` (Displacement, Force oder Moment),
-globale `Position` (Length) und nullable `Side`. Im Elementinneren ist `Side`
-null; an Elementgrenzen kennzeichnet es den untersuchten Grenzwert. An den
-Balkenenden gilt ausschließlich die innere Seite (Right bei 0, Left bei L).
-Alle Ergebnisobjekte sind unveränderlich; die Extremwerte werden bereits beim
-Lösen bestimmt.
+Kandidaten sind beide inneren Randseiten jedes Ereignisstücks sowie die inneren
+reellen Nullstellen von θ für w und von V für M. V benötigt bei konstanter
+Streckenlast nur die Randwerte. `PolynomialRoots` bestimmt die Kandidaten ohne
+Raster; Skalierung, Gradreduktion, auslöschungsarme quadratische Formeln und
+Ableitungsintervalle mit Bisektion behandeln auch Mehrfachwurzeln.
+Lokale Randzuordnung und Wurzeldeduplizierung verwenden 32ε, Rundungsvergleiche
+64ε mit ε = 2⁻⁵². Diese lokalen Regeln ändern keine Modellpositionen.
+Numerisch unauflösbare Wurzelcluster können nur einmal repräsentiert werden.
 
-Die Kandidaten entstehen aus den stückweisen Polynomen:
+Bei Wertgleichstand innerhalb des relativen Rundungsvergleichs von 64ε gewinnt
+die kleinste globale Position, danach Left vor Right. Es gibt keine absolute
+SI-Gleichheitsschwelle. Konstante Intervalle werden durch einen Endpunkt
+repräsentiert. Jeder ausgegebene Extremwert lässt sich mit seiner Position
+und Seite über `EvaluateAt` reproduzieren; bei `Side = null` liefern beide
+Seiten denselben Wert.
 
-- w: Elementendpunkte und alle inneren reellen Nullstellen von θ(s).
-- M: beide einseitigen Elementendwerte und innere Nullstellen von V(s).
-- V: beide einseitigen Elementendwerte, da V im Element linear ist.
+Der verifizierte Output-Bound gilt für den Wert am ausgegebenen Kandidatenort.
+Er beweist weder einen ebenso kleinen Ortsfehler noch für beliebige entartete
+Polynome die Vollständigkeit aller getrennten Extremorte. Diese Eigenschaften
+werden durch unabhängige analytische und exakte Root-Oracles geprüft.
 
-Die Wurzelsuche benötigt keine Samplingpunkte. Polynome werden nach ihrem
-größten absoluten Koeffizienten skaliert; verschwindende führende Koeffizienten
-reduzieren den Grad. Lineare Wurzeln werden direkt, quadratische mit einer
-auslöschungsarmen Formel berechnet. Kubische Polynome werden durch die reellen
-Ableitungsnullstellen in monotone Intervalle zerlegt und dort durch Bisektion
-mit maximal 128 Schritten gelöst. Stationäre Stellen werden zusätzlich auf
-Mehrfachwurzeln geprüft. Die Intervallbreite steuert die Bisektion, nicht eine
-pauschale kleine Funktionswertschwelle.
+## Verifikation und bekannte Grenzen
 
-Lokale Rundungsschranken verwenden ε = 2⁻⁵² (nicht `double.Epsilon`).
-Wurzeln innerhalb von 32ε an 0 oder 1 werden dem betreffenden Endpunkt
-zugeordnet; weiter außerhalb liegende Kandidaten werden verworfen. Wurzeln
-innerhalb von 32ε werden dedupliziert. Diskriminanten beziehungsweise stationäre
-Funktionswerte werden anhand von 64ε und ihrer jeweiligen Rechenskala geprüft.
-Numerisch unauflösbare Mehrfachwurzelcluster werden einmal repräsentiert.
-Diese Regeln gelten nur in der lokalen Polynomrechnung und ändern die exakten
-Positionsvergleiche im Modell und in der Auswertungs-API nicht.
+Die Product-Suite prüft analytische Lösungen, Zustands- und Ausgabeschranken,
+exakte Grenzfälle, Fehlerklassen, Koinzidenzen, nahe Ereignisse, Sprünge und
+Extrema. Die separate öffentliche Produkt-Acceptance vergleicht gegen feste
+analytische und externe Referenzen sowie physikalische und metamorphische
+Prüfungen. Herkunft und aktuelle Abnahme stehen in [VALIDATION.md](VALIDATION.md),
+die Teststrategie in [TESTING.md](TESTING.md). Testtoleranzen und numerische
+Freigabeschwellen sind getrennte Verträge.
 
-Jedes globale Minimum/Maximum liefert genau einen repräsentativen Ort. Für
-Wertgleichstände gilt ein relativer Rundungsvergleich von 64ε ohne absolute
-SI-Schwelle. Dann gewinnt die kleinste globale Position, bei gleicher Position
-Left vor Right. Konstante Abschnitte werden durch einen Endpunkt repräsentiert,
-nicht als Intervalle veröffentlicht. Die veröffentlichte Position lässt sich
-mit der angegebenen Seite wieder über `EvaluateAt` auswerten.
+Bereichsgrenzen schützen die Gleitkomma-Prämissen für Eingaben, EI, Abstände,
+normierte Lasten, Koeffizienten, Pivots und SI-Ausgaben. Auch ein mechanisch
+stabiles Modell kann deshalb oder wegen konservativer Bounds abgelehnt werden.
+Nähe allein ist kein Mechanismus und kein pauschaler Ablehnungsgrund.
+Gespeicherte Eingabepositionen werden nicht nachträglich vereinigt.
 
-## Verifikation und Grenzen
+Die Implementierung verwendet dichte Matrizen mit quadratischem Speicherbedarf
+und kubischer Lösungs-/Verifikationsarbeit. Viele Lasten in einem Abschnitt
+verteuern die wiederholte analytische Auswertung. Eine allgemeine Modellgrößen-
+oder Latenzzusage wird daraus nicht abgeleitet. Sehr kurze Stücke weit vom
+Ursprung können die Darstellung innerer globaler Extrempositionen begrenzen.
+Die Rechnung verwendet `double`; kleine Rundungsreste werden nicht pauschal
+auf null gesetzt oder geglättet.
 
-Produkttests prüfen analytische Referenzen, Lastüberlagerungen und statisch
-unbestimmte Systeme sowie Assembly, Stabilität und numerische Fehlerfälle.
-Kontinuierliche Felder und Extremwerte werden einschließlich Sprungstellen,
-Ableitungsbeziehungen, nichtnodaler Extremstellen und Rundungsgrenzen geprüft.
-Der unabhängige Validierungsnachweis steht in [VALIDATION.md](VALIDATION.md).
-
-Ergebnisvergleiche verwenden `absTol + 1e-9 · |Soll|`: absolut `1e-7 N`,
-`1e-7 Nm`, `1e-12 m` und `1e-12 rad`. Diese Testtoleranzen sind von den
-numerischen Abbruchschwellen getrennt.
-
-Der Solver liefert keine Festigkeitsbewertung. Reine elastische Biegespannung
-und ein einfaches Verhältnis zum gewählten Festigkeitskennwert werden als getrenntes Postprocessing
-in [SpanDraft.Engineering](ENGINEERING.md) ausgewertet. Normative
-Festigkeits-/Gebrauchstauglichkeitsnachweise, Schubverformung, geometrische
-Nichtlinearität sind nicht implementiert. Eigengewicht wird in Core
-als bestehende konstante Streckenlast aus Dichte, Fläche und Erdbeschleunigung
-abgeleitet; der Solver benötigt dafür keine besondere Behandlung.
-Core hat derzeit keinen axialen Lasttyp; der axiale Gleichungsanteil
-wird einschließlich u(x) und N(x) separat intern getestet. Öffentliche
-Lastmodelle liefern normalerweise N = 0. Globale N-Extrema sind nicht Teil
-der API. Querschnitt und Material sind konstant; nichtkonstante Linienlasten,
-Lagerbewegungen und Gelenkfreigaben sind nicht vorgesehen. Diagramm-Rendering
-und Diagramm-Sampling gehören nicht zum Solver.
-
-Sehr kurze Elemente oder extreme Längenverhältnisse können trotz mechanischer
-Stabilität die Konditionsgrenze überschreiten. Auch Über-/Unterläufe bei
-Steifigkeitskennwerten werden abgelehnt. Die dichte Numerik benötigt quadratischen
-Speicher und kubische Faktorisierungsarbeit und ist für kleine Einzelbalkenmodelle
-vorgesehen. Der Solver liefert keinen Knick- oder sonstigen Stabilitätsnachweis.
-
-Die Feldfunktionen sind analytisch, werden aber mit `double` ausgewertet.
-Auslöschung kann insbesondere bei nominell verschwindenden Schnittgrößen
-kleine Residuen hinterlassen. Nahe mehrfache Wurzeln können hinsichtlich ihrer
-Position schlechter konditioniert sein als einfache Wurzeln; unterhalb der
-Koeffizienten-Rundungsauflösung werden sie nicht getrennt ausgewiesen.
-Extrem kleine Beiträge können unterlaufen; nicht endliche Koeffizienten oder
-Ergebniswerte werden als NumericalFailure abgelehnt. Sehr kleine Elemente
-weit vom Ursprung können zusätzlich die Darstellung innerer globaler
-Positionen begrenzen. Mathematisch gleiche, binär unterschiedliche
-Eingabepositionen werden nicht zusammengelegt.
+Nicht unterstützt sind belastete Axialmechanik, Federn, Gelenkfreigaben,
+veränderliche Steifigkeiten, nichtkonstante Streckenlasten, Lagerbewegungen,
+Schubverformung und geometrische Nichtlinearität. Historische Prototypen und
+eingefrorene FE-Vergleichsrechner liegen ausschließlich außerhalb des Produktpfads.
+Der Solver liefert keinen Knick-, Festigkeits- oder normativen Nachweis.
+Die elastische Spannungsbewertung ist getrenntes Postprocessing in
+[ENGINEERING.md](ENGINEERING.md).
