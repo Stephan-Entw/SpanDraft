@@ -45,6 +45,7 @@ internal sealed record BendingFields(ImmutableArray<MechanicalStation> Stations,
         if (x == 0) side = FieldSide.Right;
         if (x == Stations[^1].Position) side = FieldSide.Left;
         int j = SegmentOf(x);
+        int station = x == Stations[^1].Position ? Stations.Length - 1 : x == Stations[j].Position ? j : -1;
         if (x == Stations[j].Position)
         {
             if (side == FieldSide.Right)
@@ -69,8 +70,11 @@ internal sealed record BendingFields(ImmutableArray<MechanicalStation> Stations,
             field += q < 2 ? load / e : load;
             KernelFailureException.RequireFinite(field.Value);
             KernelFailureException.RequireFinite(field.Error);
-            values.Add(field.Value);
-            bounds.Add(field.Error);
+            // Both sides share the verified station kinematics, including exact restrained zeros.
+            bool stationKinematics = q < 2 && station >= 0;
+            values.Add(stationKinematics ? State[4 * station + q] : field.Value);
+            // Retain the propagated bound for open-piece certification as well as the shared state's bound.
+            bounds.Add(stationKinematics ? Math.Max(field.Error, StateBound[4 * station + q]) : field.Error);
         }
         return new(values.MoveToImmutable(), bounds.MoveToImmutable());
     }

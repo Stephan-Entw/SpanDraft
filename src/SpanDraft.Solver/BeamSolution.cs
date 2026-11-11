@@ -36,8 +36,8 @@ public sealed class BeamSolution
     public BeamExtrema Extrema { get; }
 
     /// <summary>
-    /// Evaluates the physical fields at x. At interior nodes Left/Right selects the
-    /// adjacent piece without averaging. At either beam end both sides select the
+    /// Evaluates the physical fields at x. At exact nodes w and rotation share the nodal state;
+    /// Left/Right selects the force and moment limits without averaging. At either beam end both sides select the
     /// existing inward limit. Positions and node comparisons use exact SI values.
     /// </summary>
     public BeamSectionResult EvaluateAt(Length position, EvaluationSide side)

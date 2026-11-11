@@ -116,6 +116,20 @@ public sealed class SolverBendingOutputExtremaTests
         Check(result, new(input, Q(-1, 3), Q(1, 2), [(1, W, Q(2)), (1, Theta, Q(0))]));
     }
 
+    [Theory]
+    [InlineData(-0.7, -1.3)]
+    [InlineData(0.7, 1.3)]
+    public void RestrainedWExtremumUsesSharedZeroAndLeftSideOfTheStationTie(double first, double last)
+    {
+        var input = Model(restraints: [new(0.75, U | W | Theta)], forces: [new(0, first), new(2, last)]);
+        BendingResult result = SolverKernel.Solve(input);
+        BendingExtremum extreme = first < 0 ? result.Extrema.W.Maximum : result.Extrema.W.Minimum;
+        Assert.Equal(0.75, extreme.Position);
+        Assert.Equal(FieldSide.Left, extreme.Side);
+        Assert.Equal(0L, BitConverter.DoubleToInt64Bits(extreme.Output.Value));
+        Check(result, FromCompatibility(input));
+    }
+
     [Fact]
     public void ConstantFieldsAndLoadJumpRetainCurrentSignedSelection()
     {

@@ -23,7 +23,7 @@ public sealed class SolverProductChainTests
     private const double X1 = 0.10054, X2 = 0.100540006; // The 6 nm regression pair.
 
     public static TheoryData<string> Models => new(
-        "cantilever", "simple", "udl", "moment", "indeterminate", "load-on-support", "coincident-fixed",
+        "cantilever", "simple", "udl", "moment", "indeterminate", "multiple-inner-supports", "load-on-support", "coincident-fixed",
         "coincident-pinned", "six-nanometer-loads", "six-nanometer-support", "unloaded", "bending-axis", "self-weight");
 
     [Theory]
@@ -83,12 +83,17 @@ public sealed class SolverProductChainTests
             {
                 Assert.InRange(Math.Abs(right.ShearForce.Newtons - left.ShearForce.Newtons - force), 0, 1e-9 * forceScale);
                 Assert.InRange(Math.Abs(right.BendingMoment.NewtonMeters - left.BendingMoment.NewtonMeters + couple), 0, 1e-9 * momentScale);
-                // w and θ are continuous; each side is evaluated from its own piece.
-                DisplacementClose(left.TransverseDisplacement.Meters, right.TransverseDisplacement);
-                RotationClose(left.RotationRadians, right.RotationRadians);
             }
-            Assert.Equal(node.TransverseDisplacement, right.TransverseDisplacement);
-            Assert.Equal(0, right.AxialForce.Newtons);
+            foreach (BeamSectionResult section in new[] { left, right })
+            {
+                Assert.Equal(BitConverter.DoubleToInt64Bits(node.TransverseDisplacement.Meters),
+                    BitConverter.DoubleToInt64Bits(section.TransverseDisplacement.Meters));
+                Assert.Equal(BitConverter.DoubleToInt64Bits(node.RotationRadians),
+                    BitConverter.DoubleToInt64Bits(section.RotationRadians));
+                if (node.ReactionY.HasValue) Assert.Equal(0L, BitConverter.DoubleToInt64Bits(section.TransverseDisplacement.Meters));
+                Assert.Equal(0, section.AxialDisplacement.Meters);
+                Assert.Equal(0, section.AxialForce.Newtons);
+            }
         }
 
         // Extrema are attained by the fields, and Engineering takes its maxima from them.
@@ -229,6 +234,9 @@ public sealed class SolverProductChainTests
         "moment" => From(Beam(loads: [Couple(0.75, 400)])),
         "indeterminate" => From(Beam([SupportAt(0, SupportType.Fixed), SupportAt(1, SupportType.Roller),
             SupportAt(L, SupportType.Roller)], [Point(0.75, -500), Uniform(0, L, -300)])),
+        "multiple-inner-supports" => From(Beam([SupportAt(0, SupportType.Pinned), SupportAt(.5, SupportType.Roller),
+            SupportAt(1.25, SupportType.Roller), SupportAt(L, SupportType.Roller)],
+            [Point(.5, -1000), Couple(.5, 100), Point(1, -300), Uniform(.25, 1.5, -200)])),
         "load-on-support" => From(Beam([SupportAt(0, SupportType.Pinned), SupportAt(1, SupportType.Roller),
             SupportAt(L, SupportType.Roller)], [Point(1, -1000), Couple(1, 100), Point(1.5, -200)])),
         "coincident-fixed" => From(Beam([SupportAt(0, SupportType.Fixed), SupportAt(0, SupportType.Pinned),

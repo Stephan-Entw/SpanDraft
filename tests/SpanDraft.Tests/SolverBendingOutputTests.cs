@@ -22,6 +22,32 @@ public sealed class SolverBendingOutputTests
     public void StagesEAndFEncloseFixedIndependentExactMechanicsThroughoutEveryPiece(string name)
         => CheckExactOutputs(Case(name));
 
+    [Theory]
+    [MemberData(nameof(Cases))]
+    public void EveryEventHasBitIdenticalKinematicsFromTheSharedStationState(string name)
+    {
+        BendingResult result = SolverKernel.Solve(Case(name).Input);
+        foreach (BendingStation station in result.Stations)
+        {
+            NormalizedBendingField left = result.Fields.EvaluateNormalized(station.Position, FieldSide.Left);
+            NormalizedBendingField right = result.Fields.EvaluateNormalized(station.Position, FieldSide.Right);
+            int mechanical = Enumerable.Range(0, result.Fields.Stations.Length)
+                .FirstOrDefault(i => result.Fields.Stations[i].Position == station.Position, -1);
+            for (int q = 0; q < 2; q++)
+            {
+                Assert.Equal(BitConverter.DoubleToInt64Bits(left.Values[q]), BitConverter.DoubleToInt64Bits(right.Values[q]));
+                double si = result.EvaluateAt(station.Position, FieldSide.Right).Bending[q].Value;
+                Assert.Equal(BitConverter.DoubleToInt64Bits(si),
+                    BitConverter.DoubleToInt64Bits(result.EvaluateAt(station.Position, FieldSide.Left).Bending[q].Value));
+                foreach (BendingField stored in new[] { station.Left, station.Right }.OfType<BendingField>())
+                    Assert.Equal(BitConverter.DoubleToInt64Bits(si), BitConverter.DoubleToInt64Bits(stored.Bending[q].Value));
+                if (mechanical < 0) continue;
+                double state = result.Fields.State[4 * mechanical + q];
+                Assert.Equal(BitConverter.DoubleToInt64Bits(state), BitConverter.DoubleToInt64Bits(left.Values[q]));
+            }
+        }
+    }
+
     internal static void CheckExactOutputs(SolverOutputOracle oracle)
     {
         BendingResult result = SolverKernel.Solve(oracle.Input);

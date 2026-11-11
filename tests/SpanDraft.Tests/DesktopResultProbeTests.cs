@@ -153,7 +153,6 @@ public sealed class DesktopResultProbeTests
     [Fact]
     public void InteriorSupportShowsContinuousKinematicsOnceAndBothShearLimits()
     {
-        // Each side of a support is evaluated from its own piece; w and θ must not split on that roundoff.
         var document = ProbeTestProjects.Document().WithSupports([
             new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Pinned, "A"),
             new(Guid.NewGuid(), Length.FromMeters(.5), SupportType.Roller, "B"),
@@ -161,8 +160,18 @@ public sealed class DesktopResultProbeTests
         var editor = new EditorViewModel(document, () => { }, resultPresentation: new(significantDigits: 10));
         editor.ToggleResultProbeTool();
         editor.HoverResultProbe(Length.FromMeters(.5), atStation: true);
+        var solution = editor.Presentation.Result!.Solution;
+        var node = solution.Nodes.Single(n => n.Position.Meters == .5);
+        foreach (EvaluationSide side in Enum.GetValues<EvaluationSide>())
+        {
+            var field = solution.EvaluateAt(node.Position, side);
+            Assert.Equal(BitConverter.DoubleToInt64Bits(node.TransverseDisplacement.Meters),
+                BitConverter.DoubleToInt64Bits(field.TransverseDisplacement.Meters));
+            Assert.Equal(BitConverter.DoubleToInt64Bits(node.RotationRadians), BitConverter.DoubleToInt64Bits(field.RotationRadians));
+        }
         Assert.Equal(new[] { "x", "w", "θ", "V−", "V+", "M" }, editor.ResultProbeRows.Select(r => r.Label));
         Assert.Equal(QuantityFormatter.Format(0, QuantityKind.TransverseDisplacement, editor.ResultPresentation), editor.ResultProbeRows[1].Value);
+        Assert.Equal(QuantityFormatter.Format(node.RotationRadians, QuantityKind.Rotation, editor.ResultPresentation), editor.ResultProbeRows[2].Value);
     }
 
     [Theory]
