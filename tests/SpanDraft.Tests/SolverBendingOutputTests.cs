@@ -242,4 +242,33 @@ public sealed class SolverBendingOutputTests
     private static BendingResult EventResult(bool unloaded) => SolverKernel.Solve(Model(
         restraints: [new(0, U | W | Theta), new(1.75, U)], forces: [new(0.5, unloaded ? 0 : -2)],
         moments: [new(0.75, unloaded ? 0 : 3)], lines: [new(1, 1.5, unloaded ? 0 : 4)]));
+
+    [Fact]
+    public void ExactEventSearchFindsManyNonmechanicalEventsAndDistinguishesAdjacentDoubles()
+    {
+        var input = Model(forces: Enumerable.Range(1, 2047).Select(i => new TransversePointForce(i / 1024d, 0))
+            .Append(new(Math.BitIncrement(1), 0)).ToArray());
+        BendingFields fields = BendingFields.From(SolverKernel.SolveSystem(SolverKernel.BuildSystem(input)));
+        Assert.Equal(2, fields.Stations.Length);
+        Assert.Equal(2050, fields.EventPositions.Length);
+        foreach (double x in fields.EventPositions)
+        {
+            Assert.True(fields.IsEventPosition(x));
+            Assert.Throws<ArgumentException>(() => fields.EvaluateNormalized(x, FieldSide.Interior));
+        }
+        for (int i = 1; i < fields.EventPositions.Length; i++)
+        {
+            double left = fields.EventPositions[i - 1], right = fields.EventPositions[i];
+            double middle = left + (right - left) / 2;
+            if (!(middle > left && middle < right)) continue;
+            Assert.False(fields.IsEventPosition(middle));
+            Assert.Equal(new[] { 0d, 0, 0, 0 }, fields.EvaluateNormalized(middle, FieldSide.Interior).Values);
+        }
+        Assert.True(fields.IsEventPosition(-0d));
+        Assert.True(fields.IsEventPosition(1));
+        Assert.True(fields.IsEventPosition(Math.BitIncrement(1)));
+        foreach (double x in new[] { Math.BitDecrement(0), double.Epsilon, Math.BitDecrement(1),
+            Math.BitIncrement(Math.BitIncrement(1)), Math.BitDecrement(2), Math.BitIncrement(2) })
+            Assert.False(fields.IsEventPosition(x));
+    }
 }

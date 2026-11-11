@@ -23,6 +23,8 @@ internal sealed record BendingFields(ImmutableArray<MechanicalStation> Stations,
         state.System.Loads, state.FullState, state.FullStateBound, state.System.EL,
         state.System.StateExponents, state.System.NormalizedEI, state.IsUnloaded);
 
+    internal bool IsEventPosition(double x) => EventPositions.BinarySearch(x) >= 0;
+
     internal int SegmentOf(double x)
     {
         int low = 0, high = Stations.Length - 1;
@@ -107,7 +109,7 @@ internal sealed record BendingFields(ImmutableArray<MechanicalStation> Stations,
             throw new ArgumentOutOfRangeException(nameof(x));
         if (!Enum.IsDefined(side))
             throw new ArgumentOutOfRangeException(nameof(side));
-        if (side == FieldSide.Interior && EventPositions.Contains(x))
+        if (side == FieldSide.Interior && IsEventPosition(x))
             throw new ArgumentException("Interior requires a position inside an open event piece.", nameof(side));
     }
 }
