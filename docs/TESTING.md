@@ -145,6 +145,11 @@ Independent validation must remain isolated from the production implementation e
 
 Reference datasets, tools and external solver versions must be reproducibly pinned or versioned where applicable.
 
+The former finite-element solver and the solver-rework prototype are frozen comparison
+solvers in `tests/SpanDraft.Tests/SolverReference`. They are test-only, are not developed
+further and must not be referenced from `src`. Tests may compare the product solver with
+them, but must not derive expected values for the product from the product solver itself.
+
 ## 7. Numerical tolerances
 
 Numerical tolerances are part of the test contract.

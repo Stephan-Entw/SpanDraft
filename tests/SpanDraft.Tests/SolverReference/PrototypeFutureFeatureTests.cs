@@ -2,6 +2,8 @@ using SpanDraft.Core.Beams;
 using SpanDraft.Core.Supports;
 using SpanDraft.Solver;
 using Xunit;
+using SpanDraft.Tests.SolverReference;
+using static SpanDraft.Tests.SolverReference.ReferenceTestSupport;
 using static SpanDraft.Tests.SolverTestSupport;
 
 namespace SpanDraft.Tests;
@@ -11,13 +13,14 @@ namespace SpanDraft.Tests;
 /// linearly varying loads and imposed curvature. Expected values follow from statics and
 /// closed-form beam formulas unless a comment names another source.
 /// </summary>
-public class SolverFutureFeatureTests
+public class PrototypeFutureFeatureTests
 {
-    private static BeamSolution SolveWith(BeamModel beam, ElasticSupport[]? springs = null, double[]? hinges = null,
+    private static ReferenceBeamSolution Solve(BeamModel beam) => ReferenceBeamSolver.Prototype(beam);
+    private static ReferenceBeamSolution SolveWith(BeamModel beam, ElasticSupport[]? springs = null, double[]? hinges = null,
         PointAction[]? rigidity = null, LinearAction[]? linear = null, UniformAction[]? curvature = null) =>
-        new EulerBernoulliBeamSolver().Solve(beam, new SolverLoads([], [], [], [], [], hinges ?? [], springs ?? [],
+        ReferenceBeamSolver.Prototype(beam, new SolverLoads([], [], [], [], [], hinges ?? [], springs ?? [],
             rigidity, linear, curvature));
-    private static BeamSectionResult Right(BeamSolution s, double x) => s.EvaluateAt(M(x), EvaluationSide.Right);
+    private static BeamSectionResult Right(ReferenceBeamSolution s, double x) => s.EvaluateAt(M(x), EvaluationSide.Right);
     private static void Relative(double expected, double actual, double tolerance = 1e-12) =>
         Assert.True(Math.Abs(actual - expected) <= tolerance * Math.Abs(expected), $"Expected {expected:R}, got {actual:R}.");
 
@@ -26,7 +29,7 @@ public class SolverFutureFeatureTests
     {
         double flexibility = L * L * L / (48 * EI), k = 3 / flexibility, load = -1000;
         BeamModel beam = Beam([SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller)], [Point(L / 2, load)]);
-        BeamSolution solution = SolveWith(beam, [new ElasticSupport(L / 2, k)]);
+        ReferenceBeamSolution solution = SolveWith(beam, [new ElasticSupport(L / 2, k)]);
         double w = load * flexibility / (1 + k * flexibility);
         Relative(w, At(solution, L / 2).TransverseDisplacement.Meters);
         Relative(-k * w, At(solution, L / 2).ReactionY!.Value.Newtons);
@@ -38,7 +41,7 @@ public class SolverFutureFeatureTests
     {
         double kTheta = 4e5, load = -1000;
         BeamModel beam = Beam([], [Point(L, load)]);
-        BeamSolution solution = SolveWith(beam, [new ElasticSupport(0, double.PositiveInfinity, kTheta, AxialRestraint: true)]);
+        ReferenceBeamSolution solution = SolveWith(beam, [new ElasticSupport(0, double.PositiveInfinity, kTheta, AxialRestraint: true)]);
         Relative(-load * L, At(solution, 0).ReactionMoment!.Value.NewtonMeters);
         Relative(load * L / kTheta, At(solution, 0).RotationRadians);
         Relative(load * L * L / kTheta + load * L * L * L / (3 * EI), At(solution, L).TransverseDisplacement.Meters);
@@ -49,7 +52,7 @@ public class SolverFutureFeatureTests
     {
         double outer = 5 * EI, load = -1000, b = L / 2;
         BeamModel beam = Cantilever(Point(L, load));
-        BeamSolution solution = SolveWith(beam, rigidity: [new PointAction(L / 2, outer)]);
+        ReferenceBeamSolution solution = SolveWith(beam, rigidity: [new PointAction(L / 2, outer)]);
         // w(L) = P * ∫ (L-x)²/EI(x) dx.
         Relative(load * ((L * L * L - b * b * b) / (3 * EI) + b * b * b / (3 * outer)), At(solution, L).TransverseDisplacement.Meters);
         Relative(-load * L, At(solution, 0).ReactionMoment!.Value.NewtonMeters);
@@ -60,8 +63,8 @@ public class SolverFutureFeatureTests
     {
         BeamModel beam = Beam([SupportAt(0, SupportType.Pinned), SupportAt(1, SupportType.Fixed), SupportAt(L, SupportType.Roller)],
             [Point(.5, -1000), Point(1.5, -1000)]);
-        BeamSolution uniform = Solve(beam);
-        BeamSolution changed = SolveWith(beam, rigidity: [new PointAction(1, 2 * EI)]);
+        ReferenceBeamSolution uniform = Solve(beam);
+        ReferenceBeamSolution changed = SolveWith(beam, rigidity: [new PointAction(1, 2 * EI)]);
         // Each span is clamped at x = 1, so EI does not change any force.
         Relative(uniform.Nodes.Single(n => n.Position.Meters == 1).ReactionMoment!.Value.NewtonMeters,
             At(changed, 1).ReactionMoment!.Value.NewtonMeters);
@@ -73,7 +76,7 @@ public class SolverFutureFeatureTests
     {
         double q0 = -3000;
         BeamModel beam = Beam([SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller)]);
-        BeamSolution solution = SolveWith(beam, linear: [new LinearAction(0, L, 0, q0)]);
+        ReferenceBeamSolution solution = SolveWith(beam, linear: [new LinearAction(0, L, 0, q0)]);
         Relative(-q0 * L * L / (9 * Math.Sqrt(3)), solution.Extrema.MaximumBendingMoment.Value.NewtonMeters, 1e-13);
         Relative(L / Math.Sqrt(3), solution.Extrema.MaximumBendingMoment.Position.Meters, 1e-9);
         Relative(-q0 * L / 6, At(solution, 0).ReactionY!.Value.Newtons);
@@ -84,7 +87,7 @@ public class SolverFutureFeatureTests
     {
         double q0 = 3000;
         BeamModel beam = Beam([SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller)]);
-        BeamSolution solution = SolveWith(beam, linear: [new LinearAction(0, L, q0, -q0)]);
+        ReferenceBeamSolution solution = SolveWith(beam, linear: [new LinearAction(0, L, q0, -q0)]);
         Relative(q0 * L / 12, solution.Extrema.MaximumShearForce.Value.Newtons);
         Relative(L / 2, solution.Extrema.MaximumShearForce.Position.Meters, 1e-12);
     }
@@ -96,7 +99,7 @@ public class SolverFutureFeatureTests
         // The load length is the stored difference, not 6e-9: 1 + 6e-9 is not representable exactly.
         double a = end - 1;
         BeamModel beam = Beam([SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller)]);
-        BeamSolution solution = SolveWith(beam, linear: [new LinearAction(1, end, 0, peak)]);
+        ReferenceBeamSolution solution = SolveWith(beam, linear: [new LinearAction(1, end, 0, peak)]);
         double resultant = peak * a / 2, centroid = 1 + 2 * a / 3;
         Relative(-resultant * (L - centroid) / L, At(solution, 0).ReactionY!.Value.Newtons);
         Relative(-resultant * centroid / L, At(solution, L).ReactionY!.Value.Newtons);
@@ -106,12 +109,12 @@ public class SolverFutureFeatureTests
     public void ImposedCurvatureIsFreeOnASimpleSpanAndRestrainedBetweenClamps()
     {
         double kappa = 1e-3;
-        BeamSolution free = SolveWith(Beam([SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller)]),
+        ReferenceBeamSolution free = SolveWith(Beam([SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller)]),
             curvature: [new UniformAction(0, L, kappa)]);
         Relative(-kappa * L * L / 8, Right(free, L / 2).TransverseDisplacement.Meters);
         Close(0, Right(free, L / 2).BendingMoment.NewtonMeters, 1e-9);
 
-        BeamSolution held = SolveWith(Beam([SupportAt(0, SupportType.Fixed), SupportAt(L, SupportType.Fixed)]),
+        ReferenceBeamSolution held = SolveWith(Beam([SupportAt(0, SupportType.Fixed), SupportAt(L, SupportType.Fixed)]),
             curvature: [new UniformAction(0, L, kappa)]);
         Relative(-EI * kappa, Right(held, L / 2).BendingMoment.NewtonMeters);
         Close(0, Right(held, L / 2).TransverseDisplacement.Meters, 1e-18);
@@ -123,7 +126,7 @@ public class SolverFutureFeatureTests
         // Expected values from the exact rational force-method reference used for the spring study.
         double k = 4.480000000000001e16;
         BeamModel beam = Beam([SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller)], [Point(.6, -1000)]);
-        BeamSolution solution = SolveWith(beam, [new ElasticSupport(1, k), new ElasticSupport(1 + 6e-9, k)]);
+        ReferenceBeamSolution solution = SolveWith(beam, [new ElasticSupport(1, k), new ElasticSupport(1 + 6e-9, k)]);
         Relative(12395.99564491011, At(solution, 1).ReactionY!.Value.Newtons, 1e-10);
         Relative(-11603.995645505118, At(solution, 1 + 6e-9).ReactionY!.Value.Newtons, 1e-10);
         Relative(303.999965485517, At(solution, 0).ReactionY!.Value.Newtons);
@@ -135,7 +138,7 @@ public class SolverFutureFeatureTests
     public void SpringsAloneCarryABeamWhenOneRestrainsAxialMotion()
     {
         BeamModel beam = Beam([], [Point(L / 2, -1000)]);
-        BeamSolution solution = SolveWith(beam, [new ElasticSupport(0, 1e6, AxialRestraint: true), new ElasticSupport(L, 1e6)]);
+        ReferenceBeamSolution solution = SolveWith(beam, [new ElasticSupport(0, 1e6, AxialRestraint: true), new ElasticSupport(L, 1e6)]);
         Relative(-1000.0 / 2 / 1e6, At(solution, 0).TransverseDisplacement.Meters);
         Assert.Throws<BeamSolverException>(() => SolveWith(beam, [new ElasticSupport(0, 1e6), new ElasticSupport(L, 1e6)]));
     }

@@ -1,8 +1,9 @@
 using MathNet.Numerics.LinearAlgebra;
 using SpanDraft.Core.Beams;
 using SpanDraft.Core.Supports;
+using SpanDraft.Solver;
 
-namespace SpanDraft.Solver;
+namespace SpanDraft.Tests.SolverReference;
 
 /// <summary>Left-limit-free state of one segment between two stations, in local s = x - start.</summary>
 internal readonly record struct SegmentState(

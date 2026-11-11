@@ -35,16 +35,16 @@ public static class Results
         ["V"] = r.ShearForce.Newtons, ["M"] = r.BendingMoment.NewtonMeters
     };
 
-    public static ReferenceData Export(ValidationCase input, BeamSolution? solution = null, bool kernel = false)
+    public static ReferenceData Export(ValidationCase input, BeamSolution? solution = null)
     {
-        solution ??= Solve(input, kernel);
+        solution ??= Solve(input);
         var data = new ReferenceData {
             CaseId = input.CaseId, CaseVersion = input.CaseVersion, InputSha256 = Catalog.Hash(input.CaseId), Solver = "SpanDraft",
             Availability = Catalog.Quantities.ToDictionary(q => q, _ => "supported"),
             Provenance = new() { ["package"] = "SpanDraft.Solver", ["version"] = typeof(BeamSolution).Assembly.GetName().Version!.ToString(),
                 ["generatedAt"] = DateTimeOffset.UtcNow.ToString("O"), ["theory"] = "Euler-Bernoulli",
                 ["signMapping"] = "Native SI / SpanDraft", ["dotnet"] = Environment.Version.ToString(),
-                ["entryPoint"] = kernel ? "KernelBeamSolver" : "EulerBernoulliBeamSolver" }
+                ["entryPoint"] = "EulerBernoulliBeamSolver" }
         };
         data.Reactions = solution.Nodes.Where(n => n.ReactionX.HasValue || n.ReactionY.HasValue || n.ReactionMoment.HasValue)
             .Select(n => {

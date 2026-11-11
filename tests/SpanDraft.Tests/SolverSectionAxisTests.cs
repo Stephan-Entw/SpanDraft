@@ -58,26 +58,4 @@ public sealed class SolverSectionAxisTests
             }
         }
     }
-
-    [Theory]
-    [InlineData(SectionAxisDesignation.Y)]
-    [InlineData(SectionAxisDesignation.Z)]
-    public void AxialAssemblyAndFieldsUseAreaForEitherBendingAxis(SectionAxisDesignation axis)
-    {
-        var beam = AxisBeam(Manual(SectionAxisDesignation.Y, SectionAxisDesignation.Z), axis);
-        var model = SolverModel.Create(beam);
-        var dofs = new DofMap(beam, model);
-        var system = BeamAssembly.Assemble(beam, model, dofs);
-        system.Loads[3] = 1000;
-        var u = ReducedSystemSolver.Solve(system, dofs);
-        BeamNodeResult[] nodes = model.Nodes.Select(n => new BeamNodeResult(n.Index, n.Position,
-            Displacement.FromMeters(u[3 * n.Index]), default, 0, null, null, null)).ToArray();
-        var solution = new BeamSolution(beam, nodes, model);
-        foreach (double x in new[] { 0, .37, 1.13, L })
-        {
-            var result = solution.EvaluateAt(M(x), EvaluationSide.Left);
-            DisplacementClose(1000 * x / (E * beam.Section.Area.SquareMeters), result.AxialDisplacement);
-            Close(1000, result.AxialForce.Newtons, 1e-7);
-        }
-    }
 }

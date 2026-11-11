@@ -99,9 +99,9 @@ public static class Physics
         return report;
     }
 
-    public static CheckReport Metamorphic(ValidationCase input, string operation, bool kernel = false)
+    public static CheckReport Metamorphic(ValidationCase input, string operation)
     {
-        var original = Solve(input, kernel);
+        var original = Solve(input);
         ValidationCase transformed;
         Func<string, double> scale;
         switch (operation)
@@ -119,14 +119,14 @@ public static class Physics
                 break;
             default: throw new ArgumentException(operation);
         }
-        var solved = Solve(transformed, kernel);
+        var solved = Solve(transformed);
         var report = CompareSolutions(input, solved, [(original,1.0)], scale, operation);
         if (operation == "zeroNode") report.Require(solved.Nodes.Count == original.Nodes.Count+1, "Null force did not create an extra node");
         return report;
     }
 
     public static readonly string[] SuperpositionIds = ["V04", "V08", "V09", "V11", "V13", "V15"];
-    public static CheckReport Superposition(ValidationCase input, bool kernel = false)
+    public static CheckReport Superposition(ValidationCase input)
     {
         ValidationCase a, b;
         if (input.CaseId == "V13")
@@ -151,7 +151,7 @@ public static class Physics
         }
         var combined = input with { PointForces = [..a.PointForces,..b.PointForces],
             PointMoments = [..a.PointMoments,..b.PointMoments], Udls = [..a.Udls,..b.Udls] };
-        return CompareSolutions(input, Solve(combined,kernel), [(Solve(a,kernel),1.0),(Solve(b,kernel),1.0)], _ => 1, "superposition");
+        return CompareSolutions(input, Solve(combined), [(Solve(a),1.0),(Solve(b),1.0)], _ => 1, "superposition");
     }
 
     private static CheckReport CompareSolutions(ValidationCase input, BeamSolution actual,

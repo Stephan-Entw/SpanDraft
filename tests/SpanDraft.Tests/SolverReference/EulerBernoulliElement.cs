@@ -1,6 +1,7 @@
 using MathNet.Numerics.LinearAlgebra;
+using SpanDraft.Solver;
 
-namespace SpanDraft.Solver;
+namespace SpanDraft.Tests.SolverReference;
 
 internal static class EulerBernoulliElement
 {

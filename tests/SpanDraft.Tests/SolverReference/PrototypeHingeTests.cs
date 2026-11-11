@@ -2,22 +2,24 @@ using SpanDraft.Core.Beams;
 using SpanDraft.Core.Supports;
 using SpanDraft.Solver;
 using Xunit;
+using SpanDraft.Tests.SolverReference;
+using static SpanDraft.Tests.SolverReference.ReferenceTestSupport;
 using static SpanDraft.Tests.SolverTestSupport;
 
 namespace SpanDraft.Tests;
 
-public class SolverHingeTests
+public class PrototypeHingeTests
 {
-    private static BeamSolution SolveWith(BeamModel beam, params double[] hinges) =>
-        new EulerBernoulliBeamSolver().Solve(beam, new SolverLoads([], [], [], [], [], hinges));
-    private static BeamSectionResult Right(BeamSolution s, double x) => s.EvaluateAt(M(x), EvaluationSide.Right);
-    private static BeamSectionResult Left(BeamSolution s, double x) => s.EvaluateAt(M(x), EvaluationSide.Left);
+    private static ReferenceBeamSolution SolveWith(BeamModel beam, params double[] hinges) =>
+        ReferenceBeamSolver.Prototype(beam, new SolverLoads([], [], [], [], [], hinges));
+    private static BeamSectionResult Right(ReferenceBeamSolution s, double x) => s.EvaluateAt(M(x), EvaluationSide.Right);
+    private static BeamSectionResult Left(ReferenceBeamSolution s, double x) => s.EvaluateAt(M(x), EvaluationSide.Left);
 
     [Fact]
     public void ClampHingeRollerFollowsStatics()
     {
         BeamModel beam = Beam([SupportAt(0, SupportType.Fixed), SupportAt(L, SupportType.Roller)], [Point(1.5, -1000)]);
-        BeamSolution solution = SolveWith(beam, 1);
+        ReferenceBeamSolution solution = SolveWith(beam, 1);
         ForceClose(500, At(solution, L).ReactionY);
         ForceClose(500, At(solution, 0).ReactionY);
         MomentClose(500, At(solution, 0).ReactionMoment);
@@ -34,7 +36,7 @@ public class SolverHingeTests
     public void DropInSpanBetweenTwoClampsIsStaticallyDeterminate()
     {
         BeamModel beam = Beam([SupportAt(0, SupportType.Fixed), SupportAt(L, SupportType.Fixed)], [Point(1, -1000)]);
-        BeamSolution solution = SolveWith(beam, .5, 1.5);
+        ReferenceBeamSolution solution = SolveWith(beam, .5, 1.5);
         ForceClose(500, At(solution, 0).ReactionY);
         ForceClose(500, At(solution, L).ReactionY);
         MomentClose(250, At(solution, 0).ReactionMoment);
@@ -47,7 +49,7 @@ public class SolverHingeTests
     {
         BeamModel beam = Beam([SupportAt(0, SupportType.Pinned), SupportAt(1, SupportType.Roller), SupportAt(L, SupportType.Roller)],
             [Point(.5, -1000), Point(1.5, -400)]);
-        BeamSolution solution = SolveWith(beam, 1);
+        ReferenceBeamSolution solution = SolveWith(beam, 1);
         ForceClose(500, At(solution, 0).ReactionY);
         ForceClose(700, At(solution, 1).ReactionY);
         ForceClose(200, At(solution, L).ReactionY);
@@ -64,7 +66,7 @@ public class SolverHingeTests
     {
         BeamModel beam = Beam([SupportAt(0, SupportType.Pinned), SupportAt(1, SupportType.Roller), SupportAt(L, SupportType.Roller)],
             [Point(1.5, -1000)]);
-        BeamSolution solution = SolveWith(beam, 1 + gap);
+        ReferenceBeamSolution solution = SolveWith(beam, 1 + gap);
         double end = 1000 * (.5 - gap) / (1 - gap);
         double shear = 1000 - end; // Carried by the hinge into the short overhang.
         ForceClose(end, At(solution, L).ReactionY);
@@ -76,7 +78,7 @@ public class SolverHingeTests
     public void LoadSixNanometersBesideAHingeStaysExact()
     {
         BeamModel beam = Beam([SupportAt(0, SupportType.Fixed), SupportAt(L, SupportType.Roller)], [Point(1 + 6e-9, -1000)]);
-        BeamSolution solution = SolveWith(beam, 1);
+        ReferenceBeamSolution solution = SolveWith(beam, 1);
         ForceClose(1000 * (1 + 6e-9 - 1) / 1, At(solution, L).ReactionY);
         Close(0, Right(solution, 1).BendingMoment.NewtonMeters, 1e-9);
     }
@@ -117,7 +119,7 @@ public class SolverHingeTests
     public void AxialForcePassesThroughAHinge()
     {
         BeamModel beam = Beam([SupportAt(0, SupportType.Fixed), SupportAt(L, SupportType.Roller)]);
-        BeamSolution solution = new EulerBernoulliBeamSolver().Solve(beam,
+        ReferenceBeamSolution solution = ReferenceBeamSolver.Prototype(beam,
             new SolverLoads([], [], [], [new PointAction(1.5, 1000)], [], [1.0]));
         Close(1000, Right(solution, 1).AxialForce.Newtons, 1e-9);
         Close(1000, Left(solution, 1).AxialForce.Newtons, 1e-9);
@@ -128,6 +130,6 @@ public class SolverHingeTests
     public void WithoutHingesTheResultIsUnchanged()
     {
         BeamModel beam = Beam([SupportAt(0, SupportType.Fixed), SupportAt(1, SupportType.Roller)], [Point(1.5, -1000), Uniform(0, 2, -100)]);
-        SameResults(Solve(beam), SolveWith(beam));
+        SameNodes(Solve(beam).Nodes, SolveWith(beam).Nodes);
     }
 }

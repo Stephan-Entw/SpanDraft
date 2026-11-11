@@ -37,11 +37,13 @@ public sealed class ProjectOverviewState
                 weight.Intensity.NewtonsPerMeter, weight.StartPosition, weight.EndPosition) } : [])
             .Concat(document.DistributedLoads.Select(l => Distributed(l.Id, l.Name, "q", l.Intensity.NewtonsPerMeter,
                 l.StartPosition, l.EndPosition))).ToArray());
+        // The solver reports one common reaction per station and restrained direction. Supports sharing
+        // a station therefore share one row; no individual split is invented for them.
         Reactions = Array.AsReadOnly(analysis.Result is { } result
-            ? document.Supports.Select(s =>
+            ? document.Supports.GroupBy(s => s.Position).Select(station =>
             {
-                var node = result.Solution.Nodes.Single(n => n.Position == s.Position);
-                return new ProjectOverviewReaction(s.Id, s.Name,
+                var node = result.Solution.Nodes.Single(n => n.Position == station.Key);
+                return new ProjectOverviewReaction(station.First().Id, string.Join(" + ", station.Select(s => s.Name)),
                     node.ReactionX is { } rx ? Reaction(rx.Newtons, QuantityKind.AxialForce) : "",
                     node.ReactionY is { } ry ? Reaction(ry.Newtons, QuantityKind.TransverseForce) : "",
                     node.ReactionMoment is { } moment ? Reaction(moment.NewtonMeters, QuantityKind.Moment) : "");

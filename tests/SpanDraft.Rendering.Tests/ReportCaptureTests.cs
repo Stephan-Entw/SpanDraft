@@ -1,12 +1,14 @@
 using System.Globalization;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Sections.Parametric;
+using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Reporting;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
+using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Reporting;
 using Xunit;
 
@@ -264,6 +266,35 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
             Assert.Equal(sameDisplay ? 2 : 3, report.Data.SectionProperties.Count);
             using var bitmap = report.RenderPage(0, 96); AssertTextContained(report);
         }
+    }
+
+    [Fact]
+    public void SupportsSharingAStationReportOneCommonReactionRow()
+    {
+        // Project files and the editor keep support positions unique; only a programmatic document reaches
+        // this state. The report must still show the station's common reaction once, never once per support.
+        var state = ReportTestProjects.Create();
+        var supports = state.Document.Supports;
+        state = state with { Document = state.Document.WithSupports([
+            supports[0], new(Guid.NewGuid(), supports[0].Position, SupportType.Fixed, "Clamp"), supports[1]]) };
+        var editor = EditorViewModel.ForSession(ProjectSession.Create(state), () => { });
+        using var report = ProjectReport.Capture(editor, Now);
+        var solution = editor.Presentation.Result!.Solution;
+        var node = solution.Nodes.Single(n => n.Position == supports[0].Position);
+        Assert.Equal(3, report.Data.Tables.Single(t => t.Title == Strings.Supports).Rows.Count);
+        var reactions = report.Data.Tables.Single(t => t.Title == Strings.Reactions).Rows;
+        Assert.Equal(new[] { supports[0].Name + " + Clamp", supports[1].Name }, reactions.Select(r => r[0]));
+        string Number(double value, QuantityKind kind) => QuantityFormatter.FormatNumber(value, kind, editor.ResultPresentation);
+        Assert.Equal(new[] { Number(node.ReactionX!.Value.Newtons, QuantityKind.AxialForce),
+            Number(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce),
+            Number(node.ReactionMoment!.Value.NewtonMeters, QuantityKind.Moment) }, reactions[0].Skip(1));
+        // Summing the reported rows reproduces the applied load; nothing is counted twice.
+        double applied = state.Document.Loads.Sum(l => l.Value) + state.Document.DistributedLoads.Sum(q =>
+            q.Intensity.NewtonsPerMeter * (q.EndPosition.Meters - q.StartPosition.Meters));
+        Assert.Equal(-applied, solution.Nodes.Sum(n => n.ReactionY?.Newtons ?? 0), 6);
+        Assert.Equal(editor.Overview.Reactions.Select(r => r.Ry), reactions.Select(r => r[2]));
+        using var bitmap = report.RenderPage(0, 96); AssertTextContained(report);
+        using var pdf = new MemoryStream(); report.WritePdf(pdf); Assert.True(pdf.Length > 0);
     }
 
     [Theory]

@@ -29,6 +29,16 @@ internal static class SolverTestSupport
             supports ?? [SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller)], loads ?? []);
 
     internal static BeamModel Cantilever(params BeamLoad[] loads) => Beam([SupportAt(0, SupportType.Fixed)], loads);
+    /// <summary>
+    /// w = sign·(t⁴ - 2t³ + 1.18t² - 0.18t) with t = x/L: a simply supported beam under a uniform load
+    /// and equal end moments. θ has the roots 0.1, 0.5 and 0.9; w is -0.0081·sign at 0.1/0.9 and 0.0175·sign at 0.5.
+    /// </summary>
+    internal static BeamModel ThreeStationaryPointQuartic(double sign = 1)
+    {
+        double endMoment = sign * 2.36 * EI / (L * L);
+        return Beam(loads: [Uniform(0, L, sign * 24 * EI / Math.Pow(L, 4)), Couple(0, -endMoment), Couple(L, endMoment)]);
+    }
+
     internal static BeamSolution Solve(BeamModel beam) => new EulerBernoulliBeamSolver().Solve(beam);
     internal static BeamNodeResult At(BeamSolution solution, double x) =>
         Assert.Single(solution.Nodes, node => node.Position == M(x));
@@ -53,10 +63,12 @@ internal static class SolverTestSupport
     internal static void DisplacementClose(double expected, Displacement actual) => Close(expected, actual.Meters, 1e-12);
     internal static void RotationClose(double expected, double actual) => Close(expected, actual, 1e-12);
 
-    internal static void SameResults(BeamSolution expected, BeamSolution actual)
+    internal static void SameResults(BeamSolution expected, BeamSolution actual) => SameNodes(expected.Nodes, actual.Nodes);
+
+    internal static void SameNodes(IReadOnlyList<BeamNodeResult> expected, IReadOnlyList<BeamNodeResult> actual)
     {
-        Assert.Equal(expected.Nodes.Count, actual.Nodes.Count);
-        foreach (var pair in expected.Nodes.Zip(actual.Nodes))
+        Assert.Equal(expected.Count, actual.Count);
+        foreach (var pair in expected.Zip(actual))
         {
             Assert.Equal(pair.First.Position, pair.Second.Position);
             DisplacementClose(pair.First.AxialDisplacement.Meters, pair.Second.AxialDisplacement);

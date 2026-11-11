@@ -1,7 +1,8 @@
 using SpanDraft.Core.Beams;
 using SpanDraft.Core.Loads;
+using SpanDraft.Solver;
 
-namespace SpanDraft.Solver;
+namespace SpanDraft.Tests.SolverReference;
 
 internal readonly record struct PointAction(double X, double Value);
 internal readonly record struct UniformAction(double Start, double End, double Intensity);

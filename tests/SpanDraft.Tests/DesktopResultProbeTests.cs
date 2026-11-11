@@ -150,6 +150,21 @@ public sealed class DesktopResultProbeTests
             QuantityFormatter.Format(value, kind, options), editor.ResultProbeRows.Single(r => r.Label == label).Value);
     }
 
+    [Fact]
+    public void InteriorSupportShowsContinuousKinematicsOnceAndBothShearLimits()
+    {
+        // Each side of a support is evaluated from its own piece; w and θ must not split on that roundoff.
+        var document = ProbeTestProjects.Document().WithSupports([
+            new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Pinned, "A"),
+            new(Guid.NewGuid(), Length.FromMeters(.5), SupportType.Roller, "B"),
+            new(Guid.NewGuid(), Length.FromMeters(1), SupportType.Roller, "C")]);
+        var editor = new EditorViewModel(document, () => { }, resultPresentation: new(significantDigits: 10));
+        editor.ToggleResultProbeTool();
+        editor.HoverResultProbe(Length.FromMeters(.5), atStation: true);
+        Assert.Equal(new[] { "x", "w", "θ", "V−", "V+", "M" }, editor.ResultProbeRows.Select(r => r.Label));
+        Assert.Equal(QuantityFormatter.Format(0, QuantityKind.TransverseDisplacement, editor.ResultPresentation), editor.ResultProbeRows[1].Value);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(1)]

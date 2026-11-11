@@ -1,4 +1,3 @@
-using MathNet.Numerics.LinearAlgebra;
 using SpanDraft.Core.Beams;
 using SpanDraft.Core.Loads;
 using SpanDraft.Core.Materials;
@@ -6,7 +5,9 @@ using SpanDraft.Core.Sections;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Core.Validation;
+using SpanDraft.Analysis;
 using SpanDraft.Solver;
+using SpanDraft.Solver.Kernel;
 using Xunit;
 using static SpanDraft.Tests.SolverTestSupport;
 
@@ -118,71 +119,140 @@ public class SolverFailureTests
     public void VeryShortAdjacentElementIsSolvedWithoutMergingItsNodes()
     {
         BeamModel beam = Cantilever(Point(1, -1000), Point(1 + 1e-6, 0));
-        Assert.Equal(4, SolverModel.Create(beam).Nodes.Count);
         BeamSolution solution = Solve(beam);
         Assert.Equal(4, solution.Nodes.Count);
         ForceClose(1000, At(solution, 0).ReactionY);
         MomentClose(1000, At(solution, 0).ReactionMoment);
     }
 
-    [Fact]
-    public void ReducedSystemDetectsSingularityIndependentlyOfSupportPrecheck()
+    [Theory]
+    [InlineData(1e300, 1e100)]
+    [InlineData(1e-200, 1e-200)]
+    public void UnrepresentableBendingRigidityReturnsNumericalFailure(double modulus, double inertia)
     {
-        BeamModel beam = Beam([SupportAt(0, SupportType.Roller), SupportAt(L, SupportType.Roller)]);
-        SolverModel model = SolverModel.Create(beam);
-        var dofs = new DofMap(beam, model);
-        BeamSystem system = BeamAssembly.Assemble(beam, model, dofs);
-        BeamSolverException exception = Assert.Throws<BeamSolverException>(() => ReducedSystemSolver.Solve(system, dofs));
-        Assert.Equal(SolverErrorCode.IllConditionedSystem, exception.Code);
-    }
-
-    [Fact]
-    public void IndefiniteReducedMatrixReturnsTypedFactorizationError()
-    {
-        BeamModel beam = Cantilever();
-        var dofs = new DofMap(beam, SolverModel.Create(beam));
-        Matrix<double> matrix = Matrix<double>.Build.DenseIdentity(dofs.Count);
-        matrix[3, 4] = matrix[4, 3] = 2;
-        BeamSolverException exception = Assert.Throws<BeamSolverException>(() =>
-            ReducedSystemSolver.Solve(new BeamSystem(matrix, Vector<double>.Build.Dense(dofs.Count)), dofs));
+        BeamSolverException exception = Assert.Throws<BeamSolverException>(() => Solve(Extreme(modulus, 1, inertia)));
         Assert.Equal(SolverErrorCode.NumericalFailure, exception.Code);
-        Assert.IsType<ArgumentException>(exception.InnerException);
-    }
-
-    [Fact]
-    public void WrongSolutionFailsBackwardErrorCheck()
-    {
-        BeamSolverException exception = Assert.Throws<BeamSolverException>(() => ReducedSystemSolver.CheckBackwardError(
-            Matrix<double>.Build.DenseIdentity(2), Vector<double>.Build.Dense([0, 0]), Vector<double>.Build.Dense([1, 0])));
-        Assert.Equal(SolverErrorCode.NumericalFailure, exception.Code);
+        Assert.Equal(KernelFailureCause.NumericalRange, Assert.IsType<NumericalRangeException>(exception.InnerException).Cause);
     }
 
     [Theory]
     [InlineData(1e300, 1e100)]
     [InlineData(1e-200, 1e-200)]
-    public void UnrepresentableRigidityReturnsNumericalFailure(double modulus, double area)
+    public void AxialRigidityIsOutsideTheAxialZeroContract(double modulus, double area)
     {
-        BeamModel beam = Beam([SupportAt(0, SupportType.Fixed)], material:
-            new Material("Extreme", Pressure.FromPascals(modulus), Pressure.FromPascals(1), MaterialStrengthType.Re), section:
-            new CustomSection(Area.FromSquareMeters(area), SecondMomentOfArea.FromMetersToTheFourth(1),
-                SectionModulus.FromCubicMeters(1)));
+        // Without axial loads u and N are exact zeros; EA never enters a calculation.
+        BeamSolution solution = Solve(Extreme(modulus, area, 1, Point(L, -modulus)));
+        Assert.All(solution.Nodes, node => Assert.Equal(0, node.AxialDisplacement.Meters));
+        Assert.Equal(0, solution.EvaluateAt(M(1), EvaluationSide.Right).AxialForce.Newtons);
+        ForceClose(0, At(solution, 0).ReactionX);
+        ForceClose(modulus, At(solution, 0).ReactionY);
+    }
+
+    [Fact]
+    public void EveryKernelCauseHasExactlyOnePublicCodeAndStaysTheInnerException()
+    {
+        var expected = new Dictionary<KernelFailureCause, SolverErrorCode>
+        {
+            [KernelFailureCause.ZeroPivot] = SolverErrorCode.IllConditionedSystem,
+            [KernelFailureCause.NotVerified] = SolverErrorCode.IllConditionedSystem,
+            [KernelFailureCause.Gate] = SolverErrorCode.IllConditionedSystem,
+            [KernelFailureCause.NumericalRange] = SolverErrorCode.NumericalFailure,
+            [KernelFailureCause.NonFinite] = SolverErrorCode.NumericalFailure,
+            [KernelFailureCause.InternalInconsistency] = SolverErrorCode.NumericalFailure
+        };
+        Assert.Equal(Enum.GetValues<KernelFailureCause>().Order(), expected.Keys.Order());
+        foreach (var (cause, code) in expected)
+        {
+            var kernel = new KernelFailureException(cause, "cause");
+            BeamSolverException mapped = BeamSolverException.Rejected(cause, kernel);
+            Assert.Equal(code, mapped.Code);
+            Assert.Same(kernel, mapped.InnerException);
+            Assert.Empty(mapped.ValidationErrors);
+        }
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            BeamSolverException.Rejected((KernelFailureCause)99, new InvalidOperationException()));
+        Assert.Equal(SolverErrorCode.NumericalFailure,
+            BeamSolverException.Rejected(new NumericalRangeException("range").Cause, new InvalidOperationException()).Code);
+    }
+
+    [Fact]
+    public void FailedOutputGateIsReportedAsIllConditionedSystem()
+    {
+        // The conservative rejection of the M2 boundary family: supports 2^-28 m apart under a symmetric load.
+        BeamModel beam = Beam([SupportAt(1, SupportType.Pinned), SupportAt(1 + Math.ScaleB(1, -28), SupportType.Roller)],
+            [Uniform(0.25, 1.75, 3)]);
+        BeamSolverException exception = Assert.Throws<BeamSolverException>(() => Solve(beam));
+        Assert.Equal(SolverErrorCode.IllConditionedSystem, exception.Code);
+        Assert.Equal(KernelFailureCause.Gate, Assert.IsType<KernelFailureException>(exception.InnerException).Cause);
+        Assert.Empty(exception.ValidationErrors);
+    }
+
+    [Fact]
+    public void RangeViolationInsideTheKernelIsReportedAsNumericalFailure()
+    {
+        BeamModel beam = Tiny(SupportType.Fixed);
+        Assert.Empty(BeamModelValidator.Validate(beam));
         BeamSolverException exception = Assert.Throws<BeamSolverException>(() => Solve(beam));
         Assert.Equal(SolverErrorCode.NumericalFailure, exception.Code);
+        Assert.IsType<NumericalRangeException>(exception.InnerException);
     }
+
+    [Fact]
+    public void ValidationPrecedesMechanismAndMechanismPrecedesEveryRangeRule()
+    {
+        // Unrepresentable EI, a mechanism and a validation error at once: the validation error wins.
+        BeamModel invalid = Extreme(1e300, 1, 1e100, supports: [SupportAt(1, SupportType.Roller), SupportAt(1, SupportType.Roller)]);
+        BeamSolverException exception = Assert.Throws<BeamSolverException>(() => Solve(invalid));
+        Assert.Equal(SolverErrorCode.InvalidModel, exception.Code);
+        Assert.Equal(ValidationErrorCode.DuplicateSupport, Assert.Single(exception.ValidationErrors).Code);
+        Assert.Null(exception.InnerException);
+
+        // The same unrepresentable EI with a mechanism is unstable, for the adapter's and the kernel's range rules.
+        foreach (BeamModel unstable in new[]
+        {
+            Extreme(1e300, 1, 1e100, supports: [SupportAt(1, SupportType.Pinned)]),
+            Tiny(SupportType.Pinned)
+        })
+        {
+            exception = Assert.Throws<BeamSolverException>(() => Solve(unstable));
+            Assert.Equal(SolverErrorCode.UnstableModel, exception.Code);
+            Assert.False(Assert.IsType<MechanicalMechanismException>(exception.InnerException).Stability.IsStable);
+        }
+    }
+
+    [Fact]
+    public void AnalysisReturnsEveryExpectedSolverRejectionAsAFailure()
+    {
+        foreach (var (beam, code) in new[]
+        {
+            (Beam(supports: []), BeamAnalysisFailureCode.InvalidModel),
+            (Beam([SupportAt(1, SupportType.Pinned)]), BeamAnalysisFailureCode.UnstableModel),
+            (Beam([SupportAt(1, SupportType.Pinned), SupportAt(1 + Math.ScaleB(1, -28), SupportType.Roller)],
+                [Uniform(0.25, 1.75, 3)]), BeamAnalysisFailureCode.IllConditionedSystem),
+            (Extreme(1e300, 1, 1e100), BeamAnalysisFailureCode.NumericalFailure)
+        })
+        {
+            BeamAnalysisOutcome outcome = BeamAnalysis.Analyze(beam);
+            Assert.Null(outcome.Result);
+            Assert.Equal(code, outcome.Failure!.Code);
+        }
+    }
+
+    private static BeamModel Tiny(SupportType type) => new(M(1e-300), Beam().Material,
+        new RectangleSection(Length.FromMillimeters(40), Length.FromMillimeters(80)), [new Support(M(0), type)], []);
+
+    private static BeamModel Extreme(double modulus, double area, double inertia, BeamLoad? load = null,
+        IEnumerable<Support>? supports = null) =>
+        Beam(supports ?? [SupportAt(0, SupportType.Fixed)], load is null ? [] : [load], material:
+            new Material("Extreme", Pressure.FromPascals(modulus), Pressure.FromPascals(1), MaterialStrengthType.Re), section:
+            new CustomSection(Area.FromSquareMeters(area), SecondMomentOfArea.FromMetersToTheFourth(inertia),
+                SectionModulus.FromCubicMeters(1)));
 
     [Fact]
     public void OverflowingCoincidentLoadsReturnNumericalFailure()
     {
         BeamSolverException exception = Assert.Throws<BeamSolverException>(() =>
             Solve(Cantilever(Point(L, double.MaxValue), Point(L, double.MaxValue))));
-        Assert.Equal(SolverErrorCode.NumericalFailure, exception.Code);
-    }
-
-    [Fact]
-    public void OverflowingEquivalentMomentReturnsNumericalFailure()
-    {
-        BeamSolverException exception = Assert.Throws<BeamSolverException>(() =>
-            EulerBernoulliElement.UniformLoad(double.MaxValue / 100, 100));
         Assert.Equal(SolverErrorCode.NumericalFailure, exception.Code);
     }
 
@@ -214,5 +284,6 @@ public class SolverFailureTests
         BeamSolverException exception = Assert.Throws<BeamSolverException>(() => Solve(beam));
         Assert.Equal(SolverErrorCode.UnstableModel, exception.Code);
         Assert.Empty(exception.ValidationErrors);
+        Assert.IsType<MechanicalMechanismException>(exception.InnerException);
     }
 }

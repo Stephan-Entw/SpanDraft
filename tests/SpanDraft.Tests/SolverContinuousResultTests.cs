@@ -1,4 +1,3 @@
-using MathNet.Numerics.LinearAlgebra;
 using SpanDraft.Core.Beams;
 using SpanDraft.Core.Loads;
 using SpanDraft.Core.Supports;
@@ -277,27 +276,6 @@ public class SolverContinuousResultTests
             Section(solution, Math.BitDecrement(1)).ShearForce.Newtons, 1e-7);
         Close(Section(solution, 1).ShearForce.Newtons,
             Section(solution, Math.BitIncrement(1), EvaluationSide.Left).ShearForce.Newtons, 1e-7);
-    }
-
-    [Theory]
-    [InlineData(-1000)]
-    [InlineData(1000)]
-    public void AxialResultUsesExistingReducedSystemAndLinearDisplacement(double force)
-    {
-        BeamModel beam = Cantilever();
-        SolverModel model = SolverModel.Create(beam);
-        var dofs = new DofMap(beam, model);
-        BeamSystem system = BeamAssembly.Assemble(beam, model, dofs);
-        system.Loads[3] = force;
-        Vector<double> u = ReducedSystemSolver.Solve(system, dofs);
-        BeamNodeResult[] nodes = model.Nodes.Select(n => new BeamNodeResult(n.Index, n.Position,
-            Displacement.FromMeters(u[3 * n.Index]), default, 0, null, null, null)).ToArray();
-        var solution = new BeamSolution(beam, nodes, model);
-        foreach (double x in new[] { 0, 0.25, 1, 1.75, L })
-        {
-            DisplacementClose(force * x / (E * beam.Section.Area.SquareMeters), Section(solution, x).AxialDisplacement);
-            Close(force, Section(solution, x).AxialForce.Newtons, 1e-7);
-        }
     }
 
     internal static void SameSection(BeamSectionResult expected, BeamSectionResult actual)

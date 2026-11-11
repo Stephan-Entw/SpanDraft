@@ -5,41 +5,37 @@ namespace SpanDraft.Validation.Tests;
 
 public class AcceptanceTests
 {
-    public static IEnumerable<object[]> Cases => Catalog.CaseIds.SelectMany(id => new[] { false, true }
-        .Select(kernel => new object[] { id, kernel }));
+    public static IEnumerable<object[]> Cases => Catalog.CaseIds.Select(id => new object[] { id });
     public static IEnumerable<object[]> References => Catalog.CaseIds.SelectMany(id =>
         Catalog.ExternalSolvers.Concat(Catalog.AnalyticalIds.Contains(id) ? new[] { "analytical" } : [])
-            .SelectMany(s => new[] { false, true }.Select(kernel => new object[] {id,s,kernel})));
+            .Select(s => new object[] {id,s}));
     public static IEnumerable<object[]> Transformations => Catalog.CaseIds.SelectMany(id =>
-        new[] { "load2", "load-1", "E2", "I2", "zeroNode" }
-            .SelectMany(op => new[] { false, true }.Select(kernel => new object[] {id,op,kernel})));
-    public static IEnumerable<object[]> Superpositions => Physics.SuperpositionIds.SelectMany(id => new[] { false, true }
-        .Select(kernel => new object[] {id,kernel}));
+        new[] { "load2", "load-1", "E2", "I2", "zeroNode" }.Select(op => new object[] {id,op}));
+    public static IEnumerable<object[]> Superpositions => Physics.SuperpositionIds.Select(id => new object[] {id});
     private static void Pass(CheckReport report) => Assert.True(report.Status == "PASS", System.Text.Json.JsonSerializer.Serialize(report.Failures,Catalog.Json));
 
     [Theory, MemberData(nameof(References))]
-    public void GoldenReferenceMatchesSelectedSolver(string id, string solver, bool kernel)
+    public void GoldenReferenceMatchesSolver(string id, string solver)
     {
         var input = Catalog.Load(id);
         var reference = Catalog.ReadReference(id,solver);
-        Pass(Comparison.Compare(input,Results.Export(input,kernel:kernel),reference,solver));
+        Pass(Comparison.Compare(input,Results.Export(input),reference,solver));
         Pass(Physics.ReferenceEquilibrium(input,reference));
     }
 
     [Theory, MemberData(nameof(Cases))]
-    public void GlobalEquilibrium(string id, bool kernel)
+    public void GlobalEquilibrium(string id)
     {
         var input = Catalog.Load(id);
-        Pass(Physics.Equilibrium(input,ValidationCase.Solve(input,kernel)));
+        Pass(Physics.Equilibrium(input,ValidationCase.Solve(input)));
     }
 
     [Theory, MemberData(nameof(Cases))]
-    public void AxialConsistencyJumpsAndIndependentDifferentialChecks(string id, bool kernel)
+    public void AxialConsistencyJumpsAndIndependentDifferentialChecks(string id)
     {
         var input = Catalog.Load(id);
-        var solution = ValidationCase.Solve(input,kernel);
+        var solution = ValidationCase.Solve(input);
         Pass(Physics.Fields(input,solution));
-        if (!kernel) return;
         foreach (var evaluation in input.Evaluations)
         {
             var section = solution.EvaluateAt(ValidationCase.M(evaluation.Position),
@@ -56,10 +52,10 @@ public class AcceptanceTests
     }
 
     [Theory, MemberData(nameof(Transformations))]
-    public void MetamorphicRelation(string id, string operation, bool kernel) => Pass(Physics.Metamorphic(Catalog.Load(id),operation,kernel));
+    public void MetamorphicRelation(string id, string operation) => Pass(Physics.Metamorphic(Catalog.Load(id),operation));
 
     [Theory, MemberData(nameof(Superpositions))]
-    public void IndependentLoadGroupsSuperpose(string id, bool kernel) => Pass(Physics.Superposition(Catalog.Load(id),kernel));
+    public void IndependentLoadGroupsSuperpose(string id) => Pass(Physics.Superposition(Catalog.Load(id)));
 
     [Fact]
     public void CatalogAndReferenceInventoryIsComplete()

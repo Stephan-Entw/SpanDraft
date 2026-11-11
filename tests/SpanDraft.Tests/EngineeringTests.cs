@@ -80,15 +80,9 @@ public class EngineeringTests
     [InlineData(-1)]
     public void CompetingNonzeroDeflectionsChooseGreaterMagnitude(double sign)
     {
-        // Same analytical test field as SolverExtremaTests:
+        // Same analytical field as SolverExtremaTests:
         // w=sign*(t⁴-2t³+1.18t²-.18t), with min=-.0081 and max=.0175.
-        // Construct the already-computed solution directly; Engineering never solves it.
-        BeamModel beam = Cantilever(Uniform(0, L, sign * 24 * EI / Math.Pow(L, 4)));
-        SolverModel model = SolverModel.Create(beam);
-        BeamNodeResult[] nodes = [
-            new(0, M(0), default, default, -sign * 0.18 / L, null, null, null),
-            new(1, M(L), default, default, sign * 0.18 / L, null, null, null) ];
-        var solution = new BeamSolution(beam, nodes, model);
+        BeamSolution solution = Solve(ThreeStationaryPointQuartic(sign));
         var result = BeamEngineeringAnalysis.Analyze(solution);
 
         Assert.True(solution.Extrema.MinimumTransverseDisplacement.Value.Meters < 0);

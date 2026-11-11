@@ -1,8 +1,9 @@
 using SpanDraft.Core.Beams;
 using SpanDraft.Core.Loads;
 using SpanDraft.Core.Units;
+using SpanDraft.Solver;
 
-namespace SpanDraft.Solver;
+namespace SpanDraft.Tests.SolverReference;
 
 /// <summary>One quartic displacement polynomial in t = (x-x1)/Le; no sampling or extra solve.</summary>
 internal sealed class ElementField

@@ -78,8 +78,10 @@ public sealed partial class EditorViewModel
             var primary = solution.EvaluateAt(position, end ? EvaluationSide.Left : EvaluationSide.Right);
             var left = _probeAtStation && position.Meters > 0 && !end
                 ? solution.EvaluateAt(position, EvaluationSide.Left) : primary;
-            Add("w", QuantityKind.TransverseDisplacement, left.TransverseDisplacement.Meters, primary.TransverseDisplacement.Meters);
-            Add("θ", QuantityKind.Rotation, left.RotationRadians, primary.RotationRadians);
+            // w and θ are continuous at every station. Only V and M have two limits; the solver evaluates
+            // each side from its own piece, so a second w or θ row could only show roundoff.
+            Add("w", QuantityKind.TransverseDisplacement, primary.TransverseDisplacement.Meters, primary.TransverseDisplacement.Meters);
+            Add("θ", QuantityKind.Rotation, primary.RotationRadians, primary.RotationRadians);
             Add("V", QuantityKind.TransverseForce, left.ShearForce.Newtons, primary.ShearForce.Newtons);
             Add("M", QuantityKind.Moment, left.BendingMoment.NewtonMeters, primary.BendingMoment.NewtonMeters);
         }

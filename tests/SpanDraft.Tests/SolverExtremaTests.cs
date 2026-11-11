@@ -122,14 +122,9 @@ public class SolverExtremaTests
     [Fact]
     public void QuarticWithThreeStationaryPointsConsidersAllInteriorCandidates()
     {
-        // Manufacture an element field w=t^4-2t^3+1.18t²-0.18t.
+        // One piece with w=t^4-2t^3+1.18t²-0.18t.
         // θ has roots .1, .5, .9; minima tie at .1/.9, maximum at .5.
-        BeamModel beam = Cantilever(Uniform(0, L, 24 * EI / Math.Pow(L, 4)));
-        SolverModel model = SolverModel.Create(beam);
-        BeamNodeResult[] nodes = [
-            new(0, M(0), default, default, -0.18 / L, null, null, null),
-            new(1, M(L), default, default, 0.18 / L, null, null, null) ];
-        var solution = new BeamSolution(beam, nodes, model);
+        BeamSolution solution = Solve(ThreeStationaryPointQuartic());
         Close(0.1 * L, solution.Extrema.MinimumTransverseDisplacement.Position.Meters, 1e-12);
         DisplacementClose(-0.0081, solution.Extrema.MinimumTransverseDisplacement.Value);
         Close(0.5 * L, solution.Extrema.MaximumTransverseDisplacement.Position.Meters, 1e-12);

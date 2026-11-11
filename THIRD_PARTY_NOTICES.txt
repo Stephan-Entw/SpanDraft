@@ -250,20 +250,6 @@ Licensed under MIT
 Available at https://licenses.nuget.org/MIT
 
 
-License notice for MathNet.Numerics (v5.0.0)
-------------------------------------
-
-https://github.com/mathnet/mathnet-numerics
-
-https://numerics.mathdotnet.com/
-
-Copyright Math.NET Project
-
-Licensed under MIT
-
-Available at https://licenses.nuget.org/MIT
-
-
 License notice for MicroCom.Runtime (v0.11.6)
 ------------------------------------
 

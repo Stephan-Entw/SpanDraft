@@ -2,8 +2,9 @@ using SpanDraft.Core.Beams;
 using SpanDraft.Core.Loads;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
+using SpanDraft.Solver;
 
-namespace SpanDraft.Solver;
+namespace SpanDraft.Tests.SolverReference;
 
 // Global nodal DOFs are [u, w, θ]: index = 3 * node index + enum value.
 internal enum DegreeOfFreedom { Axial = 0, Transverse = 1, Rotation = 2 }

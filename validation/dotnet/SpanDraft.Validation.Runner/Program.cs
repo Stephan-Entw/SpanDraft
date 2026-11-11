@@ -4,7 +4,6 @@ using SpanDraft.Validation;
 try
 {
     string command = args.FirstOrDefault() ?? "help";
-    bool kernel = args.Contains("--kernel");
     string? Option(string name)
     {
         int index = Array.IndexOf(args,name);
@@ -17,8 +16,8 @@ try
         case "export":
             string exportPath = Option("--output") ?? Path.Combine(Catalog.Root,"validation","results","spandraft.json");
             Directory.CreateDirectory(Path.GetDirectoryName(exportPath)!);
-            File.WriteAllText(exportPath,JsonSerializer.Serialize(Catalog.CaseIds.Select(id => Results.Export(Catalog.Load(id), kernel: kernel)).ToArray(),Catalog.Json)+"\n");
-            Console.WriteLine($"Exported {Catalog.CaseIds.Length} cases ({(kernel ? "kernel" : "public")}): " + exportPath);
+            File.WriteAllText(exportPath,JsonSerializer.Serialize(Catalog.CaseIds.Select(id => Results.Export(Catalog.Load(id))).ToArray(),Catalog.Json)+"\n");
+            Console.WriteLine($"Exported {Catalog.CaseIds.Length} cases: " + exportPath);
             break;
         case "compare":
             string? actualPath = Option("--actual");
@@ -26,10 +25,9 @@ try
             if (actual is not null && (actual.Length != Catalog.CaseIds.Length ||
                 !actual.Select(a => a.CaseId).ToHashSet().SetEquals(Catalog.CaseIds) ||
                 actual.Any(a => a.Solver != "SpanDraft" || a.InputSha256 != Catalog.Hash(a.CaseId) ||
-                    (kernel ? a.Provenance.GetValueOrDefault("entryPoint")?.ToString() != "KernelBeamSolver" :
-                        a.Provenance.GetValueOrDefault("entryPoint")?.ToString() == "KernelBeamSolver"))))
+                    a.Provenance.GetValueOrDefault("entryPoint")?.ToString() == "KernelBeamSolver")))
                 throw new InvalidDataException("Stale/incomplete SpanDraft export");
-            var report = Acceptance.Run(Option("--references"),actual,kernel);
+            var report = Acceptance.Run(Option("--references"),actual);
             string reportPath = Option("--report") ?? Path.Combine(Catalog.Root,"validation","results","run-report.json");
             if (reportPath.StartsWith(Path.Combine(Catalog.Root,"validation","references")+Path.DirectorySeparatorChar,StringComparison.Ordinal))
                 throw new ArgumentException("Reports must not overwrite golden references");
@@ -43,7 +41,7 @@ try
             Environment.ExitCode = report.Validated ? 0 : 1;
             break;
         default:
-            Console.WriteLine("export [--kernel] [--output PATH]\ncompare [--kernel] [--references DIR] [--actual PATH] [--report PATH]");
+            Console.WriteLine("export [--output PATH]\ncompare [--references DIR] [--actual PATH] [--report PATH]");
             Environment.ExitCode = command == "help" ? 0 : 2;
             break;
     }

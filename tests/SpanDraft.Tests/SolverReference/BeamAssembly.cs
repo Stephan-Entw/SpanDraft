@@ -1,8 +1,9 @@
 using MathNet.Numerics.LinearAlgebra;
 using SpanDraft.Core.Beams;
 using SpanDraft.Core.Loads;
+using SpanDraft.Solver;
 
-namespace SpanDraft.Solver;
+namespace SpanDraft.Tests.SolverReference;
 
 internal sealed record BeamSystem(Matrix<double> Stiffness, Vector<double> Loads);
 

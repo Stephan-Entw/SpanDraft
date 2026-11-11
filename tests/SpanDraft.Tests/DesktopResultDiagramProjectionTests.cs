@@ -4,6 +4,7 @@ using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Layout;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Solver;
+using SpanDraft.Solver.Kernel;
 using Xunit;
 using static SpanDraft.Tests.SolverTestSupport;
 
@@ -267,11 +268,8 @@ public sealed class DesktopResultDiagramProjectionTests
     [Fact]
     public void RepeatedEqualInteriorExtremaKeepTheSolversFirstRepresentative()
     {
-        // Same manufactured quartic as SolverExtremaTests: equal minima at .1L/.9L.
-        var beam = Cantilever(Uniform(0, L, 24 * EI / Math.Pow(L, 4)));
-        var solution = new BeamSolution(beam,
-            [new(0, M(0), default, default, -.18 / L, null, null, null),
-             new(1, M(L), default, default, .18 / L, null, null, null)], SolverModel.Create(beam));
+        // Same quartic as SolverExtremaTests: equal minima at .1L/.9L.
+        var solution = Solve(ThreeStationaryPointQuartic());
         var minimum = Assert.Single(Project(solution, ResultDiagramKind.TransverseDisplacement).Markers,
             m => m.Kind == ResultDiagramExtremumKind.Minimum);
         Assert.Equal(solution.Extrema.MinimumTransverseDisplacement.Position, minimum.Position);
@@ -301,11 +299,11 @@ public sealed class DesktopResultDiagramProjectionTests
     [InlineData(-1e-100)]
     public void ExactlyConstantDisplacementCombinesExtremaWithoutTreatingSmallValuesAsZero(double value)
     {
+        // No supported model has a constant nonzero deflection; only the reported extremum is replaced.
         var beam = Cantilever();
-        var displacement = Displacement.FromMeters(value);
-        var solution = new BeamSolution(beam,
-            [new(0, M(0), default, displacement, 0, null, null, null),
-             new(1, M(L), default, displacement, 0, null, null, null)], SolverModel.Create(beam));
+        BendingResult result = SolverKernel.Solve(BeamModelAdapter.Adapt(beam));
+        BendingExtremum constant = result.Extrema.W.Minimum with { Output = new(value, 0) };
+        var solution = new BeamSolution(beam, result with { Extrema = result.Extrema with { W = new(constant, constant) } });
         var marker = Assert.Single(Project(solution, ResultDiagramKind.TransverseDisplacement).Markers);
         Assert.Equal(ResultDiagramExtremumKind.MinimumAndMaximum, marker.Kind);
         Assert.Equal(value * 1000, marker.Value);
@@ -317,12 +315,8 @@ public sealed class DesktopResultDiagramProjectionTests
     [InlineData(ResultDiagramKind.BendingMoment)]
     public void ZeroRemainsAMarkedExtremumInALoadedModel(ResultDiagramKind kind)
     {
-        // Exact nodal representation of the tip-force cubic, with a true zero
-        // moment at the free end rather than a solver roundoff residual.
-        var beam = Cantilever(Point(L, -6 * EI));
-        var solution = new BeamSolution(beam,
-            [new(0, M(0), default, default, 0, null, null, null),
-             new(1, M(L), default, Displacement.FromMeters(-16), -12, null, null, null)], SolverModel.Create(beam));
+        // The clamped deflection and the free-end moment are exact zeros, not roundoff residuals.
+        var solution = Solve(Cantilever(Point(L, -6 * EI)));
         var plot = Project(solution, kind);
         var marker = Assert.Single(plot.Markers, m => m.Value == 0);
         Assert.Equal(ResultDiagramExtremumKind.Maximum, marker.Kind);

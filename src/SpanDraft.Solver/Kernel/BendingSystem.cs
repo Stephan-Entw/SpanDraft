@@ -64,7 +64,7 @@ internal static class BendingSystemBuilder
             void Jump(int q, Bounded stationLoad)
             {
                 if (row >= n)
-                    throw new InvalidOperationException("Internal inconsistency: too many bending equations.");
+                    throw new KernelFailureException(KernelFailureCause.InternalInconsistency, "Too many bending equations.");
                 Put(4 * i + q, new(1));
                 if (i > 0)
                 {
@@ -108,7 +108,7 @@ internal static class BendingSystemBuilder
             }
         }
         if (row != n)
-            throw new InvalidOperationException("Internal inconsistency: bending equations and unknowns differ.");
+            throw new KernelFailureException(KernelFailureCause.InternalInconsistency, "Bending equations and unknowns differ.");
 
         return new(n, a.ToImmutableArray(), k.ToImmutableArray(), b.ToImmutableArray(), bb.ToImmutableArray(),
             stations, free.ToImmutable(), columns.ToImmutableArray(), preparation.EL, preparation.EEI, preparation.EF,

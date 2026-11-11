@@ -1,8 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Development-only harness. The assembly name matches the test project so that Solver internals are visible. -->
+  <!-- Development-only harness for the frozen prototype. It compiles the reference sources of the test project;
+       the assembly name matches that project so that the result types of the Solver are visible. -->
   <PropertyGroup><OutputType>Exe</OutputType><AssemblyName>SpanDraft.Tests</AssemblyName><IsPackable>false</IsPackable><TreatWarningsAsErrors>false</TreatWarningsAsErrors><GenerateDocumentationFile>false</GenerateDocumentationFile></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../../../src/SpanDraft.Core/SpanDraft.Core.csproj" />
     <ProjectReference Include="../../../../src/SpanDraft.Solver/SpanDraft.Solver.csproj" />
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <Compile Include="../../../../tests/SpanDraft.Tests/SolverReference/*.cs"
+             Exclude="../../../../tests/SpanDraft.Tests/SolverReference/*Tests.cs;../../../../tests/SpanDraft.Tests/SolverReference/ReferenceTestSupport.cs"
+             LinkBase="SolverReference" />
   </ItemGroup>
 </Project>

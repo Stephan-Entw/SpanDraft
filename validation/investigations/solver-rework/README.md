@@ -37,7 +37,7 @@ dotnet build harness -c Release
 
 | Datei | Zweck |
 |---|---|
-| `harness/` | Liest Modelle als JSON-Zeilen, rechnet sie mit dem C#-Solver und schreibt Felder, Extremwerte und Reaktionen. Der Assemblyname `SpanDraft.Tests` macht die internen Solver-Eingaben (`SolverLoads`) sichtbar. |
+| `harness/` | Liest Modelle als JSON-Zeilen, rechnet sie mit dem eingefrorenen Prototyp aus `tests/SpanDraft.Tests/SolverReference` (seit M3 nicht mehr Produktpfad) und schreibt Felder, Extremwerte und Reaktionen. |
 | `fuzz.py` | Exakte Referenz in Bruchrechnung (Macaulay-Klammern) für Lager und Lasten, dazu Zufallsgeneratoren. |
 | `hinge.py`, `hinge2.py` | Exakte Referenz mit Gelenken, Stabilitätsregel, Gelenk-Generatoren. |
 | `spring_ref.py` | Exakte Macaulay-Referenz mit Weg- und Drehfedern. |

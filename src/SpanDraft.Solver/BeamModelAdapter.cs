@@ -36,6 +36,9 @@ internal static class BeamModelAdapter
             beam.Supports.Select(AdaptSupport), pointForces, pointMoments, lineLoads);
     }
 
+    /// <summary>The restraints alone, for the mechanism check of a beam whose EI is not representable.</summary>
+    internal static IEnumerable<RigidRestraint> AdaptRestraints(BeamModel beam) => beam.Supports.Select(AdaptSupport);
+
     private static RigidRestraint AdaptSupport(Support support) =>
         new(support.Position.Meters, support.Type switch
         {

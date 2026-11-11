@@ -1,4 +1,5 @@
 using SpanDraft.Core.Validation;
+using SpanDraft.Solver.Kernel;
 
 namespace SpanDraft.Solver;
 
@@ -23,6 +24,22 @@ public sealed class BeamSolverException : Exception
 
     public SolverErrorCode Code { get; }
     public IReadOnlyList<ValidationError> ValidationErrors { get; }
+
+    /// <summary>
+    /// Maps a structured kernel cause to its public code. The kernel exception stays the inner
+    /// exception, so diagnostics keep the cause without widening the public contract.
+    /// </summary>
+    internal static BeamSolverException Rejected(KernelFailureCause cause, Exception kernelException) => cause switch
+    {
+        KernelFailureCause.ZeroPivot or KernelFailureCause.NotVerified or KernelFailureCause.Gate =>
+            new(SolverErrorCode.IllConditionedSystem,
+                "The stable, loaded model cannot be solved reliably within the numerical contract.",
+                innerException: kernelException),
+        KernelFailureCause.NumericalRange or KernelFailureCause.NonFinite or KernelFailureCause.InternalInconsistency =>
+            new(SolverErrorCode.NumericalFailure,
+                "The model cannot be evaluated reliably in double precision.", innerException: kernelException),
+        _ => throw new ArgumentOutOfRangeException(nameof(cause), cause, "Unknown kernel failure cause.")
+    };
 }
 
 internal static class NumericalGuard

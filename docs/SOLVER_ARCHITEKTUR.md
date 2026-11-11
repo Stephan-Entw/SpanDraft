@@ -1096,6 +1096,14 @@ Abweichung bei engen Stationen bekannt **[compare-rand]**. Er dient als Differen
 von A7 „Fremdsolver“, wird nicht weiterentwickelt und bekommt keine neuen Features. Der Prototyp wird
 nach M3 entfernt; seine Testfälle bleiben als Sollwertfälle erhalten.
 
+**Stand nach M3.** `EulerBernoulliBeamSolver.Solve(BeamModel)` ist der einzige Produktzugang und
+rechnet ausschließlich über Adapter und Kern. Der FE-Solver und der Machbarkeitsprototyp liegen
+eingefroren unter `tests/SpanDraft.Tests/SolverReference` im Testassembly, zusammen mit ihren
+Testfällen. Abweichend von der ursprünglichen Planung bleibt auch der Prototyp dort als
+Vergleichswerkzeug für die Feature-Tracks erhalten. Math.NET Numerics ist nur noch eine
+Abhängigkeit dieses Testprojekts. Die öffentliche Fehlerzuordnung aus 6.6 setzt
+`BeamSolverException.Rejected` um; die Kernursache bleibt als innere Ausnahme erhalten.
+
 ## 13. Offene Entscheidungen und Risiken
 
 | Nr. | Punkt | Art |

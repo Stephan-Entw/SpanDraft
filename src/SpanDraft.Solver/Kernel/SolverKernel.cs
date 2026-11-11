@@ -31,12 +31,21 @@ internal static class SolverKernel
 
     internal static VerifiedBendingState SolveSystem(BendingSystem system) => BendingStateSolver.Solve(system);
 
-    internal static BendingSystem BuildSystem(MechanicalInput input)
+    /// <summary>Exact mechanism check of the restraints alone; it reads neither length nor stiffness nor loads.</summary>
+    internal static void RequireStable(IEnumerable<RigidRestraint> restraints) =>
+        RequireStable(StationModel.Create(new MechanicalInput(1, 1, restraints, [], [], [])));
+
+    private static void RequireStable(StationModel stations)
     {
-        StationModel stations = StationModel.Create(input);
         MechanicalStability stability = MechanicalStability.Check(stations);
         if (!stability.IsStable)
             throw new MechanicalMechanismException(stability);
+    }
+
+    internal static BendingSystem BuildSystem(MechanicalInput input)
+    {
+        StationModel stations = StationModel.Create(input);
+        RequireStable(stations);
 
         BendingPreparation preparation = BendingPreparation.Create(input, stations);
         PreparedBendingLoads loads = PreparedBendingLoads.Create(input, stations, preparation);

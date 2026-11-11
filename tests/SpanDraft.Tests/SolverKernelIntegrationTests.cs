@@ -2,9 +2,10 @@ using System.Collections.Immutable;
 using SpanDraft.Core.Beams;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Supports;
-using SpanDraft.Core.Validation;
+using SpanDraft.Core.Units;
 using SpanDraft.Solver;
 using SpanDraft.Solver.Kernel;
+using SpanDraft.Tests.SolverReference;
 using Xunit;
 using static SpanDraft.Tests.SolverTestSupport;
 
@@ -32,7 +33,7 @@ public sealed class SolverKernelIntegrationTests
     {
         BeamModel beam = Model(name);
         BendingResult kernel = SolverKernel.Solve(BeamModelAdapter.Adapt(beam));
-        BeamSolution solution = KernelBeamSolver.Solve(beam);
+        BeamSolution solution = Solve(beam);
         Assert.Same(beam, solution.Beam);
         Assert.Equal(kernel.Stations.Length, solution.Nodes.Count);
         for (int i = 0; i < kernel.Stations.Length; i++)
@@ -154,35 +155,13 @@ public sealed class SolverKernelIntegrationTests
     }
 
     [Fact]
-    public void InternalEntryValidatesBeforeAdaptingAndPreservesAllModelErrors()
-    {
-        Assert.True(typeof(KernelBeamSolver).IsNotPublic);
-        Assert.Throws<ArgumentNullException>(() => KernelBeamSolver.Solve(null!));
-        foreach (BeamModel beam in new[]
-        {
-            Beam(supports: []),
-            Beam([SupportAt(3, SupportType.Fixed), SupportAt(3, SupportType.Fixed)],
-                [Point(3, -1), Couple(3, 1), Uniform(0, 3, -1)])
-        })
-        {
-            BeamSolverException error = Assert.Throws<BeamSolverException>(() => KernelBeamSolver.Solve(beam));
-            Assert.Equal(SolverErrorCode.InvalidModel, error.Code);
-            Assert.Equal(BeamModelValidator.Validate(beam), error.ValidationErrors);
-        }
-    }
-
-    [Fact]
     public void ExistingPublicQueryErrorsArePreserved()
     {
-        BeamModel beam = Model("simple");
-        BeamSolution old = Solve(beam), current = KernelBeamSolver.Solve(beam);
-        foreach (BeamSolution solution in new[] { old, current })
-        {
-            Assert.Equal("side", Assert.Throws<ArgumentOutOfRangeException>(() =>
-                solution.EvaluateAt(M(1), (EvaluationSide)99)).ParamName);
-            Assert.Equal("position", Assert.Throws<ArgumentOutOfRangeException>(() =>
-                solution.EvaluateAt(M(Math.BitIncrement(L)), EvaluationSide.Left)).ParamName);
-        }
+        BeamSolution solution = Solve(Model("simple"));
+        Assert.Equal("side", Assert.Throws<ArgumentOutOfRangeException>(() =>
+            solution.EvaluateAt(M(1), (EvaluationSide)99)).ParamName);
+        Assert.Equal("position", Assert.Throws<ArgumentOutOfRangeException>(() =>
+            solution.EvaluateAt(M(Math.BitIncrement(L)), EvaluationSide.Left)).ParamName);
     }
 
     [Theory]
@@ -191,27 +170,36 @@ public sealed class SolverKernelIntegrationTests
     [InlineData("moment")]
     [InlineData("overlap")]
     [InlineData("indeterminate")]
-    public void RepresentativeModelsAgreeWithPublicProductionSolver(string name)
+    public void RepresentativeModelsAgreeWithBothFrozenReferences(string name)
     {
         BeamModel beam = Model(name);
-        BeamSolution old = Solve(beam), current = KernelBeamSolver.Solve(beam);
-        SameResults(old, current);
-        foreach (double x in old.Nodes.Select(n => n.Position.Meters).Concat([0.125, 0.625, 1.375, 1.875]))
-            foreach (EvaluationSide side in Enum.GetValues<EvaluationSide>())
-            {
-                BeamSectionResult a = old.EvaluateAt(M(x), side), b = current.EvaluateAt(M(x), side);
-                DisplacementClose(a.AxialDisplacement.Meters, b.AxialDisplacement);
-                DisplacementClose(a.TransverseDisplacement.Meters, b.TransverseDisplacement);
-                RotationClose(a.RotationRadians, b.RotationRadians);
-                Close(a.AxialForce.Newtons, b.AxialForce.Newtons, 1e-7);
-                Close(a.ShearForce.Newtons, b.ShearForce.Newtons, 1e-7);
-                Close(a.BendingMoment.NewtonMeters, b.BendingMoment.NewtonMeters, 1e-7);
-            }
-        foreach (var (a, b) in Extrema(old).Zip(Extrema(current)))
+        BeamSolution current = Solve(beam);
+        foreach (bool exactPlateaus in new[] { true, false })
         {
-            Close(a.Value, b.Value, a.Component == 0 ? 1e-12 : 1e-7);
-            Close(a.Position, b.Position, 1e-10);
-            Assert.Equal(a.Side, b.Side);
+            // The finite-element reference leaves roundoff on zero plateaus, so its representative
+            // position and side of a tied extremum are not comparable; its values are.
+            ReferenceBeamSolution old = exactPlateaus ? ReferenceBeamSolver.Prototype(beam) : ReferenceBeamSolver.FiniteElement(beam);
+            SameNodes(old.Nodes, current.Nodes);
+            foreach (double x in old.Nodes.Select(n => n.Position.Meters).Concat([0.125, 0.625, 1.375, 1.875]))
+                foreach (EvaluationSide side in Enum.GetValues<EvaluationSide>())
+                {
+                    BeamSectionResult a = old.EvaluateAt(M(x), side), b = current.EvaluateAt(M(x), side);
+                    DisplacementClose(a.AxialDisplacement.Meters, b.AxialDisplacement);
+                    DisplacementClose(a.TransverseDisplacement.Meters, b.TransverseDisplacement);
+                    RotationClose(a.RotationRadians, b.RotationRadians);
+                    Close(a.AxialForce.Newtons, b.AxialForce.Newtons, 1e-7);
+                    Close(a.ShearForce.Newtons, b.ShearForce.Newtons, 1e-7);
+                    Close(a.BendingMoment.NewtonMeters, b.BendingMoment.NewtonMeters, 1e-7);
+                }
+            foreach (var (a, b) in Extrema(old.Extrema.MinimumTransverseDisplacement, old.Extrema.MaximumTransverseDisplacement,
+                old.Extrema.MinimumShearForce, old.Extrema.MaximumShearForce, old.Extrema.MinimumBendingMoment,
+                old.Extrema.MaximumBendingMoment).Zip(Extrema(current)))
+            {
+                Close(a.Value, b.Value, a.Component == 0 ? 1e-12 : 1e-7);
+                if (!exactPlateaus) continue;
+                Close(a.Position, b.Position, 1e-10);
+                Assert.Equal(a.Side, b.Side);
+            }
         }
     }
 
@@ -263,13 +251,20 @@ public sealed class SolverKernelIntegrationTests
         [value.TransverseDisplacement.Meters, value.RotationRadians, value.BendingMoment.NewtonMeters, value.ShearForce.Newtons];
 
     private static (double Value, double Position, EvaluationSide? Side, int Component)[] Extrema(BeamSolution solution) =>
+        Extrema(solution.Extrema.MinimumTransverseDisplacement, solution.Extrema.MaximumTransverseDisplacement,
+            solution.Extrema.MinimumShearForce, solution.Extrema.MaximumShearForce,
+            solution.Extrema.MinimumBendingMoment, solution.Extrema.MaximumBendingMoment);
+
+    private static (double Value, double Position, EvaluationSide? Side, int Component)[] Extrema(
+        BeamExtremum<Displacement> minimumW, BeamExtremum<Displacement> maximumW, BeamExtremum<Force> minimumV,
+        BeamExtremum<Force> maximumV, BeamExtremum<Moment> minimumM, BeamExtremum<Moment> maximumM) =>
     [
-        (solution.Extrema.MinimumTransverseDisplacement.Value.Meters, solution.Extrema.MinimumTransverseDisplacement.Position.Meters, solution.Extrema.MinimumTransverseDisplacement.Side, 0),
-        (solution.Extrema.MaximumTransverseDisplacement.Value.Meters, solution.Extrema.MaximumTransverseDisplacement.Position.Meters, solution.Extrema.MaximumTransverseDisplacement.Side, 0),
-        (solution.Extrema.MinimumShearForce.Value.Newtons, solution.Extrema.MinimumShearForce.Position.Meters, solution.Extrema.MinimumShearForce.Side, 3),
-        (solution.Extrema.MaximumShearForce.Value.Newtons, solution.Extrema.MaximumShearForce.Position.Meters, solution.Extrema.MaximumShearForce.Side, 3),
-        (solution.Extrema.MinimumBendingMoment.Value.NewtonMeters, solution.Extrema.MinimumBendingMoment.Position.Meters, solution.Extrema.MinimumBendingMoment.Side, 2),
-        (solution.Extrema.MaximumBendingMoment.Value.NewtonMeters, solution.Extrema.MaximumBendingMoment.Position.Meters, solution.Extrema.MaximumBendingMoment.Side, 2)
+        (minimumW.Value.Meters, minimumW.Position.Meters, minimumW.Side, 0),
+        (maximumW.Value.Meters, maximumW.Position.Meters, maximumW.Side, 0),
+        (minimumV.Value.Newtons, minimumV.Position.Meters, minimumV.Side, 3),
+        (maximumV.Value.Newtons, maximumV.Position.Meters, maximumV.Side, 3),
+        (minimumM.Value.NewtonMeters, minimumM.Position.Meters, minimumM.Side, 2),
+        (maximumM.Value.NewtonMeters, maximumM.Position.Meters, maximumM.Side, 2)
     ];
 
     private static EvaluationSide? PublicSide(FieldSide side) => side switch

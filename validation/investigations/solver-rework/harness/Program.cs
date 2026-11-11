@@ -1,5 +1,5 @@
 using System.Text.Json;
-using SpanDraft.Core.Beams; using SpanDraft.Core.Loads; using SpanDraft.Core.Materials; using SpanDraft.Core.Sections; using SpanDraft.Core.Supports; using SpanDraft.Core.Units; using SpanDraft.Solver;
+using SpanDraft.Core.Beams; using SpanDraft.Core.Loads; using SpanDraft.Core.Materials; using SpanDraft.Core.Sections; using SpanDraft.Core.Supports; using SpanDraft.Core.Units; using SpanDraft.Solver; using SpanDraft.Tests.SolverReference;
 static Length M(double m)=>Length.FromMeters(m);
 using var w=new StreamWriter(args[1]);
 foreach(var line in File.ReadLines(args[0])){
@@ -15,7 +15,7 @@ foreach(var line in File.ReadLines(args[0])){
     var hinges=c.TryGetProperty("hinges",out var hp)?hp.EnumerateArray().Select(h=>h.GetDouble()).ToArray():Array.Empty<double>();
     static double K(JsonElement e)=>e.ValueKind==JsonValueKind.String?double.PositiveInfinity:e.GetDouble();
     var springs=c.TryGetProperty("springs",out var sp)?sp.EnumerateArray().Select(s=>new ElasticSupport(s[0].GetDouble(),K(s[1]),K(s[2]),s[3].GetBoolean())).ToArray():Array.Empty<ElasticSupport>();
-    var sol=new EulerBernoulliBeamSolver().Solve(new BeamModel(M(c.GetProperty("L").GetDouble()),mat,sec,sup,loads),new SolverLoads([],[],[],[],[],hinges,springs,
+    var sol=ReferenceBeamSolver.Prototype(new BeamModel(M(c.GetProperty("L").GetDouble()),mat,sec,sup,loads),new SolverLoads([],[],[],[],[],hinges,springs,
       c.TryGetProperty("ei",out var ep)?ep.EnumerateArray().Select(e=>new PointAction(e[0].GetDouble(),e[1].GetDouble())).ToArray():null,
       c.TryGetProperty("lin",out var lp)?lp.EnumerateArray().Select(e=>new LinearAction(e[0].GetDouble(),e[1].GetDouble(),e[2].GetDouble(),e[3].GetDouble())).ToArray():null,
       c.TryGetProperty("curv",out var kp)?kp.EnumerateArray().Select(e=>new UniformAction(e[0].GetDouble(),e[1].GetDouble(),e[2].GetDouble())).ToArray():null));

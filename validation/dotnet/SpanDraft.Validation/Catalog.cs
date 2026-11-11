@@ -43,9 +43,7 @@ public sealed record ValidationCase(int SchemaVersion, int CaseVersion, string C
     };
 
     public static Length M(double meters) => SpanDraft.Core.Units.Length.FromMeters(meters);
-    public static BeamSolution Solve(ValidationCase input, bool kernel = false) => kernel
-        ? KernelBeamSolver.Solve(input.ToBeam())
-        : new EulerBernoulliBeamSolver().Solve(input.ToBeam());
+    public static BeamSolution Solve(ValidationCase input) => new EulerBernoulliBeamSolver().Solve(input.ToBeam());
 }
 
 public static class Catalog
