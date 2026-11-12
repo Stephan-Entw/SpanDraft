@@ -48,31 +48,37 @@ Einheiten ändern nur die Darstellung: Intern rechnet SpanDraft mit SI-Werten; d
 
 ### Zahlendarstellung
 
-SpanDraft unterscheidet zwei Arten von Zahlen.
+Alle angezeigten Zahlen – Vorgabewerte, Bibliothekswerte und Ergebnisse – folgen
+derselben Regel. **Signifikante Stellen** legt die Anzahl `n` fest, 1 bis 5
+(Standard: 3). Jeder Wert wird einzeln in der gewählten Einheit gerundet:
+
+- Ziffern vor dem Komma gehen nie verloren: `1234,5 N` erscheint als
+  `1 235 N`, `12,375 mm` als `12,4 mm`.
+- Halbwerte werden von null weg gerundet; Endnullen entfallen (`12,0 mm` wird
+  `12 mm`, `999,6 N` wird `1 000 N`).
+- Ein Sicherheitsfaktor wird nie aufgerundet: `0,9995` erscheint als `0,999`.
+  Exakt null erscheint als `0`, ein unendlicher Sicherheitsfaktor als `∞`.
 
 **Vorgabewerte** – Längen, Positionen, Lasten, Querschnittsabmessungen sowie
-gespeicherte Werkstoff- und Profilkennwerte – werden so angezeigt, wie sie
-vorgegeben sind: `800 mm` bleibt `800 mm`, `800,000004 mm` bleibt
-`800,000004 mm`. Ergebnispräzision und technische Schreibweise wirken nicht auf
-sie; Nullen werden nicht ergänzt. Nur wenn ein Wert, etwa nach einem
-Einheitenwechsel, mehr als 12 Stellen hätte, zeigt SpanDraft eine auf 3 Stellen,
-aber nie gröber als auf eine ganze Einheit gerundete Näherung mit `≈`, zum
-Beispiel `≈ 3,94 in` oder `≈ 3 937 in`. Beim Bearbeiten ist weiterhin der
-vollständige Wert verfügbar.
+Werkstoff- und Profilkennwerte – erhalten ein `≈`, wenn die Anzeige vom
+eingegebenen Wert abweicht: `800 mm` bleibt `800 mm`, `800,000004 mm` erscheint
+als `≈ 800 mm`. In Beschriftungen ersetzt `≈` das Gleichheitszeichen, etwa
+`F1 ≈ 800 mm`. Exakte Werte und exakte Umrechnungen bleiben ohne Zeichen:
+`25,4 mm` erscheint in Zoll als `1 in`. Beim Bearbeiten steht immer der
+vollständige Wert im Eingabefeld, stets in Dezimalschreibweise, etwa
+`0,0000042`.
 
 **Berechnete Werte** – Reaktionen, Schnittgrößen, Spannungen, Verformungen,
 Sicherheitsfaktoren, aus der Geometrie berechnete Querschnittswerte und das
-Eigengewicht – werden gerundet. **Ergebnispräzision** legt dafür 1 bis 15
-signifikante Stellen fest (Standard: 3): `12,356 mm` wird als `12,4 mm`
-angezeigt, `12 mm` als `12,0 mm`. In Dezimalschreibweise wird nie gröber als
-auf eine ganze Einheit gerundet: `1234,56 N` erscheint als `1 235 N`.
+Eigengewicht – werden gleich gerundet, tragen aber nie ein `≈`.
 
 **Technische Schreibweise: Automatisch** zeigt gerundete Beträge unter `0,001`
 oder ab `1 000 000` mit Zehnerpotenzen in Dreierschritten, beispielsweise
-`1,23 · 10⁶ N`. Mit **Aus** bleiben diese Werte in Dezimalschreibweise.
+`1,23 · 10⁶ N` oder `420 · 10⁻⁶ mm`; die Mantisse hat dann `n` signifikante
+Stellen. Mit **Aus** bleiben alle Werte in Dezimalschreibweise.
 Zifferngruppen werden durch schmale geschützte Leerzeichen getrennt; das
 Dezimalzeichen folgt dem regionalen Zahlenformat.
 
-Beide Einstellungen gelten für berechnete Werte in App und Bericht. Die
-Berechnung und gespeicherte Eingaben bleiben unverändert. Diagramm-Achsenticks
-behalten ihre eigene Skalierung.
+Beide Einstellungen gelten in App und Bericht; der Bericht nennt die Rundung
+unter den maßgebenden Kennwerten. Die Berechnung und gespeicherte Eingaben
+bleiben unverändert. Diagramm-Achsenticks behalten ihre eigene Skalierung.
