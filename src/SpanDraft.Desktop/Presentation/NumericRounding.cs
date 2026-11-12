@@ -26,9 +26,18 @@ public static class NumericRounding
         if (notation == EngineeringNotation.Automatic && magnitude is < -3 or >= 6)
             // A carry into the next decade keeps the mantissa at exactly the requested digits.
             return new(byPrecision, new(1, magnitude - significantDigits + 1), usesEngineeringNotation: true);
-        // Decimal notation never rounds coarser than one whole display unit.
-        int exponent = Math.Min(0, precisionExponent);
-        return new(exponent == precisionExponent ? byPrecision : RoundAt(value, exponent), new(1, exponent));
+        var rounded = RoundWithinUnit(value, significantDigits, out int exponent);
+        return new(rounded, new(1, exponent));
+    }
+
+    /// <summary>
+    /// Significant digits in decimal notation, but never coarser than one whole display unit:
+    /// the rounding place is 10^min(0, e − n + 1). Shared by results and approximated given values.
+    /// </summary>
+    internal static DecimalNumber RoundWithinUnit(PresentationNumber value, int significantDigits, out int exponent)
+    {
+        exponent = Math.Min(0, value.DecimalExponent - significantDigits + 1);
+        return RoundAt(value, exponent);
     }
 
     private static DecimalNumber RoundAt(PresentationNumber value, int exponent) =>

@@ -55,9 +55,10 @@ gespeicherte Werkstoff- und Profilkennwerte – werden so angezeigt, wie sie
 vorgegeben sind: `800 mm` bleibt `800 mm`, `800,000004 mm` bleibt
 `800,000004 mm`. Ergebnispräzision und technische Schreibweise wirken nicht auf
 sie; Nullen werden nicht ergänzt. Nur wenn ein Wert, etwa nach einem
-Einheitenwechsel, mehr als 12 Stellen hätte, zeigt SpanDraft eine auf 6 Stellen
-gerundete Näherung mit `≈`, zum Beispiel `≈ 3,93701 in`. Beim Bearbeiten ist
-weiterhin der vollständige Wert verfügbar.
+Einheitenwechsel, mehr als 12 Stellen hätte, zeigt SpanDraft eine auf 3 Stellen,
+aber nie gröber als auf eine ganze Einheit gerundete Näherung mit `≈`, zum
+Beispiel `≈ 3,94 in` oder `≈ 3 937 in`. Beim Bearbeiten ist weiterhin der
+vollständige Wert verfügbar.
 
 **Berechnete Werte** – Reaktionen, Schnittgrößen, Spannungen, Verformungen,
 Sicherheitsfaktoren, aus der Geometrie berechnete Querschnittswerte und das

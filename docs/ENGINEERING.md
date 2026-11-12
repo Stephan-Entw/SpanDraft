@@ -124,8 +124,9 @@ Dezimaldarstellung der aktuellen Anzeigeeinheit – mit denselben Ziffern wie im
 Eingabefeld –, stets in Dezimalschreibweise und ohne ergänzte Endnullen.
 Ergebnispräzision und technische Schreibweise wirken nicht auf sie. Nur wenn
 diese Darstellung mehr als 12 signifikante Stellen hätte, typischerweise nach
-einem Einheitenwechsel, wird auf 6 signifikante Stellen gerundet und der Wert
-als Näherung gekennzeichnet: `≈ 3,93701 in`. In Labels ersetzt `≈` das
+einem Einheitenwechsel, wird auf 3 signifikante Stellen gerundet, jedoch nie
+gröber als auf eine ganze Einheit der Anzeigeeinheit, und der Wert als Näherung
+gekennzeichnet: `≈ 3,94 in`, `≈ 3 937 in`. In Labels ersetzt `≈` das
 Gleichheitszeichen (`F1 ≈ …`). Der gespeicherte Wert und der Text im
 Eingabefeld bleiben davon unberührt.
 

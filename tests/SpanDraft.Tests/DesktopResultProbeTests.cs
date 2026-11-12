@@ -143,7 +143,7 @@ public sealed class DesktopResultProbeTests
         // x is a given position: exact, and a marked approximation only beyond twelve digits.
         Assert.Equal(QuantityFormatter.FormatInput(position.Meters, unit), editor.ResultProbeRows[0].Value);
         if (profile == 0) Assert.Equal("333,37 mm", editor.ResultProbeRows[0].Value);
-        if (profile == 2) Assert.Equal("≈ 1,09373 ft", editor.ResultProbeRows[0].Value);
+        if (profile == 2) Assert.Equal("≈ 1,09 ft", editor.ResultProbeRows[0].Value);
         Check("V−", left.ShearForce.Newtons, QuantityKind.TransverseForce);
         Check("V+", right.ShearForce.Newtons, QuantityKind.TransverseForce);
         Check("M−", left.BendingMoment.NewtonMeters, QuantityKind.Moment);

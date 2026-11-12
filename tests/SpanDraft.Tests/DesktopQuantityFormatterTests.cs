@@ -48,7 +48,7 @@ public sealed class DesktopQuantityFormatterTests
         using var scope = new UiCultureScope(culture);
         var length = Length.FromMillimeters(1234567.89012345);
         var input = new LengthInputViewModel(() => length, _ => LengthCommitResult.Success);
-        Assert.Equal(culture == "de-DE" ? "≈ 1\u202f234\u202f570 mm" : "≈ 1\u202f234\u202f570 mm", input.DisplayText);
+        Assert.Equal(culture == "de-DE" ? "≈ 1\u202f234\u202f568 mm" : "≈ 1\u202f234\u202f568 mm", input.DisplayText);
         input.Begin();
         Assert.Equal(InputQuantityFormatter.FormatExact(length.Meters, UnitCatalog.Millimeter), input.Text);
         Assert.True(InputQuantityFormatter.TryParseLength(input.Text, UnitCatalog.Millimeter, out var parsedLength));
@@ -61,7 +61,7 @@ public sealed class DesktopQuantityFormatterTests
         Assert.Equal(InputQuantityFormatter.FormatExact(document.Loads[0].Value, UnitCatalog.Newton), editor.LoadDraft!.ValueText);
         Assert.True(InputQuantityFormatter.TryParse(editor.LoadDraft.ValueText, UnitCatalog.Newton, out var parsedForce));
         Assert.Equal(document.Loads[0].Value, parsedForce);
-        Assert.Equal(culture == "de-DE" ? "≈ 13\u202f333,1 N" : "≈ 13\u202f333.1 N", editor.Overview.Forces[0].Value);
+        Assert.Equal(culture == "de-DE" ? "≈ 13\u202f333 N" : "≈ 13\u202f333 N", editor.Overview.Forces[0].Value);
         Assert.Same(document, editor.Document);
     }
 }

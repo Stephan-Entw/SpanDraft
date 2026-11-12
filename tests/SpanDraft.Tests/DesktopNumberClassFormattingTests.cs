@@ -67,24 +67,36 @@ public sealed class DesktopNumberClassFormattingTests
     }
 
     [Fact]
-    public void GivenValuesBeyondTwelveSignificantDigitsAreMarkedAsSixDigitApproximations()
+    public void GivenValuesBeyondTwelveSignificantDigitsAreMarkedAsThreeDigitApproximations()
     {
         // 0.1 m is 3.937007874015748 in.
         var text = QuantityFormatter.Input(0.1, UnitCatalog.Inch, German);
         Assert.True(text.IsApproximate);
-        Assert.Equal("3,93701", text.Number);
-        Assert.Equal("≈ 3,93701", QuantityFormatter.FormatInputNumber(0.1, UnitCatalog.Inch, German));
-        Assert.Equal("≈ 3,93701 in", QuantityFormatter.FormatInput(0.1, UnitCatalog.Inch, German));
-        Assert.Equal("F1 ≈ 3,93701 in", QuantityFormatter.FormatInputEquation("F1", 0.1, UnitCatalog.Inch, German));
-        Assert.Equal("≈ -3,93701 in", QuantityFormatter.FormatInput(-0.1, UnitCatalog.Inch, German));
+        Assert.Equal("3,94", text.Number);
+        Assert.Equal("≈ 3,94", QuantityFormatter.FormatInputNumber(0.1, UnitCatalog.Inch, German));
+        Assert.Equal("≈ 3,94 in", QuantityFormatter.FormatInput(0.1, UnitCatalog.Inch, German));
+        Assert.Equal("F1 ≈ 3,94 in", QuantityFormatter.FormatInputEquation("F1", 0.1, UnitCatalog.Inch, German));
+        Assert.Equal("≈ -3,94 in", QuantityFormatter.FormatInput(-0.1, UnitCatalog.Inch, German));
         // Twelve digits are still exact; thirteen are not. Approximations add no zeros either.
         Assert.Equal("1,23456789012 N", QuantityFormatter.FormatInput(1.23456789012, UnitCatalog.Newton, German));
-        Assert.Equal("≈ 1,23457 N", QuantityFormatter.FormatInput(1.234567890123, UnitCatalog.Newton, German));
+        Assert.Equal("≈ 1,23 N", QuantityFormatter.FormatInput(1.234567890123, UnitCatalog.Newton, German));
         Assert.Equal("≈ 2 N", QuantityFormatter.FormatInput(2.000000000001, UnitCatalog.Newton, German));
-        Assert.Equal("≈ 1\u202f234\u202f570 N", QuantityFormatter.FormatInput(1234567.890123456, UnitCatalog.Newton, German));
+        Assert.Equal("≈ 1,2 N", QuantityFormatter.FormatInput(1.200000000001, UnitCatalog.Newton, German));
+        // Never coarser than one whole display unit, and independent of the result precision.
+        Assert.Equal("≈ 1\u202f234\u202f568 N", QuantityFormatter.FormatInput(1234567.890123456, UnitCatalog.Newton, German));
         // The stored value and the editing text are untouched.
         Assert.Equal("3,937007874015748", InputQuantityFormatter.FormatExact(0.1, UnitCatalog.Inch, German));
     }
+
+    [Theory]
+    [InlineData(0.1, "≈ 3,94")]                    // 3.937007874015748 in
+    [InlineData(1, "≈ 39,4")]                      // 39.37007874015748 in
+    [InlineData(10, "≈ 394")]                      // 393.7007874015748 in
+    [InlineData(100, "≈ 3\u202f937")]                 // 3 937.007874015748 in
+    [InlineData(-100, "≈ -3\u202f937")]
+    [InlineData(0.0001, "≈ 0,00394")]              // 0.003937007874015748 in
+    public void ApproximationsTargetThreeDigitsButKeepWholeUnits(double meters, string expected) =>
+        Assert.Equal(expected, QuantityFormatter.FormatInputNumber(meters, UnitCatalog.Inch, German));
 
     [Theory]
     [InlineData(0.012356, QuantityKind.TransverseDisplacement, "12,4 mm")]

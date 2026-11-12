@@ -119,7 +119,7 @@ public sealed class DesktopNumericPresentationTests
         var original = Length.FromMillimeters(12.3560000000001);
         var stored = original;
         var input = new LengthInputViewModel(() => stored, value => { stored = value; return LengthCommitResult.Success; });
-        Assert.Equal(culture == "de-DE" ? "≈ 12,356 mm" : "≈ 12.356 mm", input.DisplayText);
+        Assert.Equal(culture == "de-DE" ? "≈ 12,4 mm" : "≈ 12.4 mm", input.DisplayText);
         for (int pass = 0; pass < 3; pass++)
         {
             input.Begin();

@@ -48,7 +48,7 @@ public sealed class DesktopSchematicIntegrationTests
         {
             var label = Assert.Single(scene.Annotations, a => a.Text.StartsWith(name + " ", StringComparison.Ordinal));
             Assert.Equal(QuantityFormatter.FormatInputEquation(name, value, options.Profile[kind]), label.Text);
-            Assert.StartsWith(name + " ≈ 1\u202f234\u202f570\u202f000 ", label.Text);
+            Assert.StartsWith(name + " ≈ 1\u202f234\u202f567\u202f890 ", label.Text);
             // A cache miss would measure the displayed label a second time and lose the wider unit reserve.
             Assert.Single(measured, text => text == label.Text);
             double reservedWidth = UnitCatalog.All.Where(u => u.Dimension == UnitCatalog.DimensionOf(kind))

@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace SpanDraft.Desktop.Presentation;
 
-/// <summary>A given value's display digits; <see cref="IsApproximate"/> marks the six-digit fallback.</summary>
+/// <summary>A given value's display digits; <see cref="IsApproximate"/> marks the rounded fallback.</summary>
 public readonly record struct InputNumberText(string Number, bool IsApproximate)
 {
     /// <summary>The relation for labels such as "F1 = 5 N": an approximation replaces the equals sign.</summary>
@@ -28,7 +28,8 @@ public static class QuantityFormatter
     internal const string ApproximationSign = "≈";
     /// <summary>Given values with more significant digits are shown as marked approximations.</summary>
     public const int MaximumExactInputDigits = 12;
-    public const int ApproximateInputDigits = 6;
+    /// <summary>Target digits of an approximation; it is never coarser than one whole display unit.</summary>
+    public const int ApproximateInputDigits = 3;
 
     // ---- Input: given values -------------------------------------------------------------------------------
 
@@ -40,11 +41,7 @@ public static class QuantityFormatter
         culture ??= CultureInfo.CurrentCulture;
         var value = DecimalNumber.Parse(InputQuantityFormatter.FormatExact(siValue, unit, CultureInfo.InvariantCulture));
         bool approximate = value.SignificantDigits > MaximumExactInputDigits;
-        if (approximate)
-        {
-            int exponent = value.MagnitudeExponent - ApproximateInputDigits + 1;
-            value = new((value.Number / PresentationNumber.PowerOfTen(exponent)).RoundToInteger(), exponent);
-        }
+        if (approximate) value = NumericRounding.RoundWithinUnit(value.Number, ApproximateInputDigits, out _);
         return new(value.IsZero ? "0" : Decimal(value, 0, 0, culture), approximate);
     }
 
@@ -54,7 +51,7 @@ public static class QuantityFormatter
     public static string FormatInput(double siValue, UnitDefinition unit, CultureInfo? culture = null) =>
         WithUnit(FormatInputNumber(siValue, unit, culture), unit);
 
-    /// <summary>"F1 = 800 N", or "F1 ≈ 3.93701 in" for an approximation.</summary>
+    /// <summary>"F1 = 800 N", or "F1 ≈ 3.94 in" for an approximation.</summary>
     public static string FormatInputEquation(string label, double siValue, UnitDefinition unit, CultureInfo? culture = null)
     {
         var text = Input(siValue, unit, culture);
