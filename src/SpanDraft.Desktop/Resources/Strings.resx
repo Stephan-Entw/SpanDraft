@@ -358,7 +358,7 @@
   <data name="Forces" xml:space="preserve"><value>Forces</value></data>
   <data name="Moments" xml:space="preserve"><value>Moments</value></data>
   <data name="DistributedLoads" xml:space="preserve"><value>Distributed loads</value></data>
-  <data name="ResultPrecision" xml:space="preserve"><value>Result precision</value></data>
+  <data name="SignificantDigits" xml:space="preserve"><value>Significant digits</value></data>
   <data name="SignificantDigitChoice" xml:space="preserve"><value>{0} significant digits</value></data>
   <data name="SignificantDigitChoiceOne" xml:space="preserve"><value>1 significant digit</value></data>
   <data name="EngineeringNotation" xml:space="preserve"><value>Engineering notation</value></data>

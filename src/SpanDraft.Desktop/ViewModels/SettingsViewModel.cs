@@ -80,7 +80,7 @@ public sealed class SettingsViewModel : ObservableObject
     public string? ErrorText => _error;
     public bool HasError => ErrorText is not null;
     public bool HasCustomProfile => _pending.HasCustomProfile;
-    /// <summary>The result precision, offered as a recognisable number of significant digits.</summary>
+    /// <summary>The significant digits of every displayed value, offered as 1–5.</summary>
     public IReadOnlyList<SetupChoice<int>> SignificantDigitChoices { get; } = Enumerable.Range(
         ResultPresentationOptions.MinimumSignificantDigits,
         ResultPresentationOptions.MaximumSignificantDigits - ResultPresentationOptions.MinimumSignificantDigits + 1)

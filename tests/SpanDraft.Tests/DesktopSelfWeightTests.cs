@@ -186,7 +186,7 @@ public sealed class DesktopSelfWeightTests
         string original = editor.SelfWeightLabel;
         var changed = new List<string?>();
         editor.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
-        var options = new ResultPresentationOptions(UnitProfile.UnitedStates, 6, EngineeringNotation.Off);
+        var options = new ResultPresentationOptions(UnitProfile.UnitedStates, 5, EngineeringNotation.Off);
         editor.ApplyResultPresentation(options);
         Assert.NotEqual(original, editor.SelfWeightLabel);
         Assert.Equal("g = " + QuantityFormatter.FormatResult(editor.Document.SelfWeightLoad!.Intensity.NewtonsPerMeter,
@@ -194,8 +194,8 @@ public sealed class DesktopSelfWeightTests
         Assert.Equal(editor.SelfWeightLabel[4..], editor.Overview.DistributedLoads[0].Value);
         Assert.Equal(editor.SelfWeightLabel, editor.SelfWeightValue.PlainText);
         Assert.Equal("A = " + QuantityFormatter.FormatResult(editor.Document.Section.Area.SquareMeters, QuantityKind.Area, options), editor.SelfWeightArea.PlainText);
-        // The density is a given material value; only the calculated intensity and area follow the result precision.
-        Assert.Equal("ρ = " + QuantityFormatter.FormatInput(editor.Document.Material.Density!.Value.KilogramsPerCubicMeter, options.Profile[QuantityKind.Density]), editor.SelfWeightDensity.PlainText);
+        // The density is a given material value: the same digits apply, with "≈" replacing "=" when rounded.
+        Assert.Equal("ρ" + QuantityFormatter.FormatInputEquation("", editor.Document.Material.Density!.Value.KilogramsPerCubicMeter, options.Profile[QuantityKind.Density], options), editor.SelfWeightDensity.PlainText);
         Assert.Contains(nameof(editor.SelfWeightArea), changed); Assert.Contains(nameof(editor.SelfWeightDensity), changed);
         Assert.Same(revision, editor.Session.CurrentRevision); Assert.Same(result, editor.Presentation.Result);
         Assert.Equal(1, s.Calls); Assert.Empty(editor.Session.UndoHistory);

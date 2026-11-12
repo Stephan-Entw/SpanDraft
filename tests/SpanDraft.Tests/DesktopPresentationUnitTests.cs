@@ -105,8 +105,8 @@ public sealed class DesktopPresentationUnitTests
     }
 
     [Theory]
-    [InlineData("de-DE", "1,02 kip", "301 · 10⁻⁶ in", "301,181 · 10⁻⁶ in")]
-    [InlineData("en-US", "1.02 kip", "301 · 10⁻⁶ in", "301.181 · 10⁻⁶ in")]
+    [InlineData("de-DE", "1,02 kip", "301 · 10⁻⁶ in", "301,18 · 10⁻⁶ in")]
+    [InlineData("en-US", "1.02 kip", "301 · 10⁻⁶ in", "301.18 · 10⁻⁶ in")]
     public void UsPrecisionIsChosenInDisplayUnitBeforeAnyRounding(string culture, string force, string displacement, string detailed)
     {
         var c = CultureInfo.GetCultureInfo(culture);
@@ -116,7 +116,7 @@ public sealed class DesktopPresentationUnitTests
         Assert.Equal(displacement, QuantityFormatter.FormatResult(0.00765 / 1000, QuantityKind.TransverseDisplacement,
             UnitProfile.UnitedStates, culture: c));
         Assert.Equal(detailed, QuantityFormatter.FormatResult(0.00765 / 1000, QuantityKind.TransverseDisplacement,
-            UnitProfile.UnitedStates, 6, culture: c));
+            UnitProfile.UnitedStates, 5, culture: c));
         Assert.Equal(culture == "de-DE" ? "607 · 10⁻⁶ kip" : "607 · 10⁻⁶ kip", QuantityFormatter.FormatResult(2.7, QuantityKind.TransverseForce,
             UnitProfile.UnitedStates, culture: c));
     }

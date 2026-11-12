@@ -160,7 +160,7 @@ public sealed class DesktopResultProbeTests
             new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Pinned, "A"),
             new(Guid.NewGuid(), Length.FromMeters(.5), SupportType.Roller, "B"),
             new(Guid.NewGuid(), Length.FromMeters(1), SupportType.Roller, "C")]);
-        var editor = new EditorViewModel(document, () => { }, resultPresentation: new(significantDigits: 10));
+        var editor = new EditorViewModel(document, () => { }, resultPresentation: new(significantDigits: 5));
         editor.ToggleResultProbeTool();
         editor.HoverResultProbe(Length.FromMeters(.5), atStation: true);
         var solution = editor.Presentation.Result!.Solution;
@@ -193,12 +193,13 @@ public sealed class DesktopResultProbeTests
 
     [Theory]
     [InlineData(3, false)]
-    [InlineData(10, true)]
+    [InlineData(5, true)]
     public void LimitRowsSplitOnlyWhenDifferentAtTheCurrentPresentationPrecision(int digits, bool split)
     {
         var document = ProbeTestProjects.Document();
         var moment = (EditorPointMoment)document.Loads[1];
-        document = document.WithLoads([document.Loads[0], moment with { Moment = Moment.FromNewtonMeters(.0001) }]);
+        // M ≈ 1 333 N·m: a 0.2 N·m jump stays within one whole unit at 3 digits but shows at 5 (0.1 N·m).
+        document = document.WithLoads([document.Loads[0], moment with { Moment = Moment.FromNewtonMeters(.2) }]);
         var editor = new EditorViewModel(document, () => { }, resultPresentation: new(significantDigits: digits));
         editor.ToggleResultProbeTool();
         editor.HoverResultProbe(moment.Position, atStation: true);

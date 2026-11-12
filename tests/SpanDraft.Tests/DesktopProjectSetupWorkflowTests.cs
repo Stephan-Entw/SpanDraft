@@ -453,7 +453,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         var f = new Fixture(); await f.Load(); var editor = NewSection(f); editor.Parameters[0].PendingText = "100,";
         Assert.False(f.Main.SetResultPresentation(UnitProfile.UnitedStates, 3));
         Assert.Same(editor, f.Main.Setup.CurrentStep); Assert.Equal("100,", editor.Parameters[0].PendingText);
-        Assert.True(f.Main.SetResultPresentation(UnitProfile.Default, 6));
+        Assert.True(f.Main.SetResultPresentation(UnitProfile.Default, 5));
         Assert.Equal("100,", editor.Parameters[0].PendingText);
         f.Main.Setup.Escape(); Assert.True(f.Main.SetResultPresentation(UnitProfile.UnitedStates, 3));
     }

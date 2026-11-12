@@ -28,7 +28,7 @@ public sealed class DesktopSettingsInteractionTests
         {
             "language" => main.Settings with { UiLanguage = UiLanguagePreference.English },
             "region" => main.Settings with { RegionalFormat = RegionalFormatPreference.GermanGermany },
-            _ => main.Settings with { SignificantDigits = 6 }
+            _ => main.Settings with { SignificantDigits = 5 }
         };
         Assert.Null(await main.ApplySettingsAsync(next));
         Assert.True(next.ContentEquals(SettingsCodec.Deserialize(files.Data["settings"])));
@@ -52,7 +52,7 @@ public sealed class DesktopSettingsInteractionTests
         }
         else { main.Setup.LengthInput.Begin(); main.Setup.LengthInput.Text = "unfinished"; }
         var next = main.Settings with { UiLanguage = UiLanguagePreference.English,
-            RegionalFormat = RegionalFormatPreference.GermanGermany, SignificantDigits = 6 };
+            RegionalFormat = RegionalFormatPreference.GermanGermany, SignificantDigits = 5 };
         Assert.Null(await main.ApplySettingsAsync(next));
         Assert.Equal("unfinished", input?.PendingText ?? main.Setup.LengthInput.Text);
         Assert.NotNull(await main.ApplySettingsAsync(next.Select(UnitProfileKind.UnitedStates)));
@@ -69,7 +69,7 @@ public sealed class DesktopSettingsInteractionTests
         selection.EditSelectedCommand.Execute(null);
         var editor = Assert.IsType<MaterialEditorViewModel>(selection.Editor);
         editor.Inputs[0].Text = "unfinished";
-        var settings = main.Settings with { SignificantDigits = 8, Notation = EngineeringNotation.Off };
+        var settings = main.Settings with { SignificantDigits = 4, Notation = EngineeringNotation.Off };
         Assert.Null(await main.ApplySettingsAsync(settings));
         Assert.Equal("unfinished", editor.Inputs[0].Text);
         var writes = files.Writes.ToArray();
@@ -131,7 +131,7 @@ public sealed class DesktopSettingsInteractionTests
         Assert.Same(UnitProfile.Default, main.ResultPresentation.Profile);
         Assert.Same(draft, (object?)editor.SupportDraft ?? (object?)editor.LoadDraft ?? editor.DistributedLoadDraft);
         Assert.Equal(originalText, editor.DimensionLength.Text);
-        Assert.False(main.SetResultPresentation(UnitProfile.StructuralEngineering, 6));
+        Assert.False(main.SetResultPresentation(UnitProfile.StructuralEngineering, 5));
         editor.CancelEditorInteraction();
         Assert.True(await dialog.ApplyAsync());
         Assert.False(dialog.CanApply); Assert.True(main.Settings.ContentEquals(await new LocalSettingsStore(files, "settings").LoadAsync()));
@@ -149,7 +149,7 @@ public sealed class DesktopSettingsInteractionTests
         var main = CreateMain(); var editor = main.Editor!; Edit(editor, target);
         var support = editor.SupportDraft; var point = editor.LoadDraft; var distributed = editor.DistributedLoadDraft;
         var reference = editor.Presentation.Result;
-        Assert.True(main.SetResultPresentation(UnitProfile.Default, 6));
+        Assert.True(main.SetResultPresentation(UnitProfile.Default, 5));
         var unit = unrelated == QuantityKind.Moment ? UnitCatalog.KilonewtonMeter : UnitCatalog.Kilonewton;
         Assert.True(main.SetResultPresentation(UnitProfile.Default.WithUnit(unrelated, unit), 3));
         Assert.Same(support, editor.SupportDraft); Assert.Same(point, editor.LoadDraft); Assert.Same(distributed, editor.DistributedLoadDraft);

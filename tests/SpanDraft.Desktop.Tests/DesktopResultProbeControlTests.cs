@@ -139,7 +139,7 @@ public sealed class DesktopResultProbeControlTests
     {
         using var environment = new DesktopControlEnvironment();
         var editor = new EditorViewModel(ProbeTestProjects.Document(), () => { }, resultPresentation:
-            new(UnitProfile.StructuralEngineering, 15, EngineeringNotation.Off));
+            new(UnitProfile.StructuralEngineering, 5, EngineeringNotation.Off));
         var view = new EditorView { DataContext = editor };
         var window = new Window { Content = view };
         Layout(window, width);
@@ -183,7 +183,7 @@ public sealed class DesktopResultProbeControlTests
         var solution = editor.Presentation.Result;
         var position = editor.ResultProbePosition;
         var before = editor.ResultProbeRows;
-        editor.ApplyResultPresentation(new(UnitProfile.UnitedStates, 6));
+        editor.ApplyResultPresentation(new(UnitProfile.UnitedStates, 5));
         Layout(window);
         Assert.Equal(position, editor.ResultProbePosition);
         Assert.True(editor.IsResultProbeFixed);

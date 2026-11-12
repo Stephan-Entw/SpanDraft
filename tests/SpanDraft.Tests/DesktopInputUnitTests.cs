@@ -43,29 +43,29 @@ public sealed class DesktopInputUnitTests
     }
 
     [Theory]
-    [InlineData("de-DE", "12\u202f200,05")]
-    [InlineData("en-US", "12\u202f200.05")]
+    [InlineData("de-DE", "1\u202f234,5")]
+    [InlineData("en-US", "1\u202f234.5")]
     public void DisplayedIntegerGroupsParseBackThroughTheRegionalInputPipeline(string culture, string expected)
     {
         using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
-        var options = new ResultPresentationOptions(significantDigits: 7, notation: EngineeringNotation.Off);
+        var options = new ResultPresentationOptions(significantDigits: 5, notation: EngineeringNotation.Off);
         foreach (double sign in new[] { 1d, -1d })
         {
-            double original = sign * 12.20005;
+            double original = sign * 1.2345;
             string displayed = QuantityFormatter.FormatResultNumber(original, QuantityKind.BeamLength, options);
             Assert.Equal((sign < 0 ? "-" : "") + expected, displayed);
             Assert.True(InputQuantityFormatter.TryParse(displayed, UnitCatalog.Millimeter, out var parsed));
             Assert.Equal(original, parsed);
         }
         Assert.True(InputQuantityFormatter.TryParse("+" + expected, UnitCatalog.Millimeter, out var positive));
-        Assert.Equal(12.20005, positive);
+        Assert.Equal(1.2345, positive);
         Assert.True(InputQuantityFormatter.TryParse(expected + "e-2", UnitCatalog.Newton, out var exponent));
-        Assert.Equal(122.0005, exponent);
-        string otherRegion = culture == "de-DE" ? "12\u202f200.05" : "12\u202f200,05";
+        Assert.Equal(12.345, exponent);
+        string otherRegion = culture == "de-DE" ? "1\u202f234.5" : "1\u202f234,5";
         Assert.False(InputQuantityFormatter.TryParse(otherRegion, UnitCatalog.Millimeter, out _));
         Assert.True(InputQuantityFormatter.TryParse(otherRegion, UnitCatalog.Millimeter, out var overridden,
             CultureInfo.GetCultureInfo(culture == "de-DE" ? "en-US" : "de-DE")));
-        Assert.Equal(12.20005, overridden);
+        Assert.Equal(1.2345, overridden);
     }
 
     [Theory]
@@ -78,8 +78,9 @@ public sealed class DesktopInputUnitTests
         string grouped = editable.Insert(2, QuantityFormatter.GroupSeparator);
         Assert.True(InputQuantityFormatter.TryParse(grouped, UnitCatalog.Newton, out var parsed));
         Assert.Equal(original, parsed);
-        var options = new ResultPresentationOptions(significantDigits: 15, notation: EngineeringNotation.Off);
-        foreach (double value in new[] { 1234567890.12345, -1234567890.12345 })
+        // Whole units are never rounded away, so integers keep every digit and all triplets.
+        var options = new ResultPresentationOptions(significantDigits: 5, notation: EngineeringNotation.Off);
+        foreach (double value in new[] { 1234567890d, -1234567890d })
         {
             string display = QuantityFormatter.FormatResultNumber(value, QuantityKind.TransverseForce, options);
             Assert.Equal(3, display.Count(c => c == '\u202f'));

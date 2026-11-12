@@ -46,7 +46,7 @@ public sealed class DesktopCultureTests
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
         Assert.Same(startup.Settings, main.Settings); Assert.Equal(1, reads);
         Assert.NotNull(main.BuiltInMaterials); Assert.Null(main.MaterialLibraryError); Assert.Null(main.SectionLibraryError);
-        var next = main.Settings with { SignificantDigits = 6 };
+        var next = main.Settings with { SignificantDigits = 5 };
         Assert.Null(await main.ApplySettingsAsync(next));
         Assert.True(next.ContentEquals(SettingsCodec.Deserialize(files.Data["settings"])));
         window.Close(); Dispatcher.UIThread.RunJobs();

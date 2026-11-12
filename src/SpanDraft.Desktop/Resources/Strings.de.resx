@@ -358,7 +358,7 @@
   <data name="Forces" xml:space="preserve"><value>Kräfte</value></data>
   <data name="Moments" xml:space="preserve"><value>Momente</value></data>
   <data name="DistributedLoads" xml:space="preserve"><value>Streckenlasten</value></data>
-  <data name="ResultPrecision" xml:space="preserve"><value>Ergebnispräzision</value></data>
+  <data name="SignificantDigits" xml:space="preserve"><value>Signifikante Stellen</value></data>
   <data name="SignificantDigitChoice" xml:space="preserve"><value>{0} signifikante Stellen</value></data>
   <data name="SignificantDigitChoiceOne" xml:space="preserve"><value>1 signifikante Stelle</value></data>
   <data name="EngineeringNotation" xml:space="preserve"><value>Technische Schreibweise</value></data>

@@ -132,8 +132,8 @@ public sealed class DesktopSettingsControlTests
     }
 
     [Theory]
-    [InlineData("de-DE", "Ergebnispräzision", "Technische Schreibweise")]
-    [InlineData("en-US", "Result precision", "Engineering notation")]
+    [InlineData("de-DE", "Signifikante Stellen", "Technische Schreibweise")]
+    [InlineData("en-US", "Significant digits", "Engineering notation")]
     public void NumericPickersBindBothDirectionsAndRestoreDiscardedPreferences(string culture, string precisionLabel, string notationLabel)
     {
         using var environment = new DesktopControlEnvironment();
@@ -148,13 +148,13 @@ public sealed class DesktopSettingsControlTests
         Assert.Equal(digits.Bounds.Left, notation.Bounds.Left);
         Assert.Equal(3, digits.SelectedValue);
         Assert.Equal(EngineeringNotation.Automatic, notation.SelectedValue);
-        Assert.Equal(Enumerable.Range(1, 15), model.SignificantDigitChoices.Select(c => c.Value));
+        Assert.Equal(Enumerable.Range(1, 5), model.SignificantDigitChoices.Select(c => c.Value));
         // The choices stay recognisable as a number of significant digits.
         Assert.Equal(culture == "de-DE" ? "1 signifikante Stelle" : "1 significant digit", model.SignificantDigitChoices[0].Label);
         Assert.Equal(culture == "de-DE" ? "3 signifikante Stellen" : "3 significant digits", model.SignificantDigitChoices[2].Label);
-        digits.SelectedItem = model.SignificantDigitChoices.Single(c => c.Value == 8);
+        digits.SelectedItem = model.SignificantDigitChoices.Single(c => c.Value == 5);
         notation.SelectedItem = model.Notations.Single(n => n.Value == EngineeringNotation.Off);
-        Assert.Equal(8, model.Pending.SignificantDigits);
+        Assert.Equal(5, model.Pending.SignificantDigits);
         Assert.Equal(EngineeringNotation.Off, model.Pending.Notation);
         model.SignificantDigits = 4;
         Assert.Equal(4, digits.SelectedValue);
@@ -199,15 +199,15 @@ public sealed class DesktopSettingsControlTests
         { published = settings; return Task.FromResult<string?>(null); });
         var window = new SettingsWindow(model);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
-        model.SignificantDigits = 6;
+        model.SignificantDigits = 5;
         model.SelectedUiLanguage = UiLanguagePreference.English;
         model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         Click(window, "OkButton");
         Assert.True(closeApproved);
-        Assert.Equal(6, published!.SignificantDigits);
+        Assert.Equal(5, published!.SignificantDigits);
         Assert.Equal(UiLanguagePreference.English, published.UiLanguage);
         Assert.Equal(RegionalFormatPreference.GermanGermany, published.RegionalFormat);
-        Assert.Equal(6, model.SignificantDigits); Assert.False(model.HasChanges);
+        Assert.Equal(5, model.SignificantDigits); Assert.False(model.HasChanges);
     }
 
     [Fact]
@@ -235,7 +235,7 @@ public sealed class DesktopSettingsControlTests
         { writes++; return Task.FromResult<string?>(null); });
         var window = new SettingsWindow(model);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
-        model.Select(UnitProfileKind.UnitedStates); model.SignificantDigits = 6;
+        model.Select(UnitProfileKind.UnitedStates); model.SignificantDigits = 5;
         model.SelectedUiLanguage = UiLanguagePreference.English;
         model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         if (action == "cancel") Click(window, "CancelButton");
@@ -287,13 +287,13 @@ public sealed class DesktopSettingsControlTests
         var model = new SettingsViewModel(UserSettings.Default, _ => { writes++; return completion.Task; });
         var window = new SettingsWindow(model);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
-        model.SignificantDigits = 6;
+        model.SignificantDigits = 5;
         Click(window, "OkButton");
         Assert.True(model.IsSaving);
         Assert.False(window.FindControl<Button>("OkButton")!.IsEnabled);
         Assert.False(window.FindControl<Button>("CancelButton")!.IsEnabled);
         Click(window, "OkButton"); Click(window, "CancelButton"); Escape(window); window.Close();
-        Assert.False(closeApproved); Assert.Equal(6, model.SignificantDigits); Assert.Equal(1, writes);
+        Assert.False(closeApproved); Assert.Equal(5, model.SignificantDigits); Assert.Equal(1, writes);
         completion.SetResult(null);
         Dispatcher.UIThread.RunJobs();
         Assert.True(closeApproved); Assert.False(model.IsSaving); Assert.False(model.HasChanges);

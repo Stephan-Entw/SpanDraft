@@ -78,6 +78,8 @@ public static class SettingsCodec
         // V1–V3 Standard/Detailed both migrate to the new defaults; units remain unchanged.
         int digits = dto.Version < 4 ? ResultPresentationOptions.DefaultSignificantDigits
             : dto.SignificantDigits ?? throw new JsonException("Missing significant digits.");
+        // Earlier versions allowed up to 15 digits; larger stored values now load as the maximum.
+        digits = Math.Min(digits, ResultPresentationOptions.MaximumSignificantDigits);
         var notation = dto.Version < 4 ? EngineeringNotation.Automatic
             : dto.Notation ?? throw new JsonException("Missing notation.");
         if (digits is < ResultPresentationOptions.MinimumSignificantDigits or > ResultPresentationOptions.MaximumSignificantDigits

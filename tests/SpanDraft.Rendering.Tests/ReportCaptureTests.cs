@@ -124,7 +124,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
     }
 
     [Fact]
-    public void ReportShowsAGivenLoadPositionExactlyInsteadOfRoundingItToTheResultPrecision()
+    public void ReportKeepsAllWholeUnitDigitsOfAGivenLoadPosition()
     {
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("de-DE");
         var state = ReportTestProjects.Create();
@@ -147,7 +147,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         var (main, _) = Open(ReportTestProjects.Create());
         using var captured = ProjectReport.Capture(main.Editor!, Now);
         string number = QuantityFormatter.FormatResultNumber(123456789012345d, QuantityKind.PoissonRatio,
-            significantDigits: 15, notation: EngineeringNotation.Off);
+            significantDigits: 5, notation: EngineeringNotation.Off);
         var table = new ReportTable("Grouped numbers", ["Name", "Value"], [.8f, .2f],
             [new[] { "Group", number }]);
         using var report = new ReportDocument(captured.Data with { Tables = [table] }, new(80, (_, _, _) => { }));
@@ -173,7 +173,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
             2 => UnitProfile.UnitedStates, _ => UnitProfile.MechanicalEngineering.WithUnit(QuantityKind.BeamLength, UnitCatalog.Meter)
         };
         int analyses = 0;
-        var (main, files) = Open(ReportTestProjects.Create(), new(profile, detailed ? 6 : 3), () => analyses++);
+        var (main, files) = Open(ReportTestProjects.Create(), new(profile, detailed ? 5 : 3), () => analyses++);
         var session = main.Session!; var revision = session.CurrentRevision; var original = files.Data[session.FilePath!].ToArray();
         var editor = main.Editor!;
         editor.PreviewAnnotationOffset(editor.Document.Loads[0].Id, new(99, 88));
@@ -189,7 +189,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         Assert.Contains(profile[QuantityKind.TransverseForce].Symbol, report.Data.Tables.Single(t => t.Title == Strings.Reactions).Headers[2].PlainText);
         using var before = new MemoryStream(); report.WritePng(before, 0);
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture == "de-DE" ? "en-US" : "de-DE");
-        Assert.True(main.SetResultPresentation(UnitProfile.UnitedStates, 6));
+        Assert.True(main.SetResultPresentation(UnitProfile.UnitedStates, 5));
         using var after = new MemoryStream(); report.WritePng(after, 0);
         Assert.Equal(before.ToArray(), after.ToArray());
         using var backgroundPdf = new MemoryStream();

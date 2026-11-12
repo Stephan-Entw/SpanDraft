@@ -76,7 +76,7 @@ public sealed class ProcessCultureTests
         var dialog = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
         dialog.SelectedUiLanguage = UiLanguagePreference.English;
         dialog.SelectedRegionalFormat = RegionalFormatPreference.EnglishUnitedStates;
-        dialog.Select(UnitProfileKind.UnitedStates); dialog.SignificantDigits = 6;
+        dialog.Select(UnitProfileKind.UnitedStates); dialog.SignificantDigits = 5;
         var pending = dialog.Pending;
         if (failSave) files.FailWritePath = "settings";
         Assert.Equal(!failSave, await dialog.ApplyAsync());
@@ -92,7 +92,7 @@ public sealed class ProcessCultureTests
         }
         Assert.Same(pending, main.Settings); Assert.False(dialog.HasChanges);
         Assert.Same(UnitProfile.UnitedStates, main.ResultPresentation.Profile);
-        Assert.Equal(6, main.ResultPresentation.SignificantDigits);
+        Assert.Equal(5, main.ResultPresentation.SignificantDigits);
         var reopened = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
         Assert.Equal(UiLanguagePreference.English, reopened.SelectedUiLanguage);
         Assert.Equal(RegionalFormatPreference.EnglishUnitedStates, reopened.SelectedRegionalFormat);

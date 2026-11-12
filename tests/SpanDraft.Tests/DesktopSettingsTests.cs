@@ -36,7 +36,7 @@ public sealed class DesktopSettingsTests
     public void CurrentVersionRoundtripPreservesLocalePreferencesAndUnits(UiLanguagePreference language, RegionalFormatPreference region)
     {
         var settings = UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Inch)
-            .Select(UnitProfileKind.StructuralEngineering) with { UiLanguage = language, RegionalFormat = region, SignificantDigits = 6 };
+            .Select(UnitProfileKind.StructuralEngineering) with { UiLanguage = language, RegionalFormat = region, SignificantDigits = 5 };
         var bytes = SettingsCodec.Serialize(settings);
         var json = JsonNode.Parse(bytes)!;
         Assert.Equal(4, json["version"]!.GetValue<int>());
@@ -53,7 +53,7 @@ public sealed class DesktopSettingsTests
     public async Task VersionOnePreservesEveryExistingPreferenceWithoutRewritingTheFile(UnitProfileKind selected)
     {
         var settings = UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Inch)
-            .WithUnit(QuantityKind.Moment, UnitCatalog.KilonewtonMeter).Select(selected) with { SignificantDigits = 6 };
+            .WithUnit(QuantityKind.Moment, UnitCatalog.KilonewtonMeter).Select(selected) with { SignificantDigits = 5 };
         var json = JsonNode.Parse(SettingsCodec.Serialize(settings))!.AsObject();
         json["version"] = 1; json.Remove("uiLanguage"); json.Remove("regionalFormat");
         var files = new Files(); var store = new LocalSettingsStore(files, "settings");
@@ -93,6 +93,35 @@ public sealed class DesktopSettingsTests
         if (value is null) json.Remove(field); else json[field] = JsonNode.Parse(value);
         var files = new Files(); files.Data["settings"] = Encoding.UTF8.GetBytes(json.ToJsonString());
         Assert.Same(UserSettings.Default, await new LocalSettingsStore(files, "settings").LoadAsync());
+    }
+
+    [Theory]
+    [InlineData(5, 5)] [InlineData(6, 5)] [InlineData(7, 5)] [InlineData(15, 5)] [InlineData(16, 5)]
+    [InlineData(1, 1)] [InlineData(3, 3)]
+    public async Task StoredDigitsAboveTheRangeLoadAsTheMaximumWithoutLosingOtherPreferences(int stored, int loaded)
+    {
+        // Earlier versions offered up to 15 digits; the key and format version stay unchanged.
+        var saved = UserSettings.Default.Select(UnitProfileKind.UnitedStates) with { Notation = EngineeringNotation.Off, LastAuthor = "A" };
+        var json = JsonNode.Parse(SettingsCodec.Serialize(saved))!;
+        json["significantDigits"] = stored;
+        var files = new Files(); files.Data["settings"] = Encoding.UTF8.GetBytes(json.ToJsonString());
+        var settings = await new LocalSettingsStore(files, "settings").LoadAsync();
+        Assert.Equal(loaded, settings.SignificantDigits);
+        Assert.True((saved with { SignificantDigits = loaded }).ContentEquals(settings));
+        Assert.Equal(json["version"]!.GetValue<int>(), JsonNode.Parse(SettingsCodec.Serialize(settings))!["version"]!.GetValue<int>());
+        Assert.Equal(loaded, JsonNode.Parse(SettingsCodec.Serialize(settings))!["significantDigits"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public void TheDigitSettingOffersOneToFive()
+    {
+        Assert.Equal(1, ResultPresentationOptions.MinimumSignificantDigits);
+        Assert.Equal(5, ResultPresentationOptions.MaximumSignificantDigits);
+        Assert.Equal(3, UserSettings.Default.SignificantDigits);
+        Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default with { SignificantDigits = 6 });
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ResultPresentationOptions(significantDigits: 0));
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
+        Assert.Equal(new[] { 1, 2, 3, 4, 5 }, model.SignificantDigitChoices.Select(c => c.Value));
     }
 
     [Theory]
@@ -138,12 +167,12 @@ public sealed class DesktopSettingsTests
         var model = new SettingsViewModel(UserSettings.Default, settings =>
         { published = settings; return Task.FromResult<string?>(null); });
         Assert.False(model.CanApply);
-        model.SignificantDigits = 6;
+        model.SignificantDigits = 5;
         model.SelectedUiLanguage = UiLanguagePreference.English;
         model.SelectedRegionalFormat = RegionalFormatPreference.GermanGermany;
         Assert.True(model.CanApply);
         Assert.True(await model.ApplyAsync());
-        Assert.Equal(6, published!.SignificantDigits);
+        Assert.Equal(5, published!.SignificantDigits);
         Assert.Equal(UiLanguagePreference.English, published.UiLanguage);
         Assert.Equal(RegionalFormatPreference.GermanGermany, published.RegionalFormat);
         Assert.False(model.CanApply);
@@ -151,7 +180,7 @@ public sealed class DesktopSettingsTests
         model.SelectedUiLanguage = UiLanguagePreference.System;
         model.SelectedRegionalFormat = RegionalFormatPreference.System;
         model.DiscardPending();
-        Assert.True(model.IsMechanical); Assert.Equal(6, model.SignificantDigits);
+        Assert.True(model.IsMechanical); Assert.Equal(5, model.SignificantDigits);
         Assert.Equal(UiLanguagePreference.English, model.SelectedUiLanguage);
         Assert.Equal(RegionalFormatPreference.GermanGermany, model.SelectedRegionalFormat);
         Assert.False(model.HasChanges);
@@ -195,7 +224,7 @@ public sealed class DesktopSettingsTests
         var files = new Files(); var store = new LocalSettingsStore(files, "settings");
         Assert.Same(UserSettings.Default, await store.LoadAsync());
         var settings = UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Inch)
-            .WithUnit(QuantityKind.Moment, UnitCatalog.KilonewtonMeter).Select(selected) with { SignificantDigits = 6 };
+            .WithUnit(QuantityKind.Moment, UnitCatalog.KilonewtonMeter).Select(selected) with { SignificantDigits = 5 };
         await store.SaveAsync(settings);
         var loaded = await store.LoadAsync();
         Assert.True(settings.ContentEquals(loaded));
@@ -240,7 +269,7 @@ public sealed class DesktopSettingsTests
     public async Task StartupLoadsPreferencesBeforeTheFirstProjectAnalysis()
     {
         var files = new Files(); var store = new LocalSettingsStore(files, "settings");
-        var expected = UserSettings.Default.Select(UnitProfileKind.UnitedStates) with { SignificantDigits = 6 };
+        var expected = UserSettings.Default.Select(UnitProfileKind.UnitedStates) with { SignificantDigits = 5 };
         await store.SaveAsync(expected);
         var startup = await DesktopStartupContext.LoadAsync(files, store);
         var main = new MainWindowViewModel(files: startup.Files, settingsStore: startup.SettingsStore, settings: startup.Settings);
@@ -248,7 +277,7 @@ public sealed class DesktopSettingsTests
         Assert.True(expected.ContentEquals(main.Settings));
         ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
         Assert.True(UserSettings.SameUnits(expected.Profile, main.Editor!.ResultPresentation.Profile));
-        Assert.Equal(6, main.Editor.ResultPresentation.SignificantDigits);
+        Assert.Equal(5, main.Editor.ResultPresentation.SignificantDigits);
     }
 
     [Fact]
@@ -289,7 +318,7 @@ public sealed class DesktopSettingsTests
         var bytes = ProjectFileCodec.Serialize(revision.State); var recoveryBytes = files.Data[recoveryPath].ToArray();
         var result = editor.Presentation.Result; int count = analyses, changes = 0;
         session.Changed += () => changes++;
-        var settings = UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Foot) with { SignificantDigits = 6 };
+        var settings = UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Foot) with { SignificantDigits = 5 };
         Assert.Null(await main.ApplySettingsAsync(settings));
         Assert.Same(revision, session.CurrentRevision); Assert.Equal(saved, session.SavedRevisionId);
         Assert.Equal(undo, session.UndoHistory); Assert.Equal(redo, session.RedoHistory);
@@ -351,7 +380,7 @@ public sealed class DesktopSettingsTests
         var main = new MainWindowViewModel(files: files, settingsStore: store,
             settings: UserSettings.Default with { LastAuthor = "Local author" });
         var model = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
-        model.SignificantDigits = 6;
+        model.SignificantDigits = 5;
         Assert.True(await model.ApplyAsync());
         Assert.Equal("Local author", main.Settings.LastAuthor);
         Assert.Equal("Local author", (await store.LoadAsync()).LastAuthor);
@@ -366,7 +395,7 @@ public sealed class DesktopSettingsTests
     public void LegacyPrecisionMigratesWithoutLosingCustomUnitsOrChangingFiles(int version, string oldMode)
     {
         var settings = UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Inch)
-            .WithUnit(QuantityKind.Stress, UnitCatalog.Ksi) with { SignificantDigits = 9, Notation = EngineeringNotation.Off };
+            .WithUnit(QuantityKind.Stress, UnitCatalog.Ksi) with { SignificantDigits = 5, Notation = EngineeringNotation.Off };
         var json = JsonNode.Parse(SettingsCodec.Serialize(settings))!.AsObject();
         json["version"] = version;
         json["presentationMode"] = oldMode;
@@ -383,7 +412,7 @@ public sealed class DesktopSettingsTests
     }
 
     [Theory]
-    [InlineData("significantDigits", "0")] [InlineData("significantDigits", "16")]
+    [InlineData("significantDigits", "0")] [InlineData("significantDigits", "-1")]
     [InlineData("significantDigits", "3.5")] [InlineData("significantDigits", "null")]
     [InlineData("notation", "null")] [InlineData("notation", "42")]
     public async Task InvalidNumericPreferencesFallBackToDefaults(string field, string value)
@@ -393,5 +422,6 @@ public sealed class DesktopSettingsTests
         var files = new Files(); files.Data["settings"] = Encoding.UTF8.GetBytes(json.ToJsonString());
         Assert.Same(UserSettings.Default, await new LocalSettingsStore(files, "settings").LoadAsync());
     }
+
 
 }

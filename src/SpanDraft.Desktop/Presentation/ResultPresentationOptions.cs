@@ -2,12 +2,15 @@ namespace SpanDraft.Desktop.Presentation;
 
 public enum EngineeringNotation { Automatic, Off }
 
-/// <summary>Global display preferences, independent of stored SI values and project revisions.</summary>
+/// <summary>
+/// Global display preferences for given and calculated values alike, independent of stored SI values and
+/// project revisions.
+/// </summary>
 public sealed record ResultPresentationOptions
 {
-    // 1–15 is useful technical precision within double's reliable decimal precision.
+    // One setting for every displayed value; more than five digits adds no engineering information.
     public const int MinimumSignificantDigits = 1;
-    public const int MaximumSignificantDigits = 15;
+    public const int MaximumSignificantDigits = 5;
     public const int DefaultSignificantDigits = 3;
 
     public ResultPresentationOptions(UnitProfile? profile = null, int significantDigits = DefaultSignificantDigits,

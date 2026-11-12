@@ -270,7 +270,7 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
         Assert.Equal(editor.Overview.ReactionYHeader, TechnicalTextPresenter.GetContent(overview.FindControl<TextBlock>("ReactionYHeader")!)!.PlainText);
         Assert.Equal(editor.Overview.ReactionMomentHeader, TechnicalTextPresenter.GetContent(overview.FindControl<TextBlock>("ReactionMomentHeader")!)!.PlainText);
         Snapshot(view, $"phase2-{uiCulture}-{profileIndex}-standard-workspace");
-        main.SetResultPresentation(profile, 6);
+        main.SetResultPresentation(profile, 5);
         Arrange(window, width, 950);
         Assert.Equal(count, analyses);
         Assert.Same(result, editor.Presentation.Result);
@@ -280,7 +280,7 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
             AssertReadableMarkers(diagrams[i]);
             foreach (var label in diagrams[i].MarkerLabels)
                 Assert.Contains(QuantityFormatter.FormatResult(label.Marker.SiValue,
-                    ResultDiagramProjection.QuantityOf(diagrams[i].Kind), profile, 6), label.Text);
+                    ResultDiagramProjection.QuantityOf(diagrams[i].Kind), profile, 5), label.Text);
             Snapshot(diagrams[i], $"phase2-{uiCulture}-{profileIndex}-detailed-{diagrams[i].Kind}");
         }
         Snapshot(view, $"phase2-{uiCulture}-{profileIndex}-detailed-workspace");
@@ -397,11 +397,11 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
         Assert.Contains(diagram.MarkerLabels, l => l.Text == (force < 0 ? "max = 0 mm" : "min = 0 mm"));
         AssertReadableMarkers(diagram);
         Snapshot(diagram, $"approximate-comparison-{culture}-{(force < 0 ? "minimum" : "maximum")}");
-        diagram.Presentation = editor.Presentation.WithPresentation(new(significantDigits: 6));
+        diagram.Presentation = editor.Presentation.WithPresentation(new(significantDigits: 5));
         Assert.Same(projection, diagram.Projection);
         Assert.All(diagram.MarkerLabels, l => Assert.DoesNotContain("≈", l.Text));
         Assert.Contains(diagram.MarkerLabels, l => l.Text == (force < 0 ? "min = " : "max = ")
-            + QuantityFormatter.FormatResult(label.Marker.SiValue, QuantityKind.TransverseDisplacement, significantDigits: 6));
+            + QuantityFormatter.FormatResult(label.Marker.SiValue, QuantityKind.TransverseDisplacement, significantDigits: 5));
         window.Content = null;
     }
 

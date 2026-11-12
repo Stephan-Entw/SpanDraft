@@ -105,7 +105,7 @@ public sealed class DesktopResultPresentationTests
         session.StateApplied += (_, _, _) => applied++;
         editor.PropertyChanged += (_, e) => notifications.Add(e.PropertyName);
         foreach (var profile in new[] { UnitProfile.UnitedStates, PresentationTestProfiles.Mixed, UnitProfile.Default })
-        foreach (var mode in new[] { 3, 6 })
+        foreach (var mode in new[] { 3, 5 })
         {
             Assert.Equal(UserSettings.SameUnits(profile, UnitProfile.Default), app.Main.SetResultPresentation(profile, mode));
             Assert.True(app.Main.SetResultPresentation(UnitProfile.Default, mode));
@@ -135,13 +135,13 @@ public sealed class DesktopResultPresentationTests
         Assert.All(notifications, name => Assert.Contains(name, new[] { "ResultPresentation", "Presentation", "Overview", "CoordinateText" }));
         var before = editor.Presentation;
         int count = notifications.Count;
-        app.Main.SetResultPresentation(UnitProfile.Default, 6);
+        app.Main.SetResultPresentation(UnitProfile.Default, 5);
         Assert.Same(before, editor.Presentation);
         Assert.Equal(count, notifications.Count);
         Assert.True(session.Commit(state with { Document = document with { Length = M(1.3) } }));
         Assert.Equal(analyses + 1, app.Analyses);
         Assert.NotSame(before.Result, editor.Presentation.Result);
-        Assert.Equal(6, editor.ResultPresentation.SignificantDigits);
+        Assert.Equal(5, editor.ResultPresentation.SignificantDigits);
         app.Delay.ReleaseAll();
         await app.Recovery.DrainAsync();
     }
@@ -151,7 +151,7 @@ public sealed class DesktopResultPresentationTests
     {
         var app = new App(create: false);
         Assert.True(await app.Main.NewAsync());
-        app.Main.SetResultPresentation(PresentationTestProfiles.Mixed, 6);
+        app.Main.SetResultPresentation(PresentationTestProfiles.Mixed, 5);
         var section = app.Main.Setup.SelectedSection;
         var material = app.Main.Setup.SelectedMaterial;
         Assert.Same(section, app.Main.Setup.SelectedSection);
@@ -182,7 +182,7 @@ public sealed class DesktopResultPresentationTests
         ProjectTestSupport.CompleteSetup(app.Main); app.Main.Setup.ApplyCommand.Execute(null);
         Assert.Equal(app.Main.ResultPresentation, app.Main.Editor!.ResultPresentation);
         var restored = new App(create: false);
-        restored.Main.SetResultPresentation(PresentationTestProfiles.Mixed, 6);
+        restored.Main.SetResultPresentation(PresentationTestProfiles.Mixed, 5);
         restored.Files.Data[App.Slot] = ProjectRecovery.Encode(new(LoadedState(), app.Dialogs.OpenPath, Now));
         Assert.True(await restored.Main.InitializeRecoveryAsync());
         Assert.Equal(restored.Main.ResultPresentation, restored.Main.Editor!.ResultPresentation);
@@ -197,7 +197,7 @@ public sealed class DesktopResultPresentationTests
         var document = new EditorDocument(M(1), ProjectTemplates.Material, ProjectTemplates.Section,
             [new(Guid.NewGuid(), M(0), SupportType.Pinned, "A"), new(Guid.NewGuid(), M(1), SupportType.Roller, "B")]);
         foreach (var profile in new[] { UnitProfile.Default, UnitProfile.StructuralEngineering, UnitProfile.UnitedStates, PresentationTestProfiles.Mixed })
-        foreach (var mode in new[] { 3, 6 })
+        foreach (var mode in new[] { 3, 5 })
         {
             var options = new ResultPresentationOptions(profile, mode);
             var editor = new EditorViewModel(document, () => { }, resultPresentation: options);
@@ -221,7 +221,7 @@ public sealed class DesktopResultPresentationTests
         Assert.NotNull(editor.Presentation.Result);
         Assert.True(session.Commit(session.CurrentRevision.State with { Document = editor.Document.WithSupports([]) }));
         var failed = editor.Presentation;
-        var updated = failed.WithPresentation(new(PresentationTestProfiles.Mixed, 6));
+        var updated = failed.WithPresentation(new(PresentationTestProfiles.Mixed, 5));
         Assert.Null(updated.Result);
         Assert.Empty(updated.Displacement); Assert.Empty(updated.Moment);
         Assert.Empty(updated.Stress); Assert.Empty(updated.SafetyFactor);
@@ -247,7 +247,7 @@ public sealed class DesktopResultPresentationTests
     {
         var outcome = BeamAnalysis.Analyze(LoadedState().Document.ToBeamModel());
         var original = AnalysisPresentationState.FromOutcome(outcome);
-        var switched = original.WithPresentation(new(PresentationTestProfiles.Mixed, 6));
+        var switched = original.WithPresentation(new(PresentationTestProfiles.Mixed, 5));
         Assert.Same(outcome.Result, switched.Result);
         var nextAnalysis = AnalysisPresentationState.FromOutcome(BeamAnalysis.Analyze(LoadedState().Document.ToBeamModel()));
         Assert.NotSame(switched.Result, nextAnalysis.Result);
@@ -257,7 +257,7 @@ public sealed class DesktopResultPresentationTests
     public void NumberOnlyFormattingUsesTheSamePrecisionAndExplicitCultureOverride()
     {
         using var cultures = new ResultCultureScope("de-DE", "en-US");
-        foreach (var mode in new[] { 3, 6 })
+        foreach (var mode in new[] { 3, 5 })
         foreach (var profile in new[] { UnitProfile.Default, UnitProfile.StructuralEngineering, UnitProfile.UnitedStates, PresentationTestProfiles.Mixed })
         foreach (var kind in new[] { QuantityKind.AxialForce, QuantityKind.TransverseForce, QuantityKind.Moment })
         foreach (double value in new[] { 0, -0.0, 1e-12, -1234.5678 })

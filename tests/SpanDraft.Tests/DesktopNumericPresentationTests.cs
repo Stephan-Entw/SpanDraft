@@ -83,13 +83,13 @@ public sealed class DesktopNumericPresentationTests
             notation: EngineeringNotation.Off, culture: CultureInfo.InvariantCulture));
 
     [Theory]
-    [InlineData("de-DE", "12\u202f200,05", "123\u202f456,7")]
-    [InlineData("en-US", "12\u202f200.05", "123\u202f456.7")]
+    [InlineData("de-DE", "1\u202f234,5", "123\u202f457")]
+    [InlineData("en-US", "1\u202f234.5", "123\u202f457")]
     public void GroupingAlwaysUsesNarrowNonbreakingSpaces(string culture, string first, string second)
     {
         using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
-        Assert.Equal(first, QuantityFormatter.FormatResultNumber(12200.05, QuantityKind.PoissonRatio, significantDigits: 7));
-        Assert.Equal(second, QuantityFormatter.FormatResultNumber(123456.7, QuantityKind.PoissonRatio, significantDigits: 7));
+        Assert.Equal(first, QuantityFormatter.FormatResultNumber(1234.5, QuantityKind.PoissonRatio, significantDigits: 5));
+        Assert.Equal(second, QuantityFormatter.FormatResultNumber(123456.7, QuantityKind.PoissonRatio, significantDigits: 5));
         Assert.Equal("\u202f", QuantityFormatter.GroupSeparator);
     }
 

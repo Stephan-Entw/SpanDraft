@@ -224,7 +224,7 @@ public sealed class ProjectSetupIntegrationTests
         app.Main.EditProject(); var input = app.Main.Setup.LengthInput; input.Begin(); input.Text = "unfinished";
         var other = options.WithUnit(QuantityKind.BeamLength, options[QuantityKind.BeamLength].Id == UnitCatalog.Inch.Id ? UnitCatalog.Millimeter : UnitCatalog.Inch);
         Assert.False(app.Main.SetResultPresentation(other, 3)); Assert.Equal("unfinished", input.Text);
-        Assert.True(app.Main.SetResultPresentation(options, 6)); Assert.Equal("unfinished", input.Text);
+        Assert.True(app.Main.SetResultPresentation(options, 5)); Assert.Equal("unfinished", input.Text);
     }
 
     [Theory]
