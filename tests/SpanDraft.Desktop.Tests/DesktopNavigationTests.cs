@@ -72,7 +72,7 @@ public sealed class DesktopNavigationTests
             Assert.NotEmpty(buttons);
             foreach (var button in buttons)
             {
-                Guid id = button.DataContext is ProjectOverviewItem item ? item.Id : ((ProjectOverviewReaction)button.DataContext!).Id;
+                Guid id = button.DataContext is ProjectOverviewItem item ? item.Id : ((ProjectOverviewReaction)button.DataContext!).Id!.Value;
                 ActivateName(button, window, keyboard);
                 object draft;
                 if (editor.Document.Supports.Any(s => s.Id == id))
@@ -150,6 +150,47 @@ public sealed class DesktopNavigationTests
         Assert.NotNull(editor.LoadDraft);
         Assert.Same(revision, editor.Session.CurrentRevision);
         editor.CancelEditorInteraction();
+    }
+
+    [Fact]
+    public void SharedStationReactionRowIsNotAnEditableEntityWhileSingleRowsStillOpenTheirSupport()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
+        var window = new MainWindow { DataContext = model };
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
+        var state = ProjectTestSupport.State();
+        // Two supports of different type at the same station are valid outside the interactive placement path.
+        var clamp = new EditorSupport(Guid.NewGuid(), Length.FromMeters(0), SupportType.Roller, "Clamp");
+        Assert.True(model.Editor!.Session.Commit(new(
+            (state.Document with { Length = Length.FromMeters(1) }).WithSupports([.. state.Document.Supports, clamp]), state.Presentation)));
+        Layout(window);
+        var editor = model.Editor;
+        var overview = Assert.Single(window.GetVisualDescendants().OfType<ProjectOverviewView>());
+        var buttons = overview.FindControl<ItemsControl>("ReactionTable")!.GetVisualDescendants().OfType<Button>().ToArray();
+        Assert.Equal(editor.Document.Supports.Count - 1, buttons.Length);
+        var revision = editor.Session.CurrentRevision;
+
+        var shared = Assert.Single(buttons, b => ((ProjectOverviewReaction)b.DataContext!).Id is null);
+        Assert.Equal("A + Clamp", ((ProjectOverviewReaction)shared.DataContext!).Name);
+        Assert.False(shared.IsHitTestVisible);
+        Assert.False(shared.Focusable);
+        shared.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        shared.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
+        Assert.Null(editor.SupportDraft);
+        Assert.False(editor.IsSupportFlyoutVisible);
+
+        foreach (var single in buttons.Where(b => b != shared))
+        {
+            var row = (ProjectOverviewReaction)single.DataContext!;
+            Assert.True(row.IsEditable);
+            Assert.True(single.IsHitTestVisible);
+            Assert.True(single.Focusable);
+            ActivateName(single, window, true);
+            Assert.Equal(row.Id, editor.SupportDraft!.OriginalId);
+            editor.CancelEditorInteraction();
+        }
+        Assert.Same(revision, editor.Session.CurrentRevision);
     }
 
     [Theory]

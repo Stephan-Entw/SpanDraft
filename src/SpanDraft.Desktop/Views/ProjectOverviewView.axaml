@@ -33,6 +33,7 @@
       <Grid Classes="overviewRow" ColumnDefinitions="64,*,*,*">
         <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
+                IsHitTestVisible="{Binding IsEditable}" Focusable="{Binding IsEditable}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
           <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
         </Button>

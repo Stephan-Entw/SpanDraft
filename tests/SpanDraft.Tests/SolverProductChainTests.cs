@@ -124,6 +124,9 @@ public sealed class SolverProductChainTests
         {
             BeamNodeResult node = solution.Nodes.Single(n => n.Position == station.Key);
             Assert.Equal(string.Join(" + ", station.Select(s => s.Name)), row.Name);
+            // Only a row with exactly one support identifies an editable entity.
+            Assert.Equal(station.Count() == 1 ? station.Single().Id : (Guid?)null, row.Id);
+            Assert.Equal(station.Count() == 1, row.IsEditable);
             Assert.Equal(QuantityFormatter.FormatNumber(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce, options), row.Ry);
             Assert.Equal(node.ReactionX is { } rx ? QuantityFormatter.FormatNumber(rx.Newtons, QuantityKind.AxialForce, options) : "", row.Rx);
             Assert.Equal(node.ReactionMoment is { } rm ? QuantityFormatter.FormatNumber(rm.NewtonMeters, QuantityKind.Moment, options) : "", row.Moment);

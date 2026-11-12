@@ -8,7 +8,14 @@ using SpanDraft.Reporting.Notation;
 namespace SpanDraft.Desktop.State;
 
 public sealed record ProjectOverviewItem(Guid Id, string Name, string Type, string Value, string Position);
-public sealed record ProjectOverviewReaction(Guid Id, string Name, string Rx, string Ry, string Moment);
+/// <summary>
+/// One reaction row per support station. <see cref="Id"/> identifies the row's single support; a row
+/// shared by several supports at one station represents no single editable entity and has none.
+/// </summary>
+public sealed record ProjectOverviewReaction(Guid? Id, string Name, string Rx, string Ry, string Moment)
+{
+    public bool IsEditable => Id is not null;
+}
 
 /// <summary>Read-only display projection of a committed document and its current analysis.</summary>
 public sealed class ProjectOverviewState
@@ -43,7 +50,8 @@ public sealed class ProjectOverviewState
             ? document.Supports.GroupBy(s => s.Position).Select(station =>
             {
                 var node = result.Solution.Nodes.Single(n => n.Position == station.Key);
-                return new ProjectOverviewReaction(station.First().Id, string.Join(" + ", station.Select(s => s.Name)),
+                return new ProjectOverviewReaction(station.Count() == 1 ? station.First().Id : null,
+                    string.Join(" + ", station.Select(s => s.Name)),
                     node.ReactionX is { } rx ? Reaction(rx.Newtons, QuantityKind.AxialForce) : "",
                     node.ReactionY is { } ry ? Reaction(ry.Newtons, QuantityKind.TransverseForce) : "",
                     node.ReactionMoment is { } moment ? Reaction(moment.NewtonMeters, QuantityKind.Moment) : "");
