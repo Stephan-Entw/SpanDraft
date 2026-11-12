@@ -23,7 +23,7 @@ public sealed class ProjectOverviewState
     private ProjectOverviewState(EditorDocument document, AnalysisPresentationState analysis)
     {
         Analysis = analysis;
-        Section = document.SectionDisplayName ?? SectionDisplay.Name(document.Section, analysis.Options.Profile, analysis.Options);
+        Section = document.SectionDisplayName ?? SectionDisplay.Name(document.Section, analysis.Options.Profile);
         Material = MaterialDisplay.Format(document.Material);
         Length = string.Format(CultureInfo.CurrentUICulture, Strings.OverviewLength, Position(document.Length),
             analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
@@ -32,16 +32,19 @@ public sealed class ProjectOverviewState
         IReadOnlyList<ProjectOverviewItem> PointLoads(PointLoadKind kind) => Array.AsReadOnly(document.Loads
             .Where(l => l.Kind == kind).Select(l => new ProjectOverviewItem(l.Id, l.Name,
                 kind == PointLoadKind.Force ? "F" : "M",
-                QuantityFormatter.WithUnit(l.Value, analysis.Options.Profile[kind == PointLoadKind.Force
-                    ? QuantityKind.TransverseForce : QuantityKind.Moment], analysis.Options), Position(l.Position))).ToArray());
+                QuantityFormatter.FormatInput(l.Value, analysis.Options.Profile[kind == PointLoadKind.Force
+                    ? QuantityKind.TransverseForce : QuantityKind.Moment]), Position(l.Position))).ToArray());
         Forces = PointLoads(PointLoadKind.Force);
         Moments = PointLoads(PointLoadKind.Moment);
-        ProjectOverviewItem Distributed(Guid id, string name, string type, double intensity, Length start, Length end) =>
-            new(id, name, type, QuantityFormatter.WithUnit(intensity, analysis.Options.Profile[QuantityKind.DistributedLoad], analysis.Options),
+        // A self-weight intensity is calculated from area and density; a user load's intensity is given.
+        ProjectOverviewItem Distributed(Guid id, string name, string type, double intensity, Length start, Length end, bool calculated = false) =>
+            new(id, name, type, calculated
+                    ? QuantityFormatter.FormatResult(intensity, QuantityKind.DistributedLoad, analysis.Options)
+                    : QuantityFormatter.FormatInput(intensity, analysis.Options.Profile[QuantityKind.DistributedLoad]),
                 Position(start) + "…" + Position(end));
         DistributedLoads = Array.AsReadOnly((document.SelfWeightLoad is { } weight
             ? new[] { Distributed(document.SelfWeight!.Id, EditorSelfWeight.Symbol, EditorSelfWeight.Symbol,
-                weight.Intensity.NewtonsPerMeter, weight.StartPosition, weight.EndPosition) } : [])
+                weight.Intensity.NewtonsPerMeter, weight.StartPosition, weight.EndPosition, calculated: true) } : [])
             .Concat(document.DistributedLoads.Select(l => Distributed(l.Id, l.Name, "q", l.Intensity.NewtonsPerMeter,
                 l.StartPosition, l.EndPosition))).ToArray());
         // The solver reports one common reaction per station and restrained direction. Supports sharing
@@ -84,10 +87,10 @@ public sealed class ProjectOverviewState
     public string PositionHeader => string.Format(CultureInfo.CurrentUICulture, Strings.OverviewPosition,
         Analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
 
-    private string Reaction(double siValue, QuantityKind kind) => QuantityFormatter.FormatNumber(siValue, kind,
+    private string Reaction(double siValue, QuantityKind kind) => QuantityFormatter.FormatResultNumber(siValue, kind,
         Analysis.Options);
 
-    private string Position(Length position) => QuantityFormatter.Display(position.Meters, Analysis.Options.Profile[QuantityKind.BeamLength], Analysis.Options);
+    private string Position(Length position) => QuantityFormatter.FormatInputNumber(position.Meters, Analysis.Options.Profile[QuantityKind.BeamLength]);
 
     private static string SupportTypeName(SupportType type) => type switch
     {

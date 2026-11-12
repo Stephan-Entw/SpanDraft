@@ -381,7 +381,9 @@ public static class Strings
     public static string RenameMaterial => Get(nameof(RenameMaterial));
     public static string MaterialNameConflictQuestion => Get(nameof(MaterialNameConflictQuestion));
     public static string ReplaceMaterialQuestion => Get(nameof(ReplaceMaterialQuestion));
-    public static string SignificantDigits => Get(nameof(SignificantDigits));
+    public static string ResultPrecision => Get(nameof(ResultPrecision));
+    public static string SignificantDigitChoice => Get(nameof(SignificantDigitChoice));
+    public static string SignificantDigitChoiceOne => Get(nameof(SignificantDigitChoiceOne));
     public static string EngineeringNotation => Get(nameof(EngineeringNotation));
     public static string NotationAutomatic => Get(nameof(NotationAutomatic));
     public static string NotationOff => Get(nameof(NotationOff));

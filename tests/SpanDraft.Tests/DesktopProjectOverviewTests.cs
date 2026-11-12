@@ -362,8 +362,8 @@ public sealed class DesktopProjectOverviewTests
         {
             var node = editor.Presentation.Result!.Solution.Nodes.Single(n => n.Position == support.Position);
             var row = editor.Overview.Reactions.Single(r => r.Id == support.Id);
-            Assert.Equal(QuantityFormatter.FormatNumber(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce), row.Ry);
-            if (node.ReactionX is { } rx) Assert.Equal(QuantityFormatter.FormatNumber(rx.Newtons, QuantityKind.AxialForce), row.Rx);
+            Assert.Equal(QuantityFormatter.FormatResultNumber(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce), row.Ry);
+            if (node.ReactionX is { } rx) Assert.Equal(QuantityFormatter.FormatResultNumber(rx.Newtons, QuantityKind.AxialForce), row.Rx);
             if (loaded) Assert.StartsWith("-", row.Ry);
             else Assert.Equal("0", row.Ry);
         }
@@ -383,7 +383,7 @@ public sealed class DesktopProjectOverviewTests
     {
         var editor = Observed(Document(), out var analyses);
         var moment = editor.Presentation.Result!.Solution.Nodes[0].ReactionMoment!.Value;
-        Assert.Equal(QuantityFormatter.FormatNumber(moment.NewtonMeters, QuantityKind.Moment), Assert.Single(editor.Overview.Reactions).Moment);
+        Assert.Equal(QuantityFormatter.FormatResultNumber(moment.NewtonMeters, QuantityKind.Moment), Assert.Single(editor.Overview.Reactions).Moment);
         var material = new Material("Other steel", Pressure.FromPascals(200e9), Pressure.FromPascals(250e6), MaterialStrengthType.Re);
         var section = new CircleSection(Mm(50));
         editor.ApplySetup(section, material);
@@ -394,8 +394,8 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", "-1\u202f230")]
-    [InlineData("en-US", "-1\u202f230")]
+    [InlineData("de-DE", "-1\u202f235")]
+    [InlineData("en-US", "-1\u202f235")]
     public void ReactionDisplayUsesResultPrecisionWithoutRoundingCommittedLoads(string culture, string expected)
     {
         using var scope = new UiCultureScope(culture);
@@ -414,9 +414,9 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", "400", "-101 N", "601", "50,1 N·m", "200…801", "-501 N/m")]
-    [InlineData("en-US", "400", "-101 N", "601", "50.1 N·m", "200…801", "-501 N/m")]
-    public void TableCellsRoundOnlyDisplayValuesInNumericCulture(string culture, string forcePosition,
+    [InlineData("de-DE", "400,123456", "-100,56789 N", "600,987654", "50,123456 N·m", "200,2468…800,7531", "-500,98765 N/m")]
+    [InlineData("en-US", "400.123456", "-100.56789 N", "600.987654", "50.123456 N·m", "200.2468…800.7531", "-500.98765 N/m")]
+    public void TableCellsShowGivenLoadsAndPositionsExactlyInNumericCulture(string culture, string forcePosition,
         string force, string momentPosition, string moment, string range, string intensity)
     {
         using var scope = new UiCultureScope(culture);
@@ -436,8 +436,8 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", 1234.5678, "1\u202f230")]
-    [InlineData("en-US", -1234.5678, "-1\u202f230")]
+    [InlineData("de-DE", 1234.5678, "1\u202f235")]
+    [InlineData("en-US", -1234.5678, "-1\u202f235")]
     [InlineData("de-DE", -0.000123456, "-123 · 10⁻⁶")]
     [InlineData("en-US", 0.000123456, "123 · 10⁻⁶")]
     [InlineData("de-DE", 12345678, "12,3 · 10⁶")]
@@ -447,7 +447,7 @@ public sealed class DesktopProjectOverviewTests
     public void CompactNumbersBoundWidthWithoutHidingSmallNonzeroValues(string culture, double value, string expected)
     {
         using var scope = new UiCultureScope(culture);
-        Assert.Equal(expected, QuantityFormatter.FormatNumber(value, double.IsPositiveInfinity(value) ? QuantityKind.SafetyFactor : QuantityKind.TransverseForce, ResultPresentationOptions.Default));
+        Assert.Equal(expected, QuantityFormatter.FormatResultNumber(value, double.IsPositiveInfinity(value) ? QuantityKind.SafetyFactor : QuantityKind.TransverseForce, ResultPresentationOptions.Default));
     }
 
     [Theory]

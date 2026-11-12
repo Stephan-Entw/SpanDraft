@@ -166,7 +166,7 @@ public sealed class DesktopNativeTextMeasurementTests
             }
             var axis = CoordinateAxisLayout.Create(layout, 1000, Measure);
             Assert.Equal(layout.Stations.Count, measured.Count);
-            Assert.Equal(layout.Stations.Select(s => QuantityFormatter.FormatNumber(s.PhysicalX, QuantityKind.BeamLength, ResultPresentationOptions.Default)), measured.Select(m => m.Text));
+            Assert.Equal(layout.Stations.Select(s => QuantityFormatter.FormatInputNumber(s.PhysicalX, UnitCatalog.Millimeter)), measured.Select(m => m.Text));
             Assert.All(measured, m =>
             {
                 Assert.True(double.IsFinite(m.Size.Width) && m.Size.Width > 0);
@@ -186,6 +186,22 @@ public sealed class DesktopNativeTextMeasurementTests
     }
 
     [Fact]
+    public void AxisShowsNearlyCoincidentGivenStationsAsDistinctNonOverlappingLabels()
+    {
+        using var scope = new ResultCultureScope("de-DE", "de-DE");
+        const double pane = 1100;
+        var document = DesktopLayoutFixture.Document().WithLoads([
+            EditorPointLoad.Create(Guid.NewGuid(), SpanDraft.Core.Units.Length.FromMillimeters(800), PointLoadKind.Force, -1000, "F1"),
+            EditorPointLoad.Create(Guid.NewGuid(), SpanDraft.Core.Units.Length.FromMillimeters(800.000004), PointLoadKind.Force, -1000, "F2")]);
+        var frame = new BeamLayoutState().Update(document, pane, 600)!;
+        var axis = CoordinateAxisLayout.Create(frame.Layout, pane, text => SchematicText.Measure(text, Typeface.Default, 13));
+        Assert.Equal(new[] { "0", "800", "800,000004", "1\u202f000" }, axis.Labels.OrderBy(l => l.PhysicalX).Select(l => l.Text));
+        Assert.All(axis.Labels, label => Assert.True(label.Bounds.Left >= 0 && label.Bounds.Right <= pane, label.Text));
+        foreach (var label in axis.Labels)
+            Assert.All(axis.Labels.Where(other => other != label), other => Assert.False(label.Bounds.Intersects(other.Bounds), label.Text + " / " + other.Text));
+    }
+
+    [Fact]
     public void RealMeasuredEntityLabelsHaveFiniteBoundsAndCarryStableNames()
     {
         var load = EditorPointLoad.Create(Guid.NewGuid(), SpanDraft.Core.Units.Length.FromMillimeters(500.5),
@@ -194,7 +210,7 @@ public sealed class DesktopNativeTextMeasurementTests
         var frame = new BeamLayoutState().Update(document, 1100, 600)!;
         var scene = BeamRenderState.Create(document, frame, text => SchematicText.Measure(text, Typeface.Default, 13));
         var label = Assert.Single(scene.Annotations);
-        Assert.Equal("Motorlast = " + QuantityFormatter.Format(load.Value, QuantityKind.TransverseForce, ResultPresentationOptions.Default), label.Text);
+        Assert.Equal(QuantityFormatter.FormatInputEquation("Motorlast", load.Value, UnitCatalog.Newton), label.Text);
         Assert.True(double.IsFinite(label.Bounds.X) && double.IsFinite(label.Bounds.Y));
         Assert.True(double.IsFinite(label.Bounds.Width) && label.Bounds.Width > 0);
         Assert.True(double.IsFinite(label.Bounds.Height) && label.Bounds.Height > 0);

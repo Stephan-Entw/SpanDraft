@@ -45,6 +45,9 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             distributed.Insert(0, DistributedLoadSymbol.CreateVisual(document.SelfWeight!.Id,
                 new(weight.StartPosition, weight.EndPosition, weight.Intensity.NewtonsPerMeter), EditorSelfWeight.Symbol,
                 frame, symbolScale: loadSymbolScale) with { CanDragEndpoints = false, IsSelfWeight = true });
+        // The profile selects the units of given labels; the options only round the calculated self-weight.
+        var results = options is null ? new ResultPresentationOptions(profile)
+            : profile is null ? options : new(profile, options.SignificantDigits, options.Notation);
         if (reserveUnitWidths)
         {
             var originalMeasure = measure;
@@ -52,22 +55,24 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             foreach (var load in loads)
             {
                 var quantity = load.Preview.Kind == PointLoadKind.Force ? QuantityKind.TransverseForce : QuantityKind.Moment;
-                Reserve(PointLoadSymbol.Label(load.Preview, load.Name, profile, options), load.Name, load.Preview.Value, quantity);
+                Reserve(PointLoadSymbol.Label(load.Preview, load.Name, profile), quantity,
+                    u => PointLoadSymbol.Label(load.Preview, load.Name, results.Profile.WithUnit(quantity, u)));
             }
             foreach (var load in distributed)
-                Reserve(DistributedLoadSymbol.Label(load.Preview, load.Name, profile, options), load.Name, load.Preview.Intensity, QuantityKind.DistributedLoad);
-            void Reserve(string label, string name, double value, QuantityKind quantity)
+                Reserve(DistributedLoadSymbol.Label(load, results), QuantityKind.DistributedLoad,
+                    u => DistributedLoadSymbol.Label(load, new(results.Profile.WithUnit(QuantityKind.DistributedLoad, u), results.SignificantDigits, results.Notation)));
+            void Reserve(string label, QuantityKind quantity, Func<UnitDefinition, string> inUnit)
             {
                 var sizes = UnitCatalog.All.Where(u => u.Dimension == UnitCatalog.DimensionOf(quantity))
-                    .Select(u => originalMeasure(name.Trim() + " = " + QuantityFormatter.WithUnit(value, u, options))).ToArray();
+                    .Select(u => originalMeasure(inUnit(u))).ToArray();
                 reserved[label] = new(sizes.Max(s => s.Width), sizes.Max(s => s.Height));
             }
             measure = text => reserved.TryGetValue(text, out var size) ? size : originalMeasure(text);
         }
         var annotations = new List<EntityAnnotation>();
-        double above = Place(loads.Select((v, i) => (v.Id, v.Name, Text: PointLoadSymbol.Label(v.Preview, v.Name, profile, options),
+        double above = Place(loads.Select((v, i) => (v.Id, v.Name, Text: PointLoadSymbol.Label(v.Preview, v.Name, profile),
             v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)).Concat(distributed.Select((v, i) =>
-            (v.Id, v.Name, Text: DistributedLoadSymbol.Label(v.Preview, v.Name, profile, options), X: v.CenterX,
+            (v.Id, v.Name, Text: DistributedLoadSymbol.Label(v, results), X: v.CenterX,
                 v.IsPreview, v.Preview.IsInvalid, Order: loads.Count + i))), false);
         double below = Place(supports.Select((v, i) => (v.Id, v.Name, Text: v.Name,
             v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)), true);

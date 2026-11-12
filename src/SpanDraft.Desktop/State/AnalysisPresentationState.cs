@@ -67,5 +67,5 @@ public sealed record AnalysisPresentationState
     public string SafetyFactor => Result is { } r ? Format(r.Engineering.SafetyFactor, QuantityKind.SafetyFactor) : "";
 
     private string Format(double siValue, QuantityKind kind) =>
-        QuantityFormatter.Format(siValue, kind, Options);
+        QuantityFormatter.FormatResult(siValue, kind, Options);
 }

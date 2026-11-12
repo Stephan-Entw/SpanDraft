@@ -50,7 +50,7 @@ public sealed class DesktopInputUnitTests
         foreach (double sign in new[] { 1d, -1d })
         {
             double original = sign * 12.20005;
-            string displayed = QuantityFormatter.FormatNumber(original, QuantityKind.BeamLength, options);
+            string displayed = QuantityFormatter.FormatResultNumber(original, QuantityKind.BeamLength, options);
             Assert.Equal((sign < 0 ? "-" : "") + expected, displayed);
             Assert.True(InputQuantityFormatter.TryParse(displayed, UnitCatalog.Millimeter, out var parsed));
             Assert.Equal(original, parsed);
@@ -79,7 +79,7 @@ public sealed class DesktopInputUnitTests
         var options = new ResultPresentationOptions(significantDigits: 15, notation: EngineeringNotation.Off);
         foreach (double value in new[] { 1234567890.12345, -1234567890.12345 })
         {
-            string display = QuantityFormatter.FormatNumber(value, QuantityKind.TransverseForce, options);
+            string display = QuantityFormatter.FormatResultNumber(value, QuantityKind.TransverseForce, options);
             Assert.Equal(3, display.Count(c => c == '\u202f'));
             Assert.True(InputQuantityFormatter.TryParse(display, UnitCatalog.Newton, out parsed));
             Assert.Equal(value, parsed);

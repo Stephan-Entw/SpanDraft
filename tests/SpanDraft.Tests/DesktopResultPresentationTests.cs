@@ -39,8 +39,8 @@ public sealed class DesktopResultPresentationTests
         var editor = EditorViewModel.ForSession(ProjectSession.Create(state), () => { }, resultPresentation: options);
         var presentation = editor.Presentation;
         var result = presentation.Result!;
-        string Format(double value, QuantityKind kind) => QuantityFormatter.Format(value, kind, profile, mode);
-        string Number(double value, QuantityKind kind) => QuantityFormatter.FormatNumber(value, kind, profile, mode);
+        string Format(double value, QuantityKind kind) => QuantityFormatter.FormatResult(value, kind, profile, mode);
+        string Number(double value, QuantityKind kind) => QuantityFormatter.FormatResultNumber(value, kind, profile, mode);
         Assert.Equal(Format(result.Engineering.TransverseDisplacementMagnitude.Meters, QuantityKind.TransverseDisplacement), presentation.Displacement);
         Assert.Equal(Format(result.Engineering.BendingMomentMagnitude.NewtonMeters, QuantityKind.Moment), presentation.Moment);
         Assert.Equal(Format(result.Engineering.MaximumBendingStress.Pascals, QuantityKind.Stress), presentation.Stress);
@@ -61,8 +61,9 @@ public sealed class DesktopResultPresentationTests
         Assert.Equal(Format(setup.SelectedSection!.Area.SquareMeters, QuantityKind.Area), setup.Area);
         Assert.Equal(Format(setup.SelectedSection.GetAxis(setup.BendingAxis).SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea), setup.Inertia);
         Assert.Equal(Format(setup.SelectedSection.GetAxis(setup.BendingAxis).PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus), setup.Modulus);
-        Assert.Equal(Format(state.Document.Material.YoungsModulus.Pascals, QuantityKind.YoungsModulus), setup.YoungsModulus);
-        Assert.Equal(Format(state.Document.Material.YieldStrength.Pascals, QuantityKind.MaterialStrength), setup.YieldStrength);
+        // Material values are given: exact in the selected unit, independent of the result precision.
+        Assert.Equal(QuantityFormatter.FormatInput(state.Document.Material.YoungsModulus.Pascals, profile[QuantityKind.YoungsModulus]), setup.YoungsModulus);
+        Assert.Equal(QuantityFormatter.FormatInput(state.Document.Material.YieldStrength.Pascals, profile[QuantityKind.MaterialStrength]), setup.YieldStrength);
     }
 
     [Fact]
@@ -173,7 +174,7 @@ public sealed class DesktopResultPresentationTests
         Assert.Contains("LengthError", notifications); Assert.Contains("Inertia", notifications);
         Assert.Same(section, setup.SelectedSection);
         Assert.Same(material, setup.SelectedMaterial);
-        Assert.Equal(QuantityFormatter.Format(material!.YoungsModulus.Pascals, QuantityKind.YoungsModulus, setup.ResultPresentation), setup.YoungsModulus);
+        Assert.Equal(QuantityFormatter.FormatInput(material!.YoungsModulus.Pascals, setup.ResultPresentation.Profile[QuantityKind.YoungsModulus]), setup.YoungsModulus);
         setup.CancelCommand.Execute(null);
         Assert.Equal(analyses, app.Analyses);
         Assert.True(await app.Main.NewAsync());
@@ -262,11 +263,11 @@ public sealed class DesktopResultPresentationTests
         foreach (double value in new[] { 0, -0.0, 1e-12, -1234.5678 })
         {
             var culture = CultureInfo.GetCultureInfo("en-US");
-            string number = QuantityFormatter.FormatNumber(value, kind, profile, mode, culture: culture);
-            Assert.Equal(number + " " + profile[kind].Symbol, QuantityFormatter.Format(value, kind, profile, mode, culture: culture));
+            string number = QuantityFormatter.FormatResultNumber(value, kind, profile, mode, culture: culture);
+            Assert.Equal(number + " " + profile[kind].Symbol, QuantityFormatter.FormatResult(value, kind, profile, mode, culture: culture));
             Assert.DoesNotContain(",", number);
         }
-        Assert.Equal("∞", QuantityFormatter.FormatNumber(double.PositiveInfinity, QuantityKind.SafetyFactor));
+        Assert.Equal("∞", QuantityFormatter.FormatResultNumber(double.PositiveInfinity, QuantityKind.SafetyFactor));
         Assert.Equal("2,5", AxisTickFormatter.Format(1, 2.5, 0, CultureInfo.CurrentCulture));
         Assert.Equal("2,5", AxisTickFormatter.Format(1, 2.5, 0));
         Assert.Equal("2.5", AxisTickFormatter.Format(1, 2.5, 0, CultureInfo.CurrentUICulture));

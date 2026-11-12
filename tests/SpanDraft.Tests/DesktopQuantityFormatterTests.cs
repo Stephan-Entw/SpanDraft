@@ -16,26 +16,26 @@ public sealed class DesktopQuantityFormatterTests
     [InlineData("en-US", -13300, "-13\u202f300")]
     [InlineData("de-DE", 0.00123456, "0,00123")]
     [InlineData("en-US", -0.00123456, "-0.00123")]
-    [InlineData("de-DE", 0.01, "0,01")]
-    [InlineData("en-US", 0.009, "0.009")]
-    [InlineData("en-US", 9999, "10\u202f000")]
+    [InlineData("de-DE", 0.01, "0,0100")]
+    [InlineData("en-US", 0.009, "0.00900")]
+    [InlineData("en-US", 9999, "9\u202f999")]
     [InlineData("de-DE", 10000, "10\u202f000")]
-    [InlineData("en-US", 999499, "999\u202f000")]
-    [InlineData("de-DE", 999500, "1 · 10⁶")]
-    [InlineData("en-US", -999500, "-1 · 10⁶")]
-    [InlineData("de-DE", 0.0009999999, "0,001")]
+    [InlineData("en-US", 999499, "999\u202f499")]
+    [InlineData("de-DE", 999500, "1,00 · 10⁶")]
+    [InlineData("en-US", -999500, "-1.00 · 10⁶")]
+    [InlineData("de-DE", 0.0009999999, "0,001000")]
     [InlineData("en-US", double.MaxValue, "180 · 10³⁰⁶")]
     [InlineData("de-DE", -double.MaxValue, "-180 · 10³⁰⁶")]
     [InlineData("de-DE", double.Epsilon, "4,94 · 10⁻³²⁴")]
     [InlineData("en-US", -double.Epsilon, "-4.94 · 10⁻³²⁴")]
-    [InlineData("en-US", 1e-300, "1 · 10⁻³⁰⁰")]
+    [InlineData("en-US", 1e-300, "1.00 · 10⁻³⁰⁰")]
     [InlineData("de-DE", 0, "0")]
     [InlineData("en-US", -0.0, "0")]
     [InlineData("de-DE", double.PositiveInfinity, "∞")]
     public void DisplayRulesUseRegionalCultureAndSuperscriptEngineeringGroups(string culture, double value, string expected)
     {
         using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
-        Assert.Equal(expected, QuantityFormatter.FormatNumber(value,
+        Assert.Equal(expected, QuantityFormatter.FormatResultNumber(value,
             double.IsPositiveInfinity(value) ? QuantityKind.SafetyFactor : QuantityKind.TransverseForce, ResultPresentationOptions.Default));
         Assert.DoesNotContain("E", expected);
     }
@@ -43,12 +43,12 @@ public sealed class DesktopQuantityFormatterTests
     [Theory]
     [InlineData("de-DE")]
     [InlineData("en-US")]
-    public void RoundedDisplaysLeaveLengthAndDraftBuffersLossless(string culture)
+    public void ApproximateGivenDisplaysLeaveLengthAndDraftBuffersLossless(string culture)
     {
         using var scope = new UiCultureScope(culture);
         var length = Length.FromMillimeters(1234567.89012345);
         var input = new LengthInputViewModel(() => length, _ => LengthCommitResult.Success);
-        Assert.Equal(culture == "de-DE" ? "1,23 · 10⁶ mm" : "1.23 · 10⁶ mm", input.DisplayText);
+        Assert.Equal(culture == "de-DE" ? "≈ 1\u202f234\u202f570 mm" : "≈ 1\u202f234\u202f570 mm", input.DisplayText);
         input.Begin();
         Assert.Equal(InputQuantityFormatter.FormatExact(length.Meters, UnitCatalog.Millimeter), input.Text);
         Assert.True(InputQuantityFormatter.TryParseLength(input.Text, UnitCatalog.Millimeter, out var parsedLength));
@@ -61,7 +61,7 @@ public sealed class DesktopQuantityFormatterTests
         Assert.Equal(InputQuantityFormatter.FormatExact(document.Loads[0].Value, UnitCatalog.Newton), editor.LoadDraft!.ValueText);
         Assert.True(InputQuantityFormatter.TryParse(editor.LoadDraft.ValueText, UnitCatalog.Newton, out var parsedForce));
         Assert.Equal(document.Loads[0].Value, parsedForce);
-        Assert.Equal(culture == "de-DE" ? "13\u202f300 N" : "13\u202f300 N", editor.Overview.Forces[0].Value);
+        Assert.Equal(culture == "de-DE" ? "≈ 13\u202f333,1 N" : "≈ 13\u202f333.1 N", editor.Overview.Forces[0].Value);
         Assert.Same(document, editor.Document);
     }
 }

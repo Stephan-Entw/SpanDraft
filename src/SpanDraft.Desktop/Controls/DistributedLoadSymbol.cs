@@ -113,9 +113,17 @@ public static class DistributedLoadSymbol
     public static bool Contains(DistributedLoadVisual visual, double x, double y) =>
         HitEndpoint(visual, x, y) is not null || visual.Bounds.Contains(new Point(x, y));
 
-    public static string Label(DistributedLoadPreview preview, string name, UnitProfile? profile = null, ResultPresentationOptions? options = null) =>
-        name.Trim() + " = " + QuantityFormatter.WithUnit(preview.Intensity,
-            (profile ?? UnitProfile.Default)[QuantityKind.DistributedLoad], options);
+    public static string Label(DistributedLoadPreview preview, string name, UnitProfile? profile = null) =>
+        QuantityFormatter.FormatInputEquation(name.Trim(), preview.Intensity,
+            (profile ?? UnitProfile.Default)[QuantityKind.DistributedLoad]);
+
+    /// <summary>A user load's intensity is given; the self-weight intensity is a calculated result.</summary>
+    public static string Label(DistributedLoadVisual visual, ResultPresentationOptions options) => visual.IsSelfWeight
+        ? SelfWeightLabel(visual.Name, visual.Preview.Intensity, options)
+        : Label(visual.Preview, visual.Name, options.Profile);
+
+    public static string SelfWeightLabel(string name, double newtonsPerMeter, ResultPresentationOptions options) =>
+        name.Trim() + " = " + QuantityFormatter.FormatResult(newtonsPerMeter, QuantityKind.DistributedLoad, options);
 
     public static void DrawFill(DrawingContext context, DistributedLoadVisual visual, IBrush? neutralBrush)
     {

@@ -119,14 +119,14 @@ public sealed class DesktopResultProbeTests
         Check("M", force * (length - x), QuantityKind.Moment);
         Assert.DoesNotContain(editor.ResultProbeRows, row => row.Label.StartsWith('N'));
         void Check(string label, double value, QuantityKind kind) => Assert.Equal(
-            QuantityFormatter.Format(value, kind, editor.ResultPresentation), editor.ResultProbeRows.Single(r => r.Label == label).Value);
+            QuantityFormatter.FormatResult(value, kind, editor.ResultPresentation), editor.ResultProbeRows.Single(r => r.Label == label).Value);
     }
 
     [Theory]
     [InlineData("de-DE", 3, 0)]
     [InlineData("en-US", 6, 1)]
     [InlineData("de-DE", 3, 2)]
-    public void StationUsesBothSolverLimitsAndExactXWithCurrentResultFormatting(string culture, int digits, int profile)
+    public void StationUsesBothSolverLimitsAndGivenXWithCurrentResultFormatting(string culture, int digits, int profile)
     {
         using var scope = new ResultCultureScope(culture, culture);
         var options = new ResultPresentationOptions(PresentationTestProfiles.Profile(profile), digits);
@@ -140,14 +140,16 @@ public sealed class DesktopResultProbeTests
         Assert.Equal(7, editor.ResultProbeRows.Count);
         Assert.Equal(new[] { "x", "w", "θ", "V−", "V+", "M−", "M+" }, editor.ResultProbeRows.Select(r => r.Label));
         var unit = options.Profile[QuantityKind.BeamLength];
-        Assert.Equal(InputQuantityFormatter.FormatExact(position.Meters, unit) + " " + unit.Symbol, editor.ResultProbeRows[0].Value);
+        // x is a given position: exact, and a marked approximation only beyond twelve digits.
+        Assert.Equal(QuantityFormatter.FormatInput(position.Meters, unit), editor.ResultProbeRows[0].Value);
         if (profile == 0) Assert.Equal("333,37 mm", editor.ResultProbeRows[0].Value);
+        if (profile == 2) Assert.Equal("≈ 1,09373 ft", editor.ResultProbeRows[0].Value);
         Check("V−", left.ShearForce.Newtons, QuantityKind.TransverseForce);
         Check("V+", right.ShearForce.Newtons, QuantityKind.TransverseForce);
         Check("M−", left.BendingMoment.NewtonMeters, QuantityKind.Moment);
         Check("M+", right.BendingMoment.NewtonMeters, QuantityKind.Moment);
         void Check(string label, double value, QuantityKind kind) => Assert.Equal(
-            QuantityFormatter.Format(value, kind, options), editor.ResultProbeRows.Single(r => r.Label == label).Value);
+            QuantityFormatter.FormatResult(value, kind, options), editor.ResultProbeRows.Single(r => r.Label == label).Value);
     }
 
     [Fact]
@@ -170,8 +172,8 @@ public sealed class DesktopResultProbeTests
             Assert.Equal(BitConverter.DoubleToInt64Bits(node.RotationRadians), BitConverter.DoubleToInt64Bits(field.RotationRadians));
         }
         Assert.Equal(new[] { "x", "w", "θ", "V−", "V+", "M" }, editor.ResultProbeRows.Select(r => r.Label));
-        Assert.Equal(QuantityFormatter.Format(0, QuantityKind.TransverseDisplacement, editor.ResultPresentation), editor.ResultProbeRows[1].Value);
-        Assert.Equal(QuantityFormatter.Format(node.RotationRadians, QuantityKind.Rotation, editor.ResultPresentation), editor.ResultProbeRows[2].Value);
+        Assert.Equal(QuantityFormatter.FormatResult(0, QuantityKind.TransverseDisplacement, editor.ResultPresentation), editor.ResultProbeRows[1].Value);
+        Assert.Equal(QuantityFormatter.FormatResult(node.RotationRadians, QuantityKind.Rotation, editor.ResultPresentation), editor.ResultProbeRows[2].Value);
     }
 
     [Theory]
@@ -184,8 +186,8 @@ public sealed class DesktopResultProbeTests
         editor.HoverResultProbe(Length.FromMeters(x), atStation: true);
         Assert.Equal(new[] { "x", "w", "θ", "V", "M" }, editor.ResultProbeRows.Select(r => r.Label));
         var section = editor.Presentation.Result!.Solution.EvaluateAt(Length.FromMeters(x), x == 0 ? EvaluationSide.Right : EvaluationSide.Left);
-        Assert.Equal(QuantityFormatter.Format(section.ShearForce.Newtons, QuantityKind.TransverseForce, editor.ResultPresentation), editor.ResultProbeRows[3].Value);
-        Assert.Equal(QuantityFormatter.Format(section.BendingMoment.NewtonMeters, QuantityKind.Moment, editor.ResultPresentation), editor.ResultProbeRows[4].Value);
+        Assert.Equal(QuantityFormatter.FormatResult(section.ShearForce.Newtons, QuantityKind.TransverseForce, editor.ResultPresentation), editor.ResultProbeRows[3].Value);
+        Assert.Equal(QuantityFormatter.FormatResult(section.BendingMoment.NewtonMeters, QuantityKind.Moment, editor.ResultPresentation), editor.ResultProbeRows[4].Value);
     }
 
     [Theory]

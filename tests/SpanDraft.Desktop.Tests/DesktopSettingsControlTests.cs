@@ -132,8 +132,8 @@ public sealed class DesktopSettingsControlTests
     }
 
     [Theory]
-    [InlineData("de-DE", "Signifikante Stellen", "Technische Schreibweise")]
-    [InlineData("en-US", "Significant digits", "Engineering notation")]
+    [InlineData("de-DE", "Ergebnispräzision", "Technische Schreibweise")]
+    [InlineData("en-US", "Result precision", "Engineering notation")]
     public void NumericPickersBindBothDirectionsAndRestoreDiscardedPreferences(string culture, string precisionLabel, string notationLabel)
     {
         using var environment = new DesktopControlEnvironment();
@@ -146,17 +146,20 @@ public sealed class DesktopSettingsControlTests
         Assert.Equal(notationLabel, AutomationProperties.GetName(notation));
         Assert.Equal(digits.Bounds.Width, notation.Bounds.Width);
         Assert.Equal(digits.Bounds.Left, notation.Bounds.Left);
-        Assert.Equal(3, digits.SelectedItem);
+        Assert.Equal(3, digits.SelectedValue);
         Assert.Equal(EngineeringNotation.Automatic, notation.SelectedValue);
-        Assert.Equal(Enumerable.Range(1, 15), model.SignificantDigitChoices);
-        digits.SelectedItem = 8;
+        Assert.Equal(Enumerable.Range(1, 15), model.SignificantDigitChoices.Select(c => c.Value));
+        // The choices stay recognisable as a number of significant digits.
+        Assert.Equal(culture == "de-DE" ? "1 signifikante Stelle" : "1 significant digit", model.SignificantDigitChoices[0].Label);
+        Assert.Equal(culture == "de-DE" ? "3 signifikante Stellen" : "3 significant digits", model.SignificantDigitChoices[2].Label);
+        digits.SelectedItem = model.SignificantDigitChoices.Single(c => c.Value == 8);
         notation.SelectedItem = model.Notations.Single(n => n.Value == EngineeringNotation.Off);
         Assert.Equal(8, model.Pending.SignificantDigits);
         Assert.Equal(EngineeringNotation.Off, model.Pending.Notation);
         model.SignificantDigits = 4;
-        Assert.Equal(4, digits.SelectedItem);
+        Assert.Equal(4, digits.SelectedValue);
         model.DiscardPending();
-        Assert.Equal(3, digits.SelectedItem);
+        Assert.Equal(3, digits.SelectedValue);
         Assert.Equal(EngineeringNotation.Automatic, notation.SelectedValue);
         Assert.DoesNotContain(window.GetVisualDescendants().OfType<RadioButton>(), r => r.GroupName == "Presentation");
     }

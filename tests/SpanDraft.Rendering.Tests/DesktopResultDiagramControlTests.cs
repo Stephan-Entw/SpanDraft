@@ -279,7 +279,7 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
             Assert.Same(projections[i], diagrams[i].Projection);
             AssertReadableMarkers(diagrams[i]);
             foreach (var label in diagrams[i].MarkerLabels)
-                Assert.Contains(QuantityFormatter.Format(label.Marker.SiValue,
+                Assert.Contains(QuantityFormatter.FormatResult(label.Marker.SiValue,
                     ResultDiagramProjection.QuantityOf(diagrams[i].Kind), profile, 6), label.Text);
             Snapshot(diagrams[i], $"phase2-{uiCulture}-{profileIndex}-detailed-{diagrams[i].Kind}");
         }
@@ -342,7 +342,7 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
             Assert.All(diagram.MarkerLabels, label =>
             {
                 Assert.EndsWith(" " + unit, label.Text);
-                Assert.Contains(QuantityFormatter.Format(label.Marker.SiValue,
+                Assert.Contains(QuantityFormatter.FormatResult(label.Marker.SiValue,
                     ResultDiagramProjection.QuantityOf(diagram.Kind)), label.Text);
                 Assert.DoesNotContain("E", label.Text);
                 if (label.Marker.Value != 0) Assert.DoesNotContain("= 0 ", label.Text);
@@ -368,7 +368,7 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
         var diagram = Assert.Single(Diagrams(view), d => d.Kind == ResultDiagramKind.ShearForce);
         var label = Assert.Single(diagram.MarkerLabels);
         Assert.NotEqual(0, label.Marker.SiValue);
-        Assert.Equal("min = max = " + QuantityFormatter.Format(label.Marker.SiValue, QuantityKind.TransverseForce), label.Text);
+        Assert.Equal("min = max = " + QuantityFormatter.FormatResult(label.Marker.SiValue, QuantityKind.TransverseForce), label.Text);
         AssertReadableMarkers(diagram);
         Snapshot(diagram, $"approximate-constant-{culture}");
         window.Content = null;
@@ -392,7 +392,7 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
         var diagram = Assert.Single(Diagrams(view), d => d.Kind == ResultDiagramKind.TransverseDisplacement);
         var projection = diagram.Projection;
         var label = Assert.Single(diagram.MarkerLabels, l => l.Marker.SiValue != 0);
-        Assert.Equal(expected + QuantityFormatter.Format(label.Marker.SiValue, QuantityKind.TransverseDisplacement), label.Text);
+        Assert.Equal(expected + QuantityFormatter.FormatResult(label.Marker.SiValue, QuantityKind.TransverseDisplacement), label.Text);
         Assert.Equal(force < 0 ? ResultDiagramExtremumKind.Minimum : ResultDiagramExtremumKind.Maximum, label.Marker.Kind);
         Assert.Contains(diagram.MarkerLabels, l => l.Text == (force < 0 ? "max = 0 mm" : "min = 0 mm"));
         AssertReadableMarkers(diagram);
@@ -401,7 +401,7 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
         Assert.Same(projection, diagram.Projection);
         Assert.All(diagram.MarkerLabels, l => Assert.DoesNotContain("≈", l.Text));
         Assert.Contains(diagram.MarkerLabels, l => l.Text == (force < 0 ? "min = " : "max = ")
-            + QuantityFormatter.Format(label.Marker.SiValue, QuantityKind.TransverseDisplacement, significantDigits: 6));
+            + QuantityFormatter.FormatResult(label.Marker.SiValue, QuantityKind.TransverseDisplacement, significantDigits: 6));
         window.Content = null;
     }
 

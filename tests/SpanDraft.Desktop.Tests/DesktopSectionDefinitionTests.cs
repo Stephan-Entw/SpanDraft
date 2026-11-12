@@ -68,7 +68,8 @@ public sealed class DesktopSectionDefinitionTests
         Assert.Equal(axis, setup.BendingAxis);
         Assert.Same(d.Material, setup.OriginalMaterial);
         var selected = d.Section.GetAxis(axis);
-        string Format(double si, QuantityKind quantity) => QuantityFormatter.Format(si, quantity,
+        // Stored properties of a manual section are given values; geometric sections derive results.
+        string Format(double si, QuantityKind quantity) => SectionDisplay.Property(d.Section, si, quantity,
             setup.ResultPresentation);
         Assert.Equal(Format(selected.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea), setup.Inertia);
         var axisSummary = Strings.BendingAxis + " " + new AxisChoice(axis).Label;

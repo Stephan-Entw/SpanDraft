@@ -32,19 +32,7 @@ internal readonly struct PresentationNumber : IComparable<PresentationNumber>
         return Parse(value.ToString(format, CultureInfo.InvariantCulture));
     }
 
-    internal static PresentationNumber Parse(string text)
-    {
-        int separator = text.IndexOfAny(['e', 'E']);
-        int exponent = separator < 0 ? 0 : int.Parse(text.AsSpan(separator + 1), CultureInfo.InvariantCulture);
-        string mantissa = separator < 0 ? text : text[..separator];
-        int point = mantissa.IndexOf('.');
-        if (point >= 0)
-        {
-            exponent -= mantissa.Length - point - 1;
-            mantissa = mantissa.Remove(point, 1);
-        }
-        return new PresentationNumber(BigInteger.Parse(mantissa, CultureInfo.InvariantCulture), 1) * PowerOfTen(exponent);
-    }
+    internal static PresentationNumber Parse(string text) => DecimalNumber.Parse(text).Number;
 
     internal static PresentationNumber PowerOfTen(int exponent) => exponent >= 0
         ? new(BigInteger.Pow(10, exponent), 1)

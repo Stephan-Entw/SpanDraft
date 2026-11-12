@@ -104,21 +104,39 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         var bytes = ProjectFileCodec.Serialize(editor.Session.CurrentRevision.State);
         using var report = ProjectReport.Capture(editor, Now);
         var material = state.Document.Material;
+        // Material values and load positions are given: the precision and notation settings do not apply.
         Assert.Contains(report.Data.MaterialProperties, p => p.PlainText.EndsWith(
-            QuantityFormatter.Format(material.YoungsModulus.Pascals, QuantityKind.YoungsModulus, options), StringComparison.Ordinal));
+            QuantityFormatter.FormatInput(material.YoungsModulus.Pascals, options.Profile[QuantityKind.YoungsModulus]), StringComparison.Ordinal));
         Assert.Contains(report.Data.MaterialProperties, p => p.PlainText.EndsWith(
-            QuantityFormatter.Format(material.YieldStrength.Pascals, QuantityKind.MaterialStrength, options), StringComparison.Ordinal));
+            QuantityFormatter.FormatInput(material.YieldStrength.Pascals, options.Profile[QuantityKind.MaterialStrength]), StringComparison.Ordinal));
+        Assert.DoesNotContain(report.Data.MaterialProperties, p => p.PlainText.Contains("= ≈", StringComparison.Ordinal));
         var forces = report.Data.Tables.Single(t => t.Title == Strings.Forces);
         Assert.Equal(editor.Overview.Forces[0].Value, forces.Rows[0][1]);
         Assert.Equal(editor.Overview.Forces[0].Position, forces.Rows[0][2]);
-        Assert.Equal(QuantityFormatter.FormatNumber(.8123456789,
-            QuantityKind.BeamLength, options), forces.Rows[0][2]);
+        Assert.Equal(QuantityFormatter.FormatInputNumber(.8123456789,
+            options.Profile[QuantityKind.BeamLength]), forces.Rows[0][2]);
         Assert.Equal(editor.Overview.Reactions.Select(r => r.Ry), report.Data.Tables.Single(t => t.Title == Strings.Reactions).Rows.Select(r => r[2]));
         Assert.Equal(editor.Presentation.Displacement, report.Data.Indicators[0].Value);
         Assert.Equal(editor.Presentation.Moment, report.Data.Indicators[1].Value);
         for (int i = 0; i < report.Pages.Count; i++) { using var bitmap = report.RenderPage(i); AssertTextContained(report); }
         using var pdf = new MemoryStream(); report.WritePdf(pdf); Assert.True(pdf.Length > 0);
         Assert.Equal(bytes, ProjectFileCodec.Serialize(editor.Session.CurrentRevision.State));
+    }
+
+    [Fact]
+    public void ReportShowsAGivenLoadPositionExactlyInsteadOfRoundingItToTheResultPrecision()
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("de-DE");
+        var state = ReportTestProjects.Create();
+        var original = state.Document.Loads[0];
+        state = state with { Document = state.Document.WithLoads([
+            new EditorPointForce(original.Id, Length.FromMillimeters(1234), Force.FromNewtons(-1000), original.Name)]) };
+        var (main, _) = Open(state);
+        using var report = ProjectReport.Capture(main.Editor!, Now);
+        var force = report.Data.Tables.Single(t => t.Title == Strings.Forces).Rows[0];
+        Assert.Equal("1\u202f234", force[2]);
+        Assert.Equal("-1\u202f000 N", force[1]);
+        for (int i = 0; i < report.Pages.Count; i++) { using var bitmap = report.RenderPage(i); AssertTextContained(report); }
     }
 
     [Theory]
@@ -128,7 +146,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
         var (main, _) = Open(ReportTestProjects.Create());
         using var captured = ProjectReport.Capture(main.Editor!, Now);
-        string number = QuantityFormatter.FormatNumber(123456789012345d, QuantityKind.PoissonRatio,
+        string number = QuantityFormatter.FormatResultNumber(123456789012345d, QuantityKind.PoissonRatio,
             significantDigits: 15, notation: EngineeringNotation.Off);
         var table = new ReportTable("Grouped numbers", ["Name", "Value"], [.8f, .2f],
             [new[] { "Group", number }]);
@@ -259,10 +277,10 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
             Assert.Equal(main.Editor!.Overview.Section, report.Data.Section);
             Assert.DoesNotMatch(@" · [yzuv]-[yzuv]$", report.Data.Section);
             Assert.Contains(report.Data.SectionProperties, p => p.PlainText.StartsWith("I" + axis.AxisDesignation.ToString().ToLowerInvariant() + " = "));
-            bool sameDisplay = QuantityFormatter.Format(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus,
-                main.Editor!.ResultPresentation.Profile) ==
-                QuantityFormatter.Format(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus,
-                main.Editor.ResultPresentation.Profile);
+            bool sameDisplay = SectionDisplay.Property(section, axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus,
+                main.Editor!.ResultPresentation) ==
+                SectionDisplay.Property(section, axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus,
+                main.Editor.ResultPresentation);
             Assert.Equal(sameDisplay ? 2 : 3, report.Data.SectionProperties.Count);
             using var bitmap = report.RenderPage(0, 96); AssertTextContained(report);
         }
@@ -284,7 +302,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         Assert.Equal(3, report.Data.Tables.Single(t => t.Title == Strings.Supports).Rows.Count);
         var reactions = report.Data.Tables.Single(t => t.Title == Strings.Reactions).Rows;
         Assert.Equal(new[] { supports[0].Name + " + Clamp", supports[1].Name }, reactions.Select(r => r[0]));
-        string Number(double value, QuantityKind kind) => QuantityFormatter.FormatNumber(value, kind, editor.ResultPresentation);
+        string Number(double value, QuantityKind kind) => QuantityFormatter.FormatResultNumber(value, kind, editor.ResultPresentation);
         Assert.Equal(new[] { Number(node.ReactionX!.Value.Newtons, QuantityKind.AxialForce),
             Number(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce),
             Number(node.ReactionMoment!.Value.NewtonMeters, QuantityKind.Moment) }, reactions[0].Skip(1));

@@ -80,7 +80,7 @@ public sealed class ResultDiagram : Control
 
     private string MarkerText(ResultDiagramMarker marker)
     {
-        string quantity = QuantityFormatter.Format(marker.SiValue, ResultDiagramProjection.QuantityOf(Kind),
+        string quantity = QuantityFormatter.FormatResult(marker.SiValue, ResultDiagramProjection.QuantityOf(Kind),
             Options);
         string format = marker.Kind switch
         {

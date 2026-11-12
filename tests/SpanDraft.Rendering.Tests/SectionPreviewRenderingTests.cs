@@ -165,7 +165,7 @@ public sealed class SectionPreviewRenderingTests : SectionDefinitionPrototypeTes
                 return new(text.PlainText.Contains(" = ", StringComparison.Ordinal) ? measured.Width * textWidthScale : measured.Width, measured.Height);
             }
             var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, new(side, side),
-                units[QuantityKind.SectionDimension], Measure, compact: true, options: new(units));
+                units[QuantityKind.SectionDimension], Measure, compact: true);
             var y = layout.Axes.Single(a => a.Axis == SectionAxisDesignation.Y);
             Assert.True(y.LabelBounds.Left > y.End.X);
             Vector direction = y.End - y.Start; direction /= direction.Length;
@@ -564,7 +564,7 @@ public sealed class SectionPreviewRenderingTests : SectionDefinitionPrototypeTes
                         text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
                     var drawing = layout.Dimensions.Single(d => d.Key == "r");
                     var line = Assert.Single(drawing.Lines); var arrow = Assert.Single(drawing.Arrows);
-                    Assert.Equal(radius.IsConfirmed ? "r = " + QuantityFormatter.WithUnit(radius.Value, unit) : "r", drawing.Text);
+                    Assert.Equal(radius.IsConfirmed ? QuantityFormatter.FormatInputEquation("r", radius.Value, unit) : "r", drawing.Text);
                     Assert.Equal(layout.Project(radius.End), line.Start); Assert.Equal(line.Start, arrow.Tip);
                     Vector ray = line.End - line.Start;
                     double angle = Math.Atan2(Math.Abs(ray.Y), ray.X) * 180 / Math.PI;
@@ -648,7 +648,7 @@ public sealed class SectionPreviewRenderingTests : SectionDefinitionPrototypeTes
                             Assert.Equal(layout.ProfileBounds.Bottom + 33, line.End.Y, 10);
                             Assert.True(line.End.Y > line.Start.Y);
                         });
-                        Assert.Equal("b" + (complete ? " = " + QuantityFormatter.WithUnit(geometry.Width, units[QuantityKind.SectionDimension]) : ""), width.Text);
+                        Assert.Equal(complete ? QuantityFormatter.FormatInputEquation("b", geometry.Width, units[QuantityKind.SectionDimension]) : "b", width.Text);
                     }
                     else
                     {

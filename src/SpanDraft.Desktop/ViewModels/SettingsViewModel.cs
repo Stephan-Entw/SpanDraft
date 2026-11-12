@@ -1,3 +1,4 @@
+using System.Globalization;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Reporting.Notation;
@@ -79,9 +80,12 @@ public sealed class SettingsViewModel : ObservableObject
     public string? ErrorText => _error;
     public bool HasError => ErrorText is not null;
     public bool HasCustomProfile => _pending.HasCustomProfile;
-    public IReadOnlyList<int> SignificantDigitChoices { get; } = Enumerable.Range(
+    /// <summary>The result precision, offered as a recognisable number of significant digits.</summary>
+    public IReadOnlyList<SetupChoice<int>> SignificantDigitChoices { get; } = Enumerable.Range(
         ResultPresentationOptions.MinimumSignificantDigits,
-        ResultPresentationOptions.MaximumSignificantDigits - ResultPresentationOptions.MinimumSignificantDigits + 1).ToArray();
+        ResultPresentationOptions.MaximumSignificantDigits - ResultPresentationOptions.MinimumSignificantDigits + 1)
+        .Select(digits => new SetupChoice<int>(digits, digits == 1 ? Strings.SignificantDigitChoiceOne
+            : string.Format(CultureInfo.CurrentUICulture, Strings.SignificantDigitChoice, digits))).ToArray();
     public int SignificantDigits
     {
         get => _pending.SignificantDigits;

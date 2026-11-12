@@ -9,30 +9,30 @@ namespace SpanDraft.Tests;
 public sealed class DesktopNumericPresentationTests
 {
     [Theory]
-    [InlineData(12, 3, "12")]
+    [InlineData(12, 3, "12.0")]
     [InlineData(12.3, 3, "12.3")]
-    [InlineData(12.356, 1, "10")]
+    [InlineData(12.356, 1, "12")]
     [InlineData(12.356, 2, "12")]
     [InlineData(12.356, 3, "12.4")]
     [InlineData(12.356, 4, "12.36")]
-    [InlineData(12.356, 8, "12.356")]
-    [InlineData(12.356, 15, "12.356")]
+    [InlineData(12.356, 8, "12.356000")]
+    [InlineData(12.356, 15, "12.3560000000000")]
     [InlineData(-12.356, 3, "-12.4")]
     [InlineData(0.012356, 3, "0.0124")]
     [InlineData(0.0012356, 3, "0.00124")]
     [InlineData(0.00012356, 3, "124 · 10⁻⁶")]
-    [InlineData(123456.55, 3, "123\u202f000")]
-    [InlineData(999999, 3, "1 · 10⁶")]
+    [InlineData(123456.55, 3, "123\u202f457")]
+    [InlineData(999999, 3, "1.00 · 10⁶")]
     [InlineData(1234567, 3, "1.23 · 10⁶")]
     [InlineData(0.000000123, 3, "123 · 10⁻⁹")]
     [InlineData(1.25, 2, "1.3")]
     [InlineData(-1.25, 2, "-1.3")]
     [InlineData(0, 3, "0")]
-    public void SignificantDigitsAreAMaximumAndNeverHideNonzeroValues(double value, int digits, string expected)
+    public void ResultPrecisionKeepsWholeUnitsAndNeverHidesNonzeroValues(double value, int digits, string expected)
     {
         foreach (string culture in new[] { "en-US", "de-DE" })
             Assert.Equal(culture == "de-DE" ? expected.Replace('.', ',') : expected,
-                QuantityFormatter.FormatNumber(value, QuantityKind.PoissonRatio, significantDigits: digits,
+                QuantityFormatter.FormatResultNumber(value, QuantityKind.PoissonRatio, significantDigits: digits,
                     culture: CultureInfo.GetCultureInfo(culture)));
     }
 
@@ -49,13 +49,13 @@ public sealed class DesktopNumericPresentationTests
 
     [Theory]
     [InlineData(0.0009994, "999 · 10⁻⁶")]
-    [InlineData(0.0009995, "0.001")]
-    [InlineData(0.001, "0.001")]
-    [InlineData(999499, "999\u202f000")]
-    [InlineData(999500, "1 · 10⁶")]
-    [InlineData(1000000, "1 · 10⁶")]
+    [InlineData(0.0009995, "0.001000")]
+    [InlineData(0.001, "0.00100")]
+    [InlineData(999499, "999\u202f499")]
+    [InlineData(999500, "1.00 · 10⁶")]
+    [InlineData(1000000, "1.00 · 10⁶")]
     public void NotationThresholdsUseTheRoundedDisplayValue(double value, string expected) =>
-        Assert.Equal(expected, QuantityFormatter.FormatNumber(value, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture));
+        Assert.Equal(expected, QuantityFormatter.FormatResultNumber(value, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture));
 
     [Fact]
     public void EngineeringExponentsAreMultiplesOfThreeAcrossTheEntireFiniteRange()
@@ -63,7 +63,7 @@ public sealed class DesktopNumericPresentationTests
         for (int exponent = -323; exponent <= 308; exponent++)
         {
             double value = Math.Pow(10, exponent) * 1.2345;
-            string text = QuantityFormatter.FormatNumber(value, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture);
+            string text = QuantityFormatter.FormatResultNumber(value, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture);
             if (exponent is >= -3 and < 6) { Assert.DoesNotContain('·', text); continue; }
             string superscript = text[(text.IndexOf("10", StringComparison.Ordinal) + 2)..];
             int engineeringExponent = int.Parse(string.Concat(superscript.Select(c => c == '⁻' ? '-' : (char)('0' + "⁰¹²³⁴⁵⁶⁷⁸⁹".IndexOf(c)))), CultureInfo.InvariantCulture);
@@ -75,11 +75,11 @@ public sealed class DesktopNumericPresentationTests
     }
 
     [Theory]
-    [InlineData(1234567, "1\u202f230\u202f000")]
+    [InlineData(1234567, "1\u202f234\u202f567")]
     [InlineData(0.00012356, "0.000124")]
-    [InlineData(-1234567, "-1\u202f230\u202f000")]
+    [InlineData(-1234567, "-1\u202f234\u202f567")]
     public void NotationOffAlwaysUsesGroupedDecimalNotation(double value, string expected) =>
-        Assert.Equal(expected, QuantityFormatter.FormatNumber(value, QuantityKind.PoissonRatio,
+        Assert.Equal(expected, QuantityFormatter.FormatResultNumber(value, QuantityKind.PoissonRatio,
             notation: EngineeringNotation.Off, culture: CultureInfo.InvariantCulture));
 
     [Theory]
@@ -88,23 +88,23 @@ public sealed class DesktopNumericPresentationTests
     public void GroupingAlwaysUsesNarrowNonbreakingSpaces(string culture, string first, string second)
     {
         using var scope = new ResultCultureScope(culture, culture == "de-DE" ? "en-US" : "de-DE");
-        Assert.Equal(first, QuantityFormatter.FormatNumber(12200.05, QuantityKind.PoissonRatio, significantDigits: 7));
-        Assert.Equal(second, QuantityFormatter.FormatNumber(123456.7, QuantityKind.PoissonRatio, significantDigits: 7));
+        Assert.Equal(first, QuantityFormatter.FormatResultNumber(12200.05, QuantityKind.PoissonRatio, significantDigits: 7));
+        Assert.Equal(second, QuantityFormatter.FormatResultNumber(123456.7, QuantityKind.PoissonRatio, significantDigits: 7));
         Assert.Equal("\u202f", QuantityFormatter.GroupSeparator);
     }
 
     [Fact]
     public void ExtremesSignedZeroAndSemanticInfinityRemainDistinct()
     {
-        Assert.Equal("4.94 · 10⁻³²⁴", QuantityFormatter.FormatNumber(double.Epsilon, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("-4.94 · 10⁻³²⁴", QuantityFormatter.FormatNumber(-double.Epsilon, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("180 · 10³¹⁸ mm⁴", QuantityFormatter.Format(double.MaxValue, QuantityKind.SecondMomentOfArea, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("∞", QuantityFormatter.Format(double.PositiveInfinity, QuantityKind.SafetyFactor));
+        Assert.Equal("4.94 · 10⁻³²⁴", QuantityFormatter.FormatResultNumber(double.Epsilon, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture));
+        Assert.Equal("-4.94 · 10⁻³²⁴", QuantityFormatter.FormatResultNumber(-double.Epsilon, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture));
+        Assert.Equal("180 · 10³¹⁸ mm⁴", QuantityFormatter.FormatResult(double.MaxValue, QuantityKind.SecondMomentOfArea, culture: CultureInfo.InvariantCulture));
+        Assert.Equal("∞", QuantityFormatter.FormatResult(double.PositiveInfinity, QuantityKind.SafetyFactor));
         foreach (var kind in Enum.GetValues<QuantityKind>())
-            Assert.Equal("0", QuantityFormatter.FormatNumber(BitConverter.Int64BitsToDouble(long.MinValue), kind));
+            Assert.Equal("0", QuantityFormatter.FormatResultNumber(BitConverter.Int64BitsToDouble(long.MinValue), kind));
         foreach (double value in new[] { double.Epsilon, double.MaxValue })
         {
-            string text = QuantityFormatter.FormatNumber(value, QuantityKind.PoissonRatio, notation: EngineeringNotation.Off);
+            string text = QuantityFormatter.FormatResultNumber(value, QuantityKind.PoissonRatio, notation: EngineeringNotation.Off);
             Assert.DoesNotContain('·', text); Assert.DoesNotContain('∞', text); Assert.NotEqual("0", text);
         }
     }
@@ -112,20 +112,18 @@ public sealed class DesktopNumericPresentationTests
     [Theory]
     [InlineData("de-DE")]
     [InlineData("en-US")]
-    public void RoundedDisplayNeverBecomesTheEditingBufferOnFocusRefreshOrCommit(string culture)
+    public void ApproximateDisplayNeverBecomesTheEditingBufferOnFocusRefreshOrCommit(string culture)
     {
         using var scope = new ResultCultureScope(culture, culture);
-        var original = Length.FromMillimeters(12.356);
+        // More than twelve significant digits: the display is a marked approximation, the buffer stays exact.
+        var original = Length.FromMillimeters(12.3560000000001);
         var stored = original;
-        var options = new ResultPresentationOptions();
-        var input = new LengthInputViewModel(() => stored, value => { stored = value; return LengthCommitResult.Success; },
-            readPresentation: () => options);
-        Assert.Equal(culture == "de-DE" ? "12,4 mm" : "12.4 mm", input.DisplayText);
+        var input = new LengthInputViewModel(() => stored, value => { stored = value; return LengthCommitResult.Success; });
+        Assert.Equal(culture == "de-DE" ? "≈ 12,356 mm" : "≈ 12.356 mm", input.DisplayText);
         for (int pass = 0; pass < 3; pass++)
         {
             input.Begin();
-            Assert.Equal(culture == "de-DE" ? "12,356" : "12.356", input.Text);
-            options = new(significantDigits: pass + 1, notation: EngineeringNotation.Off);
+            Assert.Equal(culture == "de-DE" ? "12,3560000000001" : "12.3560000000001", input.Text);
             input.Refresh();
             Assert.True(input.TryGetLength(out var pending)); Assert.Equal(original, pending);
             input.LoseFocus(); Assert.Equal(original, stored);
@@ -143,15 +141,15 @@ public sealed class DesktopNumericPresentationTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new ResultPresentationOptions(significantDigits: invalid));
         Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default with { SignificantDigits = invalid });
-        Assert.Throws<ArgumentOutOfRangeException>(() => QuantityFormatter.Format(1, QuantityKind.BeamLength, significantDigits: invalid));
+        Assert.Throws<ArgumentOutOfRangeException>(() => QuantityFormatter.FormatResult(1, QuantityKind.BeamLength, significantDigits: invalid));
     }
 
     [Fact]
     public void InvalidNumbersUnitsAndNotationAreRejected()
     {
         foreach (double invalid in new[] { double.NaN, double.PositiveInfinity, double.NegativeInfinity })
-            Assert.Throws<ArgumentOutOfRangeException>(() => QuantityFormatter.Format(invalid, QuantityKind.TransverseForce));
-        Assert.Throws<ArgumentOutOfRangeException>(() => QuantityFormatter.Format(-1, QuantityKind.SafetyFactor));
+            Assert.Throws<ArgumentOutOfRangeException>(() => QuantityFormatter.FormatResult(invalid, QuantityKind.TransverseForce));
+        Assert.Throws<ArgumentOutOfRangeException>(() => QuantityFormatter.FormatResult(-1, QuantityKind.SafetyFactor));
         Assert.Throws<ArgumentException>(() => NumericRounding.Round(1, QuantityKind.TransverseForce, UnitCatalog.Meter));
         Assert.Throws<ArgumentOutOfRangeException>(() => new ResultPresentationOptions(notation: (EngineeringNotation)99));
     }

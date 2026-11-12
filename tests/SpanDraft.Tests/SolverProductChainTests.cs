@@ -113,8 +113,8 @@ public sealed class SolverProductChainTests
         Assert.Equal(engineering.BendingMomentMagnitude.NewtonMeters /
             Math.Min(axis.PositiveSectionModulus.CubicMeters, axis.NegativeSectionModulus.CubicMeters), engineering.MaximumBendingStress.Pascals);
         var options = editor.ResultPresentation;
-        Assert.Equal(QuantityFormatter.Format(engineering.BendingMomentMagnitude.NewtonMeters, QuantityKind.Moment, options), editor.Presentation.Moment);
-        Assert.Equal(QuantityFormatter.Format(engineering.TransverseDisplacementMagnitude.Meters, QuantityKind.TransverseDisplacement, options),
+        Assert.Equal(QuantityFormatter.FormatResult(engineering.BendingMomentMagnitude.NewtonMeters, QuantityKind.Moment, options), editor.Presentation.Moment);
+        Assert.Equal(QuantityFormatter.FormatResult(engineering.TransverseDisplacementMagnitude.Meters, QuantityKind.TransverseDisplacement, options),
             editor.Presentation.Displacement);
 
         // Overview: one reaction row per support station with the station's common reaction.
@@ -127,9 +127,9 @@ public sealed class SolverProductChainTests
             // Only a row with exactly one support identifies an editable entity.
             Assert.Equal(station.Count() == 1 ? station.Single().Id : (Guid?)null, row.Id);
             Assert.Equal(station.Count() == 1, row.IsEditable);
-            Assert.Equal(QuantityFormatter.FormatNumber(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce, options), row.Ry);
-            Assert.Equal(node.ReactionX is { } rx ? QuantityFormatter.FormatNumber(rx.Newtons, QuantityKind.AxialForce, options) : "", row.Rx);
-            Assert.Equal(node.ReactionMoment is { } rm ? QuantityFormatter.FormatNumber(rm.NewtonMeters, QuantityKind.Moment, options) : "", row.Moment);
+            Assert.Equal(QuantityFormatter.FormatResultNumber(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce, options), row.Ry);
+            Assert.Equal(node.ReactionX is { } rx ? QuantityFormatter.FormatResultNumber(rx.Newtons, QuantityKind.AxialForce, options) : "", row.Rx);
+            Assert.Equal(node.ReactionMoment is { } rm ? QuantityFormatter.FormatResultNumber(rm.NewtonMeters, QuantityKind.Moment, options) : "", row.Moment);
         }
 
         // Diagrams: markers are the solver's extrema; every jump line connects both analytical limits.
@@ -194,7 +194,7 @@ public sealed class SolverProductChainTests
 
         void Probe(string label, QuantityKind kind, double left, double right)
         {
-            string a = QuantityFormatter.Format(left, kind, options), b = QuantityFormatter.Format(right, kind, options);
+            string a = QuantityFormatter.FormatResult(left, kind, options), b = QuantityFormatter.FormatResult(right, kind, options);
             if (a == b) Assert.Equal(b, editor.ResultProbeRows.Single(r => r.Label == label).Value);
             else
             {

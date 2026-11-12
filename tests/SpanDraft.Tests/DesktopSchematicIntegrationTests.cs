@@ -32,28 +32,39 @@ public sealed class DesktopSchematicIntegrationTests
     {
         using var scope = new ResultCultureScope(culture, culture);
         const double value = 1234567890.123;
-        var document = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section,
+        var document = new EditorDocument(Mm(1000), SelfWeightTestProjects.Steel(), ProjectTemplates.Section,
             loads: [Load(200, value, PointLoadKind.Force, "F1"), Load(500, value, PointLoadKind.Moment, "M1")],
             distributedLoads: [new(Guid.NewGuid(), Mm(700), Mm(900), ForcePerLength.FromNewtonsPerMeter(value), "q1")]);
+        document = document with { SelfWeight = new(Guid.NewGuid(), true) };
+        double weight = document.SelfWeightLoad!.Intensity.NewtonsPerMeter;
         var options = new ResultPresentationOptions(significantDigits: digits, notation: notation);
         var measured = new List<string>();
         double Width(string text) => text.Contains("kip", StringComparison.Ordinal) ? 300 + text.Length : text.Length * 3;
         Size Measure(string text) { measured.Add(text); return new(Width(text), 18); }
         var scene = BeamRenderState.Create(document, Frame(document), Measure, profile: options.Profile,
             reserveUnitWidths: true, options: options);
+        // Given loads: exact digits (here a marked approximation), independent of the result precision.
         foreach (var (name, kind) in new[] { ("F1", QuantityKind.TransverseForce), ("M1", QuantityKind.Moment), ("q1", QuantityKind.DistributedLoad) })
         {
-            var label = Assert.Single(scene.Annotations, a => a.Text.StartsWith(name + " = ", StringComparison.Ordinal));
-            string expected = name + " = " + QuantityFormatter.Format(value, kind, options);
-            Assert.Equal(expected, label.Text);
-            Assert.NotEqual(name + " = " + QuantityFormatter.Format(value, kind, ResultPresentationOptions.Default), label.Text);
+            var label = Assert.Single(scene.Annotations, a => a.Text.StartsWith(name + " ", StringComparison.Ordinal));
+            Assert.Equal(QuantityFormatter.FormatInputEquation(name, value, options.Profile[kind]), label.Text);
+            Assert.StartsWith(name + " ≈ 1\u202f234\u202f570\u202f000 ", label.Text);
             // A cache miss would measure the displayed label a second time and lose the wider unit reserve.
             Assert.Single(measured, text => text == label.Text);
             double reservedWidth = UnitCatalog.All.Where(u => u.Dimension == UnitCatalog.DimensionOf(kind))
-                .Max(unit => Width(name + " = " + QuantityFormatter.WithUnit(value, unit, options)));
+                .Max(unit => Width(QuantityFormatter.FormatInputEquation(name, value, unit)));
             Assert.Equal(reservedWidth, label.Bounds.Width);
             Assert.True(label.Bounds.Width > Width(label.Text));
         }
+        // The calculated self-weight is the label that follows the result precision.
+        var self = Assert.Single(scene.Annotations, a => a.Text.StartsWith(EditorSelfWeight.Symbol + " = ", StringComparison.Ordinal));
+        Assert.Equal(EditorSelfWeight.Symbol + " = " + QuantityFormatter.FormatResult(weight, QuantityKind.DistributedLoad, options), self.Text);
+        if (digits != ResultPresentationOptions.DefaultSignificantDigits)
+            Assert.NotEqual(EditorSelfWeight.Symbol + " = " + QuantityFormatter.FormatResult(weight, QuantityKind.DistributedLoad), self.Text);
+        Assert.Single(measured, text => text == self.Text);
+        Assert.Equal(UnitCatalog.All.Where(u => u.Dimension == UnitDimension.DistributedLoad).Max(unit => Width(EditorSelfWeight.Symbol + " = "
+            + QuantityFormatter.FormatResult(weight, QuantityKind.DistributedLoad, options.Profile.WithUnit(QuantityKind.DistributedLoad, unit), digits, notation))),
+            self.Bounds.Width);
     }
 
     [Theory]
@@ -427,7 +438,7 @@ public sealed class DesktopSchematicIntegrationTests
         Assert.Equal(document.Loads[0].Id, PointLoadSymbol.HitTest(scene.Loads, bottom.X, bottom.Y));
         var label = Assert.Single(scene.Annotations);
         Assert.True(label.Bounds.Bottom < top.Y - SchematicMetrics.SymbolStrokeWidth / 2);
-        Assert.Equal("F7 = " + QuantityFormatter.Format(value, QuantityKind.TransverseForce, ResultPresentationOptions.Default), label.Text);
+        Assert.Equal("F7 = " + QuantityFormatter.FormatResult(value, QuantityKind.TransverseForce, ResultPresentationOptions.Default), label.Text);
         Assert.Equal(document.Loads[0].Id, PointLoadSymbol.ResolveEntity(glyph));
         Assert.True(SchematicMetrics.ForceHeight > 0);
     }
@@ -472,7 +483,7 @@ public sealed class DesktopSchematicIntegrationTests
         Assert.Equal(14.7721162952, PointLoadSymbol.MomentTip(true).Y, 10);
         Assert.Equal(-PointLoadSymbol.MomentTip(true).X, PointLoadSymbol.MomentTip(false).X);
         Assert.Equal(PointLoadSymbol.MomentTip(true).Y, PointLoadSymbol.MomentTip(false).Y);
-        Assert.Equal("M1 = " + QuantityFormatter.Format(first, QuantityKind.Moment, ResultPresentationOptions.Default), scene.Annotations.Single(a => a.Id == document.Loads[0].Id).Text);
+        Assert.Equal("M1 = " + QuantityFormatter.FormatResult(first, QuantityKind.Moment, ResultPresentationOptions.Default), scene.Annotations.Single(a => a.Id == document.Loads[0].Id).Text);
         Assert.Equal(2, document.ToBeamModel().Loads.Count);
         Assert.Equal(2, glyph.Entities.Count);
         Assert.Equal(2, scene.Annotations.Count);

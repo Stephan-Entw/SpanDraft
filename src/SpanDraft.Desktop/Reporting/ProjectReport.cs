@@ -22,8 +22,15 @@ internal static class ProjectReport
         var overview = ProjectOverviewState.From(state.Document, presentation);
         var analysis = presentation.Result!;
         var profile = presentation.Options.Profile;
-        string Quantity(double si, QuantityKind kind) => QuantityFormatter.Format(si, kind, presentation.Options);
-        string Position(double meters) => QuantityFormatter.FormatNumber(meters, QuantityKind.BeamLength, presentation.Options);
+        // Given: material values and stored section properties. Result: section properties derived
+        // from geometry and the calculated positions of the critical values.
+        TechnicalText Given(TechnicalText label, double si, QuantityKind kind) =>
+            label + QuantityFormatter.FormatInputEquation("", si, profile[kind]);
+        bool givenSection = SectionDefinitionCompatibility.Normalize(state.Document.Section) is SpanDraft.Core.Sections.ManualSectionDefinition;
+        string SectionProperty(double si, QuantityKind kind) => SectionDisplay.Property(givenSection, si, kind, presentation.Options);
+        TechnicalText SectionValue(TechnicalText label, double si, QuantityKind kind) =>
+            givenSection ? Given(label, si, kind) : label + " = " + SectionProperty(si, kind);
+        string Position(double meters) => QuantityFormatter.FormatResultNumber(meters, QuantityKind.BeamLength, presentation.Options);
         string Location(double meters, SpanDraft.Solver.EvaluationSide? side) =>
             string.Format(CultureInfo.CurrentUICulture, Strings.ReportPosition, Position(meters),
                 profile[QuantityKind.BeamLength].Symbol, side is null ? "" : side == SpanDraft.Solver.EvaluationSide.Left ? " (x−)" : " (x+)");
@@ -38,22 +45,22 @@ internal static class ProjectReport
         var axis = analysis.Beam.BendingAxisProperties;
         string axisName = state.Document.BendingAxis.ToString().ToLowerInvariant();
         var sectionProperties = new List<TechnicalText>
-        { TechnicalSymbols.Inertia(axisName) + " = " + Quantity(axis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea) };
-        if (Quantity(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus)
-            == Quantity(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus))
-            sectionProperties.Add(TechnicalSymbols.Modulus(axisName) + " = " + Quantity(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
+        { SectionValue(TechnicalSymbols.Inertia(axisName), axis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea) };
+        if (SectionProperty(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus)
+            == SectionProperty(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus))
+            sectionProperties.Add(SectionValue(TechnicalSymbols.Modulus(axisName), axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
         else
         {
-            sectionProperties.Add(TechnicalSymbols.Modulus(axisName, 1) + " = " + Quantity(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
-            sectionProperties.Add(TechnicalSymbols.Modulus(axisName, -1) + " = " + Quantity(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus));
+            sectionProperties.Add(SectionValue(TechnicalSymbols.Modulus(axisName, 1), axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
+            sectionProperties.Add(SectionValue(TechnicalSymbols.Modulus(axisName, -1), axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus));
         }
         var engineering = analysis.Engineering;
         var timestamp = createdAt ?? DateTimeOffset.Now;
         var data = new ReportData(state.Info?.CalculationTitle ?? Strings.ReportHeading, state.Info?.Author ?? "",
             ApplicationMetadata.Version, timestamp, timestamp.ToLocalTime().ToString("d", CultureInfo.CurrentCulture), metadata,
             overview.Section, sectionProperties, overview.Material,
-            [Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus + " = " + Quantity(state.Document.Material.YoungsModulus.Pascals, QuantityKind.YoungsModulus),
-             MaterialStrengthDisplay.LabelText(state.Document.Material.StrengthType) + " = " + Quantity(state.Document.Material.YieldStrength.Pascals, QuantityKind.MaterialStrength)],
+            [Given(Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus, state.Document.Material.YoungsModulus.Pascals, QuantityKind.YoungsModulus),
+             Given(MaterialStrengthDisplay.LabelText(state.Document.Material.StrengthType), state.Document.Material.YieldStrength.Pascals, QuantityKind.MaterialStrength)],
             new ReportTable[]
             {
                 new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.25f, .50f, .25f],

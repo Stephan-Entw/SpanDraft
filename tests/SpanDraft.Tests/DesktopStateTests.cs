@@ -105,7 +105,7 @@ public class DesktopStateTests
         Assert.Equal(1000, previous.Length.Millimeters);
         Assert.Equal(s.Editor.Document.Length, s.LastBeam!.Length);
         Assert.Equal(text, input.Text);
-        Assert.Equal("1\u202f000 mm", s.Editor.DimensionLength.DisplayText);
+        Assert.Equal("1\u202f000" + text[4..] + " mm", s.Editor.DimensionLength.DisplayText);
         Assert.False(input.IsEditing);
         Assert.Equal(2, s.Calls);
     }
@@ -343,13 +343,13 @@ public class DesktopStateTests
         Assert.True(state.IsSuccess);
         Assert.Same(outcome.Result, state.Result);
         var engineering = outcome.Result!.Engineering;
-        Assert.Equal(QuantityFormatter.Format(engineering.TransverseDisplacementMagnitude.Meters,
+        Assert.Equal(QuantityFormatter.FormatResult(engineering.TransverseDisplacementMagnitude.Meters,
             QuantityKind.TransverseDisplacement), state.Displacement);
-        Assert.Equal(QuantityFormatter.Format(engineering.BendingMomentMagnitude.NewtonMeters,
+        Assert.Equal(QuantityFormatter.FormatResult(engineering.BendingMomentMagnitude.NewtonMeters,
             QuantityKind.Moment), state.Moment);
-        Assert.Equal(QuantityFormatter.Format(engineering.MaximumBendingStress.Pascals,
+        Assert.Equal(QuantityFormatter.FormatResult(engineering.MaximumBendingStress.Pascals,
             QuantityKind.Stress), state.Stress);
-        Assert.Equal(QuantityFormatter.Format(engineering.SafetyFactor, QuantityKind.SafetyFactor), state.SafetyFactor);
+        Assert.Equal(QuantityFormatter.FormatResult(engineering.SafetyFactor, QuantityKind.SafetyFactor), state.SafetyFactor);
         if (!loaded) Assert.Equal("∞", state.SafetyFactor);
     }
 

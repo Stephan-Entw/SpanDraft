@@ -18,13 +18,14 @@ public sealed partial class EditorViewModel
     public bool IsSelfWeightFlyoutVisible => _selfWeightFlyout && IsSelfWeightEnabled;
     public string SelfWeightVisibilityAction => IsSelfWeightVisible ? Strings.HideSelfWeight : Strings.ShowSelfWeight;
     public string SelfWeightLabel => Document.SelfWeightLoad is { } load
-        ? EditorSelfWeight.Symbol + " = " + QuantityFormatter.Format(load.Intensity.NewtonsPerMeter, QuantityKind.DistributedLoad, ResultPresentation) : "";
+        ? EditorSelfWeight.Symbol + " = " + QuantityFormatter.FormatResult(load.Intensity.NewtonsPerMeter, QuantityKind.DistributedLoad, ResultPresentation) : "";
     public TechnicalText SelfWeightValue => SelfWeightLabel is { Length: > 0 } label
         ? new TechnicalText(new TechnicalRun(EditorSelfWeight.Symbol, Role: TechnicalRole.Variable)) + label[EditorSelfWeight.Symbol.Length..] : "";
     public TechnicalText SelfWeightArea => TechnicalSymbols.Area + " = "
-        + QuantityFormatter.Format(Document.Section.Area.SquareMeters, QuantityKind.Area, ResultPresentation);
-    public TechnicalText SelfWeightDensity => TechnicalSymbols.Density + " = " + (Document.Material.Density is { } density
-        ? QuantityFormatter.Format(density.KilogramsPerCubicMeter, QuantityKind.Density, ResultPresentation) : "—");
+        + SectionDisplay.Property(Document.Section, Document.Section.Area.SquareMeters, QuantityKind.Area, ResultPresentation);
+    public TechnicalText SelfWeightDensity => Document.Material.Density is { } density
+        ? TechnicalSymbols.Density + QuantityFormatter.FormatInputEquation("", density.KilogramsPerCubicMeter, ResultPresentation.Profile[QuantityKind.Density])
+        : TechnicalSymbols.Density + " = —";
     public string? SelfWeightFeedback => _selfWeightFeedback;
     public bool HasSelfWeightFeedback => SelfWeightFeedback is not null;
 

@@ -111,13 +111,13 @@ public sealed class DesktopPresentationUnitTests
     {
         var c = CultureInfo.GetCultureInfo(culture);
         // 4514.96 N rounds to 4510 N in SI, whose converted value would round to 1.01 kip.
-        Assert.Equal(force, QuantityFormatter.Format(4514.96, QuantityKind.TransverseForce,
+        Assert.Equal(force, QuantityFormatter.FormatResult(4514.96, QuantityKind.TransverseForce,
             UnitProfile.UnitedStates, culture: c));
-        Assert.Equal(displacement, QuantityFormatter.Format(0.00765 / 1000, QuantityKind.TransverseDisplacement,
+        Assert.Equal(displacement, QuantityFormatter.FormatResult(0.00765 / 1000, QuantityKind.TransverseDisplacement,
             UnitProfile.UnitedStates, culture: c));
-        Assert.Equal(detailed, QuantityFormatter.Format(0.00765 / 1000, QuantityKind.TransverseDisplacement,
+        Assert.Equal(detailed, QuantityFormatter.FormatResult(0.00765 / 1000, QuantityKind.TransverseDisplacement,
             UnitProfile.UnitedStates, 6, culture: c));
-        Assert.Equal(culture == "de-DE" ? "607 · 10⁻⁶ kip" : "607 · 10⁻⁶ kip", QuantityFormatter.Format(2.7, QuantityKind.TransverseForce,
+        Assert.Equal(culture == "de-DE" ? "607 · 10⁻⁶ kip" : "607 · 10⁻⁶ kip", QuantityFormatter.FormatResult(2.7, QuantityKind.TransverseForce,
             UnitProfile.UnitedStates, culture: c));
     }
 
@@ -125,7 +125,7 @@ public sealed class DesktopPresentationUnitTests
     public void DetailedUsConversionDoesNotRoundSiFirst()
     {
         // SI three-digit rounding would produce 4510 N and subsequently 1.01 kip.
-        Assert.Equal("1.02 kip", QuantityFormatter.Format(4514.96, QuantityKind.AxialForce,
+        Assert.Equal("1.02 kip", QuantityFormatter.FormatResult(4514.96, QuantityKind.AxialForce,
             UnitProfile.UnitedStates, culture: CultureInfo.InvariantCulture));
     }
 
@@ -133,20 +133,20 @@ public sealed class DesktopPresentationUnitTests
     public void MixedLengthUnitsUsePhysicalLengthRatherThanBeamDisplayUnit()
     {
         var profile = UnitProfile.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Foot);
-        Assert.Equal("0.05 mm", QuantityFormatter.Format(0.05 / 1000, QuantityKind.TransverseDisplacement,
+        Assert.Equal("0.0500 mm", QuantityFormatter.FormatResult(0.05 / 1000, QuantityKind.TransverseDisplacement,
             profile, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("0.05 mm", QuantityFormatter.Format(0.05 / 1000, QuantityKind.AxialDisplacement,
+        Assert.Equal("0.0500 mm", QuantityFormatter.FormatResult(0.05 / 1000, QuantityKind.AxialDisplacement,
             profile, culture: CultureInfo.InvariantCulture));
     }
 
     [Fact]
     public void NotationKeepsExplicitlyChosenUnitAndExactRoundedDigits()
     {
-        Assert.Equal("4\u202f520 N", QuantityFormatter.Format(4516.02, QuantityKind.TransverseForce, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("4.52 kN", QuantityFormatter.Format(4516.02, QuantityKind.TransverseForce,
+        Assert.Equal("4\u202f516 N", QuantityFormatter.FormatResult(4516.02, QuantityKind.TransverseForce, culture: CultureInfo.InvariantCulture));
+        Assert.Equal("4.52 kN", QuantityFormatter.FormatResult(4516.02, QuantityKind.TransverseForce,
             UnitProfile.StructuralEngineering, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("1 · 10⁶ N", QuantityFormatter.Format(1e6, QuantityKind.AxialForce, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("1\u202f000 kN", QuantityFormatter.Format(1e6, QuantityKind.AxialForce,
+        Assert.Equal("1.00 · 10⁶ N", QuantityFormatter.FormatResult(1e6, QuantityKind.AxialForce, culture: CultureInfo.InvariantCulture));
+        Assert.Equal("1\u202f000 kN", QuantityFormatter.FormatResult(1e6, QuantityKind.AxialForce,
             UnitProfile.StructuralEngineering, culture: CultureInfo.InvariantCulture));
     }
 

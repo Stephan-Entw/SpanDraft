@@ -189,12 +189,13 @@ public sealed class DesktopSelfWeightTests
         var options = new ResultPresentationOptions(UnitProfile.UnitedStates, 6, EngineeringNotation.Off);
         editor.ApplyResultPresentation(options);
         Assert.NotEqual(original, editor.SelfWeightLabel);
-        Assert.Equal("g = " + QuantityFormatter.Format(editor.Document.SelfWeightLoad!.Intensity.NewtonsPerMeter,
+        Assert.Equal("g = " + QuantityFormatter.FormatResult(editor.Document.SelfWeightLoad!.Intensity.NewtonsPerMeter,
             QuantityKind.DistributedLoad, options), editor.SelfWeightLabel);
         Assert.Equal(editor.SelfWeightLabel[4..], editor.Overview.DistributedLoads[0].Value);
         Assert.Equal(editor.SelfWeightLabel, editor.SelfWeightValue.PlainText);
-        Assert.Equal("A = " + QuantityFormatter.Format(editor.Document.Section.Area.SquareMeters, QuantityKind.Area, options), editor.SelfWeightArea.PlainText);
-        Assert.Equal("ρ = " + QuantityFormatter.Format(editor.Document.Material.Density!.Value.KilogramsPerCubicMeter, QuantityKind.Density, options), editor.SelfWeightDensity.PlainText);
+        Assert.Equal("A = " + QuantityFormatter.FormatResult(editor.Document.Section.Area.SquareMeters, QuantityKind.Area, options), editor.SelfWeightArea.PlainText);
+        // The density is a given material value; only the calculated intensity and area follow the result precision.
+        Assert.Equal("ρ = " + QuantityFormatter.FormatInput(editor.Document.Material.Density!.Value.KilogramsPerCubicMeter, options.Profile[QuantityKind.Density]), editor.SelfWeightDensity.PlainText);
         Assert.Contains(nameof(editor.SelfWeightArea), changed); Assert.Contains(nameof(editor.SelfWeightDensity), changed);
         Assert.Same(revision, editor.Session.CurrentRevision); Assert.Same(result, editor.Presentation.Result);
         Assert.Equal(1, s.Calls); Assert.Empty(editor.Session.UndoHistory);

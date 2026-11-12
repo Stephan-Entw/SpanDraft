@@ -72,7 +72,7 @@ public sealed partial class EditorViewModel
         if (ResultProbePosition is { } position && Presentation.Result is { } result)
         {
             var unit = ResultPresentation.Profile[QuantityKind.BeamLength];
-            rows.Add(new("x", QuantityFormatter.WithUnit(InputQuantityFormatter.FormatExact(position.Meters, unit), unit)));
+            rows.Add(new("x", QuantityFormatter.FormatInput(position.Meters, unit)));
             var solution = result.Solution;
             bool end = position == Document.Length;
             var primary = solution.EvaluateAt(position, end ? EvaluationSide.Left : EvaluationSide.Right);
@@ -88,8 +88,8 @@ public sealed partial class EditorViewModel
 
         void Add(string label, QuantityKind kind, double left, double right)
         {
-            string a = QuantityFormatter.Format(left, kind, ResultPresentation);
-            string b = QuantityFormatter.Format(right, kind, ResultPresentation);
+            string a = QuantityFormatter.FormatResult(left, kind, ResultPresentation);
+            string b = QuantityFormatter.FormatResult(right, kind, ResultPresentation);
             if (a == b) rows.Add(new(label, b));
             else { rows.Add(new(label + "−", a)); rows.Add(new(label + "+", b)); }
         }

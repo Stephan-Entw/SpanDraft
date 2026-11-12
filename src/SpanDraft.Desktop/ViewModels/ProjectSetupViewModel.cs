@@ -69,7 +69,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         _resultPresentation = resultPresentation ?? ResultPresentationOptions.Default;
         Libraries = libraries; _apply = apply;
         LengthInput = new(() => SelectedLength, CommitLength, () => IsBusy || Libraries?.PreserveSetupInputs == true,
-            () => ResultPresentation.Profile[QuantityKind.BeamLength], retainRejectedOnBlur: true, readPresentation: () => ResultPresentation);
+            () => ResultPresentation.Profile[QuantityKind.BeamLength], retainRejectedOnBlur: true);
         LengthInput.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(LengthInputViewModel.Text) or nameof(LengthInputViewModel.IsEditing)
@@ -162,30 +162,30 @@ public sealed class ProjectSetupViewModel : ObservableObject
     }
     public bool HasMaterial => SelectedMaterial is not null;
     public string MaterialName => SelectedMaterial is { } material ? MaterialDisplay.Format(material) : Strings.SelectMaterialRequired;
-    public TechnicalText MaterialSummaryText => SelectedMaterial is null ? (TechnicalText)"" : TechnicalSymbols.YoungsModulus + " " + YoungsModulus + " · " + MaterialStrengthDisplay.SummaryText(SelectedMaterial, ResultPresentation) + " " + ResultPresentation.Profile[QuantityKind.MaterialStrength].Symbol;
+    public TechnicalText MaterialSummaryText => SelectedMaterial is null ? (TechnicalText)"" : TechnicalSymbols.YoungsModulus + " " + YoungsModulus + " · " + MaterialStrengthDisplay.SummaryText(SelectedMaterial, ResultPresentation.Profile) + " " + ResultPresentation.Profile[QuantityKind.MaterialStrength].Symbol;
     public string MaterialSummary => MaterialSummaryText.PlainText;
     public string? StartupError => Libraries?.BuiltInError;
     public bool HasStartupError => StartupError is not null;
     public string SectionName => SelectedSection is { } section
-        ? SectionDisplayName ?? SectionDisplay.Name(section, ResultPresentation.Profile, ResultPresentation) : Strings.SectionSelection;
+        ? SectionDisplayName ?? SectionDisplay.Name(section, ResultPresentation.Profile) : Strings.SectionSelection;
     public string AxisSummary => SelectedSection is not { } section ? "" : Strings.BendingAxis + " " + new AxisChoice(BendingAxis).Label
         + (section.Axes.Count == 2 && SectionDefinitionViewModel.HaveEquivalentProperties(section.Axes[0], section.Axes[1])
             ? " · " + Strings.SectionDefinitionEquivalent : "");
     public SectionEditorType SectionType => SelectedSection is { } section && SectionDefinitionCompatibility.Normalize(section) is IParametricSectionDefinition p
         ? Enum.Parse<SectionEditorType>(p.ShapeKind.ToString()) : SectionEditorType.Manual;
     public ResultPresentationOptions ResultPresentation => _resultPresentation;
-    public string Area => SelectedSection is { } section ? Format(section.Area.SquareMeters, QuantityKind.Area) : "";
-    public string Inertia => SelectedAxis is { } axis ? Format(axis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea) : "";
+    public string Area => SelectedSection is { } section ? SectionProperty(section.Area.SquareMeters, QuantityKind.Area) : "";
+    public string Inertia => SelectedAxis is { } axis ? SectionProperty(axis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea) : "";
     public string Modulus => !IsAsymmetric ? PositiveModulus : "W+ = " + PositiveModulus + "; W− = " + NegativeModulus;
     public bool IsAsymmetric => SelectedAxis is { } axis && axis.PositiveSectionModulus != axis.NegativeSectionModulus;
-    public string PositiveModulus => SelectedAxis is { } axis ? Format(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus) : "";
-    public string NegativeModulus => SelectedAxis is { } axis ? Format(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus) : "";
-    public string YoungsModulus => SelectedMaterial is { } m ? Format(m.YoungsModulus.Pascals, QuantityKind.YoungsModulus) : "";
-    public string YieldStrength => SelectedMaterial is { } m ? Format(m.YieldStrength.Pascals, QuantityKind.MaterialStrength) : "";
+    public string PositiveModulus => SelectedAxis is { } axis ? SectionProperty(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus) : "";
+    public string NegativeModulus => SelectedAxis is { } axis ? SectionProperty(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus) : "";
+    public string YoungsModulus => SelectedMaterial is { } m ? Given(m.YoungsModulus.Pascals, QuantityKind.YoungsModulus) : "";
+    public string YieldStrength => SelectedMaterial is { } m ? Given(m.YieldStrength.Pascals, QuantityKind.MaterialStrength) : "";
     public bool HasDensity => SelectedMaterial?.Density is not null;
     public bool HasPoissonRatio => SelectedMaterial?.PoissonRatio is not null;
-    public string Density => SelectedMaterial?.Density is { } rho ? Format(rho.KilogramsPerCubicMeter, QuantityKind.Density) : "";
-    public string PoissonRatio => SelectedMaterial?.PoissonRatio is { } nu ? Format(nu.Value, QuantityKind.PoissonRatio) : "";
+    public string Density => SelectedMaterial?.Density is { } rho ? Given(rho.KilogramsPerCubicMeter, QuantityKind.Density) : "";
+    public string PoissonRatio => SelectedMaterial?.PoissonRatio is { } nu ? Given(nu.Value, QuantityKind.PoissonRatio) : "";
     public AsyncActionCommand ApplyCommand { get; }
     public ActionCommand CancelCommand { get; }
     public ActionCommand ChangeMaterialCommand { get; }
@@ -302,8 +302,8 @@ public sealed class ProjectSetupViewModel : ObservableObject
         if (CurrentStep is SetupStepViewModel step) step.Refresh();
         Definition?.RefreshLibraryState();
     }
-    private string Format(double si, QuantityKind kind) =>
-        QuantityFormatter.Format(si, kind, ResultPresentation);
+    private string Given(double si, QuantityKind kind) => QuantityFormatter.FormatInput(si, ResultPresentation.Profile[kind]);
+    private string SectionProperty(double si, QuantityKind kind) => SectionDisplay.Property(SelectedSection!, si, kind, ResultPresentation);
 }
 
 public abstract class SetupStepViewModel(ProjectSetupViewModel setup) : ObservableObject

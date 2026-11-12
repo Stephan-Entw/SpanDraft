@@ -389,7 +389,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     }
     private void UpdateAutomaticName(Dictionary<string, double> values)
     {
-        if (_section is not null) { Current.AutomaticName = SectionDisplay.Name(_section, Presentation.Profile, Presentation); return; }
+        if (_section is not null) { Current.AutomaticName = SectionDisplay.Name(_section, Presentation.Profile); return; }
         if (IsManual) { Current.AutomaticName = Strings.SectionDefinitionCustomName; return; }
         string[] main = SectionPreviewGeometryResolver.ParameterKeys(_type!.Value).Where(k => k != "r").ToArray();
         var name = SelectedFormName;
@@ -397,9 +397,8 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         {
             var unit = Presentation.Profile[QuantityKind.SectionDimension];
             name += " " + (_type is SectionEditorType.Circle or SectionEditorType.CircularHollow ? "Ø" : "")
-                + string.Join(" × ", main.Select(k => QuantityFormatter.Display(values[k], unit, Presentation))) + " " + unit.Symbol;
-            if (values.TryGetValue("r", out double radius) && radius > 0)
-                name += string.Format(CultureInfo.CurrentUICulture, Strings.SectionDefinitionRadiusSuffix, QuantityFormatter.Display(radius, unit, Presentation), unit.Symbol);
+                + SectionDisplay.Dimensions(main.Select(k => values[k]), unit);
+            if (values.TryGetValue("r", out double radius) && radius > 0) name += SectionDisplay.RadiusSuffix(radius, unit);
         }
         Current.AutomaticName = name;
     }
@@ -509,14 +508,14 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
                 var section = SectionDefinitionCompatibility.Normalize(e.Section);
                 var values = PresetValues(section);
                 string summary = IsManual ? string.Join(" / ", section.Axes.Select(a => new AxisChoice(a.AxisDesignation).Label))
-                    + " · " + Format(section.Area.SquareMeters, QuantityKind.Area)
-                    : string.Join(" × ", values.Values.Select(v => QuantityFormatter.Display(v, Presentation.Profile[QuantityKind.SectionDimension], Presentation)))
-                        + " " + Presentation.Profile[QuantityKind.SectionDimension].Symbol;
+                    + " · " + SectionDisplay.Property(section, section.Area.SquareMeters, QuantityKind.Area, Presentation)
+                    : SectionDisplay.Dimensions(values.Values, Presentation.Profile[QuantityKind.SectionDimension]);
                 return new SectionDefinitionPreset(e, summary);
             }).ToArray();
         if (!_libraryEntries.SequenceEqual(entries)) { _libraryEntries = entries; Notify(nameof(LibraryEntries)); }
     }
-    private string Format(double value, QuantityKind kind) => QuantityFormatter.Format(value, kind, Presentation);
+    // Manual sections store their properties (given values); geometric forms derive them (results).
+    private string Format(double value, QuantityKind kind) => SectionDisplay.Property(IsManual, value, kind, Presentation);
     private void RefreshInputs()
     { Notify(nameof(Parameters)); Notify(nameof(GeometryInputs)); Notify(nameof(ManualInputs)); Notify(nameof(ManualAreaInputs)); }
     private void RefreshLibraryAction()
