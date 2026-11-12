@@ -31,6 +31,8 @@
     </DataTemplate>
     <DataTemplate x:Key="ReactionRowTemplate" x:DataType="state:ProjectOverviewReaction">
       <Grid Classes="overviewRow" ColumnDefinitions="64,*,*,*">
+        <!-- A shared row is not an action, but its trimmed name stays readable through this tooltip. -->
+        <Border Background="Transparent" ToolTip.Tip="{Binding Name}" />
         <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
                 IsHitTestVisible="{Binding IsEditable}" Focusable="{Binding IsEditable}"

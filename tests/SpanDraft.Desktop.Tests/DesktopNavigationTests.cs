@@ -175,6 +175,15 @@ public sealed class DesktopNavigationTests
         Assert.Equal("A + Clamp", ((ProjectOverviewReaction)shared.DataContext!).Name);
         Assert.False(shared.IsHitTestVisible);
         Assert.False(shared.Focusable);
+        // The inert name cell behind the button keeps the full, possibly trimmed name reachable by tooltip.
+        var nameCell = Assert.Single(((Grid)shared.Parent!).Children.OfType<Border>());
+        Assert.Equal("A + Clamp", ToolTip.GetTip(nameCell));
+        Assert.True(nameCell.IsHitTestVisible);
+        Assert.NotNull(nameCell.Background);
+        Assert.False(nameCell.Focusable);
+        Assert.Equal(Grid.GetColumn(shared), Grid.GetColumn(nameCell));
+        Assert.True(nameCell.Bounds.Contains(shared.Bounds));
+        // The hidden native root has no hit testing; the inert button above the cell is what lets it be hit.
         shared.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         shared.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
         Assert.Null(editor.SupportDraft);
@@ -186,6 +195,7 @@ public sealed class DesktopNavigationTests
             Assert.True(row.IsEditable);
             Assert.True(single.IsHitTestVisible);
             Assert.True(single.Focusable);
+            Assert.Equal(row.Name, ToolTip.GetTip(single));
             ActivateName(single, window, true);
             Assert.Equal(row.Id, editor.SupportDraft!.OriginalId);
             editor.CancelEditorInteraction();
