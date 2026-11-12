@@ -86,7 +86,8 @@ internal static class ProjectReport
                 Strings.ReportSummary, Strings.ReportNotes, [Strings.ReportTheory],
                 Strings.CalculationTitle, Strings.Project, Strings.Reference, Strings.Author),
             MaterialNoteDisplay.Resolve(state.Document.Material.Note, CultureInfo.CurrentUICulture) is { } note
-                ? Strings.MaterialNote + ": " + note : null);
+                ? Strings.MaterialNote + ": " + note : null,
+            RoundingNote(presentation.Options.SignificantDigits));
         var visuals = new ReportVisuals(state, presentation, data);
         var report = new ReportDocument(data, visuals.Graphics);
         try { visuals.Freeze(report); return report; }
@@ -94,4 +95,8 @@ internal static class ProjectReport
     }
 
     private static string Missing(string value) => value.Length == 0 ? "-" : value;
+
+    /// <summary>The sentence under the results that states the display rounding of all values.</summary>
+    internal static string RoundingNote(int significantDigits) => significantDigits == 1 ? Strings.ReportRoundingNoteOne
+        : string.Format(CultureInfo.CurrentUICulture, Strings.ReportRoundingNote, significantDigits);
 }

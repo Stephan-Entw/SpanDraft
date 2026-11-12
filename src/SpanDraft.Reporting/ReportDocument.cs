@@ -518,9 +518,11 @@ internal sealed class ReportDocument : IDisposable
 
     private float MeasureSummary()
     {
-        float height = 19 + SummaryRows().Sum(row => row.Max(cell => cell.Label.Length * LineHeight + 4));
+        float height = 19 + SummaryRows().Sum(row => row.Max(cell => cell.Label.Length * LineHeight + 4)) + ResultNoteLines().Length * LineHeight;
         return height + 17 + Data.Labels.Assumptions.Sum(n => Wrap(n, PageWidth - 2 * Margin, 8).Length * LineHeight);
     }
+
+    private string[] ResultNoteLines() => Data.ResultNote is { } note ? Wrap(note, PageWidth - 2 * Margin, 8) : [];
 
     private sealed record SummaryCell(ReportIndicator Indicator, float Left, float Right,
         float ValueLeft, TechnicalText[] Label);
@@ -567,6 +569,9 @@ internal sealed class ReportDocument : IDisposable
             }
             y += row.Max(cell => cell.Label.Length * LineHeight + 4);
         }
+        // How the displayed values above are rounded; it belongs to the results, not to the calculation model.
+        Lines(canvas, ResultNoteLines(), Margin, y, 8, color: Secondary);
+        y += ResultNoteLines().Length * LineHeight;
         Heading(canvas, Data.Labels.Notes, Margin, y + 2, width);
         y += 20;
         foreach (string assumption in Data.Labels.Assumptions)
