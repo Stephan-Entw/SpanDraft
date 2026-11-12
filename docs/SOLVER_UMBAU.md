@@ -259,7 +259,7 @@ Bedienung, Persistenz und Report werden in den Feature-Issues separat geplant.
 ## Offene Punkte
 
 1. **Neue Feature-Koinzidenzen:** Semantik je Feature-Track (A2, B, O6).
-2. **Plattformen:** Unabhängige fachliche und numerische Abnahme je unterstützter Plattform.
+2. **Plattformen:** Der heutige Migrationsumfang ist auf macOS ARM64 und Windows x64 abgenommen; die separate Validation läuft auch in Linux-CI (M2/M4, [VALIDATION.md](VALIDATION.md)). Für zukünftige Feature-Tracks und weitere unterstützte Plattformen bleibt die unabhängige fachliche und numerische Abnahme Pflicht.
 3. **Produktentscheidungen der Feature-Tracks:** Siehe [Architekturentwurf](SOLVER_ARCHITEKTUR.md).
 
 ## Voraussetzung für die Übernahme in `main`

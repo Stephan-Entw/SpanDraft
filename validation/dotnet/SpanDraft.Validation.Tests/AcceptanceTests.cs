@@ -194,31 +194,56 @@ public class AcceptanceTests
     }
 
     [Theory]
-    [InlineData("EulerBernoulliBeamSolver", true)]
-    [InlineData(null, false)]
-    [InlineData("KernelBeamSolver", false)]
-    [InlineData("SomeOtherSolver", false)]
-    public void ImportedExportMustNameTheCurrentEntryPoint(string? entryPoint, bool accepted)
+    [InlineData("EulerBernoulliBeamSolver", "current", true)]
+    [InlineData("EulerBernoulliBeamSolver", null, false)]
+    [InlineData("EulerBernoulliBeamSolver", "wrong", false)]
+    [InlineData(null, "current", false)]
+    [InlineData("KernelBeamSolver", "current", false)]
+    [InlineData("SomeOtherSolver", "current", false)]
+    public void ImportedExportMustIdentifyTheCurrentSolver(string? entryPoint, string? sourceHash, bool accepted)
     {
+        string solverHash = Acceptance.SolverHash();
         // Round-trip through JSON exactly as the runner reads --actual.
         string json = System.Text.Json.JsonSerializer.Serialize(Catalog.CaseIds.Select(id =>
         {
-            var export = Results.Export(Catalog.Load(id));
+            var export = Results.Export(Catalog.Load(id), solverHash: solverHash);
             if (entryPoint is null) export.Provenance.Remove("entryPoint");
             else export.Provenance["entryPoint"] = entryPoint;
+            if (sourceHash is null) export.Provenance.Remove("solverSourceSha256");
+            else if (sourceHash != "current") export.Provenance["solverSourceSha256"] = new string('0', 64);
             return export;
         }).ToArray(), Catalog.Json);
         var imported = System.Text.Json.JsonSerializer.Deserialize<ReferenceData[]>(json, Catalog.Json)!;
         Assert.Equal(accepted, Acceptance.IsCurrentExport(imported));
+        if (!accepted)
+            Assert.Equal("Stale/incomplete SpanDraft export",
+                Assert.Throws<InvalidDataException>(() => Acceptance.Run(exported: imported)).Message);
+    }
+
+    [Theory]
+    [InlineData("entryPoint"), InlineData("solverSourceSha256")]
+    [InlineData("missingCase"), InlineData("duplicateCase"), InlineData("inputHash"), InlineData("solver")]
+    public void OneStaleCaseRejectsTheWholeImportedExport(string defect)
+    {
+        string solverHash = Acceptance.SolverHash();
+        var exported = Catalog.CaseIds.Select(id => Results.Export(Catalog.Load(id), solverHash: solverHash)).ToArray();
+        Assert.True(Acceptance.IsCurrentExport(exported));
+        switch (defect)
+        {
+            case "missingCase": exported = exported[..^1]; break;
+            case "duplicateCase": exported[^1] = exported[0]; break;
+            case "inputHash": exported[^1] = exported[^1] with { InputSha256 = new string('0', 64) }; break;
+            case "solver": exported[^1] = exported[^1] with { Solver = "OtherSolver" }; break;
+            default: exported[^1].Provenance.Remove(defect); break;
+        }
+        Assert.False(Acceptance.IsCurrentExport(exported));
+        Assert.Throws<InvalidDataException>(() => Acceptance.Run(exported: exported));
     }
 
     [Fact]
-    public void OneStaleCaseRejectsTheWholeImportedExport()
+    public void ExportIncludesCurrentSolverSourceHash()
     {
-        var exported = Catalog.CaseIds.Select(id => Results.Export(Catalog.Load(id))).ToArray();
-        Assert.True(Acceptance.IsCurrentExport(exported));
-        exported[^1].Provenance.Remove("entryPoint");
-        Assert.False(Acceptance.IsCurrentExport(exported));
-        Assert.False(Acceptance.IsCurrentExport(exported[..^1]));
+        var exported = Results.Export(Catalog.Load("V01"));
+        Assert.Equal(Acceptance.SolverHash(), exported.Provenance["solverSourceSha256"]);
     }
 }

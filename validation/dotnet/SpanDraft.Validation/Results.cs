@@ -35,7 +35,7 @@ public static class Results
         ["V"] = r.ShearForce.Newtons, ["M"] = r.BendingMoment.NewtonMeters
     };
 
-    public static ReferenceData Export(ValidationCase input, BeamSolution? solution = null)
+    public static ReferenceData Export(ValidationCase input, BeamSolution? solution = null, string? solverHash = null)
     {
         solution ??= Solve(input);
         var data = new ReferenceData {
@@ -44,7 +44,7 @@ public static class Results
             Provenance = new() { ["package"] = "SpanDraft.Solver", ["version"] = typeof(BeamSolution).Assembly.GetName().Version!.ToString(),
                 ["generatedAt"] = DateTimeOffset.UtcNow.ToString("O"), ["theory"] = "Euler-Bernoulli",
                 ["signMapping"] = "Native SI / SpanDraft", ["dotnet"] = Environment.Version.ToString(),
-                ["entryPoint"] = Acceptance.EntryPoint }
+                ["entryPoint"] = Acceptance.EntryPoint, ["solverSourceSha256"] = solverHash ?? Acceptance.SolverHash() }
         };
         data.Reactions = solution.Nodes.Where(n => n.ReactionX.HasValue || n.ReactionY.HasValue || n.ReactionMoment.HasValue)
             .Select(n => {

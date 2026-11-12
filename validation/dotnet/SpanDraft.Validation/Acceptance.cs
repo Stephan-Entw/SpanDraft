@@ -15,22 +15,29 @@ public static class Acceptance
 
     /// <summary>
     /// An imported export is reported under the current solver source hash, so it must be complete,
-    /// match the current inputs and name the current entry point explicitly.
+    /// match the current inputs and identify the current entry point and solver sources explicitly.
     /// </summary>
-    public static bool IsCurrentExport(ReferenceData[] exported) =>
-        exported.Length == Catalog.CaseIds.Length &&
-        exported.Select(a => a.CaseId).ToHashSet().SetEquals(Catalog.CaseIds) &&
-        exported.All(a => a.Solver == "SpanDraft" && a.InputSha256 == Catalog.Hash(a.CaseId) &&
-            a.Provenance?.GetValueOrDefault("entryPoint")?.ToString() == EntryPoint);
+    public static bool IsCurrentExport(ReferenceData[] exported, string? solverHash = null)
+    {
+        solverHash ??= SolverHash();
+        return exported.Length == Catalog.CaseIds.Length &&
+            exported.Select(a => a.CaseId).ToHashSet().SetEquals(Catalog.CaseIds) &&
+            exported.All(a => a.Solver == "SpanDraft" && a.InputSha256 == Catalog.Hash(a.CaseId) &&
+                a.Provenance?.GetValueOrDefault("entryPoint")?.ToString() == EntryPoint &&
+                a.Provenance?.GetValueOrDefault("solverSourceSha256")?.ToString() == solverHash);
+    }
 
     public static AcceptanceReport Run(string? references = null, ReferenceData[]? exported = null)
     {
+        string solverHash = SolverHash();
+        if (exported is not null && !IsCurrentExport(exported, solverHash))
+            throw new InvalidDataException("Stale/incomplete SpanDraft export");
         var results = new List<CaseAcceptance>();
         foreach (string id in Catalog.CaseIds)
         {
             var input = Catalog.Load(id);
             var solution = ValidationCase.Solve(input);
-            var actual = exported is null ? Results.Export(input, solution) : exported.Single(a => a.CaseId == id);
+            var actual = exported is null ? Results.Export(input, solution, solverHash) : exported.Single(a => a.CaseId == id);
             var referenceChecks = new List<CheckReport>();
             var referenceEquilibria = new List<CheckReport>();
             foreach (string provider in Catalog.ExternalSolvers.Concat(Catalog.AnalyticalIds.Contains(id) ? new[] { "analytical" } : []))
@@ -56,7 +63,7 @@ public static class Acceptance
             string status = all.Any(r => r.Status == "FAIL") ? "FAIL" : all.Any(r => r.Status == "PARTIAL") ? "PARTIAL" : "PASS";
             results.Add(new(id,status,referenceChecks.ToArray(),equilibrium,fields,metamorphic.ToArray(),referenceEquilibria.ToArray()));
         }
-        return new(DateTimeOffset.UtcNow.ToString("O"), SolverHash(), results.Count, Catalog.AnalyticalIds.Length,
+        return new(DateTimeOffset.UtcNow.ToString("O"), solverHash, results.Count, Catalog.AnalyticalIds.Length,
             results.Sum(c => c.References.Where(r => Catalog.ExternalSolvers.Contains(r.ReferenceSolver)).Sum(r => r.Comparisons)),
             results.Sum(c => c.References.Where(r => r.ReferenceSolver == "analytical").Sum(r => r.Comparisons)),
             results.Sum(c => c.Metamorphic.Length),

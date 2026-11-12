@@ -42,9 +42,9 @@ verworfene Alternative (V), mit X für rein experimentelle Evidenz.
 | E9 | Mechanismus | Exakter Rang auf dem kinematischen Modell der Teilkörper (Bareiss), unabhängig von der Lösungsmatrix. |
 | E10 | Numerische Qualität | `RawBound` für den adjungierten Residualanteil, `VerifiedStateBound` nach verifizierter Kontraktion mit μ < 1, `VerifiedOutputBound` für den veröffentlichten SI-Wert. Variante C deckt den ganzen Balken mit gerichteten Stückgrenzen ab. Akzeptanz bei `VerifiedOutputBound` höchstens mathematisch τ = 10⁻⁸ mal Bezugsskala. Kondition und Rückwärtsfehler dienen der Diagnose. |
 | E11 | Eingabesensitivität | Nur Diagnose; ändert weder Lösung noch Status. |
-| E12 | Ergebnis | Internes Ergebnismodell (Stationen mit Seiten und Sprungarten, Stücke, Reaktionen einschließlich gemeinsamer starrer Zwangsreaktionen, Genauigkeitsbericht). `BeamSolution` wird zur Fassade des heutigen Vertrags. |
-| E13 | Grenze Core ↔ Solver | Transiente mechanische Eingabe aus generischen Primitiven, je Rechnung aus dem Fachmodell gebaut. `SolverLoads` entfällt. |
-| E14 | Alter FE-Solver | Nach der Migration eingefrorene Testreferenz außerhalb des Produktpfads. |
+| E12 | Ergebnis | Internes Ergebnismodell (Stationen mit Seiten und Sprungarten, Stücke, Reaktionen einschließlich gemeinsamer starrer Zwangsreaktionen, Genauigkeitsbericht). `BeamSolution` ist die Fassade des heutigen Vertrags. |
+| E13 | Grenze Core ↔ Solver | Transiente mechanische Eingabe aus generischen Primitiven, je Rechnung aus dem Fachmodell gebaut. `SolverLoads` ist seit M3 aus dem Produktpfad entfernt. |
+| E14 | Alter FE-Solver | Seit M3 eingefrorene Testreferenz außerhalb des Produktpfads. |
 | E15 | Anregung | Unbelastet genau dann, wenn jedes gespeicherte Anregungsprimitiv null ist. Für geladene Modelle positive Anregungsnorm in Mantissen und ganzzahligen Binärexponenten (7.2). |
 | E16 | Aufwand | Primärpfad O(n) in der Zahl mechanischer Stationen. Engpass ist der Qualitätsvertrag mit n + n_r adjungierten Lösungen: Band O(n²), dicht O(n³). Dichte Speicherung ist in M1 zulässig bis zu einer festzulegenden Modellgröße (Abschnitt 5.6). |
 
@@ -444,7 +444,8 @@ keine Konditionsgarantie.
   kaum Reserve (Gate/Fehler bis 1,1 statt ≥ 7,3) **[state-refine-summary]**.
 - **Residual:** in double genügt (Ablation: kompensiertes oder exaktes Residual ändert Fehler und
   Indikator nur unwesentlich, **[state-ablation]**). Kompensierte Residuen (TwoSum/TwoProd über
-  `Math.FusedMultiplyAdd`) bleiben eine Option, falls die C#-Messung anderes zeigt.
+  `Math.FusedMultiplyAdd`) bleiben eine Option für spätere Befunde; die C#-Abnahme des heutigen
+  Migrationsumfangs ist mit dem double-Residual abgeschlossen (M2/M4).
 
 ### 5.3 Sehr nahe Koordinaten
 
@@ -470,9 +471,9 @@ fortgepflanzten Verschiebungen. Der Prototyp umgeht es mit Newton-Basen.
 EI-Wechsel und kurze Lasten mit Vorzeichenwechsel. Ergebnis über 840 Fälle: größte Abweichung 2,3·10⁻¹⁴ im gemischten Maß, größter Indikator 2,8·10⁻¹², keine Ablehnung, keine Indikatorverletzung, höchstens 5 Nachiterationsschritte **[state-targeted]**. Zum Vergleich der Prototyp:
 bis 5·10⁻¹⁰ **[s_detail2]**. Zufallsmodelle siehe Abschnitt 7.6.
 
-Das ist starke Evidenz, aber kein Beweis. Die C#-Implementierung übernimmt die gezielte Matrix als
-Abnahme (Abschnitt 11). Tauchen dort Federgruppen auf, die die Formulierung nicht trägt, wird der
-Befund dokumentiert und neu entschieden. Eine geometrische Heuristik ist nicht vorgesehen.
+Das ist starke Evidenz, aber kein Beweis. Der Feature-Track DEV-19 übernimmt die gezielte Matrix als
+C#-Abnahme (Abschnitt 11); Federn gehören nicht zum heutigen Migrationsumfang. Tauchen dort
+Federgruppen auf, die die Formulierung nicht trägt, wird der Befund dokumentiert und neu entschieden. Eine geometrische Heuristik ist nicht vorgesehen.
 
 ### 5.5 Ablation
 
@@ -573,7 +574,7 @@ relevant.
 - *Dicht in M1:* sinnvoll, wenn die Faktorisierung hinter einer Schnittstelle liegt (Lösen,
   transponiert Lösen, Residual). Dann ersetzt eine Band-Speicherung sie, ohne Schranken oder Gate zu
   ändern. Die endgültige Modellgrößen- und Latenzgrenze folgt aus der C#-Messung (O9).
-- *Tests vor `main`:* Zähltests (adjungierte Lösungen = n + n_r, Nachiterationsschritte ≤ Obergrenze),
+- *Aufwandsprüfungen für O9 (weiter offen):* Zähltests (adjungierte Lösungen = n + n_r, Nachiterationsschritte ≤ Obergrenze),
   Bandbreitentest mit wachsender Stationszahl (Invariante 2), ein verfolgter Zeitmesswert bei
   n_m = 10, 30, 100 (Band zusätzlich 1.000) mit Budget statt enger Absolutgrenze, und ein Fall mit
   1.000 Lasten in einem Abschnitt.
@@ -603,8 +604,8 @@ relevant.
 Andere Ablehnungsgründe gibt es nicht. Insbesondere führen weder Kondition noch Rückwärtsfehler ω
 noch Eingabesensitivität zu einer Ablehnung.
 
-„Numerisch nicht sicher lösbar“ (im Datenfluss `NotReliablySolvable`) ist bis zur Migration der
-bestehende Code `IllConditionedSystem` (Abschnitt 6.6).
+„Numerisch nicht sicher lösbar“ (im Datenfluss `NotReliablySolvable`) wird auch nach der Migration
+auf den öffentlichen Code `IllConditionedSystem` abgebildet (Abschnitt 6.6).
 
 ### 6.2 Exakte Mechanismusprüfung
 
@@ -764,7 +765,7 @@ ausschließlich der Diagnose. Die strukturierte Ursache ergänzt den
 öffentlichen Code.
 
 Die Umbenennung von `IllConditionedSystem` ist eine Option der Ergebnisschnittstelle. Der Code
-bleibt bis zur Migration erhalten.
+bleibt nach M3 erhalten; eine spätere Umbenennung ist O11.
 
 ## 7. Numerischer Vertrag (A8)
 
@@ -969,7 +970,7 @@ Das **interne Ergebnismodell** wird ohne FE-Begriffe gebildet:
 
 **`BeamSolution` als Fassade** erhält den heutigen Vertrag:
 
-- `Nodes` sind die Ereignisstationen; das sind dieselben Positionen wie die heutigen FE-Knoten.
+- `Nodes` sind die Ereignisstationen; das sind dieselben Positionen wie die früheren FE-Knoten.
   `NodeIndex` ist der Stationsindex. u, w und θ sind die rechtsseitigen Werte.
   `ReactionX`, `ReactionY` und `ReactionMoment` enthalten je Station die
   gemeinsame Reaktion der jeweiligen gesperrten Richtung. Für freie
@@ -995,7 +996,7 @@ Nutzer heute: `ResultDiagramProjection`, `EditorViewModel.ResultProbe`, `BeamAna
 - Freigegebene Features werden in Core modelliert. Ihr Core-Typ wird im Track festgelegt, der
   Adapter bildet ihn auf Primitive ab. Den Kern kennt nur Primitive.
 - **Bis zur Freigabe** erreichen Tests die Primitive über einen internen Einstieg
-  (`InternalsVisibleTo`); der Produktpfad baut sie nur aus Core. `SolverLoads` entfällt.
+  (`InternalsVisibleTo`); der Produktpfad baut sie nur aus Core. `SolverLoads` ist seit M3 aus dem Produktpfad entfernt.
 - Core bleibt frei von Numerik und prüft weiterhin identische Lagerduplikate.
   Die mechanischen Koinzidenzregeln des Solvers erhalten die heutige Semantik
   aus 4.4. Die Tracks liefern die fachlichen Regeln für neue Kombinationen.
@@ -1003,6 +1004,13 @@ Nutzer heute: `ResultDiagramProjection`, `EditorViewModel.ResultProbe`, `BeamAna
 ## 11. Validierungsstrategie (A7)
 
 **Übernahme in dauerhafte Abnahmefälle** (exakte Sollwerte, eingecheckt, CI ohne Python):
+
+Die folgende Strategie umfasst den heutigen Migrationsumfang und spätere Feature-Tracks.
+Die [M2-Abnahmeakte](../validation/investigations/solver-rework/M2_ACCEPTANCE.md) ordnet
+die für die Migration relevanten Fälle den dauerhaften C#-Tests zu; M3/M4 belegen den
+öffentlichen Produktpfad und die Plattformabnahme in [VALIDATION.md](VALIDATION.md).
+Fälle mit Federn, Gelenken, EI-Wechseln, Rampen, belasteter Axialmechanik oder neuen
+Koinzidenzen bleiben Abnahmepflicht ihrer Feature-Tracks. O9 bleibt eine offene Produktentscheidung.
 
 | Quelle | Fälle |
 |---|---|
@@ -1092,12 +1100,12 @@ Produkttests definieren die Referenzfälle für Abschnitt 4.4.
 - `SolverFailureTests.CoincidentPinnedAndRollerDoNotRestrainRigidRotation`
   prüft `UnstableModel` für die verbleibende Starrkörperrotation.
 
-**Alter FE-Solver:** Er wird als eingefrorene Kopie in ein Test- oder Validierungsprojekt verschoben
+**Alter FE-Solver:** Er liegt seit M3 als eingefrorene Kopie im Testprojekt
 und gehört nicht mehr zum Produkt. Er ist ein unabhängiges, *nicht exaktes* Verfahren für den
 heutigen Funktionsumfang mit dokumentiertem Gültigkeitsbereich: gut getrennte Stationen,
 Abweichung bei engen Stationen bekannt **[compare-rand]**. Er dient als Differenzialtest im Sinne
-von A7 „Fremdsolver“, wird nicht weiterentwickelt und bekommt keine neuen Features. Der Prototyp wird
-nach M3 entfernt; seine Testfälle bleiben als Sollwertfälle erhalten.
+von A7 „Fremdsolver“, wird nicht weiterentwickelt und bekommt keine neuen Features. Der Prototyp ist
+seit M3 ebenfalls aus dem Produktpfad entfernt; seine Testfälle bleiben als Sollwertfälle erhalten.
 
 **Stand nach M3.** `EulerBernoulliBeamSolver.Solve(BeamModel)` ist der einzige Produktzugang und
 rechnet ausschließlich über Adapter und Kern. Der FE-Solver und der Machbarkeitsprototyp liegen
@@ -1112,7 +1120,7 @@ Abhängigkeit dieses Testprojekts. Die öffentliche Fehlerzuordnung aus 6.6 setz
 | Nr. | Punkt | Art |
 |---|---|---|
 | O1 | Exakter Produktwert τ = 1/100_000_000, gerichteter SI-Vergleich [GV 7] | Geschlossen |
-| O2 | C#-Konformität mit dem Gleitkomma-Vertrag und seinen Fehlerklassen, nachzuweisen mit A–F und exakten Referenzen [GV 9, 13] | C#-Abnahme |
+| O2 | C#-Konformität mit dem Gleitkomma-Vertrag und seinen Fehlerklassen durch A–F und exakte Referenzen belegt [GV 9, 13]; Nachweise in der M2-Abnahmeakte und VALIDATION.md | Für heutigen Migrationsumfang geschlossen (M2/M4); neue Regeln je Feature-Track |
 | O3 | Pessimistische Schranken können korrekte Fälle ablehnen | Akzeptiertes Risiko |
 | O4 | Belasteter Axialvertrag, zweite unabhängige Referenz und Axialfedergesetz. Die heutige axiale Nullausgabe gehört zur Migration | DEV-12 |
 | O5 | Variante B. PolynomialRoots bleibt unabhängig validiert, exakte Yun/Sturm-Isolation bleibt Oracle [GV 11] | Geschlossen |
@@ -1120,32 +1128,32 @@ Abhängigkeit dieses Testprojekts. Die öffentliche Fehlerzuordnung aus 6.6 setz
 | O7 | N-Extrema in der Schnittstelle (DEV-12) | Track |
 | O8 | Eingabesensitivität anzeigen ja/nein | Produkt |
 | O9 | Modellgrößen- und Latenzgrenze nach C#-Messung festlegen. [GV 12] liefert eine Größenordnungsschätzung | Produkt nach C#-Messung |
-| O10 | Keine Federgruppierung. Umsetzung an den Federextremen bestätigen | C#-Abnahme |
-| O11 | Umbenennung von `IllConditionedSystem` / `Nodes` | Integration |
-| O12 | Jede Plattform erfüllt fachliche Entscheidungen, Schranken, τ und Fehlerklassifikation unabhängig. Bitvergleiche dienen der Diagnose | C#-Abnahme |
-| O13 | Geschlossen (Runde 4): 75 gezielte Grenzfälle, 41 mit Gate in (10⁻¹⁰, 10⁻⁸], kein gelieferter Fehler > τ, Gate/Fehler ≥ 11,8 (7.6). Die Fälle werden in die Abnahme übernommen | – |
+| O10 | Keine Federgruppierung. Umsetzung an den Federextremen bestätigen | DEV-19; außerhalb des heutigen Migrationsumfangs |
+| O11 | M3 erhält `IllConditionedSystem` und `Nodes`; eine spätere Umbenennung bleibt optional | Produkt |
+| O12 | Heutiger Umfang auf macOS ARM64 und Windows x64 abgenommen; separate Validation auch in Linux-CI (VALIDATION.md). Fachliche Entscheidungen, Schranken, τ und Fehlerklassen gelten unabhängig; Bitvergleiche dienen der Diagnose | Für heutigen Migrationsumfang geschlossen (M2/M4); Pflicht für Feature-Tracks und weitere unterstützte Plattformen bleibt |
+| O13 | Geschlossen (Runde 4): 75 gezielte Grenzfälle, 41 mit Gate in (10⁻¹⁰, 10⁻⁸], kein gelieferter Fehler > τ, Gate/Fehler ≥ 11,8 (7.6). Die für den heutigen Umfang relevanten Grenzfälle sind in M2 übernommen; Feature-Fälle bleiben ihren Tracks zugeordnet | – |
 | O14 | Anregungsskala für spätere Anregungsarten (Lagersenkung, Temperatur) je Track konkret festlegen. Für jeden neuen Lasttyp die Stückmajorante des `VerifiedOutputBound` und die Schranke für die Änderung von \|Q\| im Stück festlegen (7.3) | Track |
 | O15 | Geschlossen (Runde 4). Bei überwiegendem Residual war das damalige β scharf. Bei 10 % gestörter Faktorisierung lag der Fehler in jedem verifizierten Modell unter β. Seit Runde 5 gilt der Nachweis mit den getrennten Schranken aus 6.3. | – |
 | O16 | Geschlossen (Runde 4, präzisiert Runde 5): Verifikation der adjungierten Lösungen nach Rump (2010, Satz 10.2), μ < 1 nach oben gerundet, Gewichte mit Neumann-Schritten, sonst Ablehnung mit Ursache `NotVerified` (6.3, [GV 6, 10]) | – |
 | O17 | Nichtlokale Kopplungen oder exponentielle Zustandsübertragung lösen eine Neubewertung im jeweiligen Track aus | Feature-Track |
 | O18 | Gradueller und abrupter Unterlauf sind im Vertrag hergeleitet [GV 3, 6, 7] | Geschlossen |
-| O19 | Gerichtete Primitives, Bereichsgrenzen und benötigte Zwischenwerte im Release-Build auf x64 und ARM64 prüfen [GV 2] | C#-Abnahme |
-| O20 | Gerichtete Rundung der Schranken (L5) und Software-Flush sind neue Implementierungspflichten; ihre Kosten sind in [GV 12] nicht gesondert gemessen | Implementierung |
+| O19 | Gerichtete Primitives, Bereichsgrenzen und benötigte Zwischenwerte im Release-Build auf Windows x64 und macOS ARM64 geprüft [GV 2]; M2-Abnahmeakte und VALIDATION.md | Für heutigen Migrationsumfang geschlossen (M2/M4); für neue Regeln und weitere unterstützte Plattformen erneut nachzuweisen |
+| O20 | Gerichtete Rundung der Schranken (L5) und Software-Flush sind für den heutigen Umfang umgesetzt und in M2 abgenommen; ihre Kosten sind in [GV 12] nicht gesondert gemessen | Implementierung im heutigen Umfang geschlossen; gesonderte Kostenmessung bleibt O9 |
 
 ## 14. Abgleich mit A1–A10 und den Feature-Tracks
 
-| Anforderung | Erfüllung im Entwurf | Nachweis / offen |
+| Anforderung | Architekturvertrag | Nachweis / verbleibend offen |
 |---|---|---|
 | A1 Stationen und Unbekannte | E2, E3, Invariante 1, 2 | Phantomstationstest; gezielte Matrix |
 | A2 Positionen | Invariante 3, 4; E5 Teilpunkte mit Koinzidenztabelle | Verletzungsanalyse 6.4; starre Lagerkoinzidenz 4.4 und 12; neue Kombinationen O6 |
 | A3 Modell und Numerik | Invariante 5; nur exakte Skalierungen | Ablation |
 | A4 Gemeinsame Mechanik | Eine Formulierung, Tabelle 4.2, Axial 4.3, Erweiterungen 4.5 | Axialreferenz O4 |
-| A5 Stabilität, Kondition, Fehler | 6.1–6.6; vier Fehlercodes getrennt; vollständige Code-Zuordnung mit strukturierter Ursache (6.6, `NotVerified` neu); Schranke unter dem Gleitkomma-Vertrag und Verifikation statt Pauschalgrenze; ω, Kondition und Sensitivität nur Diagnose; Selbsttests → `NumericalFailure`; Bereichs- und Subnormalvertrag unabhängig von FTZ/DAZ, auch für die SI-Rückrechnung; Literaturabgleich jeder Regel ([Audit]) | Ablehnungen 7.6; O2 (C#-Konformität), O3, O17, O19 |
+| A5 Stabilität, Kondition, Fehler | 6.1–6.6; vier Fehlercodes getrennt; vollständige Code-Zuordnung mit strukturierter Ursache (6.6, `NotVerified` neu); Schranke unter dem Gleitkomma-Vertrag und Verifikation statt Pauschalgrenze; ω, Kondition und Sensitivität nur Diagnose; Selbsttests → `NumericalFailure`; Bereichs- und Subnormalvertrag unabhängig von FTZ/DAZ, auch für die SI-Rückrechnung; Literaturabgleich jeder Regel ([Audit]) | M2/M4: O2 und O19 für heutigen Umfang geschlossen; historische Ablehnungen 7.6; O3, O17 bleiben |
 | A6 Felder und Extremwerte | Abschnitt 8, beide θ am Gelenk, Sprungarten; Extremwerte gegen exakte Wurzelisolation geprüft | Vollständigkeit validiert, nicht zertifiziert (O5, Variante B beschlossen); N-Extrema O7 |
 | A7 Validierung | Abschnitt 11, zwei exakte Referenzen, Mutationen, exakte Oracles für Stück-Gate und Extremwerte | Belastetes Axialmodell O4 |
-| A8 Numerischer Vertrag | Abschnitt 7 und Gleitkomma-Vertrag: Anregungsskala und Nullfall, Bereichsregeln einschließlich SI-Rückskalierung, Gate über den ganzen Balken mit Majorante und geschlossener Untergrenze (unabhängig gegen exakte Bernstein-Einschließung geprüft), s = 1 auch nahe τ belegt. `VerifiedOutputBound` gilt auch am ausgegebenen Extremwertkandidaten. Positionsfehler und Vollständigkeit werden getrennt validiert (7.3). Zur Migration gehört die axiale Nullsemantik (4.3). | O1 und O5 geschlossen, C#-Abnahme O2 |
+| A8 Numerischer Vertrag | Abschnitt 7 und Gleitkomma-Vertrag: Anregungsskala und Nullfall, Bereichsregeln einschließlich SI-Rückskalierung, Gate über den ganzen Balken mit Majorante und geschlossener Untergrenze (unabhängig gegen exakte Bernstein-Einschließung geprüft), s = 1 auch nahe τ belegt. `VerifiedOutputBound` gilt auch am ausgegebenen Extremwertkandidaten. Positionsfehler und Vollständigkeit werden getrennt validiert (7.3). Zur Migration gehört die axiale Nullsemantik (4.3). | O1 und O5 geschlossen; O2 für heutigen Umfang durch M2/M4 geschlossen |
 | A9 Grenze Fachmodell | Abschnitt 10 | – |
-| A10 Migration | Abschnitte 9, 12 | Plattformkonformität O12 |
+| A10 Migration | Abschnitte 9, 12 | M2/M3/M4 abgeschlossen; O12 für heutigen Umfang geschlossen, Plattformpflicht für Erweiterungen bleibt |
 | DEV-20 Gelenke | Momentengelenk als Stationsregel; θ links/rechts; exakte Mechanismusprüfung über Teilkörper | Koinzidenz O6 |
 | DEV-19 Federlager | Weg-, Dreh-, Kombi-Federn als Gesetz auf dem lokalen Zustand; keine Gruppierung; Reaktion aus Sprung oder Federgesetz nach kleinerem `VerifiedOutputBound`, Identität beider Wege als Selbsttest (4.2); k = 0 entscheidet der Track | O10; axiale Feder als Regel möglich, Federgesetz axial O4; Feder an starrem Lager O6 |
 | DEV-11 Mehrsegment | Abschnittswechsel als mechanische Station mit EI und EA; Zuordnung über Stationsfolge | Wechsel an Halterung O6 |
@@ -1155,12 +1163,20 @@ Abhängigkeit dieses Testprojekts. Die öffentliche Fehlerzuordnung aus 6.6 setz
 ## 15. Closure und eingefrorener Stand
 
 Die [Closure-Kriterien C1–C13](#closure-kriterien-c1c13) sind für den
-Architekturentwurf erfüllt. Ebene A ist für die C#-Implementierungsplanung
-des heutigen öffentlichen Funktionsumfangs einschließlich starrer
-Lagerkoinzidenz und axialer Nullsemantik eingefroren. Die C#-Umsetzung und
-ihre fachliche und numerische Abnahme je unterstützter Plattform stehen aus.
-Der belastete Axialvertrag und neue Feature-Koinzidenzen bleiben in ihren
-Feature-Tracks.
+Architekturentwurf erfüllt. Ebene A ist für den heutigen öffentlichen
+Funktionsumfang einschließlich starrer Lagerkoinzidenz und axialer Nullsemantik
+eingefroren. Seine C#-Umsetzung, unabhängige numerische Abnahme (M2),
+Produktintegration (M3) und finale Abnahme (M4) sind abgeschlossen. Die
+Plattformnachweise umfassen macOS ARM64 und Windows x64 sowie die separate
+Validation in Linux-CI; die Evidenz steht in [VALIDATION.md](VALIDATION.md).
+Die Übernahme nach `main` bleibt eine eigene Entscheidung.
+
+Belastete Axialmechanik, Federlager, Gelenke, Abschnittswechsel, Rampen und
+neue Feature-Koinzidenzen bleiben ihren Feature-Tracks mit eigener fachlicher,
+numerischer und plattformbezogener Abnahme zugeordnet. Die offenen
+Produktentscheidungen aus Abschnitt 13, insbesondere O8/O9 und die optionale
+Umbenennung O11, bleiben offen. Weitere unterstützte Plattformen benötigen
+einen eigenen Konformitätsnachweis.
 
 ### Closure-Kriterien C1–C13
 
@@ -1170,7 +1186,10 @@ Regressionsläufe. Die [Boundary-Suite][closure-boundary] prüft Grenzfälle
 und Mutanten. Die [Oracle-Gegenproben][closure-oracles] vergleichen
 unabhängige exakte Referenzen und die Wurzelisolation. Die
 [axiale Produktbaseline][closure-axial] belegt die Nullsemantik am
-bestehenden öffentlichen Pfad.
+damaligen öffentlichen Pfad. Diese historischen Closure-Nachweise bleiben
+unverändert; die C#-Zuordnung des heutigen Umfangs steht in der
+[M2-Abnahmeakte](../validation/investigations/solver-rework/M2_ACCEPTANCE.md),
+die M3/M4- und Plattformnachweise in [VALIDATION.md](VALIDATION.md).
 
 | Kriterium | Maßstab | Nachweis |
 |---|---|---|
@@ -1185,8 +1204,8 @@ bestehenden öffentlichen Pfad.
 | C9 | Numerische Konstanten sind als Korrektheitsgrenze, Range-Policy oder Strategie klassifiziert. | [GV 8][closure-gv] |
 | C10 | Die deterministische Boundary-Suite erkennt die geforderten Primitive-Mutanten (`outward`, `lambda`, `exponent`, `contribution`, `gamma`, `unloaded`) und Mechanikmutanten (B3, L1, L2). | [Boundary-Suite][closure-boundary] |
 | C11 | Architektur, Gleitkomma-Vertrag, ausführbare Referenz und Closure-Evidenz sind widerspruchsfrei. | Abgleich mit [GV 4–9][closure-gv], [`state/fpc.py`](../validation/investigations/solver-rework/state/fpc.py), [Closure-Protokoll][closure-summary] und [Oracle-Gegenproben][closure-oracles] |
-| C12 | Die Plattformzusage verlangt fachliche und numerische Konformität. Plattformübergreifende Bitvergleiche dienen der Diagnose. | [GV 2, 13][closure-gv], C#-Abnahme in Abschnitt 11 |
-| C13 | Für den heutigen Migrationsumfang ist kein Architektur- oder Floating-Point-Blocker bekannt. Offen bleiben die ausdrücklich verschobenen Feature-Tracks, Produktentscheidungen und C#-Abnahmen. | Migrationsumfang in Abschnitten 4.3, 4.4 und 12, [axiale Produktbaseline][closure-axial], offene Punkte in Abschnitt 13 |
+| C12 | Die Plattformzusage verlangt fachliche und numerische Konformität. Plattformübergreifende Bitvergleiche dienen der Diagnose. | [GV 2, 13][closure-gv], Strategie in Abschnitt 11; heutiger Umfang durch M2/M4 abgenommen (VALIDATION.md) |
+| C13 | Für den heutigen Migrationsumfang ist kein Architektur- oder Floating-Point-Blocker bekannt. Offen bleiben die ausdrücklich verschobenen Feature-Tracks, Produktentscheidungen und deren eigene C#-/Plattformabnahmen. | Migrationsumfang in Abschnitten 4.3, 4.4 und 12, [axiale Produktbaseline][closure-axial], offene Punkte in Abschnitt 13 |
 
 [closure-gv]: ../validation/investigations/solver-rework/FLOATING_POINT_CONTRACT.md
 [closure-summary]: ../validation/investigations/solver-rework/results/state-fpc-summary.log

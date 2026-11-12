@@ -16,14 +16,14 @@ try
         case "export":
             string exportPath = Option("--output") ?? Path.Combine(Catalog.Root,"validation","results","spandraft.json");
             Directory.CreateDirectory(Path.GetDirectoryName(exportPath)!);
-            File.WriteAllText(exportPath,JsonSerializer.Serialize(Catalog.CaseIds.Select(id => Results.Export(Catalog.Load(id))).ToArray(),Catalog.Json)+"\n");
+            string solverHash = Acceptance.SolverHash();
+            File.WriteAllText(exportPath,JsonSerializer.Serialize(Catalog.CaseIds.Select(id => Results.Export(Catalog.Load(id), solverHash: solverHash)).ToArray(),Catalog.Json)+"\n");
             Console.WriteLine($"Exported {Catalog.CaseIds.Length} cases: " + exportPath);
             break;
         case "compare":
             string? actualPath = Option("--actual");
-            var actual = actualPath is null ? null : JsonSerializer.Deserialize<ReferenceData[]>(File.ReadAllText(actualPath),Catalog.Json);
-            if (actual is not null && !Acceptance.IsCurrentExport(actual))
-                throw new InvalidDataException("Stale/incomplete SpanDraft export");
+            var actual = actualPath is null ? null : JsonSerializer.Deserialize<ReferenceData[]>(File.ReadAllText(actualPath),Catalog.Json)
+                ?? throw new InvalidDataException("Stale/incomplete SpanDraft export");
             var report = Acceptance.Run(Option("--references"),actual);
             string reportPath = Option("--report") ?? Path.Combine(Catalog.Root,"validation","results","run-report.json");
             if (reportPath.StartsWith(Path.Combine(Catalog.Root,"validation","references")+Path.DirectorySeparatorChar,StringComparison.Ordinal))

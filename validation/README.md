@@ -135,8 +135,11 @@ respectively; `compare` also accepts `--references` and `--actual`. It writes a
 structured report and returns nonzero for failed/incomplete comparisons.
 Since M3 the public `EulerBernoulliBeamSolver` is the only entry and runs the
 kernel; the former `--kernel` switch is gone. Exports and reports identify the
-entry point, and `compare --actual` rejects exports of the retired internal
-entry. The M2 coverage audit and exact-test mapping are in
+entry point and solver source hash. `compare --actual` requires the current
+`EulerBernoulliBeamSolver` entry point, the exact current `Acceptance.SolverHash()`,
+the complete case catalog and current input hashes. Missing or stale provenance
+is rejected, including older exports from the same public entry point.
+The M2 coverage audit and exact-test mapping are in
 [M2_ACCEPTANCE.md](investigations/solver-rework/M2_ACCEPTANCE.md).
 Relative deviation is undefined (JSON null) for a zero reference. Timestamps do
 not constitute a numerical difference; input hashes, versions and coverage do.
