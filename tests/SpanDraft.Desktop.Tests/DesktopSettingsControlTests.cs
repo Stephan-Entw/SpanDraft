@@ -339,7 +339,7 @@ public sealed class DesktopSettingsControlTests
             Assert.Same(result, editor.Presentation.Result);
             Assert.Equal(initialAnalyses, analyses);
             Assert.Contains(canvas.Scene.Annotations, a => a.Text == PointLoadSymbol.Label(new(document.Loads[0].Position,
-                PointLoadKind.Force, -1000), "F1", profile));
+                PointLoadKind.Force, -1000), "F1", editor.ResultPresentation));
             Assert.All(view.GetVisualDescendants().OfType<ResultDiagram>(), d => Assert.Same(layout, d.Projection!.StationLayout));
         }
     }

@@ -124,7 +124,7 @@ public sealed class DesktopResultProbeTests
 
     [Theory]
     [InlineData("de-DE", 3, 0)]
-    [InlineData("en-US", 6, 1)]
+    [InlineData("en-US", 5, 1)]
     [InlineData("de-DE", 3, 2)]
     public void StationUsesBothSolverLimitsAndGivenXWithCurrentResultFormatting(string culture, int digits, int profile)
     {
@@ -140,9 +140,10 @@ public sealed class DesktopResultProbeTests
         Assert.Equal(7, editor.ResultProbeRows.Count);
         Assert.Equal(new[] { "x", "w", "θ", "V−", "V+", "M−", "M+" }, editor.ResultProbeRows.Select(r => r.Label));
         var unit = options.Profile[QuantityKind.BeamLength];
-        // x is a given position: exact, and a marked approximation only beyond twelve digits.
-        Assert.Equal(QuantityFormatter.FormatInput(position.Meters, unit), editor.ResultProbeRows[0].Value);
-        if (profile == 0) Assert.Equal("333,37 mm", editor.ResultProbeRows[0].Value);
+        // x is a given position: rounded with the current digits and marked when rounded.
+        Assert.Equal(QuantityFormatter.FormatInput(position.Meters, unit, options), editor.ResultProbeRows[0].Value);
+        if (profile == 0) Assert.Equal("≈ 333 mm", editor.ResultProbeRows[0].Value);
+        if (profile == 1) Assert.Equal("0.33337 m", editor.ResultProbeRows[0].Value);
         if (profile == 2) Assert.Equal("≈ 1,09 ft", editor.ResultProbeRows[0].Value);
         Check("V−", left.ShearForce.Newtons, QuantityKind.TransverseForce);
         Check("V+", right.ShearForce.Newtons, QuantityKind.TransverseForce);

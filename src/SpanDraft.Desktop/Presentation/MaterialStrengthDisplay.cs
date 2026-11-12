@@ -27,7 +27,10 @@ internal static class MaterialStrengthDisplay
     };
 
     internal static string Summary(Material material) => SummaryText(material).PlainText;
-    internal static TechnicalText SummaryText(Material material, UnitProfile? profile = null) =>
-        SymbolText(material.StrengthType) + " " + QuantityFormatter.FormatInputNumber(material.YieldStrength.Pascals,
-            (profile ?? UnitProfile.Default)[QuantityKind.MaterialStrength]);
+    internal static TechnicalText SummaryText(Material material, ResultPresentationOptions? options = null)
+    {
+        options ??= ResultPresentationOptions.Default;
+        return SymbolText(material.StrengthType) + " " + QuantityFormatter.FormatInputNumber(material.YieldStrength.Pascals,
+            options.Profile[QuantityKind.MaterialStrength], options);
+    }
 }

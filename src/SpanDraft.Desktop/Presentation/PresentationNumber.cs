@@ -59,6 +59,8 @@ internal readonly struct PresentationNumber : IComparable<PresentationNumber>
         return Numerator.Sign < 0 ? -integral : integral;
     }
 
+    internal BigInteger TruncateToInteger() => BigInteger.Divide(Numerator, Denominator);
+
     internal double ToDouble()
     {
         if (IsZero) return 0;

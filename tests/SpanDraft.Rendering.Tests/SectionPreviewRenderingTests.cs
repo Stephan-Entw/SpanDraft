@@ -226,13 +226,13 @@ public sealed class SectionPreviewRenderingTests : SectionDefinitionPrototypeTes
         var canvas = view.FindControl<SectionPreviewControl>("SectionPreview")!;
         Assert.InRange(canvas.Bounds.Width, 180, width); Assert.InRange(canvas.Bounds.Height, 180, height);
         var referenceLayout = SectionPreviewDrawingLayout.Create(canvas.Geometry!, canvas.Bounds.Size,
-            canvas.UnitProfile[QuantityKind.SectionDimension], text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
+            canvas.Presentation.Profile[QuantityKind.SectionDimension], text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
         Assert.Equal(new[] { SectionAxisDesignation.Y, SectionAxisDesignation.Z }, referenceLayout.Axes.Select(a => a.Axis));
         Assert.All(referenceLayout.Axes, a => Assert.True(a.IsReference)); Assert.Null(canvas.Geometry!.Centroid);
         Assert.Null(canvas.SelectedAxis);
         Fill(vm, false); ArrangeSection(window, width, height);
         var realLayout = SectionPreviewDrawingLayout.Create(canvas.Geometry!, canvas.Bounds.Size,
-            canvas.UnitProfile[QuantityKind.SectionDimension], text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
+            canvas.Presentation.Profile[QuantityKind.SectionDimension], text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
         Assert.All(realLayout.Axes, a => Assert.False(a.IsReference)); Assert.NotNull(canvas.Geometry!.Centroid);
         Assert.Equal(3, columns.ColumnDefinitions.Count);
         Assert.True(view.FindControl<TextBlock>("AxisSelectionHint")!.IsEffectivelyVisible);
@@ -739,7 +739,7 @@ public sealed class SectionPreviewRenderingTests : SectionDefinitionPrototypeTes
         var axes = Drawings(drawing).OfType<Avalonia.Media.GeometryDrawing>()
             .Where(d => d.Pen?.DashStyle is not null).ToArray();
         Assert.Equal(2, axes.Length);
-        var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, canvas.Bounds.Size, canvas.UnitProfile[QuantityKind.SectionDimension],
+        var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, canvas.Bounds.Size, canvas.Presentation.Profile[QuantityKind.SectionDimension],
             text =>
             {
                 var formatted = SchematicText.Format(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12, Avalonia.Media.Brushes.Gray);

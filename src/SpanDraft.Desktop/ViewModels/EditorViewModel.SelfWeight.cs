@@ -24,7 +24,7 @@ public sealed partial class EditorViewModel
     public TechnicalText SelfWeightArea => TechnicalSymbols.Area + " = "
         + SectionDisplay.Property(Document.Section, Document.Section.Area.SquareMeters, QuantityKind.Area, ResultPresentation);
     public TechnicalText SelfWeightDensity => Document.Material.Density is { } density
-        ? TechnicalSymbols.Density + QuantityFormatter.FormatInputEquation("", density.KilogramsPerCubicMeter, ResultPresentation.Profile[QuantityKind.Density])
+        ? TechnicalSymbols.Density + QuantityFormatter.FormatInputEquation("", density.KilogramsPerCubicMeter, ResultPresentation.Profile[QuantityKind.Density], ResultPresentation)
         : TechnicalSymbols.Density + " = —";
     public string? SelfWeightFeedback => _selfWeightFeedback;
     public bool HasSelfWeightFeedback => SelfWeightFeedback is not null;

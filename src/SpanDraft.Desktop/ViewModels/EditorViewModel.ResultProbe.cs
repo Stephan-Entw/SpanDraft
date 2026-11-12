@@ -72,7 +72,7 @@ public sealed partial class EditorViewModel
         if (ResultProbePosition is { } position && Presentation.Result is { } result)
         {
             var unit = ResultPresentation.Profile[QuantityKind.BeamLength];
-            rows.Add(new("x", QuantityFormatter.FormatInput(position.Meters, unit)));
+            rows.Add(new("x", QuantityFormatter.FormatInput(position.Meters, unit, ResultPresentation)));
             var solution = result.Solution;
             bool end = position == Document.Length;
             var primary = solution.EvaluateAt(position, end ? EvaluationSide.Left : EvaluationSide.Right);

@@ -44,8 +44,8 @@ public sealed class DesktopAxisTickFormattingTests
                 Assert.DoesNotContain('E', text);
                 Assert.True(text.Length <= 16, text);
             }
-        // Tick labels add no digits; result formatting pads to its own precision independently.
+        // Tick labels keep their own nice-tick digits; result formatting rounds independently and adds no zeros.
         Assert.Equal(culture == "de-DE" ? "0,025" : "0.025", AxisTickFormatter.Format(1, 2.5, -2));
-        Assert.Equal(culture == "de-DE" ? "0,0250" : "0.0250", QuantityFormatter.FormatResultNumber(.025, QuantityKind.TransverseForce, ResultPresentationOptions.Default));
+        Assert.Equal(culture == "de-DE" ? "0,025" : "0.025", QuantityFormatter.FormatResultNumber(.025, QuantityKind.TransverseForce, ResultPresentationOptions.Default));
     }
 }

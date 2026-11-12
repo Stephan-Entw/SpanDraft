@@ -16,19 +16,19 @@ public sealed class DesktopQuantityFormatterTests
     [InlineData("en-US", -13300, "-13\u202f300")]
     [InlineData("de-DE", 0.00123456, "0,00123")]
     [InlineData("en-US", -0.00123456, "-0.00123")]
-    [InlineData("de-DE", 0.01, "0,0100")]
-    [InlineData("en-US", 0.009, "0.00900")]
+    [InlineData("de-DE", 0.01, "0,01")]
+    [InlineData("en-US", 0.009, "0.009")]
     [InlineData("en-US", 9999, "9\u202f999")]
     [InlineData("de-DE", 10000, "10\u202f000")]
     [InlineData("en-US", 999499, "999\u202f499")]
-    [InlineData("de-DE", 999500, "1,00 · 10⁶")]
-    [InlineData("en-US", -999500, "-1.00 · 10⁶")]
-    [InlineData("de-DE", 0.0009999999, "0,001000")]
+    [InlineData("de-DE", 999500, "1 · 10⁶")]
+    [InlineData("en-US", -999500, "-1 · 10⁶")]
+    [InlineData("de-DE", 0.0009999999, "0,001")]
     [InlineData("en-US", double.MaxValue, "180 · 10³⁰⁶")]
     [InlineData("de-DE", -double.MaxValue, "-180 · 10³⁰⁶")]
     [InlineData("de-DE", double.Epsilon, "4,94 · 10⁻³²⁴")]
     [InlineData("en-US", -double.Epsilon, "-4.94 · 10⁻³²⁴")]
-    [InlineData("en-US", 1e-300, "1.00 · 10⁻³⁰⁰")]
+    [InlineData("en-US", 1e-300, "1 · 10⁻³⁰⁰")]
     [InlineData("de-DE", 0, "0")]
     [InlineData("en-US", -0.0, "0")]
     [InlineData("de-DE", double.PositiveInfinity, "∞")]
@@ -48,7 +48,7 @@ public sealed class DesktopQuantityFormatterTests
         using var scope = new UiCultureScope(culture);
         var length = Length.FromMillimeters(1234567.89012345);
         var input = new LengthInputViewModel(() => length, _ => LengthCommitResult.Success);
-        Assert.Equal(culture == "de-DE" ? "≈ 1\u202f234\u202f568 mm" : "≈ 1\u202f234\u202f568 mm", input.DisplayText);
+        Assert.Equal(culture == "de-DE" ? "≈ 1,23\u00a0·\u00a010⁶ mm" : "≈ 1.23\u00a0·\u00a010⁶ mm", input.DisplayText);
         input.Begin();
         Assert.Equal(InputQuantityFormatter.FormatExact(length.Meters, UnitCatalog.Millimeter), input.Text);
         Assert.True(InputQuantityFormatter.TryParseLength(input.Text, UnitCatalog.Millimeter, out var parsedLength));

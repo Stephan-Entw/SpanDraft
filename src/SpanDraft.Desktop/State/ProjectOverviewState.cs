@@ -23,7 +23,7 @@ public sealed class ProjectOverviewState
     private ProjectOverviewState(EditorDocument document, AnalysisPresentationState analysis)
     {
         Analysis = analysis;
-        Section = document.SectionDisplayName ?? SectionDisplay.Name(document.Section, analysis.Options.Profile);
+        Section = document.SectionDisplayName ?? SectionDisplay.Name(document.Section, analysis.Options);
         Material = MaterialDisplay.Format(document.Material);
         Length = string.Format(CultureInfo.CurrentUICulture, Strings.OverviewLength, Position(document.Length),
             analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
@@ -33,14 +33,14 @@ public sealed class ProjectOverviewState
             .Where(l => l.Kind == kind).Select(l => new ProjectOverviewItem(l.Id, l.Name,
                 kind == PointLoadKind.Force ? "F" : "M",
                 QuantityFormatter.FormatInput(l.Value, analysis.Options.Profile[kind == PointLoadKind.Force
-                    ? QuantityKind.TransverseForce : QuantityKind.Moment]), Position(l.Position))).ToArray());
+                    ? QuantityKind.TransverseForce : QuantityKind.Moment], analysis.Options), Position(l.Position))).ToArray());
         Forces = PointLoads(PointLoadKind.Force);
         Moments = PointLoads(PointLoadKind.Moment);
         // A self-weight intensity is calculated from area and density; a user load's intensity is given.
         ProjectOverviewItem Distributed(Guid id, string name, string type, double intensity, Length start, Length end, bool calculated = false) =>
             new(id, name, type, calculated
                     ? QuantityFormatter.FormatResult(intensity, QuantityKind.DistributedLoad, analysis.Options)
-                    : QuantityFormatter.FormatInput(intensity, analysis.Options.Profile[QuantityKind.DistributedLoad]),
+                    : QuantityFormatter.FormatInput(intensity, analysis.Options.Profile[QuantityKind.DistributedLoad], analysis.Options),
                 Position(start) + "…" + Position(end));
         DistributedLoads = Array.AsReadOnly((document.SelfWeightLoad is { } weight
             ? new[] { Distributed(document.SelfWeight!.Id, EditorSelfWeight.Symbol, EditorSelfWeight.Symbol,
@@ -90,7 +90,8 @@ public sealed class ProjectOverviewState
     private string Reaction(double siValue, QuantityKind kind) => QuantityFormatter.FormatResultNumber(siValue, kind,
         Analysis.Options);
 
-    private string Position(Length position) => QuantityFormatter.FormatInputNumber(position.Meters, Analysis.Options.Profile[QuantityKind.BeamLength]);
+    private string Position(Length position) => QuantityFormatter.FormatInputNumber(position.Meters, Analysis.Options.Profile[QuantityKind.BeamLength],
+        Analysis.Options);
 
     private static string SupportTypeName(SupportType type) => type switch
     {

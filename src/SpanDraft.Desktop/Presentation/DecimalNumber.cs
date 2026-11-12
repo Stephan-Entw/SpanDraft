@@ -54,7 +54,7 @@ public sealed record DecimalNumber
 
 /// <summary>
 /// The result of the one final precision rounding and its notation, before any culture choice.
-/// <see cref="Step"/> is the place of the last displayed digit, so trailing zeros up to it are kept.
+/// <see cref="Step"/> is the rounding place; trailing zeros up to it are not displayed.
 /// </summary>
 public sealed class RoundedNumber
 {

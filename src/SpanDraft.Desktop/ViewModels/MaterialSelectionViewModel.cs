@@ -40,7 +40,7 @@ public sealed class MaterialSelectionItem(Material material, MaterialSelectionKi
     public string StrengthValue => Given(Material.YieldStrength.Pascals, QuantityKind.MaterialStrength);
     public TechnicalText StrengthLabelText => MaterialStrengthDisplay.LabelText(Material.StrengthType);
     public string StrengthLabel => StrengthLabelText.PlainText;
-    public TechnicalText StrengthSummaryText => MaterialStrengthDisplay.SummaryText(Material, Presentation.Profile);
+    public TechnicalText StrengthSummaryText => MaterialStrengthDisplay.SummaryText(Material, Presentation);
     public string StrengthSummary => StrengthSummaryText.PlainText;
     public TechnicalText YoungsModulusLabel => Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus;
     public TechnicalText DensityLabel => Strings.MaterialDensity + " " + TechnicalSymbols.Density;
@@ -54,7 +54,7 @@ public sealed class MaterialSelectionItem(Material material, MaterialSelectionKi
         foreach (string name in new[] { nameof(Note), nameof(YoungsModulus), nameof(StrengthValue), nameof(StrengthSummaryText), nameof(StrengthSummary), nameof(Density), nameof(PoissonRatio), nameof(AccessibleName), nameof(YoungsModulusUnit), nameof(StrengthUnit), nameof(DensityUnit) }) Notify(name);
     }
     public string? PoissonRatio => Material.PoissonRatio is { } nu ? Given(nu.Value, QuantityKind.PoissonRatio) : null;
-    private string Given(double si, QuantityKind kind) => QuantityFormatter.FormatInputNumber(si, Presentation.Profile[kind]);
+    private string Given(double si, QuantityKind kind) => QuantityFormatter.FormatInputNumber(si, Presentation.Profile[kind], Presentation);
 }
 
 public sealed class MaterialSelectionViewModel : SetupStepViewModel

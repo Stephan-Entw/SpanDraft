@@ -195,7 +195,8 @@ public sealed class DesktopNativeTextMeasurementTests
             EditorPointLoad.Create(Guid.NewGuid(), SpanDraft.Core.Units.Length.FromMillimeters(800.000004), PointLoadKind.Force, -1000, "F2")]);
         var frame = new BeamLayoutState().Update(document, pane, 600)!;
         var axis = CoordinateAxisLayout.Create(frame.Layout, pane, text => SchematicText.Measure(text, Typeface.Default, 13));
-        Assert.Equal(new[] { "0", "800", "800,000004", "1\u202f000" }, axis.Labels.OrderBy(l => l.PhysicalX).Select(l => l.Text));
+        // Both stations remain distinct labels; the rounded one is marked.
+        Assert.Equal(new[] { "0", "800", "≈ 800", "1\u202f000" }, axis.Labels.OrderBy(l => l.PhysicalX).Select(l => l.Text));
         Assert.All(axis.Labels, label => Assert.True(label.Bounds.Left >= 0 && label.Bounds.Right <= pane, label.Text));
         foreach (var label in axis.Labels)
             Assert.All(axis.Labels.Where(other => other != label), other => Assert.False(label.Bounds.Intersects(other.Bounds), label.Text + " / " + other.Text));

@@ -45,7 +45,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             distributed.Insert(0, DistributedLoadSymbol.CreateVisual(document.SelfWeight!.Id,
                 new(weight.StartPosition, weight.EndPosition, weight.Intensity.NewtonsPerMeter), EditorSelfWeight.Symbol,
                 frame, symbolScale: loadSymbolScale) with { CanDragEndpoints = false, IsSelfWeight = true });
-        // The profile selects the units of given labels; the options only round the calculated self-weight.
+        // The profile selects the units of all load labels; the options round given and calculated values alike.
         var results = options is null ? new ResultPresentationOptions(profile)
             : profile is null ? options : new(profile, options.SignificantDigits, options.Notation);
         if (reserveUnitWidths)
@@ -55,8 +55,8 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             foreach (var load in loads)
             {
                 var quantity = load.Preview.Kind == PointLoadKind.Force ? QuantityKind.TransverseForce : QuantityKind.Moment;
-                Reserve(PointLoadSymbol.Label(load.Preview, load.Name, profile), quantity,
-                    u => PointLoadSymbol.Label(load.Preview, load.Name, results.Profile.WithUnit(quantity, u)));
+                Reserve(PointLoadSymbol.Label(load.Preview, load.Name, results), quantity,
+                    u => PointLoadSymbol.Label(load.Preview, load.Name, new(results.Profile.WithUnit(quantity, u), results.SignificantDigits, results.Notation)));
             }
             foreach (var load in distributed)
                 Reserve(DistributedLoadSymbol.Label(load, results), QuantityKind.DistributedLoad,
@@ -70,7 +70,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             measure = text => reserved.TryGetValue(text, out var size) ? size : originalMeasure(text);
         }
         var annotations = new List<EntityAnnotation>();
-        double above = Place(loads.Select((v, i) => (v.Id, v.Name, Text: PointLoadSymbol.Label(v.Preview, v.Name, profile),
+        double above = Place(loads.Select((v, i) => (v.Id, v.Name, Text: PointLoadSymbol.Label(v.Preview, v.Name, results),
             v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)).Concat(distributed.Select((v, i) =>
             (v.Id, v.Name, Text: DistributedLoadSymbol.Label(v, results), X: v.CenterX,
                 v.IsPreview, v.Preview.IsInvalid, Order: loads.Count + i))), false);

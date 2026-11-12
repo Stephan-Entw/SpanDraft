@@ -414,9 +414,9 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", "400,123456", "-100,56789 N", "600,987654", "50,123456 N·m", "200,2468…800,7531", "-500,98765 N/m")]
-    [InlineData("en-US", "400.123456", "-100.56789 N", "600.987654", "50.123456 N·m", "200.2468…800.7531", "-500.98765 N/m")]
-    public void TableCellsShowGivenLoadsAndPositionsExactlyInNumericCulture(string culture, string forcePosition,
+    [InlineData("de-DE", "≈ 400", "≈ -101 N", "≈ 601", "≈ 50,1 N·m", "≈ 200…≈ 801", "≈ -501 N/m")]
+    [InlineData("en-US", "≈ 400", "≈ -101 N", "≈ 601", "≈ 50.1 N·m", "≈ 200…≈ 801", "≈ -501 N/m")]
+    public void TableCellsShowGivenLoadsAndPositionsRoundedAndMarkedInNumericCulture(string culture, string forcePosition,
         string force, string momentPosition, string moment, string range, string intensity)
     {
         using var scope = new UiCultureScope(culture);

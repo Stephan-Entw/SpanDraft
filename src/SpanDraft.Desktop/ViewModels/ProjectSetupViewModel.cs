@@ -69,7 +69,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         _resultPresentation = resultPresentation ?? ResultPresentationOptions.Default;
         Libraries = libraries; _apply = apply;
         LengthInput = new(() => SelectedLength, CommitLength, () => IsBusy || Libraries?.PreserveSetupInputs == true,
-            () => ResultPresentation.Profile[QuantityKind.BeamLength], retainRejectedOnBlur: true);
+            () => ResultPresentation.Profile[QuantityKind.BeamLength], retainRejectedOnBlur: true, readPresentation: () => ResultPresentation);
         LengthInput.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(LengthInputViewModel.Text) or nameof(LengthInputViewModel.IsEditing)
@@ -162,12 +162,12 @@ public sealed class ProjectSetupViewModel : ObservableObject
     }
     public bool HasMaterial => SelectedMaterial is not null;
     public string MaterialName => SelectedMaterial is { } material ? MaterialDisplay.Format(material) : Strings.SelectMaterialRequired;
-    public TechnicalText MaterialSummaryText => SelectedMaterial is null ? (TechnicalText)"" : TechnicalSymbols.YoungsModulus + " " + YoungsModulus + " · " + MaterialStrengthDisplay.SummaryText(SelectedMaterial, ResultPresentation.Profile) + " " + ResultPresentation.Profile[QuantityKind.MaterialStrength].Symbol;
+    public TechnicalText MaterialSummaryText => SelectedMaterial is null ? (TechnicalText)"" : TechnicalSymbols.YoungsModulus + " " + YoungsModulus + " · " + MaterialStrengthDisplay.SummaryText(SelectedMaterial, ResultPresentation) + " " + ResultPresentation.Profile[QuantityKind.MaterialStrength].Symbol;
     public string MaterialSummary => MaterialSummaryText.PlainText;
     public string? StartupError => Libraries?.BuiltInError;
     public bool HasStartupError => StartupError is not null;
     public string SectionName => SelectedSection is { } section
-        ? SectionDisplayName ?? SectionDisplay.Name(section, ResultPresentation.Profile) : Strings.SectionSelection;
+        ? SectionDisplayName ?? SectionDisplay.Name(section, ResultPresentation) : Strings.SectionSelection;
     public string AxisSummary => SelectedSection is not { } section ? "" : Strings.BendingAxis + " " + new AxisChoice(BendingAxis).Label
         + (section.Axes.Count == 2 && SectionDefinitionViewModel.HaveEquivalentProperties(section.Axes[0], section.Axes[1])
             ? " · " + Strings.SectionDefinitionEquivalent : "");
@@ -302,7 +302,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         if (CurrentStep is SetupStepViewModel step) step.Refresh();
         Definition?.RefreshLibraryState();
     }
-    private string Given(double si, QuantityKind kind) => QuantityFormatter.FormatInput(si, ResultPresentation.Profile[kind]);
+    private string Given(double si, QuantityKind kind) => QuantityFormatter.FormatInput(si, ResultPresentation.Profile[kind], ResultPresentation);
     private string SectionProperty(double si, QuantityKind kind) => SectionDisplay.Property(SelectedSection!, si, kind, ResultPresentation);
 }
 

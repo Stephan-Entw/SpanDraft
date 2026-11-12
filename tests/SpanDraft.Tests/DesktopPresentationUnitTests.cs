@@ -133,9 +133,9 @@ public sealed class DesktopPresentationUnitTests
     public void MixedLengthUnitsUsePhysicalLengthRatherThanBeamDisplayUnit()
     {
         var profile = UnitProfile.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Foot);
-        Assert.Equal("0.0500 mm", QuantityFormatter.FormatResult(0.05 / 1000, QuantityKind.TransverseDisplacement,
+        Assert.Equal("0.05 mm", QuantityFormatter.FormatResult(0.05 / 1000, QuantityKind.TransverseDisplacement,
             profile, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("0.0500 mm", QuantityFormatter.FormatResult(0.05 / 1000, QuantityKind.AxialDisplacement,
+        Assert.Equal("0.05 mm", QuantityFormatter.FormatResult(0.05 / 1000, QuantityKind.AxialDisplacement,
             profile, culture: CultureInfo.InvariantCulture));
     }
 
@@ -145,7 +145,7 @@ public sealed class DesktopPresentationUnitTests
         Assert.Equal("4\u202f516 N", QuantityFormatter.FormatResult(4516.02, QuantityKind.TransverseForce, culture: CultureInfo.InvariantCulture));
         Assert.Equal("4.52 kN", QuantityFormatter.FormatResult(4516.02, QuantityKind.TransverseForce,
             UnitProfile.StructuralEngineering, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("1.00 · 10⁶ N", QuantityFormatter.FormatResult(1e6, QuantityKind.AxialForce, culture: CultureInfo.InvariantCulture));
+        Assert.Equal("1 · 10⁶ N", QuantityFormatter.FormatResult(1e6, QuantityKind.AxialForce, culture: CultureInfo.InvariantCulture));
         Assert.Equal("1\u202f000 kN", QuantityFormatter.FormatResult(1e6, QuantityKind.AxialForce,
             UnitProfile.StructuralEngineering, culture: CultureInfo.InvariantCulture));
     }

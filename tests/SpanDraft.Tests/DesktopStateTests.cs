@@ -105,7 +105,8 @@ public class DesktopStateTests
         Assert.Equal(1000, previous.Length.Millimeters);
         Assert.Equal(s.Editor.Document.Length, s.LastBeam!.Length);
         Assert.Equal(text, input.Text);
-        Assert.Equal("1\u202f000" + text[4..] + " mm", s.Editor.DimensionLength.DisplayText);
+        // The stored length keeps its digits; the display rounds it like every other value and marks it.
+        Assert.Equal("≈ 1\u202f001 mm", s.Editor.DimensionLength.DisplayText);
         Assert.False(input.IsEditing);
         Assert.Equal(2, s.Calls);
     }

@@ -23,7 +23,7 @@ public sealed class DesktopResultPresentationTests
     public static IEnumerable<object[]> Cases()
     {
         foreach (string culture in new[] { "de-DE", "en-US" })
-        foreach (int mode in new[] { 3, 6 })
+        foreach (int mode in new[] { 3, 5 })
         foreach (int profile in Enumerable.Range(0, 4))
             yield return [culture, mode, profile];
     }
@@ -61,9 +61,9 @@ public sealed class DesktopResultPresentationTests
         Assert.Equal(Format(setup.SelectedSection!.Area.SquareMeters, QuantityKind.Area), setup.Area);
         Assert.Equal(Format(setup.SelectedSection.GetAxis(setup.BendingAxis).SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea), setup.Inertia);
         Assert.Equal(Format(setup.SelectedSection.GetAxis(setup.BendingAxis).PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus), setup.Modulus);
-        // Material values are given: exact in the selected unit, independent of the result precision.
-        Assert.Equal(QuantityFormatter.FormatInput(state.Document.Material.YoungsModulus.Pascals, profile[QuantityKind.YoungsModulus]), setup.YoungsModulus);
-        Assert.Equal(QuantityFormatter.FormatInput(state.Document.Material.YieldStrength.Pascals, profile[QuantityKind.MaterialStrength]), setup.YieldStrength);
+        // Material values are given: rounded with the same digits in the selected unit and marked when rounded.
+        Assert.Equal(QuantityFormatter.FormatInput(state.Document.Material.YoungsModulus.Pascals, profile[QuantityKind.YoungsModulus], options), setup.YoungsModulus);
+        Assert.Equal(QuantityFormatter.FormatInput(state.Document.Material.YieldStrength.Pascals, profile[QuantityKind.MaterialStrength], options), setup.YieldStrength);
     }
 
     [Fact]

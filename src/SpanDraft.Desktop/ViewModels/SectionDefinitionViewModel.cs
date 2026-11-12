@@ -389,7 +389,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     }
     private void UpdateAutomaticName(Dictionary<string, double> values)
     {
-        if (_section is not null) { Current.AutomaticName = SectionDisplay.Name(_section, Presentation.Profile); return; }
+        if (_section is not null) { Current.AutomaticName = SectionDisplay.Name(_section, Presentation); return; }
         if (IsManual) { Current.AutomaticName = Strings.SectionDefinitionCustomName; return; }
         string[] main = SectionPreviewGeometryResolver.ParameterKeys(_type!.Value).Where(k => k != "r").ToArray();
         var name = SelectedFormName;
@@ -397,8 +397,8 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         {
             var unit = Presentation.Profile[QuantityKind.SectionDimension];
             name += " " + (_type is SectionEditorType.Circle or SectionEditorType.CircularHollow ? "Ø" : "")
-                + SectionDisplay.Dimensions(main.Select(k => values[k]), unit);
-            if (values.TryGetValue("r", out double radius) && radius > 0) name += SectionDisplay.RadiusSuffix(radius, unit);
+                + SectionDisplay.Dimensions(main.Select(k => values[k]), unit, Presentation);
+            if (values.TryGetValue("r", out double radius) && radius > 0) name += SectionDisplay.RadiusSuffix(radius, unit, Presentation);
         }
         Current.AutomaticName = name;
     }
@@ -509,7 +509,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
                 var values = PresetValues(section);
                 string summary = IsManual ? string.Join(" / ", section.Axes.Select(a => new AxisChoice(a.AxisDesignation).Label))
                     + " · " + SectionDisplay.Property(section, section.Area.SquareMeters, QuantityKind.Area, Presentation)
-                    : SectionDisplay.Dimensions(values.Values, Presentation.Profile[QuantityKind.SectionDimension]);
+                    : SectionDisplay.Dimensions(values.Values, Presentation.Profile[QuantityKind.SectionDimension], Presentation);
                 return new SectionDefinitionPreset(e, summary);
             }).ToArray();
         if (!_libraryEntries.SequenceEqual(entries)) { _libraryEntries = entries; Notify(nameof(LibraryEntries)); }

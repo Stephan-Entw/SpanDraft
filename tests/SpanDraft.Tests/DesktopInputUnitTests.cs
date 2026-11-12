@@ -27,10 +27,12 @@ public sealed class DesktopInputUnitTests
         Assert.Equal(UnitCatalog.DimensionOf(quantity), unit.Dimension);
         foreach (double original in new[] { 0d, .027387593197926163, -1234.5678901234567, 1e-200, 1e200 })
         {
+            // The editing text is decimal without exponent or grouping and leads back to exactly the SI value.
             string text = InputQuantityFormatter.FormatExact(original, unit);
-            Assert.Equal(unit.FromSi(original).ToString("R", CultureInfo.CurrentCulture), text);
+            Assert.DoesNotContain("E", text, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("\u202f", text);
             Assert.True(InputQuantityFormatter.TryParse(text, unit, out double parsed), $"{unit.Id}: {original:R} -> {text}");
-            Assert.True(Math.Abs(parsed - original) <= Math.Abs(original) * 5e-16);
+            Assert.Equal(original, parsed);
         }
         string changed = culture == "de-DE" ? "-1,25" : "-1.25";
         Assert.True(InputQuantityFormatter.TryParse(changed, unit, out double value));

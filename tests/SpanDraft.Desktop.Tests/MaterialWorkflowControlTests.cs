@@ -81,12 +81,15 @@ public sealed class MaterialWorkflowControlTests
         var library = new MaterialSelectionViewModel(setup);
         Assert.Equal("E [ksi]", library.YoungsModulusHeader.PlainText);
         Assert.EndsWith("[ksi]", library.StrengthHeader);
-        Assert.Equal(QuantityFormatter.FormatInputNumber(material.YoungsModulus.Pascals, UnitCatalog.Ksi), library.CurrentEntry!.YoungsModulus);
+        Assert.Equal(QuantityFormatter.FormatInputNumber(material.YoungsModulus.Pascals, UnitCatalog.Ksi, setup.ResultPresentation), library.CurrentEntry!.YoungsModulus);
         Assert.StartsWith("≈ ", library.CurrentEntry.YoungsModulus);
-        setup.ApplyResultPresentation(new(UnitProfile.Default, 7, EngineeringNotation.Off));
+        var metric = new ResultPresentationOptions(UnitProfile.Default, 5, EngineeringNotation.Off);
+        setup.ApplyResultPresentation(metric);
         library.Refresh();
         Assert.Equal("E [GPa]", library.YoungsModulusHeader.PlainText);
-        Assert.Equal(QuantityFormatter.FormatInputNumber(material.Density!.Value.KilogramsPerCubicMeter, UnitCatalog.KilogramsPerCubicMeter), library.CurrentEntry.Density);
+        // Library values follow the current digits and notation like every given value.
+        Assert.Equal(QuantityFormatter.FormatInputNumber(material.Density!.Value.KilogramsPerCubicMeter, UnitCatalog.KilogramsPerCubicMeter, metric), library.CurrentEntry.Density);
+        Assert.NotEqual(QuantityFormatter.FormatInputNumber(material.Density!.Value.KilogramsPerCubicMeter, UnitCatalog.KilogramsPerCubicMeter), library.CurrentEntry.Density);
         window.Content = null;
     }
 

@@ -86,7 +86,7 @@ public sealed class DesktopSectionDefinitionTests
         var window = new Window { Content = view }; window.Show();
         window.Measure(new Size(1100, 650)); window.Arrange(new Rect(0, 0, 1100, 650)); Dispatcher.UIThread.RunJobs();
         var text = view.FindControl<BeamSetupCard>("BeamCard")!.FindControl<TextBlock>("SectionDescription")!;
-        var expectedCaption = SectionDisplay.Name(d.Section, setup.ResultPresentation.Profile);
+        var expectedCaption = SectionDisplay.Name(d.Section, setup.ResultPresentation);
         Assert.Equal(expectedCaption, text.Text);
         Assert.Equal(expectedCaption, app.Main.Editor.Overview.Section);
         var words = culture == "de-DE"

@@ -9,20 +9,20 @@ namespace SpanDraft.Tests;
 public sealed class DesktopNumericPresentationTests
 {
     [Theory]
-    [InlineData(12, 3, "12.0")]
+    [InlineData(12, 3, "12")]
     [InlineData(12.3, 3, "12.3")]
     [InlineData(12.356, 1, "12")]
     [InlineData(12.356, 2, "12")]
     [InlineData(12.356, 3, "12.4")]
     [InlineData(12.356, 4, "12.36")]
-    [InlineData(12.356, 8, "12.356000")]
-    [InlineData(12.356, 15, "12.3560000000000")]
+    [InlineData(12.356, 5, "12.356")]
+    [InlineData(12.3, 5, "12.3")]
     [InlineData(-12.356, 3, "-12.4")]
     [InlineData(0.012356, 3, "0.0124")]
     [InlineData(0.0012356, 3, "0.00124")]
     [InlineData(0.00012356, 3, "124 · 10⁻⁶")]
     [InlineData(123456.55, 3, "123\u202f457")]
-    [InlineData(999999, 3, "1.00 · 10⁶")]
+    [InlineData(999999, 3, "1 · 10⁶")]
     [InlineData(1234567, 3, "1.23 · 10⁶")]
     [InlineData(0.000000123, 3, "123 · 10⁻⁹")]
     [InlineData(1.25, 2, "1.3")]
@@ -49,11 +49,11 @@ public sealed class DesktopNumericPresentationTests
 
     [Theory]
     [InlineData(0.0009994, "999 · 10⁻⁶")]
-    [InlineData(0.0009995, "0.001000")]
-    [InlineData(0.001, "0.00100")]
+    [InlineData(0.0009995, "0.001")]
+    [InlineData(0.001, "0.001")]
     [InlineData(999499, "999\u202f499")]
-    [InlineData(999500, "1.00 · 10⁶")]
-    [InlineData(1000000, "1.00 · 10⁶")]
+    [InlineData(999500, "1 · 10⁶")]
+    [InlineData(1000000, "1 · 10⁶")]
     public void NotationThresholdsUseTheRoundedDisplayValue(double value, string expected) =>
         Assert.Equal(expected, QuantityFormatter.FormatResultNumber(value, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture));
 

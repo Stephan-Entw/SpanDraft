@@ -60,13 +60,14 @@ public partial class CoordinateAxisPane : UserControl
         if (StationLayout is null || _paneWidth <= 0) return;
         Size Measure(string text) => SchematicText.Measure(text, AppTypography.Typeface, FontSize);
         bool editing = _editor?.DimensionLength.IsEditing == true;
+        var presentation = _editor?.ResultPresentation;
         AxisLayout = CoordinateAxisLayout.Create(StationLayout, _paneWidth, Measure, editing,
-            _editor?.ResultPresentation.Profile[QuantityKind.BeamLength]);
+            presentation?.Profile[QuantityKind.BeamLength], presentation);
         AxisCanvas.AxisLayout = AxisLayout;
         AxisCanvas.LabelFontSize = FontSize;
         // Reserve for all supported input units, so changing label text never moves the beam.
         Height = UnitCatalog.All.Where(u => u.Dimension == UnitDimension.Length)
-            .Max(u => CoordinateAxisLayout.Create(StationLayout, _paneWidth, Measure, editing, u).PaneHeight);
+            .Max(u => CoordinateAxisLayout.Create(StationLayout, _paneWidth, Measure, editing, u, presentation).PaneHeight);
         var end = AxisLayout.Labels.Single(l => l.Role == AxisEndpointRole.End);
         LengthButton.Content = end.Text;
         LengthButton.Height = end.Bounds.Height;

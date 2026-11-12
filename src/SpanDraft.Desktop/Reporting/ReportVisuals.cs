@@ -48,7 +48,7 @@ internal sealed class ReportVisuals
             var type = SectionDefinitionViewModel.FormOf(parametric);
             section = new SectionPreviewControl { Geometry = SectionPreviewGeometryResolver.FromSection(type,
                 SectionDefinitionViewModel.PresetValues(parametric), parametric), SelectedAxis = state.Document.BendingAxis,
-                UnitProfile = presentation.Options.Profile, IsHitTestVisible = false, Compact = true };
+                Presentation = presentation.Options, IsHitTestVisible = false, Compact = true };
             foreach (string key in new[] { "CanvasBackground", "AppBackground", "SurfacePressed", "TextSecondary", "TextPrimary", "Accent" })
                 section.Resources.Add(key, Brush(key));
         }
@@ -99,7 +99,8 @@ internal sealed class ReportVisuals
                 presentation: inputs.EditorPresentation, profile: profile, loadSymbolScale: LoadSymbolScale,
                 reserveLoadPreviewRow: false, minimumPaneHeight: MinimumBeamPaneHeight, options: inputs.Presentation.Options);
             Beam.Height = frame.Viewport.Height;
-            Axis.AxisLayout = CoordinateAxisLayout.Create(frame.Layout, width, Measure, unit: profile[QuantityKind.BeamLength]);
+            Axis.AxisLayout = CoordinateAxisLayout.Create(frame.Layout, width, Measure, unit: profile[QuantityKind.BeamLength],
+                presentation: inputs.Presentation.Options);
             Axis.Height = Axis.AxisLayout.PaneHeight;
             Canvas.SetTop(Axis, Beam.Height);
             Arrange(beamRoot, new(width, Beam.Height + Axis.Height));

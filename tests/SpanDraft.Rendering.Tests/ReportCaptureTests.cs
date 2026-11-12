@@ -97,24 +97,24 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         var original = state.Document.Loads[0];
         state = state with { Document = state.Document.WithLoads([
             new EditorPointForce(original.Id, Length.FromMeters(.8123456789), Force.FromNewtons(-12345.6789), original.Name)]) };
-        var options = new ResultPresentationOptions(UnitProfile.UnitedStates, 7,
+        var options = new ResultPresentationOptions(UnitProfile.UnitedStates, 5,
             engineering ? EngineeringNotation.Automatic : EngineeringNotation.Off);
         var (main, _) = Open(state, options);
         var editor = main.Editor!;
         var bytes = ProjectFileCodec.Serialize(editor.Session.CurrentRevision.State);
         using var report = ProjectReport.Capture(editor, Now);
         var material = state.Document.Material;
-        // Material values and load positions are given: the precision and notation settings do not apply.
+        // Material values and load positions are given: the same precision and notation apply, marked when rounded.
         Assert.Contains(report.Data.MaterialProperties, p => p.PlainText.EndsWith(
-            QuantityFormatter.FormatInput(material.YoungsModulus.Pascals, options.Profile[QuantityKind.YoungsModulus]), StringComparison.Ordinal));
+            QuantityFormatter.FormatInput(material.YoungsModulus.Pascals, options.Profile[QuantityKind.YoungsModulus], options), StringComparison.Ordinal));
         Assert.Contains(report.Data.MaterialProperties, p => p.PlainText.EndsWith(
-            QuantityFormatter.FormatInput(material.YieldStrength.Pascals, options.Profile[QuantityKind.MaterialStrength]), StringComparison.Ordinal));
+            QuantityFormatter.FormatInput(material.YieldStrength.Pascals, options.Profile[QuantityKind.MaterialStrength], options), StringComparison.Ordinal));
         Assert.DoesNotContain(report.Data.MaterialProperties, p => p.PlainText.Contains("= ≈", StringComparison.Ordinal));
         var forces = report.Data.Tables.Single(t => t.Title == Strings.Forces);
         Assert.Equal(editor.Overview.Forces[0].Value, forces.Rows[0][1]);
         Assert.Equal(editor.Overview.Forces[0].Position, forces.Rows[0][2]);
         Assert.Equal(QuantityFormatter.FormatInputNumber(.8123456789,
-            options.Profile[QuantityKind.BeamLength]), forces.Rows[0][2]);
+            options.Profile[QuantityKind.BeamLength], options), forces.Rows[0][2]);
         Assert.Equal(editor.Overview.Reactions.Select(r => r.Ry), report.Data.Tables.Single(t => t.Title == Strings.Reactions).Rows.Select(r => r[2]));
         Assert.Equal(editor.Presentation.Displacement, report.Data.Indicators[0].Value);
         Assert.Equal(editor.Presentation.Moment, report.Data.Indicators[1].Value);

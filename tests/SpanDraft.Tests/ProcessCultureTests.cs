@@ -37,8 +37,8 @@ public sealed class ProcessCultureTests
         Assert.False(InputQuantityFormatter.TryParse(wrongSeparator, UnitCatalog.Millimeter, out _));
         Assert.Equal(number, InputQuantityFormatter.FormatExact(si, UnitCatalog.Millimeter));
         Assert.Equal(number, QuantityFormatter.Format(new DecimalNumber(125, -1)));
-        Assert.Equal(number + "000 MPa", QuantityFormatter.FormatResult(12.5e6, QuantityKind.Stress, settings.Profile,
-            6));
+        Assert.Equal(number + " MPa", QuantityFormatter.FormatResult(12.5e6, QuantityKind.Stress, settings.Profile,
+            5));
         Assert.Equal("mm", settings.Profile[QuantityKind.BeamLength].Symbol);
         Assert.Equal("N", settings.Profile[QuantityKind.TransverseForce].Symbol);
         Assert.Equal("MPa", settings.Profile[QuantityKind.Stress].Symbol);

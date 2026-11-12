@@ -25,7 +25,7 @@ internal static class ProjectReport
         // Given: material values and stored section properties. Result: section properties derived
         // from geometry and the calculated positions of the critical values.
         TechnicalText Given(TechnicalText label, double si, QuantityKind kind) =>
-            label + QuantityFormatter.FormatInputEquation("", si, profile[kind]);
+            label + QuantityFormatter.FormatInputEquation("", si, profile[kind], presentation.Options);
         bool givenSection = SectionDefinitionCompatibility.Normalize(state.Document.Section) is SpanDraft.Core.Sections.ManualSectionDefinition;
         string SectionProperty(double si, QuantityKind kind) => SectionDisplay.Property(givenSection, si, kind, presentation.Options);
         TechnicalText SectionValue(TechnicalText label, double si, QuantityKind kind) =>

@@ -22,13 +22,14 @@ public sealed class DesktopSchematicIntegrationTests
     private static BeamRenderState Scene(EditorDocument document, BeamLayoutFrame frame) => BeamRenderState.Create(document, frame, DesktopLayoutFixture.Measure);
 
     [Theory]
-    [InlineData("de-DE", 6, EngineeringNotation.Automatic)]
-    [InlineData("en-US", 6, EngineeringNotation.Automatic)]
-    [InlineData("de-DE", 3, EngineeringNotation.Off)]
-    [InlineData("en-US", 3, EngineeringNotation.Off)]
-    [InlineData("de-DE", 7, EngineeringNotation.Off)]
-    [InlineData("en-US", 7, EngineeringNotation.Off)]
-    public void UnitWidthReservationUsesTheDisplayedLabelAsItsLookupKey(string culture, int digits, EngineeringNotation notation)
+    [InlineData("de-DE", 5, EngineeringNotation.Automatic, "≈ 1,2346\u00a0·\u00a010⁹ ")]
+    [InlineData("en-US", 5, EngineeringNotation.Automatic, "≈ 1.2346\u00a0·\u00a010⁹ ")]
+    [InlineData("de-DE", 3, EngineeringNotation.Off, "≈ 1\u202f234\u202f567\u202f890 ")]
+    [InlineData("en-US", 3, EngineeringNotation.Off, "≈ 1\u202f234\u202f567\u202f890 ")]
+    [InlineData("de-DE", 5, EngineeringNotation.Off, "≈ 1\u202f234\u202f567\u202f890 ")]
+    [InlineData("en-US", 4, EngineeringNotation.Automatic, "≈ 1.235\u00a0·\u00a010⁹ ")]
+    public void UnitWidthReservationUsesTheDisplayedLabelAsItsLookupKey(string culture, int digits, EngineeringNotation notation,
+        string given)
     {
         using var scope = new ResultCultureScope(culture, culture);
         const double value = 1234567890.123;
@@ -43,20 +44,20 @@ public sealed class DesktopSchematicIntegrationTests
         Size Measure(string text) { measured.Add(text); return new(Width(text), 18); }
         var scene = BeamRenderState.Create(document, Frame(document), Measure, profile: options.Profile,
             reserveUnitWidths: true, options: options);
-        // Given loads: exact digits (here a marked approximation), independent of the result precision.
+        // Given loads: the same digits and notation as results, here marked as rounded.
         foreach (var (name, kind) in new[] { ("F1", QuantityKind.TransverseForce), ("M1", QuantityKind.Moment), ("q1", QuantityKind.DistributedLoad) })
         {
             var label = Assert.Single(scene.Annotations, a => a.Text.StartsWith(name + " ", StringComparison.Ordinal));
-            Assert.Equal(QuantityFormatter.FormatInputEquation(name, value, options.Profile[kind]), label.Text);
-            Assert.StartsWith(name + " ≈ 1\u202f234\u202f567\u202f890 ", label.Text);
+            Assert.Equal(QuantityFormatter.FormatInputEquation(name, value, options.Profile[kind], options), label.Text);
+            Assert.StartsWith(name + " " + given, label.Text);
             // A cache miss would measure the displayed label a second time and lose the wider unit reserve.
             Assert.Single(measured, text => text == label.Text);
             double reservedWidth = UnitCatalog.All.Where(u => u.Dimension == UnitCatalog.DimensionOf(kind))
-                .Max(unit => Width(QuantityFormatter.FormatInputEquation(name, value, unit)));
+                .Max(unit => Width(QuantityFormatter.FormatInputEquation(name, value, unit, options)));
             Assert.Equal(reservedWidth, label.Bounds.Width);
             Assert.True(label.Bounds.Width > Width(label.Text));
         }
-        // The calculated self-weight is the label that follows the result precision.
+        // The calculated self-weight follows the same precision without a marking.
         var self = Assert.Single(scene.Annotations, a => a.Text.StartsWith(EditorSelfWeight.Symbol + " = ", StringComparison.Ordinal));
         Assert.Equal(EditorSelfWeight.Symbol + " = " + QuantityFormatter.FormatResult(weight, QuantityKind.DistributedLoad, options), self.Text);
         if (digits != ResultPresentationOptions.DefaultSignificantDigits)
