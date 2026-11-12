@@ -6,11 +6,23 @@ public sealed record AcceptanceReport(string GeneratedAt, string SolverSourceSha
     int ExternalComparisons, int AnalyticalComparisons, int MetamorphicTests, int PhysicalComparisons,
     int TotalComparisons, int NotApplicableComparisons, bool Validated, CaseAcceptance[] Results)
 {
-    public string EntryPoint { get; init; } = "EulerBernoulliBeamSolver";
+    public string EntryPoint { get; init; } = Acceptance.EntryPoint;
 }
 
 public static class Acceptance
 {
+    public const string EntryPoint = "EulerBernoulliBeamSolver";
+
+    /// <summary>
+    /// An imported export is reported under the current solver source hash, so it must be complete,
+    /// match the current inputs and name the current entry point explicitly.
+    /// </summary>
+    public static bool IsCurrentExport(ReferenceData[] exported) =>
+        exported.Length == Catalog.CaseIds.Length &&
+        exported.Select(a => a.CaseId).ToHashSet().SetEquals(Catalog.CaseIds) &&
+        exported.All(a => a.Solver == "SpanDraft" && a.InputSha256 == Catalog.Hash(a.CaseId) &&
+            a.Provenance?.GetValueOrDefault("entryPoint")?.ToString() == EntryPoint);
+
     public static AcceptanceReport Run(string? references = null, ReferenceData[]? exported = null)
     {
         var results = new List<CaseAcceptance>();

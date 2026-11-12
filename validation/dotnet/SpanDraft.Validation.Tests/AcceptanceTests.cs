@@ -192,4 +192,33 @@ public class AcceptanceTests
         Assert.Equal("PARTIAL",report.Status);
         Assert.Empty(report.NotApplicable);
     }
+
+    [Theory]
+    [InlineData("EulerBernoulliBeamSolver", true)]
+    [InlineData(null, false)]
+    [InlineData("KernelBeamSolver", false)]
+    [InlineData("SomeOtherSolver", false)]
+    public void ImportedExportMustNameTheCurrentEntryPoint(string? entryPoint, bool accepted)
+    {
+        // Round-trip through JSON exactly as the runner reads --actual.
+        string json = System.Text.Json.JsonSerializer.Serialize(Catalog.CaseIds.Select(id =>
+        {
+            var export = Results.Export(Catalog.Load(id));
+            if (entryPoint is null) export.Provenance.Remove("entryPoint");
+            else export.Provenance["entryPoint"] = entryPoint;
+            return export;
+        }).ToArray(), Catalog.Json);
+        var imported = System.Text.Json.JsonSerializer.Deserialize<ReferenceData[]>(json, Catalog.Json)!;
+        Assert.Equal(accepted, Acceptance.IsCurrentExport(imported));
+    }
+
+    [Fact]
+    public void OneStaleCaseRejectsTheWholeImportedExport()
+    {
+        var exported = Catalog.CaseIds.Select(id => Results.Export(Catalog.Load(id))).ToArray();
+        Assert.True(Acceptance.IsCurrentExport(exported));
+        exported[^1].Provenance.Remove("entryPoint");
+        Assert.False(Acceptance.IsCurrentExport(exported));
+        Assert.False(Acceptance.IsCurrentExport(exported[..^1]));
+    }
 }

@@ -44,7 +44,7 @@ public static class Results
             Provenance = new() { ["package"] = "SpanDraft.Solver", ["version"] = typeof(BeamSolution).Assembly.GetName().Version!.ToString(),
                 ["generatedAt"] = DateTimeOffset.UtcNow.ToString("O"), ["theory"] = "Euler-Bernoulli",
                 ["signMapping"] = "Native SI / SpanDraft", ["dotnet"] = Environment.Version.ToString(),
-                ["entryPoint"] = "EulerBernoulliBeamSolver" }
+                ["entryPoint"] = Acceptance.EntryPoint }
         };
         data.Reactions = solution.Nodes.Where(n => n.ReactionX.HasValue || n.ReactionY.HasValue || n.ReactionMoment.HasValue)
             .Select(n => {

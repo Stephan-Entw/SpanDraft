@@ -22,10 +22,7 @@ try
         case "compare":
             string? actualPath = Option("--actual");
             var actual = actualPath is null ? null : JsonSerializer.Deserialize<ReferenceData[]>(File.ReadAllText(actualPath),Catalog.Json);
-            if (actual is not null && (actual.Length != Catalog.CaseIds.Length ||
-                !actual.Select(a => a.CaseId).ToHashSet().SetEquals(Catalog.CaseIds) ||
-                actual.Any(a => a.Solver != "SpanDraft" || a.InputSha256 != Catalog.Hash(a.CaseId) ||
-                    a.Provenance.GetValueOrDefault("entryPoint")?.ToString() == "KernelBeamSolver")))
+            if (actual is not null && !Acceptance.IsCurrentExport(actual))
                 throw new InvalidDataException("Stale/incomplete SpanDraft export");
             var report = Acceptance.Run(Option("--references"),actual);
             string reportPath = Option("--report") ?? Path.Combine(Catalog.Root,"validation","results","run-report.json");
