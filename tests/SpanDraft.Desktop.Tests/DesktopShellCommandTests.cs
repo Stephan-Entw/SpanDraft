@@ -75,7 +75,13 @@ public sealed class DesktopShellCommandTests
         files.Data[target] = ProjectFileCodec.Serialize(State(4));
         var reads = new List<string>();
         files.BeforeRead = path => { reads.Add(path); return Task.CompletedTask; };
-        var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default);
+        // Restoring a dirty session schedules recovery; hold its debounce while inspecting startup.
+        var delay = new Delay();
+        var recovery = new ProjectRecovery(files, projectSlot, delay.Wait, () => Now);
+        var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default)
+        {
+            StateStores = DesktopStateStores.Local(files) with { Recovery = recovery }
+        };
         var window = new MainWindow(startup, [target]);
         window.Show(); Dispatcher.UIThread.RunJobs();
         if (restoreProject) { Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs(); }
@@ -93,9 +99,23 @@ public sealed class DesktopShellCommandTests
         Assert.Equal(setupBytes, files.Data[setupSlot]); Assert.Empty(files.Writes);
         Assert.DoesNotContain(target, reads); Assert.Equal(recents, reads[^1]);
         Assert.Empty(window.OwnedWindows);
+        if (restoreProject)
+        {
+            Assert.Single(delay.Waiters);
+            Assert.False(recovery.DrainAsync().IsCompleted);
+        }
+        else Assert.Empty(delay.Waiters);
         // Dispose the test window without starting another modal leave workflow.
         typeof(MainWindow).GetField("_closeApproved", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, true);
         window.Close(); Dispatcher.UIThread.RunJobs();
+        delay.ReleaseAll(); Dispatcher.UIThread.RunJobs();
+        Assert.True(recovery.DrainAsync().IsCompletedSuccessfully);
+        if (restoreProject)
+        {
+            Assert.Equal(projectSlot, Assert.Single(files.Writes));
+            Assert.Equal(projectBytes, files.Data[projectSlot]);
+        }
+        else Assert.Empty(files.Writes);
     }
 
     [Theory]

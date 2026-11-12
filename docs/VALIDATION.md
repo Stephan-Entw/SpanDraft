@@ -621,6 +621,16 @@ negative Guard-Lauf ist ein erwarteter Fehlernachweis, keine fehlgeschlagene
 Produktabnahme. Der nach dem Push ausgeführte CI-Lauf wird im Abschlussbericht
 anhand des exakten Commit-SHA und seiner Job-URLs ausgewiesen.
 
+Der erste Windows-CI-Lauf fand einen zeitabhängigen Desktop-Test außerhalb der
+Numerik: `RestoredSetupDraftTakesPrecedenceOverStartupFileWithOrWithoutRestoredSession`
+prüfte unveränderte Recovery-Bytes, während der reale Ein-Sekunden-Debounce einer
+wiederhergestellten schmutzigen Sitzung bereits einen neuen UTC-Zeitstempel
+schreiben konnte. Die Fixture verwendet jetzt den bestehenden steuerbaren
+Delay und eine feste Uhr. Alle bisherigen Assertions bleiben bestehen;
+zusätzlich wird die geplante Speicherung nach expliziter Freigabe geprüft.
+Es wurden weder Produktcode noch Wartezeiten, Toleranzen oder N/A-Regeln geändert.
+Die vollständigen Haupt- und Validation-Tests wurden danach erneut ausgeführt.
+
 Die 45 Golden References, Eingabefälle, Vergleichsregeln und historischen
 Reports wurden weder regeneriert noch verändert. Die beiden regenerierten
 DE-/EN-Help-Biegemomentgrafiken zeigen im bestehenden Beispiel nun das exakte
