@@ -1,10 +1,12 @@
 # SpanDraft – Solver-Umbau
 
-Stand: 10. November 2026. Ebene A ist nach dem Closure fachlich für die
-C#-Implementierungsplanung eingefroren. Die C#-Produktimplementierung der
-Zielarchitektur und ihre Plattformabnahme stehen aus. Dieses Dokument
-beschreibt den Umbau auf `features/solver-umbau`. Der Branch bleibt bis zur
-ausdrücklichen Übernahmeentscheidung von `main` und der Webseite getrennt.
+Stand: 12. November 2026. Der heutige Produktumfang ist auf den neuen Solver
+migriert: Die Produktintegration (M3) und die Abnahme von Dokumentation,
+Acceptance und CI (M4) sind abgeschlossen; die Nachweise stehen in
+[VALIDATION.md](VALIDATION.md). Dieses Dokument beschreibt den Umbau auf
+`features/solver-umbau`. Der Branch ist noch nicht nach `main` übernommen und
+bleibt bis zur ausdrücklichen Übernahmeentscheidung von `main` und der Webseite
+getrennt. Die Feature-Tracks (Ebene B) bleiben eigene, spätere Vorhaben.
 
 Dieses Dokument legt fachliche Anforderungen, Architekturgrenzen und Entscheidungen
 fest. Es legt bewusst keine Klassenstrukturen oder Core-Typen fest.
@@ -258,17 +260,17 @@ Bedienung, Persistenz und Report werden in den Feature-Issues separat geplant.
 
 1. **Neue Feature-Koinzidenzen:** Semantik je Feature-Track (A2, B, O6).
 2. **Plattformen:** Unabhängige fachliche und numerische Abnahme je unterstützter Plattform.
-3. **Produktentscheidungen und C#-Abnahme:** Siehe [Architekturentwurf](SOLVER_ARCHITEKTUR.md).
+3. **Produktentscheidungen der Feature-Tracks:** Siehe [Architekturentwurf](SOLVER_ARCHITEKTUR.md).
 
 ## Voraussetzung für die Übernahme in `main`
 
-Die C#-Implementierung des heutigen Umfangs kann auf der eingefrorenen
-Architektur geplant werden. Vor der Übernahme in `main` müssen mindestens
-folgende Bedingungen erfüllt sein:
+Für die Übernahme in `main` gelten folgende Bedingungen. Auf dem Branch sind
+sie für den heutigen Produktumfang erfüllt; die Übernahme selbst ist eine
+eigene, ausdrückliche Entscheidung.
 
 - **Vertrag erfüllt:** Die Implementierung erfüllt den numerischen Vertrag (A8), die Ablehnungskriterien (A5) und die Semantik des heutigen Produktumfangs (A10).
 - **Validierung:** Die dauerhafte Validierung ist erfolgreich, einschließlich Windows-CI.
-- **Produktionspfad:** Der neue Kern ersetzt den FE-Pfad auf `main` und löst den Machbarkeitsprototyp des Umbau-Branches ab.
+- **Produktionspfad:** Der neue Kern ersetzt den FE-Pfad und hat den Machbarkeitsprototyp des Umbau-Branches abgelöst.
 - **Dokumentation:** `docs/KONZEPT.md`, `docs/SOLVER.md`, `docs/VALIDATION.md` und der CI-Hash entsprechen dem neuen Stand.
 
 ## Folgen außerhalb des Solvers
@@ -278,6 +280,6 @@ folgende Bedingungen erfüllt sein:
 
 ## Nächster Schritt
 
-Nächster Schritt ist der schrittweise C#-Implementierungsplan auf Grundlage
-der eingefrorenen Solver-Architektur und der bestandenen
-[Closure-Kriterien C1–C13](SOLVER_ARCHITEKTUR.md#closure-kriterien-c1c13).
+Nächster Schritt ist die Übernahmeentscheidung für `main`. Danach folgen die
+technische Dokumentation der Webseite (A10) und die Feature-Tracks der Ebene B,
+jeweils mit eigener Abnahme nach Ebene C.

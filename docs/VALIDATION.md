@@ -574,6 +574,9 @@ cc92d41a80ecefdcc9b811870d7698b5f015abd00e89242a4418fa01fe59f4c6
 Maßgeblich bleibt `Acceptance.SolverHash()`: Die `.cs`- und `.csproj`-Dateien
 unter Core und Solver werden je Projekt ordinal sortiert, ohne bin/obj, und
 byteweise in derselben Reihenfolge gehasht. Die Definition wurde nicht verändert.
+Damit derselbe Commit auf jeder Plattform dieselben Bytes liefert, checkt
+`.gitattributes` diese Dateien mit LF aus. Die Festlegung wurde nach M4 ergänzt
+und ändert weder die eingecheckten Bytes noch den Hash.
 Die CI-Baseline ist separat als `expected_hash` in
 [ci.yml](../.github/workflows/ci.yml) festgeschrieben und stimmt bei M4 exakt mit
 dem Report überein. CI erzeugt einen eigenen aktuellen Report und vergleicht

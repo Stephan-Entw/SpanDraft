@@ -9,3 +9,9 @@ src/SpanDraft.Desktop/Assets/Icons/Generated/*.axaml text eol=lf
 validation/cases/*.json text eol=lf
 validation/python/*.py text eol=lf
 validation/python/requirements.txt text eol=lf
+
+# SolverSourceSha256 hashes these checked-out bytes; keep them identical on every platform.
+src/SpanDraft.Core/**/*.cs text eol=lf
+src/SpanDraft.Core/**/*.csproj text eol=lf
+src/SpanDraft.Solver/**/*.cs text eol=lf
+src/SpanDraft.Solver/**/*.csproj text eol=lf
