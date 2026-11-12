@@ -1,13 +1,16 @@
 # SpanDraft – Solver-Architektur (Ebene A)
 
-Stand: 10. November 2026. Architektur für den Branch `features/solver-umbau`.
-Die Zielarchitektur ist nach dem Closure für die C#-Implementierungsplanung
-des heutigen Produktumfangs eingefroren (Abschnitt 15). Dieses Dokument legt
-normativ fest, wie der Rechenkern die Anforderungen A1–A10 aus
+Stand: 12. November 2026. Architektur für den Branch `features/solver-umbau`.
+Die Zielarchitektur ist nach dem Closure eingefroren (Abschnitt 15) und für
+den heutigen Produktumfang umgesetzt. Dieses Dokument legt normativ fest, wie
+der Rechenkern die Anforderungen A1–A10 aus
 [SOLVER_UMBAU.md](SOLVER_UMBAU.md) erfüllt. Produktfreigaben und Core-Typen
 werden in den Feature-Tracks festgelegt. [SOLVER.md](SOLVER.md) beschreibt
-den FE-Produktpfad auf `main`. Im Umbau-Branch verwendet der öffentliche
-Einstieg bereits den Machbarkeitsprototyp `SupportSpanSolver` aus Abschnitt 2.
+den Produktvertrag dieses Kerns: `EulerBernoulliBeamSolver.Solve` ist der
+einzige Produkteinstieg und führt über den internen `SolverKernel`. Der
+frühere FE-Pfad und der Machbarkeitsprototyp `SupportSpanSolver` aus
+Abschnitt 2 sind eingefrorene Vergleichswerkzeuge außerhalb des Produktpfads.
+Der Branch ist noch nicht nach `main` übernommen.
 
 Alle Zahlen in diesem Dokument stammen aus reproduzierbaren Läufen in
 [`validation/investigations/solver-rework/`](../validation/investigations/solver-rework/README.md);
