@@ -16,7 +16,6 @@ public sealed class DesktopNumberClassFormattingTests
     [InlineData(1.234, "1\u202f234")]
     [InlineData(-1.2345, "-1\u202f234,5")]
     [InlineData(0, "0")]
-    [InlineData(-0.0, "0")]
     [InlineData(12.5, "12\u202f500")]
     public void GivenValuesUseTheShortestExactDecimalWithGroupingAndNoAddedZeros(double meters, string expected)
     {
@@ -26,6 +25,13 @@ public sealed class DesktopNumberClassFormattingTests
         var text = QuantityFormatter.Input(meters, UnitCatalog.Millimeter, German);
         Assert.False(text.IsApproximate);
         Assert.Equal(expected, text.Number);
+    }
+
+    [Fact]
+    public void NegativeZeroIsShownAsPlainZero()
+    {
+        Assert.Equal("0", QuantityFormatter.FormatInputNumber(-0.0, UnitCatalog.Millimeter, German));
+        Assert.Equal("0 N", QuantityFormatter.FormatResult(-0.0, QuantityKind.TransverseForce, culture: German));
     }
 
     [Theory]
@@ -113,7 +119,6 @@ public sealed class DesktopNumberClassFormattingTests
     [InlineData(0.0000012, QuantityKind.TransverseForce, "1,20\u00a0·\u00a010⁻⁶ N")]
     [InlineData(12000000, QuantityKind.TransverseForce, "12,0\u00a0·\u00a010⁶ N")]
     [InlineData(0, QuantityKind.TransverseForce, "0 N")]
-    [InlineData(-0.0, QuantityKind.TransverseForce, "0 N")]
     public void ResultsRoundToThePrecisionButNeverCoarserThanOneUnit(double si, QuantityKind kind, string expected) =>
         Assert.Equal(expected, QuantityFormatter.FormatResult(si, kind, culture: German));
 
