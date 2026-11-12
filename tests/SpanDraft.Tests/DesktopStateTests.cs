@@ -296,6 +296,7 @@ public class DesktopStateTests
     [Theory]
     [InlineData(AnalysisPresentationKind.IncompleteModel)]
     [InlineData(AnalysisPresentationKind.UnstableModel)]
+    [InlineData(AnalysisPresentationKind.IllConditionedSystem)]
     [InlineData(AnalysisPresentationKind.NumericalFailure)]
     public void StructuredAnalysisFailuresMapToLocalizedPresentation(AnalysisPresentationKind kind)
     {
@@ -306,6 +307,10 @@ public class DesktopStateTests
             AnalysisPresentationKind.IncompleteModel => AnalysisBeam([new(Length.FromMeters(3), SupportType.Fixed)]),
             AnalysisPresentationKind.UnstableModel => AnalysisBeam([new(Length.FromMeters(0), SupportType.Roller),
                 new(Length.FromMeters(2), SupportType.Roller)]),
+            // The solver's own output gate rejects this stable model: supports 2^-28 m apart under a symmetric load.
+            AnalysisPresentationKind.IllConditionedSystem => AnalysisBeam(
+                [new(Length.FromMeters(1), SupportType.Pinned), new(Length.FromMeters(1 + Math.ScaleB(1, -28)), SupportType.Roller)],
+                [new UniformDistributedLoad(Length.FromMeters(0.25), Length.FromMeters(1.75), ForcePerLength.FromNewtonsPerMeter(3))]),
             _ => AnalysisBeam([fixedSupport],
                 [new PointForce(Length.FromMeters(2), Force.FromNewtons(double.MaxValue)),
                  new PointForce(Length.FromMeters(2), Force.FromNewtons(double.MaxValue))])
@@ -313,6 +318,8 @@ public class DesktopStateTests
         var outcome = BeamAnalysis.Analyze(beam);
         var state = AnalysisPresentationState.FromOutcome(outcome);
         Assert.Equal(kind, state.Kind);
+        if (kind == AnalysisPresentationKind.IllConditionedSystem)
+            Assert.Equal(BeamAnalysisFailureCode.IllConditionedSystem, outcome.Failure!.Code);
         Assert.Null(state.Result);
         Assert.DoesNotContain(outcome.Failure!.TechnicalMessage, state.StatusText);
         Assert.Equal(kind switch
