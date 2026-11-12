@@ -112,20 +112,49 @@ nicht. Diese Auswertung ist **kein normativer Festigkeits- oder Sicherheitsnachw
 ## Numerische Darstellung in App und Bericht
 
 Die Darstellung liegt außerhalb der fachlichen Auswertung. Modell, Solver,
-Engineering und Projektdateien behalten ihre ungerundeten SI-Werte. Die lokalen,
-projektunabhängigen Einstellungen gelten für alle technischen Einzelwerte:
-maximal 1–15 signifikante Stellen (Default 3), technische Schreibweise
-Automatisch (Default) oder Aus. Der Bereich begrenzt die Anzeige auf eine für
-`double` sinnvolle Dezimalpräzision; er ist keine Aussage über Messgenauigkeit.
+Engineering und Projektdateien behalten ihre ungerundeten SI-Werte. Jeder
+angezeigte technische Einzelwert gehört zu genau einer von zwei Zahlenklassen;
+die Zuordnung liegt an einer Stelle, den beiden Formatierungswegen des
+`QuantityFormatter` (`FormatInput…` / `FormatResult…`).
+
+**Vorgabewerte** sind direkt vorgegebene oder aus Bibliotheken übernommene
+Werte: Längen, Positionen, Lasten, Querschnittsabmessungen sowie gespeicherte
+Material- und Profilkennwerte. Sie erscheinen in der kürzesten eindeutigen
+Dezimaldarstellung der aktuellen Anzeigeeinheit – mit denselben Ziffern wie im
+Eingabefeld –, stets in Dezimalschreibweise und ohne ergänzte Endnullen.
+Ergebnispräzision und technische Schreibweise wirken nicht auf sie. Nur wenn
+diese Darstellung mehr als 12 signifikante Stellen hätte, typischerweise nach
+einem Einheitenwechsel, wird auf 6 signifikante Stellen gerundet und der Wert
+als Näherung gekennzeichnet: `≈ 3,93701 in`. In Labels ersetzt `≈` das
+Gleichheitszeichen (`F1 ≈ …`). Der gespeicherte Wert und der Text im
+Eingabefeld bleiben davon unberührt.
+
+**Berechnete Werte** sind alle aus anderen Werten ermittelten Größen:
+Reaktionen, Schnittgrößen, Spannungen, Verformungen, Sicherheitsfaktoren, aus
+Geometrie abgeleitete Querschnittswerte, das Eigengewicht und berechnete
+Positionen wie die Lage eines Maximums. Für sie gelten die lokalen,
+projektunabhängigen Einstellungen: Ergebnispräzision mit 1–15 signifikanten
+Stellen `n` (Default 3) und technische Schreibweise Automatisch (Default) oder
+Aus. Der Bereich begrenzt die Anzeige auf eine für `double` sinnvolle
+Dezimalpräzision; er ist keine Aussage über Messgenauigkeit.
 
 Die Reihenfolge ist **SI-Wert → Anzeigeeinheit → einmalige Rundung → Schreibweise**.
-Halbwerte werden von null weg gerundet. Bedeutungslose Endnullen entfallen.
-Bei Automatisch gilt für den bereits gerundeten Betrag `10⁻³ ≤ |x| < 10⁶`
-Dezimalschreibweise, außerhalb Engineering-Notation mit Exponenten als
-Vielfachen von drei. Aus verwendet unabhängig von der Größenordnung
-Dezimalschreibweise. Null bleibt `0`, ein endlicher Nichtnullwert bleibt sichtbar;
-`∞` bezeichnet weiterhin den semantisch unendlichen Sicherheitsfaktor.
+Halbwerte werden von null weg gerundet. In Dezimalschreibweise liegt die
+Rundestelle bei `10^min(0, e − n + 1)` mit dem Dezimalexponenten `e` des Werts
+in der Anzeigeeinheit: Es wird nie gröber als auf eine ganze Einheit gerundet
+(`1234,56 N` → `1 235 N`), und Endnullen bis zur Rundestelle bleiben erhalten
+(`12 mm` → `12,0 mm`). Bei Automatisch entscheidet der auf `n` Stellen
+gerundete Betrag: `10⁻³ ≤ |x| < 10⁶` bleibt dezimal, außerhalb gilt
+Engineering-Notation mit Exponenten als Vielfachen von drei. Dort bestimmt
+allein `n` die Mantisse, ebenfalls mit Endnullen (`999 999,6 N` →
+`1,00 · 10⁶ N`). Aus verwendet unabhängig von der Größenordnung
+Dezimalschreibweise. Exakt null bleibt `0`, ein endlicher Nichtnullwert bleibt
+sichtbar; `∞` bezeichnet weiterhin den semantisch unendlichen Sicherheitsfaktor.
 Es gibt keine modellabhängigen Anzeigeauflösungen oder automatische Nullschwelle.
+
+Querschnittswerte (Fläche, Flächen- und Widerstandsmomente) folgen ihrer
+Herkunft: Bei manuell definierten Profilen sind sie gespeicherte Vorgabewerte,
+bei geometrisch definierten Formen berechnete Werte.
 
 Ganzzahlige Ziffern werden in Dreiergruppen mit schmalem geschütztem Leerzeichen
 (U+202F) gegliedert; nur das Dezimalzeichen folgt dem regionalen Zahlenformat,
@@ -149,4 +178,4 @@ Beibehaltung ihrer Einheiten auf die oben beschriebenen Standardwerte migriert;
 das Projektformat bleibt unverändert.
 
 Diagramm-Achsenticks behalten ihre eigenständige Nice-Tick-Logik. Zoom, Seitenzahlen
-und reine UI-Zähler unterliegen ebenfalls nicht der technischen Präzision.
+und reine UI-Zähler unterliegen ebenfalls nicht der Ergebnispräzision.

@@ -54,14 +54,18 @@ A value that is currently being edited may need to be confirmed or canceled befo
 
 ### Number formatting
 
-**Significant digits** limits the displayed precision to between 1 and 15 digits (default: 3).
+SpanDraft distinguishes two kinds of numbers.
 
-For example, `12.356 mm` is displayed as `12.4 mm`; the full value remains available while editing. Trailing zeros are not added.
+**Given values** – lengths, positions, loads, cross-section dimensions and stored material and section properties – are displayed as they were given: `800 mm` stays `800 mm`, and `800.000004 mm` stays `800.000004 mm`. Result precision and engineering notation do not apply to them, and zeros are not added.
 
-**Engineering notation: Automatic** displays rounded magnitudes below `0.001` or at least `1 000 000` using powers of ten in steps of three, for example `123 · 10⁻⁹`.
+Only if a value would need more than 12 digits, for example after changing units, SpanDraft shows an approximation rounded to 6 digits and marked with `≈`, such as `≈ 3.93701 in`. The full value remains available while editing.
+
+**Calculated values** – reactions, internal forces, stresses, deformations, safety factors, section properties calculated from geometry and the self-weight – are rounded. **Result precision** sets between 1 and 15 significant digits for them (default: 3): `12.356 mm` is displayed as `12.4 mm`, and `12 mm` as `12.0 mm`. In decimal notation, a value is never rounded more coarsely than to one whole unit: `1234.56 N` is displayed as `1 235 N`.
+
+**Engineering notation: Automatic** displays rounded magnitudes below `0.001` or at least `1 000 000` using powers of ten in steps of three, for example `1.23 · 10⁶ N`.
 
 With **Off**, these values remain in decimal notation.
 
 Digit groups are separated by narrow non-breaking spaces. The decimal separator follows the selected regional format.
 
-These settings apply to technical values in the application and report. The calculation and stored inputs remain unchanged. Diagram axis ticks use their own scaling.
+Both settings apply to calculated values in the application and report. The calculation and stored inputs remain unchanged. Diagram axis ticks use their own scaling.

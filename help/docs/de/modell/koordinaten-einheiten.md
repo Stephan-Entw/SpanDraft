@@ -48,17 +48,30 @@ Einheiten ändern nur die Darstellung: Intern rechnet SpanDraft mit SI-Werten; d
 
 ### Zahlendarstellung
 
-**Signifikante Stellen** begrenzt die angezeigte Genauigkeit auf 1 bis 15 Stellen
-(Standard: 3). Zum Beispiel wird `12,356 mm` als `12,4 mm` angezeigt; beim
-Bearbeiten ist weiterhin der vollständige Wert verfügbar. Nachgestellte Nullen
-werden nicht ergänzt.
+SpanDraft unterscheidet zwei Arten von Zahlen.
+
+**Vorgabewerte** – Längen, Positionen, Lasten, Querschnittsabmessungen sowie
+gespeicherte Werkstoff- und Profilkennwerte – werden so angezeigt, wie sie
+vorgegeben sind: `800 mm` bleibt `800 mm`, `800,000004 mm` bleibt
+`800,000004 mm`. Ergebnispräzision und technische Schreibweise wirken nicht auf
+sie; Nullen werden nicht ergänzt. Nur wenn ein Wert, etwa nach einem
+Einheitenwechsel, mehr als 12 Stellen hätte, zeigt SpanDraft eine auf 6 Stellen
+gerundete Näherung mit `≈`, zum Beispiel `≈ 3,93701 in`. Beim Bearbeiten ist
+weiterhin der vollständige Wert verfügbar.
+
+**Berechnete Werte** – Reaktionen, Schnittgrößen, Spannungen, Verformungen,
+Sicherheitsfaktoren, aus der Geometrie berechnete Querschnittswerte und das
+Eigengewicht – werden gerundet. **Ergebnispräzision** legt dafür 1 bis 15
+signifikante Stellen fest (Standard: 3): `12,356 mm` wird als `12,4 mm`
+angezeigt, `12 mm` als `12,0 mm`. In Dezimalschreibweise wird nie gröber als
+auf eine ganze Einheit gerundet: `1234,56 N` erscheint als `1 235 N`.
 
 **Technische Schreibweise: Automatisch** zeigt gerundete Beträge unter `0,001`
 oder ab `1 000 000` mit Zehnerpotenzen in Dreierschritten, beispielsweise
-`123 · 10⁻⁹`. Mit **Aus** bleiben diese Werte in Dezimalschreibweise.
+`1,23 · 10⁶ N`. Mit **Aus** bleiben diese Werte in Dezimalschreibweise.
 Zifferngruppen werden durch schmale geschützte Leerzeichen getrennt; das
 Dezimalzeichen folgt dem regionalen Zahlenformat.
 
-Diese Einstellungen gelten für technische Werte in App und Bericht. Die
+Beide Einstellungen gelten für berechnete Werte in App und Bericht. Die
 Berechnung und gespeicherte Eingaben bleiben unverändert. Diagramm-Achsenticks
 behalten ihre eigene Skalierung.
