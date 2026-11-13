@@ -52,6 +52,16 @@ Manuelle Beschriftungspositionen sind Offsets zum automatisch berechneten Anker.
 Absolute Bildschirmkoordinaten würden die Beschriftung bei Resize oder Reflow
 vom zugehörigen Objekt lösen. Der Offset verändert ausschließlich die Darstellung.
 
+## Zahlendarstellung in den Einstellungen
+
+Die Zehnerpotenzen sind ein Kontrollkästchen und kein Umschalter: Der Dialog
+übernimmt Änderungen erst mit OK, ein Umschalter signalisiert dagegen sofortige
+Wirkung, und Abbrechen wirkte dann widersprüchlich. Die Vorschau steht rechts in
+der Spalte der rechten Einheitenliste, damit Ursache und Wirkung nebeneinander
+liegen, ohne den Dialog zu verlängern. Sie zeigt einen gerundeten Vorgabewert,
+weil der Dialog die Stelle ist, an der `≈` erklärt wird; der Bericht erklärt es
+nicht.
+
 ## Berichte als eingefrorene Ausgabe
 
 Berichte frieren den bestätigten Projektzustand samt Darstellung beim Öffnen ein,

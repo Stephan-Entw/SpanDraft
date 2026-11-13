@@ -138,11 +138,12 @@ einmalige Rundung → Schreibweise**. Für jeden angezeigten Wert gilt einzeln:
 - **R3** Halbwerte werden von null weg gerundet.
 - **R4** Keine Endnullen, weder dezimal noch in der Mantisse
   (`12,0 mm` → `12 mm`, `999 999,6 N` → `1 · 10⁶ N`).
-- **R5** Technische Schreibweise Automatisch (Default): Ist der auf `n`
-  Stellen gerundete Betrag kleiner als `10⁻³` oder mindestens `10⁶`, gilt
-  Engineering-Notation mit Exponenten als Vielfachen von drei und einer Mantisse
-  mit `n` signifikanten Stellen; R2 gilt dort nicht. Aus verwendet unabhängig
-  von der Größenordnung Dezimalschreibweise.
+- **R5** Mit der Einstellung „Zehnerpotenzen bei sehr kleinen und großen
+  Werten“ (Default: ein) gilt: Ist der auf `n` Stellen gerundete Betrag kleiner
+  als `10⁻³` oder mindestens `10⁶`, wird Engineering-Notation mit Exponenten als
+  Vielfachen von drei und einer Mantisse mit `n` signifikanten Stellen
+  verwendet; R2 gilt dort nicht. Ausgeschaltet gilt unabhängig von der
+  Größenordnung Dezimalschreibweise.
 - **R6** Vorgabewerte: Weicht die Anzeige vom exakten Wert in der
   Anzeigeeinheit ab, wird `≈` vorangestellt (`800,000004 mm` → `≈ 800 mm`). In
   Labels ersetzt es das Gleichheitszeichen (`F1 ≈ 800 mm`).

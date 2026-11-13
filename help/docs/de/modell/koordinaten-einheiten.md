@@ -72,13 +72,16 @@ vollständige Wert im Eingabefeld, stets in Dezimalschreibweise, etwa
 Sicherheitsfaktoren, aus der Geometrie berechnete Querschnittswerte und das
 Eigengewicht – werden gleich gerundet, tragen aber nie ein `≈`.
 
-**Technische Schreibweise: Automatisch** zeigt gerundete Beträge unter `0,001`
-oder ab `1 000 000` mit Zehnerpotenzen in Dreierschritten, beispielsweise
-`1,23 · 10⁶ N` oder `420 · 10⁻⁶ mm`; die Mantisse hat dann `n` signifikante
-Stellen. Mit **Aus** bleiben alle Werte in Dezimalschreibweise.
+**Zehnerpotenzen bei sehr kleinen und großen Werten** (Standard: ein) zeigt
+gerundete Beträge unter `0,001` oder ab `1 000 000` mit Zehnerpotenzen in
+Dreierschritten, beispielsweise `1,23 · 10⁶ N` oder `420 · 10⁻⁶ mm`; die
+Mantisse hat dann `n` signifikante Stellen. Ohne Haken bleiben alle Werte in
+Dezimalschreibweise.
 Zifferngruppen werden durch schmale geschützte Leerzeichen getrennt; das
 Dezimalzeichen folgt dem regionalen Zahlenformat.
 
-Beide Einstellungen gelten in App und Bericht; der Bericht nennt die Rundung
-unter den maßgebenden Kennwerten. Die Berechnung und gespeicherte Eingaben
+Die **Vorschau** neben den Einstellungen zeigt eine Eingabe und zwei Ergebnisse
+in den gewählten Einheiten so, wie sie nach **OK** dargestellt werden. Beide
+Einstellungen gelten in App und Bericht; der Bericht nennt die Stellenzahl im
+Abschnitt „Berechnungsmodell“. Die Berechnung und gespeicherte Eingaben
 bleiben unverändert. Diagramm-Achsenticks behalten ihre eigene Skalierung.

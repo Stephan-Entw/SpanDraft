@@ -64,10 +64,10 @@ All displayed numbers – given values, library values and results – follow th
 
 **Calculated values** – reactions, internal forces, stresses, deformations, safety factors, section properties calculated from geometry and the self-weight – are rounded the same way but never carry `≈`.
 
-**Engineering notation: Automatic** displays rounded magnitudes below `0.001` or at least `1 000 000` using powers of ten in steps of three, for example `1.23 · 10⁶ N` or `420 · 10⁻⁶ mm`; the mantissa then has `n` significant digits.
+**Powers of ten for very small and large values** (default: on) displays rounded magnitudes below `0.001` or at least `1 000 000` using powers of ten in steps of three, for example `1.23 · 10⁶ N` or `420 · 10⁻⁶ mm`; the mantissa then has `n` significant digits.
 
-With **Off**, all values remain in decimal notation.
+When it is cleared, all values remain in decimal notation.
 
 Digit groups are separated by narrow non-breaking spaces. The decimal separator follows the selected regional format.
 
-Both settings apply in the application and the report; the report states the rounding below the governing results. The calculation and stored inputs remain unchanged. Diagram axis ticks use their own scaling.
+The **Preview** next to the settings shows one input and two results in the selected units as they will be displayed after **OK**. Both settings apply in the application and the report; the report states the number of digits in its “Calculation model” section. The calculation and stored inputs remain unchanged. Diagram axis ticks use their own scaling.
