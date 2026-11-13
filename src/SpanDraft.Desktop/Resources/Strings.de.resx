@@ -318,8 +318,7 @@
   <data name="ReportContinuation" xml:space="preserve"><value>Fortsetzung</value></data>
   <data name="ReportPage" xml:space="preserve"><value>Seite {0} von {1}</value></data>
   <data name="ReportNotes" xml:space="preserve"><value>Berechnungsmodell</value></data>
-  <data name="ReportRoundingNote" xml:space="preserve"><value>Alle Werte auf {0} signifikante Stellen gerundet; ≈ kennzeichnet gerundete Eingaben.</value></data>
-  <data name="ReportRoundingNoteOne" xml:space="preserve"><value>Alle Werte auf 1 signifikante Stelle gerundet; ≈ kennzeichnet gerundete Eingaben.</value></data>
+  <data name="ReportRounding" xml:space="preserve"><value>Zahlenwerte sind auf {0} gerundet.</value></data>
   <data name="ReportTheory" xml:space="preserve"><value>Berechnung nach Euler-Bernoulli, linear-elastisch und für kleine Verformungen. Werkstoff und Querschnitt sind über die Balkenlänge konstant; Schubverformungen werden vernachlässigt.</value></data>
   <data name="ReportPosition" xml:space="preserve"><value>x = {0} {1}{2}</value></data>
   <data name="ReportSavePdf" xml:space="preserve"><value>PDF speichern</value></data>

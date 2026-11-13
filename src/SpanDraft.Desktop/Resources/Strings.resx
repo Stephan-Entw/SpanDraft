@@ -318,8 +318,7 @@
   <data name="ReportContinuation" xml:space="preserve"><value>Continuation</value></data>
   <data name="ReportPage" xml:space="preserve"><value>Page {0} of {1}</value></data>
   <data name="ReportNotes" xml:space="preserve"><value>Calculation model</value></data>
-  <data name="ReportRoundingNote" xml:space="preserve"><value>All values rounded to {0} significant digits; ≈ marks rounded inputs.</value></data>
-  <data name="ReportRoundingNoteOne" xml:space="preserve"><value>All values rounded to 1 significant digit; ≈ marks rounded inputs.</value></data>
+  <data name="ReportRounding" xml:space="preserve"><value>Numerical values are rounded to {0}.</value></data>
   <data name="ReportTheory" xml:space="preserve"><value>Calculation based on Euler-Bernoulli theory, assuming linear-elastic behavior and small deformations. Material and cross-section are constant along the beam length; shear deformations are neglected.</value></data>
   <data name="ReportPosition" xml:space="preserve"><value>x = {0} {1}{2}</value></data>
   <data name="ReportSavePdf" xml:space="preserve"><value>Save PDF</value></data>

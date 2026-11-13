@@ -22,8 +22,7 @@ public static class Strings
     public static string ReportPage => Get(nameof(ReportPage));
     public static string ReportNotes => Get(nameof(ReportNotes));
     public static string ReportTheory => Get(nameof(ReportTheory));
-    public static string ReportRoundingNote => Get(nameof(ReportRoundingNote));
-    public static string ReportRoundingNoteOne => Get(nameof(ReportRoundingNoteOne));
+    public static string ReportRounding => Get(nameof(ReportRounding));
     public static string ReportPosition => Get(nameof(ReportPosition));
     public static string ReportSavePdf => Get(nameof(ReportSavePdf));
     public static string ReportPrint => Get(nameof(ReportPrint));

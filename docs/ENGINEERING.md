@@ -157,8 +157,8 @@ einmalige Rundung → Schreibweise**. Für jeden angezeigten Wert gilt einzeln:
 
 Der Bereich 1–5 begrenzt die Anzeige auf technisch sinnvolle Stellen; er ist
 keine Aussage über Messgenauigkeit. Gespeicherte Einstellungen mit mehr Stellen
-werden beim Laden auf 5 gesetzt. Der Bericht nennt unter den maßgebenden
-Kennwerten die eingestellte Stellenzahl und die Bedeutung von `≈`.
+werden beim Laden auf 5 gesetzt. Der Bericht nennt die eingestellte Stellenzahl
+im Absatz zum Berechnungsmodell; `≈` wird dort nicht erklärt.
 
 Querschnittswerte (Fläche, Flächen- und Widerstandsmomente) folgen ihrer
 Herkunft: Bei manuell definierten Profilen sind sie gespeicherte Vorgabewerte,

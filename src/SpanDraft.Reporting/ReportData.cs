@@ -7,8 +7,7 @@ namespace SpanDraft.Reporting;
 internal sealed record ReportData(string Title, string Author, string Version, DateTimeOffset CreatedAt,
     string Date, IReadOnlyList<(string Label, string Value)> Metadata, string Section,
     IReadOnlyList<TechnicalText> SectionProperties, string Material, IReadOnlyList<TechnicalText> MaterialProperties,
-    IReadOnlyList<ReportTable> Tables, IReadOnlyList<ReportIndicator> Indicators, ReportLabels Labels, string? MaterialNote = null,
-    string? ResultNote = null);
+    IReadOnlyList<ReportTable> Tables, IReadOnlyList<ReportIndicator> Indicators, ReportLabels Labels, string? MaterialNote = null);
 internal sealed record ReportLabels(string Heading, string Continuation, string PageFormat,
     string Section, string Material, string Summary, string Notes, IReadOnlyList<string> Assumptions,
     string Title, string Project, string Reference, string Author);

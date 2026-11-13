@@ -123,32 +123,35 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         Assert.Equal(bytes, ProjectFileCodec.Serialize(editor.Session.CurrentRevision.State));
     }
 
+    private const string TheoryDe = "Berechnung nach Euler-Bernoulli, linear-elastisch und für kleine Verformungen. Werkstoff und Querschnitt sind über die Balkenlänge konstant; Schubverformungen werden vernachlässigt. ";
+    private const string TheoryEn = "Calculation based on Euler-Bernoulli theory, assuming linear-elastic behavior and small deformations. Material and cross-section are constant along the beam length; shear deformations are neglected. ";
+
     [Theory]
-    [InlineData("de-DE", 3, "Alle Werte auf 3 signifikante Stellen gerundet; ≈ kennzeichnet gerundete Eingaben.")]
-    [InlineData("en-US", 3, "All values rounded to 3 significant digits; ≈ marks rounded inputs.")]
-    [InlineData("de-DE", 5, "Alle Werte auf 5 signifikante Stellen gerundet; ≈ kennzeichnet gerundete Eingaben.")]
-    [InlineData("de-DE", 1, "Alle Werte auf 1 signifikante Stelle gerundet; ≈ kennzeichnet gerundete Eingaben.")]
-    [InlineData("en-US", 1, "All values rounded to 1 significant digit; ≈ marks rounded inputs.")]
-    public void ReportStatesTheRoundingOfAllValuesBelowTheResults(string culture, int digits, string expected)
+    [InlineData("de-DE", 3, TheoryDe + "Zahlenwerte sind auf 3 signifikante Stellen gerundet.")]
+    [InlineData("en-US", 3, TheoryEn + "Numerical values are rounded to 3 significant digits.")]
+    [InlineData("de-DE", 5, TheoryDe + "Zahlenwerte sind auf 5 signifikante Stellen gerundet.")]
+    [InlineData("de-DE", 1, TheoryDe + "Zahlenwerte sind auf 1 signifikante Stelle gerundet.")]
+    [InlineData("en-US", 1, TheoryEn + "Numerical values are rounded to 1 significant digit.")]
+    public void ReportStatesTheRoundingInTheCalculationModelParagraph(string culture, int digits, string expected)
     {
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
         var (main, _) = Open(ReportTestProjects.Create(), new(UnitProfile.Default, digits));
         using var report = ProjectReport.Capture(main.Editor!, Now);
-        Assert.Equal(expected, report.Data.ResultNote);
-        // Drawn on the summary page between the governing results and the calculation-model notes.
+        // One paragraph: the rounding sentence is appended to the theory text, not a second note.
+        Assert.Equal(new[] { expected }, report.Data.Labels.Assumptions);
         int summaryPage = report.Pages.Select((p, i) => (p, i)).Single(p => p.p.SummaryTop is not null).i;
         using var bitmap = report.RenderPage(summaryPage, 96);
         var page = report.TextRuns.Where(r => r.Bounds.Top < ReportDocument.FooterTop).ToArray();
-        var note = page.Where(r => r.Bounds.Top > page.Single(h => h.Text == Strings.ReportSummary).Bounds.Bottom
-            && expected.Contains(r.Text, StringComparison.Ordinal) && r.Text.Length > 8).ToArray();
-        Assert.True(note.Length > 0, string.Join(" | ", page.Select(r => r.Text)));
-        Assert.Equal(expected, string.Join(" ", note.Select(r => r.Text)));
+        float notes = page.Single(r => r.Text == Strings.ReportNotes).Bounds.Bottom;
+        var paragraph = page.Where(r => r.Bounds.Top > notes).OrderBy(r => r.Bounds.Top).ToArray();
+        Assert.Equal(expected, string.Join(" ", paragraph.Select(r => r.Text)));
+        // Nothing is drawn between the governing results and the calculation-model heading.
         float summary = page.Single(r => r.Text == Strings.ReportSummary).Bounds.Bottom;
         float model = page.Single(r => r.Text == Strings.ReportNotes).Bounds.Top;
-        Assert.All(note, r => Assert.InRange(r.Bounds.Top, summary, model));
-        var values = page.Where(r => r.Bounds.Top > summary && report.Data.Indicators.Any(i => i.Value == r.Text)).ToArray();
-        Assert.Equal(report.Data.Indicators.Count, values.Length);
-        Assert.True(values.Max(r => r.Bounds.Bottom) <= note.Min(r => r.Bounds.Top));
+        Assert.All(page.Where(r => r.Bounds.Top > summary && r.Bounds.Bottom < model),
+            r => Assert.Contains(report.Data.Indicators, i => i.Value == r.Text || i.Label.PlainText.Contains(r.Text, StringComparison.Ordinal)
+                || i.Position == r.Text));
+        Assert.DoesNotContain(report.TextRuns, r => r.Text.Contains("≈ kennzeichnet", StringComparison.Ordinal) || r.Text.Contains("≈ marks", StringComparison.Ordinal));
         AssertTextContained(report);
     }
 

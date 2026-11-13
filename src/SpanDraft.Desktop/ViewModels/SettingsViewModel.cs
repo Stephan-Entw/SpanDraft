@@ -84,8 +84,10 @@ public sealed class SettingsViewModel : ObservableObject
     public IReadOnlyList<SetupChoice<int>> SignificantDigitChoices { get; } = Enumerable.Range(
         ResultPresentationOptions.MinimumSignificantDigits,
         ResultPresentationOptions.MaximumSignificantDigits - ResultPresentationOptions.MinimumSignificantDigits + 1)
-        .Select(digits => new SetupChoice<int>(digits, digits == 1 ? Strings.SignificantDigitChoiceOne
-            : string.Format(CultureInfo.CurrentUICulture, Strings.SignificantDigitChoice, digits))).ToArray();
+        .Select(digits => new SetupChoice<int>(digits, SignificantDigitLabel(digits))).ToArray();
+    /// <summary>The label of a significant-digit count, shared by the settings dialog and the report.</summary>
+    internal static string SignificantDigitLabel(int digits) => digits == 1 ? Strings.SignificantDigitChoiceOne
+        : string.Format(CultureInfo.CurrentUICulture, Strings.SignificantDigitChoice, digits);
     public int SignificantDigits
     {
         get => _pending.SignificantDigits;
