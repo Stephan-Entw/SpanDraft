@@ -62,8 +62,10 @@ und nur lesbar. Ein leerer Benutzerhinweis wird als `Note == null` gespeichert.
 Core kennt keine aktuelle Sprache; Desktop löst exakten Culture-Tag, Parent-Cultures
 und schließlich den Defaulttext auf. Die Texte sind Klartext ohne Markup- oder
 Quellenmodell. Defaulttext und alle Übersetzungen gehören zum vollständigen
-Materialinhalt, zu Dirty-State, History und Report, niemals zur mechanischen
-Eingabeäquivalenz oder Berechnung.
+Materialinhalt, zu Dirty-State und History, niemals zur mechanischen
+Eingabeäquivalenz oder Berechnung. Der Bericht gibt keine Materialhinweise aus:
+Er dokumentiert Eingaben, Berechnungsgrundlagen und Ergebnisse; die Wahl
+geeigneter Werkstoffkennwerte verantwortet der Nutzer.
 
 `MassDensity` speichert kg/m³ über `FromKilogramsPerCubicMeter` und
 `KilogramsPerCubicMeter`. Ein angegebener Wert muss endlich und streng positiv

@@ -84,9 +84,7 @@ internal static class ProjectReport
                 new(Strings.ReportSafety + " " + TechnicalSymbols.SafetyFactor + " = " + strengthSymbol + " / " + TechnicalSymbols.MaximumStress, presentation.SafetyFactor, null)
             ], new(Strings.ReportHeading.ToUpperInvariant(), Strings.ReportContinuation, Strings.ReportPage, Strings.Section, Strings.ReportMaterial,
                 Strings.ReportSummary, Strings.ReportNotes, [Strings.ReportTheory + " " + RoundingSentence(presentation.Options.SignificantDigits)],
-                Strings.CalculationTitle, Strings.Project, Strings.Reference, Strings.Author),
-            MaterialNoteDisplay.Resolve(state.Document.Material.Note, CultureInfo.CurrentUICulture) is { } note
-                ? Strings.MaterialNote + ": " + note : null);
+                Strings.CalculationTitle, Strings.Project, Strings.Reference, Strings.Author));
         var visuals = new ReportVisuals(state, presentation, data);
         var report = new ReportDocument(data, visuals.Graphics);
         try { visuals.Freeze(report); return report; }

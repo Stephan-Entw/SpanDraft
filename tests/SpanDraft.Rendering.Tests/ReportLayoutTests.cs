@@ -12,31 +12,6 @@ namespace SpanDraft.Tests;
 public sealed class ReportLayoutTests : ProjectReportTestSupport
 {
 
-    [Fact]
-    public void LongMaterialNoteContinuesWithoutClippingOrLosingText()
-    {
-        var (main, _) = Open(ReportTestProjects.Create());
-        using var original = ProjectReport.Capture(main.Editor!, Now);
-        var text = string.Join("\n", Enumerable.Range(1, 130).Select(i => $"Note line {i}."));
-        using var report = new ReportDocument(original.Data with { MaterialNote = text }, new(130, (_, _, _) => { }));
-        Assert.True(report.Pages.Count > original.Pages.Count);
-        var lines = new List<string>();
-        for (int page = 0; page < report.Pages.Count; page++)
-        {
-            using var bitmap = report.RenderPage(page);
-            lines.AddRange(report.TextRuns.Where(r => r.Text.StartsWith("Note line ", StringComparison.Ordinal)).Select(r => r.Text));
-            AssertTextContained(report);
-            foreach (var run in report.TextRuns.Where(r => r.Text.StartsWith("Note line ", StringComparison.Ordinal)))
-            {
-                Assert.True(run.Bounds.Bottom < ReportDocument.FooterTop);
-                Assert.True(run.Bounds.Left >= ReportDocument.Margin + ReportDocument.LeftWidth + ReportDocument.Gutter);
-                Assert.True(run.Bounds.Right <= ReportDocument.PageWidth - ReportDocument.Margin + 1);
-                Assert.All(report.Pages[page].Tables, table => Assert.True(run.Bounds.Bottom <= table.Bounds.Top));
-            }
-        }
-        Assert.Equal(text.Split('\n'), lines);
-    }
-
     [Theory]
     [InlineData("de-DE")] [InlineData("en-US")]
     public void SummaryUsesFullWidthWithInlinePositionsAndAlignedValues(string culture)

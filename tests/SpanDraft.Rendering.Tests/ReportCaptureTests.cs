@@ -22,31 +22,38 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
 
     [Theory]
     [InlineData("de-DE", "en-US")] [InlineData("en-US", "de-DE")]
-    public void MaterialNotesUseReportLanguageFreezeAndWrapBelowProperties(string ui, string numbers)
+    public void MaterialNotesAreNotPartOfTheReport(string ui, string numbers)
     {
         CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(ui); CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(numbers);
-        var state = ReportTestProjects.Create();
+        var clean = ReportTestProjects.Create();
+        clean = clean with { Document = clean.Document with { Material = MaterialNoteTestSupport.WithNote(clean.Document.Material, null) } };
         var note = new SpanDraft.Core.Materials.MaterialNote("Reference value for a test specimen.\nSecond line.",
             [new("de", "Referenzwert für einen Probekörper.\nZweite Zeile.")]);
-        state = state with { Document = state.Document with { Material = MaterialNoteTestSupport.WithNote(state.Document.Material, note) } };
-        var (main, _) = Open(state);
+        var noted = clean with { Document = clean.Document with { Material = MaterialNoteTestSupport.WithNote(clean.Document.Material, note) } };
+        var (main, _) = Open(noted);
         using var report = ProjectReport.Capture(main.Editor!, Now);
-        var expected = Strings.MaterialNote + ": " + MaterialNoteDisplay.Resolve(note, CultureInfo.CurrentUICulture);
-        Assert.Equal(expected, report.Data.MaterialNote);
-        using var without = new ReportDocument(report.Data with { MaterialNote = null }, new(130, (_, _, _) => { }));
-        using var bitmap = report.RenderPage(0);
-        var properties = report.TextRuns.Where(r => report.Data.MaterialProperties.Any(p => r.Text.Contains(p.PlainText))).ToArray();
-        Assert.Contains(report.TextRuns, r => r.Text.StartsWith(Strings.MaterialNote + ":", StringComparison.Ordinal));
-        Assert.Contains(report.TextRuns, r => r.Text == (ui == "de-DE" ? "Zweite Zeile." : "Second line."));
-        var noteStart = report.TextRuns.Single(r => r.Text.StartsWith(Strings.MaterialNote + ":", StringComparison.Ordinal));
-        Assert.True(noteStart.Bounds.Top > properties.Max(p => p.Bounds.Bottom));
-        AssertTextContained(report);
-        Assert.True(report.Pages[0].Tables.First().Bounds.Top > without.Pages[0].Tables.First().Bounds.Top);
-        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(ui == "de-DE" ? "en-US" : "de-DE");
-        Assert.Equal(expected, report.Data.MaterialNote);
-        var clean = state with { Document = state.Document with { Material = MaterialNoteTestSupport.WithNote(state.Document.Material, null) } };
-        var (cleanMain, _) = Open(clean); using var cleanReport = ProjectReport.Capture(cleanMain.Editor!, Now);
-        Assert.Null(cleanReport.Data.MaterialNote);
+        var (cleanMain, _) = Open(clean);
+        using var cleanReport = ProjectReport.Capture(cleanMain.Editor!, Now);
+
+        // Note text is never rendered, while material name and properties stay intact.
+        Assert.Equal(cleanReport.Data.Material, report.Data.Material);
+        Assert.Equal(cleanReport.Data.MaterialProperties.Select(p => p.PlainText), report.Data.MaterialProperties.Select(p => p.PlainText));
+        var visible = MaterialNoteDisplay.Resolve(note, CultureInfo.CurrentUICulture)!.Split('\n');
+        for (int page = 0; page < report.Pages.Count; page++)
+        {
+            using var bitmap = report.RenderPage(page);
+            Assert.DoesNotContain(report.TextRuns, r => r.Text.Contains(Strings.MaterialNote + ":", StringComparison.Ordinal)
+                || visible.Any(line => r.Text.Contains(line, StringComparison.Ordinal)));
+            if (page == 0)
+                Assert.All(report.Data.MaterialProperties, p => Assert.Contains(report.TextRuns, r => r.Text.Contains(p.PlainText, StringComparison.Ordinal)));
+            AssertTextContained(report);
+        }
+
+        // Without the note no space is reserved: the composition equals the note-free project.
+        Assert.Equal(cleanReport.Pages.Count, report.Pages.Count);
+        Assert.Equal(cleanReport.Pages.Select(p => p.SummaryTop), report.Pages.Select(p => p.SummaryTop));
+        Assert.Equal(cleanReport.Pages.SelectMany(p => p.Tables.Select(t => t.Bounds)),
+            report.Pages.SelectMany(p => p.Tables.Select(t => t.Bounds)));
     }
 
     [Theory]

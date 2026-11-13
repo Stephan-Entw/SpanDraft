@@ -18,7 +18,7 @@ internal sealed class ReportDocument : IDisposable
         Rule = SKColor.Parse("#C5CDD8");
     private readonly ReportTechnicalGraphics graphics;
     private readonly List<IDisposable> ownedGraphics = [];
-    private readonly string[] sectionLines, materialLines, materialNoteLines;
+    private readonly string[] sectionLines, materialLines;
     private readonly TechnicalText[] sectionProperties, materialProperties;
     private readonly float sectionDrawingTop, materialTop, firstTableTop, summaryHeight;
     private readonly List<(string Text, SKRect Bounds)> textRuns = [];
@@ -45,7 +45,6 @@ internal sealed class ReportDocument : IDisposable
         materialLines = CompactMaterialName(Data.Material, metadata);
         Data = Data with { Metadata = metadata.ToArray() };
         materialProperties = PropertyLines(Data.MaterialProperties);
-        materialNoteLines = Data.MaterialNote is { } note ? Wrap(note, RightWidth, 8.5f) : [];
         sectionDrawingTop = SectionTopOffset + HeadingHeight + sectionLines.Length * LineHeight;
         materialTop = sectionDrawingTop + SectionDrawingHeight
             + sectionProperties.Length * LineHeight + BlockGap;
@@ -116,22 +115,14 @@ internal sealed class ReportDocument : IDisposable
         const float columnWidth = (PageWidth - 2 * Margin - columnGap) / 2;
         var freshRegion = new SKRect(Margin, ContinuationTop, Margin + columnWidth, bottom);
         var cursor = new TableCursor();
-        int noteOffset = 0;
         bool firstPage = true;
         while (true)
         {
             var before = cursor;
             var fragments = new List<ReportTableFragment>();
-            if (!firstPage) bodyTop = ContinuationTop;
-            bool hasNote = noteOffset < materialNoteLines.Length;
-            float noteTop = firstPage ? bodyTop + firstTableTop - BlockGap : bodyTop;
-            var noteLines = hasNote ? materialNoteLines.Skip(noteOffset)
-                .Take(Math.Max(0, (int)((bottom - noteTop) / LineHeight))).ToArray() : [];
-            noteOffset += noteLines.Length;
-            float tableTop = hasNote ? noteTop + noteLines.Length * LineHeight + BlockGap : bodyTop + firstTableTop;
-            if (firstPage || hasNote)
+            if (firstPage)
             {
-                var region = new SKRect(Margin + LeftWidth + Gutter, tableTop,
+                var region = new SKRect(Margin + LeftWidth + Gutter, bodyTop + firstTableTop,
                     PageWidth - Margin, bottom);
                 var filled = FillRegion(region, cursor, freshRegion);
                 fragments.AddRange(filled.Fragments);
@@ -139,6 +130,7 @@ internal sealed class ReportDocument : IDisposable
             }
             else
             {
+                bodyTop = ContinuationTop;
                 for (int column = 0; column < 2; column++)
                 {
                     float x = Margin + column * (columnWidth + columnGap);
@@ -148,25 +140,24 @@ internal sealed class ReportDocument : IDisposable
                 }
             }
 
-            if (!firstPage && !hasNote && cursor.TableIndex == Data.Tables.Count)
+            if (!firstPage && cursor.TableIndex == Data.Tables.Count)
                 fragments = BalanceContinuationColumns(before, freshRegion, columnGap, fragments);
 
             float? summary = null;
-            if (cursor.TableIndex == Data.Tables.Count && noteOffset == materialNoteLines.Length)
+            if (cursor.TableIndex == Data.Tables.Count)
             {
-                float top = fragments.Count == 0 ? (hasNote ? tableTop : bodyTop)
-                    : fragments.Max(f => f.Bounds.Bottom) + (firstPage ? 16 : 20);
+                float top = fragments.Count == 0 ? bodyTop : fragments.Max(f => f.Bounds.Bottom) + (firstPage ? 16 : 20);
                 if (firstPage)
-                    top = Math.Max(top, Math.Max(tableTop, bodyTop + graphics.BeamHeight + 4 + 3 * 60) + 16);
+                    top = Math.Max(top, bodyTop + Math.Max(firstTableTop,
+                        graphics.BeamHeight + 4 + 3 * 60) + 16);
                 if (top + summaryHeight <= (firstPage ? FooterTop - 4 : bottom)) summary = top;
-                else if (!firstPage && !hasNote && fragments.Count == 0)
+                else if (!firstPage && fragments.Count == 0)
                     throw new InvalidOperationException("The report summary cannot fit on a continuation page.");
             }
-            else if (!firstPage && cursor == before && noteLines.Length == 0)
+            else if (!firstPage && cursor == before)
                 throw new InvalidOperationException("A report table cannot fit on a continuation page.");
 
-            pages.Add(new(bodyTop, firstPage, summary, fragments.ToArray(), firstPage ? firstMetadata : [],
-                noteLines, hasNote ? noteTop : null));
+            pages.Add(new(bodyTop, firstPage, summary, fragments.ToArray(), firstPage ? firstMetadata : []));
             if (summary.HasValue) break;
             firstPage = false;
         }
@@ -394,8 +385,6 @@ internal sealed class ReportDocument : IDisposable
             Lines(canvas, materialLines, x, top + HeadingHeight, strong: true);
             Lines(canvas, materialProperties, x, top + HeadingHeight + materialLines.Length * LineHeight + 2);
         }
-        if (page.MaterialNoteTop is { } noteTop)
-            Lines(canvas, page.MaterialNoteLines!, Margin + LeftWidth + Gutter, noteTop);
         foreach (var fragment in page.Tables) DrawTable(canvas, fragment);
         if (page.SummaryTop is { } summary) DrawSummary(canvas, summary);
         Line(canvas, Margin, FooterTop, PageWidth - Margin, FooterTop, Rule, .6f);

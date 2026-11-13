@@ -35,8 +35,7 @@ internal static class SyntheticReportData
             new(new TechnicalText(new TechnicalRun("Max. elastische Biegespannung "), new TechnicalRun("σ", TechnicalPosition.Normal, TechnicalRole.Variable), new TechnicalRun("b,max", TechnicalPosition.Subscript, TechnicalRole.Text)), "22,8 MPa", null),
             new(new TechnicalText(new TechnicalRun("Sicherheitsfaktor "), new TechnicalRun("S", TechnicalPosition.Normal, TechnicalRole.Variable), new TechnicalRun(" = "), new TechnicalRun("R", TechnicalPosition.Normal, TechnicalRole.Variable), new TechnicalRun("e", TechnicalPosition.Subscript, TechnicalRole.Text), new TechnicalRun(" / "), new TechnicalRun("σ", TechnicalPosition.Normal, TechnicalRole.Variable), new TechnicalRun("b,max", TechnicalPosition.Subscript, TechnicalRole.Text)), "10,3", null)
         ],
-            Labels: new("BERECHNUNGSBERICHT", "Fortsetzung", "Seite {0} von {1}", "Querschnitt", "Material", "Maßgebende Kennwerte", "Berechnungsmodell", ["Berechnung nach Euler-Bernoulli, linear-elastisch und für kleine Verformungen. Werkstoff und Querschnitt sind über die Balkenlänge konstant; Schubverformungen werden vernachlässigt."], "Titel", "Projekt", "Referenz", "Erstellt von"),
-            MaterialNote: null);
+            Labels: new("BERECHNUNGSBERICHT", "Fortsetzung", "Seite {0} von {1}", "Querschnitt", "Material", "Maßgebende Kennwerte", "Berechnungsmodell", ["Berechnung nach Euler-Bernoulli, linear-elastisch und für kleine Verformungen. Werkstoff und Querschnitt sind über die Balkenlänge konstant; Schubverformungen werden vernachlässigt."], "Titel", "Projekt", "Referenz", "Erstellt von"));
         return overflow ? data with
         {
             Title = "Mehrfach gelagerter Balken",
