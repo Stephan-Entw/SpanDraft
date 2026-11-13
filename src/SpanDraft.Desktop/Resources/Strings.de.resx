@@ -134,7 +134,7 @@
   <data name="UnitStress" xml:space="preserve"><value>Spannung</value></data>
   <data name="UnitRotation" xml:space="preserve"><value>Rotation</value></data>
   <data name="SettingsNumeric" xml:space="preserve"><value>Zahlendarstellung</value></data>
-  <data name="PresentationCalculationHint" xml:space="preserve"><value>Nur die Darstellung ändert sich. Die Berechnung bleibt identisch.</value></data>
+  <data name="PresentationCalculationHint" xml:space="preserve"><value>≈ kennzeichnet gerundete Eingaben. Gespeichert und gerechnet wird mit den vollen Werten.</value></data>
   <data name="SettingsLanguage" xml:space="preserve"><value>Sprache und Region</value></data>
   <data name="InterfaceLanguage" xml:space="preserve"><value>Sprache der Benutzeroberfläche</value></data>
   <data name="SystemLanguage" xml:space="preserve"><value>Systemsprache</value></data>
@@ -362,9 +362,13 @@
   <data name="SignificantDigits" xml:space="preserve"><value>Signifikante Stellen</value></data>
   <data name="SignificantDigitChoice" xml:space="preserve"><value>{0} signifikante Stellen</value></data>
   <data name="SignificantDigitChoiceOne" xml:space="preserve"><value>1 signifikante Stelle</value></data>
-  <data name="EngineeringNotation" xml:space="preserve"><value>Technische Schreibweise</value></data>
-  <data name="NotationAutomatic" xml:space="preserve"><value>Automatisch</value></data>
-  <data name="NotationOff" xml:space="preserve"><value>Aus</value></data>
+  <data name="SignificantDigitChoiceDefault" xml:space="preserve"><value>{0} (Standard)</value></data>
+  <data name="PowersOfTen" xml:space="preserve"><value>Zehnerpotenzen bei sehr kleinen und großen Werten</value></data>
+  <data name="PowersOfTenHint" xml:space="preserve"><value>Unter {0} und ab {1}, z. B. {2}</value></data>
+  <data name="NumberPreview" xml:space="preserve"><value>Vorschau</value></data>
+  <data name="NumberPreviewInput" xml:space="preserve"><value>Eingabe</value></data>
+  <data name="NumberPreviewResult" xml:space="preserve"><value>Ergebnis</value></data>
+  <data name="NumberPreviewSmall" xml:space="preserve"><value>Kleiner Wert</value></data>
   <data name="MissingRecentQuestion" xml:space="preserve"><value>Projektdatei nicht gefunden.
 
 Die Datei ist am gespeicherten Speicherort nicht mehr vorhanden. Sie wurde möglicherweise gelöscht, verschoben oder umbenannt.

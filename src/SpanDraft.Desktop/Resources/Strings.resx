@@ -134,7 +134,7 @@
   <data name="UnitStress" xml:space="preserve"><value>Stress</value></data>
   <data name="UnitRotation" xml:space="preserve"><value>Rotation</value></data>
   <data name="SettingsNumeric" xml:space="preserve"><value>Number formatting</value></data>
-  <data name="PresentationCalculationHint" xml:space="preserve"><value>Only the presentation changes. The calculation remains identical.</value></data>
+  <data name="PresentationCalculationHint" xml:space="preserve"><value>≈ marks rounded inputs. Values are stored and calculated in full.</value></data>
   <data name="SettingsLanguage" xml:space="preserve"><value>Language and region</value></data>
   <data name="InterfaceLanguage" xml:space="preserve"><value>User interface language</value></data>
   <data name="SystemLanguage" xml:space="preserve"><value>System language</value></data>
@@ -362,9 +362,13 @@
   <data name="SignificantDigits" xml:space="preserve"><value>Significant digits</value></data>
   <data name="SignificantDigitChoice" xml:space="preserve"><value>{0} significant digits</value></data>
   <data name="SignificantDigitChoiceOne" xml:space="preserve"><value>1 significant digit</value></data>
-  <data name="EngineeringNotation" xml:space="preserve"><value>Engineering notation</value></data>
-  <data name="NotationAutomatic" xml:space="preserve"><value>Automatic</value></data>
-  <data name="NotationOff" xml:space="preserve"><value>Off</value></data>
+  <data name="SignificantDigitChoiceDefault" xml:space="preserve"><value>{0} (default)</value></data>
+  <data name="PowersOfTen" xml:space="preserve"><value>Powers of ten for very small and large values</value></data>
+  <data name="PowersOfTenHint" xml:space="preserve"><value>Below {0} and from {1}, e.g. {2}</value></data>
+  <data name="NumberPreview" xml:space="preserve"><value>Preview</value></data>
+  <data name="NumberPreviewInput" xml:space="preserve"><value>Input</value></data>
+  <data name="NumberPreviewResult" xml:space="preserve"><value>Result</value></data>
+  <data name="NumberPreviewSmall" xml:space="preserve"><value>Small value</value></data>
   <data name="MissingRecentQuestion" xml:space="preserve"><value>Project file not found.
 
 The file is no longer available at the saved location. It may have been deleted, moved or renamed.

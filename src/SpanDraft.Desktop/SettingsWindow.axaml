@@ -46,28 +46,52 @@
         </StackPanel>
         <StackPanel Spacing="{StaticResource Space12}">
           <TextBlock Text="{x:Static resources:Strings.SettingsNumeric}" Classes="sectionTitle" />
-          <Grid ColumnDefinitions="Auto,220" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space16}"
-                RowSpacing="{StaticResource Space12}">
-            <TextBlock Text="{x:Static resources:Strings.SignificantDigits}" Classes="propertyLabel" VerticalAlignment="Center" />
-            <ComboBox x:Name="SignificantDigitsPicker" Grid.Column="1" Width="220"
-                      ItemsSource="{Binding SignificantDigitChoices}" SelectedValueBinding="{ReflectionBinding Value}"
-                      SelectedValue="{Binding SignificantDigits, Mode=TwoWay}"
-                      AutomationProperties.Name="{x:Static resources:Strings.SignificantDigits}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-            <TextBlock Grid.Row="1" Text="{x:Static resources:Strings.EngineeringNotation}" Classes="propertyLabel" VerticalAlignment="Center" />
-            <ComboBox x:Name="NotationPicker" Grid.Row="1" Grid.Column="1" Width="220"
-                      ItemsSource="{Binding Notations}" SelectedValueBinding="{ReflectionBinding Value}"
-                      SelectedValue="{Binding SelectedNotation, Mode=TwoWay}"
-                      AutomationProperties.Name="{x:Static resources:Strings.EngineeringNotation}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
+          <!-- Same two columns as the unit lists: the preview starts at the right unit column. -->
+          <Grid x:Name="NumericSettings" ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
+            <StackPanel Spacing="{StaticResource Space12}">
+              <Grid ColumnDefinitions="Auto,220" ColumnSpacing="{StaticResource Space16}" HorizontalAlignment="Left">
+                <TextBlock Text="{x:Static resources:Strings.SignificantDigits}" Classes="propertyLabel" VerticalAlignment="Center" />
+                <ComboBox x:Name="SignificantDigitsPicker" Grid.Column="1" Width="220"
+                          ItemsSource="{Binding SignificantDigitChoices}" SelectedValueBinding="{ReflectionBinding Value}"
+                          SelectedValue="{Binding SignificantDigits, Mode=TwoWay}"
+                          AutomationProperties.Name="{x:Static resources:Strings.SignificantDigits}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </Grid>
+              <CheckBox x:Name="PowersOfTenOption" IsChecked="{Binding UsesPowersOfTen, Mode=TwoWay}"
+                        AutomationProperties.Name="{x:Static resources:Strings.PowersOfTen}"
+                        AutomationProperties.HelpText="{Binding PowersOfTenHint}">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{x:Static resources:Strings.PowersOfTen}" TextWrapping="Wrap" />
+                  <TextBlock x:Name="PowersOfTenHint" Text="{Binding PowersOfTenHint}" Classes="caption" TextWrapping="Wrap" />
+                </StackPanel>
+              </CheckBox>
+            </StackPanel>
+            <StackPanel x:Name="NumberPreview" Grid.Column="1" Spacing="{StaticResource Space8}">
+              <TextBlock Text="{x:Static resources:Strings.NumberPreview}" Classes="propertyLabel" />
+              <ItemsControl x:Name="NumberPreviewRows" ItemsSource="{Binding PreviewRows}" Grid.IsSharedSizeScope="True">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:NumberPreviewRow">
+                    <Grid Margin="0,0,0,4">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="PreviewLabel" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="PreviewExact" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Text="{Binding Label}" Classes="caption" Margin="0,0,12,0" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Exact}" Classes="caption" Margin="0,0,8,0" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="→" Classes="caption" Margin="0,0,8,0" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="3" Text="{Binding Displayed}" VerticalAlignment="Center" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
           </Grid>
-          <TextBlock Text="{x:Static resources:Strings.PresentationCalculationHint}" Classes="caption" TextWrapping="Wrap" />
+          <TextBlock x:Name="PresentationHint" Text="{x:Static resources:Strings.PresentationCalculationHint}" Classes="caption" TextWrapping="Wrap" />
         </StackPanel>
         <StackPanel Spacing="{StaticResource Space12}">
           <TextBlock Text="{x:Static resources:Strings.SettingsLanguage}" Classes="sectionTitle" />

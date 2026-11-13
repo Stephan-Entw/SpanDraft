@@ -115,6 +115,12 @@ public sealed class DesktopSettingsControlTests
             }
         }
         Export(scroll, $"settings-{culture}-{width}x{height}-top.png", width, height);
+        AssertNumericSection(window);
+        scroll.Offset = new(0, window.FindControl<Grid>("NumericSettings")!.TranslatePoint(default, (Control)scroll.Content!)!.Value.Y - 60);
+        Arrange(window, width, height);
+        Export(scroll, $"settings-{culture}-{width}x{height}-numeric.png", width, height);
+        scroll.Offset = default;
+        Arrange(window, width, height);
         model.ChangeUnit(QuantityKind.BeamLength, UnitCatalog.Inch);
         Arrange(window, width, height);
         Assert.True(window.FindControl<RadioButton>("CustomProfileOption")!.IsVisible);
@@ -132,35 +138,45 @@ public sealed class DesktopSettingsControlTests
     }
 
     [Theory]
-    [InlineData("de-DE", "Signifikante Stellen", "Technische Schreibweise")]
-    [InlineData("en-US", "Significant digits", "Engineering notation")]
-    public void NumericPickersBindBothDirectionsAndRestoreDiscardedPreferences(string culture, string precisionLabel, string notationLabel)
+    [InlineData("de-DE", "Signifikante Stellen", "Zehnerpotenzen bei sehr kleinen und großen Werten")]
+    [InlineData("en-US", "Significant digits", "Powers of ten for very small and large values")]
+    public void NumericControlsBindBothDirectionsAndRestoreDiscardedPreferences(string culture, string precisionLabel, string notationLabel)
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new ResultCultureScope(culture, culture);
         var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
         var window = new SettingsWindow(model); Arrange(window, 900, 780);
         var digits = window.FindControl<ComboBox>("SignificantDigitsPicker")!;
-        var notation = window.FindControl<ComboBox>("NotationPicker")!;
+        var powers = window.FindControl<CheckBox>("PowersOfTenOption")!;
         Assert.Equal(precisionLabel, AutomationProperties.GetName(digits));
-        Assert.Equal(notationLabel, AutomationProperties.GetName(notation));
-        Assert.Equal(digits.Bounds.Width, notation.Bounds.Width);
-        Assert.Equal(digits.Bounds.Left, notation.Bounds.Left);
+        Assert.Equal(notationLabel, AutomationProperties.GetName(powers));
+        Assert.Equal(model.PowersOfTenHint, AutomationProperties.GetHelpText(powers));
+        Assert.Equal(model.PowersOfTenHint, window.FindControl<TextBlock>("PowersOfTenHint")!.Text);
         Assert.Equal(3, digits.SelectedValue);
-        Assert.Equal(EngineeringNotation.Automatic, notation.SelectedValue);
+        Assert.True(powers.IsChecked);
+        // The field label names the digits, so the choices are plain counts with the default marked.
         Assert.Equal(Enumerable.Range(1, 5), model.SignificantDigitChoices.Select(c => c.Value));
-        // The choices stay recognisable as a number of significant digits.
-        Assert.Equal(culture == "de-DE" ? "1 signifikante Stelle" : "1 significant digit", model.SignificantDigitChoices[0].Label);
-        Assert.Equal(culture == "de-DE" ? "3 signifikante Stellen" : "3 significant digits", model.SignificantDigitChoices[2].Label);
+        Assert.Equal(new[] { "1", "2", culture == "de-DE" ? "3 (Standard)" : "3 (default)", "4", "5" },
+            model.SignificantDigitChoices.Select(c => c.Label));
+        var rows = window.FindControl<ItemsControl>("NumberPreviewRows")!;
+        // The last preview row is the small calculated value; its last column is the displayed text.
+        string Small() => rows.GetVisualDescendants().OfType<Grid>().Last(g => g.DataContext is NumberPreviewRow)
+            .Children.OfType<TextBlock>().Last().Text!;
+        Assert.Equal("420\u00a0·\u00a010⁻⁶ mm", Small());
         digits.SelectedItem = model.SignificantDigitChoices.Single(c => c.Value == 5);
-        notation.SelectedItem = model.Notations.Single(n => n.Value == EngineeringNotation.Off);
+        powers.IsChecked = false;
         Assert.Equal(5, model.Pending.SignificantDigits);
         Assert.Equal(EngineeringNotation.Off, model.Pending.Notation);
+        Arrange(window, 900, 780);
+        Assert.Equal(culture == "de-DE" ? "0,00042 mm" : "0.00042 mm", Small());
         model.SignificantDigits = 4;
         Assert.Equal(4, digits.SelectedValue);
+        model.UsesPowersOfTen = true;
+        Assert.True(powers.IsChecked);
         model.DiscardPending();
         Assert.Equal(3, digits.SelectedValue);
-        Assert.Equal(EngineeringNotation.Automatic, notation.SelectedValue);
+        Assert.True(powers.IsChecked);
+        Assert.Equal(EngineeringNotation.Automatic, model.Pending.Notation);
         Assert.DoesNotContain(window.GetVisualDescendants().OfType<RadioButton>(), r => r.GroupName == "Presentation");
     }
 
@@ -349,6 +365,41 @@ public sealed class DesktopSettingsControlTests
 
     private static void Escape(SettingsWindow window) =>
         window.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
+
+    /// <summary>
+    /// The preview starts at the right unit column, the controls stay in the left column, and no text of the
+    /// section is clipped; the preview columns line up across rows.
+    /// </summary>
+    private static void AssertNumericSection(Window window)
+    {
+        var content = (Control)((ScrollViewer)window.FindControl<ScrollViewer>("SettingsScroll")!).Content!;
+        double X(Control control) => control.TranslatePoint(default, content)!.Value.X;
+        var section = window.FindControl<Grid>("NumericSettings")!;
+        var preview = window.FindControl<StackPanel>("NumberPreview")!;
+        var rightUnits = window.FindControl<ItemsControl>("RightUnitList")!;
+        Assert.Equal(X(rightUnits), X(preview), 6);
+        var digits = window.FindControl<ComboBox>("SignificantDigitsPicker")!;
+        var powers = window.FindControl<CheckBox>("PowersOfTenOption")!;
+        Assert.Equal(220, digits.Bounds.Width, 6);
+        Assert.True(X(digits) + digits.Bounds.Width <= X(preview), "digits picker overlaps the preview");
+        Assert.True(X(powers) + powers.Bounds.Width <= X(preview), "check box overlaps the preview");
+        Assert.True(X(preview) + preview.Bounds.Width <= X(section) + section.Bounds.Width + .01);
+        foreach (var text in section.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible))
+        {
+            Assert.True(text.TextLayout.Width <= text.Bounds.Width + .01, $"clipped: {text.Text}");
+            Assert.True(text.TextLayout.Height <= text.Bounds.Height + .01, $"clipped: {text.Text}");
+        }
+        var rows = window.FindControl<ItemsControl>("NumberPreviewRows")!.GetVisualDescendants().OfType<Grid>()
+            .Where(g => g.DataContext is NumberPreviewRow).ToArray();
+        Assert.Equal(3, rows.Length);
+        for (int column = 0; column < 4; column++)
+        {
+            double x = X(rows[0].Children[column]);
+            Assert.All(rows, row => Assert.Equal(x, X(row.Children[column]), 6));
+        }
+        var hint = window.FindControl<TextBlock>("PresentationHint")!;
+        Assert.True(hint.TextLayout.Height <= hint.Bounds.Height + .01);
+    }
 
     private static void Arrange(Window window, double width, double height)
     {

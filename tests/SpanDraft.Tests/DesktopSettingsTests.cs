@@ -112,6 +112,54 @@ public sealed class DesktopSettingsTests
         Assert.Equal(loaded, JsonNode.Parse(SettingsCodec.Serialize(settings))!["significantDigits"]!.GetValue<int>());
     }
 
+    [Theory]
+    [InlineData("de-DE", UnitProfileKind.MechanicalEngineering, 3, true,
+        "1234,5678 mm", "≈ 1\u202f235 mm", "2,4583 mm", "2,46 mm", "0,00042 mm", "420\u00a0·\u00a010⁻⁶ mm")]
+    [InlineData("de-DE", UnitProfileKind.MechanicalEngineering, 5, false,
+        "1234,5678 mm", "≈ 1\u202f234,6 mm", "2,4583 mm", "2,4583 mm", "0,00042 mm", "0,00042 mm")]
+    [InlineData("en-US", UnitProfileKind.UnitedStates, 1, true,
+        "1234.5678 ft", "≈ 1\u202f235 ft", "2.4583 in", "2 in", "0.00042 in", "400\u00a0·\u00a010⁻⁶ in")]
+    [InlineData("en-US", UnitProfileKind.StructuralEngineering, 3, true,
+        "1234.5678 m", "≈ 1\u202f235 m", "2.4583 mm", "2.46 mm", "0.00042 mm", "420\u00a0·\u00a010⁻⁶ mm")]
+    public void PreviewShowsAGivenAndTwoCalculatedValuesWithThePendingSettings(string culture, UnitProfileKind profile, int digits,
+        bool powersOfTen, string inputExact, string input, string resultExact, string result, string smallExact, string small)
+    {
+        using var scope = new ResultCultureScope(culture, culture);
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
+        var notified = new List<string?>();
+        model.PropertyChanged += (_, e) => notified.Add(e.PropertyName);
+        model.Select(profile); model.SignificantDigits = digits; model.UsesPowersOfTen = powersOfTen;
+        Assert.Equal(powersOfTen ? EngineeringNotation.Automatic : EngineeringNotation.Off, model.Pending.Notation);
+        Assert.Equal(new[] { (Strings.NumberPreviewInput, inputExact, input), (Strings.NumberPreviewResult, resultExact, result),
+            (Strings.NumberPreviewSmall, smallExact, small) }, model.PreviewRows.Select(r => (r.Label, r.Exact, r.Displayed)));
+        // The given example has more digits than any setting shows, so it is always marked; calculated values never are.
+        Assert.StartsWith("≈ ", model.PreviewRows[0].Displayed);
+        Assert.DoesNotContain(model.PreviewRows.Skip(1), r => r.Displayed.Contains('≈'));
+        model.DiscardPending();
+        Assert.True(model.UsesPowersOfTen);
+        // Any change of units, digits or notation refreshes the preview and the check box.
+        notified.Clear(); model.UsesPowersOfTen = false;
+        Assert.Contains(nameof(SettingsViewModel.PreviewRows), notified);
+        Assert.Contains(nameof(SettingsViewModel.UsesPowersOfTen), notified);
+        notified.Clear(); model.ChangeUnit(QuantityKind.TransverseDisplacement, UnitCatalog.Inch);
+        Assert.Contains(nameof(SettingsViewModel.PreviewRows), notified);
+        Assert.EndsWith(" in", model.PreviewRows[1].Displayed);
+    }
+
+    [Theory]
+    [InlineData("de-DE", "Unter 0,001 und ab 1\u202f000\u202f000, z. B. 1,23\u00a0·\u00a010⁶ N", "3 (Standard)")]
+    [InlineData("en-US", "Below 0.001 and from 1\u202f000\u202f000, e.g. 1.23\u00a0·\u00a010⁶ N", "3 (default)")]
+    public void DigitChoicesAreCountsAndThePowersOfTenHintStatesTheThresholds(string culture, string hint, string defaultChoice)
+    {
+        using var scope = new ResultCultureScope(culture, culture);
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
+        Assert.Equal(hint, model.PowersOfTenHint);
+        Assert.Equal(new[] { "1", "2", defaultChoice, "4", "5" }, model.SignificantDigitChoices.Select(c => c.Label));
+        // Running text such as the report keeps the full phrase.
+        Assert.Equal(culture == "de-DE" ? "3 signifikante Stellen" : "3 significant digits", SettingsViewModel.SignificantDigitLabel(3));
+        Assert.Equal(culture == "de-DE" ? "1 signifikante Stelle" : "1 significant digit", SettingsViewModel.SignificantDigitLabel(1));
+    }
+
     [Fact]
     public void TheDigitSettingOffersOneToFive()
     {

@@ -5,6 +5,9 @@ using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
+/// <summary>One line of the number preview: an exact value and how it is displayed with the pending settings.</summary>
+public sealed record NumberPreviewRow(string Label, string Exact, string Displayed);
+
 public sealed class UnitSettingViewModel : ObservableObject
 {
     private readonly SettingsViewModel _owner;
@@ -54,11 +57,6 @@ public sealed class SettingsViewModel : ObservableObject
             Row(QuantityKind.YoungsModulus, Strings.MaterialYoungsModulus),
             Row(QuantityKind.MaterialStrength, Strings.MaterialStrength), Row(QuantityKind.Density, Strings.MaterialDensity)
         };
-        Notations =
-        [
-            new(EngineeringNotation.Automatic, Strings.NotationAutomatic),
-            new(EngineeringNotation.Off, Strings.NotationOff)
-        ];
         UiLanguages =
         [
             new(UiLanguagePreference.System, Strings.SystemLanguage),
@@ -80,12 +78,17 @@ public sealed class SettingsViewModel : ObservableObject
     public string? ErrorText => _error;
     public bool HasError => ErrorText is not null;
     public bool HasCustomProfile => _pending.HasCustomProfile;
-    /// <summary>The significant digits of every displayed value, offered as 1–5.</summary>
+    /// <summary>
+    /// The significant digits of every displayed value, offered as plain counts 1–5 because the field label
+    /// already names them; the default is marked.
+    /// </summary>
     public IReadOnlyList<SetupChoice<int>> SignificantDigitChoices { get; } = Enumerable.Range(
         ResultPresentationOptions.MinimumSignificantDigits,
         ResultPresentationOptions.MaximumSignificantDigits - ResultPresentationOptions.MinimumSignificantDigits + 1)
-        .Select(digits => new SetupChoice<int>(digits, SignificantDigitLabel(digits))).ToArray();
-    /// <summary>The label of a significant-digit count, shared by the settings dialog and the report.</summary>
+        .Select(digits => new SetupChoice<int>(digits, digits == ResultPresentationOptions.DefaultSignificantDigits
+            ? string.Format(CultureInfo.CurrentUICulture, Strings.SignificantDigitChoiceDefault, digits)
+            : digits.ToString(CultureInfo.CurrentUICulture))).ToArray();
+    /// <summary>A significant-digit count as a phrase ("3 significant digits"), used in running text such as the report.</summary>
     internal static string SignificantDigitLabel(int digits) => digits == 1 ? Strings.SignificantDigitChoiceOne
         : string.Format(CultureInfo.CurrentUICulture, Strings.SignificantDigitChoice, digits);
     public int SignificantDigits
@@ -93,7 +96,43 @@ public sealed class SettingsViewModel : ObservableObject
         get => _pending.SignificantDigits;
         set => Update(_pending with { SignificantDigits = value });
     }
-    public IReadOnlyList<SetupChoice<EngineeringNotation>> Notations { get; }
+    /// <summary>
+    /// Engineering notation as a yes/no choice. A check box, not a toggle switch: the dialog only applies its
+    /// changes on OK, while a toggle switch signals an immediate effect.
+    /// </summary>
+    public bool UsesPowersOfTen
+    {
+        get => _pending.Notation == EngineeringNotation.Automatic;
+        set => Update(_pending with { Notation = value ? EngineeringNotation.Automatic : EngineeringNotation.Off });
+    }
+    /// <summary>The thresholds of automatic engineering notation in the regional number format, with an example.</summary>
+    public string PowersOfTenHint => string.Format(CultureInfo.CurrentUICulture, Strings.PowersOfTenHint,
+        QuantityFormatter.Format(new DecimalNumber(1, -3)), QuantityFormatter.Format(new DecimalNumber(1, 6)),
+        QuantityFormatter.FormatResult(1.23e6, QuantityKind.TransverseForce, UnitProfile.Default));
+    /// <summary>
+    /// Representative values in the pending units, digits and notation: a rounded given value (marked with ≈),
+    /// a calculated value and a small calculated value that switches to powers of ten.
+    /// </summary>
+    public IReadOnlyList<NumberPreviewRow> PreviewRows
+    {
+        get
+        {
+            var options = _pending.Presentation;
+            NumberPreviewRow Row(string label, double displayValue, QuantityKind kind, bool given)
+            {
+                var unit = options.Profile[kind];
+                double si = unit.ToSi(displayValue);
+                return new(label, QuantityFormatter.WithUnit(InputQuantityFormatter.FormatExact(si, unit), unit), given
+                    ? QuantityFormatter.FormatInput(si, unit, options) : QuantityFormatter.FormatResult(si, kind, options));
+            }
+            return
+            [
+                Row(Strings.NumberPreviewInput, 1234.5678, QuantityKind.BeamLength, true),
+                Row(Strings.NumberPreviewResult, 2.4583, QuantityKind.TransverseDisplacement, false),
+                Row(Strings.NumberPreviewSmall, 0.00042, QuantityKind.TransverseDisplacement, false)
+            ];
+        }
+    }
     public EngineeringNotation SelectedNotation
     {
         get => _pending.Notation;
@@ -151,7 +190,8 @@ public sealed class SettingsViewModel : ObservableObject
     {
         foreach (string name in new[] { nameof(Pending), nameof(HasChanges), nameof(IsSaving), nameof(CanApply), nameof(ErrorText),
             nameof(HasError), nameof(HasCustomProfile), nameof(IsMechanical), nameof(IsStructural), nameof(IsUnitedStates),
-            nameof(IsCustom), nameof(SignificantDigits), nameof(SelectedNotation), nameof(SelectedUiLanguage), nameof(SelectedRegionalFormat) }) Notify(name);
+            nameof(IsCustom), nameof(SignificantDigits), nameof(SelectedNotation), nameof(UsesPowersOfTen), nameof(PreviewRows),
+            nameof(SelectedUiLanguage), nameof(SelectedRegionalFormat) }) Notify(name);
         foreach (var row in LeftUnits.Concat(RightUnits)) row.Refresh();
     }
 }

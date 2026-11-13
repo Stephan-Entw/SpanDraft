@@ -385,9 +385,13 @@ public static class Strings
     public static string SignificantDigits => Get(nameof(SignificantDigits));
     public static string SignificantDigitChoice => Get(nameof(SignificantDigitChoice));
     public static string SignificantDigitChoiceOne => Get(nameof(SignificantDigitChoiceOne));
-    public static string EngineeringNotation => Get(nameof(EngineeringNotation));
-    public static string NotationAutomatic => Get(nameof(NotationAutomatic));
-    public static string NotationOff => Get(nameof(NotationOff));
+    public static string SignificantDigitChoiceDefault => Get(nameof(SignificantDigitChoiceDefault));
+    public static string PowersOfTen => Get(nameof(PowersOfTen));
+    public static string PowersOfTenHint => Get(nameof(PowersOfTenHint));
+    public static string NumberPreview => Get(nameof(NumberPreview));
+    public static string NumberPreviewInput => Get(nameof(NumberPreviewInput));
+    public static string NumberPreviewResult => Get(nameof(NumberPreviewResult));
+    public static string NumberPreviewSmall => Get(nameof(NumberPreviewSmall));
     public static string SelfWeight => Get(nameof(SelfWeight));
     public static string SelfWeightMissingDensity => Get(nameof(SelfWeightMissingDensity));
     public static string SelfWeightNameConflict => Get(nameof(SelfWeightNameConflict));
