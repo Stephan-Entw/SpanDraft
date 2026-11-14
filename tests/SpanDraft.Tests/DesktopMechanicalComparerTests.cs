@@ -57,6 +57,8 @@ public sealed class DesktopMechanicalComparerTests
     [InlineData("udl-start")]
     [InlineData("udl-end")]
     [InlineData("udl-intensity")]
+    [InlineData("udl-end-intensity")]
+    [InlineData("udl-start-intensity-of-linear")]
     public void EachCurrentAnalysisRelevantValueIndependentlyBreaksEquivalence(string change)
     {
         var loads = Loads();
@@ -77,6 +79,11 @@ public sealed class DesktopMechanicalComparerTests
             case "udl-start": loads[2] = new DistributedLoad(M(.11), M(.9), ForcePerLength.FromNewtonsPerMeter(-20)); break;
             case "udl-end": loads[2] = new DistributedLoad(M(.1), M(.91), ForcePerLength.FromNewtonsPerMeter(-20)); break;
             case "udl-intensity": loads[2] = new DistributedLoad(M(.1), M(.9), ForcePerLength.FromNewtonsPerMeter(-21)); break;
+            // The load starts constant; changing only its end intensity makes it a linear load and must recalculate.
+            case "udl-end-intensity": loads[2] = new DistributedLoad(M(.1), M(.9), ForcePerLength.FromNewtonsPerMeter(-20),
+                ForcePerLength.FromNewtonsPerMeter(-20.5)); break;
+            case "udl-start-intensity-of-linear": loads[2] = new DistributedLoad(M(.1), M(.9), ForcePerLength.FromNewtonsPerMeter(-19),
+                ForcePerLength.FromNewtonsPerMeter(-20)); break;
         }
         var next = Beam(length: change == "length" ? M(1.01) : null,
             material: Material(e: change == "E" ? 200e9 : 210e9, re: change == "Re" ? 355e6 : 235e6),

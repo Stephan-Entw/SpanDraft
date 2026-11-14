@@ -37,16 +37,26 @@ public sealed class ProjectOverviewState
         Forces = PointLoads(PointLoadKind.Force);
         Moments = PointLoads(PointLoadKind.Moment);
         // A self-weight intensity is calculated from area and density; a user load's intensity is given.
-        ProjectOverviewItem Distributed(Guid id, string name, string type, double intensity, Length start, Length end, bool calculated = false) =>
-            new(id, name, type, calculated
-                    ? QuantityFormatter.FormatResult(intensity, QuantityKind.DistributedLoad, analysis.Options)
-                    : QuantityFormatter.FormatInput(intensity, analysis.Options.Profile[QuantityKind.DistributedLoad], analysis.Options),
-                Position(start) + "…" + Position(end));
+        string Intensity(double startIntensity, double endIntensity, bool calculated)
+        {
+            var unit = analysis.Options.Profile[QuantityKind.DistributedLoad];
+            if (calculated)
+                return QuantityFormatter.FormatResult(startIntensity, QuantityKind.DistributedLoad, analysis.Options);
+            // A linear load shows both ends as "q₁ … q₂" in the unit once, like the position range.
+            return startIntensity == endIntensity
+                ? QuantityFormatter.FormatInput(startIntensity, unit, analysis.Options)
+                : QuantityFormatter.FormatInputNumber(startIntensity, unit, analysis.Options) + " … "
+                    + QuantityFormatter.FormatInput(endIntensity, unit, analysis.Options);
+        }
+        ProjectOverviewItem Distributed(Guid id, string name, string type, double startIntensity, double endIntensity,
+            Length start, Length end, bool calculated = false) =>
+            new(id, name, type, Intensity(startIntensity, endIntensity, calculated), Position(start) + "…" + Position(end));
         DistributedLoads = Array.AsReadOnly((document.SelfWeightLoad is { } weight
             ? new[] { Distributed(document.SelfWeight!.Id, EditorSelfWeight.Symbol, EditorSelfWeight.Symbol,
-                weight.StartIntensity.NewtonsPerMeter, weight.StartPosition, weight.EndPosition, calculated: true) } : [])
+                weight.StartIntensity.NewtonsPerMeter, weight.EndIntensity.NewtonsPerMeter, weight.StartPosition,
+                weight.EndPosition, calculated: true) } : [])
             .Concat(document.DistributedLoads.Select(l => Distributed(l.Id, l.Name, "q", l.StartIntensity.NewtonsPerMeter,
-                l.StartPosition, l.EndPosition))).ToArray());
+                l.EndIntensity.NewtonsPerMeter, l.StartPosition, l.EndPosition))).ToArray());
         // The solver reports one common reaction per station and restrained direction. Supports sharing
         // a station therefore share one row; no individual split is invented for them.
         Reactions = Array.AsReadOnly(analysis.Result is { } result

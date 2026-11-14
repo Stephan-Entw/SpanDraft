@@ -72,7 +72,7 @@ public sealed partial class EditorViewModel
             return true;
         }
         if (_distributedLoadPreview is not { IsInvalid: false } preview) return false;
-        OpenDistributedLoadDraft(null, preview.StartPosition, preview.EndPosition, preview.Intensity);
+        OpenDistributedLoadDraft(null, preview.StartPosition, preview.EndPosition, preview.StartIntensity, preview.EndIntensity);
         return true;
     }
 
@@ -89,7 +89,8 @@ public sealed partial class EditorViewModel
         if (!IsEditorNeutral) return false;
         var load = Document.DistributedLoads.FirstOrDefault(l => l.Id == id);
         if (load is null) return false;
-        OpenDistributedLoadDraft(id, load.StartPosition, load.EndPosition, load.StartIntensity.NewtonsPerMeter);
+        OpenDistributedLoadDraft(id, load.StartPosition, load.EndPosition, load.StartIntensity.NewtonsPerMeter,
+            load.EndIntensity.NewtonsPerMeter);
         return true;
     }
 
@@ -150,7 +151,7 @@ public sealed partial class EditorViewModel
     {
         if (IsBusy) return false;
         var draft = DistributedLoadDraft;
-        if (!IsDistributedLoadFlyoutVisible || draft is null || !draft.TryGetValues(out var start, out var end, out double intensity)
+        if (!IsDistributedLoadFlyoutVisible || draft is null || !draft.TryGetValues(out var start, out var end, out double startIntensity, out double endIntensity)
             || !CanDistributedLoadRange(start.Meters, end.Meters)) return false;
         var loads = Document.DistributedLoads.ToArray();
         var naming = Document.NamingState;
@@ -159,12 +160,13 @@ public sealed partial class EditorViewModel
             int index = Array.FindIndex(loads, l => l.Id == id);
             if (index < 0) { CancelDistributedLoadInteraction(); return false; }
             loads[index] = loads[index] with { StartPosition = start, EndPosition = end,
-                StartIntensity = ForcePerLength.FromNewtonsPerMeter(intensity),
-                EndIntensity = ForcePerLength.FromNewtonsPerMeter(intensity), Name = draft.NameText };
+                StartIntensity = ForcePerLength.FromNewtonsPerMeter(startIntensity),
+                EndIntensity = ForcePerLength.FromNewtonsPerMeter(endIntensity), Name = draft.NameText };
         }
         else
         {
-            loads = [.. loads, new(Guid.NewGuid(), start, end, ForcePerLength.FromNewtonsPerMeter(intensity), draft.NameText)];
+            loads = [.. loads, new(Guid.NewGuid(), start, end, ForcePerLength.FromNewtonsPerMeter(startIntensity),
+                ForcePerLength.FromNewtonsPerMeter(endIntensity), draft.NameText)];
             naming = naming.Consume(draft.AutoCandidate!.Value);
         }
         var document = Document.WithDistributedLoads(loads, naming);
@@ -195,9 +197,9 @@ public sealed partial class EditorViewModel
         NotifyDistributedLoadState();
     }
 
-    private void OpenDistributedLoadDraft(Guid? id, Length start, Length end, double intensity)
+    private void OpenDistributedLoadDraft(Guid? id, Length start, Length end, double startIntensity, double endIntensity)
     {
-        _distributedLoadDraft = new(() => Document, id, start, end, intensity, ResultPresentation.Profile);
+        _distributedLoadDraft = new(() => Document, id, start, end, startIntensity, endIntensity, ResultPresentation.Profile);
         _distributedLoadDraft.PropertyChanged += DistributedLoadDraftChanged;
         _distributedLoadPreview = _distributedLoadDraft.Preview;
         _distributedPointerPosition = null;

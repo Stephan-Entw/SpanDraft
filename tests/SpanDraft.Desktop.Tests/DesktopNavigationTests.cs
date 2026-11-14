@@ -96,12 +96,12 @@ public sealed class DesktopNavigationTests
                     draft = editor.DistributedLoadDraft!;
                     Assert.Equal(id, editor.DistributedLoadDraft!.OriginalId);
                     Assert.True(surface.FindControl<Popup>("DistributedLoadPopup")!.IsOpen);
-                    editor.DistributedLoadDraft.IntensityText = "-";
+                    editor.DistributedLoadDraft.StartIntensityText = "-";
                     Assert.False(editor.ConfirmDistributedLoad());
                 }
                 ActivateName(button, window, keyboard);
                 Assert.Same(draft, (object?)editor.SupportDraft ?? (object?)editor.LoadDraft ?? editor.DistributedLoadDraft);
-                Assert.Equal("-", editor.SupportDraft?.PositionText ?? editor.LoadDraft?.ValueText ?? editor.DistributedLoadDraft?.IntensityText);
+                Assert.Equal("-", editor.SupportDraft?.PositionText ?? editor.LoadDraft?.ValueText ?? editor.DistributedLoadDraft?.StartIntensityText);
                 Assert.Same(revision, editor.Session.CurrentRevision);
                 Assert.Same(projection, editor.Overview);
                 Assert.Equal(historyCount, editor.Session.UndoHistory.Count);

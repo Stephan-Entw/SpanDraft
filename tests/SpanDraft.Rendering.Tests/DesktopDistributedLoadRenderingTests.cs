@@ -338,7 +338,7 @@ public sealed class DesktopDistributedLoadRenderingTests : DesktopDistributedLoa
     {
         var a = Visual();
         var visuals = Enumerable.Range(0, count).Select(i => a with
-            { Preview = a.Preview with { Intensity = i % 3 == 0 ? 0 : i % 3 == 1 ? -500 : 2000 } }).ToArray();
+            { Preview = a.Preview with { StartIntensity = i % 3 == 0 ? 0 : i % 3 == 1 ? -500 : 2000, EndIntensity = i % 3 == 0 ? 0 : i % 3 == 1 ? -500 : 2000 } }).ToArray();
         AssertFill(Assert.Single(Fills(visuals).Children), expected, a.FillBounds, 1e-12);
         Assert.Equal(0, SchematicMetrics.DistributedFillOpacityForCount(0));
         Assert.Equal(.06, SchematicMetrics.DistributedFillOpacityForCount(1));

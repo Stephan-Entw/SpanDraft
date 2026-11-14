@@ -72,7 +72,7 @@ public sealed class DesktopDistributedLoadTests
         NewDraft(editor, first, second);
         Assert.Equal(Mm(Math.Min(first, second)), editor.DistributedLoadPreview!.StartPosition);
         Assert.Equal(Mm(Math.Max(first, second)), editor.DistributedLoadPreview.EndPosition);
-        Assert.Equal(-500, editor.DistributedLoadPreview.Intensity);
+        Assert.Equal(-500, editor.DistributedLoadPreview.StartIntensity);
         Assert.Empty(editor.Document.DistributedLoads);
         Assert.Equal(1, calls());
         Assert.Equal(1, editor.Document.NamingState.NextDistributedLoadNumber);
@@ -114,10 +114,10 @@ public sealed class DesktopDistributedLoadTests
         var draft = editor.DistributedLoadDraft!;
         draft.StartText = "300";
         draft.EndText = "900";
-        draft.IntensityText = InputQuantityFormatter.FormatExact(q, UnitCatalog.NewtonPerMeter);
+        draft.StartIntensityText = InputQuantityFormatter.FormatExact(q, UnitCatalog.NewtonPerMeter);
         Assert.Equal(Mm(200), editor.DistributedLoadPreview!.StartPosition);
         Assert.Equal(Mm(800), editor.DistributedLoadPreview.EndPosition);
-        Assert.Equal(q, editor.DistributedLoadPreview.Intensity);
+        Assert.Equal(q, editor.DistributedLoadPreview.StartIntensity);
         Assert.Equal(1, calls());
         Assert.True(editor.ConfirmDistributedLoad());
         var load = Assert.Single(editor.Document.DistributedLoads);
@@ -142,7 +142,7 @@ public sealed class DesktopDistributedLoadTests
         var original = editor.Document;
         editor.EditDistributedLoad(original.DistributedLoads[0].Id);
         var draft = editor.DistributedLoadDraft!;
-        draft.StartText = start; draft.EndText = end; draft.IntensityText = q;
+        draft.StartText = start; draft.EndText = end; draft.StartIntensityText = q;
         Assert.False(editor.ConfirmDistributedLoad());
         Assert.True(editor.IsDistributedLoadFlyoutVisible);
         Assert.True(editor.DistributedLoadPreview!.IsInvalid);
@@ -171,7 +171,7 @@ public sealed class DesktopDistributedLoadTests
         Assert.Equal(1, calls());
         editor.EditDistributedLoad(load.Id);
         editor.DistributedLoadDraft!.NameText = "Discard";
-        editor.DistributedLoadDraft.IntensityText = "100";
+        editor.DistributedLoadDraft.StartIntensityText = "100";
         editor.CancelEditorInteraction();
         Assert.Equal("Motor", editor.Document.DistributedLoads[0].Name);
         Assert.Equal(-500, editor.Document.DistributedLoads[0].StartIntensity.NewtonsPerMeter);
@@ -224,14 +224,14 @@ public sealed class DesktopDistributedLoadTests
             var editor = new EditorViewModel(Document(), () => { });
             NewDraft(editor);
             var draft = editor.DistributedLoadDraft!;
-            draft.StartText = start; draft.EndText = end; draft.IntensityText = intensity;
+            draft.StartText = start; draft.EndText = end; draft.StartIntensityText = intensity;
             Assert.True(editor.ConfirmDistributedLoad());
             var load = editor.Document.DistributedLoads[0];
             Assert.Equal(Mm(123.5), load.StartPosition);
             Assert.Equal(Mm(900.5), load.EndPosition);
             Assert.Equal(-500.25, load.StartIntensity.NewtonsPerMeter);
             editor.EditDistributedLoad(load.Id);
-            editor.DistributedLoadDraft!.IntensityText = culture == "en-US" ? "1,000" : "1.000";
+            editor.DistributedLoadDraft!.StartIntensityText = culture == "en-US" ? "1,000" : "1.000";
             Assert.False(editor.ConfirmDistributedLoad());
         }
         finally { CultureInfo.CurrentUICulture = original; CultureInfo.CurrentCulture = numericCulture; }

@@ -230,7 +230,7 @@ public sealed class DesktopReportToolbarTests
         else if (draft == "distributed")
         {
             Assert.True(editor.EditDistributedLoad(editor.Document.DistributedLoads[0].Id));
-            buffer = editor.DistributedLoadDraft!; editor.DistributedLoadDraft!.IntensityText = "unconfirmed";
+            buffer = editor.DistributedLoadDraft!; editor.DistributedLoadDraft!.StartIntensityText = "unconfirmed";
         }
         else
         {
@@ -261,7 +261,7 @@ public sealed class DesktopReportToolbarTests
         Assert.Single(window.GetVisualDescendants().OfType<EditorView>());
         if (draft == "support") { Assert.Same(buffer, editor.SupportDraft); Assert.Equal("unconfirmed", editor.SupportDraft!.PositionText); }
         else if (draft == "load") { Assert.Same(buffer, editor.LoadDraft); Assert.Equal("unconfirmed", editor.LoadDraft!.PositionText); }
-        else if (draft == "distributed") { Assert.Same(buffer, editor.DistributedLoadDraft); Assert.Equal("unconfirmed", editor.DistributedLoadDraft!.IntensityText); }
+        else if (draft == "distributed") { Assert.Same(buffer, editor.DistributedLoadDraft); Assert.Equal("unconfirmed", editor.DistributedLoadDraft!.StartIntensityText); }
         else { Assert.True(editor.DimensionLength.IsEditing); Assert.Equal("9000", editor.DimensionLength.Text); }
         window.Close();
     }

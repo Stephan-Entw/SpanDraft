@@ -154,13 +154,14 @@ public sealed class DesktopInputUnitTests
         var intensityUnit = profile[QuantityKind.DistributedLoad];
         var distributed = new DistributedLoadDraftViewModel(() => document, null, original, end, raw, profile);
         Assert.Equal(positionUnit.Symbol, distributed.PositionUnit); Assert.Equal(intensityUnit.Symbol, distributed.IntensityUnit);
-        Assert.True(distributed.TryGetValues(out var start, out var stop, out double intensity));
-        Assert.Equal(original, start); Assert.Equal(end, stop); Assert.Equal(raw, intensity);
+        Assert.True(distributed.TryGetValues(out var start, out var stop, out double intensity, out double endIntensity));
+        Assert.Equal(original, start); Assert.Equal(end, stop); Assert.Equal(raw, intensity); Assert.Equal(raw, endIntensity);
         distributed.StartText = InputQuantityFormatter.FormatExact(.2, positionUnit);
         distributed.EndText = InputQuantityFormatter.FormatExact(.8, positionUnit);
-        distributed.IntensityText = InputQuantityFormatter.FormatExact(-500, intensityUnit);
-        Assert.True(distributed.TryGetValues(out start, out stop, out intensity));
+        distributed.StartIntensityText = InputQuantityFormatter.FormatExact(-500, intensityUnit);
+        Assert.True(distributed.TryGetValues(out start, out stop, out intensity, out endIntensity));
         Assert.Equal(.2, start.Meters, 14); Assert.Equal(.8, stop.Meters, 14); Assert.Equal(-500, intensity, 10);
+        Assert.Equal(-500, endIntensity, 10); // The untouched end intensity follows the start intensity.
         distributed.EndText = distributed.StartText; Assert.False(distributed.IsValid);
         distributed.EndText = "bad"; Assert.False(distributed.IsValid);
     }

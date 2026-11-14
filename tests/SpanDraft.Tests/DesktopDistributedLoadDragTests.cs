@@ -32,7 +32,7 @@ public sealed class DesktopDistributedLoadDragTests
         editor.EditDistributedLoad(s.Load.Id);
         var draft = editor.DistributedLoadDraft!;
         draft.NameText = "Payload";
-        draft.IntensityText = "unfinished";
+        draft.StartIntensityText = "unfinished";
         if (endpoint == DistributedLoadEndpoint.Start) draft.EndText = "850"; else draft.StartText = "150";
         Assert.True(editor.BeginDistributedLoadDrag(s.Load.Id, endpoint));
         editor.UpdateDistributedLoadDrag(Mm(endpoint == DistributedLoadEndpoint.Start ? 300 : 700));
@@ -42,7 +42,7 @@ public sealed class DesktopDistributedLoadDragTests
         Assert.Single(editor.Document.DistributedLoads);
         Assert.True(editor.EndDistributedLoadDrag());
         Assert.Same(draft, editor.DistributedLoadDraft);
-        Assert.Equal("unfinished", draft.IntensityText);
+        Assert.Equal("unfinished", draft.StartIntensityText);
         Assert.Equal("Payload", draft.NameText);
         Assert.Equal(endpoint == DistributedLoadEndpoint.Start ? "850" : "150",
             endpoint == DistributedLoadEndpoint.Start ? draft.EndText : draft.StartText);
@@ -53,7 +53,7 @@ public sealed class DesktopDistributedLoadDragTests
             endpoint == DistributedLoadEndpoint.Start ? draft.Preview.EndPosition : draft.Preview.StartPosition);
         Assert.Equal(s.Load, editor.Document.DistributedLoads[0]);
         Assert.Equal(1, s.Calls);
-        draft.IntensityText = "0";
+        draft.StartIntensityText = "0";
         if (cancel) editor.CancelEditorInteraction(); else Assert.True(editor.ConfirmDistributedLoad());
         var load = editor.Document.DistributedLoads[0];
         Assert.Equal(s.Load.Id, load.Id);
@@ -72,7 +72,7 @@ public sealed class DesktopDistributedLoadDragTests
         var s = new Session();
         s.Editor.EditDistributedLoad(s.Load.Id);
         var draft = s.Editor.DistributedLoadDraft!;
-        draft.StartText = "250"; draft.EndText = "750"; draft.IntensityText = "broken";
+        draft.StartText = "250"; draft.EndText = "750"; draft.StartIntensityText = "broken";
         var preview = draft.Preview;
         Assert.True(s.Editor.BeginDistributedLoadDrag(s.Load.Id, endpoint));
         s.Editor.UpdateDistributedLoadDrag(Mm(position));
@@ -83,7 +83,7 @@ public sealed class DesktopDistributedLoadDragTests
         Assert.Equal(preview, draft.Preview);
         Assert.Equal("250", draft.StartText);
         Assert.Equal("750", draft.EndText);
-        Assert.Equal("broken", draft.IntensityText);
+        Assert.Equal("broken", draft.StartIntensityText);
         Assert.Equal(1, s.Calls);
     }
 

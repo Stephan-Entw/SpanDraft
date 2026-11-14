@@ -14,7 +14,15 @@ public partial class DistributedLoadFlyout : UserControl
     private void ToggleSign(object? sender, RoutedEventArgs e)
     {
         if (DataContext is EditorViewModel { DistributedLoadDraft: { } draft })
-            draft.IntensityText = LoadSignToggle.Apply(draft.IntensityText, !draft.HasIntensityError, draft.Preview.Intensity);
+            draft.StartIntensityText = LoadSignToggle.Apply(draft.StartIntensityText, !draft.HasStartIntensityError,
+                draft.Preview.StartIntensity);
+    }
+
+    private void ToggleEndSign(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is EditorViewModel { DistributedLoadDraft: { } draft })
+            draft.EndIntensityText = LoadSignToggle.Apply(draft.EndIntensityText, !draft.HasEndIntensityError,
+                draft.Preview.EndIntensity);
     }
 
     private void FlyoutKeyDown(object? sender, KeyEventArgs e)
@@ -22,6 +30,7 @@ public partial class DistributedLoadFlyout : UserControl
         if (DataContext is not EditorViewModel editor) return;
         if (e.Key == Key.Escape) { editor.CancelDistributedLoadInteraction(); e.Handled = true; }
         else if (e.Key == Key.Enter && SignButton.IsFocused) { ToggleSign(sender, e); e.Handled = true; }
+        else if (e.Key == Key.Enter && EndSignButton.IsFocused) { ToggleEndSign(sender, e); e.Handled = true; }
         else if (e.Key == Key.Enter) { editor.ConfirmDistributedLoad(); e.Handled = true; }
     }
 }

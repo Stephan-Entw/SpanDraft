@@ -176,11 +176,11 @@ public sealed class DesktopDistributedLoadLayoutTests
         Assert.True(click.OpenOnClick(editor));
         var draft = editor.DistributedLoadDraft!;
         draft.StartText = "unfinished";
-        draft.IntensityText = "0";
+        draft.StartIntensityText = "0";
         gesture.Cancel(editor);
         Assert.Same(draft, editor.DistributedLoadDraft);
         Assert.Equal("unfinished", draft.StartText);
-        Assert.Equal("0", draft.IntensityText);
+        Assert.Equal("0", draft.StartIntensityText);
         Assert.DoesNotContain(a.Id, editor.EditorPresentation.AnnotationOffsets.Keys);
         Assert.Empty(editor.Session.UndoHistory);
         var other = scene.Annotations.Single(l => l.Id == b.Id);

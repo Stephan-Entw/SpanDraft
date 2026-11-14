@@ -163,11 +163,11 @@ public sealed class ProjectSessionTests
         {
             var id = editor.Document.DistributedLoads[0].Id;
             editor.EditDistributedLoad(id); var draft = editor.DistributedLoadDraft!;
-            draft.StartText = "unfinished"; draft.IntensityText = "-";
+            draft.StartText = "unfinished"; draft.StartIntensityText = "-";
             editor.BeginDistributedLoadDrag(id, DistributedLoadEndpoint.End); editor.UpdateDistributedLoadDrag(M(.9));
             editor.CancelPointerDrag();
             Assert.Same(draft, editor.DistributedLoadDraft); Assert.Equal("unfinished", draft.StartText);
-            Assert.Equal("-", draft.IntensityText); Assert.Equal(DistributedLoadInteraction.EditDraft, editor.DistributedLoadState);
+            Assert.Equal("-", draft.StartIntensityText); Assert.Equal(DistributedLoadInteraction.EditDraft, editor.DistributedLoadState);
         }
         Assert.Same(revision, editor.Session.CurrentRevision); Assert.Empty(editor.Session.UndoHistory);
     }

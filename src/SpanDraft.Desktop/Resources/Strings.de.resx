@@ -89,7 +89,8 @@
   <data name="SchematicDrawing" xml:space="preserve"><value>Schematische Darstellung</value></data>
   <data name="DistributedStartLabel" xml:space="preserve"><value>Start</value></data>
   <data name="DistributedEndLabel" xml:space="preserve"><value>Ende</value></data>
-  <data name="DistributedIntensityLabel" xml:space="preserve"><value>Streckenlast q</value></data>
+  <data name="DistributedStartIntensityLabel" xml:space="preserve"><value>q am Anfang</value></data>
+  <data name="DistributedEndIntensityLabel" xml:space="preserve"><value>q am Ende</value></data>
   <data name="InvalidDistributedRange" xml:space="preserve"><value>Der Bereich muss 0 ≤ Start X &lt; Ende X ≤ Balkenlänge erfüllen.</value></data>
   <data name="SaveAs" xml:space="preserve"><value>Speichern unter…</value></data>
   <data name="CloseProject" xml:space="preserve"><value>Projekt schließen</value></data>

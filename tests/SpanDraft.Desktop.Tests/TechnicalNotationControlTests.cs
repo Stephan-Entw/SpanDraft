@@ -44,7 +44,8 @@ public sealed class TechnicalNotationControlTests
         var distributed = new DistributedLoadFlyout { DataContext = editor };
         CheckPosition(distributed, "StartInput", "Start x");
         CheckPosition(distributed, "EndInput", culture == "de-DE" ? "Ende x" : "End x");
-        CheckPlain(distributed, Strings.DistributedIntensityLabel);
+        CheckPlain(distributed, Strings.DistributedStartIntensityLabel);
+        CheckPlain(distributed, Strings.DistributedEndIntensityLabel);
         Assert.Equal("q1", editor.DistributedLoadDraft!.NameText);
         editor.CancelEditorInteraction();
         Assert.Same(document, editor.Document);

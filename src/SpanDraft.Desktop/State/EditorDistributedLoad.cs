@@ -22,5 +22,15 @@ public sealed record EditorDistributedLoad(Guid Id, Length StartPosition, Length
 
 public enum DistributedLoadInteraction { Neutral, Placement, NewDraft, EditDraft, Drag }
 public enum DistributedLoadEndpoint { Start, End }
-public sealed record DistributedLoadPreview(Length StartPosition, Length EndPosition, double Intensity,
-    bool IsInvalid = false);
+/// <summary>The transient range and end intensities of a load being placed or edited, in SI.</summary>
+public sealed record DistributedLoadPreview(Length StartPosition, Length EndPosition, double StartIntensity,
+    double EndIntensity, bool IsInvalid = false)
+{
+    /// <summary>A constant load.</summary>
+    public DistributedLoadPreview(Length startPosition, Length endPosition, double intensity, bool isInvalid = false)
+        : this(startPosition, endPosition, intensity, intensity, isInvalid)
+    {
+    }
+
+    public bool IsConstant => StartIntensity == EndIntensity;
+}

@@ -59,9 +59,15 @@ public sealed class DesktopLoadFlyoutControlTests
         var flyout = new DistributedLoadFlyout { DataContext = editor };
         var window = Open(flyout);
         VerifySign(flyout, flyout.FindControl<TextBox>("ValueInput")!, flyout.FindControl<Button>("SignButton")!, culture,
-            () => editor.DistributedLoadPreview!.Intensity);
+            () => editor.DistributedLoadPreview!.StartIntensity);
         AssertNumericAlignment(flyout, "StartInput", "StartUnit");
         AssertNumericAlignment(flyout, "EndInput", "EndUnit");
+        // The second intensity row has the same structure as the first: size, column and unit position agree.
+        AssertNumericAlignment(flyout, "StartInput", "StartUnit", "EndValueInput", "EndValueUnit");
+        var first = flyout.FindControl<TextBox>("ValueInput")!; var second = flyout.FindControl<TextBox>("EndValueInput")!;
+        Assert.Equal(first.Bounds.Height, second.Bounds.Height, 3);
+        Assert.True(second.TranslatePoint(default, flyout)!.Value.Y > first.TranslatePoint(default, flyout)!.Value.Y + first.Bounds.Height);
+        Assert.Equal(flyout.FindControl<Button>("SignButton")!.Bounds.Size, flyout.FindControl<Button>("EndSignButton")!.Bounds.Size);
         AssertNameAlignment(flyout, "StartInput");
         window.Close();
     }
@@ -324,13 +330,14 @@ public sealed class DesktopLoadFlyoutControlTests
         window.Close();
     }
 
-    private static void AssertNumericAlignment(Control flyout, string positionName, string unitName)
+    private static void AssertNumericAlignment(Control flyout, string positionName, string unitName,
+        string valueName = "ValueInput", string valueUnitName = "ValueUnit")
     {
         var position = flyout.FindControl<TextBox>(positionName)!;
         Assert.InRange(position.Bounds.Width, 149, 151);
-        var value = flyout.FindControl<TextBox>("ValueInput")!;
+        var value = flyout.FindControl<TextBox>(valueName)!;
         var positionUnit = flyout.FindControl<TextBlock>(unitName)!;
-        var valueUnit = flyout.FindControl<TextBlock>("ValueUnit")!;
+        var valueUnit = flyout.FindControl<TextBlock>(valueUnitName)!;
         Assert.Equal(position.Bounds.Width, value.Bounds.Width, 3);
         Assert.Equal(position.TranslatePoint(new Point(), flyout)!.Value.X, value.TranslatePoint(new Point(), flyout)!.Value.X, 3);
         Assert.Equal(positionUnit.TranslatePoint(new Point(), flyout)!.Value.X, valueUnit.TranslatePoint(new Point(), flyout)!.Value.X, 3);

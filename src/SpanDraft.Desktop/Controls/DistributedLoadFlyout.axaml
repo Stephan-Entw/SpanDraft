@@ -38,9 +38,9 @@
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
         <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
-          <TextBlock Text="{x:Static resources:Strings.DistributedIntensityLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
-          <TextBox Classes="numeric loadValue" Grid.Column="1" x:Name="ValueInput" Text="{Binding DistributedLoadDraft.IntensityText, Mode=TwoWay}"
-                   Classes.error="{Binding DistributedLoadDraft.HasIntensityError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedIntensityLabel}">
+          <TextBlock Text="{x:Static resources:Strings.DistributedStartIntensityLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Classes="numeric loadValue" Grid.Column="1" x:Name="ValueInput" Text="{Binding DistributedLoadDraft.StartIntensityText, Mode=TwoWay}"
+                   Classes.error="{Binding DistributedLoadDraft.HasStartIntensityError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedStartIntensityLabel}">
             <TextBox.InnerLeftContent>
               <controls:LoadSignButton x:Name="SignButton" Content="±" Classes="loadSign" Click="ToggleSign"
                       AutomationProperties.Name="{x:Static resources:Strings.ToggleLoadSign}" ToolTip.Tip="{x:Static resources:Strings.ToggleLoadSign}" />
@@ -48,7 +48,22 @@
           </TextBox>
           <controls:TechnicalTextBlock Grid.Column="2" x:Name="ValueUnit" Text="{Binding DistributedLoadDraft.IntensityUnit}" VerticalAlignment="Center" />
         </Grid>
-        <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.IntensityError}" IsVisible="{Binding DistributedLoadDraft.HasIntensityError}"
+        <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.StartIntensityError}" IsVisible="{Binding DistributedLoadDraft.HasStartIntensityError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
+      <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+          <TextBlock Text="{x:Static resources:Strings.DistributedEndIntensityLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Classes="numeric loadValue" Grid.Column="1" x:Name="EndValueInput" Text="{Binding DistributedLoadDraft.EndIntensityText, Mode=TwoWay}"
+                   Classes.error="{Binding DistributedLoadDraft.HasEndIntensityError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedEndIntensityLabel}">
+            <TextBox.InnerLeftContent>
+              <controls:LoadSignButton x:Name="EndSignButton" Content="±" Classes="loadSign" Click="ToggleEndSign"
+                      AutomationProperties.Name="{x:Static resources:Strings.ToggleLoadSign}" ToolTip.Tip="{x:Static resources:Strings.ToggleLoadSign}" />
+            </TextBox.InnerLeftContent>
+          </TextBox>
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="EndValueUnit" Text="{Binding DistributedLoadDraft.IntensityUnit}" VerticalAlignment="Center" />
+        </Grid>
+        <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.EndIntensityError}" IsVisible="{Binding DistributedLoadDraft.HasEndIntensityError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
         <controls:TechnicalTextBlock Text="{Binding DistributedLoadFeedback}" IsVisible="{Binding HasDistributedLoadFeedback}"
                    Classes="validationMessage" TextWrapping="Wrap" />

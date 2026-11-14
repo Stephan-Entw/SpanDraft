@@ -22,8 +22,8 @@ public sealed record DistributedLoadVisual(Guid? Id, DistributedLoadPreview Prev
 /// <summary>A shared interior shaft; entities remain separate for labels, selection and endpoint drags.</summary>
 public sealed record DistributedLoadInnerGlyph(double X, IReadOnlyList<DistributedLoadVisual> Entities)
 {
-    public bool Positive => Entities.Any(e => e.Preview.Intensity > 0);
-    public bool Negative => Entities.Any(e => e.Preview.Intensity < 0);
+    public bool Positive => Entities.Any(e => e.Preview.StartIntensity > 0);
+    public bool Negative => Entities.Any(e => e.Preview.StartIntensity < 0);
     public bool IsPreview => Entities.Any(e => e.IsPreview);
 }
 
@@ -116,13 +116,13 @@ public static class DistributedLoadSymbol
     public static string Label(DistributedLoadPreview preview, string name, ResultPresentationOptions? options = null)
     {
         options ??= ResultPresentationOptions.Default;
-        return QuantityFormatter.FormatInputEquation(name.Trim(), preview.Intensity,
+        return QuantityFormatter.FormatInputEquation(name.Trim(), preview.StartIntensity,
             options.Profile[QuantityKind.DistributedLoad], options);
     }
 
     /// <summary>A user load's intensity is given; the self-weight intensity is a calculated result.</summary>
     public static string Label(DistributedLoadVisual visual, ResultPresentationOptions options) => visual.IsSelfWeight
-        ? SelfWeightLabel(visual.Name, visual.Preview.Intensity, options)
+        ? SelfWeightLabel(visual.Name, visual.Preview.StartIntensity, options)
         : Label(visual.Preview, visual.Name, options);
 
     public static string SelfWeightLabel(string name, double newtonsPerMeter, ResultPresentationOptions options) =>
@@ -150,14 +150,14 @@ public static class DistributedLoadSymbol
         var pen = SymbolPen(brush, visual.SymbolScale);
         context.DrawLine(pen, new(visual.StartX, visual.TopY), new(visual.EndX, visual.TopY));
         foreach (double x in ArrowPositions(visual))
-            DrawArrow(context, x, visual, visual.Preview.Intensity > 0, visual.Preview.Intensity < 0, brush);
+            DrawArrow(context, x, visual, visual.Preview.StartIntensity > 0, visual.Preview.StartIntensity < 0, brush);
     }
 
     public static void DrawEndpoints(DrawingContext context, DistributedLoadVisual visual, IBrush? brush)
     {
         context.DrawLine(SymbolPen(brush, visual.SymbolScale), new(visual.StartX, visual.TopY), new(visual.EndX, visual.TopY));
-        DrawArrow(context, visual.StartX, visual, visual.Preview.Intensity > 0, visual.Preview.Intensity < 0, brush);
-        DrawArrow(context, visual.EndX, visual, visual.Preview.Intensity > 0, visual.Preview.Intensity < 0, brush);
+        DrawArrow(context, visual.StartX, visual, visual.Preview.StartIntensity > 0, visual.Preview.StartIntensity < 0, brush);
+        DrawArrow(context, visual.EndX, visual, visual.Preview.StartIntensity > 0, visual.Preview.StartIntensity < 0, brush);
     }
 
     public static void DrawInner(DrawingContext context, DistributedLoadInnerGlyph glyph, IBrush? brush) =>

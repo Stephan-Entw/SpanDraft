@@ -207,7 +207,7 @@ public sealed class DesktopProjectOverviewTests
         else if (kind == AutoNameKind.DistributedLoad)
         {
             editor.DistributedLoadDraft!.StartText = "100";
-            editor.DistributedLoadDraft.IntensityText = "-750";
+            editor.DistributedLoadDraft.StartIntensityText = "-750";
             Assert.True(editor.BeginDistributedLoadDrag(id, DistributedLoadEndpoint.Start));
             editor.UpdateDistributedLoadDrag(Mm(100));
             Assert.Same(before, editor.Overview);
