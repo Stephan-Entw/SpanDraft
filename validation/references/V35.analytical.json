@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V35",
+  "inputSha256": "74b9512cb3686ee259bc12f5bc906e71a5d949976c11276f9902177b81ff9410",
+  "solver": "analytical",
+  "status": "PASS",
+  "provenance": {
+    "package": "analytical",
+    "version": "1",
+    "python": "3.9.6",
+    "generatedAt": "2026-11-14T18:31:59.556712+00:00",
+    "theory": "Euler-Bernoulli; piecewise constant E, A, I per segment; linear; small displacements; internal moment releases",
+    "signMapping": "SI and SpanDraft conventions directly; no SpanDraft solver input",
+    "options": {
+      "method": "Exact rational statics and compatibility, integrated linear intensity"
+    },
+    "adapterVersion": "1",
+    "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
+    "adapterSourcesSha256": "6d59101bebd8296e40be41247fe544da02c7f7f95165e9e8b2a6a33cf3d6ce51",
+    "source": "validation/python/analytical.py; derivation in docs/VALIDATION.md"
+  },
+  "availability": {
+    "Rx": "supported",
+    "Ry": "supported",
+    "Rm": "supported",
+    "u": "supported",
+    "w": "supported",
+    "theta": "supported",
+    "N": "supported",
+    "V": "supported",
+    "M": "supported"
+  },
+  "reactions": [
+    {
+      "position": 0.0,
+      "values": {
+        "Ry": -3425.0,
+        "Rx": 0.0
+      }
+    },
+    {
+      "position": 2.0,
+      "values": {
+        "Ry": 14775.0
+      }
+    },
+    {
+      "position": 6.0,
+      "values": {
+        "Ry": 1800.0
+      }
+    }
+  ],
+  "samples": [
+    {
+      "position": 0.0,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.0,
+        "theta": 0.000623015873015873,
+        "M": 0.0,
+        "V": -3425.0
+      }
+    },
+    {
+      "position": 0.74,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.00040298179999999996,
+        "theta": 0.00038365817460317463,
+        "M": -2808.3,
+        "V": -4165.0
+      }
+    },
+    {
+      "position": 1.42,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.00045518933968253974,
+        "theta": -0.0003127697619047618,
+        "M": -5871.7,
+        "V": -4845.0
+      }
+    },
+    {
+      "position": 2.0,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.0,
+        "theta": -0.0013253968253968255,
+        "M": -8850.0,
+        "V": -5425.0
+      }
+    },
+    {
+      "position": 2.0,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.0,
+        "theta": -0.0013253968253968255,
+        "M": -8850.0,
+        "V": 9350.0
+      }
+    },
+    {
+      "position": 2.37,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0006160228116071432,
+        "theta": -0.0019546669841269846,
+        "M": -5458.949999999999,
+        "V": 8980.0
+      }
+    },
+    {
+      "position": 2.71,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0013418617600198413,
+        "theta": -0.002274559761904762,
+        "M": -2463.55,
+        "V": 8640.0
+      }
+    },
+    {
+      "position": 3.0,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0020178571428571433,
+        "theta": -0.0023591269841269843,
+        "M": 0.0,
+        "V": 8350.0
+      }
+    },
+    {
+      "position": 3.0,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.002017857142857143,
+        "theta": -0.0020595238095238097,
+        "M": 0.0,
+        "V": 1350.0
+      }
+    },
+    {
+      "position": 4.11,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0036716605491375004,
+        "theta": -0.00045017019077380903,
+        "M": 1060.48845,
+        "V": 499.1849999999997
+      }
+    },
+    {
+      "position": 5.13,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0027138908293410716,
+        "theta": 0.0023184631663690477,
+        "M": 1031.25015,
+        "V": -608.5349999999999
+      }
+    },
+    {
+      "position": 6.0,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 4.336808689942018e-19,
+        "theta": 0.00356547619047619,
+        "M": 0.0,
+        "V": -1800.0
+      }
+    }
+  ],
+  "extrema": {
+    "wMin": {
+      "value": -0.003710814374780759,
+      "locations": [
+        {
+          "position": 4.282075700442538,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    },
+    "wMax": {
+      "value": 0.0004926596403553483,
+      "locations": [
+        {
+          "position": 1.1711694639967007,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    },
+    "VMin": {
+      "value": -5425.0,
+      "locations": [
+        {
+          "position": 2.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "VMax": {
+      "value": 9350.0,
+      "locations": [
+        {
+          "position": 2.0,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMin": {
+      "value": -8850.0,
+      "locations": [
+        {
+          "position": 2.0,
+          "side": "Left"
+        },
+        {
+          "position": 2.0,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMax": {
+      "value": 1187.216658103186,
+      "locations": [
+        {
+          "position": 4.60555127546399,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    }
+  }
+}

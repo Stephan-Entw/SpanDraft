@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V34",
+  "description": "Hinge on a translational spring between a pinned end and a roller under point forces and a uniform load",
+  "length": 6,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 6,
+      "type": "Roller"
+    },
+    {
+      "position": 3,
+      "type": "Spring",
+      "translationalStiffness": 2500000.0
+    }
+  ],
+  "momentReleases": [
+    {
+      "position": 3
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 1.5,
+      "value": -8000.0
+    },
+    {
+      "position": 4.5,
+      "value": -3000.0
+    }
+  ],
+  "pointMoments": [],
+  "udls": [
+    {
+      "start": 3,
+      "end": 6,
+      "value": -500.0
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0.0,
+      "side": "Right"
+    },
+    {
+      "position": 0.555,
+      "side": "Right"
+    },
+    {
+      "position": 1.065,
+      "side": "Right"
+    },
+    {
+      "position": 1.5,
+      "side": "Left"
+    },
+    {
+      "position": 1.5,
+      "side": "Right"
+    },
+    {
+      "position": 2.055,
+      "side": "Right"
+    },
+    {
+      "position": 2.565,
+      "side": "Right"
+    },
+    {
+      "position": 3.0,
+      "side": "Left"
+    },
+    {
+      "position": 3.0,
+      "side": "Right"
+    },
+    {
+      "position": 3.555,
+      "side": "Right"
+    },
+    {
+      "position": 4.065,
+      "side": "Right"
+    },
+    {
+      "position": 4.5,
+      "side": "Left"
+    },
+    {
+      "position": 4.5,
+      "side": "Right"
+    },
+    {
+      "position": 5.055,
+      "side": "Right"
+    },
+    {
+      "position": 5.565,
+      "side": "Right"
+    },
+    {
+      "position": 6.0,
+      "side": "Left"
+    }
+  ]
+}

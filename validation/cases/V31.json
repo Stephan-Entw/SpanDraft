@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V31",
+  "description": "Two spans with a hinge on the middle roller under a point force, a uniform load and a couple",
+  "length": 6,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 3,
+      "type": "Roller"
+    },
+    {
+      "position": 6,
+      "type": "Roller"
+    }
+  ],
+  "momentReleases": [
+    {
+      "position": 3
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 1.5,
+      "value": -6000.0
+    }
+  ],
+  "pointMoments": [
+    {
+      "position": 5,
+      "value": 2500.0
+    }
+  ],
+  "udls": [
+    {
+      "start": 3.5,
+      "end": 6,
+      "value": -1500.0
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0.0,
+      "side": "Right"
+    },
+    {
+      "position": 0.555,
+      "side": "Right"
+    },
+    {
+      "position": 1.065,
+      "side": "Right"
+    },
+    {
+      "position": 1.5,
+      "side": "Left"
+    },
+    {
+      "position": 1.5,
+      "side": "Right"
+    },
+    {
+      "position": 2.055,
+      "side": "Right"
+    },
+    {
+      "position": 2.565,
+      "side": "Right"
+    },
+    {
+      "position": 3.0,
+      "side": "Left"
+    },
+    {
+      "position": 3.0,
+      "side": "Right"
+    },
+    {
+      "position": 3.185,
+      "side": "Right"
+    },
+    {
+      "position": 3.355,
+      "side": "Right"
+    },
+    {
+      "position": 3.5,
+      "side": "Left"
+    },
+    {
+      "position": 3.5,
+      "side": "Right"
+    },
+    {
+      "position": 4.055,
+      "side": "Right"
+    },
+    {
+      "position": 4.565,
+      "side": "Right"
+    },
+    {
+      "position": 5.0,
+      "side": "Left"
+    },
+    {
+      "position": 5.0,
+      "side": "Right"
+    },
+    {
+      "position": 5.37,
+      "side": "Right"
+    },
+    {
+      "position": 5.71,
+      "side": "Right"
+    },
+    {
+      "position": 6.0,
+      "side": "Left"
+    }
+  ]
+}

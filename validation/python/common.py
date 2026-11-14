@@ -54,6 +54,7 @@ def stiffness_at(case, a, b):
 
 def events(case):
     return sorted(set([0.0, case['length']] + [g[0] for g in segments(case)[1:]] + [s['position'] for s in case['supports']] +
+                      [r['position'] for r in case.get('momentReleases', [])] +
                       [p['position'] for p in case['pointForces'] + case['pointMoments']] +
                       [x for q in case['udls'] + case.get('lineLoads', []) for x in [q['start'], q['end']]]))
 
@@ -69,7 +70,8 @@ def result(case, solver, supported, options, mapping, source):
                                 python=platform.python_version(),
                                 generatedAt=datetime.now(timezone.utc).isoformat(),
                                 theory=('Euler-Bernoulli; piecewise constant E, A, I per segment; linear; small displacements'
-                                        if 'segments' in case else 'Euler-Bernoulli; constant E, A, I; linear; small displacements'),
+                                        if 'segments' in case else 'Euler-Bernoulli; constant E, A, I; linear; small displacements')
+                                       + ('; internal moment releases' if case.get('momentReleases') else ''),
                                 signMapping=mapping, options=options, adapterVersion=ADAPTER_VERSION,
                                 requirementsSha256=hashlib.sha256((ROOT/'validation/python/requirements.txt').read_bytes()).hexdigest(),
                                 adapterSourcesSha256=adapter_hash.hexdigest(),

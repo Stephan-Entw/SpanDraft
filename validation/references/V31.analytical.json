@@ -1,0 +1,391 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V31",
+  "inputSha256": "1c38ad027e5eb660884f4689612ecf732e5397aa97eb8cf2dd59130e0b954c46",
+  "solver": "analytical",
+  "status": "PASS",
+  "provenance": {
+    "package": "analytical",
+    "version": "1",
+    "python": "3.9.6",
+    "generatedAt": "2026-11-14T18:31:58.414905+00:00",
+    "theory": "Euler-Bernoulli; constant E, A, I; linear; small displacements; internal moment releases",
+    "signMapping": "SI and SpanDraft conventions directly; no SpanDraft solver input",
+    "options": {
+      "method": "Exact rational statics and compatibility, integrated linear intensity"
+    },
+    "adapterVersion": "1",
+    "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
+    "adapterSourcesSha256": "6d59101bebd8296e40be41247fe544da02c7f7f95165e9e8b2a6a33cf3d6ce51",
+    "source": "validation/python/analytical.py; derivation in docs/VALIDATION.md"
+  },
+  "availability": {
+    "Rx": "supported",
+    "Ry": "supported",
+    "Rm": "supported",
+    "u": "supported",
+    "w": "supported",
+    "theta": "supported",
+    "N": "supported",
+    "V": "supported",
+    "M": "supported"
+  },
+  "reactions": [
+    {
+      "position": 0.0,
+      "values": {
+        "Ry": 3000.0,
+        "Rx": 0.0
+      }
+    },
+    {
+      "position": 3.0,
+      "values": {
+        "Ry": 5395.833333333333
+      }
+    },
+    {
+      "position": 6.0,
+      "values": {
+        "Ry": 1354.1666666666667
+      }
+    }
+  ],
+  "samples": [
+    {
+      "position": 0.0,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.0,
+        "theta": -0.0020089285714285712,
+        "M": 0.0,
+        "V": 3000.0
+      }
+    },
+    {
+      "position": 0.555,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0010640762276785715,
+        "theta": -0.0017339062499999998,
+        "M": 1665.0000000000002,
+        "V": 3000.0
+      }
+    },
+    {
+      "position": 1.065,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.001780000111607143,
+        "theta": -0.0009962276785714286,
+        "M": 3195.0,
+        "V": 3000.0
+      }
+    },
+    {
+      "position": 1.5,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0020089285714285717,
+        "theta": 0.0,
+        "M": 4500.0,
+        "V": 3000.0
+      }
+    },
+    {
+      "position": 1.5,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0020089285714285712,
+        "theta": 0.0,
+        "M": 4500.0,
+        "V": -3000.0
+      }
+    },
+    {
+      "position": 2.055,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0016472742187499997,
+        "theta": 0.0012115848214285716,
+        "M": 2834.9999999999995,
+        "V": -3000.0
+      }
+    },
+    {
+      "position": 2.565,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0008493860491071425,
+        "theta": 0.0018399776785714282,
+        "M": 1305.0,
+        "V": -3000.0
+      }
+    },
+    {
+      "position": 3.0,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 4.336808689942018e-19,
+        "theta": 0.0020089285714285712,
+        "M": 0.0,
+        "V": -3000.0
+      }
+    },
+    {
+      "position": 3.0,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.0,
+        "theta": -0.0014067150297619048,
+        "M": 0.0,
+        "V": 2395.8333333333335
+      }
+    },
+    {
+      "position": 3.185,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.00025873736798321767,
+        "theta": -0.001382311042906746,
+        "M": 443.2291666666668,
+        "V": 2395.8333333333335
+      }
+    },
+    {
+      "position": 3.355,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0004887502157221395,
+        "theta": -0.0013168534536210318,
+        "M": 850.5208333333334,
+        "V": 2395.8333333333335
+      }
+    },
+    {
+      "position": 3.5,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0006736472800925925,
+        "theta": -0.001228453621031746,
+        "M": 1197.9166666666667,
+        "V": 2395.8333333333335
+      }
+    },
+    {
+      "position": 3.5,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0006736472800925925,
+        "theta": -0.001228453621031746,
+        "M": 1197.9166666666667,
+        "V": 2395.8333333333335
+      }
+    },
+    {
+      "position": 4.055,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0012085182004097426,
+        "theta": -0.0006385169766865081,
+        "M": 2296.5854166666663,
+        "V": 1563.333333333334
+      }
+    },
+    {
+      "position": 4.565,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0013383251693457547,
+        "theta": 0.0001599397569444455,
+        "M": 2898.810416666667,
+        "V": 798.3333333333328
+      }
+    },
+    {
+      "position": 5.0,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0011003120866402115,
+        "theta": 0.0009432353670634922,
+        "M": 3104.166666666667,
+        "V": 145.83333333333348
+      }
+    },
+    {
+      "position": 5.0,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0011003120866402117,
+        "theta": 0.0009432353670634921,
+        "M": 604.1666666666666,
+        "V": 145.83333333333334
+      }
+    },
+    {
+      "position": 5.37,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0007266632109374999,
+        "theta": 0.001074700074404762,
+        "M": 555.4499999999999,
+        "V": -409.16666666666674
+      }
+    },
+    {
+      "position": 5.71,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.0003442476347139551,
+        "theta": 0.0011671864831349207,
+        "M": 329.6333333333333,
+        "V": -919.1666666666666
+      }
+    },
+    {
+      "position": 6.0,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.0,
+        "theta": 0.001197451636904762,
+        "M": 0.0,
+        "V": -1354.1666666666667
+      }
+    }
+  ],
+  "extrema": {
+    "wMin": {
+      "value": -0.0020089285714285717,
+      "locations": [
+        {
+          "position": 1.5,
+          "side": "Left"
+        },
+        {
+          "position": 1.5,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    },
+    "wMax": {
+      "value": 4.336808689942018e-19,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        },
+        {
+          "position": 3.0,
+          "side": "Left"
+        },
+        {
+          "position": 3.0,
+          "side": "Right"
+        },
+        {
+          "position": 6.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "VMin": {
+      "value": -3000.0,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 1.5,
+          "end": 3.0
+        }
+      ]
+    },
+    "VMax": {
+      "value": 3000.0,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 0.0,
+          "end": 1.5
+        }
+      ]
+    },
+    "MMin": {
+      "value": 0.0,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        },
+        {
+          "position": 3.0,
+          "side": "Left"
+        },
+        {
+          "position": 3.0,
+          "side": "Right"
+        },
+        {
+          "position": 6.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMax": {
+      "value": 4500.0,
+      "locations": [
+        {
+          "position": 1.5,
+          "side": "Left"
+        },
+        {
+          "position": 1.5,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    }
+  }
+}

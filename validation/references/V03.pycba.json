@@ -9,7 +9,7 @@
     "package": "pycba",
     "version": "1.0.2",
     "python": "3.9.6",
-    "generatedAt": "2026-11-14T16:35:44.421345+00:00",
+    "generatedAt": "2026-11-14T18:31:50.314179+00:00",
     "theory": "Euler-Bernoulli; constant E, A, I; linear; small displacements",
     "signMapping": "Input forces/UDLs negated; input CCW moments unchanged; Ry/Rm,w/theta,V,M identity",
     "options": {
@@ -22,7 +22,7 @@
     },
     "adapterVersion": "1",
     "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
-    "adapterSourcesSha256": "07bd11f00391147575799b2965e4f1f62f5827dc1c0ee988bd555bb257b22843",
+    "adapterSourcesSha256": "6d59101bebd8296e40be41247fe544da02c7f7f95165e9e8b2a6a33cf3d6ce51",
     "source": "https://pypi.org/project/PyCBA/1.0.2/"
   },
   "availability": {

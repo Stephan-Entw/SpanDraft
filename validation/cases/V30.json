@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V30",
+  "description": "Gerber beam: pinned end, roller, a hinge in the second span and an end roller under a point force and a uniform load",
+  "length": 8,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 4,
+      "type": "Roller"
+    },
+    {
+      "position": 8,
+      "type": "Roller"
+    }
+  ],
+  "momentReleases": [
+    {
+      "position": 6
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 7,
+      "value": -10000.0
+    }
+  ],
+  "pointMoments": [],
+  "udls": [
+    {
+      "start": 0,
+      "end": 3,
+      "value": -2000.0
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0.0,
+      "side": "Right"
+    },
+    {
+      "position": 1.11,
+      "side": "Right"
+    },
+    {
+      "position": 2.13,
+      "side": "Right"
+    },
+    {
+      "position": 3.0,
+      "side": "Left"
+    },
+    {
+      "position": 3.0,
+      "side": "Right"
+    },
+    {
+      "position": 3.37,
+      "side": "Right"
+    },
+    {
+      "position": 3.71,
+      "side": "Right"
+    },
+    {
+      "position": 4.0,
+      "side": "Left"
+    },
+    {
+      "position": 4.0,
+      "side": "Right"
+    },
+    {
+      "position": 4.74,
+      "side": "Right"
+    },
+    {
+      "position": 5.42,
+      "side": "Right"
+    },
+    {
+      "position": 6.0,
+      "side": "Left"
+    },
+    {
+      "position": 6.0,
+      "side": "Right"
+    },
+    {
+      "position": 6.37,
+      "side": "Right"
+    },
+    {
+      "position": 6.71,
+      "side": "Right"
+    },
+    {
+      "position": 7.0,
+      "side": "Left"
+    },
+    {
+      "position": 7.0,
+      "side": "Right"
+    },
+    {
+      "position": 7.37,
+      "side": "Right"
+    },
+    {
+      "position": 7.71,
+      "side": "Right"
+    },
+    {
+      "position": 8.0,
+      "side": "Left"
+    }
+  ]
+}

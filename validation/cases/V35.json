@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 2,
+  "caseVersion": 1,
+  "caseId": "V35",
+  "description": "Hinge on a section change with a ten-fold stiffness ratio under a point force on the hinge and distributed loads",
+  "length": 6,
+  "segments": [
+    {
+      "start": 0,
+      "end": 3,
+      "e": 210000000000.0,
+      "a": 0.006,
+      "i": 2e-05
+    },
+    {
+      "start": 3,
+      "end": 6,
+      "e": 210000000000.0,
+      "a": 0.002,
+      "i": 2e-06
+    }
+  ],
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 2,
+      "type": "Roller"
+    },
+    {
+      "position": 6,
+      "type": "Roller"
+    }
+  ],
+  "momentReleases": [
+    {
+      "position": 3
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 3,
+      "value": -7000.0
+    }
+  ],
+  "pointMoments": [],
+  "udls": [
+    {
+      "start": 0,
+      "end": 3,
+      "value": -1000.0
+    }
+  ],
+  "lineLoads": [
+    {
+      "start": 3,
+      "end": 6,
+      "startValue": -600.0,
+      "endValue": -1500.0
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0.0,
+      "side": "Right"
+    },
+    {
+      "position": 0.74,
+      "side": "Right"
+    },
+    {
+      "position": 1.42,
+      "side": "Right"
+    },
+    {
+      "position": 2.0,
+      "side": "Left"
+    },
+    {
+      "position": 2.0,
+      "side": "Right"
+    },
+    {
+      "position": 2.37,
+      "side": "Right"
+    },
+    {
+      "position": 2.71,
+      "side": "Right"
+    },
+    {
+      "position": 3.0,
+      "side": "Left"
+    },
+    {
+      "position": 3.0,
+      "side": "Right"
+    },
+    {
+      "position": 4.11,
+      "side": "Right"
+    },
+    {
+      "position": 5.13,
+      "side": "Right"
+    },
+    {
+      "position": 6.0,
+      "side": "Left"
+    }
+  ]
+}

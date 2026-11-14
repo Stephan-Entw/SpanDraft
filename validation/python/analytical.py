@@ -52,7 +52,8 @@ def generate(case):
         C1 = -primitive.subs(x,L)/L
         w = (primitive+C1*x)/EI
         reactions = [(0,Ra,None),(float(L),Ra,None)]
-    elif kind in ['V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24', 'V25', 'V26', 'V27', 'V28', 'V29']:
+    elif kind in ['V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24', 'V25', 'V26', 'V27', 'V28', 'V29',
+                  'V30', 'V31', 'V32', 'V33', 'V34', 'V35', 'V36', 'V37']:
         return generate_linear(case, x, L, EI)
     else:
         raise ValueError('No analytical provider for '+case['caseId'])
@@ -90,6 +91,9 @@ def generate_linear(case, x, L, EI):
     A case with segments has a piecewise constant EI: the curvature M / EI is integrated with the EI of the segment
     that contains each interval. Segment boundaries are event positions without any jump, so the state is simply
     carried through them with the new stiffness.
+
+    An internal moment release adds the unknown rotation jump at its position and the condition that the moment
+    left of it is zero; w, V and N pass it unchanged, the moment right of it stays zero because no couple acts there.
     """
     R = sp.Rational
     bounds = [R(str(b)) for b in events(case)]
@@ -102,6 +106,7 @@ def generate_linear(case, x, L, EI):
                  if kind != 'Spring' or springs[i][0] is not None or springs[i][2]}
     couples = {i: sp.Symbol(f'Rm{i}') for i, (_, kind) in enumerate(supports)
                if kind == 'Fixed' or kind == 'Spring' and springs[i][1] is not None}
+    releases = {R(str(r['position'])): sp.Symbol(f'dtheta{i}') for i, r in enumerate(case.get('momentReleases', []))}
     w0, theta0 = sp.symbols('w0 theta0')
     lines = [(R(str(q['start'])), R(str(q['end'])), R(str(q['startValue'])), R(str(q['endValue'])))
              for q in case.get('lineLoads', [])]
@@ -113,7 +118,12 @@ def generate_linear(case, x, L, EI):
     def integrate(expression):
         return sp.integrate(expression.subs(s, u), (u, 0, s))
 
+    equations = []
+
     def jump(position, w, theta, m, v):
+        if position in releases:
+            equations.append(m)
+            theta += releases[position]
         v += sum((f for a, f in forces if a == position), sp.Integer(0))
         m -= sum((c for a, c in moments if a == position), sp.Integer(0))
         for i, (a, kind) in enumerate(supports):
@@ -123,8 +133,6 @@ def generate_linear(case, x, L, EI):
                 if i in couples:
                     m -= couples[i]
         return w, theta, m, v
-
-    equations = []
 
     def support_conditions(position, w, theta):
         for i, (a, kind) in enumerate(supports):
@@ -162,7 +170,7 @@ def generate_linear(case, x, L, EI):
         support_conditions(b, end[0], end[1])
         state = jump(b, *end)
     equations += [state[2], state[3]]
-    unknowns = [w0, theta0] + list(reactions.values()) + list(couples.values())
+    unknowns = [w0, theta0] + list(reactions.values()) + list(couples.values()) + list(releases.values())
     solution = sp.solve(equations, unknowns, dict=True)
     if len(solution) != 1 or set(solution[0]) != set(unknowns):
         raise RuntimeError('The statics of ' + case['caseId'] + ' are not uniquely solvable')

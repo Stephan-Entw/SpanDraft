@@ -82,7 +82,21 @@ public static class Physics
             report.Number("V jump", after.ShearForce.Newtons-before.ShearForce.Newtons, force, Strict("V"), x, "Right-Left");
             report.Number("M jump", after.BendingMoment.NewtonMeters-before.BendingMoment.NewtonMeters, -couple, Strict("M"), x, "Right-Left");
             report.Number("w continuity", after.TransverseDisplacement.Meters, before.TransverseDisplacement.Meters, Strict("w"), x);
-            report.Number("theta continuity", after.RotationRadians, before.RotationRadians, Strict("theta"), x);
+            if (input.MomentReleases.Any(r => r.Position == x))
+            {
+                // A moment release carries no moment on either side and lets the rotation jump; the node reports
+                // the right-hand rotation and, only here, the left-hand one.
+                report.Number("release M left", before.BendingMoment.NewtonMeters, 0, Strict("M"), x, "Left");
+                report.Number("release M right", after.BendingMoment.NewtonMeters, 0, Strict("M"), x, "Right");
+                report.Number("release theta right", node.RotationRadians, after.RotationRadians, Strict("theta"), x, "Right");
+                report.Require(node.RotationLeftRadians.HasValue, "A moment release node lacks its left rotation");
+                report.Number("release theta left", node.RotationLeftRadians ?? double.NaN, before.RotationRadians, Strict("theta"), x, "Left");
+            }
+            else
+            {
+                report.Number("theta continuity", after.RotationRadians, before.RotationRadians, Strict("theta"), x);
+                report.Require(node.RotationLeftRadians is null, "Only a moment release node has a left rotation");
+            }
         }
         // A spring reaction is the spring law -k w (-k_theta theta) evaluated on the solved deformation. The check applies
         // while k L³/EI and k_theta L/EI stay below 10⁸: the 10⁻⁸ relative output contract bounds w only against the field
@@ -163,7 +177,7 @@ public static class Physics
     }
 
     public static readonly string[] SuperpositionIds = ["V04", "V08", "V09", "V11", "V13", "V15", "V16", "V17", "V18", "V19",
-        "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27", "V28"];
+        "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27", "V28", "V30", "V31", "V32", "V33", "V34", "V35", "V36", "V37"];
     public static readonly string[] RigidLimitIds = ["V24"];
     public static CheckReport Superposition(ValidationCase input)
     {

@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V36",
+  "description": "Hinge four millimetres beside a middle roller under point forces close to the hinge and an uplift on the first span",
+  "length": 4,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 2,
+      "type": "Roller"
+    },
+    {
+      "position": 4,
+      "type": "Roller"
+    }
+  ],
+  "momentReleases": [
+    {
+      "position": 2.004
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 2.01,
+      "value": -2000.0
+    },
+    {
+      "position": 3,
+      "value": -9000.0
+    }
+  ],
+  "pointMoments": [],
+  "udls": [
+    {
+      "start": 0,
+      "end": 2,
+      "value": 1500.0
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0.0,
+      "side": "Right"
+    },
+    {
+      "position": 0.74,
+      "side": "Right"
+    },
+    {
+      "position": 1.42,
+      "side": "Right"
+    },
+    {
+      "position": 2.0,
+      "side": "Left"
+    },
+    {
+      "position": 2.0,
+      "side": "Right"
+    },
+    {
+      "position": 2.00148,
+      "side": "Right"
+    },
+    {
+      "position": 2.00284,
+      "side": "Right"
+    },
+    {
+      "position": 2.004,
+      "side": "Left"
+    },
+    {
+      "position": 2.004,
+      "side": "Right"
+    },
+    {
+      "position": 2.00622,
+      "side": "Right"
+    },
+    {
+      "position": 2.00826,
+      "side": "Right"
+    },
+    {
+      "position": 2.01,
+      "side": "Left"
+    },
+    {
+      "position": 2.01,
+      "side": "Right"
+    },
+    {
+      "position": 2.376,
+      "side": "Right"
+    },
+    {
+      "position": 2.713,
+      "side": "Right"
+    },
+    {
+      "position": 3.0,
+      "side": "Left"
+    },
+    {
+      "position": 3.0,
+      "side": "Right"
+    },
+    {
+      "position": 3.37,
+      "side": "Right"
+    },
+    {
+      "position": 3.71,
+      "side": "Right"
+    },
+    {
+      "position": 4.0,
+      "side": "Left"
+    }
+  ]
+}

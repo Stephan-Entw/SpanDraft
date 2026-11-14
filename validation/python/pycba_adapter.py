@@ -8,6 +8,12 @@ from common import events, piece_index, result, extrema_from_candidates, stiffne
 FIELDS = {'w':'D','theta':'R','V':'V','M':'M'}
 
 
+def released_members(case,boundaries):
+    """Per member: whether a moment release lies at its right end."""
+    positions={r['position'] for r in case.get('momentReleases',[])}
+    return [b in positions for b in boundaries[1:]]
+
+
 def build(case):
     boundaries=events(case)
     lengths=np.diff(boundaries)
@@ -24,8 +30,10 @@ def build(case):
         restraints.extend([-1 if supports else 0, -1 if 'Fixed' in supports else 0])
     # One member per interval between events, so a segment boundary (an event) never lies inside a member.
     stiffness=np.array([np.prod(stiffness_at(case,a,b)) for a,b in zip(boundaries,boundaries[1:])])
+    # An internal moment release is a pinned right end of the member to its left (type 2, fixed-pinned): at a hinge only
+    # one of the two members meeting at the node carries the release, the node's rotation then belongs to the other.
     model=BeamAnalysis(lengths, stiffness,restraints,[],
-                       eletype=np.ones(len(lengths),dtype=int),GAv=None,kf=None)
+                       eletype=np.array([2 if r else 1 for r in released_members(case,boundaries)],dtype=int),GAv=None,kf=None)
     # Native end loads at interior nodes go on the preceding member exactly once.
     for kind in ['pointForces','pointMoments']:
         for p in case[kind]:
@@ -54,6 +62,7 @@ def extract(case,model,boundaries,restraints,npts):
     native=model.beam_results
     if len(native.vRes)!=len(boundaries)-1 or len(native.D)!=2*len(boundaries):
         raise RuntimeError('Unexpected native result layout')
+    released=released_members(case,boundaries)
     pieces=[]
     endpoint_ratio=0.0
     endpoint_drift={'w':0.0,'theta':0.0}
@@ -65,10 +74,16 @@ def extract(case,model,boundaries,restraints,npts):
         fields={q:CubicSpline(t,np.asarray(getattr(res,name))[1:-1]) for q,name in FIELDS.items()}
         nodal={'w':(float(native.D[2*index]),float(native.D[2*index+2])),
                'theta':(float(native.D[2*index+1]),float(native.D[2*index+3]))}
+        if released[index]:
+            # The node's rotation DOF belongs to the member on its right; the released end's own rotation is the
+            # member field's value (PyCBA recovers it from the member's kinematics), so it is not a nodal value.
+            nodal['theta']=(nodal['theta'][0],float(fields['theta'](1)))
         for q in ['w','theta']:
             kind='displacement' if q=='w' else 'rotation'
             absolute,relative=TOLERANCES[kind]
             for end in [0,1]:
+                if q=='theta' and end==1 and released[index]:
+                    continue
                 drift=abs(float(fields[q](end))-nodal[q][end])
                 endpoint_drift[q]=max(endpoint_drift[q],drift)
                 endpoint_ratio=max(endpoint_ratio,drift/(absolute+relative*abs(nodal[q][end])))

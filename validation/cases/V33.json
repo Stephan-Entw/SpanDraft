@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V33",
+  "description": "Two fixed ends with two hinges, a drop-in span, under a uniform load and a point force",
+  "length": 6,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Fixed"
+    },
+    {
+      "position": 6,
+      "type": "Fixed"
+    }
+  ],
+  "momentReleases": [
+    {
+      "position": 1.5
+    },
+    {
+      "position": 4.5
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 3,
+      "value": -5000.0
+    }
+  ],
+  "pointMoments": [],
+  "udls": [
+    {
+      "start": 0,
+      "end": 6,
+      "value": -1000.0
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0.0,
+      "side": "Right"
+    },
+    {
+      "position": 0.555,
+      "side": "Right"
+    },
+    {
+      "position": 1.065,
+      "side": "Right"
+    },
+    {
+      "position": 1.5,
+      "side": "Left"
+    },
+    {
+      "position": 1.5,
+      "side": "Right"
+    },
+    {
+      "position": 2.055,
+      "side": "Right"
+    },
+    {
+      "position": 2.565,
+      "side": "Right"
+    },
+    {
+      "position": 3.0,
+      "side": "Left"
+    },
+    {
+      "position": 3.0,
+      "side": "Right"
+    },
+    {
+      "position": 3.555,
+      "side": "Right"
+    },
+    {
+      "position": 4.065,
+      "side": "Right"
+    },
+    {
+      "position": 4.5,
+      "side": "Left"
+    },
+    {
+      "position": 4.5,
+      "side": "Right"
+    },
+    {
+      "position": 5.055,
+      "side": "Right"
+    },
+    {
+      "position": 5.565,
+      "side": "Right"
+    },
+    {
+      "position": 6.0,
+      "side": "Left"
+    }
+  ]
+}
