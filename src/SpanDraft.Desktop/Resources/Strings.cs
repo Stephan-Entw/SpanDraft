@@ -418,6 +418,10 @@ public static class Strings
     public static string SegmentSplitInvalid => Get(nameof(SegmentSplitInvalid));
     public static string SegmentStartInvalid => Get(nameof(SegmentStartInvalid));
     public static string SegmentSelected => Get(nameof(SegmentSelected));
+    public static string ReportGoverningSegment => Get(nameof(ReportGoverningSegment));
+    public static string ReportSegmentSection => Get(nameof(ReportSegmentSection));
+    public static string ReportSegmentMaterial => Get(nameof(ReportSegmentMaterial));
+    public static string ReportSegmentTheory => Get(nameof(ReportSegmentTheory));
     public static string SelfWeightMissingDensity => Get(nameof(SelfWeightMissingDensity));
     public static string SelfWeightNameConflict => Get(nameof(SelfWeightNameConflict));
     public static string ReservedEntityName => Get(nameof(ReservedEntityName));

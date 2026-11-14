@@ -43,11 +43,13 @@ internal sealed class ReportVisuals
     internal ReportVisuals(ProjectState state, AnalysisPresentationState presentation, ReportData data)
     {
         var inputs = new Inputs(state.Document, presentation, state.Presentation, data);
-        if (SectionDefinitionCompatibility.Normalize(state.Document.Section) is IParametricSectionDefinition parametric)
+        // The section drawing shows the governing segment, the only one for a beam of one segment.
+        var governing = state.Document.Segments[presentation.Result!.Engineering.GoverningSegmentIndex];
+        if (SectionDefinitionCompatibility.Normalize(governing.Section) is IParametricSectionDefinition parametric)
         {
             var type = SectionDefinitionViewModel.FormOf(parametric);
             section = new SectionPreviewControl { Geometry = SectionPreviewGeometryResolver.FromSection(type,
-                SectionDefinitionViewModel.PresetValues(parametric), parametric), SelectedAxis = state.Document.BendingAxis,
+                SectionDefinitionViewModel.PresetValues(parametric), parametric), SelectedAxis = governing.BendingAxis,
                 Presentation = presentation.Options, IsHitTestVisible = false, Compact = true };
             foreach (string key in new[] { "CanvasBackground", "AppBackground", "SurfacePressed", "TextSecondary", "TextPrimary", "Accent" })
                 section.Resources.Add(key, Brush(key));

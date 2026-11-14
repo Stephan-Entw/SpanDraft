@@ -404,6 +404,10 @@ Remove the entry from Recent projects?</value></data>
   <data name="SegmentSplitInvalid" xml:space="preserve"><value>The position must lie inside the beam and off the existing segment boundaries.</value></data>
   <data name="SegmentStartInvalid" xml:space="preserve"><value>The start must lie between the neighbouring boundaries.</value></data>
   <data name="SegmentSelected" xml:space="preserve"><value>Segment {0}</value></data>
+  <data name="ReportGoverningSegment" xml:space="preserve"><value>Governing segment</value></data>
+  <data name="ReportSegmentSection" xml:space="preserve"><value>Section, segment {0}</value></data>
+  <data name="ReportSegmentMaterial" xml:space="preserve"><value>Material, segment {0}</value></data>
+  <data name="ReportSegmentTheory" xml:space="preserve"><value>Calculation based on Euler-Bernoulli theory, assuming linear-elastic behavior and small deformations. Material and cross-section are constant within each segment and change abruptly at the segment boundaries; notch effects and local stresses at these changes are not assessed. Stress and safety factor refer to the governing segment with the smallest safety factor. Shear deformations are neglected.</value></data>
   <data name="SelfWeightMissingDensity" xml:space="preserve"><value>Self-weight cannot be included. No density is specified for the material.</value></data>
   <data name="SelfWeightNameConflict" xml:space="preserve"><value>Self-weight cannot be included. Rename the existing entity named g or G first.</value></data>
   <data name="ReservedEntityName" xml:space="preserve"><value>The name g is reserved for self-weight.</value></data>

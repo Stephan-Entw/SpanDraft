@@ -404,6 +404,10 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="SegmentSplitInvalid" xml:space="preserve"><value>Die Position muss im Balken und abseits der vorhandenen Abschnittsgrenzen liegen.</value></data>
   <data name="SegmentStartInvalid" xml:space="preserve"><value>Der Beginn muss zwischen den benachbarten Grenzen liegen.</value></data>
   <data name="SegmentSelected" xml:space="preserve"><value>Abschnitt {0}</value></data>
+  <data name="ReportGoverningSegment" xml:space="preserve"><value>Maßgebender Abschnitt</value></data>
+  <data name="ReportSegmentSection" xml:space="preserve"><value>Querschnitt, Abschnitt {0}</value></data>
+  <data name="ReportSegmentMaterial" xml:space="preserve"><value>Werkstoff, Abschnitt {0}</value></data>
+  <data name="ReportSegmentTheory" xml:space="preserve"><value>Berechnung nach Euler-Bernoulli, linear-elastisch und für kleine Verformungen. Werkstoff und Querschnitt sind innerhalb jedes Abschnitts konstant und ändern sich an den Abschnittsgrenzen sprunghaft; Kerbwirkung und örtliche Spannungen dort werden nicht bewertet. Spannung und Sicherheitsfaktor gelten für den maßgebenden Abschnitt mit dem kleinsten Sicherheitsfaktor. Schubverformungen werden vernachlässigt.</value></data>
   <data name="SelfWeightMissingDensity" xml:space="preserve"><value>Eigengewicht kann nicht berücksichtigt werden. Für den Werkstoff ist keine Dichte angegeben.</value></data>
   <data name="SelfWeightNameConflict" xml:space="preserve"><value>Eigengewicht kann nicht berücksichtigt werden. Benennen Sie zuerst die vorhandene Entity mit der Bezeichnung g oder G um.</value></data>
   <data name="ReservedEntityName" xml:space="preserve"><value>Die Bezeichnung g ist für Eigengewicht reserviert.</value></data>
