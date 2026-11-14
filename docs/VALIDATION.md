@@ -712,3 +712,19 @@ Alle Mutanten werden von mindestens einem Test erkannt:
 | E3 | shear candidates ignore the intensity change | killed (13 Tests) |
 | E4 | piece intensity change from a difference of end values with the wrong piece length | killed (4 Tests) |
 | I1 | input order ignores the end intensity | killed (1 Tests) |
+
+**Abnahme der Linearlasten.** Nach dem letzten Core-/Solver-Commit erzeugte ein frischer
+`compare` ohne `--actual` den Report
+[`acceptance-linear-loads.json`](../validation/results/acceptance-linear-loads.json)
+(2026-11-14T11:32:10Z, macOS ARM64, `entryPoint` `EulerBernoulliBeamSolver`): 22 Fälle,
+3540 externe und 1090 analytische Skalarvergleiche, 120 metamorphe Prüfungen,
+`validated = true`. Die separate Validierungs-Suite bestand vollständig.
+
+**SolverSourceSha256:**
+
+```text
+e65af778b7c5a42522a8bbaa86e6bbdb49d1a8d1d8202be000490f2ff39ea050
+```
+
+Dieser Hash ist die neue CI-Baseline in [ci.yml](../.github/workflows/ci.yml). Der Report
+der M4-Abnahme bleibt als historische Evidenz unverändert und gehört zum Stand davor.

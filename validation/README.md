@@ -49,6 +49,8 @@ The current M4 product acceptance is recorded separately in
 public entry point. [VALIDATION.md](../docs/VALIDATION.md#4-finale-m4-produktabnahme)
 records the actual local platform/build/test evidence. The historical
 [acceptance.json](results/acceptance.json) from 2026-10-03 remains unchanged.
+The acceptance after the linear distributed loads is recorded in
+[acceptance-linear-loads.json](results/acceptance-linear-loads.json) and carries the current CI baseline hash.
 Neither dated report is overwritten by routine runs or used as the CI baseline.
 CI pins its expected hash separately in `.github/workflows/ci.yml` and compares
 it with `Acceptance.SolverHash()` from a fresh acceptance run. At M4 closure the
