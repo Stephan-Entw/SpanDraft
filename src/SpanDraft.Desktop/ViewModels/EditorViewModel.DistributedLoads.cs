@@ -96,7 +96,8 @@ public sealed partial class EditorViewModel
 
     public bool BeginDistributedLoadDrag(Guid? id, DistributedLoadEndpoint endpoint)
     {
-        if (!Enum.IsDefined(endpoint) || Interaction != SupportInteraction.Neutral || LoadState != LoadInteraction.Neutral) return false;
+        if (!Enum.IsDefined(endpoint) || Interaction != SupportInteraction.Neutral || LoadState != LoadInteraction.Neutral
+            || MomentReleaseState != MomentReleaseInteraction.Neutral) return false;
         bool editing = IsDistributedLoadFlyoutVisible && DistributedLoadDraft?.OriginalId == id;
         if (!IsEditorNeutral && !editing) return false;
         _distributedDragFromNeutral = !editing;

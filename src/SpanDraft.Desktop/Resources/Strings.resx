@@ -417,4 +417,14 @@ Remove the entry from Recent projects?</value></data>
   <data name="ShowSelfWeight" xml:space="preserve"><value>Show</value></data>
   <data name="DisableSelfWeight" xml:space="preserve"><value>Disable self-weight</value></data>
   <data name="MaterialNote" xml:space="preserve"><value>Note</value></data>
+  <data name="MomentRelease" xml:space="preserve"><value>Hinge</value></data>
+  <data name="MomentReleases" xml:space="preserve"><value>Hinges</value></data>
+  <data name="MomentReleaseAlreadyExists" xml:space="preserve"><value>There is already a hinge at this position.</value></data>
+  <data name="MomentReleaseInsideBeam" xml:space="preserve"><value>The hinge must lie inside the beam, not at a beam end.</value></data>
+  <data name="MomentReleaseAtFixedSupport" xml:space="preserve"><value>A hinge is not possible at a fixed support.</value></data>
+  <data name="MomentReleaseAtRotationalSpring" xml:space="preserve"><value>A hinge is not possible at a rotational spring.</value></data>
+  <data name="MomentReleaseAtMoment" xml:space="preserve"><value>A hinge is not possible at a moment.</value></data>
+  <data name="SupportAtMomentRelease" xml:space="preserve"><value>A fixed support and a rotational spring are not possible at a hinge.</value></data>
+  <data name="MomentAtMomentRelease" xml:space="preserve"><value>A moment cannot act at a hinge.</value></data>
+  <data name="InsufficientSupportWithMomentReleases" xml:space="preserve"><value>Insufficient support or too many hinges</value></data>
 </root>

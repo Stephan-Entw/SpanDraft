@@ -15,12 +15,16 @@ public enum AnalysisPresentationKind
 public sealed record AnalysisPresentationState
 {
     public AnalysisPresentationState(AnalysisPresentationKind kind, BeamAnalysisResult? result,
-        ResultPresentationOptions? options = null)
+        ResultPresentationOptions? options = null, bool hasMomentReleases = false)
     {
         Kind = kind;
         Result = result;
         Options = options ?? ResultPresentationOptions.Default;
+        HasMomentReleases = hasMomentReleases;
     }
+
+    /// <summary>True when the analysed beam has moment releases; an unstable model may then have too many of them.</summary>
+    public bool HasMomentReleases { get; }
 
     public AnalysisPresentationKind Kind { get; }
     public BeamAnalysisResult? Result { get; }
@@ -29,12 +33,13 @@ public sealed record AnalysisPresentationState
     public AnalysisPresentationState WithPresentation(ResultPresentationOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        return Options == options ? this : new(Kind, Result, options);
+        return Options == options ? this : new(Kind, Result, options, HasMomentReleases);
     }
 
-    public static AnalysisPresentationState FromOutcome(BeamAnalysisOutcome outcome, ResultPresentationOptions? options = null)
+    public static AnalysisPresentationState FromOutcome(BeamAnalysisOutcome outcome, ResultPresentationOptions? options = null,
+        bool hasMomentReleases = false)
     {
-        if (outcome.Result is { } result) return new(AnalysisPresentationKind.Success, result, options);
+        if (outcome.Result is { } result) return new(AnalysisPresentationKind.Success, result, options, hasMomentReleases);
         var failure = outcome.Failure!;
         var kind = failure.Code switch
         {
@@ -46,7 +51,7 @@ public sealed record AnalysisPresentationState
             BeamAnalysisFailureCode.NumericalFailure => AnalysisPresentationKind.NumericalFailure,
             _ => throw new ArgumentOutOfRangeException(nameof(outcome))
         };
-        return new(kind, null, options);
+        return new(kind, null, options, hasMomentReleases);
     }
 
     public bool IsSuccess => Result is not null;
@@ -54,7 +59,8 @@ public sealed record AnalysisPresentationState
     {
         AnalysisPresentationKind.Success => Strings.CalculationComplete,
         AnalysisPresentationKind.MissingSupports => Strings.CalculationUnavailable + " · " + Strings.SupportsMissing,
-        AnalysisPresentationKind.UnstableModel => Strings.CalculationUnavailable + " · " + Strings.InsufficientSupport,
+        AnalysisPresentationKind.UnstableModel => Strings.CalculationUnavailable + " · " +
+            (HasMomentReleases ? Strings.InsufficientSupportWithMomentReleases : Strings.InsufficientSupport),
         AnalysisPresentationKind.IncompleteModel => Strings.CalculationUnavailable + " · " + Strings.IncompleteModel,
         _ => Strings.CalculationNotPossible
     };

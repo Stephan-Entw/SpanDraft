@@ -16,6 +16,9 @@ public static class SchematicMetrics
     public const double SupportHatchSize = 9;
     public const int HingedHatchCount = 4;
     public const double SupportJointRadius = 3;
+    /// <summary>Radius of the open ring that marks a moment release (hinge) on the beam axis.</summary>
+    public const double MomentReleaseRadius = 5;
+    public const double MomentReleaseHitPadding = 5;
     public const double PinnedTriangleHalfWidth = 14;
     public const double PinnedTriangleHeight = 20;
     public const double RollerTriangleScale = 0.8;

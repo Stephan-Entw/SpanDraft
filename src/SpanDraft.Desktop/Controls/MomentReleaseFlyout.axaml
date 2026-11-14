@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             x:Class="SpanDraft.Desktop.Controls.MomentReleaseFlyout"
+             x:DataType="vm:EditorViewModel" KeyDown="FlyoutKeyDown" KeyboardNavigation.TabNavigation="Cycle">
+  <Border Classes="supportFlyout" MinWidth="300">
+    <StackPanel Spacing="{StaticResource Space8}">
+      <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+          <TextBlock Text="{x:Static resources:Strings.EntityNameLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Grid.Column="1" x:Name="NameInput" Text="{Binding MomentReleaseDraft.NameText, Mode=TwoWay}"
+                   Classes.error="{Binding MomentReleaseDraft.HasNameError}"
+                   AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
+        </Grid>
+        <controls:TechnicalTextBlock Text="{Binding MomentReleaseDraft.NameError}" IsVisible="{Binding MomentReleaseDraft.HasNameError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
+      <StackPanel Spacing="{StaticResource Space4}">
+        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+          <TextBlock controls:TechnicalTextPresenter.Content="{Binding MomentReleaseDraft.PositionLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBox Classes="numeric" Grid.Column="1" x:Name="PositionInput" Text="{Binding MomentReleaseDraft.PositionText, Mode=TwoWay}"
+                   Classes.error="{Binding MomentReleaseDraft.HasError}"
+                   AutomationProperties.Name="{Binding MomentReleaseDraft.PositionLabel.PlainText}" />
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding MomentReleaseDraft.PositionUnit}" VerticalAlignment="Center" />
+        </Grid>
+        <controls:TechnicalTextBlock Text="{Binding MomentReleaseDraft.ErrorText}" IsVisible="{Binding MomentReleaseDraft.HasError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+        <controls:TechnicalTextBlock Text="{Binding MomentReleaseFeedback}" IsVisible="{Binding HasMomentReleaseFeedback}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
+      <StackPanel x:Name="Footer" Classes="editorFlyoutFooter">
+        <Button x:Name="DeleteAction" Content="{x:Static resources:Strings.Delete}" Classes="ghost dangerGhost"
+                IsVisible="{Binding MomentReleaseDraft.IsExisting}" Command="{Binding DeleteMomentReleaseCommand}" />
+        <Button x:Name="CancelAction" Content="{x:Static resources:Strings.Cancel}" Classes="secondary"
+                Command="{Binding CancelMomentReleaseCommand}" />
+        <Button x:Name="ConfirmAction" Classes="primary"
+                AutomationProperties.Name="{x:Static resources:Strings.OK}"
+                IsEnabled="{Binding MomentReleaseDraft.IsValid}" Command="{Binding ConfirmMomentReleaseCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <TextBlock Text="{x:Static resources:Strings.OK}" VerticalAlignment="Center" />
+            <controls:EngineeringIcon Data="{StaticResource Return}" Width="16" Height="16" StrokeThickness="2.25"
+                                      VerticalAlignment="Center" IsHitTestVisible="False" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

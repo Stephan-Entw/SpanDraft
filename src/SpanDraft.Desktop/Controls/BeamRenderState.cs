@@ -18,6 +18,9 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
 {
     public IReadOnlyList<DistributedLoadVisual> DistributedLoads { get; init; } = [];
 
+    /// <summary>The moment releases (hinges) as rings on the beam axis; empty for a beam without any.</summary>
+    public IReadOnlyList<MomentReleaseVisual> MomentReleases { get; init; } = [];
+
     /// <summary>The screen x of every segment boundary; empty for a beam of one segment.</summary>
     public IReadOnlyList<double> SegmentBoundaryXs { get; init; } = [];
     public double RequiredBelowBeamSpace { get; init; } = SchematicMetrics.BelowBeamSpace;
@@ -28,7 +31,8 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         EditorPresentationState? presentation = null, DistributedLoadPreview? distributedPreview = null,
         Guid? hiddenDistributedId = null, string? distributedName = null, UnitProfile? profile = null,
         bool reserveUnitWidths = false, double loadSymbolScale = 1, bool reserveLoadPreviewRow = true,
-        double minimumPaneHeight = SchematicMetrics.MinimumBeamPaneHeight, ResultPresentationOptions? options = null)
+        double minimumPaneHeight = SchematicMetrics.MinimumBeamPaneHeight, ResultPresentationOptions? options = null,
+        MomentReleasePreview? releasePreview = null, Guid? hiddenReleaseId = null, string? releaseName = null)
     {
         var supports = new List<SupportVisual>();
         foreach (var support in document.Supports)
@@ -42,6 +46,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         void AddSupport(Guid? id, SupportPreview preview, string name, bool draft) => supports.Add(
             new(id, preview, name.Trim(), frame.Layout.Transform.PhysicalToScreen(preview.Position.Meters), draft,
                 preview.Type == SupportType.Fixed && FixedSupportGeometry.AtPosition(preview.Position.Meters, document.Length.Meters).IsMirrored));
+        var releases = MomentReleaseSymbol.Layout(document.MomentReleases, frame, releasePreview, hiddenReleaseId, releaseName);
         var loads = PointLoadSymbol.Layout(document.Loads, frame, loadPreview, hiddenLoadId, loadName, loadSymbolScale);
         var distributed = DistributedLoadSymbol.Layout(document.DistributedLoads, frame, distributedPreview, hiddenDistributedId, distributedName, loadSymbolScale).ToList();
         if (presentation?.SelfWeightVisible != false)
@@ -78,8 +83,10 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)).Concat(distributed.Select((v, i) =>
             (v.Id, v.Name, Text: DistributedLoadSymbol.Label(v, results), X: v.CenterX,
                 v.IsPreview, v.Preview.IsInvalid, Order: loads.Count + i))), false);
+        // A hinge label shares the support rows below the beam.
         double below = Place(supports.Select((v, i) => (v.Id, v.Name, Text: v.Name,
-            v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)), true);
+            v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)).Concat(releases.Select((v, i) =>
+            (v.Id, v.Name, Text: v.Name, v.X, v.IsPreview, v.Preview.IsInvalid, Order: supports.Count + i))), true);
         // Establish every reference anchor before considering any offsets. A manual
         // label can never move its own anchor through the obstacle pass below.
         for (int i = 0; i < annotations.Count; i++)
@@ -106,7 +113,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         return new(frame, supports.AsReadOnly(), loads, PointLoadSymbol.Group(loads), annotations.AsReadOnly(),
             Math.Max(visibleHeight, minimumPaneHeight))
             {
-                DistributedLoads = distributed.AsReadOnly(), RequiredBelowBeamSpace = below,
+                DistributedLoads = distributed.AsReadOnly(), RequiredBelowBeamSpace = below, MomentReleases = releases,
                 SegmentBoundaryXs = document.SegmentBoundaries.Select(b => frame.Layout.Transform.PhysicalToScreen(b.Meters)).ToArray()
             };
 
@@ -173,8 +180,13 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
     {
         var labels = HitTestLabels(x, y);
         if (labels.Count > 0) return labels.Select(a => a.Id!.Value).Distinct().ToArray();
+        // The ring is tiny and usually sits on a support symbol: a hit on the ring itself is a hit on the hinge alone.
+        var rings = MomentReleases.Where(r => r.Id is not null
+            && MomentReleaseSymbol.Contains(r, Frame.Viewport.BeamY, x, y, padding: 0)).Select(r => r.Id!.Value).ToArray();
+        if (rings.Length > 0) return rings;
         return Supports.Where(s => s.Id is not null && SupportSymbol.Contains(s.Preview, Frame.Layout.Transform, Frame.Viewport.BeamY, x, y))
             .Select(s => s.Id!.Value)
+            .Concat(MomentReleases.Where(r => r.Id is not null && MomentReleaseSymbol.Contains(r, Frame.Viewport.BeamY, x, y)).Select(r => r.Id!.Value))
             .Concat(Loads.Where(l => l.Id is not null && PointLoadSymbol.Contains(l, x, y)).Select(l => l.Id!.Value))
             .Concat(DistributedLoads.Where(l => l.Id is not null && DistributedLoadSymbol.Contains(l, x, y)).Select(l => l.Id!.Value))
             .Distinct().ToArray();

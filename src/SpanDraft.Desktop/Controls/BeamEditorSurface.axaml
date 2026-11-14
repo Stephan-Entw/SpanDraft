@@ -11,7 +11,7 @@
   <Grid RowDefinitions="*,Auto" Background="{DynamicResource CanvasBackground}">
     <Grid x:Name="BeamPane" SizeChanged="SurfaceSizeChanged">
       <controls:BeamCanvas x:Name="TechnicalCanvas"
-                           HighlightedLoadId="{Binding HoveredLoadId}" HighlightedSupportId="{Binding HoveredSupportId}"
+                           HighlightedLoadId="{Binding HoveredLoadId}" HighlightedSupportId="{Binding HoveredSupportId}" HighlightedMomentReleaseId="{Binding HoveredMomentReleaseId}"
                            HighlightedDistributedLoadId="{Binding HoveredDistributedLoadId}"
                            ConflictEntityIds="{Binding ConflictEntityIds}" ConstraintConflict="{Binding ConstraintConflict}" />
       <Canvas>
@@ -28,6 +28,7 @@
         <Border x:Name="DistributedLoadAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="SelfWeightAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="SupportAnchor" Width="1" Height="1" IsHitTestVisible="False" />
+        <Border x:Name="MomentReleaseAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <Border x:Name="SelectionAnchor" Width="1" Height="1" IsHitTestVisible="False" />
         <controls:TechnicalTextBlock x:Name="CoordinateOverlay" Text="{Binding CoordinateText}" IsVisible="{Binding HasCoordinate}"
                    Classes="propertyLabel" Background="{DynamicResource CanvasBackground}" IsHitTestVisible="False" />
@@ -41,6 +42,10 @@
            IsLightDismissEnabled="False"
            ShouldUseOverlayLayer="True" Closed="SupportPopupClosed">
       <controls:SupportFlyout x:Name="SupportEditor" />
+    </Popup>
+    <Popup x:Name="MomentReleasePopup" PlacementTarget="{Binding #MomentReleaseAnchor}" Placement="Bottom"
+           IsLightDismissEnabled="False" ShouldUseOverlayLayer="True" Closed="MomentReleasePopupClosed">
+      <controls:MomentReleaseFlyout x:Name="MomentReleaseEditor" />
     </Popup>
     <Popup x:Name="LoadPopup" PlacementTarget="{Binding #LoadAnchor}" Placement="Bottom"
            IsLightDismissEnabled="False" ShouldUseOverlayLayer="True" Closed="LoadPopupClosed">

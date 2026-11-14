@@ -130,6 +130,40 @@ public sealed class DesktopResultDiagramProjectionTests
         Assert.Contains(plot.Sections, s => s[0] == jump.Right);
     }
 
+    [Fact]
+    public void AMomentReleaseShowsAKinkInTheDeflectionAndNoJumpInTheOtherDiagrams()
+    {
+        // The hinge at 1 m sits on the middle support of two spans, with a load on each.
+        var solution = Solve(SolverMomentReleaseTests.Released(2, [SupportAt(0, SupportType.Pinned), SupportAt(1, SupportType.Roller),
+            SupportAt(2, SupportType.Roller)], [Point(.5, -1000), Point(1.5, -400)], 1));
+        var deflection = Project(solution, ResultDiagramKind.TransverseDisplacement);
+        var left = deflection.Sections.Last(section => section[^1].Position == M(1));
+        var right = deflection.Sections.First(section => section[0].Position == M(1));
+        // w is continuous at the hinge; the slope is not: the neighbouring samples are on different lines.
+        Assert.Equal(left[^1].SiValue, right[0].SiValue);
+        double slopeLeft = (left[^1].SiValue - left[^2].SiValue) / (left[^1].Position.Meters - left[^2].Position.Meters);
+        double slopeRight = (right[1].SiValue - right[0].SiValue) / (right[1].Position.Meters - right[0].Position.Meters);
+        Assert.True(Math.Abs(slopeLeft - slopeRight) > 1e-6 * Math.Max(Math.Abs(slopeLeft), Math.Abs(slopeRight)));
+        Close(At(solution, 1).RotationLeftRadians!.Value, slopeLeft, 1e-6);
+        Close(At(solution, 1).RotationRadians, slopeRight, 1e-6);
+        Assert.DoesNotContain(deflection.Jumps, j => j.Left.Position == M(1));
+        // The moment passes through zero from both sides; only the support reaction makes a shear jump.
+        var moment = Project(solution, ResultDiagramKind.BendingMoment);
+        Assert.Equal(0, moment.Sections.First(section => section[0].Position == M(1))[0].SiValue);
+        Assert.Equal(0, moment.Sections.Last(section => section[^1].Position == M(1))[^1].SiValue);
+        Assert.DoesNotContain(moment.Jumps, j => j.Left.Position == M(1));
+        Assert.Single(Project(solution, ResultDiagramKind.ShearForce).Jumps, j => j.Left.Position == M(1));
+    }
+
+    [Fact]
+    public void AReleaseIsAStationOfTheDiagramLayoutWhenItIsPartOfTheDocumentRequirements()
+    {
+        var document = new SpanDraft.Desktop.State.EditorDocument(M(2), ProjectTemplates.Material,
+            ProjectTemplates.Section).WithMomentReleases([new(Guid.NewGuid(), M(.9), "G1")]);
+        var layout = StationLayout.Compute(2, 72, 872, SpanDraft.Desktop.State.StationRequirementBuilder.FromDocument(document));
+        Assert.Contains(layout.Stations, station => station.PhysicalX == .9);
+    }
+
     [Theory]
     [InlineData(ResultDiagramKind.ShearForce)]
     [InlineData(ResultDiagramKind.BendingMoment)]

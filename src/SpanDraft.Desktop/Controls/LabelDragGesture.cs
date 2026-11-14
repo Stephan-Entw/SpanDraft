@@ -36,6 +36,7 @@ public sealed class LabelDragGesture(EntityAnnotation label, Point press, Annota
 
     public bool OpenOnClick(EditorViewModel editor) => !IsDragging
         && (editor.Document.SelfWeight?.Id == EntityId ? editor.EditSelfWeight(EntityId)
+            : editor.Document.MomentReleases.Any(r => r.Id == EntityId) ? editor.EditMomentRelease(EntityId)
             : IsSupport ? editor.EditSupport(EntityId) : editor.Document.DistributedLoads.Any(l => l.Id == EntityId)
             ? editor.EditDistributedLoad(EntityId) : editor.EditLoad(EntityId));
 

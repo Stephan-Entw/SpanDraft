@@ -417,4 +417,14 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="ShowSelfWeight" xml:space="preserve"><value>Einblenden</value></data>
   <data name="DisableSelfWeight" xml:space="preserve"><value>Eigengewicht deaktivieren</value></data>
   <data name="MaterialNote" xml:space="preserve"><value>Hinweis</value></data>
+  <data name="MomentRelease" xml:space="preserve"><value>Gelenk</value></data>
+  <data name="MomentReleases" xml:space="preserve"><value>Gelenke</value></data>
+  <data name="MomentReleaseAlreadyExists" xml:space="preserve"><value>An dieser Stelle gibt es bereits ein Gelenk.</value></data>
+  <data name="MomentReleaseInsideBeam" xml:space="preserve"><value>Das Gelenk muss innerhalb des Balkens liegen, nicht an einem Balkenende.</value></data>
+  <data name="MomentReleaseAtFixedSupport" xml:space="preserve"><value>An einer Einspannung ist kein Gelenk möglich.</value></data>
+  <data name="MomentReleaseAtRotationalSpring" xml:space="preserve"><value>An einer Drehfeder ist kein Gelenk möglich.</value></data>
+  <data name="MomentReleaseAtMoment" xml:space="preserve"><value>An einem Moment ist kein Gelenk möglich.</value></data>
+  <data name="SupportAtMomentRelease" xml:space="preserve"><value>An einem Gelenk sind Einspannung und Drehfeder nicht möglich.</value></data>
+  <data name="MomentAtMomentRelease" xml:space="preserve"><value>An einem Gelenk kann kein Moment wirken.</value></data>
+  <data name="InsufficientSupportWithMomentReleases" xml:space="preserve"><value>Lagerung nicht ausreichend oder zu viele Gelenke</value></data>
 </root>

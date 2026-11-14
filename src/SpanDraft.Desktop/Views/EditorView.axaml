@@ -7,9 +7,9 @@
              x:Class="SpanDraft.Desktop.Views.EditorView"
              x:DataType="vm:EditorViewModel" KeyDown="EditorKeyDown">
   <UserControl.Styles>
-    <!-- Keep the complete toolbar readable at the minimum window width; the spring support tool has no caption. -->
+    <!-- Keep the complete toolbar readable at the minimum window width; the spring support and hinge tools have no caption. -->
     <Style Selector="Border#EditorToolbar :is(Button).toolbar">
-      <Setter Property="Padding" Value="2,4,4,4" />
+      <Setter Property="Padding" Value="2,4" />
       <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
     </Style>
     <Style Selector="controls|BeamEditorSurface#BeamSurface, StackPanel#ResultDiagrams">
@@ -78,6 +78,13 @@
                         ToolTip.Tip="{x:Static resources:Strings.SpringSupport}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.SpringSupport}" Stretch="Uniform" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton x:Name="MomentReleaseToolButton" Classes="toolbar" IsChecked="{Binding IsMomentReleaseTool, Mode=OneWay}"
+                        Command="{Binding MomentReleaseToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.MomentRelease}"
+                        ToolTip.Tip="{x:Static resources:Strings.MomentRelease}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.MomentRelease}" Stretch="Uniform" />
             </StackPanel>
           </ToggleButton>
           <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />

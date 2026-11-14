@@ -12,7 +12,7 @@ namespace SpanDraft.Tests;
 
 public abstract class DesktopIconTestSupport
 {
-    protected static readonly string[] Toolbar = ["PointLoad", "PointMoment", "DistributedLoad", "SelfWeight", "FixedSupport", "PinnedSupport", "RollerSupport", "SpringSupport", "Probe"];
+    protected static readonly string[] Toolbar = ["PointLoad", "PointMoment", "DistributedLoad", "SelfWeight", "FixedSupport", "PinnedSupport", "RollerSupport", "SpringSupport", "MomentRelease", "Probe"];
 
     protected static PathIcon Icon(string key, int size = 16)
     {

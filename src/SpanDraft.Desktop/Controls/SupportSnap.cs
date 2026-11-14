@@ -13,6 +13,11 @@ public static class SupportSnap
         double.IsFinite(screenY) && Math.Abs(screenY - beamY) <= BeamHitRadius
             ? AtX(transform, screenX) : null;
 
+    /// <summary>A moment release lies strictly inside the beam, so the ends do not attract it.</summary>
+    public static Length? ReleasePlacement(StationTransform transform, double beamY, double screenX, double screenY) =>
+        double.IsFinite(screenY) && Math.Abs(screenY - beamY) <= BeamHitRadius
+            ? AtX(transform, screenX, endpointRadius: 0) : null;
+
     public static Length? AtX(StationTransform transform, double screenX, double endpointRadius = EndpointRadius)
     {
         double left = transform.Stations[0].ScreenX, right = transform.Stations[^1].ScreenX;

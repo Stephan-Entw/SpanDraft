@@ -118,8 +118,9 @@ public sealed class PointLoadDraftViewModel : ObservableObject
             positionValid = position.Meters >= 0 && position.Meters <= document.Length.Meters;
         }
         else positionValid = InputQuantityFormatter.TryParsePosition(PositionText, _positionUnit, document.Length, out position);
-        _positionError = positionValid
-            ? null : Strings.PositionInsideBeam;
+        _positionError = !positionValid ? Strings.PositionInsideBeam
+            : Kind == PointLoadKind.Moment && MomentReleaseRules.MomentConflicts(document, position) ? Strings.MomentAtMomentRelease
+            : null;
         if (_positionError is null)
             _inputPosition = PositionText == _referencePositionText ? _referencePosition : position;
         double value = _referenceValue;

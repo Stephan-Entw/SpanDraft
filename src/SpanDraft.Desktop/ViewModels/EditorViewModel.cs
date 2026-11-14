@@ -41,7 +41,8 @@ public sealed partial class EditorViewModel : ObservableObject
     {
         Session = session;
         _analyze = analyze ?? BeamAnalysis.Analyze;
-        _presentation = AnalysisPresentationState.FromOutcome(_analyze(Document.ToBeamModel()), resultPresentation);
+        _presentation = AnalysisPresentationState.FromOutcome(_analyze(Document.ToBeamModel()), resultPresentation,
+            Document.MomentReleases.Count > 0);
         _overview = ProjectOverviewState.From(Document, _presentation);
         DimensionLength = new(() => Document.Length, ChangeLength, () => PreserveDrafts,
             () => ResultPresentation.Profile[QuantityKind.BeamLength], readPresentation: () => ResultPresentation);
@@ -70,6 +71,10 @@ public sealed partial class EditorViewModel : ObservableObject
         PinnedToolCommand = new(() => ToggleSupportTool(SupportType.Pinned));
         RollerToolCommand = new(() => ToggleSupportTool(SupportType.Roller));
         SpringToolCommand = new(() => ToggleSupportTool(SupportType.Spring));
+        MomentReleaseToolCommand = new(ToggleMomentReleaseTool);
+        ConfirmMomentReleaseCommand = new(() => ConfirmMomentRelease());
+        CancelMomentReleaseCommand = new(CancelMomentReleaseInteraction);
+        DeleteMomentReleaseCommand = new(DeleteMomentRelease);
         ResultProbeToolCommand = new(ToggleResultProbeTool, () => CanResultProbe);
         ConfirmSupportCommand = new(() => ConfirmSupport());
         CancelSupportCommand = new(CancelSupportInteraction);
@@ -94,7 +99,8 @@ public sealed partial class EditorViewModel : ObservableObject
         bool Changed(QuantityKind q) => profile[q].Id != ResultPresentation.Profile[q].Id;
         bool positionEditing = DimensionLength.IsEditing || SupportDraft is not null || LoadDraft is not null
             || DistributedLoadDraft is not null || Interaction == SupportInteraction.Drag
-            || LoadState == LoadInteraction.Drag || DistributedLoadState == DistributedLoadInteraction.Drag;
+            || LoadState == LoadInteraction.Drag || DistributedLoadState == DistributedLoadInteraction.Drag
+            || MomentReleaseState != MomentReleaseInteraction.Neutral;
         if (positionEditing && Changed(QuantityKind.BeamLength)) return false;
         var pointKind = LoadDraft?.Kind ?? _dragLoad?.Kind;
         if (pointKind is { } kind && Changed(kind == PointLoadKind.Force ? QuantityKind.TransverseForce : QuantityKind.Moment)) return false;
@@ -146,9 +152,12 @@ public sealed partial class EditorViewModel : ObservableObject
     public string? SupportFeedback => _supportFeedback;
     public bool HasSupportFeedback => !string.IsNullOrEmpty(SupportFeedback);
     public bool IsEditorNeutral => !IsResultProbeTool && Interaction == SupportInteraction.Neutral && LoadState == LoadInteraction.Neutral
-        && DistributedLoadState == DistributedLoadInteraction.Neutral && !IsSelfWeightFlyoutVisible;
-    public bool HasCoordinate => Preview is not null || LoadPreview is not null || DistributedPointerPosition is not null || DistributedLoadPreview is not null;
-    public string CoordinateText => (Preview?.Position ?? LoadPreview?.Position ?? DistributedPointerPosition ?? DistributedLoadPreview?.EndPosition) is { } position
+        && DistributedLoadState == DistributedLoadInteraction.Neutral && MomentReleaseState == MomentReleaseInteraction.Neutral
+        && !IsSelfWeightFlyoutVisible;
+    public bool HasCoordinate => Preview is not null || LoadPreview is not null || DistributedPointerPosition is not null || DistributedLoadPreview is not null
+        || MomentReleasePreview is not null;
+    public string CoordinateText => (Preview?.Position ?? LoadPreview?.Position ?? DistributedPointerPosition ?? DistributedLoadPreview?.EndPosition
+        ?? MomentReleasePreview?.Position) is { } position
         ? string.Format(CultureInfo.CurrentUICulture, Strings.SupportCoordinate,
             QuantityFormatter.FormatInputNumber(position.Meters, ResultPresentation.Profile[QuantityKind.BeamLength], ResultPresentation),
             ResultPresentation.Profile[QuantityKind.BeamLength].Symbol) : "";
@@ -167,16 +176,17 @@ public sealed partial class EditorViewModel : ObservableObject
     public void HoverPlacement(Length? position)
     {
         if (Interaction != SupportInteraction.Placement) return;
-        _preview = position is { } p ? new(p, PlacementTool!.Value, !CanPosition(p),
-            PlacementTool == SupportType.Spring ? PlacementSpring : null) : null;
-        _supportFeedback = _preview?.IsInvalid == true ? PositionError(position!.Value) : null;
+        var type = PlacementTool!.Value;
+        var spring = type == SupportType.Spring ? PlacementSpring : null;
+        _preview = position is { } p ? new(p, type, !CanSupportAt(p, type, spring), spring) : null;
+        _supportFeedback = _preview?.IsInvalid == true ? PositionError(position!.Value, null, type, spring) : null;
         NotifySupportState();
     }
 
     public bool PlaceSupport()
     {
         if (Interaction != SupportInteraction.Placement || Preview is not { IsInvalid: false } preview
-            || !CanPosition(preview.Position)) return false;
+            || !CanSupportAt(preview.Position, preview.Type, preview.Spring)) return false;
         OpenDraft(null, preview.Type, preview.Position);
         return true;
     }
@@ -204,7 +214,8 @@ public sealed partial class EditorViewModel : ObservableObject
     {
         bool editing = Interaction == SupportInteraction.EditDraft && _draft?.OriginalId == id;
         if ((Interaction != SupportInteraction.Neutral && !editing) || LoadState != LoadInteraction.Neutral
-            || DistributedLoadState != DistributedLoadInteraction.Neutral) return false;
+            || DistributedLoadState != DistributedLoadInteraction.Neutral
+            || MomentReleaseState != MomentReleaseInteraction.Neutral) return false;
         var support = Document.Supports.FirstOrDefault(s => s.Id == id);
         if (support is null) return false;
         if (editing) support = support with { Position = _draft!.CanvasPosition, Type = _draft.Preview.Type, Spring = _draft.Preview.Spring };
@@ -218,9 +229,9 @@ public sealed partial class EditorViewModel : ObservableObject
     public void UpdateSupportDrag(Length? position)
     {
         if (Interaction != SupportInteraction.Drag || _dragSupport is null) return;
-        _dragValid = position is { } p && CanPosition(p, _dragSupport.Id);
+        _dragValid = position is { } p && CanSupportAt(p, _dragSupport.Type, _dragSupport.Spring, _dragSupport.Id);
         _supportFeedback = _dragValid ? null : position is { } invalid
-            ? PositionError(invalid, _dragSupport.Id) : Strings.PositionInsideBeam;
+            ? PositionError(invalid, _dragSupport.Id, _dragSupport.Type, _dragSupport.Spring) : Strings.PositionInsideBeam;
         _preview = new(position ?? _preview?.Position ?? _dragSupport.Position, _dragSupport.Type, !_dragValid, _dragSupport.Spring);
         NotifySupportState();
     }
@@ -313,9 +324,15 @@ public sealed partial class EditorViewModel : ObservableObject
         positionMeters >= 0 && positionMeters <= Document.Length.Meters
         && !Document.Supports.Any(s => s.Id != exclude && s.Position.Meters == positionMeters);
 
-    private string PositionError(Length position, Guid? exclude = null) => position.Meters > Document.Length.Meters
-        ? Strings.PositionInsideBeam : Document.Supports.Any(s => s.Id != exclude && s.Position == position)
-            ? Strings.SupportAlreadyExists : Strings.PositionInsideBeam;
+    /// <summary>Position and type together: a fixed support or a rotational spring cannot stand at a moment release.</summary>
+    private bool CanSupportAt(Length position, SupportType type, SpringData? spring, Guid? exclude = null) =>
+        CanPosition(position, exclude) && !MomentReleaseRules.SupportConflicts(Document, position, type, spring);
+
+    private string PositionError(Length position, Guid? exclude = null, SupportType? type = null, SpringData? spring = null) =>
+        position.Meters > Document.Length.Meters ? Strings.PositionInsideBeam
+        : Document.Supports.Any(s => s.Id != exclude && s.Position == position) ? Strings.SupportAlreadyExists
+        : type is { } kind && MomentReleaseRules.SupportConflicts(Document, position, kind, spring) ? Strings.SupportAtMomentRelease
+        : Strings.PositionInsideBeam;
 
     /// <summary>The symbol shown while a spring support is placed; the stiffness is entered in the flyout.</summary>
     private static readonly SpringData PlacementSpring = new(TranslationalStiffness.FromNewtonsPerMeter(1), null);
@@ -399,7 +416,7 @@ public sealed partial class EditorViewModel : ObservableObject
         if (IsBusy || !segments.All(segment => CanApplyMaterial(segment.Material))
             || BeamLengthConstraints.Error(Document, length, segmentBoundaries) is not null) return false;
         var document = new EditorDocument(length, segmentBoundaries, segments, Document.Supports, Document.Loads,
-            Document.NamingState, Document.DistributedLoads, Document.SelfWeight);
+            Document.NamingState, Document.DistributedLoads, Document.SelfWeight, Document.MomentReleases);
         Session.Commit(Session.CurrentRevision.State with
         {
             Document = document, Presentation = EditorPresentation.RetainEntities(document), Info = info
@@ -454,7 +471,8 @@ public sealed partial class EditorViewModel : ObservableObject
         {
             CancelResultProbe();
             if (ConstraintConflict is { } conflict) UpdateConstraintConflict(conflict.RequestedLength);
-            _presentation = AnalysisPresentationState.FromOutcome(_analyze(next.Document.ToBeamModel()), ResultPresentation);
+            _presentation = AnalysisPresentationState.FromOutcome(_analyze(next.Document.ToBeamModel()), ResultPresentation,
+                next.Document.MomentReleases.Count > 0);
             DimensionLength.Refresh(preserveError: ConstraintConflict is not null);
         }
         if (documentChanged) _overview = ProjectOverviewState.From(next.Document, _presentation);

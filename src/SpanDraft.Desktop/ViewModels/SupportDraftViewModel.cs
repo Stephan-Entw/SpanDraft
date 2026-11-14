@@ -211,6 +211,8 @@ public sealed class SupportDraftViewModel : ObservableObject
             if (PositionText == _bufferReferenceText) position = _bufferReferencePosition;
             if (document.Supports.Any(s => s.Id != OriginalId && s.Position == position))
                 error = Strings.SupportAlreadyExists;
+            else if (MomentReleaseRules.SupportConflicts(document, position, Type, IsSpring && _hasRotational ? PreviewSpring() : null))
+                error = Strings.SupportAtMomentRelease;
             _inputPosition = position;
         }
         _errorText = error;

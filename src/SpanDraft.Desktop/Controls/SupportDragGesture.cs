@@ -4,7 +4,8 @@ using SpanDraft.Desktop.Layout;
 namespace SpanDraft.Desktop.Controls;
 
 /// <summary>One horizontal pointer gesture. Screen positions are transient only.</summary>
-public sealed class SupportDragGesture(Guid supportId, Length originalPosition, double pressX, StationTransform snapshot)
+public sealed class SupportDragGesture(Guid supportId, Length originalPosition, double pressX, StationTransform snapshot,
+    double endpointRadius = SupportSnap.EndpointRadius)
 {
     public const double Threshold = 4;
     public Guid SupportId { get; } = supportId;
@@ -17,6 +18,6 @@ public sealed class SupportDragGesture(Guid supportId, Length originalPosition, 
         if (!IsDragging || !double.IsFinite(x) || !double.IsFinite(y) || y < 0 || y > height) return null;
         // Keep the original grab offset; never jump the symbol to the pointer on press.
         double effectiveX = Snapshot.PhysicalToScreen(originalPosition.Meters) + x - pressX;
-        return SupportSnap.AtX(Snapshot, Math.Clamp(effectiveX, Snapshot.Stations[0].ScreenX, Snapshot.Stations[^1].ScreenX));
+        return SupportSnap.AtX(Snapshot, Math.Clamp(effectiveX, Snapshot.Stations[0].ScreenX, Snapshot.Stations[^1].ScreenX), endpointRadius);
     }
 }

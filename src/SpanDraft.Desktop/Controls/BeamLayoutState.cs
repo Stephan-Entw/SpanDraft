@@ -3,7 +3,7 @@ using SpanDraft.Desktop.State;
 
 namespace SpanDraft.Desktop.Controls;
 
-public enum BeamPointerInteraction { SupportPlacement, LoadPlacement, SupportDrag, LoadDrag, LabelDrag, DistributedLoadPlacement, DistributedLoadDrag }
+public enum BeamPointerInteraction { SupportPlacement, LoadPlacement, SupportDrag, LoadDrag, LabelDrag, DistributedLoadPlacement, DistributedLoadDrag, MomentReleasePlacement, MomentReleaseDrag }
 public sealed record BeamLayoutFrame(StationLayoutResult Layout, BeamViewport Viewport);
 
 /// <summary>Surface-owned transient layout cache, never a second committed document.</summary>

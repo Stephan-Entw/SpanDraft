@@ -45,6 +45,7 @@ public sealed partial class EditorViewModel
         CancelSupportInteraction();
         CancelLoadInteraction();
         CancelDistributedLoadInteraction();
+        CancelMomentReleaseInteraction();
         CancelSelfWeightInteraction();
     }
 
@@ -78,6 +79,7 @@ public sealed partial class EditorViewModel
                 NotifyLoadState();
             }
         }
+        CancelMomentReleaseDrag();
         if (DistributedLoadState == DistributedLoadInteraction.Drag)
         {
             if (_distributedDragFromNeutral) CancelDistributedLoadInteraction();
@@ -107,19 +109,27 @@ public sealed partial class EditorViewModel
 
     public bool CanLoadPosition(double meters) => double.IsFinite(meters) && meters >= 0 && meters <= Document.Length.Meters;
 
+    /// <summary>A point moment cannot act at a moment release; a force can.</summary>
+    private bool CanLoadPosition(double meters, PointLoadKind kind) => CanLoadPosition(meters)
+        && !(kind == PointLoadKind.Moment && MomentReleaseRules.MomentConflicts(Document, Length.FromMeters(meters)));
+
+    private string LoadPositionError(double meters, PointLoadKind kind) => CanLoadPosition(meters)
+        && !CanLoadPosition(meters, kind) ? Strings.MomentAtMomentRelease : Strings.PositionInsideBeam;
+
     public void HoverLoadPlacement(Length? position)
     {
         if (LoadState != LoadInteraction.Placement) return;
+        var kind = LoadTool!.Value;
         _loadPreview = position is { } p
-            ? new(p, LoadTool!.Value, LoadTool == PointLoadKind.Force ? -1000 : 100, !CanLoadPosition(p.Meters)) : null;
-        _loadFeedback = _loadPreview?.IsInvalid == true ? Strings.PositionInsideBeam : null;
+            ? new(p, kind, kind == PointLoadKind.Force ? -1000 : 100, !CanLoadPosition(p.Meters, kind)) : null;
+        _loadFeedback = _loadPreview?.IsInvalid == true ? LoadPositionError(position!.Value.Meters, kind) : null;
         NotifyLoadState();
     }
 
     public bool PlaceLoad()
     {
         if (LoadState != LoadInteraction.Placement || LoadPreview is not { IsInvalid: false } p
-            || !CanLoadPosition(p.Position.Meters)) return false;
+            || !CanLoadPosition(p.Position.Meters, p.Kind)) return false;
         OpenLoadDraft(null, p.Kind, p.Position, p.Value);
         return true;
     }
@@ -146,7 +156,8 @@ public sealed partial class EditorViewModel
     {
         bool editing = LoadState == LoadInteraction.EditDraft && LoadDraft?.OriginalId == id;
         if (Interaction != SupportInteraction.Neutral || (LoadState != LoadInteraction.Neutral && !editing)
-            || DistributedLoadState != DistributedLoadInteraction.Neutral) return false;
+            || DistributedLoadState != DistributedLoadInteraction.Neutral
+            || MomentReleaseState != MomentReleaseInteraction.Neutral) return false;
         var load = Document.Loads.FirstOrDefault(l => l.Id == id);
         if (load is null) return false;
         if (editing) load = EditorPointLoad.Create(id, LoadDraft!.CanvasPosition, load.Kind, LoadDraft.Preview.Value, load.Name);
@@ -160,8 +171,8 @@ public sealed partial class EditorViewModel
     public void UpdateLoadDrag(Length? position)
     {
         if (LoadState != LoadInteraction.Drag || _dragLoad is null) return;
-        _loadDragValid = position is { } p && CanLoadPosition(p.Meters);
-        _loadFeedback = _loadDragValid ? null : Strings.PositionInsideBeam;
+        _loadDragValid = position is { } p && CanLoadPosition(p.Meters, _dragLoad.Kind);
+        _loadFeedback = _loadDragValid ? null : position is { } invalid ? LoadPositionError(invalid.Meters, _dragLoad.Kind) : Strings.PositionInsideBeam;
         _loadPreview = new(position ?? _loadPreview?.Position ?? _dragLoad.Position,
             _dragLoad.Kind, _dragLoad.Value, !_loadDragValid || LoadDraft?.IsValid == false);
         NotifyLoadState();
@@ -205,7 +216,7 @@ public sealed partial class EditorViewModel
         if (IsBusy) return false;
         var draft = LoadDraft;
         if (!IsLoadFlyoutVisible || draft is null || !draft.TryGetValues(out var position, out double value)
-            || !CanLoadPosition(position.Meters)) return false;
+            || !CanLoadPosition(position.Meters, draft.Kind)) return false;
         var loads = Document.Loads.ToArray();
         var naming = Document.NamingState;
         if (draft.OriginalId is { } id)

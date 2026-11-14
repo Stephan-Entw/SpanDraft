@@ -14,6 +14,7 @@ public sealed class BeamCanvas : Control
     public static readonly StyledProperty<Guid?> HighlightedLoadIdProperty = AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HighlightedLoadId));
     public static readonly StyledProperty<Guid?> HighlightedDistributedLoadIdProperty = AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HighlightedDistributedLoadId));
     public static readonly StyledProperty<Guid?> HighlightedSupportIdProperty = AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HighlightedSupportId));
+    public static readonly StyledProperty<Guid?> HighlightedMomentReleaseIdProperty = AvaloniaProperty.Register<BeamCanvas, Guid?>(nameof(HighlightedMomentReleaseId));
     public static readonly StyledProperty<IReadOnlyList<Guid>?> ConflictEntityIdsProperty = AvaloniaProperty.Register<BeamCanvas, IReadOnlyList<Guid>?>(nameof(ConflictEntityIds));
     public static readonly StyledProperty<ConstraintConflictState?> ConstraintConflictProperty = AvaloniaProperty.Register<BeamCanvas, ConstraintConflictState?>(nameof(ConstraintConflict));
     public static readonly StyledProperty<double> LabelFontSizeProperty = AvaloniaProperty.Register<BeamCanvas, double>(nameof(LabelFontSize), 13);
@@ -29,6 +30,7 @@ public sealed class BeamCanvas : Control
     public Guid? HighlightedLoadId { get => GetValue(HighlightedLoadIdProperty); set => SetValue(HighlightedLoadIdProperty, value); }
     public Guid? HighlightedDistributedLoadId { get => GetValue(HighlightedDistributedLoadIdProperty); set => SetValue(HighlightedDistributedLoadIdProperty, value); }
     public Guid? HighlightedSupportId { get => GetValue(HighlightedSupportIdProperty); set => SetValue(HighlightedSupportIdProperty, value); }
+    public Guid? HighlightedMomentReleaseId { get => GetValue(HighlightedMomentReleaseIdProperty); set => SetValue(HighlightedMomentReleaseIdProperty, value); }
     public IReadOnlyList<Guid>? ConflictEntityIds { get => GetValue(ConflictEntityIdsProperty); set => SetValue(ConflictEntityIdsProperty, value); }
     public ConstraintConflictState? ConstraintConflict { get => GetValue(ConstraintConflictProperty); set => SetValue(ConstraintConflictProperty, value); }
     public double LabelFontSize { get => GetValue(LabelFontSizeProperty); set => SetValue(LabelFontSizeProperty, value); }
@@ -40,7 +42,7 @@ public sealed class BeamCanvas : Control
     public IBrush? AccentBrush { get => GetValue(AccentBrushProperty); set => SetValue(AccentBrushProperty, value); }
     public IBrush? ErrorBrush { get => GetValue(ErrorBrushProperty); set => SetValue(ErrorBrushProperty, value); }
     static BeamCanvas() => AffectsRender<BeamCanvas>(SceneProperty, BeamBrushProperty, SelfWeightBrushProperty, CanvasBackgroundBrushProperty, GhostBrushProperty,
-        AccentBrushProperty, ErrorBrushProperty, HighlightedLoadIdProperty, HighlightedSupportIdProperty,
+        AccentBrushProperty, ErrorBrushProperty, HighlightedLoadIdProperty, HighlightedSupportIdProperty, HighlightedMomentReleaseIdProperty,
         ConflictEntityIdsProperty, ConstraintConflictProperty, LabelFontSizeProperty, HighlightedDistributedLoadIdProperty, SupportSymbolScaleProperty);
 
     public override void Render(DrawingContext context)
@@ -58,6 +60,14 @@ public sealed class BeamCanvas : Control
             beamClip = new CombinedGeometry(GeometryCombineMode.Exclude,
                 beamClip ?? new RectangleGeometry(new Rect(0, 0, frame.Viewport.Width, frame.Viewport.Height)),
                 new EllipseGeometry(new Rect(support.X - radius, y - radius, 2 * radius, 2 * radius)));
+        }
+        // The same for the open ring of a moment release: the beam stays out of it.
+        foreach (var release in scene.MomentReleases.Where(_ => CanvasBackgroundBrush is not ISolidColorBrush { Color.A: 255, Opacity: 1 }))
+        {
+            double radius = SchematicMetrics.MomentReleaseRadius * SupportSymbolScale;
+            beamClip = new CombinedGeometry(GeometryCombineMode.Exclude,
+                beamClip ?? new RectangleGeometry(new Rect(0, 0, frame.Viewport.Width, frame.Viewport.Height)),
+                new EllipseGeometry(new Rect(release.X - radius, y - radius, 2 * radius, 2 * radius)));
         }
         using (beamClip is null ? default : context.PushGeometryClip(beamClip))
         {
@@ -81,6 +91,15 @@ public sealed class BeamCanvas : Control
                 * Matrix.CreateTranslation(support.X, y)))
                 DrawSupport(context, 0, 0, support.Preview.Type, support.Preview.Spring, support.IsMirrored,
                     Brush(support.Id, true, support.IsPreview, support.Preview.IsInvalid), CanvasBackgroundBrush);
+        foreach (var release in scene.MomentReleases)
+        {
+            double radius = SchematicMetrics.MomentReleaseRadius * SupportSymbolScale;
+            // The fill hides the beam behind the ring even for a preview; only the stroke is translucent.
+            context.DrawEllipse(CanvasBackgroundBrush, null, new Point(release.X, y), radius, radius);
+            using (context.PushOpacity(release.IsPreview ? 0.75 : 1))
+                context.DrawEllipse(null, new Pen(Brush(release.Id, true, release.IsPreview, release.Preview.IsInvalid),
+                    SchematicMetrics.SymbolStrokeWidth), new Point(release.X, y), radius, radius);
+        }
         foreach (var glyph in DistributedLoadSymbol.InnerGlyphs(scene.DistributedLoads,
             scene.Glyphs.Where(g => g.Kind == PointLoadKind.Force).Select(g => g.X)))
         {
@@ -114,6 +133,7 @@ public sealed class BeamCanvas : Control
     private bool Conflict(Guid? id) => id is { } entity && ConflictEntityIds?.Contains(entity) == true;
     private IBrush? Brush(Guid? id, bool support, bool preview, bool invalid, bool selfWeight = false) => invalid || Conflict(id) ? ErrorBrush
         : preview || id is not null && (id == (support ? HighlightedSupportId : HighlightedLoadId)
+            || support && id == HighlightedMomentReleaseId
             || !support && id == HighlightedDistributedLoadId) ? AccentBrush : selfWeight ? SelfWeightBrush : BeamBrush;
 
     private static void DrawSupport(DrawingContext context, double x, double y, SupportType type, SpringData? spring, bool isMirrored, IBrush? brush, IBrush? backgroundBrush)

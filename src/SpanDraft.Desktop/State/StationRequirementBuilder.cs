@@ -27,6 +27,12 @@ public static class StationRequirementBuilder
             var (left, right) = Extents(support);
             requirements.Add(new(support.Position.Meters, left * supportSymbolScale, right * supportSymbolScale));
         }
+        foreach (var release in document.MomentReleases)
+        {
+            // The ring sits on the beam axis; it is a station of its own so that the results can show the rotation jump there.
+            double extent = (SchematicMetrics.MomentReleaseRadius + stroke) * supportSymbolScale;
+            requirements.Add(new(release.Position.Meters, extent, extent));
+        }
         foreach (var load in document.Loads)
         {
             double extent = load.Kind switch

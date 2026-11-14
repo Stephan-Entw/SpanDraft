@@ -143,6 +143,7 @@ public partial class BeamEditorSurface
                 SelectionPopup.IsOpen = false;
                 if (_editor is not { } editor) return;
                 if (editor.Document.Supports.Any(s => s.Id == id)) editor.EditSupport(id);
+                else if (editor.Document.MomentReleases.Any(r => r.Id == id)) editor.EditMomentRelease(id);
                 else if (editor.Document.SelfWeight?.Id == id) editor.EditSelfWeight(id);
                 else if (editor.Document.DistributedLoads.Any(l => l.Id == id)) editor.EditDistributedLoad(id);
                 else editor.EditLoad(id);
