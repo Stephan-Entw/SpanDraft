@@ -1,0 +1,98 @@
+{
+  "format": "SpanDraft.Project",
+  "formatVersion": 5,
+  "info": {
+    "calculationTitle": "Gerber beam",
+    "author": "A. Author"
+  },
+  "document": {
+    "length": 10,
+    "bendingAxis": "y",
+    "sectionDisplayName": "Beam 40 x 80",
+    "material": {
+      "name": "Test steel",
+      "youngsModulus": 210000000000,
+      "yieldStrength": 235000000,
+      "strengthType": "re",
+      "density": 7850
+    },
+    "section": {
+      "type": "rectangle",
+      "width": 0.04,
+      "height": 0.08
+    },
+    "supports": [
+      {
+        "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "name": "A",
+        "type": "pinned",
+        "position": 0
+      },
+      {
+        "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "name": "B",
+        "type": "roller",
+        "position": 4
+      },
+      {
+        "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+        "name": "C",
+        "type": "roller",
+        "position": 7
+      },
+      {
+        "id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+        "name": "D",
+        "type": "roller",
+        "position": 10
+      }
+    ],
+    "pointLoads": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "F1",
+        "type": "force",
+        "position": 6.25,
+        "value": -10000
+      }
+    ],
+    "distributedLoads": [
+      {
+        "id": "22222222-2222-2222-2222-222222222222",
+        "name": "q1",
+        "startPosition": 0,
+        "endPosition": 10,
+        "startIntensity": -1500,
+        "endIntensity": -1500
+      }
+    ],
+    "namingState": {
+      "nextSupportOrdinal": 5,
+      "nextForceNumber": 2,
+      "nextMomentNumber": 1,
+      "nextDistributedLoadNumber": 2,
+      "nextMomentReleaseNumber": 3
+    },
+    "momentReleases": [
+      {
+        "id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+        "name": "G1",
+        "position": 5.5
+      },
+      {
+        "id": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+        "name": "Hinge 2",
+        "position": 8.5
+      }
+    ]
+  },
+  "presentation": {
+    "annotationOffsets": [
+      {
+        "entityId": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+        "dx": 6,
+        "dy": -12
+      }
+    ]
+  }
+}

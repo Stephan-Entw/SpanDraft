@@ -104,8 +104,11 @@ public static class ProjectFileCodec
                 DistributedLoads = d.DistributedLoads.Select(l => new DistributedLoadV5 { Id = l.Id, Name = l.Name,
                     StartPosition = l.StartPosition.Meters, EndPosition = l.EndPosition.Meters,
                     StartIntensity = l.StartIntensity.NewtonsPerMeter, EndIntensity = l.EndIntensity.NewtonsPerMeter }).ToArray(),
+                MomentReleases = d.MomentReleases.Count == 0 ? null : d.MomentReleases.Select(r => new MomentReleaseV5
+                    { Id = r.Id, Name = r.Name, Position = r.Position.Meters }).ToArray(),
                 NamingState = new() { NextSupportOrdinal = n.NextSupportOrdinal, NextForceNumber = n.NextForceNumber,
-                    NextMomentNumber = n.NextMomentNumber, NextDistributedLoadNumber = n.NextDistributedLoadNumber }
+                    NextMomentNumber = n.NextMomentNumber, NextDistributedLoadNumber = n.NextDistributedLoadNumber,
+                    NextMomentReleaseNumber = n.NextMomentReleaseNumber > 1 ? n.NextMomentReleaseNumber : null }
             },
             Presentation = new() { SelfWeightVisible = state.Presentation.SelfWeightVisible,
                 AnnotationOffsets = state.Presentation.AnnotationOffsets.Select(o =>
@@ -281,7 +284,9 @@ public static class ProjectFileCodec
             return new DistributedLoadV5 { Id = x.Id, Name = x.Name, StartPosition = x.StartPosition,
                 EndPosition = x.EndPosition, StartIntensity = x.Intensity, EndIntensity = x.Intensity };
         }).ToArray(),
-        NamingState = d.NamingState, SelfWeight = d.SelfWeight
+        NamingState = new() { NextSupportOrdinal = d.NamingState.NextSupportOrdinal, NextForceNumber = d.NamingState.NextForceNumber,
+            NextMomentNumber = d.NamingState.NextMomentNumber, NextDistributedLoadNumber = d.NamingState.NextDistributedLoadNumber },
+        SelfWeight = d.SelfWeight
     };
 
     private static ProjectState MapValidated(DocumentV5 documentDto, PresentationV2 presentationDto)
@@ -326,7 +331,8 @@ public static class ProjectFileCodec
                 { "force" => PointLoadKind.Force, "moment" => PointLoadKind.Moment,
                     _ => throw new ProjectFormatException("Unknown point load type.") }, Number(x.Value, "value"), Name(x.Name));
             }),
-            new NamingState(n.NextSupportOrdinal, n.NextForceNumber, n.NextMomentNumber, n.NextDistributedLoadNumber),
+            new NamingState(n.NextSupportOrdinal, n.NextForceNumber, n.NextMomentNumber, n.NextDistributedLoadNumber,
+                n.NextMomentReleaseNumber ?? 1),
             Required(d.DistributedLoads, "distributedLoads").Select(entry =>
             {
                 var x = Required(entry, "distributedLoad");
@@ -334,7 +340,12 @@ public static class ProjectFileCodec
                     L(x.EndPosition, "endPosition"), ForcePerLength.FromNewtonsPerMeter(Number(x.StartIntensity, "startIntensity")),
                     ForcePerLength.FromNewtonsPerMeter(Number(x.EndIntensity, "endIntensity")), Name(x.Name));
             }),
-            d.SelfWeight is { } weight ? new EditorSelfWeight(EntityId(weight.Id), weight.Enabled) : null);
+            d.SelfWeight is { } weight ? new EditorSelfWeight(EntityId(weight.Id), weight.Enabled) : null,
+            (d.MomentReleases ?? []).Select(entry =>
+            {
+                var x = Required(entry, "momentRelease");
+                return new EditorMomentRelease(EntityId(x.Id), L(x.Position, "position"), Name(x.Name));
+            }));
         var errors = BeamModelValidator.Validate(document.ToBeamModel()).Where(e => e.Code != ValidationErrorCode.MissingSupports).ToArray();
         if (errors.Length > 0) throw new ProjectFormatException(errors[0].Message);
         if (document.Supports.Select(x => x.Position).Distinct().Count() != document.Supports.Count)

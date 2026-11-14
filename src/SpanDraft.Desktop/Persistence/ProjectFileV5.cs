@@ -29,7 +29,7 @@ public sealed record DocumentV5
     public required SupportV5[] Supports { get; init; }
     public required PointLoadV2[] PointLoads { get; init; }
     public required DistributedLoadV5[] DistributedLoads { get; init; }
-    public required NamingV2 NamingState { get; init; }
+    public required NamingV5 NamingState { get; init; }
     public SelfWeightV2? SelfWeight { get; init; }
 
     /// <summary>
@@ -38,6 +38,29 @@ public sealed record DocumentV5
     /// a one-segment project. Each segment ends where the next one starts, the last at <c>length</c>.
     /// </summary>
     public SegmentV5[]? FurtherSegments { get; init; }
+
+    /// <summary>
+    /// The internal moment releases (hinges); absent for a beam without any, so a file without this field has none.
+    /// </summary>
+    public MomentReleaseV5[]? MomentReleases { get; init; }
+}
+
+/// <summary>An internal moment release at <c>position</c> (m) strictly inside the beam.</summary>
+public sealed record MomentReleaseV5
+{
+    public required Guid Id { get; init; }
+    public required string Name { get; init; }
+    public required double Position { get; init; }
+}
+
+/// <summary>The V2 naming counters plus the optional counter of the moment releases (absent means 1).</summary>
+public sealed record NamingV5
+{
+    public required long NextSupportOrdinal { get; init; }
+    public required long NextForceNumber { get; init; }
+    public required long NextMomentNumber { get; init; }
+    public required long NextDistributedLoadNumber { get; init; }
+    public long? NextMomentReleaseNumber { get; init; }
 }
 
 /// <summary>A beam segment after the first. <c>start</c> (m) lies strictly inside the beam and ascends over the list.</summary>
