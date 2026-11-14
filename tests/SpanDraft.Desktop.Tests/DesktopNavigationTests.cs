@@ -693,10 +693,24 @@ public sealed class DesktopNavigationTests
             }
             if (name is "ForceTable" or "MomentTable" or "DistributedLoadTable")
             {
-                // More space for positions/ranges moves the value column left.
-                Assert.True(header.ColumnDefinitions[1].ActualWidth < header.ColumnDefinitions[2].ActualWidth);
-                double previousValueRight = 48 + 6 + (header.Bounds.Width - 48 - 12) / 2;
-                Assert.True(header.ColumnDefinitions[0].ActualWidth + 6 + header.ColumnDefinitions[1].ActualWidth < previousValueRight);
+                if (name == "DistributedLoadTable")
+                {
+                    // A linear load shows two intensities, so this table gives the value column more room than the
+                    // position range, whose text must still fit its column.
+                    Assert.True(header.ColumnDefinitions[1].ActualWidth > header.ColumnDefinitions[2].ActualWidth);
+                    foreach (var load in rows)
+                    {
+                        var position = load.Children.OfType<TextBlock>().Last();
+                        Assert.True(position.DesiredSize.Width <= load.ColumnDefinitions[2].ActualWidth + 0.5);
+                    }
+                }
+                else
+                {
+                    // More space for positions/ranges moves the value column left.
+                    Assert.True(header.ColumnDefinitions[1].ActualWidth < header.ColumnDefinitions[2].ActualWidth);
+                    double previousValueRight = 48 + 6 + (header.Bounds.Width - 48 - 12) / 2;
+                    Assert.True(header.ColumnDefinitions[0].ActualWidth + 6 + header.ColumnDefinitions[1].ActualWidth < previousValueRight);
+                }
                 Assert.Equal(new[] { Strings.OverviewName, Strings.OverviewValue, "Position [mm]" },
                     header.Children.OfType<TextBlock>().Select(t => t.Text));
                 foreach (var row in rows)

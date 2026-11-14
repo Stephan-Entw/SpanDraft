@@ -325,6 +325,39 @@ public sealed class DesktopDistributedLoadRenderingTests : DesktopDistributedLoa
         Assert.Equal(2, scene.DistributedLoads.Count);
     }
 
+    [Fact]
+    public void LinearLoadsDrawTheirEnvelopeFillBeforeTheBeamAndKeepLabelsClearOfTheSymbols()
+    {
+        // A trapezoid and a load with a sign change side by side, each with its own label.
+        EditorDistributedLoad[] loads = [
+            new(Guid.NewGuid(), Length.FromMeters(.05), Length.FromMeters(.45), ForcePerLength.FromNewtonsPerMeter(-200), ForcePerLength.FromNewtonsPerMeter(-800), "q1"),
+            new(Guid.NewGuid(), Length.FromMeters(.55), Length.FromMeters(.95), ForcePerLength.FromNewtonsPerMeter(-300), ForcePerLength.FromNewtonsPerMeter(600), "q2")];
+        var doc = new EditorDocument(Length.FromMeters(1), ProjectTemplates.Material, ProjectTemplates.Section, distributedLoads: loads);
+        var scene = BeamRenderState.Create(doc, new BeamLayoutState().Update(doc, 1100, 600)!, DesktopLayoutFixture.Measure);
+        var drawing = Canvas(scene);
+        // Both fills precede the beam stroke and are not merged into rectangular spans.
+        var fills = drawing.Children.TakeWhile(c => c is DrawingGroup).Cast<DrawingGroup>().ToArray();
+        Assert.Equal(2, fills.Length);
+        foreach (var (group, visual) in fills.Zip(scene.DistributedLoads))
+        {
+            Assert.Equal(SchematicMetrics.DistributedFillOpacity, group.Opacity);
+            var bounds = Assert.IsType<GeometryDrawing>(Assert.Single(group.Children)).Geometry!.Bounds;
+            Assert.Equal(visual.StartX, bounds.Left, 3);
+            Assert.Equal(visual.EndX, bounds.Right, 3);
+            Assert.Equal(visual.HighestTopY, bounds.Top, 3);
+            Assert.True(bounds.Bottom <= visual.BeamY);
+        }
+        Assert.IsType<GeometryDrawing>(drawing.Children[2]);
+        // Labels stay clear of the arrows and the envelope, which never rise above the full symbol height.
+        Assert.Equal(2, scene.Annotations.Count);
+        foreach (var visual in scene.DistributedLoads)
+        {
+            var symbol = new Rect(visual.StartX, visual.HighestTopY, visual.EndX - visual.StartX, visual.BottomY - visual.HighestTopY);
+            Assert.All(scene.Annotations, label => Assert.False(label.Bounds.Intersects(symbol), label.Text));
+        }
+        Assert.Contains(scene.Annotations, a => a.Text.Contains(" … "));
+    }
+
     [Theory]
     [InlineData(1, .06)]
     [InlineData(2, .26)]

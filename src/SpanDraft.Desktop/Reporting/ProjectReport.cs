@@ -69,7 +69,7 @@ internal static class ProjectReport
                     overview.Forces.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
                 new(Strings.Moments, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.18f, .47f, .35f],
                     overview.Moments.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
-                new(Strings.DistributedLoads, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.18f, .47f, .35f],
+                new(Strings.DistributedLoads, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.16f, .52f, .32f],
                     overview.DistributedLoads.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
                 new(Strings.Reactions, [Strings.Support, overview.ReactionXHeaderText, overview.ReactionYHeaderText, overview.ReactionMomentHeaderText],
                     [.16f, .24f, .30f, .30f], overview.Reactions.Select(r => (IReadOnlyList<string>)new[]

@@ -29,6 +29,17 @@
         <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
       </Grid>
     </DataTemplate>
+    <DataTemplate x:Key="DistributedLoadRowTemplate" x:DataType="state:ProjectOverviewItem">
+      <Grid Classes="overviewRow" ColumnDefinitions="64,1.25*,0.75*">
+        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
+                AutomationProperties.Name="{Binding Name}"
+                IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
+          <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
+        </Button>
+        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Value}" Classes="number" />
+        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
+      </Grid>
+    </DataTemplate>
     <DataTemplate x:Key="ReactionRowTemplate" x:DataType="state:ProjectOverviewReaction">
       <Grid Classes="overviewRow" ColumnDefinitions="64,*,*,*">
         <!-- A shared row is not an action, but its trimmed name stays readable through this tooltip. -->
@@ -148,12 +159,12 @@
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.DistributedLoads}" Classes="sectionTitle" />
           <StackPanel>
-            <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,0.7*,1.3*">
+            <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,1.25*,0.75*">
               <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
               <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
               <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
             </Grid>
-            <ItemsControl x:Name="DistributedLoadTable" ItemsSource="{Binding Overview.DistributedLoads}" ItemTemplate="{StaticResource LoadRowTemplate}" />
+            <ItemsControl x:Name="DistributedLoadTable" ItemsSource="{Binding Overview.DistributedLoads}" ItemTemplate="{StaticResource DistributedLoadRowTemplate}" />
           </StackPanel>
         </StackPanel>
         <StackPanel x:Name="ReactionsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.HasReactions}">

@@ -71,6 +71,16 @@ public static class QuantityFormatter
         ResultPresentationOptions options, CultureInfo? culture = null) =>
         Equation(label, Input(siValue, unit, options, culture), unit);
 
+    /// <summary>"q1 = −500 … 300 N/m": both given values share one unit; one rounded value makes the relation ≈.</summary>
+    public static string FormatInputRangeEquation(string label, double firstSiValue, double secondSiValue, UnitDefinition unit,
+        ResultPresentationOptions options, CultureInfo? culture = null)
+    {
+        var first = Input(firstSiValue, unit, options, culture);
+        var second = Input(secondSiValue, unit, options, culture);
+        string relation = first.IsApproximate || second.IsApproximate ? ApproximationSign : "=";
+        return label + " " + relation + " " + first.Number + " … " + WithUnit(second.Number, unit).Replace(' ', '\u00A0');
+    }
+
     private static string Equation(string label, InputNumberText text, UnitDefinition unit) =>
         label + " " + text.Relation + " " + WithUnit(text.Number, unit);
 

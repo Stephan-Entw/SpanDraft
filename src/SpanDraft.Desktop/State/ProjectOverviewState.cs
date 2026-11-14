@@ -42,11 +42,11 @@ public sealed class ProjectOverviewState
             var unit = analysis.Options.Profile[QuantityKind.DistributedLoad];
             if (calculated)
                 return QuantityFormatter.FormatResult(startIntensity, QuantityKind.DistributedLoad, analysis.Options);
-            // A linear load shows both ends as "q₁ … q₂" in the unit once, like the position range.
+            // A linear load shows both ends as "q₁ … q₂" with the unit once; a line break may only follow the ellipsis.
             return startIntensity == endIntensity
                 ? QuantityFormatter.FormatInput(startIntensity, unit, analysis.Options)
                 : QuantityFormatter.FormatInputNumber(startIntensity, unit, analysis.Options) + " … "
-                    + QuantityFormatter.FormatInput(endIntensity, unit, analysis.Options);
+                    + QuantityFormatter.FormatInput(endIntensity, unit, analysis.Options).Replace(' ', '\u00A0');
         }
         ProjectOverviewItem Distributed(Guid id, string name, string type, double startIntensity, double endIntensity,
             Length start, Length end, bool calculated = false) =>

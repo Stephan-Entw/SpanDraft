@@ -40,9 +40,11 @@ public static class StationRequirementBuilder
         }
         foreach (var load in document.DistributedLoads)
         {
-            double extent = ((load.StartIntensity.NewtonsPerMeter == 0 ? 0 : SchematicMetrics.DistributedArrowHeadHalfWidth) + stroke) * loadSymbolScale;
-            requirements.Add(new(load.StartPosition.Meters, extent, extent));
-            requirements.Add(new(load.EndPosition.Meters, extent, extent));
+            // Each end reserves the arrow head width only where it carries an intensity; a triangle's zero end has no head.
+            double Extent(double intensity) => ((intensity == 0 ? 0 : SchematicMetrics.DistributedArrowHeadHalfWidth) + stroke) * loadSymbolScale;
+            double start = Extent(load.StartIntensity.NewtonsPerMeter), end = Extent(load.EndIntensity.NewtonsPerMeter);
+            requirements.Add(new(load.StartPosition.Meters, start, start));
+            requirements.Add(new(load.EndPosition.Meters, end, end));
         }
         if (document.SelfWeightLoad is { } weight)
         {
