@@ -11,7 +11,7 @@ SpanDraft berechnet einen geraden Balken in einer zweidimensionalen Biegeebene. 
 | Querschnitt | konstant, eine ausgewählte Biegeachse |
 | Verformung | kleine Verschiebungen und Rotationen |
 | Lager | ideale Einspannung, Festlager oder Loslager |
-| Lasten | vertikale Punktkräfte, Punktmomente, konstante Streckenlasten und optionales Eigengewicht |
+| Lasten | vertikale Punktkräfte, Punktmomente, konstante und linear veränderliche Streckenlasten und optionales Eigengewicht |
 | Ergebnisse | Verformung, Schnittgrößen, Lagerreaktionen und einfache Biegebewertung |
 
 ## Wann das Modell gut passt
@@ -28,7 +28,7 @@ Schräg beziehungsweise frei im Raum gerichtete Kräfte, gleichzeitige Biegung u
 
 ### Erweiterte Lasten und Lager
 
-Eigengewicht kann als konstante, nach unten gerichtete Streckenlast aus Werkstoffdichte und Querschnittsfläche berücksichtigt werden. Veränderliche Dreieck- oder Trapezlasten und äußere axiale Lasten sind in der aktuellen Benutzeroberfläche keine unterstützten Lasttypen. Elastische Lager beziehungsweise Federn, Auflagerverschiebungen und innere Gelenkfreigaben sind ebenfalls nicht enthalten.
+Eigengewicht kann als konstante, nach unten gerichtete Streckenlast aus Werkstoffdichte und Querschnittsfläche berücksichtigt werden. Streckenlasten sind konstant oder linear veränderlich; nichtlineare Verläufe und äußere axiale Lasten sind in der aktuellen Benutzeroberfläche keine unterstützten Lasttypen. Elastische Lager beziehungsweise Federn, Auflagerverschiebungen und innere Gelenkfreigaben sind ebenfalls nicht enthalten.
 
 ### Nichtlineare und dynamische Effekte
 

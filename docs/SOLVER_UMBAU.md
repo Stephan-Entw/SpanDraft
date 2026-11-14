@@ -211,7 +211,7 @@ Feature freigegeben ist. Bis zur Freigabe ist sie über Produktpfade nicht errei
 - **Anforderung:** Ein Lasttyp mit zwei Randwerten q₁ und q₂ für konstante, Dreiecks- und Trapezlasten sowie Lasten mit Vorzeichenwechsel.
 - **Kurze Lasten:** Auch bei sehr kleiner Ausdehnung werden Resultierende und erstes Lastmoment numerisch stabil erhalten. Daraus darf ein Schwerpunkt nur abgeleitet werden, wenn die Resultierende hinreichend von null verschieden ist. Bei Vorzeichenwechsel kann die Resultierende null sein, das Lastmoment aber nicht, etwa bei einer antisymmetrischen Dreieckslast.
 - **Extremwerte:** Das Querkraftextremum im Feld wird gefunden.
-- **Zu klären:** Verhältnis zum heutigen Gleichstreckenlasttyp, also ein Typ oder zwei.
+- **Entschieden und umgesetzt:** Ein Fachtyp `DistributedLoad` mit zwei Randintensitäten ersetzt den Gleichstreckenlasttyp; Eigengewicht bleibt eine konstante Last. Der Rechenkern kennt ein Primitiv mit zwei Randwerten, gleiche Randwerte laufen unverändert über den Pfad der konstanten Last. Core liefert weder Resultierende noch Schwerpunkt.
 - **Prototyp:** Vorhanden.
 
 ### DEV-12 Axiale und schräge Einzelkräfte

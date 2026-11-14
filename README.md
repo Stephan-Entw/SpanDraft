@@ -23,7 +23,7 @@ The current desktop application supports:
 - explicit bending-axis selection
 - fixed, pinned and roller supports
 - point forces and point moments
-- constant distributed loads
+- constant and linearly varying distributed loads (triangular, trapezoidal, with sign change)
 - optional self-weight derived from material density and cross-section area
 - direct graphical placement and editing
 - exact numeric positioning

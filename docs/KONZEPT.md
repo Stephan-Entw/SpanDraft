@@ -51,7 +51,7 @@ Der aktuelle fachliche Umfang umfasst:
 - beliebig positionierte Lager einschließlich Überhängen
 - Punktkräfte
 - Punktmomente
-- konstante Streckenlasten
+- konstante und linear veränderliche Streckenlasten (Dreieck, Trapez, Vorzeichenwechsel)
 - optional aktiviertes Eigengewicht aus Werkstoffdichte und Querschnittsfläche
 - parametrische und manuelle Querschnitte mit wählbarer Biegeachse
 - Werkstoffe mit den für Berechnung und Bewertung benötigten Kennwerten
@@ -179,7 +179,7 @@ zuverlässiger machen.
 Mögliche spätere Erweiterungen, ohne festgelegte Reihenfolge:
 
 - Zoom/Pan im Balkeneditor
-- weitere Streckenlastformen
+- weitere Streckenlastformen jenseits linear veränderlicher Verläufe
 - zusätzliche Sprachen
 
 ## 10. Transparenz und Qualität

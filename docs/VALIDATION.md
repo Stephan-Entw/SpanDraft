@@ -6,6 +6,7 @@ Die Nachweise sind nach dem jeweils geprüften Solverstand getrennt:
 2. [M1/M2-Kernelnachweise](#2-m1m2-nachweise-des-neuen-kernels).
 3. [M3-Produktintegration](#3-m3-produktintegration).
 4. [Finale M4-Produktabnahme](#4-finale-m4-produktabnahme).
+5. [Linear veränderliche Streckenlasten](#5-linear-veränderliche-streckenlasten-dev-6).
 
 Der aktuelle Produktvertrag steht in [SOLVER.md](SOLVER.md), die Befehle zur
 Reproduktion in [validation/README.md](../validation/README.md). Historische
@@ -640,3 +641,74 @@ DE-/EN-Help-Biegemomentgrafiken zeigen im bestehenden Beispiel nun das exakte
 Minimum 0 N·m statt des früheren FE-Rundungsrests. Der
 [Investigations-Audit](../validation/investigations/solver-rework/README.md#m4-prüfung-der-abgelegten-evidenz)
 erhält die verknüpften Rohdaten und Herkunftsnachweise.
+
+## 5. Linear veränderliche Streckenlasten (DEV-6)
+
+Die Streckenlast hat zwei Randintensitäten; gleiche Werte laufen über denselben
+Pfad wie die frühere konstante Last. Der Nachweis ist vierfach getrennt:
+
+- **Exakte rationale Referenz in der Product-Suite.** Das Orakel der Ausgabetests
+  (`SolverOutputOracle`) enthält Rampenterme, Resultierende `l(q₁+q₂)/2` und erstes
+  Moment als Brüche ohne Gleitkomma. Für Dreieck, Trapez über mehrere Lager,
+  Vorzeichenwechsel, antisymmetrischen Kragarm, Lasten an Lager und Balkenende,
+  Überlagerung, sehr kurze und sehr steile Lasten, Nulldurchgang genau auf und
+  ein ulp neben einer Station sowie ungleiche Randwerte mit Rundung beim
+  Zuschneiden werden alle Feldwerte, Reaktionen, Stückgrenzen und
+  `VerifiedOutputBound` gegen die exakte Mechanik geprüft.
+- **Exakte Wurzelisolation.** Die Kandidatenpositionen jedes Stücks werden mit einer
+  unabhängigen Sturm-Folge über exakt interpolierten Feldpolynomen verglichen: kein
+  übersehener und kein überzähliger innerer Kandidat für w (Grad 4 von θ), M und V.
+  Wurzeln näher als 10⁻¹³ am Stückrand sind Randkandidaten. Bei fast vollständig
+  auslöschender Interpolation am Zuschneiden verschiebt der Datenfehler eine Wurzel;
+  der Wert am Kandidaten bleibt verifiziert.
+- **Analytik und eingefrorene Referenz.** Geschlossene Formeln für Dreieck (`M_max`
+  bei `L/√3`, `w_min` bei ξ* ≈ 0,5193, `V` an den Enden), Vorzeichenwechsel (Scheitel
+  `V = −q₀L/12` in Feldmitte, `M` bei `(3 ∓ √3)L/6`) und antisymmetrischen
+  Kragarm (Resultierende null, Einspannmoment `q l²/6`), dazu ein Quintik mit vier
+  stationären Punkten, sowie der Vergleich mit dem eingefrorenen Prototyp und
+  metamorphe Relationen (Superposition, Teilung, Spiegelung, Zweierpotenz-Einheiten
+  bitgleich).
+- **Unabhängige Validierung V16–V19** gegen exakte rationale Statik (neu in
+  `analytical.py`), PyCBA-Trapezglieder und IndeterminateBeam. Die analytische Referenz
+  stimmt in der Kalibrierung mit beiden externen Lösern überein. Zum Eingabeformat
+  gehört das optionale Feld `lineLoads`; Eingaben und Hashes der älteren Fälle bleiben
+  unverändert. Da sich der Quellhash der Python-Adapter in jeder Referenz
+  niederschlägt, wurden alle Referenzen neu erzeugt; die numerischen Inhalte der 45
+  älteren Dateien sind bis auf Zeitstempel und Adapterhash identisch.
+
+Die Konstantlastfälle bleiben bitgleich: Der Export der 18 älteren Fälle vor und nach der
+Umstellung unterscheidet sich nur in Zeitstempel und Solverquellhash.
+
+**Nahe der Schwelle τ.** Zwei starre Lager im Abstand 2⁻²² (symmetrische
+Dreiecksfolge ohne Netzmoment) liefern ein Gate von etwa 0,8 τ, im Abstand 2⁻²³ etwa
+1,6 τ und werden abgelehnt. Das entspricht dem Verhalten der konstanten Last und ist
+konservative Ablehnung, kein ausgelieferter Fehler über τ.
+
+**Fehlerinjektion.** `validation/investigations/linear-load-mutants/mutate.py` baut je
+Mutante einen Fehler in die Lastterme, baut neu und führt die Product-Suite aus.
+Alle Mutanten werden von mindestens einem Test erkannt:
+
+| Mutante | Fehler | Ergebnis |
+| --- | --- | --- |
+| R1 | ramp divisor inside the load, p = 4: 121 instead of 120 | killed (50 Tests) |
+| R2 | ramp divisor beyond the load, p = 2: 7 instead of 6 | killed (35 Tests) |
+| R3 | ramp divisor beyond the load, p = 3: 25 instead of 24 | killed (23 Tests) |
+| R4 | ramp divisor beyond the load, p = 4: 121 instead of 120 | killed (29 Tests) |
+| R5 | sign of the rise reversed | killed (67 Tests) |
+| R6 | near and far swapped in the outer ramp polynomial, p = 2 | killed (33 Tests) |
+| R7 | clip: interpolated intensity replaced by the start intensity | killed (34 Tests) |
+| R8 | clip: data error of the interpolated intensity dropped | killed (2 Tests) |
+| R9 | clip: load end intensity interpolated instead of taken exactly | killed (1 Tests) |
+| R10 | ramp term omitted from the shear integral (reactions and V) | killed (56 Tests) |
+| R11 | ramp term omitted from the moment integral | killed (65 Tests) |
+| N1 | excitation norm: maximum of the end intensities instead of their mean | killed (15 Tests) |
+| N2 | excitation: unloaded when only the start intensity is zero | killed (18 Tests) |
+| N3 | exact excitation exponent: doubled norm not halved | killed (7 Tests) |
+| N4 | exact excitation exponent: end intensity omitted | killed (5 Tests) |
+| Q1 | piece majorant uses only the intensity at the piece start | killed (25 Tests) |
+| Q2 | piece majorant without the data error of the intensity | killed (1 Tests) |
+| E1 | shear polynomial: factor 1/2 of the intensity change missing | killed (22 Tests) |
+| E2 | rotation polynomial: 12 instead of 24 for the intensity change | killed (15 Tests) |
+| E3 | shear candidates ignore the intensity change | killed (13 Tests) |
+| E4 | piece intensity change from a difference of end values with the wrong piece length | killed (4 Tests) |
+| I1 | input order ignores the end intensity | killed (1 Tests) |

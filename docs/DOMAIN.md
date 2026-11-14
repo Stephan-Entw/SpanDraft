@@ -75,9 +75,14 @@ abgewiesen. `PoissonRatio` ist ein kleiner dimensionsloser Werttyp mit
 nicht endliche Werte sind ungültig; der Zahlenwert 0 ist zulässig.
 
 Der Solver verwendet E, Engineering den numerischen Festigkeitskennwert.
-`UniformDistributedLoad.FromSelfWeight(length, density, area)` in Core leitet aus
+`DistributedLoad.FromSelfWeight(length, density, area)` in Core leitet aus
 bekannter Dichte und aktueller Fläche eine abwärts gerichtete konstante Linienlast
 `q_g = −ρ · A · g₀` mit `g₀ = 9.80665 m/s²` über die gesamte Balkenlänge ab.
+`DistributedLoad` ist eine Querlast mit linear veränderlicher Intensität von `StartIntensity`
+am Start bis `EndIntensity` am Ende (N/m, nach oben positiv). Gleiche Randwerte bilden
+eine konstante Last (`IsConstant`); beide Werte dürfen negativ, null oder verschieden
+sein, auch mit Vorzeichenwechsel. Core liefert keine Resultierende und keinen Schwerpunkt:
+Bei einer Resultierenden nahe null wäre ein Schwerpunkt nicht definiert.
 Länge, Dichte und Fläche müssen streng positiv sein; nicht endliche Lastintensitäten
 werden abgelehnt. Desktop ruft diese Factory bei ausdrücklich aktiviertem
 Eigengewicht auf. Der Solver verarbeitet den bestehenden Lasttyp unverändert.

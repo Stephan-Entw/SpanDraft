@@ -22,7 +22,7 @@ The **Maximum deflection** value in the project overview shows the largest magni
 
 `V(x)` shows the internal shear force along the beam.
 
-Point forces and vertical support reactions can produce visible jumps. Under a constant distributed load, the shear force changes continuously.
+Point forces and vertical support reactions can produce visible jumps. Under a constant distributed load, the shear force changes continuously; under a linearly varying load its slope changes too, and its extremum lies where the load is zero.
 
 Positive and negative values indicate different directions according to the sign convention used. The sign does not indicate whether a result is “good” or “bad.”
 

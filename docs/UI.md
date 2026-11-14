@@ -24,6 +24,14 @@ beeinflussen jedoch nicht die Mechanik. Die gemeinsame Änderungsgrenze entschei
 über eine Neuberechnung, damit einzelne Controls diese Unterscheidung nicht
 unterschiedlich treffen. Ein Ergebnis beschreibt immer ein bestätigtes Modell.
 
+## Streckenlast-Draft
+
+Eine Streckenlast hat zwei Randintensitäten, meistens aber ist sie konstant. Der
+Draft hält deshalb beide Texte getrennt und lässt die Endintensität dem Anfangswert
+folgen, solange sie nicht selbst bearbeitet wurde. Das erspart bei der häufigsten
+Eingabe einen zweiten Wert, ohne eine Betriebsart "konstant/linear" einzuführen.
+Ein Fehler des Anfangswerts wird dabei nur einmal gemeldet, nicht an beiden Feldern.
+
 ## Querschnitts-Drafts
 
 Jede Querschnittsgrundform besitzt einen eigenen transienten Draft. Eingaben,

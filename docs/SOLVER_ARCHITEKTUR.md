@@ -1157,7 +1157,7 @@ Abhängigkeit dieses Testprojekts. Die öffentliche Fehlerzuordnung aus 6.6 setz
 | DEV-20 Gelenke | Momentengelenk als Stationsregel; θ links/rechts; exakte Mechanismusprüfung über Teilkörper | Koinzidenz O6 |
 | DEV-19 Federlager | Weg-, Dreh-, Kombi-Federn als Gesetz auf dem lokalen Zustand; keine Gruppierung; Reaktion aus Sprung oder Federgesetz nach kleinerem `VerifiedOutputBound`, Identität beider Wege als Selbsttest (4.2); k = 0 entscheidet der Track | O10; axiale Feder als Regel möglich, Federgesetz axial O4; Feder an starrem Lager O6 |
 | DEV-11 Mehrsegment | Abschnittswechsel als mechanische Station mit EI und EA; Zuordnung über Stationsfolge | Wechsel an Halterung O6 |
-| DEV-6 Linearlasten | Lastintegrale `Difference`/`Ramp` mit globalen Abständen; Querkraftextremum im Feld | Extrema O5; ein oder zwei Lasttypen ist Core-Frage |
+| DEV-6 Linearlasten | Lastintegrale `Difference`/`Ramp` mit globalen Abständen; Querkraftextremum im Feld | Umgesetzt: ein Core-Typ, Trapeznorm, Stückmajorante aus den Randintensitäten, Extrema (O5 Variante B); Nachweis in VALIDATION.md Abschnitt 5 |
 | DEV-12 Axial/schräg | Entkoppeltes (u, N)-System mit eigenem Qualitätsnachweis und Gate (4.3); Zerlegung im Adapter außerhalb der Vertragsgrenze | Axialreferenz O4; N-Extrema O7 |
 
 ## 15. Closure und eingefrorener Stand

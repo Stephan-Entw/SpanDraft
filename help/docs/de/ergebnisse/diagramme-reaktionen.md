@@ -14,7 +14,7 @@ Relevant ist häufig, wo die größte Verformung auftritt und wie groß ihr Betr
 
 ![Querkraft des Beispielbalkens mit positiven und negativen Werten und einem Sprung an der mittigen Punktkraft](../assets/diagramm-querkraft.png)
 
-`V(x)` zeigt die innere Querkraft entlang des Balkens. Punktkräfte und vertikale Lagerreaktionen können sichtbare Sprünge erzeugen. Unter einer konstanten Streckenlast ändert sich die Querkraft kontinuierlich.
+`V(x)` zeigt die innere Querkraft entlang des Balkens. Punktkräfte und vertikale Lagerreaktionen können sichtbare Sprünge erzeugen. Unter einer konstanten Streckenlast ändert sich die Querkraft kontinuierlich, unter einer linear veränderlichen Streckenlast zusätzlich mit veränderlicher Steigung; ihr Extremwert liegt dort, wo die Streckenlast null wird.
 
 Positive und negative Werte kennzeichnen unterschiedliche Richtungen nach der verwendeten Vorzeichenkonvention. Das Vorzeichen ist keine Bewertung als „gut“ oder „schlecht“.
 

@@ -22,24 +22,27 @@ A point moment `M` acts at a position `x` without introducing an additional resu
 
 Multiple point forces and point moments may act at the same position.
 
-## Constant distributed load
+## Distributed load
 
-A constant distributed load `q` acts uniformly from `xStart` to `xEnd`.
+A distributed load acts from `xStart` to `xEnd` and is a **force per unit length**. The start and end positions define the loaded region, with `0 ≤ xStart < xEnd ≤ L`. It has two values: `q₁` at the start and `q₂` at the end. The intensity varies linearly in between.
 
-It is a **force per unit length**. The start and end positions define the loaded region, with `0 ≤ xStart < xEnd ≤ L`.
+- With `q₁ = q₂` the load is constant.
+- If one value is zero, the load is triangular.
+- If both values are nonzero and different, the load is trapezoidal.
+- If `q₁` and `q₂` have opposite signs, the load changes its direction within the region.
 
 <figure class="spandraft-load-signs">
   <div class="spandraft-load-sign-labels"><span><code>q &gt; 0</code> · upward</span><span><code>q &lt; 0</code> · downward</span></div>
   <img src="../assets/streckenlast-vorzeichen.png" alt="Distributed-load arrows: upward on the left, downward on the right">
 </figure>
 
+When you create a distributed load, `q₂` follows the value of `q₁` until you change `q₂` yourself. A constant load therefore needs one value; for a triangular or trapezoidal load, also enter `q₂`. In the drawing, the arrow height is proportional to the magnitude of the intensity relative to the larger of the two end values, and the arrow direction follows the sign.
+
 Multiple distributed loads may overlap. Their signed intensities are added.
 
-Triangular or otherwise varying distributed loads are currently not available as separate load types.
-
 <details class="spandraft-details">
-  <summary>Resultant of a constant distributed load</summary>
-  <p>The resultant force is <code>Fq = q · (xEnd − xStart)</code> and acts at the center of the loaded region at <code>xq = (xStart + xEnd) / 2</code>. This equivalent force describes the global equilibrium. For deflection and internal-force calculations, SpanDraft continues to treat the load as distributed.</p>
+  <summary>Resultant of a distributed load</summary>
+  <p>The resultant force is <code>Fq = (q₁ + q₂) / 2 · (xEnd − xStart)</code>. For a constant load it acts at the center of the loaded region. With a sign change it can be zero although the load produces a moment, for example an antisymmetric triangular load; SpanDraft therefore does not show a line of action of the resultant. This equivalent force describes the global equilibrium. For deflection and internal-force calculations, SpanDraft continues to treat the load as distributed.</p>
 </details>
 
 ## Self-weight

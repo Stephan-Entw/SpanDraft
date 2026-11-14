@@ -31,7 +31,7 @@ The main limitations are described under [What SpanDraft calculates – and what
 
 1. Create a new project and define the beam length, material, cross-section, and bending axis.
 2. Model the intended support conditions.
-3. Add point forces, point moments, constant distributed loads and, if required, self-weight.
+3. Add point forces, point moments, distributed loads (constant or linearly varying) and, if required, self-weight.
 4. Review the results and any messages; correct the inputs if necessary.
 5. Save the project as a `.spandraft` file.
 

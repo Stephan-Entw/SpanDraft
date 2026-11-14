@@ -15,7 +15,7 @@ The calculation is based on the linear-elastic Euler–Bernoulli beam model.
 | Cross-section | constant, with one selected bending axis |
 | Deformation | small displacements and rotations |
 | Supports | ideal Fixed, Pinned, or Roller Supports |
-| Loads | vertical point forces, point moments, constant distributed loads, and optional self-weight |
+| Loads | vertical point forces, point moments, constant and linearly varying distributed loads, and optional self-weight |
 | Results | deformation, shear force, bending moment, support reactions, and a basic bending assessment |
 
 ## When the model is a good fit
@@ -38,7 +38,7 @@ SpanDraft does not perform a general three-dimensional structural analysis.
 
 Self-weight can be included as a downward constant distributed load derived from the material density and cross-sectional area.
 
-Variable triangular or trapezoidal distributed loads and external axial loads are not currently supported load types in the user interface.
+Distributed loads are constant or linearly varying; nonlinear intensity profiles and external axial loads are not currently supported load types in the user interface.
 
 Elastic supports or springs, prescribed support displacements, and internal hinge releases are also not included.
 

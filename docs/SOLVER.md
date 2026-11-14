@@ -12,7 +12,7 @@ Werkstoff und Querschnitt, linear elastisch bei kleinen Verschiebungen und
 Rotationen. Querschnitte bleiben eben und senkrecht zur verformten Balkenachse;
 Schubverformung wird vernachlässigt. Unterstützt sind starre Einspannungen,
 Fest- und Loslager, Überhänge, transversale Punktkräfte, Punktmomente und
-konstante, auch überlappende Streckenlasten. Eigengewicht wird bereits im
+konstante und linear veränderliche, auch überlappende Streckenlasten. Eigengewicht wird bereits im
 Fachmodell als konstante Streckenlast abgeleitet. Alle Werte verwenden SI.
 
 Die Biegesteifigkeit ist `EI = E · I` mit E aus dem Werkstoff und I ausschließlich
@@ -68,8 +68,18 @@ Biegemoment; `dM/dx = V` und `dV/dx = q` auf offenen Laststücken.
 Für die Biegung gilt `EI · w'' = M` und `EI · w'''' = q`.
 
 Punktkräfte und Punktmomente wirken mit ihrer tatsächlichen Position über
-analytische Lastintegrale und Stationssprünge. Konstante Streckenlasten werden
-über ihre tatsächlichen Grenzen integriert, nicht durch Punktkräfte ersetzt.
+analytische Lastintegrale und Stationssprünge. Streckenlasten mit zwei Randintensitäten q₁ und q₂
+(linear veränderlich, gleiche Werte ergeben eine konstante Last) werden über ihre
+tatsächlichen Grenzen integriert, nicht durch Punktkräfte ersetzt. Das Lastintegral
+ist die Summe eines Terms mit der Anfangsintensität und eines Rampenterms mit dem
+Anstieg q₂ − q₁. Beide verwenden globale positive Abstände, sodass auch eine sehr
+kurze Last weit vom Ursprung Resultierende und erstes Moment behält. An einer
+mechanischen Station zugeschnittene Lasten interpolieren ihre Randintensitäten aus
+den globalen Abständen; der Interpolationsfehler gehört zur verifizierten Schranke.
+Für die Anregungsnorm gilt das Trapezmittel (|q₁| + |q₂|)/2 · l, auch bei
+Vorzeichenwechsel und bei verschwindender Resultierenden. Ein zugeschnittenes
+Laststück muss normiert mindestens 2⁻⁹⁶⁹ breit sein, sonst lehnt der Solver mit
+`NumericalFailure` (`NumericalRange`) ab.
 Überlappungen und Lasten an Lagern werden additiv berücksichtigt. Innerhalb
 eines mechanischen Abschnitts bleiben sämtliche Last-Ereignisse erhalten,
 ohne den Abschnitt in Steifigkeitselemente zu zerlegen.
@@ -202,7 +212,8 @@ Fehlende Reaktionen zählen hier als null. Eine Änderung der Streckenlastintens
 Last/Reaktion sind w, θ, V und M stetig.
 
 Die Felder sind analytisch und stückweise: w ist bei konstanten Streckenlasten
-höchstens quartisch, θ kubisch, M quadratisch und V linear. Es gibt keine
+höchstens quartisch, θ kubisch, M quadratisch und V linear; bei linear
+veränderlicher Last sind es w quintisch, θ quartisch, M kubisch und V quadratisch. Es gibt keine
 Solver-Samplingauflösung und keine künstlichen Zwischenknoten. Diagramm-Sampling
 und Rendering liegen außerhalb des Solvers. Die Zuordnung verwendet binäre
 Suche und exakte Metervergleiche; eine Position neben einer Station wird nicht
@@ -221,8 +232,9 @@ Grenzen bezeichnet es den untersuchten Grenzwert. An den Balkenenden wird nur
 die innere Seite veröffentlicht: Right bei 0 und Left bei L.
 
 Kandidaten sind beide inneren Randseiten jedes Ereignisstücks sowie die inneren
-reellen Nullstellen von θ für w und von V für M. V benötigt bei konstanter
-Streckenlast nur die Randwerte. `PolynomialRoots` bestimmt die Kandidaten ohne
+reellen Nullstellen von θ für w, von V für M und der linearen Intensität q für V.
+V benötigt bei konstanter Streckenlast nur die Randwerte; bei linear veränderlicher
+Last liegt das Querkraftextremum an der Nullstelle von q. `PolynomialRoots` bestimmt die Kandidaten ohne
 Raster; Skalierung, Gradreduktion, auslöschungsarme quadratische Formeln und
 Ableitungsintervalle mit Bisektion behandeln auch Mehrfachwurzeln.
 Lokale Randzuordnung und Wurzeldeduplizierung verwenden 32ε, Rundungsvergleiche
@@ -266,7 +278,7 @@ Die Rechnung verwendet `double`; kleine Rundungsreste werden nicht pauschal
 auf null gesetzt oder geglättet.
 
 Nicht unterstützt sind belastete Axialmechanik, Federn, Gelenkfreigaben,
-veränderliche Steifigkeiten, nichtkonstante Streckenlasten, Lagerbewegungen,
+veränderliche Steifigkeiten, nichtlineare Streckenlastverläufe, Lagerbewegungen,
 Schubverformung und geometrische Nichtlinearität. Historische Prototypen und
 eingefrorene FE-Vergleichsrechner liegen ausschließlich außerhalb des Produktpfads.
 Der Solver liefert keinen Knick-, Festigkeits- oder normativen Nachweis.

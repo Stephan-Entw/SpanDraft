@@ -22,20 +22,27 @@ Ein Punktmoment `M` wirkt an einer Position `x`, ohne dort eine zusätzliche res
 
 Mehrere Punktkräfte und Punktmomente dürfen an derselben Position liegen.
 
-## Konstante Streckenlast
+## Streckenlast
 
-Eine konstante Streckenlast `q` wirkt gleichmäßig von `xStart` bis `xEnd`. Sie ist eine **Kraft pro Länge**; Start und Ende definieren den belasteten Bereich mit `0 ≤ xStart < xEnd ≤ L`.
+Eine Streckenlast wirkt von `xStart` bis `xEnd` und ist eine **Kraft pro Länge**; Start und Ende definieren den belasteten Bereich mit `0 ≤ xStart < xEnd ≤ L`. Sie hat zwei Werte: `q₁` am Start und `q₂` am Ende. Dazwischen ändert sich die Intensität linear.
+
+- Bei `q₁ = q₂` ist die Last konstant.
+- Ist einer der Werte null, entsteht eine Dreieckslast.
+- Sind beide Werte ungleich null und verschieden, entsteht eine Trapezlast.
+- Haben `q₁` und `q₂` verschiedene Vorzeichen, wechselt die Last innerhalb des Bereichs ihre Richtung.
 
 <figure class="spandraft-load-signs">
   <div class="spandraft-load-sign-labels"><span><code>q &gt; 0</code> · nach oben</span><span><code>q &lt; 0</code> · nach unten</span></div>
   <img src="../assets/streckenlast-vorzeichen.png" alt="Streckenlastpfeile: links aufwärts, rechts abwärts">
 </figure>
 
-Mehrere Streckenlasten dürfen sich überlagern; ihre Intensitäten werden vorzeichenbehaftet addiert. Dreieckige oder veränderliche Streckenlasten gibt es aktuell nicht als eigenen Lasttyp.
+Beim Anlegen einer Streckenlast folgt `q₂` dem Wert von `q₁`, solange Sie `q₂` nicht selbst ändern. So geben Sie eine konstante Last mit einem Wert ein; für eine Dreiecks- oder Trapezlast tragen Sie `q₂` zusätzlich ein. In der Zeichnung ist die Pfeilhöhe proportional zum Betrag der Intensität, bezogen auf den größeren der beiden Randwerte; die Pfeilrichtung folgt dem Vorzeichen.
+
+Mehrere Streckenlasten dürfen sich überlagern; ihre Intensitäten werden vorzeichenbehaftet addiert.
 
 <details class="spandraft-details">
-  <summary>Resultierende einer konstanten Streckenlast</summary>
-  <p>Die Resultierende beträgt <code>Fq = q · (xEnd − xStart)</code> und greift in der Mitte des belasteten Bereichs bei <code>xq = (xStart + xEnd) / 2</code> an. Diese Ersatzkraft beschreibt das globale Gleichgewicht. Für Verformung und Schnittgrößen behandelt SpanDraft die Streckenlast weiterhin als verteilte Last.</p>
+  <summary>Resultierende einer Streckenlast</summary>
+  <p>Die Resultierende beträgt <code>Fq = (q₁ + q₂) / 2 · (xEnd − xStart)</code>. Bei konstanter Last greift sie in der Mitte des belasteten Bereichs an. Bei Vorzeichenwechsel kann sie null sein, obwohl die Last ein Moment erzeugt, etwa bei einer antisymmetrischen Dreieckslast; deshalb zeigt SpanDraft keinen Angriffspunkt der Resultierenden an. Diese Ersatzkraft beschreibt das globale Gleichgewicht. Für Verformung und Schnittgrößen behandelt SpanDraft die Streckenlast weiterhin als verteilte Last.</p>
 </details>
 
 ## Eigengewicht
