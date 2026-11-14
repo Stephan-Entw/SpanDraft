@@ -45,10 +45,10 @@ public sealed class Support
             DomainGuard.Positive(r.NewtonMetersPerRadian, nameof(rotational));
         if (translational is null && rotational is null)
             throw new ArgumentException("A spring support needs a translational or a rotational spring.", nameof(translational));
+        // Together with the check above this leaves a rigid translation only with a rotational spring; without it
+        // the support would be a roller.
         if (rigidTranslation && translational is not null)
             throw new ArgumentException("A rigid translation excludes a translational spring.", nameof(rigidTranslation));
-        if (rigidTranslation && rotational is null)
-            throw new ArgumentException("A rigid translation without a rotational spring is a roller.", nameof(rigidTranslation));
         return new(position, translational, rotational, rigidTranslation);
     }
 

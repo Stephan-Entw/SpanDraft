@@ -152,6 +152,16 @@ public class BeamModelTests
     }
 
     [Fact]
+    public void EverySupportAfterASpringAtTheSamePositionIsReported()
+    {
+        var errors = BeamModelValidator.Validate(Beam([Spring(1), new(Length.FromMeters(1), SupportType.Pinned),
+            new(Length.FromMeters(1), SupportType.Roller)]));
+
+        Assert.Equal(new[] { "Supports[1]", "Supports[2]" }, errors.Select(e => e.Path));
+        Assert.All(errors, e => Assert.Equal(ValidationErrorCode.SpringSupportCoincidence, e.Code));
+    }
+
+    [Fact]
     public void TwoSpringsAtTheSamePositionAreACoincidenceNotADuplicate()
     {
         var error = Assert.Single(BeamModelValidator.Validate(Beam([Spring(1), Spring(1, null, 5)])));

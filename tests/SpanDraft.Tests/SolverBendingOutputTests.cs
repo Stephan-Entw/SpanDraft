@@ -53,6 +53,7 @@ public sealed class SolverBendingOutputTests
         BendingResult result = SolverKernel.Solve(oracle.Input);
         Assert.True(result.Quality.IsVerified && result.Quality.GatePassed);
         double[] events = oracle.Input.Restraints.Select(s => s.Position)
+            .Concat(oracle.Input.ElasticRestraints.Select(s => s.Position))
             .Concat(oracle.Input.PointForces.Select(p => p.Position)).Concat(oracle.Input.PointMoments.Select(p => p.Position))
             .Concat(oracle.Input.LineLoads.SelectMany(q => new[] { q.Start, q.End })).Concat([0, oracle.Input.Length])
             .Distinct().Order().ToArray();
@@ -106,7 +107,8 @@ public sealed class SolverBendingOutputTests
                 Assert.True(From(reaction.Output.VerifiedOutputBound).CompareTo(Max(scales[q], expected.Value.Abs()) / Q(Binary64.TauDenominator)) <= 0);
         }
         Assert.Equal(oracle.Reactions.Length, result.Reactions.Count(r => r.Direction != U));
-        Assert.Equal(oracle.Input.Restraints.Where(s => s.Directions.HasFlag(U)).Select(s => s.Position).Distinct().Order(),
+        Assert.Equal(oracle.Input.Restraints.Where(s => s.Directions.HasFlag(U)).Select(s => s.Position)
+            .Concat(oracle.Input.ElasticRestraints.Select(s => s.Position)).Distinct().Order(),
             result.Reactions.Where(r => r.Direction == U).Select(r => r.Position));
         foreach (var (range, q) in new[] { (result.Extrema.W, 0), (result.Extrema.M, 2), (result.Extrema.V, 3) })
             foreach (BendingExtremum extreme in new[] { range.Minimum, range.Maximum })

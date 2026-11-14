@@ -65,6 +65,10 @@ public sealed class SolverSpringReactionTests
             var law = BendingReactions.TranslationalSpringLaw(state, i);
             Bounded((From(Si(jump).Value) - exact).Abs(), Si(jump).VerifiedOutputBound);
             Bounded((From(Si(law).Value) - exact).Abs(), Si(law).VerifiedOutputBound);
+            // The law's bound carries at least the stiffness times the verified state bound of the deflection.
+            double scaled = BendingPreparation.ScaleTranslationalStiffness(system.Stations[i].Springs.Translational,
+                system.EL, system.EEI).Value;
+            Assert.True(From(law.Bound).CompareTo(From(scaled) * From(state.FullStateBound[4 * i])) >= 0);
 
             NormalizedReaction reaction = Assert.Single(delivered, r => r.Position == system.Stations[i].Position && r.Direction == W);
             Assert.Equal(Math.Min(jump.Bound, law.Bound), reaction.Bound);
@@ -124,5 +128,7 @@ public sealed class SolverSpringReactionTests
     public void ChooseAcceptsADifferenceExactlyAtTheSumOfTheBounds()
     {
         Assert.Equal((1.0, 0.5), BendingReactions.Choose((1.0, 0.5), (2.0, 0.5)));
+        // The sum of the bounds is rounded upwards: 0.1 + 0.2 rounds to 0.30000000000000004 = 1.3 - 1.0.
+        Assert.Equal((1.0, 0.1), BendingReactions.Choose((1.0, 0.1), (1.3, 0.2)));
     }
 }

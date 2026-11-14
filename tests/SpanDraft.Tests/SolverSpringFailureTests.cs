@@ -47,7 +47,7 @@ public sealed class SolverSpringFailureTests
     // k·2^(3·e_L − e_EI) must be a normal number: the soft side underflows for a stiff beam, the stiff side
     // overflows for a beam of tiny bending stiffness.
     private static BeamModel TinyStiffnessBeam(double k) => Beam([SupportAt(0, SupportType.Pinned), Spring(L, k)],
-        [Point(1, -1e-300)], material: new Material("Soft", Pressure.FromPascals(1e-150), Pressure.FromPascals(1),
+        [Point(1, -1e-290)], material: new Material("Soft", Pressure.FromPascals(1e-150), Pressure.FromPascals(1),
             MaterialStrengthType.Re), section: new CustomSection(Area.FromSquareMeters(1),
             SecondMomentOfArea.FromMetersToTheFourth(1e-150), SectionModulus.FromCubicMeters(1)));
 
@@ -57,7 +57,9 @@ public sealed class SolverSpringFailureTests
         foreach (BeamModel beam in new[]
         {
             Beam([SupportAt(0, SupportType.Pinned), Spring(L, 1e-300)], [Point(1, -1000)]),
-            TinyStiffnessBeam(1e100)
+            TinyStiffnessBeam(1e100),
+            // A subnormal input is outside the range contract even where its scaled value would be normal.
+            TinyStiffnessBeam(double.Epsilon)
         })
         {
             BeamSolverException exception = Reject(beam);
