@@ -19,7 +19,7 @@ internal static class SolverTestSupport
     internal static Support SupportAt(double x, SupportType type) => new(M(x), type);
     internal static PointForce Point(double x, double magnitude) => new(M(x), Force.FromNewtons(magnitude));
     internal static PointMoment Couple(double x, double magnitude) => new(M(x), Moment.FromNewtonMeters(magnitude));
-    internal static UniformDistributedLoad Uniform(double start, double end, double intensity) =>
+    internal static DistributedLoad Uniform(double start, double end, double intensity) =>
         new(M(start), M(end), ForcePerLength.FromNewtonsPerMeter(intensity));
 
     internal static BeamModel Beam(IEnumerable<Support>? supports = null, IEnumerable<BeamLoad>? loads = null,

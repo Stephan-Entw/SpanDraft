@@ -44,8 +44,8 @@ public sealed class ProjectOverviewState
                 Position(start) + "…" + Position(end));
         DistributedLoads = Array.AsReadOnly((document.SelfWeightLoad is { } weight
             ? new[] { Distributed(document.SelfWeight!.Id, EditorSelfWeight.Symbol, EditorSelfWeight.Symbol,
-                weight.Intensity.NewtonsPerMeter, weight.StartPosition, weight.EndPosition, calculated: true) } : [])
-            .Concat(document.DistributedLoads.Select(l => Distributed(l.Id, l.Name, "q", l.Intensity.NewtonsPerMeter,
+                weight.StartIntensity.NewtonsPerMeter, weight.StartPosition, weight.EndPosition, calculated: true) } : [])
+            .Concat(document.DistributedLoads.Select(l => Distributed(l.Id, l.Name, "q", l.StartIntensity.NewtonsPerMeter,
                 l.StartPosition, l.EndPosition))).ToArray());
         // The solver reports one common reaction per station and restrained direction. Supports sharing
         // a station therefore share one row; no individual split is invented for them.

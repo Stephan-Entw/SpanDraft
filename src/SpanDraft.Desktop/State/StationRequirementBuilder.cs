@@ -40,7 +40,7 @@ public static class StationRequirementBuilder
         }
         foreach (var load in document.DistributedLoads)
         {
-            double extent = ((load.Intensity.NewtonsPerMeter == 0 ? 0 : SchematicMetrics.DistributedArrowHeadHalfWidth) + stroke) * loadSymbolScale;
+            double extent = ((load.StartIntensity.NewtonsPerMeter == 0 ? 0 : SchematicMetrics.DistributedArrowHeadHalfWidth) + stroke) * loadSymbolScale;
             requirements.Add(new(load.StartPosition.Meters, extent, extent));
             requirements.Add(new(load.EndPosition.Meters, extent, extent));
         }

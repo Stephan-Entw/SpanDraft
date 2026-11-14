@@ -23,9 +23,12 @@ internal static class BeamModelAdapter
                 case PointMoment moment:
                     pointMoments.Add(new(moment.Position.Meters, moment.Moment.NewtonMeters));
                     break;
-                case UniformDistributedLoad uniform:
-                    lineLoads.Add(new(uniform.StartPosition.Meters, uniform.EndPosition.Meters,
-                        uniform.Intensity.NewtonsPerMeter));
+                case DistributedLoad distributed:
+                    // Linearly varying intensities arrive with the kernel generalization.
+                    if (!distributed.IsConstant)
+                        throw new NotSupportedException("Linearly varying distributed loads are not yet supported.");
+                    lineLoads.Add(new(distributed.StartPosition.Meters, distributed.EndPosition.Meters,
+                        distributed.StartIntensity.NewtonsPerMeter));
                     break;
                 default:
                     throw new NotSupportedException($"Unsupported beam load {load.GetType().Name}.");

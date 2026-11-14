@@ -34,7 +34,7 @@ public static class BeamModelValidator
                 case PointMoment moment when moment.Position.Meters > beam.Length.Meters:
                     errors.Add(new(ValidationErrorCode.PointMomentOutsideBeam, "Point moment position is outside the beam.", $"Loads[{i}].Position"));
                     break;
-                case UniformDistributedLoad load when load.EndPosition.Meters > beam.Length.Meters:
+                case DistributedLoad load when load.EndPosition.Meters > beam.Length.Meters:
                     errors.Add(new(ValidationErrorCode.DistributedLoadOutsideBeam, "Distributed load extends outside the beam.", $"Loads[{i}]"));
                     break;
             }

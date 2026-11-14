@@ -210,14 +210,14 @@ public sealed class SolverProductChainTests
         {
             PointForce f => [f.Position.Meters],
             PointMoment m => [m.Position.Meters],
-            UniformDistributedLoad q => new[] { q.StartPosition.Meters, q.EndPosition.Meters },
+            DistributedLoad q => new[] { q.StartPosition.Meters, q.EndPosition.Meters },
             _ => throw new NotSupportedException()
         })).Distinct().Order().ToArray();
 
     private static double Resultant(BeamLoad load) => load switch
     {
         PointForce f => f.Force.Newtons,
-        UniformDistributedLoad q => q.Intensity.NewtonsPerMeter * (q.EndPosition.Meters - q.StartPosition.Meters),
+        DistributedLoad q => q.StartIntensity.NewtonsPerMeter * (q.EndPosition.Meters - q.StartPosition.Meters),
         _ => 0
     };
 
@@ -225,7 +225,7 @@ public sealed class SolverProductChainTests
     {
         PointForce f => f.Force.Newtons * f.Position.Meters,
         PointMoment m => m.Moment.NewtonMeters,
-        UniformDistributedLoad q => Resultant(q) * (q.StartPosition.Meters + q.EndPosition.Meters) / 2,
+        DistributedLoad q => Resultant(q) * (q.StartPosition.Meters + q.EndPosition.Meters) / 2,
         _ => 0
     };
 
@@ -265,6 +265,6 @@ public sealed class SolverProductChainTests
             PointMoment m => new EditorPointMoment(Guid.NewGuid(), m.Position, m.Moment, "M" + (i + 1)),
             _ => null!
         }).Where(l => l is not null),
-        distributedLoads: beam.Loads.OfType<UniformDistributedLoad>().Select((q, i) =>
-            new EditorUniformDistributedLoad(Guid.NewGuid(), q.StartPosition, q.EndPosition, q.Intensity, "q" + (i + 1))));
+        distributedLoads: beam.Loads.OfType<DistributedLoad>().Select((q, i) =>
+            new EditorDistributedLoad(Guid.NewGuid(), q.StartPosition, q.EndPosition, q.StartIntensity, q.EndIntensity, "q" + (i + 1))));
 }

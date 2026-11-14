@@ -18,7 +18,7 @@ public sealed class DesktopMechanicalComparerTests
         new CustomSection(Area.FromSquareMeters(a), SecondMomentOfArea.FromMetersToTheFourth(i), SectionModulus.FromCubicMeters(w));
     private static BeamLoad[] Loads() => [new PointForce(M(.2), Force.FromNewtons(-1000)),
         new PointMoment(M(.5), Moment.FromNewtonMeters(100)),
-        new UniformDistributedLoad(M(.1), M(.9), ForcePerLength.FromNewtonsPerMeter(-20))];
+        new DistributedLoad(M(.1), M(.9), ForcePerLength.FromNewtonsPerMeter(-20))];
     private static Support[] Supports() => [new(M(0), SupportType.Pinned), new(M(1), SupportType.Roller)];
     private static BeamModel Beam(Length? length = null, Material? material = null, Section? section = null,
         IEnumerable<Support>? supports = null, IEnumerable<BeamLoad>? loads = null) =>
@@ -74,9 +74,9 @@ public sealed class DesktopMechanicalComparerTests
             case "load-type": loads[0] = new PointMoment(M(.2), Moment.FromNewtonMeters(-1000)); break;
             case "load-order": Array.Reverse(loads); break;
             case "load-count": loads = loads[..2]; break;
-            case "udl-start": loads[2] = new UniformDistributedLoad(M(.11), M(.9), ForcePerLength.FromNewtonsPerMeter(-20)); break;
-            case "udl-end": loads[2] = new UniformDistributedLoad(M(.1), M(.91), ForcePerLength.FromNewtonsPerMeter(-20)); break;
-            case "udl-intensity": loads[2] = new UniformDistributedLoad(M(.1), M(.9), ForcePerLength.FromNewtonsPerMeter(-21)); break;
+            case "udl-start": loads[2] = new DistributedLoad(M(.11), M(.9), ForcePerLength.FromNewtonsPerMeter(-20)); break;
+            case "udl-end": loads[2] = new DistributedLoad(M(.1), M(.91), ForcePerLength.FromNewtonsPerMeter(-20)); break;
+            case "udl-intensity": loads[2] = new DistributedLoad(M(.1), M(.9), ForcePerLength.FromNewtonsPerMeter(-21)); break;
         }
         var next = Beam(length: change == "length" ? M(1.01) : null,
             material: Material(e: change == "E" ? 200e9 : 210e9, re: change == "Re" ? 355e6 : 235e6),

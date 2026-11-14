@@ -42,7 +42,7 @@ public class BeamModelTests
             new PointForce(Length.FromMeters(2), Force.FromNewtons(-1)),
             new PointMoment(default, Moment.FromNewtonMeters(1)),
             new PointMoment(Length.FromMeters(2), Moment.FromNewtonMeters(-1)),
-            new UniformDistributedLoad(default, Length.FromMeters(2), ForcePerLength.FromNewtonsPerMeter(-1))
+            new DistributedLoad(default, Length.FromMeters(2), ForcePerLength.FromNewtonsPerMeter(-1))
         ]);
 
         Assert.Empty(BeamModelValidator.Validate(beam));
@@ -54,8 +54,8 @@ public class BeamModelTests
         var beam = Beam(
             [new(Length.FromMeters(0.5), SupportType.Pinned), new(Length.FromMeters(1.5), SupportType.Roller)],
             [new PointForce(default, Force.FromNewtons(-1)),
-             new UniformDistributedLoad(default, Length.FromMeters(2), ForcePerLength.FromNewtonsPerMeter(-1)),
-             new UniformDistributedLoad(Length.FromMeters(1), Length.FromMeters(2), ForcePerLength.FromNewtonsPerMeter(-2))]);
+             new DistributedLoad(default, Length.FromMeters(2), ForcePerLength.FromNewtonsPerMeter(-1)),
+             new DistributedLoad(Length.FromMeters(1), Length.FromMeters(2), ForcePerLength.FromNewtonsPerMeter(-2))]);
 
         Assert.Empty(BeamModelValidator.Validate(beam));
     }
@@ -98,7 +98,7 @@ public class BeamModelTests
     public void PartiallyOrEntirelyOutsideDistributedLoadIsReported(double start, double end)
     {
         var error = Assert.Single(BeamModelValidator.Validate(Beam(loads:
-            [new UniformDistributedLoad(Length.FromMeters(start), Length.FromMeters(end), default)])));
+            [new DistributedLoad(Length.FromMeters(start), Length.FromMeters(end), default)])));
 
         Assert.Equal(ValidationErrorCode.DistributedLoadOutsideBeam, error.Code);
         Assert.Equal("Loads[0]", error.Path);
@@ -142,7 +142,7 @@ public class BeamModelTests
         var beam = Beam([new(Length.FromMeters(3), SupportType.Fixed), new(Length.FromMeters(3), SupportType.Fixed)],
             [new PointForce(Length.FromMeters(3), default),
              new PointMoment(Length.FromMeters(3), default),
-             new UniformDistributedLoad(default, Length.FromMeters(3), default)]);
+             new DistributedLoad(default, Length.FromMeters(3), default)]);
 
         var errors = BeamModelValidator.Validate(beam);
 

@@ -309,7 +309,7 @@ public sealed class DesktopDistributedLoadRenderingTests : DesktopDistributedLoa
     [Fact]
     public void CanvasDrawsFillSectionsBeforeBeamAndSharedSymbols()
     {
-        EditorUniformDistributedLoad[] loads = [new(Guid.NewGuid(), Length.FromMeters(.2), Length.FromMeters(.8), ForcePerLength.FromNewtonsPerMeter(-500), "q1"),
+        EditorDistributedLoad[] loads = [new(Guid.NewGuid(), Length.FromMeters(.2), Length.FromMeters(.8), ForcePerLength.FromNewtonsPerMeter(-500), "q1"),
             new(Guid.NewGuid(), Length.FromMeters(.4), Length.FromMeters(.9), ForcePerLength.FromNewtonsPerMeter(100), "q2")];
         var doc = new EditorDocument(Length.FromMeters(1), ProjectTemplates.Material, ProjectTemplates.Section, distributedLoads: loads);
         var scene = BeamRenderState.Create(doc, new BeamLayoutState().Update(doc, 1100, 600)!, DesktopLayoutFixture.Measure);

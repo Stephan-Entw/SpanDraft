@@ -12,7 +12,7 @@ BS = SV + 'BeamSolution.cs'
 EX = SV + 'BeamExtrema.cs'
 RT = SV + 'PolynomialRoots.cs'
 I = 'beam.BendingAxisProperties.SecondMomentOfArea.MetersToTheFourth'
-UL = 'src/SpanDraft.Core/Loads/UniformDistributedLoad.cs'
+UL = 'src/SpanDraft.Core/Loads/DistributedLoad.cs'
 # FI has an old and a new constructor; both are patched so that the new path is really affected.
 M = [
     ('A1', 'Steifigkeit 6EI/L2 in V +1 %', [(SS, '6 * ei * sum / l / l', '6.06 * ei * sum / l / l')]),

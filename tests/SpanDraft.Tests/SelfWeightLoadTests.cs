@@ -15,12 +15,14 @@ public sealed class SelfWeightLoadTests
     public void CreatesDownwardFullSpanLoadFromCurrentDensityAndArea(
         double length, double density, double area, double expectedIntensity)
     {
-        var load = UniformDistributedLoad.FromSelfWeight(Length.FromMeters(length),
+        var load = DistributedLoad.FromSelfWeight(Length.FromMeters(length),
             MassDensity.FromKilogramsPerCubicMeter(density), Area.FromSquareMeters(area));
 
         Assert.Equal(default, load.StartPosition);
         Assert.Equal(Length.FromMeters(length), load.EndPosition);
-        Assert.Equal(expectedIntensity, load.Intensity.NewtonsPerMeter, 8);
+        Assert.Equal(expectedIntensity, load.StartIntensity.NewtonsPerMeter, 8);
+        Assert.Equal(load.StartIntensity, load.EndIntensity);
+        Assert.True(load.IsConstant);
     }
 
     [Theory]
@@ -34,7 +36,7 @@ public sealed class SelfWeightLoadTests
         var area = parameter == "area" ? default : Area.FromSquareMeters(.02);
 
         var error = Assert.Throws<ArgumentOutOfRangeException>(() =>
-            UniformDistributedLoad.FromSelfWeight(length, density, area));
+            DistributedLoad.FromSelfWeight(length, density, area));
 
         Assert.Equal(parameter, error.ParamName);
     }
@@ -42,7 +44,7 @@ public sealed class SelfWeightLoadTests
     [Fact]
     public void RejectsOverflowInsteadOfPublishingAnInfiniteLoad()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => UniformDistributedLoad.FromSelfWeight(
+        Assert.Throws<ArgumentOutOfRangeException>(() => DistributedLoad.FromSelfWeight(
             Length.FromMeters(1), MassDensity.FromKilogramsPerCubicMeter(double.MaxValue), Area.FromSquareMeters(1)));
     }
 }

@@ -14,9 +14,9 @@ namespace SpanDraft.Tests;
 public sealed class DesktopDistributedLoadTests
 {
     private static Length Mm(double value) => Length.FromMillimeters(value);
-    private static EditorUniformDistributedLoad Load(double start = 200, double end = 800, double q = -500, string name = "q1") =>
+    private static EditorDistributedLoad Load(double start = 200, double end = 800, double q = -500, string name = "q1") =>
         new(Guid.NewGuid(), Mm(start), Mm(end), ForcePerLength.FromNewtonsPerMeter(q), name);
-    private static EditorDocument Document(params EditorUniformDistributedLoad[] loads) =>
+    private static EditorDocument Document(params EditorDistributedLoad[] loads) =>
         new(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section, distributedLoads: loads);
 
     private static EditorViewModel Observed(EditorDocument doc, out Func<int> calls)
@@ -42,21 +42,22 @@ public sealed class DesktopDistributedLoadTests
     {
         var a = Load(0, 1000, 0, " q1 ");
         var b = Load(123.456, 987.654, 400, "q2");
-        EditorUniformDistributedLoad[] source = [a, b];
+        EditorDistributedLoad[] source = [a, b];
         EditorPointLoad[] points = [new EditorPointMoment(Guid.NewGuid(), Mm(150), Moment.FromNewtonMeters(10), "M1"),
             new EditorPointForce(Guid.NewGuid(), Mm(250), Force.FromNewtons(-100), "F1")];
         var doc = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section, loads: points, distributedLoads: source);
         source[0] = b;
         Assert.Equal(new[] { a, b }, doc.DistributedLoads);
-        Assert.Throws<NotSupportedException>(() => ((IList<EditorUniformDistributedLoad>)doc.DistributedLoads).Clear());
+        Assert.Throws<NotSupportedException>(() => ((IList<EditorDistributedLoad>)doc.DistributedLoads).Clear());
         Assert.Equal("q1", a.Name);
         var beam = doc.ToBeamModel();
         Assert.IsType<PointMoment>(beam.Loads[0]);
         Assert.IsType<PointForce>(beam.Loads[1]);
-        var mapped = Assert.IsType<UniformDistributedLoad>(beam.Loads[3]);
+        var mapped = Assert.IsType<DistributedLoad>(beam.Loads[3]);
         Assert.Equal(b.StartPosition, mapped.StartPosition);
         Assert.Equal(b.EndPosition, mapped.EndPosition);
-        Assert.Equal(b.Intensity, mapped.Intensity);
+        Assert.Equal(b.StartIntensity, mapped.StartIntensity);
+        Assert.Equal(b.EndIntensity, mapped.EndIntensity);
         Assert.Equal(doc.DistributedLoads, doc.WithLoads([]).WithSupports([]).DistributedLoads);
         Assert.Equal(doc.DistributedLoads, (doc with { Length = Mm(1200) }).DistributedLoads);
     }
@@ -122,7 +123,7 @@ public sealed class DesktopDistributedLoadTests
         var load = Assert.Single(editor.Document.DistributedLoads);
         Assert.Equal(Mm(300), load.StartPosition);
         Assert.Equal(Mm(900), load.EndPosition);
-        Assert.Equal(q, load.Intensity.NewtonsPerMeter);
+        Assert.Equal(q, load.StartIntensity.NewtonsPerMeter);
         Assert.Equal(2, calls());
     }
 
@@ -173,7 +174,7 @@ public sealed class DesktopDistributedLoadTests
         editor.DistributedLoadDraft.IntensityText = "100";
         editor.CancelEditorInteraction();
         Assert.Equal("Motor", editor.Document.DistributedLoads[0].Name);
-        Assert.Equal(-500, editor.Document.DistributedLoads[0].Intensity.NewtonsPerMeter);
+        Assert.Equal(-500, editor.Document.DistributedLoads[0].StartIntensity.NewtonsPerMeter);
         editor.EditDistributedLoad(load.Id);
         editor.SetAnnotationOffset(load.Id, new(10, 15));
         editor.DeleteDistributedLoad();
@@ -228,7 +229,7 @@ public sealed class DesktopDistributedLoadTests
             var load = editor.Document.DistributedLoads[0];
             Assert.Equal(Mm(123.5), load.StartPosition);
             Assert.Equal(Mm(900.5), load.EndPosition);
-            Assert.Equal(-500.25, load.Intensity.NewtonsPerMeter);
+            Assert.Equal(-500.25, load.StartIntensity.NewtonsPerMeter);
             editor.EditDistributedLoad(load.Id);
             editor.DistributedLoadDraft!.IntensityText = culture == "en-US" ? "1,000" : "1.000";
             Assert.False(editor.ConfirmDistributedLoad());
@@ -239,7 +240,7 @@ public sealed class DesktopDistributedLoadTests
     [Fact]
     public void UnmodifiedBuffersKeepExactSIValuesAndSetupKeepsPresentation()
     {
-        var load = new EditorUniformDistributedLoad(Guid.NewGuid(), Length.FromMeters(.12345678912345678),
+        var load = new EditorDistributedLoad(Guid.NewGuid(), Length.FromMeters(.12345678912345678),
             Length.FromMeters(.9876543219876543), ForcePerLength.FromNewtonsPerMeter(-500.1234567891234), "q1");
         var editor = Observed(Document(load), out var calls);
         editor.SetAnnotationOffset(load.Id, new(10, -20));
@@ -249,7 +250,8 @@ public sealed class DesktopDistributedLoadTests
         var edited = editor.Document.DistributedLoads[0];
         Assert.Equal(load.StartPosition, edited.StartPosition);
         Assert.Equal(load.EndPosition, edited.EndPosition);
-        Assert.Equal(load.Intensity, edited.Intensity);
+        Assert.Equal(load.StartIntensity, edited.StartIntensity);
+        Assert.Equal(load.EndIntensity, edited.EndIntensity);
         editor.ApplySetup(ProjectTemplates.Section, ProjectTemplates.Material);
         Assert.Equal(new AnnotationOffset(10, -20), editor.EditorPresentation.AnnotationOffsets[load.Id]);
         Assert.Equal(edited, editor.Document.DistributedLoads[0]);

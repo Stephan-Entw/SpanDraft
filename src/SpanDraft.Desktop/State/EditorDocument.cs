@@ -13,7 +13,7 @@ public sealed record EditorDocument
 {
     public EditorDocument(Length length, Material material, Section section,
         IEnumerable<EditorSupport>? supports = null, IEnumerable<EditorPointLoad>? loads = null, NamingState? namingState = null,
-        IEnumerable<EditorUniformDistributedLoad>? distributedLoads = null, string? sectionDisplayName = null,
+        IEnumerable<EditorDistributedLoad>? distributedLoads = null, string? sectionDisplayName = null,
         EditorSelfWeight? selfWeight = null)
         : this(length, material, section, SectionAxisDesignation.Y, supports, loads, namingState, distributedLoads, sectionDisplayName, selfWeight)
     {
@@ -21,7 +21,7 @@ public sealed record EditorDocument
 
     public EditorDocument(Length length, Material material, ISectionDefinition section, SectionAxisDesignation bendingAxis,
         IEnumerable<EditorSupport>? supports = null, IEnumerable<EditorPointLoad>? loads = null, NamingState? namingState = null,
-        IEnumerable<EditorUniformDistributedLoad>? distributedLoads = null, string? sectionDisplayName = null,
+        IEnumerable<EditorDistributedLoad>? distributedLoads = null, string? sectionDisplayName = null,
         EditorSelfWeight? selfWeight = null)
     {
         ArgumentNullException.ThrowIfNull(material);
@@ -68,20 +68,20 @@ public sealed record EditorDocument
     }
     public IReadOnlyList<EditorSupport> Supports { get; }
     public IReadOnlyList<EditorPointLoad> Loads { get; }
-    public IReadOnlyList<EditorUniformDistributedLoad> DistributedLoads { get; }
+    public IReadOnlyList<EditorDistributedLoad> DistributedLoads { get; }
     public NamingState NamingState { get; }
     public EditorSelfWeight? SelfWeight { get; init; }
     public IEnumerable<Guid> EntityIds => NamedEntities.Select(e => e.Id)
         .Concat(SelfWeight is { } weight ? [weight.Id] : []);
     public string? SelfWeightActivationError => Material.Density is null ? Strings.SelfWeightMissingDensity
         : NamedEntities.Any(e => EntityNaming.IsReserved(e.Name)) ? Strings.SelfWeightNameConflict : null;
-    public UniformDistributedLoad? SelfWeightLoad
+    public DistributedLoad? SelfWeightLoad
     {
         get
         {
             if (SelfWeight?.Enabled != true) return null;
             if (SelfWeightActivationError is { } error) throw new ArgumentException(error);
-            return UniformDistributedLoad.FromSelfWeight(Length, Material.Density!.Value, Section.Area);
+            return DistributedLoad.FromSelfWeight(Length, Material.Density!.Value, Section.Area);
         }
     }
     public IEnumerable<(Guid Id, string Name)> NamedEntities =>
@@ -94,7 +94,7 @@ public sealed record EditorDocument
     public EditorDocument WithLoads(IEnumerable<EditorPointLoad> loads, NamingState? namingState = null) =>
         new(Length, Material, Section, BendingAxis, Supports, loads, NextNamingState(namingState), DistributedLoads, SectionDisplayName, SelfWeight);
 
-    public EditorDocument WithDistributedLoads(IEnumerable<EditorUniformDistributedLoad> loads, NamingState? namingState = null) =>
+    public EditorDocument WithDistributedLoads(IEnumerable<EditorDistributedLoad> loads, NamingState? namingState = null) =>
         new(Length, Material, Section, BendingAxis, Supports, Loads, NextNamingState(namingState), loads, SectionDisplayName, SelfWeight);
 
     public EditorDocument WithSection(ISectionDefinition section, SectionAxisDesignation bendingAxis) =>

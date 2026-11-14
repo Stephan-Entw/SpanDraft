@@ -33,9 +33,10 @@ internal sealed class ElementField
             (right.AxialDisplacement.Meters - left.AxialDisplacement.Meters), "Axial force");
 
         double intensity = 0;
-        foreach (UniformDistributedLoad load in beam.Loads.OfType<UniformDistributedLoad>())
+        foreach (DistributedLoad load in beam.Loads.OfType<DistributedLoad>())
             if (element.IsCoveredBy(load))
-                intensity = NumericalGuard.Finite(intensity + load.Intensity.NewtonsPerMeter, "Resultant UDL");
+                intensity = NumericalGuard.Finite(intensity + (load.IsConstant ? load.StartIntensity.NewtonsPerMeter
+                    : throw new NotSupportedException("The frozen finite-element reference supports constant loads only.")), "Resultant UDL");
 
         // The bubble q*s²*(Le-s)²/(24EI) satisfies EI*w''''=q and leaves
         // both nodal displacements and both nodal slopes unchanged.

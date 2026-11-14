@@ -91,7 +91,8 @@ public static class ProjectFileCodec
                     Position = l.Position.Meters, Value = l.Value }).ToArray(),
                 DistributedLoads = d.DistributedLoads.Select(l => new DistributedLoadV2 { Id = l.Id, Name = l.Name,
                     StartPosition = l.StartPosition.Meters, EndPosition = l.EndPosition.Meters,
-                    Intensity = l.Intensity.NewtonsPerMeter }).ToArray(),
+                    Intensity = l.IsConstant ? l.StartIntensity.NewtonsPerMeter
+                        : throw new ProjectFormatException("Linearly varying loads need project format version 5.") }).ToArray(),
                 NamingState = new() { NextSupportOrdinal = n.NextSupportOrdinal, NextForceNumber = n.NextForceNumber,
                     NextMomentNumber = n.NextMomentNumber, NextDistributedLoadNumber = n.NextDistributedLoadNumber }
             },
@@ -271,7 +272,7 @@ public static class ProjectFileCodec
             Required(d.DistributedLoads, "distributedLoads").Select(entry =>
             {
                 var x = Required(entry, "distributedLoad");
-                return new EditorUniformDistributedLoad(EntityId(x.Id), L(x.StartPosition, "startPosition"),
+                return new EditorDistributedLoad(EntityId(x.Id), L(x.StartPosition, "startPosition"),
                     L(x.EndPosition, "endPosition"), ForcePerLength.FromNewtonsPerMeter(Number(x.Intensity, "intensity")), Name(x.Name));
             }), d.SectionDisplayName,
             d.SelfWeight is { } weight ? new EditorSelfWeight(EntityId(weight.Id), weight.Enabled) : null);

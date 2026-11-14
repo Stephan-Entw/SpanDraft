@@ -13,7 +13,7 @@ public sealed class DesktopDistributedLoadDragTests
     private static Length Mm(double value) => Length.FromMillimeters(value);
     private sealed class Session
     {
-        public readonly EditorUniformDistributedLoad Load = new(Guid.NewGuid(), Mm(200), Mm(800), ForcePerLength.FromNewtonsPerMeter(-500), "q1");
+        public readonly EditorDistributedLoad Load = new(Guid.NewGuid(), Mm(200), Mm(800), ForcePerLength.FromNewtonsPerMeter(-500), "q1");
         public EditorViewModel Editor { get; }
         public int Calls;
         public Session() => Editor = new(new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section,
@@ -58,7 +58,7 @@ public sealed class DesktopDistributedLoadDragTests
         var load = editor.Document.DistributedLoads[0];
         Assert.Equal(s.Load.Id, load.Id);
         Assert.Equal(cancel ? s.Load : s.Load with { Name = "Payload", StartPosition = Mm(endpoint == DistributedLoadEndpoint.Start ? 350 : 150),
-            EndPosition = Mm(endpoint == DistributedLoadEndpoint.End ? 650 : 850), Intensity = ForcePerLength.FromNewtonsPerMeter(0) }, load);
+            EndPosition = Mm(endpoint == DistributedLoadEndpoint.End ? 650 : 850), StartIntensity = ForcePerLength.FromNewtonsPerMeter(0), EndIntensity = ForcePerLength.FromNewtonsPerMeter(0) }, load);
         Assert.Equal(cancel ? 1 : 2, s.Calls);
     }
 

@@ -43,7 +43,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         var distributed = DistributedLoadSymbol.Layout(document.DistributedLoads, frame, distributedPreview, hiddenDistributedId, distributedName, loadSymbolScale).ToList();
         if (presentation?.SelfWeightVisible != false && document.SelfWeightLoad is { } weight)
             distributed.Insert(0, DistributedLoadSymbol.CreateVisual(document.SelfWeight!.Id,
-                new(weight.StartPosition, weight.EndPosition, weight.Intensity.NewtonsPerMeter), EditorSelfWeight.Symbol,
+                new(weight.StartPosition, weight.EndPosition, weight.StartIntensity.NewtonsPerMeter), EditorSelfWeight.Symbol,
                 frame, symbolScale: loadSymbolScale) with { CanDragEndpoints = false, IsSelfWeight = true });
         // The profile selects the units of all load labels; the options round given and calculated values alike.
         var results = options is null ? new ResultPresentationOptions(profile)

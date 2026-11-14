@@ -11,9 +11,9 @@ namespace SpanDraft.Tests;
 
 public sealed class DesktopDistributedLoadLayoutTests
 {
-    private static EditorUniformDistributedLoad Load(double start, double end, string name = "q1") =>
+    private static EditorDistributedLoad Load(double start, double end, string name = "q1") =>
         new(Guid.NewGuid(), Length.FromMeters(start), Length.FromMeters(end), ForcePerLength.FromNewtonsPerMeter(-500), name);
-    private static EditorDocument Document(params EditorUniformDistributedLoad[] loads) =>
+    private static EditorDocument Document(params EditorDistributedLoad[] loads) =>
         new(Length.FromMeters(1), ProjectTemplates.Material, ProjectTemplates.Section, distributedLoads: loads);
     private static BeamRenderState Scene(EditorDocument doc, double width = 1100) =>
         BeamRenderState.Create(doc, new BeamLayoutState().Update(doc, width, 600)!, DesktopLayoutFixture.Measure);

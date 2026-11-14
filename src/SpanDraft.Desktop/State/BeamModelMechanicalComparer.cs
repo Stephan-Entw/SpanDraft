@@ -34,8 +34,8 @@ public static class BeamModelMechanicalComparer
     {
         (PointForce a, PointForce b) => a.Position == b.Position && a.Force == b.Force,
         (PointMoment a, PointMoment b) => a.Position == b.Position && a.Moment == b.Moment,
-        (UniformDistributedLoad a, UniformDistributedLoad b) => a.StartPosition == b.StartPosition
-            && a.EndPosition == b.EndPosition && a.Intensity == b.Intensity,
+        (DistributedLoad a, DistributedLoad b) => a.StartPosition == b.StartPosition
+            && a.EndPosition == b.EndPosition && a.StartIntensity == b.StartIntensity && a.EndIntensity == b.EndIntensity,
         _ => false
     };
 }

@@ -6,7 +6,7 @@ var mat=new Material("S235",Pressure.FromPascals(210e9),Pressure.FromPascals(235
 var sec=new CustomSection(Area.FromSquareMeters(1e-3),SecondMomentOfArea.FromMetersToTheFourth(8.33e-6),SectionModulus.FromCubicMeters(1e-4));
 const double L=1.0;
 static BeamLoad F(double x,double v)=>new PointForce(M(x),Force.FromNewtons(v));
-static BeamLoad Q(double a,double b,double v)=>new UniformDistributedLoad(M(a),M(b),ForcePerLength.FromNewtonsPerMeter(v));
+static BeamLoad Q(double a,double b,double v)=>new DistributedLoad(M(a),M(b),ForcePerLength.FromNewtonsPerMeter(v));
 void Run(string label,(double x,SupportType t)[] sup,BeamLoad[] loads,double x1=double.NaN,double x2=double.NaN){
   try{
     var s=new EulerBernoulliBeamSolver().Solve(new BeamModel(M(L),mat,sec,sup.Select(p=>new Support(M(p.x),p.t)),loads));

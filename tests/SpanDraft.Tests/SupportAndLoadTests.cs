@@ -40,7 +40,7 @@ public class SupportAndLoadTests
         var position = Length.FromMeters(0.5);
         var force = new PointForce(position, Force.FromNewtons(magnitude));
         var moment = new PointMoment(position, Moment.FromNewtonMeters(magnitude));
-        var distributed = new UniformDistributedLoad(default, position, ForcePerLength.FromNewtonsPerMeter(magnitude));
+        var distributed = new DistributedLoad(default, position, ForcePerLength.FromNewtonsPerMeter(magnitude));
 
         Assert.Equal(position, force.Position);
         Assert.Equal(magnitude, force.Force.Newtons);
@@ -48,7 +48,24 @@ public class SupportAndLoadTests
         Assert.Equal(magnitude, moment.Moment.NewtonMeters);
         Assert.Equal(default, distributed.StartPosition);
         Assert.Equal(position, distributed.EndPosition);
-        Assert.Equal(magnitude, distributed.Intensity.NewtonsPerMeter);
+        Assert.Equal(magnitude, distributed.StartIntensity.NewtonsPerMeter);
+        Assert.Equal(magnitude, distributed.EndIntensity.NewtonsPerMeter);
+        Assert.True(distributed.IsConstant);
+    }
+
+    [Theory]
+    [InlineData(-500, 0)]
+    [InlineData(0, 250)]
+    [InlineData(-500, 500)]
+    [InlineData(0, 0)]
+    public void DistributedLoadKeepsBothEndIntensitiesIncludingZeroAndSignChange(double start, double end)
+    {
+        var load = new DistributedLoad(default, Length.FromMeters(2),
+            ForcePerLength.FromNewtonsPerMeter(start), ForcePerLength.FromNewtonsPerMeter(end));
+
+        Assert.Equal(start, load.StartIntensity.NewtonsPerMeter);
+        Assert.Equal(end, load.EndIntensity.NewtonsPerMeter);
+        Assert.Equal(start == end, load.IsConstant);
     }
 
     [Theory]
@@ -57,7 +74,7 @@ public class SupportAndLoadTests
     [InlineData(2, 1)]
     public void DistributedLoadRejectsEmptyOrReversedIntervals(double start, double end)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new UniformDistributedLoad(
+        Assert.Throws<ArgumentOutOfRangeException>(() => new DistributedLoad(
             Length.FromMeters(start), Length.FromMeters(end), ForcePerLength.FromNewtonsPerMeter(-1)));
     }
 
@@ -67,6 +84,6 @@ public class SupportAndLoadTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new Support(Length.FromMeters(-1), SupportType.Fixed));
         Assert.Throws<ArgumentOutOfRangeException>(() => new PointForce(Length.FromMeters(-1), default));
         Assert.Throws<ArgumentOutOfRangeException>(() => new PointMoment(Length.FromMeters(-1), default));
-        Assert.Throws<ArgumentOutOfRangeException>(() => new UniformDistributedLoad(Length.FromMeters(-1), Length.FromMeters(1), default));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new DistributedLoad(Length.FromMeters(-1), Length.FromMeters(1), default));
     }
 }

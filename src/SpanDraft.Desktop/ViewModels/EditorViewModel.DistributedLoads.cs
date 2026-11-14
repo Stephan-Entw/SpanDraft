@@ -89,7 +89,7 @@ public sealed partial class EditorViewModel
         if (!IsEditorNeutral) return false;
         var load = Document.DistributedLoads.FirstOrDefault(l => l.Id == id);
         if (load is null) return false;
-        OpenDistributedLoadDraft(id, load.StartPosition, load.EndPosition, load.Intensity.NewtonsPerMeter);
+        OpenDistributedLoadDraft(id, load.StartPosition, load.EndPosition, load.StartIntensity.NewtonsPerMeter);
         return true;
     }
 
@@ -159,7 +159,8 @@ public sealed partial class EditorViewModel
             int index = Array.FindIndex(loads, l => l.Id == id);
             if (index < 0) { CancelDistributedLoadInteraction(); return false; }
             loads[index] = loads[index] with { StartPosition = start, EndPosition = end,
-                Intensity = ForcePerLength.FromNewtonsPerMeter(intensity), Name = draft.NameText };
+                StartIntensity = ForcePerLength.FromNewtonsPerMeter(intensity),
+                EndIntensity = ForcePerLength.FromNewtonsPerMeter(intensity), Name = draft.NameText };
         }
         else
         {

@@ -37,7 +37,7 @@ public sealed class DesktopSchematicIntegrationTests
             loads: [Load(200, value, PointLoadKind.Force, "F1"), Load(500, value, PointLoadKind.Moment, "M1")],
             distributedLoads: [new(Guid.NewGuid(), Mm(700), Mm(900), ForcePerLength.FromNewtonsPerMeter(value), "q1")]);
         document = document with { SelfWeight = new(Guid.NewGuid(), true) };
-        double weight = document.SelfWeightLoad!.Intensity.NewtonsPerMeter;
+        double weight = document.SelfWeightLoad!.StartIntensity.NewtonsPerMeter;
         var options = new ResultPresentationOptions(significantDigits: digits, notation: notation);
         var measured = new List<string>();
         double Width(string text) => text.Contains("kip", StringComparison.Ordinal) ? 300 + text.Length : text.Length * 3;

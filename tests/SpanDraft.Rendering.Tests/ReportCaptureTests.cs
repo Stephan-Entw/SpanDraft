@@ -347,7 +347,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
             Number(node.ReactionMoment!.Value.NewtonMeters, QuantityKind.Moment) }, reactions[0].Skip(1));
         // Summing the reported rows reproduces the applied load; nothing is counted twice.
         double applied = state.Document.Loads.Sum(l => l.Value) + state.Document.DistributedLoads.Sum(q =>
-            q.Intensity.NewtonsPerMeter * (q.EndPosition.Meters - q.StartPosition.Meters));
+            q.StartIntensity.NewtonsPerMeter * (q.EndPosition.Meters - q.StartPosition.Meters));
         Assert.Equal(-applied, solution.Nodes.Sum(n => n.ReactionY?.Newtons ?? 0), 6);
         Assert.Equal(editor.Overview.Reactions.Select(r => r.Ry), reactions.Select(r => r[2]));
         using var bitmap = report.RenderPage(0, 96); AssertTextContained(report);

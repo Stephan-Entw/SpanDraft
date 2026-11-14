@@ -431,7 +431,7 @@ public sealed class DesktopProjectOverviewTests
         Assert.Same(doc, editor.Document);
         Assert.Equal(-100.56789, editor.Document.Loads[0].Value);
         Assert.Equal(50.123456, editor.Document.Loads[1].Value);
-        Assert.Equal(-500.98765, editor.Document.DistributedLoads[0].Intensity.NewtonsPerMeter);
+        Assert.Equal(-500.98765, editor.Document.DistributedLoads[0].StartIntensity.NewtonsPerMeter);
         Assert.Equal(1, analyses());
     }
 

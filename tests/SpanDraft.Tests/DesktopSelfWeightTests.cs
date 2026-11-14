@@ -25,14 +25,14 @@ public sealed class DesktopSelfWeightTests
     public void FormulaMapsToExistingUdlAndMatchesCantileverReference()
     {
         var document = SelfWeightTestProjects.Document(true);
-        var load = Assert.IsType<UniformDistributedLoad>(Assert.Single(document.ToBeamModel().Loads));
-        Assert.Equal(-1539.64405, load.Intensity.NewtonsPerMeter, 8);
+        var load = Assert.IsType<DistributedLoad>(Assert.Single(document.ToBeamModel().Loads));
+        Assert.Equal(-1539.64405, load.StartIntensity.NewtonsPerMeter, 8);
         Assert.Equal(M(0), load.StartPosition); Assert.Equal(M(3), load.EndPosition);
         Assert.Empty(document.DistributedLoads);
         Assert.DoesNotContain(document.NamedEntities, e => e.Id == document.SelfWeight!.Id);
         Assert.Contains(document.SelfWeight!.Id, document.EntityIds);
         var explicitLoad = document with { SelfWeight = null };
-        explicitLoad = explicitLoad.WithDistributedLoads([new(Guid.NewGuid(), M(0), M(3), load.Intensity, "q1")]);
+        explicitLoad = explicitLoad.WithDistributedLoads([new(Guid.NewGuid(), M(0), M(3), load.StartIntensity, "q1")]);
         var solution = SolverTestSupport.Solve(document.ToBeamModel());
         SolverTestSupport.SameResults(SolverTestSupport.Solve(explicitLoad.ToBeamModel()), solution);
         SolverTestSupport.ForceClose(4618.93215, SolverTestSupport.At(solution, 0).ReactionY);
@@ -100,7 +100,7 @@ public sealed class DesktopSelfWeightTests
         Assert.Equal(enabled ? 2 : 1, s.Calls);
         Assert.Equal(enabled ? EditorChangeKind.Mechanical : EditorChangeKind.MetadataOnly,
             EditorChangeClassifier.Classify(before, editor.Session.CurrentRevision.State));
-        if (enabled) Assert.Equal(-1569.064, editor.Document.SelfWeightLoad!.Intensity.NewtonsPerMeter, 8);
+        if (enabled) Assert.Equal(-1569.064, editor.Document.SelfWeightLoad!.StartIntensity.NewtonsPerMeter, 8);
         Assert.True(editor.Undo()); Assert.Equal(enabled ? 3 : 1, s.Calls);
         Assert.True(editor.Redo()); Assert.Equal(enabled ? 4 : 1, s.Calls);
     }
@@ -111,11 +111,11 @@ public sealed class DesktopSelfWeightTests
         var s = new Observed(SelfWeightTestProjects.Document(true)); var editor = s.Editor;
         var identity = editor.Document.SelfWeight;
         editor.ApplySetup(new RectangleSection(M(.2), M(.2)), SelfWeightTestProjects.Steel());
-        Assert.Equal(-3079.2881, editor.Document.SelfWeightLoad!.Intensity.NewtonsPerMeter, 8);
+        Assert.Equal(-3079.2881, editor.Document.SelfWeightLoad!.StartIntensity.NewtonsPerMeter, 8);
         Assert.Equal(2, s.Calls);
         editor.DimensionLength.Begin(); editor.DimensionLength.Text = "4000";
         Assert.True(editor.DimensionLength.Confirm());
-        Assert.Equal(-3079.2881, editor.Document.SelfWeightLoad.Intensity.NewtonsPerMeter, 8);
+        Assert.Equal(-3079.2881, editor.Document.SelfWeightLoad.StartIntensity.NewtonsPerMeter, 8);
         Assert.Equal(M(4), editor.Document.SelfWeightLoad.EndPosition); Assert.Equal(3, s.Calls);
         var d = editor.Document;
         foreach (var copy in new[] { d.WithLoads([]), d.WithSupports([]), d.WithDistributedLoads([]),
@@ -189,7 +189,7 @@ public sealed class DesktopSelfWeightTests
         var options = new ResultPresentationOptions(UnitProfile.UnitedStates, 5, EngineeringNotation.Off);
         editor.ApplyResultPresentation(options);
         Assert.NotEqual(original, editor.SelfWeightLabel);
-        Assert.Equal("g = " + QuantityFormatter.FormatResult(editor.Document.SelfWeightLoad!.Intensity.NewtonsPerMeter,
+        Assert.Equal("g = " + QuantityFormatter.FormatResult(editor.Document.SelfWeightLoad!.StartIntensity.NewtonsPerMeter,
             QuantityKind.DistributedLoad, options), editor.SelfWeightLabel);
         Assert.Equal(editor.SelfWeightLabel[4..], editor.Overview.DistributedLoads[0].Value);
         Assert.Equal(editor.SelfWeightLabel, editor.SelfWeightValue.PlainText);

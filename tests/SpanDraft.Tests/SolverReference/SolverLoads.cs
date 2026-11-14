@@ -55,6 +55,7 @@ internal sealed record SolverLoads(
         var forces = new List<PointAction>();
         var moments = new List<PointAction>();
         var uniform = new List<UniformAction>();
+        var linear = new List<LinearAction>();
         foreach (BeamLoad load in beam.Loads)
         {
             switch (load)
@@ -65,20 +66,24 @@ internal sealed record SolverLoads(
                 case PointMoment moment:
                     moments.Add(new(moment.Position.Meters, moment.Moment.NewtonMeters));
                     break;
-                case UniformDistributedLoad distributed:
-                    uniform.Add(new(distributed.StartPosition.Meters, distributed.EndPosition.Meters,
-                        distributed.Intensity.NewtonsPerMeter));
+                case DistributedLoad distributed:
+                    if (distributed.IsConstant)
+                        uniform.Add(new(distributed.StartPosition.Meters, distributed.EndPosition.Meters,
+                            distributed.StartIntensity.NewtonsPerMeter));
+                    else
+                        linear.Add(new(distributed.StartPosition.Meters, distributed.EndPosition.Meters,
+                            distributed.StartIntensity.NewtonsPerMeter, distributed.EndIntensity.NewtonsPerMeter));
                     break;
                 default: throw new NotSupportedException($"Unsupported beam load: {load.GetType().Name}.");
             }
         }
         if (additional is null)
-            return new(forces, moments, uniform, [], []);
+            return new(forces, moments, uniform, [], [], InternalLinear: linear);
         forces.AddRange(additional.Forces);
         moments.AddRange(additional.Moments);
         uniform.AddRange(additional.Uniform);
         return new(forces, moments, uniform, additional.AxialForces, additional.AxialUniform, additional.Hinges,
-            additional.Springs, additional.Rigidity, additional.Linear, additional.Curvature);
+            additional.Springs, additional.Rigidity, linear.Concat(additional.Linear).ToArray(), additional.Curvature);
     }
 
     /// <summary>Every position where a result can change character.</summary>

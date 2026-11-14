@@ -34,14 +34,16 @@ internal static class BeamAssembly
                 case PointMoment moment:
                     loads[DofMap.Index(model.NodeIndex(moment.Position), DegreeOfFreedom.Rotation)] += moment.Moment.NewtonMeters;
                     break;
-                case UniformDistributedLoad distributed:
+                case DistributedLoad distributed:
                     foreach (BeamElement element in model.Elements)
                     {
                         // UDL endpoints are mesh nodes: each element is wholly inside or outside.
                         if (!element.IsCoveredBy(distributed))
                             continue;
+                        if (!distributed.IsConstant)
+                            throw new NotSupportedException("The frozen finite-element reference supports constant loads only.");
                         Vector<double> local = EulerBernoulliElement.UniformLoad(
-                            distributed.Intensity.NewtonsPerMeter, element.LengthMeters);
+                            distributed.StartIntensity.NewtonsPerMeter, element.LengthMeters);
                         int[] indices = element.GlobalDofs;
                         for (int i = 0; i < 6; i++)
                             loads[indices[i]] += local[i];

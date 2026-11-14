@@ -29,7 +29,7 @@ public sealed record ValidationCase(int SchemaVersion, int CaseVersion, string C
             Supports.Select(s => new Support(M(s.Position), Enum.Parse<SupportType>(s.Type))),
             PointForces.Select(p => (BeamLoad)new PointForce(M(p.Position), Force.FromNewtons(p.Value)))
                 .Concat(PointMoments.Select(p => (BeamLoad)new PointMoment(M(p.Position), Moment.FromNewtonMeters(p.Value))))
-                .Concat(Udls.Select(q => (BeamLoad)new UniformDistributedLoad(M(q.Start), M(q.End), ForcePerLength.FromNewtonsPerMeter(q.Value)))));
+                .Concat(Udls.Select(q => (BeamLoad)new DistributedLoad(M(q.Start), M(q.End), ForcePerLength.FromNewtonsPerMeter(q.Value)))));
     }
 
     public double[] Events() => new[] { 0.0, Length }.Concat(Supports.Select(s => s.Position))

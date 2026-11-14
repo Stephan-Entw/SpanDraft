@@ -311,7 +311,7 @@ public class DesktopStateTests
             // The solver's own output gate rejects this stable model: supports 2^-28 m apart under a symmetric load.
             AnalysisPresentationKind.IllConditionedSystem => AnalysisBeam(
                 [new(Length.FromMeters(1), SupportType.Pinned), new(Length.FromMeters(1 + Math.ScaleB(1, -28)), SupportType.Roller)],
-                [new UniformDistributedLoad(Length.FromMeters(0.25), Length.FromMeters(1.75), ForcePerLength.FromNewtonsPerMeter(3))]),
+                [new DistributedLoad(Length.FromMeters(0.25), Length.FromMeters(1.75), ForcePerLength.FromNewtonsPerMeter(3))]),
             _ => AnalysisBeam([fixedSupport],
                 [new PointForce(Length.FromMeters(2), Force.FromNewtons(double.MaxValue)),
                  new PointForce(Length.FromMeters(2), Force.FromNewtons(double.MaxValue))])

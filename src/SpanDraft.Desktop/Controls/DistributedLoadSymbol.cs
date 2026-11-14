@@ -32,7 +32,7 @@ public static class DistributedLoadSymbol
 {
     public const double HitPadding = PointLoadSymbol.HitPadding;
 
-    public static IReadOnlyList<DistributedLoadVisual> Layout(IReadOnlyList<EditorUniformDistributedLoad> loads,
+    public static IReadOnlyList<DistributedLoadVisual> Layout(IReadOnlyList<EditorDistributedLoad> loads,
         BeamLayoutFrame frame, DistributedLoadPreview? preview = null, Guid? hiddenId = null, string? name = null, double symbolScale = 1)
     {
         LayoutNumbers.Positive(symbolScale, nameof(symbolScale));
@@ -40,7 +40,7 @@ public static class DistributedLoadSymbol
         foreach (var load in loads)
         {
             bool draft = load.Id == hiddenId && preview is not null;
-            Add(load.Id, draft ? preview! : new(load.StartPosition, load.EndPosition, load.Intensity.NewtonsPerMeter),
+            Add(load.Id, draft ? preview! : new(load.StartPosition, load.EndPosition, load.StartIntensity.NewtonsPerMeter),
                 draft ? name ?? load.Name : load.Name, draft);
         }
         if (preview is not null && !loads.Any(l => l.Id == hiddenId)) Add(null, preview, name ?? "", true);

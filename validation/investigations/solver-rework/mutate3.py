@@ -12,7 +12,7 @@ BS = SV + 'BeamSolution.cs'
 EX = SV + 'BeamExtrema.cs'
 RT = SV + 'PolynomialRoots.cs'
 I = 'beam.BendingAxisProperties.SecondMomentOfArea.MetersToTheFourth'
-UL = 'src/SpanDraft.Core/Loads/UniformDistributedLoad.cs'
+UL = 'src/SpanDraft.Core/Loads/DistributedLoad.cs'
 # FI has an old and a new constructor; both are patched so that the new path is really affected.
 M = [
     ('S1', 'Federsteifigkeit: Nachgiebigkeit 1/k mit Faktor 1.01', [(SS, 'couple ? 1 / s.Rotational : 1 / s.Translational', 'couple ? 1 / s.Rotational : 1.01 / s.Translational')]),

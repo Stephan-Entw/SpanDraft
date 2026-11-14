@@ -16,7 +16,7 @@ internal sealed record BeamElement(BeamNode Left, BeamNode Right)
     internal double LengthMeters => Right.Position.Meters - Left.Position.Meters;
 
     // Every UDL boundary is a node, so coverage is always all-or-nothing.
-    internal bool IsCoveredBy(UniformDistributedLoad load) =>
+    internal bool IsCoveredBy(DistributedLoad load) =>
         Left.Position.Meters >= load.StartPosition.Meters &&
         Right.Position.Meters <= load.EndPosition.Meters;
 
@@ -60,7 +60,7 @@ internal sealed class SolverModel
             {
                 case PointForce force: positions.Add(force.Position.Meters); break;
                 case PointMoment moment: positions.Add(moment.Position.Meters); break;
-                case UniformDistributedLoad distributed:
+                case DistributedLoad distributed:
                     positions.Add(distributed.StartPosition.Meters);
                     positions.Add(distributed.EndPosition.Meters);
                     break;

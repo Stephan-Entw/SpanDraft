@@ -18,7 +18,7 @@ public sealed partial class EditorViewModel
     public bool IsSelfWeightFlyoutVisible => _selfWeightFlyout && IsSelfWeightEnabled;
     public string SelfWeightVisibilityAction => IsSelfWeightVisible ? Strings.HideSelfWeight : Strings.ShowSelfWeight;
     public string SelfWeightLabel => Document.SelfWeightLoad is { } load
-        ? EditorSelfWeight.Symbol + " = " + QuantityFormatter.FormatResult(load.Intensity.NewtonsPerMeter, QuantityKind.DistributedLoad, ResultPresentation) : "";
+        ? EditorSelfWeight.Symbol + " = " + QuantityFormatter.FormatResult(load.StartIntensity.NewtonsPerMeter, QuantityKind.DistributedLoad, ResultPresentation) : "";
     public TechnicalText SelfWeightValue => SelfWeightLabel is { Length: > 0 } label
         ? new TechnicalText(new TechnicalRun(EditorSelfWeight.Symbol, Role: TechnicalRole.Variable)) + label[EditorSelfWeight.Symbol.Length..] : "";
     public TechnicalText SelfWeightArea => TechnicalSymbols.Area + " = "

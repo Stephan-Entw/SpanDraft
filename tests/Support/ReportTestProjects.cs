@@ -22,7 +22,7 @@ internal static class ReportTestProjects
                 Force(9, 5.55, -12000), Force(10, 6.2, -13000),
                 new EditorPointMoment(Id(111), M(3.2), Moment.FromNewtonMeters(2500), "M1")]
             : [Force(1, .8, -1000)];
-        EditorUniformDistributedLoad[] uniform = overflow
+        EditorDistributedLoad[] uniform = overflow
             ? [Uniform(1, .2, 2.4, -3000), Uniform(2, 3.6, 6.8, -5000)]
             : [Uniform(1, .2, 1.8, -500)];
         var document = new EditorDocument(M(length), material, section, SectionAxisDesignation.Y,
@@ -37,6 +37,6 @@ internal static class ReportTestProjects
     private static Length Mm(double value) => Length.FromMillimeters(value);
     private static EditorPointForce Force(int number, double x, double value) => new(Id(100 + number), M(x),
         SpanDraft.Core.Units.Force.FromNewtons(value), "F" + number);
-    private static EditorUniformDistributedLoad Uniform(int number, double x, double end, double value) => new(Id(200 + number),
+    private static EditorDistributedLoad Uniform(int number, double x, double end, double value) => new(Id(200 + number),
         M(x), M(end), ForcePerLength.FromNewtonsPerMeter(value), "q" + number);
 }

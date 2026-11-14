@@ -11,7 +11,7 @@ foreach(var line in File.ReadLines(args[0])){
     var sup=c.GetProperty("sup").EnumerateArray().Select(s=>new Support(M(s[0].GetDouble()),Enum.Parse<SupportType>(s[1].GetString()!)));
     var loads=c.GetProperty("pf").EnumerateArray().Select(p=>(BeamLoad)new PointForce(M(p[0].GetDouble()),Force.FromNewtons(p[1].GetDouble())))
       .Concat(c.GetProperty("pm").EnumerateArray().Select(p=>(BeamLoad)new PointMoment(M(p[0].GetDouble()),Moment.FromNewtonMeters(p[1].GetDouble()))))
-      .Concat(c.GetProperty("q").EnumerateArray().Select(p=>(BeamLoad)new UniformDistributedLoad(M(p[0].GetDouble()),M(p[1].GetDouble()),ForcePerLength.FromNewtonsPerMeter(p[2].GetDouble()))));
+      .Concat(c.GetProperty("q").EnumerateArray().Select(p=>(BeamLoad)new DistributedLoad(M(p[0].GetDouble()),M(p[1].GetDouble()),ForcePerLength.FromNewtonsPerMeter(p[2].GetDouble()))));
     var hinges=c.TryGetProperty("hinges",out var hp)?hp.EnumerateArray().Select(h=>h.GetDouble()).ToArray():Array.Empty<double>();
     static double K(JsonElement e)=>e.ValueKind==JsonValueKind.String?double.PositiveInfinity:e.GetDouble();
     var springs=c.TryGetProperty("springs",out var sp)?sp.EnumerateArray().Select(s=>new ElasticSupport(s[0].GetDouble(),K(s[1]),K(s[2]),s[3].GetBoolean())).ToArray():Array.Empty<ElasticSupport>();
