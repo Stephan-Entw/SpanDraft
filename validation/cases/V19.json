@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V19",
+  "description": "Cantilever, antisymmetric triangular load",
+  "length": 3,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Fixed"
+    }
+  ],
+  "pointForces": [],
+  "pointMoments": [],
+  "udls": [],
+  "lineLoads": [
+    {
+      "start": 0.6,
+      "end": 2.4,
+      "startValue": -1500,
+      "endValue": 1500
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 0.11399999999999999,
+      "side": "Right"
+    },
+    {
+      "position": 0.222,
+      "side": "Right"
+    },
+    {
+      "position": 0.3,
+      "side": "Right"
+    },
+    {
+      "position": 0.6,
+      "side": "Left"
+    },
+    {
+      "position": 0.6,
+      "side": "Right"
+    },
+    {
+      "position": 0.942,
+      "side": "Right"
+    },
+    {
+      "position": 1.266,
+      "side": "Right"
+    },
+    {
+      "position": 1.5,
+      "side": "Right"
+    },
+    {
+      "position": 1.734,
+      "side": "Right"
+    },
+    {
+      "position": 2.1839999999999997,
+      "side": "Right"
+    },
+    {
+      "position": 2.4,
+      "side": "Left"
+    },
+    {
+      "position": 2.4,
+      "side": "Right"
+    },
+    {
+      "position": 2.514,
+      "side": "Right"
+    },
+    {
+      "position": 2.622,
+      "side": "Right"
+    },
+    {
+      "position": 2.7,
+      "side": "Right"
+    },
+    {
+      "position": 3,
+      "side": "Left"
+    }
+  ]
+}

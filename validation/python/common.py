@@ -40,7 +40,7 @@ def load_case(path):
 def events(case):
     return sorted(set([0.0, case['length']] + [s['position'] for s in case['supports']] +
                       [p['position'] for p in case['pointForces'] + case['pointMoments']] +
-                      [x for q in case['udls'] for x in [q['start'], q['end']]]))
+                      [x for q in case['udls'] + case.get('lineLoads', []) for x in [q['start'], q['end']]]))
 
 
 def result(case, solver, supported, options, mapping, source):

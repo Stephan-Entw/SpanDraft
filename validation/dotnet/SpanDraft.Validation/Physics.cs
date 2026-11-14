@@ -53,6 +53,13 @@ public static class Physics
             vertical += resultant;
             moment += resultant*(q.Start+q.End)/2;
         }
+        foreach (var q in input.LineLoads)
+        {
+            // Trapezoid: R = l (q1 + q2) / 2 and the moment about x = 0 is l (q1 (a + b) / 2 + (q2 - q1) (a / 2 + l / 3)).
+            double width = q.End-q.Start, rise = q.EndValue-q.StartValue;
+            vertical += width*(q.StartValue+q.EndValue)/2;
+            moment += width*(q.StartValue*(q.Start+q.End)/2 + rise*(q.Start/2 + width/3));
+        }
     }
 
     public static CheckReport Fields(ValidationCase input, BeamSolution solution)
@@ -83,17 +90,22 @@ public static class Physics
             foreach (double fraction in new[] { 0.37, 0.63 })
             {
                 double x = a+(b-a)*fraction;
-                double q = input.Udls.Where(q => q.Start < x && x < q.End).Sum(q => q.Value);
+                double q = input.IntensityAt(x);
                 var middle = solution.EvaluateAt(M(x), EvaluationSide.Right);
-                foreach (double h in new[] { 0.01*(b-a), 0.005*(b-a) })
+                double[] centralMoment = new double[2];
+                double[] steps = [0.01*(b-a), 0.005*(b-a)];
+                for (int k = 0; k < steps.Length; k++)
                 {
+                    double h = steps[k];
                     var left = solution.EvaluateAt(M(x-h), EvaluationSide.Right);
                     var right = solution.EvaluateAt(M(x+h), EvaluationSide.Right);
-                    report.Number("dM/dx", (right.BendingMoment.NewtonMeters-left.BendingMoment.NewtonMeters)/(2*h),
-                        middle.ShearForce.Newtons, Strict("V"), x);
+                    centralMoment[k] = (right.BendingMoment.NewtonMeters-left.BendingMoment.NewtonMeters)/(2*h);
                     report.Number("dV/dx", (right.ShearForce.Newtons-left.ShearForce.Newtons)/(2*h),
                         q, Strict("q"), x);
                 }
+                // The central difference of a cubic moment has the error h² q' / 6 under a linear load. Richardson
+                // extrapolation of the two step sizes removes it and is exact for every polynomial of degree three.
+                report.Number("dM/dx", (4*centralMoment[1]-centralMoment[0])/3, middle.ShearForce.Newtons, Strict("V"), x);
             }
         }
         return report;
@@ -125,7 +137,7 @@ public static class Physics
         return report;
     }
 
-    public static readonly string[] SuperpositionIds = ["V04", "V08", "V09", "V11", "V13", "V15"];
+    public static readonly string[] SuperpositionIds = ["V04", "V08", "V09", "V11", "V13", "V15", "V16", "V17", "V18", "V19"];
     public static CheckReport Superposition(ValidationCase input)
     {
         ValidationCase a, b;
@@ -133,6 +145,13 @@ public static class Physics
         {
             a = input with { Udls = [input.Udls[0]] };
             b = input with { Udls = [input.Udls[1]] };
+        }
+        else if (Catalog.LinearLoadIds.Contains(input.CaseId))
+        {
+            // A linear load is its constant part at the start intensity plus the triangle of the rise.
+            a = input with { LineLoads = [], Udls = [..input.Udls, ..input.LineLoads.Select(q => new UdlInput(q.Start, q.End, q.StartValue))] };
+            b = input with { PointForces = [], PointMoments = [], Udls = [],
+                LineLoads = input.LineLoads.Select(q => q with { StartValue = 0, EndValue = q.EndValue-q.StartValue }).ToArray() };
         }
         else if (input.CaseId == "V04")
         {
@@ -150,7 +169,8 @@ public static class Physics
             b = input with { PointForces = [], PointMoments = [] };
         }
         var combined = input with { PointForces = [..a.PointForces,..b.PointForces],
-            PointMoments = [..a.PointMoments,..b.PointMoments], Udls = [..a.Udls,..b.Udls] };
+            PointMoments = [..a.PointMoments,..b.PointMoments], Udls = [..a.Udls,..b.Udls],
+            LineLoads = [..a.LineLoads,..b.LineLoads] };
         return CompareSolutions(input, Solve(combined), [(Solve(a),1.0),(Solve(b),1.0)], _ => 1, "superposition");
     }
 

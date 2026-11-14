@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V16",
+  "description": "Simply supported beam, triangular load rising to the right",
+  "length": 4,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 4,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [],
+  "pointMoments": [],
+  "udls": [],
+  "lineLoads": [
+    {
+      "start": 0,
+      "end": 4,
+      "startValue": 0,
+      "endValue": -3000
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 0.76,
+      "side": "Right"
+    },
+    {
+      "position": 1.48,
+      "side": "Right"
+    },
+    {
+      "position": 2.0,
+      "side": "Right"
+    },
+    {
+      "position": 2.52,
+      "side": "Right"
+    },
+    {
+      "position": 3.52,
+      "side": "Right"
+    },
+    {
+      "position": 4,
+      "side": "Left"
+    }
+  ]
+}

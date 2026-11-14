@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V17",
+  "description": "Continuous beam with two overhangs, partial trapezoidal load",
+  "length": 5,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0.8,
+      "type": "Pinned"
+    },
+    {
+      "position": 2.9,
+      "type": "Roller"
+    },
+    {
+      "position": 4.2,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [],
+  "pointMoments": [],
+  "udls": [],
+  "lineLoads": [
+    {
+      "start": 0.2,
+      "end": 4.7,
+      "startValue": -400,
+      "endValue": -2200
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 0.038000000000000006,
+      "side": "Right"
+    },
+    {
+      "position": 0.074,
+      "side": "Right"
+    },
+    {
+      "position": 0.1,
+      "side": "Right"
+    },
+    {
+      "position": 0.2,
+      "side": "Left"
+    },
+    {
+      "position": 0.2,
+      "side": "Right"
+    },
+    {
+      "position": 0.31400000000000006,
+      "side": "Right"
+    },
+    {
+      "position": 0.42200000000000004,
+      "side": "Right"
+    },
+    {
+      "position": 0.5,
+      "side": "Right"
+    },
+    {
+      "position": 0.8,
+      "side": "Left"
+    },
+    {
+      "position": 0.8,
+      "side": "Right"
+    },
+    {
+      "position": 1.1989999999999998,
+      "side": "Right"
+    },
+    {
+      "position": 1.577,
+      "side": "Right"
+    },
+    {
+      "position": 1.8499999999999999,
+      "side": "Right"
+    },
+    {
+      "position": 2.1229999999999998,
+      "side": "Right"
+    },
+    {
+      "position": 2.6479999999999997,
+      "side": "Right"
+    },
+    {
+      "position": 2.9,
+      "side": "Left"
+    },
+    {
+      "position": 2.9,
+      "side": "Right"
+    },
+    {
+      "position": 3.147,
+      "side": "Right"
+    },
+    {
+      "position": 3.3810000000000002,
+      "side": "Right"
+    },
+    {
+      "position": 3.55,
+      "side": "Right"
+    },
+    {
+      "position": 3.7190000000000003,
+      "side": "Right"
+    },
+    {
+      "position": 4.0440000000000005,
+      "side": "Right"
+    },
+    {
+      "position": 4.2,
+      "side": "Left"
+    },
+    {
+      "position": 4.2,
+      "side": "Right"
+    },
+    {
+      "position": 4.295,
+      "side": "Right"
+    },
+    {
+      "position": 4.385,
+      "side": "Right"
+    },
+    {
+      "position": 4.45,
+      "side": "Right"
+    },
+    {
+      "position": 4.7,
+      "side": "Left"
+    },
+    {
+      "position": 4.7,
+      "side": "Right"
+    },
+    {
+      "position": 4.757000000000001,
+      "side": "Right"
+    },
+    {
+      "position": 4.811,
+      "side": "Right"
+    },
+    {
+      "position": 4.85,
+      "side": "Right"
+    },
+    {
+      "position": 5,
+      "side": "Left"
+    }
+  ]
+}

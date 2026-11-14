@@ -27,8 +27,14 @@ dotnet run --project validation/dotnet/SpanDraft.Validation.Runner --configurati
   --report validation/results/local-run/acceptance.json
 ```
 
+V16-V19 cover linearly varying line loads through the optional `lineLoads` input,
+which leaves the inputs and hashes of the earlier cases unchanged. Their analytical
+references come from exact rational statics, independent of both external solvers.
+Changing a Python source changes the adapter hash recorded in every reference, so the
+earlier references were regenerated; their numerical content is unchanged.
+
 The M2 boundary/exact tests run in the complete Product suite. They are separate
-from `compare`, which checks the 18 cases and 45 golden references, including
+from `compare`, which checks the 22 cases and 57 golden references, including
 external/analytical comparisons, physical checks and metamorphic relations.
 Use a fresh `compare` without `--actual` for product acceptance so all results
 come from the current public solver in that run.
@@ -105,7 +111,7 @@ applicable requirements fail acceptance; the explicitly investigated V14
 position limitations are classified as N/A in the comparison layer.
 
 To verify a regeneration independently against the golden files, ignoring only
-generation timestamps, and calibrate both external solvers against all nine
+generation timestamps, and calibrate both external solvers against all thirteen
 analytical cases:
 
 ```sh
@@ -116,7 +122,7 @@ validation/python/.venv/bin/python validation/python/audit_references.py \
 ```
 
 The generator returns **1** for the full catalog because it reproduces V14's
-historical PARTIAL extraction metadata; all 45 files are still generated. The
+historical PARTIAL extraction metadata; all 57 files are still generated. The
 audit returns **0** when calibration and reproduction match. In the documented
 acceptance, the comparison CLI and both complete .NET test runs returned **0**.
 V14's legacy extraction status is resolved only for its six documented position
@@ -124,8 +130,8 @@ limitations; other incomplete extraction requirements remain PARTIAL.
 
 ## Layout
 
-- `cases/`: 18 neutral versioned SI input definitions; source of truth for every adapter.
-- `references/`: 36 external and 9 analytical golden files, with provenance and input SHA-256.
+- `cases/`: 22 neutral versioned SI input definitions; source of truth for every adapter.
+- `references/`: 44 external and 13 analytical golden files, with provenance and input SHA-256.
 - `python/`: isolated external adapters, analytical provider and explicit generation/promotion commands.
 - `dotnet/`: public-solver comparisons, physical checks, metamorphic tests and CLI.
 - `results/`: reviewed acceptance evidence; transient candidate/export/run files are ignored.

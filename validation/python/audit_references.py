@@ -48,14 +48,14 @@ def main():
                     failures.append(dict(quantity=q,external=observed,analytical=ext['value'],absTol=a,relTol=r))
             results.append(dict(caseId=analytical['caseId'],solver=solver,comparisons=count,
                                 status='FAIL' if failures else 'PASS',failures=failures))
-    if len(results)!=18:
-        raise RuntimeError('Calibration requires all 9 analytical cases against both external solvers')
+    if len(results)!=26:
+        raise RuntimeError('Calibration requires all 13 analytical cases against both external solvers')
     reproduced=[]; differing=[]
     if args.against:
         left={p.name:p for p in args.directory.glob('*.json')}
         right={p.name:p for p in args.against.glob('*.json')}
-        if len(left)!=45 or left.keys()!=right.keys():
-            raise RuntimeError('Reproduction requires exactly the same 45 reference files')
+        if len(left)!=57 or left.keys()!=right.keys():
+            raise RuntimeError('Reproduction requires exactly the same 57 reference files')
         for name,path in sorted(left.items()):
             actual=semantic(json.loads(path.read_text()))
             expected=semantic(json.loads(right[name].read_text()))

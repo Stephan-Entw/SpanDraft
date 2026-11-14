@@ -35,7 +35,7 @@ def main():
     for path in files:
         case=load_case(path)
         for solver in args.solver or ['indeterminatebeam','pycba','analytical']:
-            if solver=='analytical' and case['caseId'].split('-')[0] not in ['V01','V02','V03','V04','V05','V06']:
+            if solver=='analytical' and case['caseId'].split('-')[0] not in ['V01','V02','V03','V04','V05','V06','V16','V17','V18','V19']:
                 continue
             target=output/(case['caseId']+'.'+solver+'.json')
             if target.exists(): raise FileExistsError(f'Refusing overwrite: {target}')

@@ -2,7 +2,8 @@
 Never imported by an external-solver adapter to fill missing solver results.
 """
 import sympy as sp
-from common import result, polynomial_pieces, polynomial_samples, polynomial_extrema
+import numpy as np
+from common import result, events, polynomial_pieces, polynomial_samples, polynomial_extrema
 
 
 def generate(case):
@@ -51,6 +52,8 @@ def generate(case):
         C1 = -primitive.subs(x,L)/L
         w = (primitive+C1*x)/EI
         reactions = [(0,Ra,None),(float(L),Ra,None)]
+    elif kind in ['V16', 'V17', 'V18', 'V19']:
+        return generate_linear(case, x, L, EI)
     else:
         raise ValueError('No analytical provider for '+case['caseId'])
     fields = dict(u=sp.Integer(0), w=w, theta=sp.diff(w,x), N=sp.Integer(0), V=shear, M=moment)
@@ -67,4 +70,97 @@ def generate(case):
         data['reactions'].append(dict(position=pos,values=values))
     data['samples']=polynomial_samples(case,pieces)
     data['extrema']=polynomial_extrema(pieces)
+    return data
+
+
+def generate_linear(case, x, L, EI):
+    """Exact rational statics and compatibility for piecewise linear distributed loads.
+
+    The state (w, theta, M, V) is carried through the intervals between all event positions by
+    integrating the exact linear intensity; point actions and unknown support reactions are jumps.
+    The unknown initial deflection and rotation and all reactions follow from the support and free-end
+    conditions as one rational linear system, solved symbolically. No SpanDraft code and no external beam
+    solver is involved.
+    """
+    R = sp.Rational
+    bounds = [R(str(b)) for b in events(case)]
+    supports = [(R(str(s['position'])), s['type']) for s in case['supports']]
+    reactions = {i: sp.Symbol(f'Ry{i}') for i in range(len(supports))}
+    couples = {i: sp.Symbol(f'Rm{i}') for i, (_, kind) in enumerate(supports) if kind == 'Fixed'}
+    w0, theta0 = sp.symbols('w0 theta0')
+    lines = [(R(str(q['start'])), R(str(q['end'])), R(str(q['startValue'])), R(str(q['endValue'])))
+             for q in case.get('lineLoads', [])]
+    lines += [(R(str(q['start'])), R(str(q['end'])), R(str(q['value'])), R(str(q['value']))) for q in case['udls']]
+    forces = [(R(str(p['position'])), R(str(p['value']))) for p in case['pointForces']]
+    moments = [(R(str(p['position'])), R(str(p['value']))) for p in case['pointMoments']]
+    s, u = sp.symbols('s u', real=True)
+
+    def integrate(expression):
+        return sp.integrate(expression.subs(s, u), (u, 0, s))
+
+    def jump(position, w, theta, m, v):
+        v += sum((f for a, f in forces if a == position), sp.Integer(0))
+        m -= sum((c for a, c in moments if a == position), sp.Integer(0))
+        for i, (a, kind) in enumerate(supports):
+            if a == position:
+                v += reactions[i]
+                if kind == 'Fixed':
+                    m -= couples[i]
+        return w, theta, m, v
+
+    equations = []
+
+    def support_conditions(position, w, theta):
+        for a, kind in supports:
+            if a == position:
+                equations.append(w)
+                if kind == 'Fixed':
+                    equations.append(theta)
+
+    state = (w0, theta0, sp.Integer(0), sp.Integer(0))
+    support_conditions(bounds[0], w0, theta0)
+    state = jump(bounds[0], *state)
+    pieces = []
+    for a, b in zip(bounds, bounds[1:]):
+        w, theta, m, v = state
+        # Intensity inside (a, b): the sum of the loads covering the whole interval, linear in x.
+        q = sp.expand(sum((q1 + (q2 - q1) * (x - qa) / (qb - qa) for qa, qb, q1, q2 in lines if qa <= a and b <= qb),
+                          sp.Integer(0)).subs(x, a + s))
+        shear = v + integrate(q)
+        moment = m + integrate(shear)
+        rotation = theta + integrate(moment) / EI
+        deflection = w + integrate(rotation)
+        pieces.append((a, b, dict(w=deflection, theta=rotation, M=moment, V=shear)))
+        end = tuple(e.subs(s, b - a) for e in (deflection, rotation, moment, shear))
+        support_conditions(b, end[0], end[1])
+        state = jump(b, *end)
+    equations += [state[2], state[3]]
+    unknowns = [w0, theta0] + list(reactions.values()) + list(couples.values())
+    solution = sp.solve(equations, unknowns, dict=True)
+    if len(solution) != 1 or set(solution[0]) != set(unknowns):
+        raise RuntimeError('The statics of ' + case['caseId'] + ' are not uniquely solvable')
+    solution = solution[0]
+    t = sp.Symbol('t')
+    zero = np.polynomial.Polynomial([0.0])
+    full = []
+    for a, b, fields in pieces:
+        polys = dict(u=zero, N=zero)
+        for name, expression in fields.items():
+            expression = sp.expand(expression.subs(solution).subs(s, t * (b - a)))
+            poly = sp.Poly(expression, t)
+            polys[name] = np.polynomial.Polynomial([float(c) for c in reversed(poly.all_coeffs())])
+        full.append((float(a), float(b), polys))
+    data = result(case, 'analytical', ['u', 'w', 'theta', 'N', 'V', 'M', 'Rx', 'Ry', 'Rm'],
+                  dict(method='Exact rational statics and compatibility, integrated linear intensity'),
+                  'SI and SpanDraft conventions directly; no SpanDraft solver input',
+                  'validation/python/analytical.py; derivation in docs/VALIDATION.md')
+    for i, (position, kind) in enumerate(supports):
+        values = {'Ry': float(solution[reactions[i]])}
+        if kind in ['Pinned', 'Fixed']:
+            values['Rx'] = 0.0
+        if kind == 'Fixed':
+            values['Rm'] = float(solution[couples[i]])
+        data['reactions'].append(dict(position=float(position), values=values))
+    data['samples'] = polynomial_samples(case, full)
+    data['extrema'] = polynomial_extrema(full)
     return data

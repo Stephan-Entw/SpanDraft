@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V18",
+  "description": "Simply supported beam, load with sign change",
+  "length": 3,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 3,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [],
+  "pointMoments": [],
+  "udls": [],
+  "lineLoads": [
+    {
+      "start": 0,
+      "end": 3,
+      "startValue": 1700,
+      "endValue": -1100
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0,
+      "side": "Right"
+    },
+    {
+      "position": 0.5700000000000001,
+      "side": "Right"
+    },
+    {
+      "position": 1.1099999999999999,
+      "side": "Right"
+    },
+    {
+      "position": 1.5,
+      "side": "Right"
+    },
+    {
+      "position": 1.8900000000000001,
+      "side": "Right"
+    },
+    {
+      "position": 2.64,
+      "side": "Right"
+    },
+    {
+      "position": 3,
+      "side": "Left"
+    }
+  ]
+}

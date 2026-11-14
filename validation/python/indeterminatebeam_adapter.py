@@ -1,6 +1,6 @@
 """Read-only extraction from IndeterminateBeam 2.4.0 generated expressions."""
 import sympy as sp
-from indeterminatebeam import Beam, Support, PointLoadV, PointTorque, UDLV
+from indeterminatebeam import Beam, Support, PointLoadV, PointTorque, UDLV, TrapezoidalLoadV
 from common import result, polynomial_pieces, polynomial_samples, polynomial_extrema
 
 
@@ -15,7 +15,8 @@ def generate(case):
     beam.add_supports(*(Support(s['position'],flags[s['type']]) for s in case['supports']))
     beam.add_loads(*(list(PointLoadV(p['value'],p['position']) for p in case['pointForces']) +
                      list(PointTorque(p['value'],p['position']) for p in case['pointMoments']) +
-                     list(UDLV(q['value'],(q['start'],q['end'])) for q in case['udls'])))
+                     list(UDLV(q['value'],(q['start'],q['end'])) for q in case['udls']) +
+                     list(TrapezoidalLoadV((q['startValue'],q['endValue']),(q['start'],q['end'])) for q in case.get('lineLoads',[]))))
     beam.analyse()
     expressions=dict(N=sp.sympify(beam._normal_forces),V=sp.sympify(beam._shear_forces),
                      M=sp.sympify(beam._bending_moments),w=sp.sympify(beam._deflection_equation))

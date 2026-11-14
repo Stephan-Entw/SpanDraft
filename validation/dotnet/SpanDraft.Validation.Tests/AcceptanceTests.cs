@@ -62,7 +62,7 @@ public class AcceptanceTests
     {
         Assert.Equal(Catalog.CaseIds.Order(), Directory.GetFiles(Path.Combine(Catalog.Root,"validation","cases"),"*.json")
             .Select(Path.GetFileNameWithoutExtension).Order());
-        Assert.Equal(45, Directory.GetFiles(Path.Combine(Catalog.Root,"validation","references"),"*.json").Length);
+        Assert.Equal(57, Directory.GetFiles(Path.Combine(Catalog.Root,"validation","references"),"*.json").Length);
     }
 
     [Fact]

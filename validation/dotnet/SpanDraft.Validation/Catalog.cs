@@ -14,11 +14,15 @@ namespace SpanDraft.Validation;
 public sealed record SupportInput(double Position, string Type);
 public sealed record PointInput(double Position, double Value);
 public sealed record UdlInput(double Start, double End, double Value);
+public sealed record LineInput(double Start, double End, double StartValue, double EndValue);
 public sealed record EvaluationInput(double Position, string Side);
 public sealed record ValidationCase(int SchemaVersion, int CaseVersion, string CaseId, string Description,
     double Length, double E, double A, double I, SupportInput[] Supports, PointInput[] PointForces,
     PointInput[] PointMoments, UdlInput[] Udls, EvaluationInput[] Evaluations)
 {
+    /// <summary>Linearly varying line loads; optional, so the inputs and hashes of the earlier cases stay unchanged.</summary>
+    public LineInput[] LineLoads { get; init; } = [];
+
     public BeamModel ToBeam()
     {
         // Yield strength and W are required by Core but play no role in this scope.
@@ -29,18 +33,27 @@ public sealed record ValidationCase(int SchemaVersion, int CaseVersion, string C
             Supports.Select(s => new Support(M(s.Position), Enum.Parse<SupportType>(s.Type))),
             PointForces.Select(p => (BeamLoad)new PointForce(M(p.Position), Force.FromNewtons(p.Value)))
                 .Concat(PointMoments.Select(p => (BeamLoad)new PointMoment(M(p.Position), Moment.FromNewtonMeters(p.Value))))
-                .Concat(Udls.Select(q => (BeamLoad)new DistributedLoad(M(q.Start), M(q.End), ForcePerLength.FromNewtonsPerMeter(q.Value)))));
+                .Concat(Udls.Select(q => (BeamLoad)new DistributedLoad(M(q.Start), M(q.End), ForcePerLength.FromNewtonsPerMeter(q.Value))))
+                .Concat(LineLoads.Select(q => (BeamLoad)new DistributedLoad(M(q.Start), M(q.End),
+                    ForcePerLength.FromNewtonsPerMeter(q.StartValue), ForcePerLength.FromNewtonsPerMeter(q.EndValue)))));
     }
 
     public double[] Events() => new[] { 0.0, Length }.Concat(Supports.Select(s => s.Position))
         .Concat(PointForces.Select(p => p.Position)).Concat(PointMoments.Select(p => p.Position))
-        .Concat(Udls.SelectMany(q => new[] { q.Start, q.End })).Distinct().Order().ToArray();
+        .Concat(Udls.SelectMany(q => new[] { q.Start, q.End }))
+        .Concat(LineLoads.SelectMany(q => new[] { q.Start, q.End })).Distinct().Order().ToArray();
 
     public ValidationCase ScaleLoads(double factor) => this with {
         PointForces = PointForces.Select(p => p with { Value = factor * p.Value }).ToArray(),
         PointMoments = PointMoments.Select(p => p with { Value = factor * p.Value }).ToArray(),
-        Udls = Udls.Select(q => q with { Value = factor * q.Value }).ToArray()
+        Udls = Udls.Select(q => q with { Value = factor * q.Value }).ToArray(),
+        LineLoads = LineLoads.Select(q => q with { StartValue = factor * q.StartValue, EndValue = factor * q.EndValue }).ToArray()
     };
+
+    /// <summary>The summed intensity of all distributed loads at x inside their open intervals.</summary>
+    public double IntensityAt(double x) => Udls.Where(q => q.Start < x && x < q.End).Sum(q => q.Value) +
+        LineLoads.Where(q => q.Start < x && x < q.End)
+            .Sum(q => q.StartValue + (q.EndValue - q.StartValue) * (x - q.Start) / (q.End - q.Start));
 
     public static Length M(double meters) => SpanDraft.Core.Units.Length.FromMeters(meters);
     public static BeamSolution Solve(ValidationCase input) => new EulerBernoulliBeamSolver().Solve(input.ToBeam());
@@ -52,9 +65,11 @@ public static class Catalog
         PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
-    public static readonly string[] CaseIds = Enumerable.Range(1, 15).Select(i => $"V{i:00}")
+    public static readonly string[] CaseIds = Enumerable.Range(1, 19).Select(i => $"V{i:00}")
         .Concat(new[] { "V04-S01", "V04-S02", "V04-S03" }).ToArray();
-    public static readonly string[] AnalyticalIds = new[] { "V01", "V02", "V03", "V04", "V05", "V06", "V04-S01", "V04-S02", "V04-S03" };
+    public static readonly string[] LinearLoadIds = ["V16", "V17", "V18", "V19"];
+    public static readonly string[] AnalyticalIds = new[] { "V01", "V02", "V03", "V04", "V05", "V06", "V04-S01", "V04-S02", "V04-S03" }
+        .Concat(LinearLoadIds).ToArray();
     public static readonly string[] ExternalSolvers = ["indeterminatebeam", "pycba"];
     public static readonly string[] Quantities = ["Rx", "Ry", "Rm", "u", "w", "theta", "N", "V", "M"];
     public static string Root => FindRoot();

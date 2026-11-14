@@ -30,6 +30,12 @@ def build(case):
         for index,(a,b) in enumerate(zip(boundaries,boundaries[1:])):
             if q['start'] <= a and b <= q['end']:
                 model.add_udl(index+1,-q['value'])
+    for q in case.get('lineLoads',[]):
+        slope=(q['endValue']-q['startValue'])/(q['end']-q['start'])
+        for index,(a,b) in enumerate(zip(boundaries,boundaries[1:])):
+            if q['start'] <= a and b <= q['end']:
+                # PyCBA's native trapezoidal member load (type 5); the input is negated like the UDL (positive = downward).
+                model.add_trap(index+1,-(q['startValue']+slope*(a-q['start'])),-(q['startValue']+slope*(b-q['start'])))
     return model,boundaries,restraints
 
 
