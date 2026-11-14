@@ -6,7 +6,7 @@ namespace SpanDraft.Solver.Kernel;
 internal enum BendingJump { None = 0, PointForce = 1, PointMoment = 2, ReactionY = 4, ReactionMoment = 8 }
 internal sealed record BendingStation(double Position, BendingField? Left, BendingField? Right, BendingJump Jumps);
 internal sealed record BendingPiece(double Start, double End, ImmutableArray<double> ThetaCoefficients,
-    ImmutableArray<double> ShearCoefficients, double Intensity, PieceQuality Quality)
+    ImmutableArray<double> ShearCoefficients, double Intensity, PieceQuality Quality, double IntensityChange = 0)
 {
     internal (double Position, FieldSide Side) CandidatePosition(double t)
     {
@@ -20,7 +20,7 @@ internal sealed record BendingPiece(double Start, double End, ImmutableArray<dou
     {
         BendingComponent.W => PolynomialRoots.InUnitInterval(ThetaCoefficients.ToArray()),
         BendingComponent.M => PolynomialRoots.InUnitInterval(ShearCoefficients.ToArray()),
-        BendingComponent.V => PolynomialRoots.InUnitInterval(Intensity),
+        BendingComponent.V => PolynomialRoots.InUnitInterval(Intensity, IntensityChange),
         _ => throw new ArgumentOutOfRangeException(nameof(component))
     };
 
@@ -31,17 +31,35 @@ internal sealed record BendingPiece(double Start, double End, ImmutableArray<dou
         NormalizedBendingField start = fields.EvaluateNormalized(a, FieldSide.Right);
         double h = RoundCounted.BoundedDistance(b, a, fields.EL).Value;
         Bounded intensity = default;
+        double change = 0;
         foreach (ScaledLineLoad line in fields.Loads.Segments[fields.SegmentOf(a)].Lines)
-            if (line.Start <= a && line.End >= b)
-                intensity += new Bounded(line.Value);
+        {
+            if (!(line.Start <= a && line.End >= b))
+                continue;
+            if (!line.HasRamp)
+            {
+                intensity += new Bounded(line.StartValue);
+                continue;
+            }
+            // q(t) = q0 + dq t on the piece; dq is the slope times the piece length, not a difference of values.
+            intensity += new Bounded(line.IntensityAt(a, fields.EL).Value);
+            double width = RoundCounted.BoundedDistance(line.End, line.Start, fields.EL).Value;
+            change += line.Rise.Value * (h / width);
+        }
         double ei = fields.EI.Value;
         double m = start.Values[2], v = start.Values[3], q = intensity.Value;
         ImmutableArray<double> theta = [start.Values[1], (m * h) / ei, ((v * h) * h / 2) / ei,
             (((q * h) * h) * h / 6) / ei];
         ImmutableArray<double> shear = [v, q * h];
+        if (change != 0)
+        {
+            theta = theta.Add((((change * h) * h) * h / 24) / ei);
+            shear = shear.Add(change * h / 2);
+        }
         foreach (double value in theta.Concat(shear))
             KernelFailureException.RequireFinite(value);
-        return new(a, b, theta, shear, q, quality);
+        KernelFailureException.RequireFinite(change);
+        return new(a, b, theta, shear, q, quality, change);
     }
 }
 

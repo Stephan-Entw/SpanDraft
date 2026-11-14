@@ -24,7 +24,8 @@ public sealed class SolverProductChainTests
 
     public static TheoryData<string> Models => new(
         "cantilever", "simple", "udl", "moment", "indeterminate", "multiple-inner-supports", "load-on-support", "coincident-fixed",
-        "coincident-pinned", "six-nanometer-loads", "six-nanometer-support", "unloaded", "bending-axis", "self-weight");
+        "coincident-pinned", "six-nanometer-loads", "six-nanometer-support", "unloaded", "bending-axis", "self-weight",
+        "triangle", "sign-change", "trapezoids");
 
     [Theory]
     [MemberData(nameof(Models))]
@@ -217,7 +218,7 @@ public sealed class SolverProductChainTests
     private static double Resultant(BeamLoad load) => load switch
     {
         PointForce f => f.Force.Newtons,
-        DistributedLoad q => q.StartIntensity.NewtonsPerMeter * (q.EndPosition.Meters - q.StartPosition.Meters),
+        DistributedLoad q => ResultantOf(q),
         _ => 0
     };
 
@@ -225,7 +226,7 @@ public sealed class SolverProductChainTests
     {
         PointForce f => f.Force.Newtons * f.Position.Meters,
         PointMoment m => m.Moment.NewtonMeters,
-        DistributedLoad q => Resultant(q) * (q.StartPosition.Meters + q.EndPosition.Meters) / 2,
+        DistributedLoad q => MomentAboutOriginOf(q),
         _ => 0
     };
 
@@ -249,6 +250,10 @@ public sealed class SolverProductChainTests
         "six-nanometer-loads" => From(Cantilever(Point(X1, -5000), Point(X2, -3000))),
         "six-nanometer-support" => From(Beam([SupportAt(X1, SupportType.Pinned), SupportAt(1, SupportType.Roller)],
             [Point(X2, -5000), Point(.5, -3000)])),
+        "triangle" => From(Beam(loads: [Linear(0, L, 0, -1000)])),
+        "sign-change" => From(Beam(loads: [Linear(0, L, -500, 500)])),
+        "trapezoids" => From(Beam([SupportAt(0, SupportType.Fixed), SupportAt(0.75, SupportType.Roller),
+            SupportAt(L, SupportType.Roller)], [Linear(0.25, 1.75, -200, 600), Linear(0, 1, 300, 100), Point(1.25, -400)])),
         "unloaded" => From(Beam()),
         "bending-axis" => From(SectionAxisTestSupport.AxisBeam(
             SectionAxisTestSupport.Manual(SectionAxisDesignation.Y, SectionAxisDesignation.Z),

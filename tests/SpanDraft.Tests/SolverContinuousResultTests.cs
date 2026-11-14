@@ -324,9 +324,8 @@ public class SolverContinuousResultTests
                     moment += couple.Moment.NewtonMeters;
                     break;
                 case DistributedLoad udl:
-                    double resultant = udl.StartIntensity.NewtonsPerMeter * (udl.EndPosition.Meters - udl.StartPosition.Meters);
-                    vertical += resultant;
-                    moment += resultant * (udl.StartPosition.Meters + udl.EndPosition.Meters) / 2;
+                    vertical += ResultantOf(udl);
+                    moment += MomentAboutOriginOf(udl);
                     break;
             }
         Close(0, vertical, 1e-7);

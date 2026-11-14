@@ -42,9 +42,11 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
                 moment += value;
             foreach (var line in oracle.Input.LineLoads)
             {
-                SolverExactNumber resultant = From(line.StartNewtonsPerMeter) * (From(line.End) - From(line.Start));
-                force += resultant;
-                moment += resultant * (From(line.Start) + From(line.End)) / Q(2);
+                // Trapezoid: R = l (q1 + q2) / 2 and the first moment l (q1 (a + b) / 2 + (q2 - q1) (a / 2 + l / 3)).
+                SolverExactNumber a = From(line.Start), width = From(line.End) - a;
+                SolverExactNumber q1 = From(line.StartNewtonsPerMeter), rise = From(line.EndNewtonsPerMeter) - q1;
+                force += width * (q1 + From(line.EndNewtonsPerMeter)) / Q(2);
+                moment += width * (q1 * (a + From(line.End)) / Q(2) + rise * (a / Q(2) + width / Q(3)));
             }
             return [.. keys.Select(k => oracle.Field(k.X, FieldSide.Right)[k.Direction == W ? 0 : 1]), force, moment];
         }
@@ -137,10 +139,11 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
             SolverExactNumber near = position > line.Start ? x - From(line.Start) : Q(0);
             SolverExactNumber far = position > line.End ? x - From(line.End) : Q(0);
             SolverExactNumber q = From(line.StartNewtonsPerMeter);
-            v += q * (near - far);
-            m += q * (Pow(near, 2) - Pow(far, 2)) / Q(2);
-            theta += q * (Pow(near, 3) - Pow(far, 3)) / Q(6) / ei;
-            w += q * (Pow(near, 4) - Pow(far, 4)) / Q(24) / ei;
+            SolverExactNumber rise = From(line.EndNewtonsPerMeter) - q, width = From(line.End) - From(line.Start);
+            v += LineIntegral(q, rise, width, near, far, 1);
+            m += LineIntegral(q, rise, width, near, far, 2);
+            theta += LineIntegral(q, rise, width, near, far, 3) / ei;
+            w += LineIntegral(q, rise, width, near, far, 4) / ei;
         }
         return [w, theta, m, v];
     }
@@ -158,10 +161,25 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
         SolverExactNumber force = Q(0), l = From(Input.Length), ei = From(Input.EI);
         foreach (var p in Input.PointForces) force += From(p.Newtons).Abs();
         foreach (var p in Input.PointMoments) force += From(p.NewtonMeters).Abs() / l;
-        foreach (var q in Input.LineLoads) force += From(q.StartNewtonsPerMeter).Abs() * (From(q.End) - From(q.Start));
+        foreach (var q in Input.LineLoads)
+            force += (From(q.StartNewtonsPerMeter).Abs() + From(q.EndNewtonsPerMeter).Abs()) * (From(q.End) - From(q.Start)) / Q(2);
         SolverExactNumber sm = Max(mx[2], force * l), sv = Max(sm / l, force);
         SolverExactNumber st = Max(mx[1], sm * l / ei), sw = Max(Max(mx[0], sm * l * l / ei), st * l);
         return [sw, st, sm, sv];
+    }
+
+    /// <summary>
+    /// The p-th integral at distance near (far beyond the load end, else 0) of a load with start intensity q and
+    /// linear rise over its width: q (n^p - f^p) / p! + (r / d) (n^(p+1) - f^(p+1)) / (p+1)! - r f^p / p!.
+    /// </summary>
+    internal static SolverExactNumber LineIntegral(SolverExactNumber q, SolverExactNumber rise,
+        SolverExactNumber width, SolverExactNumber near, SolverExactNumber far, int p)
+    {
+        SolverExactNumber result = q * (Pow(near, p) - Pow(far, p)) / Integer(Factorial(p));
+        if (rise.Numerator.IsZero)
+            return result;
+        return result + rise / width * (Pow(near, p + 1) - Pow(far, p + 1)) / Integer(Factorial(p + 1))
+            - rise * Pow(far, p) / Integer(Factorial(p));
     }
 
     internal static SolverExactNumber Max(SolverExactNumber a, SolverExactNumber b) => a.CompareTo(b) >= 0 ? a : b;

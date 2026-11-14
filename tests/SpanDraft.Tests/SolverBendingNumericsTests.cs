@@ -33,7 +33,7 @@ internal static class SolverBendingTestSupport
         return result;
     }
 
-    internal static int Factorial(int n) => n switch { 0 or 1 => 1, 2 => 2, 3 => 6, 4 => 24, _ => throw new ArgumentOutOfRangeException(nameof(n)) };
+    internal static int Factorial(int n) => n switch { 0 or 1 => 1, 2 => 2, 3 => 6, 4 => 24, 5 => 120, _ => throw new ArgumentOutOfRangeException(nameof(n)) };
 }
 
 public sealed class SolverBendingNumericsTests
@@ -223,9 +223,13 @@ public sealed class SolverBendingNumericsTests
                 continue;
             SolverExactNumber near = (From(x) - From(a)) * scale;
             SolverExactNumber far = x > b ? (From(x) - From(b)) * scale : Integer(0);
-            result += From(line.StartNewtonsPerMeter) * PowerOfTwo(preparation.LineLoadExponent) *
-                (SolverBendingTestSupport.Pow(near, p) - SolverBendingTestSupport.Pow(far, p)) /
-                Integer(SolverBendingTestSupport.Factorial(p));
+            // The exact intensities at the clip ends interpolate the original load; no rounding enters.
+            SolverExactNumber loadWidth = From(line.End) - From(line.Start);
+            SolverExactNumber first = From(line.StartNewtonsPerMeter), rise = From(line.EndNewtonsPerMeter) - first;
+            SolverExactNumber qa = first + rise * (From(a) - From(line.Start)) / loadWidth;
+            SolverExactNumber qb = first + rise * (From(b) - From(line.Start)) / loadWidth;
+            result += SolverOutputOracle.LineIntegral(qa * PowerOfTwo(preparation.LineLoadExponent),
+                (qb - qa) * PowerOfTwo(preparation.LineLoadExponent), (From(b) - From(a)) * scale, near, far, p);
         }
         return result;
     }

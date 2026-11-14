@@ -42,10 +42,64 @@ internal static class BendingLoadTerms
             _ => ((t * (near + far)) * (near * near + far * far)) / new Bounded(24)
         };
     }
+
+    /// <summary>
+    /// The p-th integral of a linear ramp with rise <paramref name="rise"/> over a load of width
+    /// <paramref name="width"/>: zero at the load start, the rise at its end. Outside the load every
+    /// factor is a positive distance, so cancellation is avoided for short loads far from the origin.
+    /// </summary>
+    internal static Bounded Ramp(Bounded rise, Bounded near, Bounded far, Bounded width, int p, bool inside)
+    {
+        if (inside)
+        {
+            // The quotient comes first, so rise * (n / d) cannot overflow for a short load.
+            Bounded term = rise * (near / width);
+            for (int i = 0; i < p; i++)
+                term *= near;
+            return term / new Bounded(p switch { 1 => 2, 2 => 6, 3 => 24, _ => 120 });
+        }
+        Bounded t = rise * width;
+        return p switch
+        {
+            1 => t / new Bounded(2),
+            2 => (t * (width + far * new Bounded(3))) / new Bounded(6),
+            3 => (t * ((width * width + (width * far) * new Bounded(4)) + (far * far) * new Bounded(6)))
+                / new Bounded(24),
+            _ => (t * (((width * width * width + ((width * width) * far) * new Bounded(5)) +
+                ((width * far) * far) * new Bounded(10)) + ((far * far) * far) * new Bounded(10)))
+                / new Bounded(120)
+        };
+    }
 }
 
 internal readonly record struct ScaledPointLoad(double Position, double Value);
-internal readonly record struct ScaledLineLoad(double Start, double End, double Value);
+/// <summary>
+/// A line load clipped to one mechanical section, in normalized units. The end intensities carry the data
+/// error of the clip. <paramref name="HasRamp"/> is false for constant loads, which have no ramp term.
+/// </summary>
+internal readonly record struct ScaledLineLoad(double Start, double End, double StartValue, double StartError,
+    double EndValue, double EndError, bool HasRamp)
+{
+    internal ScaledLineLoad(double start, double end, double value) : this(start, end, value, 0, value, 0, false)
+    {
+    }
+
+    internal Bounded StartIntensity => new(StartValue, StartError);
+    internal Bounded EndIntensity => new(EndValue, EndError);
+    internal Bounded Rise => EndIntensity - StartIntensity;
+
+    /// <summary>The intensity at x within the clipped load, with its data and evaluation error.</summary>
+    internal Bounded IntensityAt(double x, int lengthExponent)
+    {
+        if (!HasRamp || x == Start)
+            return StartIntensity;
+        if (x == End)
+            return EndIntensity;
+        Bounded share = RoundCounted.BoundedDistance(x, Start, lengthExponent) /
+            RoundCounted.BoundedDistance(End, Start, lengthExponent);
+        return StartIntensity + Rise * share;
+    }
+}
 internal readonly record struct StationBendingLoads(Bounded Force, Bounded Moment);
 
 internal sealed record SegmentBendingLoads(ImmutableArray<ScaledPointLoad> Forces,
@@ -69,7 +123,9 @@ internal sealed record SegmentBendingLoads(ImmutableArray<ScaledPointLoad> Force
             Bounded near = Distance(x, line.Start);
             Bounded far = inside ? default : Distance(x, line.End);
             Bounded width = Distance(line.End, line.Start);
-            total += BendingLoadTerms.Difference(new(line.Value), near, far, width, p, inside);
+            total += BendingLoadTerms.Difference(line.StartIntensity, near, far, width, p, inside);
+            if (line.HasRamp)
+                total += BendingLoadTerms.Ramp(line.Rise, near, far, width, p, inside);
         }
         return total;
     }
@@ -99,17 +155,19 @@ internal sealed record PreparedBendingLoads(ImmutableArray<SegmentBendingLoads> 
         int firstSegment = 0;
         foreach (TransverseLineLoad load in input.LineLoads)
         {
-            if (!load.IsConstant)
-                throw new NotSupportedException("Linearly varying line loads are not yet integrated.");
             while (firstSegment < count - 2 && stations[firstSegment + 1].Position <= load.Start)
                 firstSegment++;
-            double value = Binary64.ScaleByPowerOfTwo(load.StartNewtonsPerMeter, preparation.LineLoadExponent);
+            double first = Binary64.ScaleByPowerOfTwo(load.StartNewtonsPerMeter, preparation.LineLoadExponent);
+            double last = Binary64.ScaleByPowerOfTwo(load.EndNewtonsPerMeter, preparation.LineLoadExponent);
             for (int j = firstSegment; j < count - 1 && stations[j].Position < load.End; j++)
             {
                 double start = Math.Max(load.Start, stations[j].Position);
                 double end = Math.Min(load.End, stations[j + 1].Position);
-                if (end > start)
-                    lines[j].Add(new(start, end, value));
+                if (end <= start)
+                    continue;
+                lines[j].Add(load.IsConstant
+                    ? new(start, end, first)
+                    : Clip(load, start, end, first, last, preparation.EL));
             }
         }
 
@@ -131,6 +189,34 @@ internal sealed record PreparedBendingLoads(ImmutableArray<SegmentBendingLoads> 
                 else
                     segments[station].Add(point);
             }
+        }
+    }
+
+    /// <summary>
+    /// Clips a linear load to one mechanical section. The end intensities are interpolated from global
+    /// distances; the interpolation error enters their bounds. A clip end that coincides with a load end
+    /// takes that end intensity exactly.
+    /// </summary>
+    private static ScaledLineLoad Clip(TransverseLineLoad load, double start, double end, double first,
+        double last, int lengthExponent)
+    {
+        // A clipped width that cannot be normalized would make the ramp divisor unusable.
+        if (RoundCounted.BoundedDistance(end, start, lengthExponent).Value < Binary64.ScaleByPowerOfTwo(1, -969))
+            throw new NumericalRangeException("The normalized clipped distributed load length is too small.");
+        Bounded a = ClippedIntensity(start);
+        Bounded b = ClippedIntensity(end);
+        return new(start, end, a.Value, a.Error, b.Value, b.Error, true);
+
+        Bounded ClippedIntensity(double position)
+        {
+            if (position == load.Start)
+                return new(first);
+            if (position == load.End)
+                return new(last);
+            Bounded share = RoundCounted.BoundedDistance(position, load.Start, lengthExponent) /
+                RoundCounted.BoundedDistance(load.End, load.Start, lengthExponent);
+            Bounded value = new Bounded(first) + (new Bounded(last) - new Bounded(first)) * share;
+            return new(value.Value, value.Error);
         }
     }
 }

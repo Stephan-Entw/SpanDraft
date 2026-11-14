@@ -22,6 +22,23 @@ internal static class SolverTestSupport
     internal static DistributedLoad Uniform(double start, double end, double intensity) =>
         new(M(start), M(end), ForcePerLength.FromNewtonsPerMeter(intensity));
 
+    internal static DistributedLoad Linear(double start, double end, double startIntensity, double endIntensity) =>
+        new(M(start), M(end), ForcePerLength.FromNewtonsPerMeter(startIntensity),
+            ForcePerLength.FromNewtonsPerMeter(endIntensity));
+
+    /// <summary>The resultant l (q1 + q2) / 2 of a trapezoid load.</summary>
+    internal static double ResultantOf(DistributedLoad load) =>
+        (load.EndPosition.Meters - load.StartPosition.Meters) *
+        (load.StartIntensity.NewtonsPerMeter + load.EndIntensity.NewtonsPerMeter) / 2;
+
+    /// <summary>The moment of a trapezoid load about x = 0: l (q1 (a + b) / 2 + (q2 - q1) (a / 2 + l / 3)).</summary>
+    internal static double MomentAboutOriginOf(DistributedLoad load)
+    {
+        double a = load.StartPosition.Meters, b = load.EndPosition.Meters, width = b - a;
+        double q1 = load.StartIntensity.NewtonsPerMeter, rise = load.EndIntensity.NewtonsPerMeter - q1;
+        return width * (q1 * (a + b) / 2 + rise * (a / 2 + width / 3));
+    }
+
     internal static BeamModel Beam(IEnumerable<Support>? supports = null, IEnumerable<BeamLoad>? loads = null,
         Material? material = null, Section? section = null) =>
         new(M(L), material ?? new Material("Test steel", Pressure.FromPascals(E), Pressure.FromMegapascals(235), MaterialStrengthType.Re),

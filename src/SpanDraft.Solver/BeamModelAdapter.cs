@@ -24,9 +24,6 @@ internal static class BeamModelAdapter
                     pointMoments.Add(new(moment.Position.Meters, moment.Moment.NewtonMeters));
                     break;
                 case DistributedLoad distributed:
-                    // Linearly varying intensities arrive with the kernel integration.
-                    if (!distributed.IsConstant)
-                        throw new NotSupportedException("Linearly varying distributed loads are not yet supported.");
                     lineLoads.Add(new(distributed.StartPosition.Meters, distributed.EndPosition.Meters,
                         distributed.StartIntensity.NewtonsPerMeter, distributed.EndIntensity.NewtonsPerMeter));
                     break;

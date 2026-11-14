@@ -64,14 +64,23 @@ internal static class BendingOutputQuality
         return new(b, d, ratio, b <= ThresholdDown(d));
     }
 
+    /// <summary>
+    /// An upper bound of the sum of the exact absolute intensities on the piece. For a linear load the
+    /// larger of its two piece-end intensities, including their data and evaluation errors, bounds
+    /// |q| on the whole piece.
+    /// </summary>
     internal static double QSum(BendingFields fields, double x0, double x1)
     {
         double sum = 0;
         foreach (ScaledLineLoad line in fields.Loads.Segments[fields.SegmentOf(x0)].Lines)
             if (line.Start <= x0 && line.End >= x1)
-                sum = Add(sum, Add(Abs(line.Value), 0, true), true);
+                sum = Add(sum, line.HasRamp
+                    ? Math.Max(Majorant(line.IntensityAt(x0, fields.EL)), Majorant(line.IntensityAt(x1, fields.EL)))
+                    : Add(Abs(line.StartValue), 0, true), true);
         KernelFailureException.RequireFinite(sum);
         return sum;
+
+        static double Majorant(Bounded intensity) => Add(intensity.Magnitude, intensity.Error, true);
     }
 
     internal static PieceQuality Piece(BendingFields fields, double x0, double x1,
