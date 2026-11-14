@@ -17,7 +17,8 @@ public sealed class SolverSpringReactionTests
     public static TheoryData<string> Cases => new()
     {
         "single-mid", "end-pair", "soft-pair", "stiff-mid", "loaded-on-spring", "next-to-rigid", "spring-trio",
-        "near-rigid-pair", "stiff-between-near-rigid"
+        "near-rigid-pair", "stiff-between-near-rigid", "theta-mid", "partial-root", "combined-end", "theta-pair",
+        "partial-between-near-rigid"
     };
 
     private static MechanicalInput Case(string name) => name switch
@@ -40,6 +41,16 @@ public sealed class SolverSpringReactionTests
             elastic: [new(0.2, 3e3, 0, false)], forces: [new(1.9, -3)]),
         "stiff-between-near-rigid" => Model(ei: 1000, restraints: [new(1, U | W), new(1 + Math.ScaleB(1, -20), W)],
             elastic: [new(1.5, 1e9, 0, false)], forces: [new(0.2, -3)], lines: [new(0, 2, 1)]),
+        "theta-mid" => Model(ei: 1000, restraints: [new(0, U | W), new(2, W)], elastic: [new(1, 0, 4e2, false)],
+            forces: [new(0.4, -30)], moments: [new(1, 2)]),
+        "partial-root" => Model(ei: 1000, restraints: [], elastic: [new(0, 0, 8e3, true), new(2, 0, 1e-1, true)],
+            forces: [new(1, -5)], lines: [new(0, 2, -4)]),
+        "combined-end" => Model(ei: 1000, restraints: [new(0, U | W | Theta)], elastic: [new(2, 3e3, 7e1, false)],
+            forces: [new(2, -3)], moments: [new(2, 9)]),
+        "theta-pair" => Model(ei: 1000, restraints: [new(0, U | W), new(2, W)],
+            elastic: [new(1, 0, 5e12, false), new(Math.BitIncrement(1), 0, 2e1, false)], forces: [new(0.5, -3)]),
+        "partial-between-near-rigid" => Model(ei: 1000, restraints: [new(1, U | W), new(1 + Math.ScaleB(1, -20), W)],
+            elastic: [new(1.5, 0, 3e9, true)], forces: [new(0.2, -3)], lines: [new(0, 2, 1)]),
         _ => throw new ArgumentOutOfRangeException(nameof(name))
     };
 
@@ -54,23 +65,27 @@ public sealed class SolverSpringReactionTests
         var delivered = BendingReactions.Calculate(state, context);
         int springs = 0;
         for (int i = 0; i < system.Stations.Length; i++)
+            foreach (RestrainedDirections direction in new[] { W, Theta })
         {
-            if (!system.Stations[i].ElasticW)
+            bool elastic = direction == W ? system.Stations[i].ElasticW : system.Stations[i].ElasticTheta;
+            if (!elastic)
                 continue;
             springs++;
-            SolverExactNumber exact = Assert.Single(oracle.Reactions, r => r.X == system.Stations[i].Position && r.Direction == W).Value;
-            int exponent = system.StateExponents[3];
+            SolverExactNumber exact = Assert.Single(oracle.Reactions, r => r.X == system.Stations[i].Position && r.Direction == direction).Value;
+            int component = direction == W ? 3 : 2;
+            int exponent = system.StateExponents[component];
             VerifiedOutput Si((double Value, double Bound) r) => BendingFields.ToSi(r.Value, r.Bound, exponent);
-            var jump = BendingReactions.Jump(state, context!, i, W);
-            var law = BendingReactions.TranslationalSpringLaw(state, i);
+            var jump = BendingReactions.Jump(state, context!, i, direction);
+            var law = direction == W ? BendingReactions.TranslationalSpringLaw(state, i) : BendingReactions.RotationalSpringLaw(state, i);
             Bounded((From(Si(jump).Value) - exact).Abs(), Si(jump).VerifiedOutputBound);
             Bounded((From(Si(law).Value) - exact).Abs(), Si(law).VerifiedOutputBound);
-            // The law's bound carries at least the stiffness times the verified state bound of the deflection.
-            double scaled = BendingPreparation.ScaleTranslationalStiffness(system.Stations[i].Springs.Translational,
-                system.EL, system.EEI).Value;
-            Assert.True(From(law.Bound).CompareTo(From(scaled) * From(state.FullStateBound[4 * i])) >= 0);
+            // The law's bound carries at least the stiffness times the verified state bound of its deflection or rotation.
+            double scaled = direction == W
+                ? BendingPreparation.ScaleTranslationalStiffness(system.Stations[i].Springs.Translational, system.EL, system.EEI).Value
+                : BendingPreparation.ScaleRotationalStiffness(system.Stations[i].Springs.Rotational, system.EL, system.EEI).Value;
+            Assert.True(From(law.Bound).CompareTo(From(scaled) * From(state.FullStateBound[4 * i + (direction == W ? 0 : 1)])) >= 0);
 
-            NormalizedReaction reaction = Assert.Single(delivered, r => r.Position == system.Stations[i].Position && r.Direction == W);
+            NormalizedReaction reaction = Assert.Single(delivered, r => r.Position == system.Stations[i].Position && r.Direction == direction);
             Assert.Equal(Math.Min(jump.Bound, law.Bound), reaction.Bound);
             // The jump wins a tie, so the law is only delivered when its bound is strictly smaller.
             Assert.Equal(law.Bound < jump.Bound ? law.Value : jump.Value, reaction.Value);
@@ -103,6 +118,20 @@ public sealed class SolverSpringReactionTests
         double bound = Assert.Single(result.Reactions, r => r.Position == 1 && r.Direction == W).Output.VerifiedOutputBound;
         Assert.True(Math.Abs(jump - reaction) <= bound + station.Right.Bending[3].VerifiedOutputBound +
             station.Left.Bending[3].VerifiedOutputBound);
+    }
+
+    [Fact]
+    public void TheMomentJumpEqualsTheRotationalSpringReactionAtTheSpringStation()
+    {
+        BendingResult result = SolverKernel.Solve(Case("theta-mid"));
+        BendingStation station = Assert.Single(result.Stations, s => s.Position == 1);
+        Assert.True(station.Jumps.HasFlag(BendingJump.ReactionMoment));
+        Assert.False(station.Jumps.HasFlag(BendingJump.ReactionY));
+        // The support moment C acts on the beam, so M+ - M- = -(C + applied couple): the couple of 2 N·m is applied there.
+        var reaction = Assert.Single(result.Reactions, r => r.Position == 1 && r.Direction == Theta);
+        double jump = station.Right!.Bending[2].Value - station.Left!.Bending[2].Value;
+        Assert.True(Math.Abs(jump - (-reaction.Output.Value - 2)) <= reaction.Output.VerifiedOutputBound +
+            station.Right.Bending[2].VerifiedOutputBound + station.Left.Bending[2].VerifiedOutputBound);
     }
 
     [Fact]

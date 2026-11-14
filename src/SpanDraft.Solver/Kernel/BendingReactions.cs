@@ -77,6 +77,8 @@ internal static class BendingReactions
                 (double value, double bound) = Jump(state, context!, i, direction);
                 if (direction == RestrainedDirections.W && station.ElasticW)
                     (value, bound) = Choose((value, bound), TranslationalSpringLaw(state, i));
+                else if (direction == RestrainedDirections.Theta && station.ElasticTheta)
+                    (value, bound) = Choose((value, bound), RotationalSpringLaw(state, i));
                 result.Add(new(station.Position, direction, value, bound));
             }
         return result.ToImmutable();
@@ -127,13 +129,18 @@ internal static class BendingReactions
     /// The transverse spring law R = -k·w+ of a spring station. The stiffness is an exact power-of-two scaling and the
     /// state bound already includes the unscaling, so only the product's own rounding is added.
     /// </summary>
-    internal static (double Value, double Bound) TranslationalSpringLaw(VerifiedBendingState state, int station)
+    internal static (double Value, double Bound) TranslationalSpringLaw(VerifiedBendingState state, int station) =>
+        SpringLaw(state, 4 * station, BendingPreparation.ScaleTranslationalStiffness(
+            state.System.Stations[station].Springs.Translational, state.System.EL, state.System.EEI));
+
+    /// <summary>The rotational spring law C = -k_theta·theta+ of a spring station, evaluated like the transverse law.</summary>
+    internal static (double Value, double Bound) RotationalSpringLaw(VerifiedBendingState state, int station) =>
+        SpringLaw(state, 4 * station + 1, BendingPreparation.ScaleRotationalStiffness(
+            state.System.Stations[station].Springs.Rotational, state.System.EL, state.System.EEI));
+
+    private static (double Value, double Bound) SpringLaw(VerifiedBendingState state, int index, RoundCounted stiffness)
     {
-        BendingSystem system = state.System;
-        RoundCounted stiffness = BendingPreparation.ScaleTranslationalStiffness(
-            system.Stations[station].Springs.Translational, system.EL, system.EEI);
-        int w = 4 * station;
-        Bounded law = -(new Bounded(stiffness.Value) * new Bounded(state.FullState[w], state.FullStateBound[w]));
+        Bounded law = -(new Bounded(stiffness.Value) * new Bounded(state.FullState[index], state.FullStateBound[index]));
         KernelFailureException.RequireFinite(law.Value);
         KernelFailureException.RequireFinite(law.Error);
         return (law.Value, law.Error);

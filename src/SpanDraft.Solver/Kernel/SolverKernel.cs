@@ -47,8 +47,6 @@ internal static class SolverKernel
     {
         StationModel stations = StationModel.Create(input);
         RequireStable(stations);
-        if (input.ElasticRestraints.Any(e => e.RotationalStiffness != 0))
-            throw new NotSupportedException("The bending system does not yet contain rotational spring rows.");
 
         BendingPreparation preparation = BendingPreparation.Create(input, stations);
         PreparedBendingLoads loads = PreparedBendingLoads.Create(input, stations, preparation);

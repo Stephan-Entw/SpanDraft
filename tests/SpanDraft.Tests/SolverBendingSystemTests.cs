@@ -13,7 +13,8 @@ public sealed class SolverBendingSystemTests
         "unloaded", "end-force", "point-moment", "udl", "pinned-roller", "indeterminate",
         "coincidence", "support-load", "force-and-moment", "event-load", "multi-section-udl",
         "short-udl", "ulp-stations", "signed-zero", "right-fixed", "interior-fixed",
-        "spring-pair", "spring-loaded", "spring-ulp-neighbours", "spring-end", "spring-with-rigid"
+        "spring-pair", "spring-loaded", "spring-ulp-neighbours", "spring-end", "spring-with-rigid",
+        "theta-spring", "partial-restraint", "combined-spring", "theta-spring-loaded"
     };
 
     internal static MechanicalInput Case(string name) => name switch
@@ -52,6 +53,14 @@ public sealed class SolverBendingSystemTests
             forces: [new(2, -3)]),
         "spring-with-rigid" => Model(restraints: [new(0, U | W), new(2, W)], elastic: [new(1, 6e3, 0, false)],
             forces: [new(0.5, -3)], lines: [new(0, 2, -1)]),
+        "theta-spring" => Model(restraints: [new(0, U | W), new(2, W)], elastic: [new(1, 0, 4e3, false)],
+            forces: [new(0.5, -3)]),
+        "partial-restraint" => Model(restraints: [], elastic: [new(0, 0, 6e3, true)], forces: [new(2, -3)],
+            lines: [new(0.5, 1.5, 2)]),
+        "combined-spring" => Model(restraints: [new(0, U | W)], elastic: [new(2, 5e3, 7e3, false)],
+            moments: [new(1, 4)], forces: [new(1, -2)]),
+        "theta-spring-loaded" => Model(restraints: [new(0, U | W | Theta)], elastic: [new(1, 0, 9e2, true)],
+            forces: [new(1, -3), new(1, 1)], moments: [new(1, 5), new(1, -2)], lines: [new(0.25, 1.75, -9)]),
         _ => throw new ArgumentOutOfRangeException(nameof(name))
     };
 
@@ -237,24 +246,28 @@ public sealed class SolverBendingSystemTests
     public void SpringSupportsPreserveEquationCountEliminationBandAndRigidRows()
     {
         double[] positions = [0, 1, Math.BitIncrement(1), 2];
-        // none, roller, pinned, fixed and a translational spring.
-        for (int combination = 0; combination < 625; combination++)
+        // none, roller, pinned, fixed, a translational spring, a rotational spring, both and a partial restraint.
+        for (int combination = 0; combination < 4096; combination++)
         {
             var rigid = new List<RigidRestraint>();
             var elastic = new List<ElasticRestraint>();
-            for (int i = 0, c = combination; i < positions.Length; i++, c /= 5)
-                switch (c % 5)
+            for (int i = 0, c = combination; i < positions.Length; i++, c /= 8)
+                switch (c % 8)
                 {
                     case 1: rigid.Add(new(positions[i], W)); break;
                     case 2: rigid.Add(new(positions[i], U | W)); break;
                     case 3: rigid.Add(new(positions[i], U | W | Theta)); break;
                     case 4: elastic.Add(new(positions[i], 8e3 * (i + 1), 0, false)); break;
+                    case 5: elastic.Add(new(positions[i], 0, 3e3 * (i + 1), false)); break;
+                    case 6: elastic.Add(new(positions[i], 8e3 * (i + 1), 3e3 * (i + 1), false)); break;
+                    case 7: elastic.Add(new(positions[i], 0, 3e3 * (i + 1), true)); break;
                 }
             MechanicalInput input = Model(ei: 1.25, restraints: rigid.ToArray(), elastic: elastic.ToArray(),
                 forces: [new(0.75, -3)], moments: [new(1, 7)], lines: [new(0.25, 1.75, -5)]);
             int wPositions = rigid.Where(r => r.Directions.HasFlag(W)).Select(r => r.Position)
-                .Concat(elastic.Select(e => e.Position)).Distinct().Count();
-            bool theta = rigid.Any(r => r.Directions.HasFlag(Theta));
+                .Concat(elastic.Where(e => e.TranslationalStiffness != 0 || e.RigidTranslation).Select(e => e.Position))
+                .Distinct().Count();
+            bool theta = rigid.Any(r => r.Directions.HasFlag(Theta)) || elastic.Any(e => e.RotationalStiffness != 0);
             bool axial = rigid.Any(r => r.Directions.HasFlag(U)) || elastic.Count > 0;
             bool stable = axial && (wPositions >= 2 || wPositions == 1 && theta);
             if (!stable)
@@ -267,17 +280,20 @@ public sealed class SolverBendingSystemTests
             CheckExactMechanics(input, system);
             if (elastic.Count == 0)
                 continue;
-            // The spring term is exactly one entry per spring: its row, the free w column and no rounding.
+            // A spring contributes exactly one entry per acting spring: its row, the free column and no rounding.
             BendingSystem without = SolverKernel.BuildSystem(Model(ei: 1.25, restraints: rigid.ToArray(),
-                elastic: elastic.Select(e => e with { TranslationalStiffness = Math.ScaleB(1, 20) }).ToArray(),
-                forces: [new(0.75, -3)], moments: [new(1, 7)], lines: [new(0.25, 1.75, -5)]));
+                elastic: elastic.Select(e => e with
+                {
+                    TranslationalStiffness = e.TranslationalStiffness == 0 ? 0 : Math.ScaleB(1, 20),
+                    RotationalStiffness = e.RotationalStiffness == 0 ? 0 : Math.ScaleB(1, 20)
+                }).ToArray(), forces: [new(0.75, -3)], moments: [new(1, 7)], lines: [new(0.25, 1.75, -5)]));
             Assert.Equal(system.K, without.K);
             AssertBits(system.B, without.B);
             int different = 0;
             for (int index = 0; index < system.A.Length; index++)
                 if (BitConverter.DoubleToInt64Bits(system.A[index]) != BitConverter.DoubleToInt64Bits(without.A[index]))
                     different++;
-            Assert.True(different <= elastic.Count);
+            Assert.True(different <= elastic.Sum(e => (e.TranslationalStiffness != 0 ? 1 : 0) + (e.RotationalStiffness != 0 ? 1 : 0)));
         }
     }
 

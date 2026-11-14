@@ -92,18 +92,27 @@ internal sealed record BendingPreparation(int EL, int EEI, int EF, ImmutableArra
     internal RoundCounted ScaledTranslationalStiffness(double stiffness) =>
         ScaleTranslationalStiffness(stiffness, EL, EEI);
 
-    internal static RoundCounted ScaleTranslationalStiffness(double stiffness, int lengthExponent, int stiffnessExponent)
+    internal RoundCounted ScaledRotationalStiffness(double stiffness) =>
+        ScaleRotationalStiffness(stiffness, EL, EEI);
+
+    internal static RoundCounted ScaleTranslationalStiffness(double stiffness, int lengthExponent, int stiffnessExponent) =>
+        ScaleStiffness(stiffness, () => checked(3 * lengthExponent - stiffnessExponent));
+
+    internal static RoundCounted ScaleRotationalStiffness(double stiffness, int lengthExponent, int stiffnessExponent) =>
+        ScaleStiffness(stiffness, () => checked(lengthExponent - stiffnessExponent));
+
+    private static RoundCounted ScaleStiffness(double stiffness, Func<int> exponent)
     {
-        int exponent;
+        int shift;
         try
         {
-            exponent = checked(3 * lengthExponent - stiffnessExponent);
+            shift = exponent();
         }
         catch (OverflowException)
         {
             throw new NumericalRangeException("The spring stiffness exponent exceeds the integer range.");
         }
-        var scaled = new RoundCounted(ScaleByPowerOfTwo(stiffness, exponent));
+        var scaled = new RoundCounted(ScaleByPowerOfTwo(stiffness, shift));
         scaled.RequireNormal();
         return scaled;
     }
