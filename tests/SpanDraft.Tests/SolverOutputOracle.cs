@@ -16,10 +16,18 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
     // the kernel's local right-state unknowns. Exact compatibility plus global equilibrium.
     internal static SolverOutputOracle FromCompatibility(MechanicalInput input)
     {
+        // A rigid restraint prescribes w or theta; a spring adds the unknown reaction R with w + R / k = 0
+        // (respectively theta + C / k_theta = 0), so the spring law is one more compatibility condition.
         var keys = input.Restraints.SelectMany(r => new[] { W, Theta }.Where(d => r.Directions.HasFlag(d))
-            .Select(d => (X: r.Position, Direction: d))).Distinct().OrderBy(r => r.X).ThenBy(r => r.Direction).ToArray();
+            .Select(d => (X: r.Position, Direction: d, Stiffness: 0d)))
+            .Concat(input.ElasticRestraints.SelectMany(e => new[]
+            {
+                (X: e.Position, Direction: W, Stiffness: e.TranslationalStiffness),
+                (X: e.Position, Direction: Theta, Stiffness: e.RotationalStiffness)
+            }.Where(k => k.Stiffness != 0 || k.Direction == W && e.RigidTranslation)))
+            .Distinct().OrderBy(r => r.X).ThenBy(r => r.Direction).ToArray();
         int n = keys.Length + 2;
-        var zeroLoads = new MechanicalInput(input.Length, input.EI, input.Restraints, [], [], []);
+        var zeroLoads = new MechanicalInput(input.Length, input.EI, input.Restraints, [], [], [], input.ElasticRestraints);
         var basis = new SolverOutputOracle[n];
         basis[0] = new(zeroLoads, Q(1), Q(0), []);
         basis[1] = new(zeroLoads, Q(0), Q(1), []);
@@ -48,7 +56,9 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
                 force += width * (q1 + From(line.EndNewtonsPerMeter)) / Q(2);
                 moment += width * (q1 * (a + From(line.End)) / Q(2) + rise * (a / Q(2) + width / Q(3)));
             }
-            return [.. keys.Select(k => oracle.Field(k.X, FieldSide.Right)[k.Direction == W ? 0 : 1]), force, moment];
+            return [.. keys.Select(k => oracle.Field(k.X, FieldSide.Right)[k.Direction == W ? 0 : 1] +
+                (k.Stiffness == 0 ? Q(0) : oracle.Reactions.Where(r => r.X == k.X && r.Direction == k.Direction)
+                    .Aggregate(Q(0), (sum, r) => sum + r.Value) / From(k.Stiffness))), force, moment];
         }
         SolverExactNumber[] loads = Conditions(applied);
         for (int j = 0; j < n; j++)

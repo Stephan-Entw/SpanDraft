@@ -70,45 +70,87 @@ internal static class BendingReactions
                 if (!acts) continue;
                 if (state.IsUnloaded || direction == RestrainedDirections.U)
                 {
-                    result.Add(new(system.Stations[i].Position, direction, 0, 0));
+                    result.Add(new(station.Position, direction, 0, 0));
                     continue;
                 }
                 KernelFailureException.Require(context is not null);
-                int q = direction == RestrainedDirections.W ? 3 : 2;
-                double sign = q == 3 ? 1 : -1;
-                var coefficients = new List<(int Index, RoundCounted Coefficient)>();
-                if (i < system.Stations.Length - 1)
-                    coefficients.Add((4 * i + q, new(sign)));
-                Bounded constant = default;
-                if (i > 0)
-                {
-                    int previous = 4 * (i - 1);
-                    coefficients.Add((previous + q, new(-sign)));
-                    if (q == 2)
-                    {
-                        RoundCounted a = RoundCounted.Distance(system.Stations[i].Position,
-                            system.Stations[i - 1].Position, system.EL);
-                        coefficients.Add((previous + 3, sign == 1 ? -a : a));
-                    }
-                    Bounded load = system.Loads.Segments[i - 1].Integral(system.Stations[i].Position, 4 - q);
-                    constant = new(-sign * load.Value, load.Error);
-                }
-                Bounded estimate = default;
-                double coefficientError = 0;
-                foreach (var (k, c) in coefficients)
-                {
-                    estimate += new Bounded(c.Value) * new Bounded(state.FullState[k]);
-                    coefficientError = Directed.Add(coefficientError, Directed.Multiply(c.Bound(),
-                        Directed.Add(Abs(state.FullState[k]), state.FullStateBound[k], true), true), true);
-                }
-                StationBendingLoads stationLoad = system.Loads.Stations[i];
-                estimate = estimate + constant - (q == 3 ? stationLoad.Force : stationLoad.Moment);
-                double bound = Directed.Add(Directed.Add(estimate.Error, context!.Functional(state,
-                    coefficients.Select(c => (c.Index, c.Coefficient.Value)).ToArray()), true), coefficientError, true);
-                KernelFailureException.RequireFinite(estimate.Value);
-                KernelFailureException.RequireFinite(bound);
-                result.Add(new(system.Stations[i].Position, direction, estimate.Value, bound));
+                (double value, double bound) = Jump(state, context!, i, direction);
+                if (direction == RestrainedDirections.W && station.ElasticW)
+                    (value, bound) = Choose((value, bound), TranslationalSpringLaw(state, i));
+                result.Add(new(station.Position, direction, value, bound));
             }
         return result.ToImmutable();
+    }
+
+    /// <summary>The reaction as a jump of the shear force (W) or the bending moment (Theta), with its verified bound.</summary>
+    internal static (double Value, double Bound) Jump(VerifiedBendingState state, BendingSolveContext context, int i,
+        RestrainedDirections direction)
+    {
+        BendingSystem system = state.System;
+        int q = direction == RestrainedDirections.W ? 3 : 2;
+        double sign = q == 3 ? 1 : -1;
+        var coefficients = new List<(int Index, RoundCounted Coefficient)>();
+        if (i < system.Stations.Length - 1)
+            coefficients.Add((4 * i + q, new(sign)));
+        Bounded constant = default;
+        if (i > 0)
+        {
+            int previous = 4 * (i - 1);
+            coefficients.Add((previous + q, new(-sign)));
+            if (q == 2)
+            {
+                RoundCounted a = RoundCounted.Distance(system.Stations[i].Position,
+                    system.Stations[i - 1].Position, system.EL);
+                coefficients.Add((previous + 3, sign == 1 ? -a : a));
+            }
+            Bounded load = system.Loads.Segments[i - 1].Integral(system.Stations[i].Position, 4 - q);
+            constant = new(-sign * load.Value, load.Error);
+        }
+        Bounded estimate = default;
+        double coefficientError = 0;
+        foreach (var (k, c) in coefficients)
+        {
+            estimate += new Bounded(c.Value) * new Bounded(state.FullState[k]);
+            coefficientError = Directed.Add(coefficientError, Directed.Multiply(c.Bound(),
+                Directed.Add(Abs(state.FullState[k]), state.FullStateBound[k], true), true), true);
+        }
+        StationBendingLoads stationLoad = system.Loads.Stations[i];
+        estimate = estimate + constant - (q == 3 ? stationLoad.Force : stationLoad.Moment);
+        double bound = Directed.Add(Directed.Add(estimate.Error, context.Functional(state,
+            coefficients.Select(c => (c.Index, c.Coefficient.Value)).ToArray()), true), coefficientError, true);
+        KernelFailureException.RequireFinite(estimate.Value);
+        KernelFailureException.RequireFinite(bound);
+        return (estimate.Value, bound);
+    }
+
+    /// <summary>
+    /// The transverse spring law R = -k·w+ of a spring station. The stiffness is an exact power-of-two scaling and the
+    /// state bound already includes the unscaling, so only the product's own rounding is added.
+    /// </summary>
+    internal static (double Value, double Bound) TranslationalSpringLaw(VerifiedBendingState state, int station)
+    {
+        BendingSystem system = state.System;
+        RoundCounted stiffness = BendingPreparation.ScaleTranslationalStiffness(
+            system.Stations[station].Springs.Translational, system.EL, system.EEI);
+        int w = 4 * station;
+        Bounded law = -(new Bounded(stiffness.Value) * new Bounded(state.FullState[w], state.FullStateBound[w]));
+        KernelFailureException.RequireFinite(law.Value);
+        KernelFailureException.RequireFinite(law.Error);
+        return (law.Value, law.Error);
+    }
+
+    /// <summary>
+    /// A spring reaction has two exact evaluations, the jump and the spring law. Both are enclosed by their own verified
+    /// bound, and their difference is the residual of the spring row, so it cannot exceed the sum of the bounds.
+    /// The value with the smaller bound is delivered, the jump on equality.
+    /// </summary>
+    internal static (double Value, double Bound) Choose((double Value, double Bound) jump, (double Value, double Bound) law)
+    {
+        double difference = Math.Max(Directed.Subtract(jump.Value, law.Value, upper: true),
+            Directed.Subtract(law.Value, jump.Value, upper: true));
+        if (!(difference <= Directed.Add(jump.Bound, law.Bound, upper: true)))
+            throw new KernelFailureException(KernelFailureCause.InternalInconsistency,
+                "The spring reaction from the jump and from the spring law are inconsistent.");
+        return law.Bound < jump.Bound ? law : jump;
     }
 }
