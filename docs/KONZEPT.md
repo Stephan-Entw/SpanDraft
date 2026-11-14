@@ -41,8 +41,8 @@ Der Anwender soll:
 
 ## 3. Aktueller fachlicher Scope
 
-SpanDraft betrachtet derzeit einen einzelnen geraden Balken mit konstantem
-Werkstoff und konstantem Querschnitt.
+SpanDraft betrachtet derzeit einen einzelnen geraden Balken aus einem oder mehreren
+Abschnitten (Segmenten) mit je konstantem Werkstoff und konstantem Querschnitt.
 
 Der aktuelle fachliche Umfang umfasst:
 
@@ -55,6 +55,7 @@ Der aktuelle fachliche Umfang umfasst:
 - konstante und linear veränderliche Streckenlasten (Dreieck, Trapez, Vorzeichenwechsel)
 - optional aktiviertes Eigengewicht aus Werkstoffdichte und Querschnittsfläche
 - parametrische und manuelle Querschnitte mit wählbarer Biegeachse
+- Abschnitte mit eigenem Werkstoff, Querschnitt und eigener Biegeachse; Abschnittswechsel auch an Lagern, Einspannungen, Federlagern und Lasten
 - Werkstoffe mit den für Berechnung und Bewertung benötigten Kennwerten
 
 Eigene Werkstoffe und Querschnitte können lokal gespeichert und wiederverwendet

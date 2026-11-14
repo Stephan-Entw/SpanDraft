@@ -97,6 +97,15 @@ geschrieben). Mindestens eine Feder ist verpflichtend; `rigidTranslation` verlan
 Drehfeder ohne Wegfeder. Diese Felder sind nur bei `spring` zulässig und lassen
 Dateien ohne sie unverändert gültig. Positionen eines Federlagers dürfen nicht mit
 denen anderer Lager zusammenfallen.
+Ein Balken aus mehreren Abschnitten speichert den ersten Abschnitt in den Dokumentfeldern
+`material`, `section`, `bendingAxis` und `sectionDisplayName` und alle weiteren in der
+optionalen Liste `furtherSegments`. Jeder Eintrag hat `start` (m, streng aufsteigend und
+im Balkeninneren), `material`, `section`, `bendingAxis` und optional `sectionDisplayName` mit
+den Verträgen des Dokuments. Das Ende eines Abschnitts ist der Beginn des nächsten, das des
+letzten die Länge; Lücken und Überlappungen sind damit nicht darstellbar. Ohne `furtherSegments`
+(ein Abschnitt) wird nichts geschrieben, sodass sich bestehende Dateien beim Öffnen und
+Speichern nicht verändern. Eigengewicht bleibt ein Eintrag `selfWeight`; seine Last je
+Abschnitt wird abgeleitet und verlangt die Dichte jedes Werkstoffs.
 Streckenlasten stehen in `distributedLoads` und speichern Anfangs- und Endposition
 sowie `startIntensity` und `endIntensity` (N/m, vorzeichenbehaftet, beide Pflicht).
 Die Intensität ändert sich zwischen den Enden linear. Gleiche Werte bezeichnen eine
@@ -171,7 +180,8 @@ V1 und V2 werden mit fehlenden Projektangaben (`Info == null`) gelesen.
 V3 und V4 verwenden weiterhin die Dokument-/Presentation-Struktur aus V2.
 V5 ersetzt das Streckenlastfeld `intensity` durch `startIntensity`
 und `endIntensity` und erweitert Lager additiv um den Typ `spring` mit seinen optionalen
-Feldern (V1–V4 kennen ihn nicht und lehnen ihn ab); beim Lesen von V1–V4 wird die einzelne Intensität zu beiden
+Feldern (V1–V4 kennen ihn nicht und lehnen ihn ab) sowie das Dokument um die optionale Liste
+`furtherSegments`; beim Lesen von V1–V4 wird die einzelne Intensität zu beiden
 Enden. V5 ist eine reine Erweiterung des Dokumentformats, ältere Programmstände
 lehnen V5-Dateien als nicht unterstützt ab, auch wenn alle Lasten konstant sind.
 V1 wird beim Laden unmittelbar ins aktuelle In-Memory-Modell migriert:

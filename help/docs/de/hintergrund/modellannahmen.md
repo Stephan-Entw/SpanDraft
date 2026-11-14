@@ -1,14 +1,14 @@
 # Was SpanDraft berechnet – und was nicht
 
-SpanDraft berechnet einen geraden Balken in einer zweidimensionalen Biegeebene. Werkstoff und Querschnitt bleiben über die Balkenlänge konstant, Lager werden idealisiert und die Verformungen als klein angenommen. Grundlage ist das linear-elastische Euler-Bernoulli-Balkenmodell.
+SpanDraft berechnet einen geraden Balken in einer zweidimensionalen Biegeebene. Werkstoff und Querschnitt sind innerhalb eines Abschnitts konstant und ändern sich an den Abschnittsgrenzen sprunghaft, Lager werden idealisiert und die Verformungen als klein angenommen. Grundlage ist das linear-elastische Euler-Bernoulli-Balkenmodell.
 
 ## Was das Modell abbildet
 
 | Bereich | Annahme in SpanDraft |
 | --- | --- |
 | Balken | ein gerader Balken |
-| Werkstoff | konstant und linear-elastisch |
-| Querschnitt | konstant, eine ausgewählte Biegeachse |
+| Werkstoff | je Abschnitt konstant und linear-elastisch |
+| Querschnitt | je Abschnitt konstant, eine ausgewählte Biegeachse je Abschnitt |
 | Verformung | kleine Verschiebungen und Rotationen |
 | Lager | ideale Einspannung, Festlager oder Loslager |
 | Lasten | vertikale Punktkräfte, Punktmomente, konstante und linear veränderliche Streckenlasten und optionales Eigengewicht |

@@ -50,6 +50,10 @@ Bei verschwindender Biegespannung kann mathematisch `S = ∞` erscheinen. Das be
 
 Angezeigte Werte können gerundet sein; die Berechnung verwendet die ungerundeten Werte. Mehr dazu unter [Ergebnisdarstellung](../modell/koordinaten-einheiten.md#zahlendarstellung).
 
+## Mehrere Abschnitte
+
+Bei einem Balken aus mehreren Abschnitten bewertet SpanDraft jeden Abschnitt mit seinem eigenen größten Momentenbetrag, Widerstandsmoment und Festigkeitskennwert. **Maßgebend ist der Abschnitt mit dem kleinsten Sicherheitsfaktor**, nicht zwingend der mit der größten Spannung. Spannung und Sicherheitsfaktor in der Übersicht und im Bericht gehören zu diesem Abschnitt, der dort als **Maßgebender Abschnitt** genannt wird. Kerbwirkung und örtliche Spannungen an Absätzen werden nicht bewertet.
+
 ## Was der Sicherheitsfaktor nicht bewertet
 
 - **Andere Beanspruchungen:** z. B. Schub oder kombinierte Axialkraft und Biegung.

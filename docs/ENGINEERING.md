@@ -61,16 +61,17 @@ beziehungsweise negativ/hoggend. Die Magnitude wird separat nicht-negativ gelief
 
 ## Formeln und Nulllastfall
 
-Die Engineering-Auswertung berechnet ausschließlich reine elastische Biegung:
+Die Engineering-Auswertung berechnet ausschließlich reine elastische Biegung. Sie arbeitet je
+Balkenabschnitt (`BeamSegmentAssessment`); bei einem Abschnitt ist das der ganze Balken:
 
 ```text
 σ_b,max [Pa] = BendingMomentMagnitude [Nm] / min(W+, W−) [m³]
 S           = Festigkeitskennwert [Pa] / σ_b,max [Pa]
 ```
 
-W+ und W− stammen aus `Beam.BendingAxisProperties.PositiveSectionModulus`
-beziehungsweise `NegativeSectionModulus`, der Festigkeitskennwert aus
-`Beam.Material.YieldStrength` (Typ Re oder Rp0,2);
+W+ und W− stammen aus `BendingAxisProperties.PositiveSectionModulus`
+beziehungsweise `NegativeSectionModulus` des Abschnitts, der Festigkeitskennwert aus
+`Material.YieldStrength` des Abschnitts (Typ Re oder Rp0,2);
 alle sind im Domain Model positiv validiert. Der maximale elastische
 Spannungsbetrag ist das Maximum aus |M|/W+ und |M|/W−.
 Der Spannungsbetrag besitzt denselben kritischen Ort und dieselbe Seite wie
@@ -90,12 +91,27 @@ ergeben. Eine nicht endlich darstellbare Spannung wird von der bestehenden
 `Pressure`-Validierung mit `ArgumentOutOfRangeException` abgewiesen, nicht als
 unendliche Spannung veröffentlicht.
 
+## Mehrere Abschnitte
+
+|M|max,j ist das größte Momentenextremum innerhalb des Abschnitts j (`BeamSolution.SegmentExtrema`).
+Daraus folgen σ_j = |M|max,j / min(W±)_j und S_j = Re_j / σ_j. **Maßgebend ist der Abschnitt mit
+dem kleinsten Sicherheitsfaktor, nicht der mit der größten Spannung**, weil die Festigkeiten
+verschieden sein können. Bei Gleichstand (im Rahmen der relativen Rundungsschranke 64 ε)
+gewinnt der kleinere Index und damit die kleinere Position des kritischen Moments.
+
+`MaximumBendingStress`, `SafetyFactor`, `BendingStressPosition` und `BendingStressSide` beziehen
+sich auf den maßgebenden Abschnitt (`GoverningSegmentIndex`, `SegmentAssessments`).
+`CriticalBendingMoment` und die Verschiebung bleiben die globalen Extrema. Mit einem Abschnitt
+sind alle Werte identisch zum Balken mit konstantem Querschnitt. Ein Extremum genau auf einer
+Grenze zählt für beide Nachbarn. Nicht bewertet werden Kerbwirkung und die örtliche Spannung am
+Absatz.
+
 ## Randfasern und fachliche Grenzen
 
 Die ausgewählte Biegeachse stellt getrennte positive und negative geometrische
-Widerstandsmomente bereit. Da der Querschnitt entlang des Balkens konstant ist,
-bleibt der Ort des maximalen |M| auch der maßgebende Ort für den maximalen
-Spannungsbetrag. Dieser Betrag ist unabhängig davon, welche Seite bei einem
+Widerstandsmomente bereit. Da der Querschnitt innerhalb eines Abschnitts konstant ist,
+bleibt der Ort des maximalen |M| des Abschnitts auch der maßgebende Ort für den maximalen
+Spannungsbetrag des Abschnitts. Dieser Betrag ist unabhängig davon, welche Seite bei einem
 gegebenen Momentenvorzeichen unter Zug beziehungsweise Druck steht.
 Es werden keine Zug-/Druck-Randfaser und keine signed fiber stresses ausgewiesen.
 

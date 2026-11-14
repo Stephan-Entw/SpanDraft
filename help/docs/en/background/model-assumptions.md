@@ -2,7 +2,7 @@
 
 SpanDraft analyzes a straight beam in a two-dimensional bending plane.
 
-The material and cross-section remain constant along the beam length, supports are idealized, and deformations are assumed to be small.
+The material and cross-section are constant within a segment and change abruptly at the segment boundaries, supports are idealized, and deformations are assumed to be small.
 
 The calculation is based on the linear-elastic Euler–Bernoulli beam model.
 
@@ -11,8 +11,8 @@ The calculation is based on the linear-elastic Euler–Bernoulli beam model.
 | Area | Assumption in SpanDraft |
 | --- | --- |
 | Beam | one straight beam |
-| Material | constant and linear elastic |
-| Cross-section | constant, with one selected bending axis |
+| Material | constant and linear elastic within each segment |
+| Cross-section | constant within each segment, with one selected bending axis per segment |
 | Deformation | small displacements and rotations |
 | Supports | ideal Fixed, Pinned, or Roller Supports |
 | Loads | vertical point forces, point moments, constant and linearly varying distributed loads, and optional self-weight |

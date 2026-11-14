@@ -2,6 +2,12 @@
 
 Ein SpanDraft-Balken wird durch seine Länge `L`, den Werkstoff, den Querschnitt und die verwendete Biegeachse definiert.
 
+## Abschnitte
+
+Ein Balken besteht aus einem oder mehreren **Abschnitten**. Jeder Abschnitt hat seinen eigenen Werkstoff, Querschnitt und seine eigene Biegeachse. Innerhalb eines Abschnitts sind sie konstant; an den Abschnittsgrenzen ändern sie sich sprunghaft. Ein neues Projekt beginnt mit einem Abschnitt. Wählen Sie unter **Projekteigenschaften** den Abschnitt in der Liste **Abschnitte** und geben Sie bei **Teilen bei** eine Position ein: Beide Hälften erhalten zunächst alle Eigenschaften des geteilten Abschnitts. Werkstoff, Querschnitt und Achse der Karten gelten für den ausgewählten Abschnitt; der **Beginn des Abschnitts** lässt sich bei Bedarf verschieben, und **Abschnitt entfernen** lässt den linken Nachbarn den Abschnitt übernehmen.
+
+Eine Abschnittsgrenze darf an jeder Position liegen, auch auf einem Lager, einem Federlager oder einer Last. Eigengewicht berücksichtigt je Abschnitt dessen Dichte und Fläche und braucht deshalb die Dichte jedes Werkstoffs. Die Grenzen erscheinen als dünne Querstriche im Balken und als gestrichelte Linien in den Ergebnisdiagrammen. Die Balkenlänge muss größer als die letzte Grenze bleiben.
+
 ## Balkenlänge
 
 Die Länge reicht von `x = 0` links bis `x = L` rechts. Lager und Lasten können an den Enden oder innerhalb des Balkens liegen; Überhänge sind möglich. Beim Verkürzen müssen alle Lager und Lasten innerhalb der neuen Länge bleiben.

@@ -201,11 +201,12 @@ Feature freigegeben ist. Bis zur Freigabe ist sie über Produktpfade nicht errei
 ### DEV-11 Mehrsegment-Balken
 
 - **Anforderung:** Aufeinanderfolgende Abschnitte mit unterschiedlichem Querschnitt und/oder Werkstoff auf gemeinsamer gerader Achse, also EI und EA je Abschnitt. Kein Rahmenmodell.
-- **Zu klären:**
-  - Abschnittswechsel an einem Lager, Gelenk oder einer Einspannung
-  - Eigengewicht je Abschnitt
-  - Spannungsbewertung je Abschnitt (Engineering, nicht Solver)
-- **Prototyp:** EI je Abschnitt vorhanden, EA je Abschnitt fehlt.
+- **Entschieden und umgesetzt:**
+  - Ein Abschnittswechsel ist an Lager, Einspannung und Federlager sowie im freien Feld und an Lasten zulässig. Die Grenze ist eine mechanische Station ohne Sperren; Gelenke (DEV-20) dürfen später auf einer Grenze liegen und verlangen die Rangprüfung über die Teilkörper aller Abschnitte.
+  - Eigengewicht ist je Abschnitt eine konstante Last aus dessen Dichte und Fläche.
+  - Die Spannungsbewertung läuft je Abschnitt im Engineering; maßgebend ist der kleinste Sicherheitsfaktor. Der Solver liefert dafür `SegmentExtrema`.
+  - Die Biegeachse ist je Abschnitt frei wählbar. EA wird nicht gebildet (DEV-12).
+- **Prototyp:** EI je Abschnitt war vorhanden und dient als eingefrorener Vergleich; das Produkt rechnet EI je Abschnitt im Kernel.
 
 ### DEV-6 Linear veränderliche Streckenlasten
 

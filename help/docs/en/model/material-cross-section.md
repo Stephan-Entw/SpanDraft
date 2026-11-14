@@ -2,6 +2,12 @@
 
 A SpanDraft beam is defined by its length `L`, material, cross-section, and selected bending axis.
 
+## Segments
+
+A beam consists of one or more **segments**. Each segment has its own material, cross-section, and bending axis. They are constant within a segment and change abruptly at the segment boundaries. A new project starts with one segment. Under **Project properties**, select a segment in the **Segments** list and enter a position under **Split at**: both halves first receive all properties of the segment that was split. The material, cross-section, and axis cards apply to the selected segment; the **Start of the segment** can be moved if needed, and **Remove segment** lets the left neighbour take it over.
+
+A segment boundary may be at any position, including on a support, a spring support, or a load. Self-weight uses the density and area of each segment and therefore needs the density of every material. Boundaries appear as thin cross lines on the beam and as dashed lines in the result diagrams. The beam length must stay greater than the last boundary.
+
 ## Beam length
 
 The beam extends from `x = 0` on the left to `x = L` on the right.

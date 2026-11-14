@@ -7,8 +7,8 @@ Er validiert das unveränderte Core-Modell, bildet dessen freigegebene Mechanik
 auf den internen `SolverKernel` ab und liefert eine unveränderliche
 `BeamSolution`. Core bleibt unabhängig von Numerik, UI und Persistenz.
 
-Berechnet wird ein einzelner gerader Euler-Bernoulli-Balken mit konstantem
-Werkstoff und Querschnitt, linear elastisch bei kleinen Verschiebungen und
+Berechnet wird ein einzelner gerader Euler-Bernoulli-Balken aus einem oder mehreren
+Abschnitten mit je konstantem Werkstoff und Querschnitt, linear elastisch bei kleinen Verschiebungen und
 Rotationen. Querschnitte bleiben eben und senkrecht zur verformten Balkenachse;
 Schubverformung wird vernachlässigt. Unterstützt sind starre Einspannungen,
 Fest- und Loslager, linear-elastische Federlager, Überhänge, transversale Punktkräfte, Punktmomente und
@@ -16,7 +16,7 @@ konstante und linear veränderliche, auch überlappende Streckenlasten. Eigengew
 Fachmodell als konstante Streckenlast abgeleitet. Alle Werte verwenden SI.
 
 Die Biegesteifigkeit ist `EI = E · I` mit E aus dem Werkstoff und I ausschließlich
-aus `beam.BendingAxisProperties.SecondMomentOfArea`. Y/Z/U/V wählen die
+aus `BendingAxisProperties.SecondMomentOfArea` des jeweiligen Abschnitts. Y/Z/U/V wählen die
 zugehörige Querschnittsachse, ohne die planare Solverformulierung zu ändern.
 Die positive transversale Richtung w gehört zu dieser ausgewählten Biegeebene
 und zeigt in der Balkendarstellung nach oben; sie ist nicht allgemein die
@@ -110,6 +110,34 @@ Laststück muss normiert mindestens 2⁻⁹⁶⁹ breit sein, sonst lehnt der So
 Überlappungen und Lasten an Lagern werden additiv berücksichtigt. Innerhalb
 eines mechanischen Abschnitts bleiben sämtliche Last-Ereignisse erhalten,
 ohne den Abschnitt in Steifigkeitselemente zu zerlegen.
+
+### Abschnitte mit unterschiedlicher Steifigkeit
+
+Der Adapter bildet jeden `BeamSegment` auf einen `StiffnessSection(Start, End, EI)` ab, ohne
+gleiche Nachbarn zusammenzulegen. Jede Abschnittsgrenze ist im Kernel eine mechanische Station
+ohne Sperren: Sie liefert wie jede Station vier Unbekannte und vier Gleichungen im bekannten
+Muster und ändert die Bandbreite nicht. Grenze und Lager, Einspannung, Federlager oder Last auf
+derselben Position verschmelzen zu einer Station; die Koinzidenzregel der Federlager gilt nur für
+Lager. Die Grenze ist selbst keine mechanische Unbekannte außer dem Sprung von EI: M, V, w und
+θ sind dort stetig (außer an einer Punktlast oder einem Lager auf der Grenze), w'' = M/EI springt
+um das EI-Verhältnis. Es gibt keine Penalty, kein Snapping und keine Zusammenlegung von
+Positionen.
+
+Den Abschnitt eines Intervalls zwischen zwei mechanischen Stationen bestimmt der exakte
+Vergleich der Station, nie eine Mittelpunktklassifikation. Die Abschnitte müssen den Balken
+bitgenau überdecken, sonst lehnt der Kernel mit `InvalidModel` ab. Die Normierung folgt dem
+steifsten Abschnitt (`e_EI = ilogb(max EI)`); jedes normierte EI muss normal sein, ein extremes
+Verhältnis (hier ab etwa 10³⁰⁰) wird mit `NumericalFailure` (`NumericalRange`) abgelehnt.
+Gewichte der Verifikation und Referenzskalen der Ausgabeschranken nutzen kleinstes und größtes
+EI aller Intervalle, die Stückschranke das EI ihres eigenen Abschnitts. Das Gate und τ = 10⁻⁸
+bleiben unverändert; ein EI-Kontrast von 10³ bis 10⁶ wurde ohne Ablehnung geliefert
+([VALIDATION.md](VALIDATION.md)).
+
+`BeamSolution.SegmentExtrema` liefert je Abschnitt ein `BeamExtrema`. Es entsteht aus denselben
+Polynomstücken wie das globale Extremum, eingeschränkt auf die Stücke des Abschnitts; an einer
+Grenze zählt die innere Seite (rechts am Beginn, links am Ende). Das ist kein Sampling und keine
+Zweitlösung. Eine Grenze auf einer Punktlast oder einem Lager gehört beiden Nachbarn mit dem
+Wert ihrer Seite.
 
 Eine mittige Kraft −P auf einem einfach gelagerten Balken ergibt V = +P/2 links,
 V = −P/2 rechts und M = +PL/4 unter der Last. Beim links eingespannten Kragarm

@@ -47,7 +47,7 @@ Multiple distributed loads may overlap. Their signed intensities are added.
 
 ## Self-weight
 
-Self-weight is an optional distributed load derived from the current material and cross-section.
+Self-weight is an optional distributed load derived from the current material and cross-section; with several segments it is one constant load per segment from that segment's material and cross-section.
 
 When enabled, SpanDraft calculates a downward constant load over the full beam length from the material density `ρ`, cross-sectional area `A`, and standard gravity:
 

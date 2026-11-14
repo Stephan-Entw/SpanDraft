@@ -354,7 +354,7 @@ Die offenen Semantiken aus B lassen sich als **Daten** ausdrücken:
 | Gelenk an Einspannung (DEV-20) | Einspannung links oder rechts des Gelenks, oder Ablehnung |
 | Gelenk auf Lager ohne Drehbehinderung (DEV-20) | Lager und Gelenk am selben oder an getrennten Teilpunkten |
 | Feder und starres Lager an gleicher Position (DEV-19) | Ablehnung (`InvalidModel`, entschieden) |
-| Abschnittswechsel an Lager, Gelenk, Einspannung (DEV-11) | Grenze vor oder nach dem Teilpunkt der Halterung |
+| Abschnittswechsel an Lager, Gelenk, Einspannung (DEV-11) | Grenze und Halterung verschmelzen zu einer Station; die Grenze ist ein eigener Teilpunkt ohne Sperren (Lager, Einspannung, Federlager entschieden; Gelenk bleibt DEV-20) |
 | Schräge Kraft am Gelenk oder Lager (DEV-12) | Axial- und Querkomponente am gewählten Teilpunkt |
 
 Die Koinzidenzregeln beschreiben zulässige Kombinationen und ihre Reihenfolge.

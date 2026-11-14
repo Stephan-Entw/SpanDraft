@@ -847,3 +847,91 @@ Validierungs-Suite (304 Tests) bestanden vollständig.
 
 Dieser Hash ist die neue CI-Baseline in [ci.yml](../.github/workflows/ci.yml). Der Report der
 Linearlast-Abnahme und der M4-Abnahme bleiben als historische Evidenz unverändert.
+
+## 7. Mehrsegment-Balken (DEV-11)
+
+Ein Balken aus mehreren Abschnitten hat je Abschnitt ein eigenes EI; jede Grenze ist im Kernel eine
+Station ohne Sperren. Der Nachweis ist fünffach getrennt:
+
+- **Exakte rationale Referenz in der Product-Suite.** Das Orakel der Ausgabetests integriert die
+  Verträglichkeit abschnittsweise (`θ = θ₀ + Σ ∫ M/EI`, `w` entsprechend) und löst weiter die
+  globale Kraftgrößenmethode. `SolverMultiSectionExactTests` rechnet neun Konfigurationen (Stufenkragarm,
+  Grenze auf dem Mittellager, drei Abschnitte mit Punktkraft, Punktmoment und Linienlast auf den Grenzen,
+  Grenze auf Wegfeder, Grenze auf Teileinspannung, Grenze auf Lager und Last, ein 1 mm breiter
+  Abschnitt, EI-Kontraste 10³ und 10⁶). Jedes Modell wird geliefert, und jeder Ausgabewert
+  (Reaktionen, Felder an allen Stationsseiten und im Stück, Extrema, Skalen) liegt innerhalb seiner
+  verifizierten Schranke; das Gate und τ = 10⁻⁸ sind unverändert.
+- **Analytik über die öffentliche Schnittstelle.** Stufenkragarm (Einheitslastintegral
+  `w = −P ∫ (L−x)²/EI dx`), Zweifeldträger mit Steifigkeitswechsel auf dem Mittellager
+  (Dreimomentengleichung), Stufenwelle unter Mittellast, Kragarme beidseits einer Einspannung auf der
+  Grenze und Federlager auf der Grenze (`w = −P f / (1 + k f)` mit der gestuften Nachgiebigkeit `f`).
+- **Invarianten.** Teilung bei gleichen Eigenschaften an acht Positionen (auch auf Lager, Feder und
+  Last) ändert die Ergebnisse nur innerhalb der Schranken; gleiche Produkte `E·I` aus verschiedenem
+  E und I sind bitgleich; M, V, w und θ sind an einer lastfreien Grenze stetig; Spiegelung; Skalierung
+  von EI skaliert nur w und θ; jede Grenze fügt genau vier Unbekannte hinzu; Vergleich mit dem
+  eingefrorenen Prototyp (EI-Liste) in vier Modellen.
+- **Unabhängige Validierung V25–V29.** Das Eingabeformat erhält die optionale Liste `segments` (Schema
+  2); Fälle mit Schema 1 und ihre Hashes bleiben unverändert. Die analytische Referenz integriert die
+  Krümmung mit dem EI jedes Intervalls (exakte rationale Statik); PyCBA nimmt je Intervall ein Element mit
+  eigenem EI. IndeterminateBeam besitzt ein E und ein I für den ganzen Balken und fehlt für diese Fälle.
+  V25 (Stufenkragarm, drei Abschnitte), V26 (Zweifeldträger, E und I wechseln auf dem Mittellager),
+  V27 (Stufenwelle mit Grenzen auf zwei Punktkräften), V28 (Grenzen auf Wegfeder und Teileinspannung),
+  V29 (EI-Verhältnis 10⁵ zwischen zwei Abschnitten). Die Grenzen sind Ereignisse: Sprung- und
+  Stetigkeitsprüfungen laufen dort automatisch. Weil der Quellhash der Python-Adapter in jeder Referenz
+  steht, wurden alle Referenzen neu erzeugt; die numerischen Inhalte der 68 älteren Dateien sind bis auf
+  Zeitstempel und Adapterhash identisch.
+- **Gezielte Fehlerfälle.** Abschnitte, die den Balken nicht exakt überdecken, sind `InvalidModel`
+  (Validator `SegmentsNotContiguous`, Kernel `InvalidMechanicalModelException`); eine Grenze macht
+  keinen Starrkörpermodus stabil (`UnstableModel`); ein normiertes EI, das nicht mehr normal ist
+  (Verhältnis über etwa 10³⁰⁰), ist `NumericalFailure` (`NumericalRange`).
+
+**Fehlerinjektion.** `validation/investigations/multi-segment-mutants/mutate.py` baut je Mutante einen
+Fehler in die Abschnittslogik, baut neu und führt die Product-Suite aus.
+Von 38 Mutanten werden 36 von mindestens einem Test erkannt. Beim ersten Lauf überlebten sieben (E5, E8, E9, E10,
+S6, D6 und eine Tie-Break-Mutante des maßgebenden Abschnitts); E5, E8, E9 und E10 führten zu zusätzlichen Tests
+(Stückpolynom mit dem EI des falschen Abschnitts, Skala mit dem weichsten EI, Gewichte der Verifikation, Normierung am
+weichsten statt am steifsten Abschnitt). Die Tie-Break-Mutante war äquivalent, weil spätere Abschnitte rechts liegen:
+die tote Positionsprüfung wurde entfernt und die Mutante gestrichen. S2 baute zunächst nicht und wurde korrigiert.
+Zwei Mutanten bleiben äquivalent: S6 entfernt eine Schutzprüfung, die Stationen- und Überdeckungsregeln bereits
+garantieren, D6 den Vergleich der Abschnittsanzahl, die sich immer auch in einem Abschnittsbereich zeigt.
+
+| Mutante | Fehler | Ergebnis |
+| --- | --- | --- |
+| E1 | transfer coefficients of an interval use the stiffness of the previous interval | killed (28 Tests) |
+| E2 | load integrals are divided by the stiffness of the first interval | killed (16 Tests) |
+| E3 | field evaluation uses the stiffness of the first interval | killed (16 Tests) |
+| E4 | field evaluation uses the stiffness of the next interval | killed (16 Tests) |
+| E5 | piece polynomials use the stiffness of the first interval | killed (2 Tests) |
+| E6 | piece quality uses the stiffness of the first interval | killed (4 Tests) |
+| E7 | upper stiffness reference scale from the first interval only | killed (3 Tests) |
+| E8 | lower stiffness reference scale from the first interval only | killed (7 Tests) |
+| E9 | verification weights from the greatest instead of the least stiffness | killed (1 Tests) |
+| E10 | normalization follows the softest instead of the stiffest section | killed (1 Tests) |
+| S1 | an interval starting on a boundary is attributed to the section on its left | killed (60 Tests) |
+| S2 | boundaries are not mechanical stations | killed (44 Tests) |
+| S3 | the tiling of the sections is not checked | killed (1 Tests) |
+| S4 | a boundary counts as an occupied position, so a spring cannot stand on it | killed (8 Tests) |
+| S5 | a section of zero or negative length is accepted | killed (1 Tests) |
+| S6 | the straddle check of an interval is dropped (defensive check; expected equivalent) | survived, equivalent (defensive check that the tiling and station rules already guarantee) |
+| X1 | section extrema are found on all pieces from the section start on | killed (1 Tests) |
+| X2 | every section reports the global extrema | killed (4 Tests) |
+| A1 | adapter: the stiffness of the first segment for every section | killed (16 Tests) |
+| A2 | adapter: the modulus of the first segment only | killed (2 Tests) |
+| G1 | engineering: the segment with the largest safety factor governs | killed (3 Tests) |
+| G3 | engineering: every segment uses the strength of the first one | killed (2 Tests) |
+| G4 | engineering: every segment uses the section modulus of the first one | killed (1 Tests) |
+| G5 | engineering: the segment moment is the global one | killed (2 Tests) |
+| V1 | validator: gaps and overlaps between segments are accepted | killed (3 Tests) |
+| V2 | validator: a last segment that ends elsewhere than the beam is accepted | killed (2 Tests) |
+| C1 | self-weight of a segment starts at the beam start | killed (2 Tests) |
+| D1 | document: the end of a segment is its own start boundary | killed (12 Tests) |
+| D2 | document: boundaries need not ascend or lie inside the beam | killed (2 Tests) |
+| D3 | document: self-weight needs the density of the first segment only | killed (2 Tests) |
+| D4 | document: a boundary belongs to the segment that ends there | killed (1 Tests) |
+| D5 | document: splitting does not copy the segment | killed (1 Tests) |
+| D6 | comparer: the segment count is not compared | survived, equivalent (a changed count always changes a segment range, which is compared) |
+| D7 | comparer: segment ranges are not compared | killed (1 Tests) |
+| D8 | content equality ignores the boundaries | killed (1 Tests) |
+| P1 | format: a further segment is written with the first boundary | killed (3 Tests) |
+| P2 | format: further segments are not read | killed (11 Tests) |
+| P3 | format: strength confirmation is checked for the first segment only | killed (1 Tests) |

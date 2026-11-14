@@ -53,6 +53,10 @@ If the bending stress is zero, the mathematical result may be `S = ∞`. This do
 
 Displayed values may be rounded; the calculation uses the unrounded values. See [Number formatting](../model/coordinates-units.md#number-formatting).
 
+## Several segments
+
+For a beam of several segments, SpanDraft assesses each segment with its own largest bending moment magnitude, section modulus, and strength value. **The segment with the smallest safety factor governs**, which is not necessarily the one with the highest stress. The stress and safety factor in the overview and the report belong to that segment, which is named there as the **Governing segment**. Notch effects and local stresses at changes of section are not assessed.
+
 ## What the safety factor does not assess
 
 - **Other stresses:** for example shear stress or combined axial force and bending.

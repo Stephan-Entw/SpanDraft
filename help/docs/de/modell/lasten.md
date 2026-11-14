@@ -47,7 +47,7 @@ Mehrere Streckenlasten dürfen sich überlagern; ihre Intensitäten werden vorze
 
 ## Eigengewicht
 
-Eigengewicht ist eine optionale Streckenlast aus dem aktuellen Werkstoff und Querschnitt.
+Eigengewicht ist eine optionale Streckenlast aus dem aktuellen Werkstoff und Querschnitt; bei mehreren Abschnitten ist es je Abschnitt eine eigene konstante Last aus dessen Werkstoff und Querschnitt.
 
 Wenn es aktiviert ist, berechnet SpanDraft aus Werkstoffdichte `ρ`, Querschnittsfläche `A` und Standardfallbeschleunigung eine konstante, nach unten gerichtete Last über die gesamte Balkenlänge:
 

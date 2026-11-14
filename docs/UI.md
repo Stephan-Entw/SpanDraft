@@ -34,6 +34,19 @@ nicht bestehendes Core-Objekt entsteht. Das Werkzeug der Federlager ist in der W
 bewusst ohne Beschriftung: Bei der schmalsten Fensterbreite wäre sonst die deutsche Leiste
 überlaufen.
 
+## Abschnitte in der Projekteinrichtung
+
+Abschnitte werden nur beim Bearbeiten eines Projekts angelegt; ein neues Projekt beginnt mit
+einem Abschnitt, der dem bisherigen Verhalten entspricht, damit die Wiederherstellung der
+Projekteinrichtung unverändert bleibt. Werkstoff, Querschnitt und Achse der Karten gelten für
+den ausgewählten Abschnitt. Teilen kopiert alle Eigenschaften einschließlich eines
+benutzerdefinierten Querschnittsnamens in beide Hälften, weil sonst eine bewusst gesetzte
+Eigenschaft beim Teilen verloren ginge; der Name ist nie ein Merkmal der Grenze. Abschnitte
+haben keine Namen und keine IDs, damit weder Namenskonflikte mit Lasten und Lagern noch
+nichtdeterministische Kennungen aus der Migration entstehen. Grenzen lassen sich nicht im
+Balkenbild ziehen: Die Position ist eine exakte Eingabe, und die Abbildung liefert nur die
+dünnen Querstriche.
+
 ## Streckenlast-Draft
 
 Eine Streckenlast hat zwei Randintensitäten, meistens aber ist sie konstant. Der

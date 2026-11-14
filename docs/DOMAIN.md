@@ -1,7 +1,7 @@
 # SpanDraft – Fachmodell
 
-Das Modell in `SpanDraft.Core` beschreibt einen einzelnen geraden Balken mit
-konstantem Werkstoff und Querschnitt. Es enthält keine Solverlogik.
+Das Modell in `SpanDraft.Core` beschreibt einen einzelnen geraden Balken aus einem oder
+mehreren Abschnitten mit je konstantem Werkstoff und Querschnitt. Es enthält keine Solverlogik.
 Produkt-Scope und Zielbild stehen in [KONZEPT.md](KONZEPT.md); numerische Details
 und Solververträge in [SOLVER.md](SOLVER.md).
 
@@ -77,7 +77,8 @@ nicht endliche Werte sind ungültig; der Zahlenwert 0 ist zulässig.
 Der Solver verwendet E, Engineering den numerischen Festigkeitskennwert.
 `DistributedLoad.FromSelfWeight(length, density, area)` in Core leitet aus
 bekannter Dichte und aktueller Fläche eine abwärts gerichtete konstante Linienlast
-`q_g = −ρ · A · g₀` mit `g₀ = 9.80665 m/s²` über die gesamte Balkenlänge ab.
+`q_g = −ρ · A · g₀` mit `g₀ = 9.80665 m/s²` über die gesamte Balkenlänge ab; der Überlauf
+`FromSelfWeight(start, end, density, area)` tut dasselbe über den Bereich eines Abschnitts.
 `DistributedLoad` ist eine Querlast mit linear veränderlicher Intensität von `StartIntensity`
 am Start bis `EndIntensity` am Ende (N/m, nach oben positiv). Gleiche Randwerte bilden
 eine konstante Last (`IsConstant`); beide Werte dürfen negativ, null oder verschieden
@@ -291,6 +292,36 @@ Der dauerhafte Dateivertrag steht in [PROJECT_FORMAT.md](PROJECT_FORMAT.md).
 Die 2D-Balkendarstellung repräsentiert jeweils die ausgewählte Biegeebene,
 keine räumliche Einbaulage des Querschnitts.
 
+## Abschnitte (Segmente)
+
+`BeamSegment(Start, End, Material, Section, BendingAxis)` ist ein Balkenabschnitt mit
+konstantem Werkstoff, Querschnitt und eigener, bei der Konstruktion einmal aufgelöster
+Biegeachse. Die Achse bezeichnet die Querschnittsachse in der gemeinsamen Biegeebene und
+ist je Abschnitt frei wählbar; gedrehte Profile und Winkelprofile (U/V) bleiben so
+abbildbar. `BeamModel.Segments` ist die geordnete Liste; die bisherigen Konstruktoren
+erzeugen genau einen Abschnitt `0 … L`. Die Properties `Material`, `Section`,
+`BendingAxis` und `BendingAxisProperties` gelten nur für genau einen Abschnitt und
+werfen sonst `InvalidOperationException`; es gibt keinen stillen Rückgriff auf den ersten
+Abschnitt.
+
+Abschnittsgrenzen sind Positionen, keine Längen: Eine Summe von Längen wäre
+gleitkommafragil. Der Validator verlangt, dass die Abschnitte den Balken exakt und ohne
+Toleranz überdecken (`SegmentsNotContiguous`, Pfad `Segments[i].Start` beziehungsweise
+`Segments[n-1].End`): erster Beginn 0, jeder Beginn gleich dem Ende des Vorgängers, letztes
+Ende gleich der Balkenlänge. Eine Abschnittsgrenze darf auf einem Lager, einer Einspannung,
+einem Federlager oder einer Last liegen; die Koinzidenzregel der Federlager betrifft nur
+Lager, nicht Abschnittsgrenzen.
+
+`EditorDocument` hält Länge, die `n − 1` Abschnittsgrenzen (streng aufsteigend im
+Balkeninneren) und `n` `EditorSegment` (Werkstoff, Querschnitt, Achse, Anzeigename). Die
+Überdeckung gilt damit per Konstruktion, und die Länge ändert nur das Ende des letzten
+Abschnitts, nie über die letzte Grenze hinaus. Abschnitte haben keine eigene ID und keinen
+Namen, sondern ihre Reihenfolge. Teilen kopiert alle Eigenschaften in beide Hälften; eine
+Grenze zu entfernen behält den linken oder den rechten Nachbarn. Eigengewicht ist eine
+Systementität `g` mit einer konstanten Last je Abschnitt aus dessen Dichte und Fläche; es
+verlangt die Dichte in jedem Abschnitt. Die Dokument-Properties für einen Abschnitt gelten
+nur bei genau einem.
+
 ## Lager und Federlager
 
 `Support` hat eine Position und einen `SupportType`: `Fixed`, `Pinned`, `Roller` oder
@@ -316,6 +347,7 @@ Nachricht und Property-Pfad; Listenindizes sind nullbasiert. Geprüft werden:
 - fehlende Lager,
 - Lager, Einzelkräfte und Einzelmomente außerhalb des Balkens,
 - teilweise oder vollständig außerhalb liegende Streckenlasten,
+- Abschnitte, die den Balken nicht exakt überdecken (`SegmentsNotContiguous`),
 - identische Lager mit gleichem Typ und exakt gleicher Position,
 - ein Federlager an exakt derselben Position wie ein anderes Lager (`SpringSupportCoincidence`).
 
