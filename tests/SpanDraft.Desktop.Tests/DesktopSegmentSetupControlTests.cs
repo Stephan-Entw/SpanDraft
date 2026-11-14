@@ -7,6 +7,7 @@ using SpanDraft.Core.Sections;
 using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
@@ -147,6 +148,42 @@ public sealed class DesktopSegmentSetupControlTests
         window.Show();
         Arrange(window, 1100, 650);
         Assert.False(view.FindControl<SegmentSetupCard>("SegmentCard")!.IsEffectivelyVisible);
+        window.Close();
+    }
+
+    [Theory]
+    [InlineData(3)]
+    [InlineData(1)]
+    public void TheOverviewListsSegmentsAndNamesTheGoverningOneOnlyForSeveral(int segments)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var setup = Setup(segments);
+        var document = new EditorDocument(setup.SelectedLength ?? M(3), setup.SegmentBoundaries, setup.BuildSegments(),
+            [new(Guid.NewGuid(), M(0), SupportType.Fixed, "A")], [new EditorPointForce(Guid.NewGuid(), M(3), Force.FromNewtons(-1000), "F1")]);
+        var editor = new EditorViewModel(document, () => { });
+        var view = new EditorView { DataContext = editor };
+        var window = new Window { Content = view, Width = 1250, Height = 900 };
+        window.Show();
+        Arrange(window, 1250, 900);
+        var overview = view.GetVisualDescendants().OfType<ProjectOverviewView>().Single();
+        var table = overview.FindControl<ItemsControl>("SegmentTable")!;
+        var block = overview.FindControl<Grid>("ProjectBlock")!;
+        var row = overview.FindControl<Grid>("GoverningSegmentRow")!;
+
+        Assert.Equal(segments > 1, table.IsEffectivelyVisible);
+        Assert.Equal(segments > 1, row.IsEffectivelyVisible);
+        Assert.Equal(segments, editor.Overview.Segments.Count);
+        if (segments > 1)
+        {
+            Assert.Equal(segments, table.GetVisualDescendants().OfType<Grid>().Count(g => g.DataContext is ProjectOverviewSegment));
+            var rows = table.GetVisualDescendants().OfType<Grid>().Where(g => g.DataContext is ProjectOverviewSegment).ToArray();
+            // Rows stack without overlap and stay inside the overview block.
+            for (int i = 1; i < rows.Length; i++)
+                Assert.True(rows[i].TranslatePoint(default, window)!.Value.Y >= rows[i - 1].TranslatePoint(default, window)!.Value.Y + rows[i - 1].Bounds.Height - 0.5);
+            Assert.All(rows, r => Assert.True(r.Bounds.Right <= block.Bounds.Width + 0.5));
+            Assert.Equal((editor.Presentation.Result!.Engineering.GoverningSegmentIndex + 1).ToString(),
+                row.GetVisualDescendants().OfType<TextBlock>().Last().Text);
+        }
         window.Close();
     }
 }

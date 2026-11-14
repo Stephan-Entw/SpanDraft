@@ -1,3 +1,4 @@
+using System.Globalization;
 using SpanDraft.Analysis;
 using SpanDraft.Core.Validation;
 using SpanDraft.Desktop.Presentation;
@@ -64,6 +65,8 @@ public sealed record AnalysisPresentationState
         ? Format(r.Engineering.BendingMomentMagnitude.NewtonMeters, QuantityKind.Moment) : "";
     public string Stress => Result is { } r
         ? Format(r.Engineering.MaximumBendingStress.Pascals, QuantityKind.Stress) : "";
+    /// <summary>The one-based number of the governing segment; stress and safety factor refer to it.</summary>
+    public string GoverningSegment => Result is { } r ? (r.Engineering.GoverningSegmentIndex + 1).ToString(CultureInfo.CurrentUICulture) : "";
     public string SafetyFactor => Result is { } r ? Format(r.Engineering.SafetyFactor, QuantityKind.SafetyFactor) : "";
 
     private string Format(double siValue, QuantityKind kind) =>
