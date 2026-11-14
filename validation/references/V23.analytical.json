@@ -9,7 +9,7 @@
     "package": "analytical",
     "version": "1",
     "python": "3.9.6",
-    "generatedAt": "2026-11-14T12:48:37.944001+00:00",
+    "generatedAt": "2026-11-14T16:35:49.899014+00:00",
     "theory": "Euler-Bernoulli; constant E, A, I; linear; small displacements",
     "signMapping": "SI and SpanDraft conventions directly; no SpanDraft solver input",
     "options": {
@@ -17,7 +17,7 @@
     },
     "adapterVersion": "1",
     "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
-    "adapterSourcesSha256": "41119e4418dee603b515ec0cd637dc1338254d591ff79ed2d6d900c3d522c07d",
+    "adapterSourcesSha256": "07bd11f00391147575799b2965e4f1f62f5827dc1c0ee988bd555bb257b22843",
     "source": "validation/python/analytical.py; derivation in docs/VALIDATION.md"
   },
   "availability": {

@@ -3,13 +3,13 @@ Never imported by an external-solver adapter to fill missing solver results.
 """
 import sympy as sp
 import numpy as np
-from common import result, events, polynomial_pieces, polynomial_samples, polynomial_extrema
+from common import result, events, polynomial_pieces, polynomial_samples, polynomial_extrema, stiffness_at
 
 
 def generate(case):
     x = sp.Symbol('x', real=True)
     L = sp.Rational(str(case['length']))
-    EI = sp.Rational(str(case['e'])) * sp.Rational(str(case['i']))
+    EI = sp.Rational(str(case['e'])) * sp.Rational(str(case['i'])) if 'e' in case else None
     kind = case['caseId'].split('-')[0]
     C1 = 0
     if kind in ['V01', 'V06']:
@@ -52,7 +52,7 @@ def generate(case):
         C1 = -primitive.subs(x,L)/L
         w = (primitive+C1*x)/EI
         reactions = [(0,Ra,None),(float(L),Ra,None)]
-    elif kind in ['V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24']:
+    elif kind in ['V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24', 'V25', 'V26', 'V27', 'V28', 'V29']:
         return generate_linear(case, x, L, EI)
     else:
         raise ValueError('No analytical provider for '+case['caseId'])
@@ -86,6 +86,10 @@ def generate_linear(case, x, L, EI):
     w + Ry / k = 0 for a translational spring (Ry = -k w), theta + Rm / k_theta = 0 for a rotational one
     (Rm = -k_theta theta); a rigid translation (partial restraint) prescribes w = 0 and keeps its reaction.
     A spring support is axially rigid.
+
+    A case with segments has a piecewise constant EI: the curvature M / EI is integrated with the EI of the segment
+    that contains each interval. Segment boundaries are event positions without any jump, so the state is simply
+    carried through them with the new stiffness.
     """
     R = sp.Rational
     bounds = [R(str(b)) for b in events(case)]
@@ -150,7 +154,8 @@ def generate_linear(case, x, L, EI):
                           sp.Integer(0)).subs(x, a + s))
         shear = v + integrate(q)
         moment = m + integrate(shear)
-        rotation = theta + integrate(moment) / EI
+        e_mod, inertia = stiffness_at(case, float(a), float(b))
+        rotation = theta + integrate(moment) / (R(str(e_mod)) * R(str(inertia)))
         deflection = w + integrate(rotation)
         pieces.append((a, b, dict(w=deflection, theta=rotation, M=moment, V=shear)))
         end = tuple(e.subs(s, b - a) for e in (deflection, rotation, moment, shear))

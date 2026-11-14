@@ -37,8 +37,23 @@ def load_case(path):
     return case
 
 
+def segments(case):
+    """The beam segments as (start, end, e, i); a case without a segment list has one over the whole length."""
+    if 'segments' in case:
+        return [(g['start'], g['end'], g['e'], g['i']) for g in case['segments']]
+    return [(0.0, case['length'], case['e'], case['i'])]
+
+
+def stiffness_at(case, a, b):
+    """(E, I) of the segment that contains the interval [a, b]; segment boundaries are events, so there is exactly one."""
+    found = [(e, i) for start, end, e, i in segments(case) if start <= a and b <= end]
+    if len(found) != 1:
+        raise ValueError(f"{case['caseId']}: no unique segment for [{a}, {b}]")
+    return found[0]
+
+
 def events(case):
-    return sorted(set([0.0, case['length']] + [s['position'] for s in case['supports']] +
+    return sorted(set([0.0, case['length']] + [g[0] for g in segments(case)[1:]] + [s['position'] for s in case['supports']] +
                       [p['position'] for p in case['pointForces'] + case['pointMoments']] +
                       [x for q in case['udls'] + case.get('lineLoads', []) for x in [q['start'], q['end']]]))
 
@@ -53,7 +68,8 @@ def result(case, solver, supported, options, mapping, source):
                 provenance=dict(package=solver, version=VERSIONS.get(solver, '1'),
                                 python=platform.python_version(),
                                 generatedAt=datetime.now(timezone.utc).isoformat(),
-                                theory='Euler-Bernoulli; constant E, A, I; linear; small displacements',
+                                theory=('Euler-Bernoulli; piecewise constant E, A, I per segment; linear; small displacements'
+                                        if 'segments' in case else 'Euler-Bernoulli; constant E, A, I; linear; small displacements'),
                                 signMapping=mapping, options=options, adapterVersion=ADAPTER_VERSION,
                                 requirementsSha256=hashlib.sha256((ROOT/'validation/python/requirements.txt').read_bytes()).hexdigest(),
                                 adapterSourcesSha256=adapter_hash.hexdigest(),

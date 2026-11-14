@@ -35,10 +35,11 @@ def main():
     for path in files:
         case=load_case(path)
         for solver in args.solver or ['indeterminatebeam','pycba','analytical']:
-            if solver=='analytical' and case['caseId'].split('-')[0] not in ['V01','V02','V03','V04','V05','V06','V16','V17','V18','V19','V20','V21','V22','V23','V24']:
+            if solver=='analytical' and case['caseId'].split('-')[0] not in ['V01','V02','V03','V04','V05','V06','V16','V17','V18','V19','V20','V21','V22','V23','V24','V25','V26','V27','V28','V29']:
                 continue
             # IndeterminateBeam has no rotational spring; at k L^3/EI = 1e12 both external solvers lose the compared digits.
-            if solver=='indeterminatebeam' and case['caseId'] in ['V22','V23','V24'] or solver=='pycba' and case['caseId']=='V24':
+            # IndeterminateBeam has a single E and I for the whole beam, so it cannot represent segments.
+            if solver=='indeterminatebeam' and (case['caseId'] in ['V22','V23','V24'] or 'segments' in case) or solver=='pycba' and case['caseId']=='V24':
                 continue
             target=output/(case['caseId']+'.'+solver+'.json')
             if target.exists(): raise FileExistsError(f'Refusing overwrite: {target}')

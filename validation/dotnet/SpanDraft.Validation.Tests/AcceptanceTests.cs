@@ -69,9 +69,12 @@ public class AcceptanceTests
         // Two external solvers and the analytical reference where they exist; V22 and V23 have no IndeterminateBeam
         // reference (no rotational spring) and V24 only the analytical one (digit loss of both solvers at k L³/EI = 10¹²).
         int expected = Catalog.CaseIds.Sum(id => Catalog.ExternalSolversFor(id).Length + (Catalog.AnalyticalIds.Contains(id) ? 1 : 0));
-        Assert.Equal(68, expected);
+        Assert.Equal(78, expected);
         Assert.Equal(expected, Directory.GetFiles(Path.Combine(Catalog.Root,"validation","references"),"*.json").Length);
         Assert.Equal(new[] { "V22", "V23" }, Catalog.SpringIds.Where(id => Catalog.ExternalSolversFor(id) is ["pycba"]));
+        // IndeterminateBeam has one E and one I per beam: the segment cases have PyCBA and the analytical reference.
+        Assert.All(Catalog.SegmentIds, id => Assert.Equal(["pycba"], Catalog.ExternalSolversFor(id)));
+        Assert.All(Catalog.SegmentIds, id => Assert.True(Catalog.Load(id).Segments.Length >= 2));
     }
 
     [Fact]

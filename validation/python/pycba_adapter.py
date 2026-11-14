@@ -3,7 +3,7 @@ import math
 import numpy as np
 from scipy.interpolate import CubicSpline
 from pycba import BeamAnalysis
-from common import events, piece_index, result, extrema_from_candidates, TOLERANCES
+from common import events, piece_index, result, extrema_from_candidates, stiffness_at, TOLERANCES
 
 FIELDS = {'w':'D','theta':'R','V':'V','M':'M'}
 
@@ -22,7 +22,9 @@ def build(case):
             restraints.extend([vertical, spring.get('rotationalStiffness') or 0])
             continue
         restraints.extend([-1 if supports else 0, -1 if 'Fixed' in supports else 0])
-    model=BeamAnalysis(lengths, np.full(len(lengths),case['e']*case['i']),restraints,[],
+    # One member per interval between events, so a segment boundary (an event) never lies inside a member.
+    stiffness=np.array([np.prod(stiffness_at(case,a,b)) for a,b in zip(boundaries,boundaries[1:])])
+    model=BeamAnalysis(lengths, stiffness,restraints,[],
                        eletype=np.ones(len(lengths),dtype=int),GAv=None,kf=None)
     # Native end loads at interior nodes go on the preceding member exactly once.
     for kind in ['pointForces','pointMoments']:

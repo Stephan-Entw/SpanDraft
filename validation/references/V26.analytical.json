@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V26",
+  "inputSha256": "9d7307a9de33256c2566cd65a902a66edb2ea52ba6fdec8910f71ec096741909",
+  "solver": "analytical",
+  "status": "PASS",
+  "provenance": {
+    "package": "analytical",
+    "version": "1",
+    "python": "3.9.6",
+    "generatedAt": "2026-11-14T16:35:50.478136+00:00",
+    "theory": "Euler-Bernoulli; piecewise constant E, A, I per segment; linear; small displacements",
+    "signMapping": "SI and SpanDraft conventions directly; no SpanDraft solver input",
+    "options": {
+      "method": "Exact rational statics and compatibility, integrated linear intensity"
+    },
+    "adapterVersion": "1",
+    "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
+    "adapterSourcesSha256": "07bd11f00391147575799b2965e4f1f62f5827dc1c0ee988bd555bb257b22843",
+    "source": "validation/python/analytical.py; derivation in docs/VALIDATION.md"
+  },
+  "availability": {
+    "Rx": "supported",
+    "Ry": "supported",
+    "Rm": "supported",
+    "u": "supported",
+    "w": "supported",
+    "theta": "supported",
+    "N": "supported",
+    "V": "supported",
+    "M": "supported"
+  },
+  "reactions": [
+    {
+      "position": 0.0,
+      "values": {
+        "Ry": 1296.3843519494205,
+        "Rx": 0.0
+      }
+    },
+    {
+      "position": 2.4,
+      "values": {
+        "Ry": 15006.953169328037
+      }
+    },
+    {
+      "position": 5.0,
+      "values": {
+        "Ry": 6696.662478722542
+      }
+    }
+  ],
+  "samples": [
+    {
+      "position": 0.0,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.0,
+        "theta": 0.00023022429625169352,
+        "M": 0.0,
+        "V": 1296.3843519494205
+      }
+    },
+    {
+      "position": 0.888,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.00023947188848421496,
+        "theta": 0.00030689787492398015,
+        "M": -31.626695468914768,
+        "V": -1367.6156480505795
+      }
+    },
+    {
+      "position": 1.512,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.0003926472173609273,
+        "theta": 0.00011286038670480204,
+        "M": -1469.0828598524763,
+        "V": -3239.6156480505797
+      }
+    },
+    {
+      "position": 2.4,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 1.0842021724855044e-19,
+        "theta": -0.0012833057353605298,
+        "M": -5528.677555321391,
+        "V": -5903.61564805058
+      }
+    },
+    {
+      "position": 2.4,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 0.0,
+        "theta": -0.0012833057353605298,
+        "M": -5528.677555321391,
+        "V": 9103.337521277457
+      }
+    },
+    {
+      "position": 2.992,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.003150320567792204,
+        "theta": -0.007645871507581143,
+        "M": -665.197742725135,
+        "V": 7327.337521277457
+      }
+    },
+    {
+      "position": 3.408,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.00623594724688699,
+        "theta": -0.006498364535911716,
+        "M": 2123.3906661262863,
+        "V": 6079.337521277457
+      }
+    },
+    {
+      "position": 4.0,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.008058154139502926,
+        "theta": 0.0014252226172141844,
+        "M": 5196.662478722542,
+        "V": 4303.337521277457
+      }
+    },
+    {
+      "position": 4.0,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.008058154139502928,
+        "theta": 0.0014252226172141874,
+        "M": 5196.662478722542,
+        "V": -3696.662478722542
+      }
+    },
+    {
+      "position": 4.37,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.006380246754480931,
+        "theta": 0.007298087154566984,
+        "M": 3623.547361595201,
+        "V": -4806.662478722542
+      }
+    },
+    {
+      "position": 4.63,
+      "side": "Right",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": -0.004097657079290256,
+        "theta": 0.010051191162545306,
+        "M": 2272.415117127341,
+        "V": -5586.662478722542
+      }
+    },
+    {
+      "position": 5.0,
+      "side": "Left",
+      "values": {
+        "u": 0.0,
+        "N": 0.0,
+        "w": 1.734723475976807e-18,
+        "theta": 0.011597834186361585,
+        "M": 0.0,
+        "V": -6696.662478722542
+      }
+    }
+  ],
+  "extrema": {
+    "wMin": {
+      "value": -0.008114113876875405,
+      "locations": [
+        {
+          "position": 3.9205458229078682,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    },
+    "wMax": {
+      "value": 0.0004008639573894398,
+      "locations": [
+        {
+          "position": 1.6510847707954126,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    },
+    "VMin": {
+      "value": -6696.662478722542,
+      "locations": [
+        {
+          "position": 5.0,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "VMax": {
+      "value": 9103.337521277457,
+      "locations": [
+        {
+          "position": 2.4,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMin": {
+      "value": -5528.677555321391,
+      "locations": [
+        {
+          "position": 2.4,
+          "side": "Left"
+        },
+        {
+          "position": 2.4,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMax": {
+      "value": 5196.662478722542,
+      "locations": [
+        {
+          "position": 4.0,
+          "side": "Left"
+        },
+        {
+          "position": 4.0,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    }
+  }
+}

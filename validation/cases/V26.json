@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 2,
+  "caseVersion": 1,
+  "caseId": "V26",
+  "description": "Two-span beam whose modulus and second moment of area change on the middle support under a uniform load and a point force",
+  "length": 5,
+  "segments": [
+    {
+      "start": 0,
+      "end": 2.4,
+      "e": 210000000000.0,
+      "a": 0.003,
+      "i": 1e-05
+    },
+    {
+      "start": 2.4,
+      "end": 5,
+      "e": 70000000000.0,
+      "a": 0.002,
+      "i": 4e-06
+    }
+  ],
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 2.4,
+      "type": "Roller"
+    },
+    {
+      "position": 5,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 4,
+      "value": -8000.0
+    }
+  ],
+  "pointMoments": [],
+  "udls": [
+    {
+      "start": 0,
+      "end": 5,
+      "value": -3000.0
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0.0,
+      "side": "Right"
+    },
+    {
+      "position": 0.888,
+      "side": "Right"
+    },
+    {
+      "position": 1.512,
+      "side": "Right"
+    },
+    {
+      "position": 2.4,
+      "side": "Left"
+    },
+    {
+      "position": 2.4,
+      "side": "Right"
+    },
+    {
+      "position": 2.992,
+      "side": "Right"
+    },
+    {
+      "position": 3.408,
+      "side": "Right"
+    },
+    {
+      "position": 4.0,
+      "side": "Left"
+    },
+    {
+      "position": 4.0,
+      "side": "Right"
+    },
+    {
+      "position": 4.37,
+      "side": "Right"
+    },
+    {
+      "position": 4.63,
+      "side": "Right"
+    },
+    {
+      "position": 5.0,
+      "side": "Left"
+    }
+  ]
+}

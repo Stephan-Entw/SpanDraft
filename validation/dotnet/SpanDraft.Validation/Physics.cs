@@ -87,7 +87,7 @@ public static class Physics
         // A spring reaction is the spring law -k w (-k_theta theta) evaluated on the solved deformation. The check applies
         // while k L³/EI and k_theta L/EI stay below 10⁸: the 10⁻⁸ relative output contract bounds w only against the field
         // scale, which the product k·w would amplify for stiffer springs (V24 has its own rigid-limit relation).
-        double stiffnessScale = input.E*input.I;
+        double stiffnessScale = input.LeastStiffness;
         foreach (var support in input.Supports.Where(s => s.Type == "Spring"))
         {
             var node = solution.Nodes.Single(n => n.Position.Meters == support.Position);
@@ -134,9 +134,9 @@ public static class Physics
             case "load2": transformed = input.ScaleLoads(2); scale = _ => 2; break;
             case "load-1": transformed = input.ScaleLoads(-1); scale = _ => -1; break;
             // Springs scale with the bending stiffness, so every support force stays and the deformations halve.
-            case "E2": transformed = input with { E = 2*input.E, Supports = input.Supports.Select(s => s.ScaleStiffness(2)).ToArray() };
+            case "E2": transformed = input.ScaleE(2) with { Supports = input.Supports.Select(s => s.ScaleStiffness(2)).ToArray() };
                 scale = q => q is "u" or "w" or "theta" ? 0.5 : 1; break;
-            case "I2": transformed = input with { I = 2*input.I, Supports = input.Supports.Select(s => s.ScaleStiffness(2)).ToArray() };
+            case "I2": transformed = input.ScaleI(2) with { Supports = input.Supports.Select(s => s.ScaleStiffness(2)).ToArray() };
                 scale = q => q is "w" or "theta" ? 0.5 : 1; break;
             case "rigidLimit":
                 // A translational spring of k L³/EI = 10¹² is, within 1 / (1 + k f) of the rigid result, a pinned support
@@ -163,7 +163,7 @@ public static class Physics
     }
 
     public static readonly string[] SuperpositionIds = ["V04", "V08", "V09", "V11", "V13", "V15", "V16", "V17", "V18", "V19",
-        "V20", "V21", "V22", "V23", "V24"];
+        "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27", "V28"];
     public static readonly string[] RigidLimitIds = ["V24"];
     public static CheckReport Superposition(ValidationCase input)
     {

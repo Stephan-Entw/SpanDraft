@@ -27,6 +27,14 @@ dotnet run --project validation/dotnet/SpanDraft.Validation.Runner --configurati
   --report validation/results/local-run/acceptance.json
 ```
 
+V25-V29 cover beams of several segments through the optional `segments` list of a case with
+`schemaVersion` 2 (exact start and end positions, E, A and I per segment, no top-level E, A and I). Schema
+version 1 cases are read as before, so their inputs and hashes are unchanged; their references were
+regenerated only because the adapter sources changed, with identical numerical content. The analytical
+references integrate the curvature with the stiffness of each interval; PyCBA takes one member per interval
+with its own EI. IndeterminateBeam has one E and one I for the whole beam and cannot represent segments, so
+these cases are compared with PyCBA and the analytical reference only.
+
 V20-V24 cover spring supports through the optional `translationalStiffness`,
 `rotationalStiffness` and `rigidTranslation` fields of a `Spring` support, again leaving the inputs
 and hashes of the earlier cases unchanged. Their analytical references are exact rational statics with
@@ -42,7 +50,7 @@ Changing a Python source changes the adapter hash recorded in every reference, s
 earlier references were regenerated; their numerical content is unchanged.
 
 The M2 boundary/exact tests run in the complete Product suite. They are separate
-from `compare`, which checks the 27 cases and 68 golden references, including
+from `compare`, which checks the 32 cases and 78 golden references, including
 external/analytical comparisons, physical checks and metamorphic relations.
 Use a fresh `compare` without `--actual` for product acceptance so all results
 come from the current public solver in that run.
@@ -122,7 +130,7 @@ applicable requirements fail acceptance; the explicitly investigated V14
 position limitations are classified as N/A in the comparison layer.
 
 To verify a regeneration independently against the golden files, ignoring only
-generation timestamps, and calibrate both external solvers against all eighteen
+generation timestamps, and calibrate both external solvers against all twenty-three
 analytical cases:
 
 ```sh
@@ -133,7 +141,7 @@ validation/python/.venv/bin/python validation/python/audit_references.py \
 ```
 
 The generator returns **1** for the full catalog because it reproduces V14's
-historical PARTIAL extraction metadata; all 68 files are still generated. The
+historical PARTIAL extraction metadata; all 78 files are still generated. The
 audit returns **0** when calibration and reproduction match. In the documented
 acceptance, the comparison CLI and both complete .NET test runs returned **0**.
 V14's legacy extraction status is resolved only for its six documented position
@@ -141,8 +149,8 @@ limitations; other incomplete extraction requirements remain PARTIAL.
 
 ## Layout
 
-- `cases/`: 27 neutral versioned SI input definitions; source of truth for every adapter.
-- `references/`: 50 external and 18 analytical golden files, with provenance and input SHA-256.
+- `cases/`: 32 neutral versioned SI input definitions; source of truth for every adapter.
+- `references/`: 55 external and 23 analytical golden files, with provenance and input SHA-256.
 - `python/`: isolated external adapters, analytical provider and explicit generation/promotion commands.
 - `dotnet/`: public-solver comparisons, physical checks, metamorphic tests and CLI.
 - `results/`: reviewed acceptance evidence; transient candidate/export/run files are ignored.

@@ -41,6 +41,8 @@ public sealed record SupportInput(double Position, string Type)
             RotationalStiffness is { } kt ? SpanDraft.Core.Units.RotationalStiffness.FromNewtonMetersPerRadian(kt) : null, RigidTranslation == true)
         : new Support(ValidationCase.M(Position), Enum.Parse<SupportType>(Type));
 }
+/// <summary>One beam segment of a case with schema version 2: exact positions and its own E, A and I.</summary>
+public sealed record SegmentInput(double Start, double End, double E, double A, double I);
 public sealed record PointInput(double Position, double Value);
 public sealed record UdlInput(double Start, double End, double Value);
 public sealed record LineInput(double Start, double End, double StartValue, double EndValue);
@@ -52,13 +54,31 @@ public sealed record ValidationCase(int SchemaVersion, int CaseVersion, string C
     /// <summary>Linearly varying line loads; optional, so the inputs and hashes of the earlier cases stay unchanged.</summary>
     public LineInput[] LineLoads { get; init; } = [];
 
+    /// <summary>
+    /// Beam segments; optional (schema version 2), so the inputs and hashes of the earlier cases stay unchanged.
+    /// A case without segments has one over the whole length from its top-level E, A and I.
+    /// </summary>
+    public SegmentInput[] Segments { get; init; } = [];
+
+    public SegmentInput[] SegmentList => Segments.Length > 0 ? Segments : [new(0, Length, E, A, I)];
+
+    /// <summary>The smallest bending stiffness EI of any segment.</summary>
+    public double LeastStiffness => SegmentList.Min(s => s.E * s.I);
+
+    public ValidationCase ScaleE(double factor) => Segments.Length > 0
+        ? this with { Segments = Segments.Select(s => s with { E = factor * s.E }).ToArray() } : this with { E = factor * E };
+
+    public ValidationCase ScaleI(double factor) => Segments.Length > 0
+        ? this with { Segments = Segments.Select(s => s with { I = factor * s.I }).ToArray() } : this with { I = factor * I };
+
     public BeamModel ToBeam()
     {
         // Yield strength and W are required by Core but play no role in this scope.
-        var material = new Material("Validation only", Pressure.FromPascals(E), Pressure.FromPascals(235e6), MaterialStrengthType.Re);
-        var section = new CustomSection(Area.FromSquareMeters(A),
-            SecondMomentOfArea.FromMetersToTheFourth(I), SectionModulus.FromCubicMeters(1));
-        return new BeamModel(M(Length), material, section,
+        var segments = SegmentList.Select(g => new BeamSegment(M(g.Start), M(g.End),
+            new Material("Validation only", Pressure.FromPascals(g.E), Pressure.FromPascals(235e6), MaterialStrengthType.Re),
+            new CustomSection(Area.FromSquareMeters(g.A), SecondMomentOfArea.FromMetersToTheFourth(g.I),
+                SectionModulus.FromCubicMeters(1)), SectionAxisDesignation.Y)).ToArray();
+        return new BeamModel(M(Length), segments,
             Supports.Select(s => s.ToSupport()),
             PointForces.Select(p => (BeamLoad)new PointForce(M(p.Position), Force.FromNewtons(p.Value)))
                 .Concat(PointMoments.Select(p => (BeamLoad)new PointMoment(M(p.Position), Moment.FromNewtonMeters(p.Value))))
@@ -67,7 +87,8 @@ public sealed record ValidationCase(int SchemaVersion, int CaseVersion, string C
                     ForcePerLength.FromNewtonsPerMeter(q.StartValue), ForcePerLength.FromNewtonsPerMeter(q.EndValue)))));
     }
 
-    public double[] Events() => new[] { 0.0, Length }.Concat(Supports.Select(s => s.Position))
+    public double[] Events() => new[] { 0.0, Length }.Concat(Segments.Skip(1).Select(s => s.Start))
+        .Concat(Supports.Select(s => s.Position))
         .Concat(PointForces.Select(p => p.Position)).Concat(PointMoments.Select(p => p.Position))
         .Concat(Udls.SelectMany(q => new[] { q.Start, q.End }))
         .Concat(LineLoads.SelectMany(q => new[] { q.Start, q.End })).Distinct().Order().ToArray();
@@ -94,23 +115,27 @@ public static class Catalog
         PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
-    public static readonly string[] CaseIds = Enumerable.Range(1, 24).Select(i => $"V{i:00}")
+    public static readonly string[] CaseIds = Enumerable.Range(1, 29).Select(i => $"V{i:00}")
         .Concat(new[] { "V04-S01", "V04-S02", "V04-S03" }).ToArray();
     public static readonly string[] LinearLoadIds = ["V16", "V17", "V18", "V19"];
     /// <summary>Spring supports; V24 is the very stiff spring whose rigid limit is a metamorphic relation.</summary>
     public static readonly string[] SpringIds = ["V20", "V21", "V22", "V23", "V24"];
+    /// <summary>Beams with several segments (schema version 2); V28 has section changes on springs.</summary>
+    public static readonly string[] SegmentIds = ["V25", "V26", "V27", "V28", "V29"];
     public static readonly string[] AnalyticalIds = new[] { "V01", "V02", "V03", "V04", "V05", "V06", "V04-S01", "V04-S02", "V04-S03" }
-        .Concat(LinearLoadIds).Concat(SpringIds).ToArray();
+        .Concat(LinearLoadIds).Concat(SpringIds).Concat(SegmentIds).ToArray();
     public static readonly string[] ExternalSolvers = ["indeterminatebeam", "pycba"];
 
     /// <summary>
     /// The external solvers that can represent a case. IndeterminateBeam has no rotational spring, and at k L³/EI = 10¹²
     /// both external solvers lose the digits that the 10⁻⁵ comparison tolerance needs, so V24 keeps its analytical reference.
+    /// IndeterminateBeam has one E and one I for the whole beam and cannot represent segments.
     /// </summary>
     public static string[] ExternalSolversFor(string id) => id switch
     {
         "V22" or "V23" => ["pycba"],
         "V24" => [],
+        _ when SegmentIds.Contains(id) => ["pycba"],
         _ => ExternalSolvers
     };
     public static readonly string[] Quantities = ["Rx", "Ry", "Rm", "u", "w", "theta", "N", "V", "M"];
@@ -130,8 +155,17 @@ public static class Catalog
     {
         ValidationCase input = JsonSerializer.Deserialize<ValidationCase>(File.ReadAllText(CasePath(id)), Json)
             ?? throw new InvalidDataException("Empty case " + id);
-        if (input.SchemaVersion != 1 || input.CaseVersion != 1 || input.CaseId != id || string.IsNullOrWhiteSpace(input.Description))
+        if (input.SchemaVersion is not (1 or 2) || input.SchemaVersion == 2 != (input.Segments.Length > 0) || input.CaseVersion != 1 || input.CaseId != id || string.IsNullOrWhiteSpace(input.Description))
             throw new InvalidDataException("Invalid case identity/version: " + id);
+        double expectedStart = 0;
+        foreach (SegmentInput segment in input.Segments)
+        {
+            if (segment.Start != expectedStart || !(segment.End > segment.Start) || segment.E <= 0 || segment.A <= 0 || segment.I <= 0)
+                throw new InvalidDataException("Invalid segment: " + id);
+            expectedStart = segment.End;
+        }
+        if (input.Segments.Length > 0 && (expectedStart != input.Length || input.E != 0 || input.A != 0 || input.I != 0))
+            throw new InvalidDataException("Segments must tile the beam and replace the top-level E, A and I: " + id);
         double[] events = input.Events();
         if (input.Evaluations.Length == 0 || input.Evaluations.Distinct().Count() != input.Evaluations.Length)
             throw new InvalidDataException("Empty or duplicate evaluation positions: " + id);
