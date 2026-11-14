@@ -82,7 +82,7 @@ internal static class ProjectReport
              Given(MaterialStrengthDisplay.LabelText(governingSegment.Material.StrengthType), governingSegment.Material.YieldStrength.Pascals, QuantityKind.MaterialStrength)],
             new ReportTable?[]
             {
-                several ? SegmentTable(state.Document, overview, profile, presentation.Options) : null,
+                several ? SegmentTable(overview, profile) : null,
                 new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.25f, .50f, .25f],
                     overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Type, s.Position }).ToArray(), LeftAlignedColumn: 1),
                 new(Strings.Forces, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.18f, .47f, .35f],
@@ -107,32 +107,14 @@ internal static class ProjectReport
         catch { report.Dispose(); throw; }
     }
 
-    // One row per segment: number, range, section, material and the second moment of area and section modulus of its axis.
-    private static ReportTable SegmentTable(EditorDocument document, ProjectOverviewState overview, UnitProfile profile,
-        ResultPresentationOptions options)
-    {
-        string Value(double si, QuantityKind kind, bool given) => given
-            ? QuantityFormatter.FormatInputNumber(si, profile[kind], options) : QuantityFormatter.FormatResultNumber(si, kind, options);
-        var rows = document.Segments.Select((segment, index) =>
-        {
-            var axis = segment.Section.GetAxis(segment.BendingAxis);
-            bool given = SectionDefinitionCompatibility.Normalize(segment.Section) is SpanDraft.Core.Sections.ManualSectionDefinition;
-            string positive = Value(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus, given);
-            string negative = Value(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus, given);
-            return (IReadOnlyList<string>)new[]
-            {
-                (index + 1).ToString(CultureInfo.CurrentUICulture), overview.Segments[index].Range,
-                overview.Segments[index].Section, overview.Segments[index].Material,
-                Value(axis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea, given),
-                positive == negative ? positive : positive + " / " + negative
-            };
-        }).ToArray();
-        return new(Strings.SetupSegments,
-            [Strings.SegmentNumber, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]",
-                Strings.Section, Strings.Material, TechnicalSymbols.Inertia() + " [" + profile[QuantityKind.SecondMomentOfArea].Symbol + "]",
-                TechnicalSymbols.Modulus() + " [" + profile[QuantityKind.SectionModulus].Symbol + "]"],
-            [.07f, .17f, .25f, .25f, .13f, .13f], rows, LeftAlignedColumn: 2);
-    }
+    // One row per segment: number, range, section and material. The table sits in the narrow column beside the drawings,
+    // so the second moment of area and the section modulus stay with the governing segment's block.
+    private static ReportTable SegmentTable(ProjectOverviewState overview, UnitProfile profile) => new(Strings.SetupSegments,
+        [Strings.SegmentNumber, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]",
+            Strings.Section, Strings.Material],
+        [.12f, .31f, .27f, .30f], overview.Segments.Select(segment => (IReadOnlyList<string>)new[]
+            { segment.Number.ToString(CultureInfo.CurrentUICulture), segment.Range, segment.Section, segment.Material }).ToArray(),
+        LeftAlignedColumn: 2);
 
     private static string Missing(string value) => value.Length == 0 ? "-" : value;
 
