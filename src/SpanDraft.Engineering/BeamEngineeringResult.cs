@@ -7,14 +7,14 @@ namespace SpanDraft.Engineering;
 public sealed class BeamEngineeringResult
 {
     internal BeamEngineeringResult(BeamExtremum<Displacement> displacement,
-        BeamExtremum<Moment> moment, Pressure stress, double safetyFactor)
+        BeamExtremum<Moment> moment, IReadOnlyList<BeamSegmentAssessment> segments, int governingSegmentIndex)
     {
         CriticalTransverseDisplacement = displacement;
         TransverseDisplacementMagnitude = Displacement.FromMeters(Math.Abs(displacement.Value.Meters));
         CriticalBendingMoment = moment;
         BendingMomentMagnitude = Moment.FromNewtonMeters(Math.Abs(moment.Value.NewtonMeters));
-        MaximumBendingStress = stress;
-        SafetyFactor = safetyFactor;
+        SegmentAssessments = segments;
+        GoverningSegmentIndex = governingSegmentIndex;
     }
 
     /// <summary>Original signed extremum; Side is null at an interior analytical extremum.</summary>
@@ -23,10 +23,18 @@ public sealed class BeamEngineeringResult
     /// <summary>Original signed extremum; positive means sagging, negative means hogging.</summary>
     public BeamExtremum<Moment> CriticalBendingMoment { get; }
     public Moment BendingMomentMagnitude { get; }
-    /// <summary>Non-negative |M|/W in pascals; does not identify a tensile or compressive fiber.</summary>
-    public Pressure MaximumBendingStress { get; }
-    public Length BendingStressPosition => CriticalBendingMoment.Position;
-    public EvaluationSide? BendingStressSide => CriticalBendingMoment.Side;
-    /// <summary>Dimensionless material strength/σ. Positive infinity denotes zero bending stress (or floating-point overflow).</summary>
-    public double SafetyFactor { get; }
+    /// <summary>The assessment of every beam segment, in segment order.</summary>
+    public IReadOnlyList<BeamSegmentAssessment> SegmentAssessments { get; }
+    /// <summary>The segment with the smallest safety factor; its stress and safety factor are the beam's.</summary>
+    public int GoverningSegmentIndex { get; }
+    public BeamSegmentAssessment GoverningSegment => SegmentAssessments[GoverningSegmentIndex];
+    /// <summary>Non-negative |M|/W in pascals of the governing segment; does not identify a tensile or compressive fiber.</summary>
+    public Pressure MaximumBendingStress => GoverningSegment.MaximumBendingStress;
+    public Length BendingStressPosition => GoverningSegment.CriticalBendingMoment.Position;
+    public EvaluationSide? BendingStressSide => GoverningSegment.CriticalBendingMoment.Side;
+    /// <summary>
+    /// Dimensionless material strength/σ of the governing segment. Positive infinity denotes zero bending stress
+    /// (or floating-point overflow).
+    /// </summary>
+    public double SafetyFactor => GoverningSegment.SafetyFactor;
 }

@@ -29,11 +29,19 @@ public sealed class BeamSolution
                 reactions.TryGetValue((station.Position, RestrainedDirections.Theta), out double rm) ? Moment.FromNewtonMeters(rm) : null);
         }).ToArray());
         Extrema = new BeamExtrema(result.Extrema);
+        SegmentExtrema = Array.AsReadOnly(result.SectionExtrema.Select(extrema => new BeamExtrema(extrema)).ToArray());
     }
 
     public BeamModel Beam { get; }
     public IReadOnlyList<BeamNodeResult> Nodes { get; }
     public BeamExtrema Extrema { get; }
+
+    /// <summary>
+    /// The extrema within each beam segment, in segment order. They are found on the polynomial pieces of the
+    /// segment alone: at a segment boundary the inner side is used, so a boundary extremum belongs to both
+    /// neighbours with the value of its own side.
+    /// </summary>
+    public IReadOnlyList<BeamExtrema> SegmentExtrema { get; }
 
     /// <summary>
     /// Evaluates the physical fields at x. At exact nodes w and rotation share the nodal state;

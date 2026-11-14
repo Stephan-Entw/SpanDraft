@@ -124,8 +124,13 @@ internal sealed record BendingExtrema(BendingExtremumRange W, BendingExtremumRan
     }
 }
 
+/// <summary>
+/// The result of one solve. <paramref name="SectionExtrema"/> holds the extrema of every stiffness section, found on
+/// the pieces inside that section only, so an extremum on a boundary is taken from the inner side.
+/// </summary>
 internal sealed record BendingResult(BendingFields Fields, ImmutableArray<BendingStation> Stations,
-    ImmutableArray<BendingReaction> Reactions, ImmutableArray<BendingPiece> Pieces, BendingExtrema Extrema, BendingQuality Quality)
+    ImmutableArray<BendingReaction> Reactions, ImmutableArray<BendingPiece> Pieces, BendingExtrema Extrema,
+    ImmutableArray<BendingExtrema> SectionExtrema, BendingQuality Quality)
 {
     internal BendingField EvaluateAt(double x, FieldSide side) => Fields.EvaluateAt(x, side);
 }

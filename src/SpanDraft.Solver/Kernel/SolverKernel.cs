@@ -13,6 +13,10 @@ internal static class SolverKernel
         BendingQuality quality = BendingOutputQuality.Evaluate(state, fields, system.EventStations, normalized, context);
         ImmutableArray<BendingPiece> pieces = quality.Pieces.Select(p => BendingPiece.Create(fields, p)).ToImmutableArray();
         BendingExtrema extrema = BendingExtrema.Find(fields, pieces);
+        // Boundaries are event stations, so every piece lies inside exactly one section; the comparison is exact.
+        ImmutableArray<BendingExtrema> sectionExtrema = input.Sections.Select(section => BendingExtrema.Find(fields,
+            pieces.Where(piece => piece.Start >= section.Start && piece.End <= section.End).ToImmutableArray()))
+            .ToImmutableArray();
         ImmutableArray<BendingStation> stations = system.EventStations.Select(e =>
         {
             BendingJump jumps = BendingJump.None;
@@ -26,7 +30,7 @@ internal static class SolverKernel
         ImmutableArray<BendingReaction> reactions = normalized.Select(r => new BendingReaction(r.Position, r.Direction,
             r.Direction == RestrainedDirections.U ? default : BendingFields.ToSi(r.Value, r.Bound,
                 system.StateExponents[r.Component], system.IsUnloaded))).ToImmutableArray();
-        return new(fields, stations, reactions, pieces, extrema, quality);
+        return new(fields, stations, reactions, pieces, extrema, sectionExtrema, quality);
     }
 
     internal static VerifiedBendingState SolveSystem(BendingSystem system) => BendingStateSolver.Solve(system);
