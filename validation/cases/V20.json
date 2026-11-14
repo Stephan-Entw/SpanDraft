@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V20",
+  "description": "Simply supported beam with a midspan translational spring under point loads and a couple",
+  "length": 4,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Pinned"
+    },
+    {
+      "position": 4,
+      "type": "Roller"
+    },
+    {
+      "position": 2,
+      "type": "Spring",
+      "translationalStiffness": 1050000.0
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 1,
+      "value": -9000.0
+    },
+    {
+      "position": 2,
+      "value": -4000.0
+    }
+  ],
+  "pointMoments": [
+    {
+      "position": 3,
+      "value": 3000.0
+    }
+  ],
+  "udls": [
+    {
+      "start": 2.5,
+      "end": 4,
+      "value": -1200.0
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0.0,
+      "side": "Right"
+    },
+    {
+      "position": 0.37,
+      "side": "Right"
+    },
+    {
+      "position": 0.63,
+      "side": "Right"
+    },
+    {
+      "position": 1.0,
+      "side": "Left"
+    },
+    {
+      "position": 1.0,
+      "side": "Right"
+    },
+    {
+      "position": 1.37,
+      "side": "Right"
+    },
+    {
+      "position": 1.63,
+      "side": "Right"
+    },
+    {
+      "position": 2.0,
+      "side": "Left"
+    },
+    {
+      "position": 2.0,
+      "side": "Right"
+    },
+    {
+      "position": 2.185,
+      "side": "Right"
+    },
+    {
+      "position": 2.315,
+      "side": "Right"
+    },
+    {
+      "position": 2.5,
+      "side": "Left"
+    },
+    {
+      "position": 2.5,
+      "side": "Right"
+    },
+    {
+      "position": 2.685,
+      "side": "Right"
+    },
+    {
+      "position": 2.815,
+      "side": "Right"
+    },
+    {
+      "position": 3.0,
+      "side": "Left"
+    },
+    {
+      "position": 3.0,
+      "side": "Right"
+    },
+    {
+      "position": 3.37,
+      "side": "Right"
+    },
+    {
+      "position": 3.63,
+      "side": "Right"
+    },
+    {
+      "position": 4.0,
+      "side": "Left"
+    }
+  ]
+}

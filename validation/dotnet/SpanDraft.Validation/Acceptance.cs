@@ -40,7 +40,7 @@ public static class Acceptance
             var actual = exported is null ? Results.Export(input, solution, solverHash) : exported.Single(a => a.CaseId == id);
             var referenceChecks = new List<CheckReport>();
             var referenceEquilibria = new List<CheckReport>();
-            foreach (string provider in Catalog.ExternalSolvers.Concat(Catalog.AnalyticalIds.Contains(id) ? new[] { "analytical" } : []))
+            foreach (string provider in Catalog.ExternalSolversFor(id).Concat(Catalog.AnalyticalIds.Contains(id) ? new[] { "analytical" } : []))
             {
                 try
                 {
@@ -58,6 +58,7 @@ public static class Acceptance
             var equilibrium = Physics.Equilibrium(input, solution);
             var fields = Physics.Fields(input, solution);
             var metamorphic = new[] { "load2", "load-1", "E2", "I2", "zeroNode" }.Select(op => Physics.Metamorphic(input,op)).ToList();
+            if (Physics.RigidLimitIds.Contains(id)) metamorphic.Add(Physics.Metamorphic(input, "rigidLimit"));
             if (Physics.SuperpositionIds.Contains(id)) metamorphic.Add(Physics.Superposition(input));
             var all = referenceChecks.Concat(referenceEquilibria).Concat(metamorphic).Append(equilibrium).Append(fields).ToArray();
             string status = all.Any(r => r.Status == "FAIL") ? "FAIL" : all.Any(r => r.Status == "PARTIAL") ? "PARTIAL" : "PASS";

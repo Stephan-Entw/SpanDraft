@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V21",
+  "description": "Beam held only by two translational end springs under a uniform load and a point load",
+  "length": 4,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Spring",
+      "translationalStiffness": 500000.0
+    },
+    {
+      "position": 4,
+      "type": "Spring",
+      "translationalStiffness": 2000000.0
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 1.5,
+      "value": -5000.0
+    }
+  ],
+  "pointMoments": [],
+  "udls": [
+    {
+      "start": 0,
+      "end": 4,
+      "value": -3000.0
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0.0,
+      "side": "Right"
+    },
+    {
+      "position": 0.555,
+      "side": "Right"
+    },
+    {
+      "position": 0.945,
+      "side": "Right"
+    },
+    {
+      "position": 1.5,
+      "side": "Left"
+    },
+    {
+      "position": 1.5,
+      "side": "Right"
+    },
+    {
+      "position": 2.425,
+      "side": "Right"
+    },
+    {
+      "position": 3.075,
+      "side": "Right"
+    },
+    {
+      "position": 4.0,
+      "side": "Left"
+    }
+  ]
+}

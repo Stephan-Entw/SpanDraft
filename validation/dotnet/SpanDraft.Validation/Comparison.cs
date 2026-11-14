@@ -130,8 +130,7 @@ public static class Comparison
         {
             ResultRow? row = reference.Reactions.SingleOrDefault(r => r.Position == support.Position);
             ResultRow match = actual.Reactions.Single(r => r.Position == support.Position);
-            string[] quantities = support.Type switch { "Fixed" => ["Rx", "Ry", "Rm"], "Pinned" => ["Rx", "Ry"], _ => ["Ry"] };
-            var required = quantities.Where(Supported[expectedSolver].Contains).ToHashSet();
+            var required = support.ReactionQuantities.Where(Supported[expectedSolver].Contains).ToHashSet();
             report.Require(row is not null && row.Values.Keys.ToHashSet().SetEquals(required), "Reaction DOF coverage differs");
             if (row is not null)
                 foreach (string q in required)

@@ -11,7 +11,36 @@ using SpanDraft.Solver;
 
 namespace SpanDraft.Validation;
 
-public sealed record SupportInput(double Position, string Type);
+public sealed record SupportInput(double Position, string Type)
+{
+    /// <summary>Spring supports only; optional, so the inputs and hashes of the earlier cases stay unchanged.</summary>
+    public double? TranslationalStiffness { get; init; }
+    public double? RotationalStiffness { get; init; }
+    public bool? RigidTranslation { get; init; }
+
+    /// <summary>The reaction quantities the support provides; a spring support is axially rigid.</summary>
+    public string[] ReactionQuantities => Type switch
+    {
+        "Fixed" => ["Rx", "Ry", "Rm"],
+        "Pinned" => ["Rx", "Ry"],
+        "Spring" => ["Rx", ..(TranslationalStiffness is not null || RigidTranslation == true ? new[] { "Ry" } : []),
+            ..(RotationalStiffness is not null ? new[] { "Rm" } : [])],
+        _ => ["Ry"]
+    };
+
+    /// <summary>The springs scaled by a factor; other supports are unchanged.</summary>
+    public SupportInput ScaleStiffness(double factor) => Type != "Spring" ? this : this with
+    {
+        TranslationalStiffness = TranslationalStiffness * factor,
+        RotationalStiffness = RotationalStiffness * factor
+    };
+
+    public Support ToSupport() => Type == "Spring"
+        ? Support.CreateSpring(ValidationCase.M(Position),
+            TranslationalStiffness is { } k ? SpanDraft.Core.Units.TranslationalStiffness.FromNewtonsPerMeter(k) : null,
+            RotationalStiffness is { } kt ? SpanDraft.Core.Units.RotationalStiffness.FromNewtonMetersPerRadian(kt) : null, RigidTranslation == true)
+        : new Support(ValidationCase.M(Position), Enum.Parse<SupportType>(Type));
+}
 public sealed record PointInput(double Position, double Value);
 public sealed record UdlInput(double Start, double End, double Value);
 public sealed record LineInput(double Start, double End, double StartValue, double EndValue);
@@ -30,7 +59,7 @@ public sealed record ValidationCase(int SchemaVersion, int CaseVersion, string C
         var section = new CustomSection(Area.FromSquareMeters(A),
             SecondMomentOfArea.FromMetersToTheFourth(I), SectionModulus.FromCubicMeters(1));
         return new BeamModel(M(Length), material, section,
-            Supports.Select(s => new Support(M(s.Position), Enum.Parse<SupportType>(s.Type))),
+            Supports.Select(s => s.ToSupport()),
             PointForces.Select(p => (BeamLoad)new PointForce(M(p.Position), Force.FromNewtons(p.Value)))
                 .Concat(PointMoments.Select(p => (BeamLoad)new PointMoment(M(p.Position), Moment.FromNewtonMeters(p.Value))))
                 .Concat(Udls.Select(q => (BeamLoad)new DistributedLoad(M(q.Start), M(q.End), ForcePerLength.FromNewtonsPerMeter(q.Value))))
@@ -65,12 +94,25 @@ public static class Catalog
         PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
-    public static readonly string[] CaseIds = Enumerable.Range(1, 19).Select(i => $"V{i:00}")
+    public static readonly string[] CaseIds = Enumerable.Range(1, 24).Select(i => $"V{i:00}")
         .Concat(new[] { "V04-S01", "V04-S02", "V04-S03" }).ToArray();
     public static readonly string[] LinearLoadIds = ["V16", "V17", "V18", "V19"];
+    /// <summary>Spring supports; V24 is the very stiff spring whose rigid limit is a metamorphic relation.</summary>
+    public static readonly string[] SpringIds = ["V20", "V21", "V22", "V23", "V24"];
     public static readonly string[] AnalyticalIds = new[] { "V01", "V02", "V03", "V04", "V05", "V06", "V04-S01", "V04-S02", "V04-S03" }
-        .Concat(LinearLoadIds).ToArray();
+        .Concat(LinearLoadIds).Concat(SpringIds).ToArray();
     public static readonly string[] ExternalSolvers = ["indeterminatebeam", "pycba"];
+
+    /// <summary>
+    /// The external solvers that can represent a case. IndeterminateBeam has no rotational spring, and at k L³/EI = 10¹²
+    /// both external solvers lose the digits that the 10⁻⁵ comparison tolerance needs, so V24 keeps its analytical reference.
+    /// </summary>
+    public static string[] ExternalSolversFor(string id) => id switch
+    {
+        "V22" or "V23" => ["pycba"],
+        "V24" => [],
+        _ => ExternalSolvers
+    };
     public static readonly string[] Quantities = ["Rx", "Ry", "Rm", "u", "w", "theta", "N", "V", "M"];
     public static string Root => FindRoot();
 

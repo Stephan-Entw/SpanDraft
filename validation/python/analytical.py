@@ -52,7 +52,7 @@ def generate(case):
         C1 = -primitive.subs(x,L)/L
         w = (primitive+C1*x)/EI
         reactions = [(0,Ra,None),(float(L),Ra,None)]
-    elif kind in ['V16', 'V17', 'V18', 'V19']:
+    elif kind in ['V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24']:
         return generate_linear(case, x, L, EI)
     else:
         raise ValueError('No analytical provider for '+case['caseId'])
@@ -81,12 +81,23 @@ def generate_linear(case, x, L, EI):
     The unknown initial deflection and rotation and all reactions follow from the support and free-end
     conditions as one rational linear system, solved symbolically. No SpanDraft code and no external beam
     solver is involved.
+
+    A spring support adds the reaction unknown of each acting spring and its law as one more exact condition:
+    w + Ry / k = 0 for a translational spring (Ry = -k w), theta + Rm / k_theta = 0 for a rotational one
+    (Rm = -k_theta theta); a rigid translation (partial restraint) prescribes w = 0 and keeps its reaction.
+    A spring support is axially rigid.
     """
     R = sp.Rational
     bounds = [R(str(b)) for b in events(case)]
     supports = [(R(str(s['position'])), s['type']) for s in case['supports']]
-    reactions = {i: sp.Symbol(f'Ry{i}') for i in range(len(supports))}
-    couples = {i: sp.Symbol(f'Rm{i}') for i, (_, kind) in enumerate(supports) if kind == 'Fixed'}
+    springs = {i: (R(str(s['translationalStiffness'])) if s.get('translationalStiffness') is not None else None,
+                   R(str(s['rotationalStiffness'])) if s.get('rotationalStiffness') is not None else None,
+                   bool(s.get('rigidTranslation')))
+               for i, s in enumerate(case['supports']) if s['type'] == 'Spring'}
+    reactions = {i: sp.Symbol(f'Ry{i}') for i, (_, kind) in enumerate(supports)
+                 if kind != 'Spring' or springs[i][0] is not None or springs[i][2]}
+    couples = {i: sp.Symbol(f'Rm{i}') for i, (_, kind) in enumerate(supports)
+               if kind == 'Fixed' or kind == 'Spring' and springs[i][1] is not None}
     w0, theta0 = sp.symbols('w0 theta0')
     lines = [(R(str(q['start'])), R(str(q['end'])), R(str(q['startValue'])), R(str(q['endValue'])))
              for q in case.get('lineLoads', [])]
@@ -103,19 +114,30 @@ def generate_linear(case, x, L, EI):
         m -= sum((c for a, c in moments if a == position), sp.Integer(0))
         for i, (a, kind) in enumerate(supports):
             if a == position:
-                v += reactions[i]
-                if kind == 'Fixed':
+                if i in reactions:
+                    v += reactions[i]
+                if i in couples:
                     m -= couples[i]
         return w, theta, m, v
 
     equations = []
 
     def support_conditions(position, w, theta):
-        for a, kind in supports:
-            if a == position:
+        for i, (a, kind) in enumerate(supports):
+            if a != position:
+                continue
+            if kind != 'Spring':
                 equations.append(w)
                 if kind == 'Fixed':
                     equations.append(theta)
+                continue
+            translational, rotational, rigid = springs[i]
+            if translational is not None:
+                equations.append(w + reactions[i] / translational)
+            elif rigid:
+                equations.append(w)
+            if rotational is not None:
+                equations.append(theta + couples[i] / rotational)
 
     state = (w0, theta0, sp.Integer(0), sp.Integer(0))
     support_conditions(bounds[0], w0, theta0)
@@ -155,10 +177,12 @@ def generate_linear(case, x, L, EI):
                   'SI and SpanDraft conventions directly; no SpanDraft solver input',
                   'validation/python/analytical.py; derivation in docs/VALIDATION.md')
     for i, (position, kind) in enumerate(supports):
-        values = {'Ry': float(solution[reactions[i]])}
-        if kind in ['Pinned', 'Fixed']:
+        values = {}
+        if i in reactions:
+            values['Ry'] = float(solution[reactions[i]])
+        if kind in ['Pinned', 'Fixed', 'Spring']:
             values['Rx'] = 0.0
-        if kind == 'Fixed':
+        if i in couples:
             values['Rm'] = float(solution[couples[i]])
         data['reactions'].append(dict(position=float(position), values=values))
     data['samples'] = polynomial_samples(case, full)

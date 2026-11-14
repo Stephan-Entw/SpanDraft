@@ -84,6 +84,19 @@ public static class Physics
             report.Number("w continuity", after.TransverseDisplacement.Meters, before.TransverseDisplacement.Meters, Strict("w"), x);
             report.Number("theta continuity", after.RotationRadians, before.RotationRadians, Strict("theta"), x);
         }
+        // A spring reaction is the spring law -k w (-k_theta theta) evaluated on the solved deformation. The check applies
+        // while k L³/EI and k_theta L/EI stay below 10⁸: the 10⁻⁸ relative output contract bounds w only against the field
+        // scale, which the product k·w would amplify for stiffer springs (V24 has its own rigid-limit relation).
+        double stiffnessScale = input.E*input.I;
+        foreach (var support in input.Supports.Where(s => s.Type == "Spring"))
+        {
+            var node = solution.Nodes.Single(n => n.Position.Meters == support.Position);
+            var at = solution.EvaluateAt(M(support.Position), support.Position == input.Length ? EvaluationSide.Left : EvaluationSide.Right);
+            if (support.TranslationalStiffness is { } k && k*Math.Pow(input.Length,3)/stiffnessScale <= 1e8)
+                report.Number("spring law Ry", node.ReactionY!.Value.Newtons, -k*at.TransverseDisplacement.Meters, Strict("Ry"), support.Position);
+            if (support.RotationalStiffness is { } kt && kt*input.Length/stiffnessScale <= 1e8)
+                report.Number("spring law Rm", node.ReactionMoment!.Value.NewtonMeters, -kt*at.RotationRadians, Strict("Rm"), support.Position);
+        }
         for (int i = 1; i < events.Length; i++)
         {
             double a = events[i-1], b = events[i];
@@ -120,8 +133,17 @@ public static class Physics
         {
             case "load2": transformed = input.ScaleLoads(2); scale = _ => 2; break;
             case "load-1": transformed = input.ScaleLoads(-1); scale = _ => -1; break;
-            case "E2": transformed = input with { E = 2*input.E }; scale = q => q is "u" or "w" or "theta" ? 0.5 : 1; break;
-            case "I2": transformed = input with { I = 2*input.I }; scale = q => q is "w" or "theta" ? 0.5 : 1; break;
+            // Springs scale with the bending stiffness, so every support force stays and the deformations halve.
+            case "E2": transformed = input with { E = 2*input.E, Supports = input.Supports.Select(s => s.ScaleStiffness(2)).ToArray() };
+                scale = q => q is "u" or "w" or "theta" ? 0.5 : 1; break;
+            case "I2": transformed = input with { I = 2*input.I, Supports = input.Supports.Select(s => s.ScaleStiffness(2)).ToArray() };
+                scale = q => q is "w" or "theta" ? 0.5 : 1; break;
+            case "rigidLimit":
+                // A translational spring of k L³/EI = 10¹² is, within 1 / (1 + k f) of the rigid result, a pinned support
+                // at the same position: the relation between the elastic model and its rigid limit.
+                transformed = input with { Supports = input.Supports.Select(s => s.Type == "Spring" ? new SupportInput(s.Position, "Pinned") : s).ToArray() };
+                scale = _ => 1;
+                break;
             case "zeroNode":
                 double[] events = input.Events();
                 var widest = events.Zip(events.Skip(1), (a,b) => (a,b)).MaxBy(p => p.b-p.a);
@@ -132,12 +154,17 @@ public static class Physics
             default: throw new ArgumentException(operation);
         }
         var solved = Solve(transformed);
-        var report = CompareSolutions(input, solved, [(original,1.0)], scale, operation);
+        // Both solves meet the 10⁻⁸ output contract against their field scales, so the rigid limit can only be resolved to
+        // that contract (the physical distance 1 / (1 + k f) of V24 is about 5·10⁻¹¹, far below it).
+        var report = CompareSolutions(input, solved, [(original,1.0)], scale, operation,
+            operation == "rigidLimit" ? ContractTolerance(input, original) : null);
         if (operation == "zeroNode") report.Require(solved.Nodes.Count == original.Nodes.Count+1, "Null force did not create an extra node");
         return report;
     }
 
-    public static readonly string[] SuperpositionIds = ["V04", "V08", "V09", "V11", "V13", "V15", "V16", "V17", "V18", "V19"];
+    public static readonly string[] SuperpositionIds = ["V04", "V08", "V09", "V11", "V13", "V15", "V16", "V17", "V18", "V19",
+        "V20", "V21", "V22", "V23", "V24"];
+    public static readonly string[] RigidLimitIds = ["V24"];
     public static CheckReport Superposition(ValidationCase input)
     {
         ValidationCase a, b;
@@ -174,9 +201,28 @@ public static class Physics
         return CompareSolutions(input, Solve(combined), [(Solve(a),1.0),(Solve(b),1.0)], _ => 1, "superposition");
     }
 
-    private static CheckReport CompareSolutions(ValidationCase input, BeamSolution actual,
-        (BeamSolution Solution, double Weight)[] expected, Func<string,double> scale, string operation)
+    /// <summary>Twice the 10⁻⁸ output contract against the largest value of each quantity, plus the strict relative part.</summary>
+    private static Func<string, Tolerance> ContractTolerance(ValidationCase input, BeamSolution solution)
     {
+        var largest = new Dictionary<string, double>();
+        void Note(string q, double value) => largest[q] = Math.Max(largest.GetValueOrDefault(q), Math.Abs(value));
+        foreach (var evaluation in input.Evaluations)
+            foreach (var (q, value) in Results.Fields(solution.EvaluateAt(M(evaluation.Position), Enum.Parse<EvaluationSide>(evaluation.Side))))
+                Note(q, value);
+        foreach (var node in solution.Nodes)
+        {
+            Note("Rx", node.ReactionX?.Newtons ?? 0);
+            Note("Ry", node.ReactionY?.Newtons ?? 0);
+            Note("Rm", node.ReactionMoment?.NewtonMeters ?? 0);
+        }
+        return q => new Tolerance(Math.Max(Strict(q).AbsTol, 2e-8 * largest.GetValueOrDefault(q)), 1e-9);
+    }
+
+    private static CheckReport CompareSolutions(ValidationCase input, BeamSolution actual,
+        (BeamSolution Solution, double Weight)[] expected, Func<string,double> scale, string operation,
+        Func<string, Tolerance>? tolerance = null)
+    {
+        tolerance ??= Strict;
         var report = new CheckReport(input.CaseId, operation);
         foreach (SupportInput support in input.Supports)
         {
@@ -186,7 +232,7 @@ public static class Physics
                 double? value = Reaction(observed,q);
                 double?[] components = expected.Select(e => Reaction(e.Solution.Nodes.Single(n => n.Position.Meters == support.Position),q)).ToArray();
                 report.Require(components.All(v => v.HasValue == value.HasValue), "Reaction restraint changed");
-                if (value.HasValue) report.Number(q, value.Value, components.Select((v,i) => v!.Value*expected[i].Weight).Sum()*scale(q), Strict(q), support.Position);
+                if (value.HasValue) report.Number(q, value.Value, components.Select((v,i) => v!.Value*expected[i].Weight).Sum()*scale(q), tolerance(q), support.Position);
             }
         }
         foreach (var evaluation in input.Evaluations)
@@ -195,7 +241,7 @@ public static class Physics
             var observed = Results.Fields(actual.EvaluateAt(M(evaluation.Position), side));
             var fields = expected.Select(e => Results.Fields(e.Solution.EvaluateAt(M(evaluation.Position), side))).ToArray();
             foreach (string q in observed.Keys)
-                report.Number(q, observed[q], fields.Select((f,i) => f[q]*expected[i].Weight).Sum()*scale(q), Strict(q), evaluation.Position, evaluation.Side);
+                report.Number(q, observed[q], fields.Select((f,i) => f[q]*expected[i].Weight).Sum()*scale(q), tolerance(q), evaluation.Position, evaluation.Side);
         }
         return report;
     }

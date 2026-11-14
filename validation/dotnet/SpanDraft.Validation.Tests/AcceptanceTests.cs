@@ -7,7 +7,7 @@ public class AcceptanceTests
 {
     public static IEnumerable<object[]> Cases => Catalog.CaseIds.Select(id => new object[] { id });
     public static IEnumerable<object[]> References => Catalog.CaseIds.SelectMany(id =>
-        Catalog.ExternalSolvers.Concat(Catalog.AnalyticalIds.Contains(id) ? new[] { "analytical" } : [])
+        Catalog.ExternalSolversFor(id).Concat(Catalog.AnalyticalIds.Contains(id) ? new[] { "analytical" } : [])
             .Select(s => new object[] {id,s}));
     public static IEnumerable<object[]> Transformations => Catalog.CaseIds.SelectMany(id =>
         new[] { "load2", "load-1", "E2", "I2", "zeroNode" }.Select(op => new object[] {id,op}));
@@ -45,7 +45,7 @@ public class AcceptanceTests
         }
         foreach (var node in solution.Nodes)
         {
-            bool held = input.Supports.Any(s => s.Position == node.Position.Meters && s.Type is "Fixed" or "Pinned");
+            bool held = input.Supports.Any(s => s.Position == node.Position.Meters && s.Type is "Fixed" or "Pinned" or "Spring");
             Assert.Equal(held, node.ReactionX.HasValue);
             if (held) Assert.Equal(0UL, BitConverter.DoubleToUInt64Bits(node.ReactionX!.Value.Newtons));
         }
@@ -53,6 +53,10 @@ public class AcceptanceTests
 
     [Theory, MemberData(nameof(Transformations))]
     public void MetamorphicRelation(string id, string operation) => Pass(Physics.Metamorphic(Catalog.Load(id),operation));
+
+    public static IEnumerable<object[]> RigidLimits => Physics.RigidLimitIds.Select(id => new object[] {id});
+    [Theory, MemberData(nameof(RigidLimits))]
+    public void VeryStiffSpringReproducesItsRigidLimit(string id) => Pass(Physics.Metamorphic(Catalog.Load(id),"rigidLimit"));
 
     [Theory, MemberData(nameof(Superpositions))]
     public void IndependentLoadGroupsSuperpose(string id) => Pass(Physics.Superposition(Catalog.Load(id)));
@@ -62,7 +66,12 @@ public class AcceptanceTests
     {
         Assert.Equal(Catalog.CaseIds.Order(), Directory.GetFiles(Path.Combine(Catalog.Root,"validation","cases"),"*.json")
             .Select(Path.GetFileNameWithoutExtension).Order());
-        Assert.Equal(57, Directory.GetFiles(Path.Combine(Catalog.Root,"validation","references"),"*.json").Length);
+        // Two external solvers and the analytical reference where they exist; V22 and V23 have no IndeterminateBeam
+        // reference (no rotational spring) and V24 only the analytical one (digit loss of both solvers at k L³/EI = 10¹²).
+        int expected = Catalog.CaseIds.Sum(id => Catalog.ExternalSolversFor(id).Length + (Catalog.AnalyticalIds.Contains(id) ? 1 : 0));
+        Assert.Equal(68, expected);
+        Assert.Equal(expected, Directory.GetFiles(Path.Combine(Catalog.Root,"validation","references"),"*.json").Length);
+        Assert.Equal(new[] { "V22", "V23" }, Catalog.SpringIds.Where(id => Catalog.ExternalSolversFor(id) is ["pycba"]));
     }
 
     [Fact]

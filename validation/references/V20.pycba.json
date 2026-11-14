@@ -1,0 +1,445 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V20",
+  "inputSha256": "c7c871bc8a303aee77251fbe2f7ad5aff7448e1df52a6335c1c177ee9c33dfd0",
+  "solver": "pycba",
+  "status": "PASS",
+  "provenance": {
+    "package": "pycba",
+    "version": "1.0.2",
+    "python": "3.9.6",
+    "generatedAt": "2026-11-14T12:48:37.469140+00:00",
+    "theory": "Euler-Bernoulli; constant E, A, I; linear; small displacements",
+    "signMapping": "Input forces/UDLs negated; input CCW moments unchanged; Ry/Rm,w/theta,V,M identity",
+    "options": {
+      "GAv": null,
+      "kf": null,
+      "elementType": 1,
+      "checkStability": true,
+      "npts": 8192,
+      "extraction": "native vRes[1:-1], cubic interpolation; native R roots for w extrema; exact native nodal D at boundaries"
+    },
+    "adapterVersion": "1",
+    "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
+    "adapterSourcesSha256": "41119e4418dee603b515ec0cd637dc1338254d591ff79ed2d6d900c3d522c07d",
+    "source": "https://pypi.org/project/PyCBA/1.0.2/"
+  },
+  "availability": {
+    "Rx": "notSupported",
+    "Ry": "supported",
+    "Rm": "supported",
+    "u": "notSupported",
+    "w": "supported",
+    "theta": "supported",
+    "N": "notSupported",
+    "V": "supported",
+    "M": "supported"
+  },
+  "reactions": [
+    {
+      "position": 0,
+      "values": {
+        "Ry": 6930.095880681853
+      }
+    },
+    {
+      "position": 4,
+      "values": {
+        "Ry": 2055.0958806818235
+      }
+    },
+    {
+      "position": 2,
+      "values": {
+        "Ry": 5814.808238636387
+      }
+    }
+  ],
+  "samples": [
+    {
+      "position": 0.0,
+      "side": "Right",
+      "values": {
+        "w": 0.0,
+        "theta": -0.005072565780573603,
+        "V": 6930.095880681845,
+        "M": -2.1827872842550278e-11
+      }
+    },
+    {
+      "position": 0.37,
+      "side": "Right",
+      "values": {
+        "w": -0.001842024917607029,
+        "theta": -0.004790205624006542,
+        "V": 6930.095880681845,
+        "M": 2564.1354758522607
+      }
+    },
+    {
+      "position": 0.63,
+      "side": "Right",
+      "values": {
+        "w": -0.0030238067475941324,
+        "theta": -0.0042539482046680685,
+        "V": 6930.095880681845,
+        "M": 4365.9604048295405
+      }
+    },
+    {
+      "position": 1.0,
+      "side": "Left",
+      "values": {
+        "w": -0.004385056268601205,
+        "theta": -0.0030100372446564007,
+        "V": 6930.095880681845,
+        "M": 6930.0958806818235
+      }
+    },
+    {
+      "position": 1.0,
+      "side": "Right",
+      "values": {
+        "w": -0.004385056268601205,
+        "theta": -0.0030100372446564007,
+        "V": -2069.9041193181547,
+        "M": 6930.095880681838
+      }
+    },
+    {
+      "position": 1.37,
+      "side": "Right",
+      "values": {
+        "w": -0.005226811366670297,
+        "theta": -0.0015681024000820244,
+        "V": -2069.9041193181547,
+        "M": 6164.231356534121
+      }
+    },
+    {
+      "position": 1.63,
+      "side": "Right",
+      "values": {
+        "w": -0.0055141087168528976,
+        "theta": -0.0006557587134951689,
+        "V": -2069.9041193181547,
+        "M": 5626.0562855114
+      }
+    },
+    {
+      "position": 2.0,
+      "side": "Left",
+      "values": {
+        "w": -0.00553791260822513,
+        "theta": 0.000498976934523814,
+        "V": -2069.9041193181547,
+        "M": 4860.191761363683
+      }
+    },
+    {
+      "position": 2.0,
+      "side": "Right",
+      "values": {
+        "w": -0.00553791260822513,
+        "theta": 0.000498976934523814,
+        "V": -255.09588068170342,
+        "M": 4860.191761363627
+      }
+    },
+    {
+      "position": 2.185,
+      "side": "Right",
+      "values": {
+        "w": -0.005396256139469713,
+        "theta": 0.0010315782128536386,
+        "V": -255.09588068170342,
+        "M": 4812.999023437512
+      }
+    },
+    {
+      "position": 2.315,
+      "side": "Right",
+      "values": {
+        "w": -0.005237998332435977,
+        "theta": 0.0014027295895531124,
+        "V": -255.09588068170342,
+        "M": 4779.836558948889
+      }
+    },
+    {
+      "position": 2.5,
+      "side": "Left",
+      "values": {
+        "w": -0.004929966121524978,
+        "theta": 0.0019264822295217904,
+        "V": -255.09588068170342,
+        "M": 4732.643821022776
+      }
+    },
+    {
+      "position": 2.5,
+      "side": "Right",
+      "values": {
+        "w": -0.004929966121524978,
+        "theta": 0.0019264822295217904,
+        "V": -255.09588068180892,
+        "M": 4732.6438210227425
+      }
+    },
+    {
+      "position": 2.685,
+      "side": "Right",
+      "values": {
+        "w": -0.004525555239667009,
+        "theta": 0.00244428428521353,
+        "V": -477.095880681809,
+        "M": 4664.9160830966075
+      }
+    },
+    {
+      "position": 2.815,
+      "side": "Right",
+      "values": {
+        "w": -0.004184447351774781,
+        "theta": 0.0028025987081673194,
+        "V": -633.0958806818088,
+        "M": 4592.753618607972
+      }
+    },
+    {
+      "position": 3.0,
+      "side": "Left",
+      "values": {
+        "w": -0.003619617280505965,
+        "theta": 0.0033011458756087783,
+        "V": -855.0958806818089,
+        "M": 4455.095880681838
+      }
+    },
+    {
+      "position": 3.0,
+      "side": "Right",
+      "values": {
+        "w": -0.003619617280505965,
+        "theta": 0.0033011458756087783,
+        "V": -855.0958806818217,
+        "M": 1455.0958806818217
+      }
+    },
+    {
+      "position": 3.37,
+      "side": "Right",
+      "values": {
+        "w": -0.0023437615386764908,
+        "theta": 0.0035807432341017913,
+        "V": -1299.0958806818219,
+        "M": 1056.5704048295474
+      }
+    },
+    {
+      "position": 3.63,
+      "side": "Right",
+      "values": {
+        "w": -0.0013939122821572858,
+        "theta": 0.003716031129400129,
+        "V": -1611.0958806818214,
+        "M": 678.2454758522742
+      }
+    },
+    {
+      "position": 4.0,
+      "side": "Left",
+      "values": {
+        "w": 0.0,
+        "theta": 0.0037937339353355114,
+        "V": -2055.0958806818217,
+        "M": 0.0
+      }
+    }
+  ],
+  "extrema": {
+    "wMin": {
+      "value": -0.005579944605946291,
+      "locations": [
+        {
+          "position": 1.8334292740082416,
+          "side": null
+        }
+      ],
+      "plateaus": []
+    },
+    "wMax": {
+      "value": 0.0,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        },
+        {
+          "position": 4,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "VMin": {
+      "value": -2069.9041193181547,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 1,
+          "end": 2
+        }
+      ]
+    },
+    "VMax": {
+      "value": 6930.095880681845,
+      "locations": [],
+      "plateaus": [
+        {
+          "start": 0.0,
+          "end": 1
+        }
+      ]
+    },
+    "MMin": {
+      "value": -2.1827872842550278e-11,
+      "locations": [
+        {
+          "position": 0.0,
+          "side": "Right"
+        },
+        {
+          "position": 4,
+          "side": "Left"
+        }
+      ],
+      "plateaus": []
+    },
+    "MMax": {
+      "value": 6930.095880681838,
+      "locations": [
+        {
+          "position": 1.0,
+          "side": "Left"
+        },
+        {
+          "position": 1,
+          "side": "Right"
+        }
+      ],
+      "plateaus": []
+    }
+  },
+  "convergence": {
+    "converged": true,
+    "requiredConsecutiveRefinements": 2,
+    "fractionOfTolerance": 0.1,
+    "maxNpts": 131072,
+    "trace": [
+      {
+        "npts": 1024,
+        "topologyStable": true,
+        "maxRatioByKind": {},
+        "maxDeltaByKind": {},
+        "observedOrderByKind": {},
+        "nativeEndpointDrift": {
+          "w": 3.2783007992281954e-10,
+          "theta": 5.676632991793995e-11
+        },
+        "nativeEndpointMaxRatio": 0.972168725729694
+      },
+      {
+        "npts": 2048,
+        "topologyStable": true,
+        "maxRatioByKind": {
+          "displacement": 0.049586843019027126,
+          "rotation": 0.0070287920627192055,
+          "force": 0,
+          "moment": 2.1318205944367033e-10,
+          "position": 1.1484495859768635e-09
+        },
+        "maxDeltaByKind": {
+          "displacement": 1.5489971241441913e-10,
+          "rotation": 2.6822089254502357e-11,
+          "force": 0,
+          "moment": 9.094947017729282e-13,
+          "position": 2.220446049250313e-16
+        },
+        "observedOrderByKind": {
+          "displacement": null,
+          "rotation": null,
+          "force": null,
+          "moment": null,
+          "position": null
+        },
+        "nativeEndpointDrift": {
+          "w": 8.195751889650271e-11,
+          "theta": 1.4191584539469115e-11
+        },
+        "nativeEndpointMaxRatio": 0.24304214456954965
+      },
+      {
+        "npts": 4096,
+        "topologyStable": true,
+        "maxRatioByKind": {
+          "displacement": 0.012396709802800738,
+          "rotation": 0.0017571983819451291,
+          "force": 0,
+          "moment": 2.1318205944367028e-10,
+          "position": 1.1484495859768637e-09
+        },
+        "maxDeltaByKind": {
+          "displacement": 3.8724925609939786e-11,
+          "rotation": 6.7055237230884135e-12,
+          "force": 0,
+          "moment": 9.094947017729282e-13,
+          "position": 2.220446049250313e-16
+        },
+        "observedOrderByKind": {
+          "displacement": 2.0000000929013537,
+          "rotation": 1.9999996967537028,
+          "force": null,
+          "moment": 0.0,
+          "position": 0.0
+        },
+        "nativeEndpointDrift": {
+          "w": 2.0489397505041307e-11,
+          "theta": 3.5478959180268443e-12
+        },
+        "nativeEndpointMaxRatio": 0.060760532889780894
+      },
+      {
+        "npts": 8192,
+        "topologyStable": true,
+        "maxRatioByKind": {
+          "displacement": 0.0030991792806045622,
+          "rotation": 0.00043929990782282124,
+          "force": 0,
+          "moment": 1.9759795486250473e-10,
+          "position": 0
+        },
+        "maxDeltaByKind": {
+          "displacement": 9.68123714875646e-12,
+          "rotation": 1.6763821233944931e-12,
+          "force": 0,
+          "moment": 9.094947017729282e-13,
+          "position": 0
+        },
+        "observedOrderByKind": {
+          "displacement": 1.9999991436920974,
+          "rotation": 1.99999897362839,
+          "force": null,
+          "moment": 0.0,
+          "position": null
+        },
+        "nativeEndpointDrift": {
+          "w": 5.122366072973783e-12,
+          "theta": 8.869749552886663e-13
+        },
+        "nativeEndpointMaxRatio": 0.015190270916121129
+      }
+    ]
+  }
+}

@@ -25,6 +25,8 @@ def main():
     for path in sorted(args.directory.glob('*.analytical.json')):
         analytical=json.loads(path.read_text())
         for solver in ['indeterminatebeam','pycba']:
+            if not path.with_name(analytical['caseId']+'.'+solver+'.json').exists():
+                continue  # no reference of this solver for the case: see Catalog.ExternalSolversFor
             external=json.loads(path.with_name(analytical['caseId']+'.'+solver+'.json').read_text())
             failures=[]; count=0
             for group in ['samples','reactions']:
@@ -48,14 +50,15 @@ def main():
                     failures.append(dict(quantity=q,external=observed,analytical=ext['value'],absTol=a,relTol=r))
             results.append(dict(caseId=analytical['caseId'],solver=solver,comparisons=count,
                                 status='FAIL' if failures else 'PASS',failures=failures))
-    if len(results)!=26:
-        raise RuntimeError('Calibration requires all 13 analytical cases against both external solvers')
+    analytical_cases=len(list(args.directory.glob('*.analytical.json')))
+    if analytical_cases!=18 or len(results)!=32:
+        raise RuntimeError('Calibration requires all 18 analytical cases against every existing external reference')
     reproduced=[]; differing=[]
     if args.against:
         left={p.name:p for p in args.directory.glob('*.json')}
         right={p.name:p for p in args.against.glob('*.json')}
-        if len(left)!=57 or left.keys()!=right.keys():
-            raise RuntimeError('Reproduction requires exactly the same 57 reference files')
+        if len(left)!=68 or left.keys()!=right.keys():
+            raise RuntimeError('Reproduction requires exactly the same 68 reference files')
         for name,path in sorted(left.items()):
             actual=semantic(json.loads(path.read_text()))
             expected=semantic(json.loads(right[name].read_text()))

@@ -13,7 +13,14 @@ def build(case):
     lengths=np.diff(boundaries)
     restraints=[]
     for x in boundaries:
-        supports=[s['type'] for s in case['supports'] if s['position']==x]
+        found=[s for s in case['supports'] if s['position']==x]
+        supports=[s['type'] for s in found]
+        spring=next((s for s in found if s['type']=='Spring'),None)
+        if spring is not None:
+            # PyCBA: -1 restrains the degree of freedom, a positive value is a spring stiffness, 0 is free.
+            vertical=-1 if spring.get('rigidTranslation') else spring.get('translationalStiffness') or 0
+            restraints.extend([vertical, spring.get('rotationalStiffness') or 0])
+            continue
         restraints.extend([-1 if supports else 0, -1 if 'Fixed' in supports else 0])
     model=BeamAnalysis(lengths, np.full(len(lengths),case['e']*case['i']),restraints,[],
                        eletype=np.ones(len(lengths),dtype=int),GAv=None,kf=None)
@@ -75,6 +82,8 @@ def extract(case,model,boundaries,restraints,npts):
         values={}
         for dof,q in [(2*index,'Ry'),(2*index+1,'Rm')]:
             if restraints[dof]<0: values[q]=float(next(reactions))
+            # The force of a spring is its stiffness times the native displacement (spring law, not beam theory).
+            elif restraints[dof]>0: values[q]=-float(restraints[dof])*float(native.D[dof])
         if values: by_position[x]=values
     data['reactions']=[dict(position=s['position'],values=by_position[s['position']]) for s in case['supports']]
     for ev in case['evaluations']:

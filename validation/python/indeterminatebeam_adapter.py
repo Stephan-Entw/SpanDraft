@@ -12,7 +12,14 @@ def generate(case):
     if beam._units != expected:
         raise RuntimeError('Unexpected IndeterminateBeam unit representation')
     flags={'Fixed':(1,1,1),'Pinned':(1,1,0),'Roller':(0,1,0)}
-    beam.add_supports(*(Support(s['position'],flags[s['type']]) for s in case['supports']))
+    def support(s):
+        if s['type']!='Spring':
+            return Support(s['position'],flags[s['type']])
+        # A spring support is axially rigid; IndeterminateBeam has translational springs only.
+        if s.get('rotationalStiffness') is not None or s.get('rigidTranslation'):
+            raise RuntimeError('IndeterminateBeam 2.4.0 has no rotational spring')
+        return Support(s['position'],(1,0,0),ky=s['translationalStiffness'])
+    beam.add_supports(*(support(s) for s in case['supports']))
     beam.add_loads(*(list(PointLoadV(p['value'],p['position']) for p in case['pointForces']) +
                      list(PointTorque(p['value'],p['position']) for p in case['pointMoments']) +
                      list(UDLV(q['value'],(q['start'],q['end'])) for q in case['udls']) +
@@ -33,7 +40,7 @@ def generate(case):
     for support in case['supports']:
         rx,ry,rm=beam.get_reaction(support['position'])
         values={'Ry':float(ry)}
-        if support['type'] in ['Fixed','Pinned']: values['Rx']=float(rx)
+        if support['type'] in ['Fixed','Pinned','Spring']: values['Rx']=float(rx)
         if support['type']=='Fixed': values['Rm']=float(rm)
         data['reactions'].append(dict(position=support['position'],values=values))
     data['samples']=polynomial_samples(case,pieces)

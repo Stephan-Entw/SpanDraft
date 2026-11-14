@@ -9,7 +9,7 @@
     "package": "indeterminatebeam",
     "version": "2.4.0",
     "python": "3.9.6",
-    "generatedAt": "2026-11-14T10:23:28.495744+00:00",
+    "generatedAt": "2026-11-14T12:48:32.796243+00:00",
     "theory": "Euler-Bernoulli; constant E, A, I; linear; small displacements",
     "signMapping": "Inputs, Rx/Ry/Rm, w/theta, tension-positive N, V=dM/dx and sagging M: identity",
     "options": {
@@ -30,7 +30,7 @@
     },
     "adapterVersion": "1",
     "requirementsSha256": "f2cda74edd6314a47ccc06e7f9e0df23a87f49e73bc59fbe09dd79d90ca90bcb",
-    "adapterSourcesSha256": "1d943b8564b1c3c281dbd4ccb1f922820ef4e4dfd67058a69dc3a55a55370f9a",
+    "adapterSourcesSha256": "41119e4418dee603b515ec0cd637dc1338254d591ff79ed2d6d900c3d522c07d",
     "source": "https://pypi.org/project/indeterminatebeam/2.4.0/"
   },
   "availability": {

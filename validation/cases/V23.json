@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "caseVersion": 1,
+  "caseId": "V23",
+  "description": "Combined translational and rotational spring support at one end, roller at the other, partial uniform load",
+  "length": 4,
+  "e": 210000000000.0,
+  "a": 0.003,
+  "i": 8e-06,
+  "supports": [
+    {
+      "position": 0,
+      "type": "Spring",
+      "translationalStiffness": 800000.0,
+      "rotationalStiffness": 300000.0
+    },
+    {
+      "position": 4,
+      "type": "Roller"
+    }
+  ],
+  "pointForces": [
+    {
+      "position": 2.5,
+      "value": -3000.0
+    }
+  ],
+  "pointMoments": [
+    {
+      "position": 1,
+      "value": 1500.0
+    }
+  ],
+  "udls": [
+    {
+      "start": 1,
+      "end": 3,
+      "value": -2000.0
+    }
+  ],
+  "evaluations": [
+    {
+      "position": 0.0,
+      "side": "Right"
+    },
+    {
+      "position": 0.37,
+      "side": "Right"
+    },
+    {
+      "position": 0.63,
+      "side": "Right"
+    },
+    {
+      "position": 1.0,
+      "side": "Left"
+    },
+    {
+      "position": 1.0,
+      "side": "Right"
+    },
+    {
+      "position": 1.555,
+      "side": "Right"
+    },
+    {
+      "position": 1.945,
+      "side": "Right"
+    },
+    {
+      "position": 2.5,
+      "side": "Left"
+    },
+    {
+      "position": 2.5,
+      "side": "Right"
+    },
+    {
+      "position": 2.685,
+      "side": "Right"
+    },
+    {
+      "position": 2.815,
+      "side": "Right"
+    },
+    {
+      "position": 3.0,
+      "side": "Left"
+    },
+    {
+      "position": 3.0,
+      "side": "Right"
+    },
+    {
+      "position": 3.37,
+      "side": "Right"
+    },
+    {
+      "position": 3.63,
+      "side": "Right"
+    },
+    {
+      "position": 4.0,
+      "side": "Left"
+    }
+  ]
+}
