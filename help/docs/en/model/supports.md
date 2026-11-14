@@ -26,7 +26,7 @@ A Fixed Support can restrain the beam on its own.
 
 Another typical arrangement is a Pinned Support combined with a Roller Support at a different position. A Pinned Support on its own still allows rotation about its support point.
 
-Multiple supports are allowed and do not create internal hinges.
+Multiple supports are allowed and do not create internal hinges; you place hinges explicitly (see below).
 
 Two Roller Supports restrain vertical rigid-body motion but leave axial rigid-body motion free. In that case, SpanDraft cannot solve the model even if no external axial load is applied.
 
@@ -47,6 +47,16 @@ The spring force or moment is reported as the reaction `Ry` or `M`; `Rx` is zero
 SpanDraft has no stiffness limit and replaces no rigid support by a spring: a very stiff spring is a spring, not a rigid support. For extreme stiffnesses or springs that are extremely close together, SpanDraft may reject the model as numerically not reliably solvable instead of returning a doubtful result.
 
 The stiffness units can be selected in the settings.
+
+## Hinges
+
+A **hinge** is a moment release in the beam: the bending moment is zero on both sides and the beam may kink there. Deflection, shear force, and axial force are transmitted. A Gerber beam is the typical example. The hinge tool sits behind the supports in the toolbar; the ring on the beam axis is placed, dragged, and edited like a support.
+
+- A hinge lies **inside** the beam, not at an end, and at most one hinge is allowed at a position.
+- It may lie on a Pinned Support, a Roller Support, or a Spring Support with a transverse spring only, at a segment boundary, under a distributed load, and at a point force. A hinge is not possible on a Fixed Support, on a Spring Support with a rotational spring (including a partial restraint), or at a point moment.
+- Each hinge removes one restraint from the beam, so a beam with hinges needs correspondingly more supports: Pinned–Roller–Roller with one hinge is determinate, with two hinges it is a mechanism. SpanDraft detects mechanisms exactly and then reports that the support is insufficient or that there are too many hinges.
+
+In the overview and in the report, the **Hinge results** table shows the rotation to the left `θ−` and to the right `θ+` of the hinge and the transmitted shear force `V`; at a hinge over a support or with a load the shear force jumps, and both values are shown. The deflection diagram shows the kink.
 
 Choose the support type according to the actual movement constraints. For details, see [What SpanDraft calculates – and what it does not](../background/model-assumptions.md).
 

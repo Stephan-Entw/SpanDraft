@@ -952,3 +952,124 @@ Validierungs-Suite (353 Tests) bestanden vollständig. Die Abnahme auf Windows s
 
 Dieser Hash ist die neue CI-Baseline in [ci.yml](../.github/workflows/ci.yml). Die Reports der
 Federlager-, Linearlast- und M4-Abnahme bleiben als historische Evidenz unverändert.
+
+## 8. Innere Gelenke (DEV-20)
+
+Ein inneres Gelenk (`MomentRelease`) setzt M = 0 auf beiden Seiten und lässt θ springen. Der Nachweis ist fünffach getrennt:
+
+- **Exakte rationale Referenz in der Product-Suite.** Das Orakel der Ausgabetests erhält je Gelenk die
+  Rotationssprung-Unbekannte und die Bedingung M(h⁻) = 0 (`θ` springt um Δθ, `w` bleibt stetig). Die
+  Konfigurationen von `SolverMomentReleaseKernelTests` (Gerber-Träger, Gelenk über Fest- und Loslager,
+  Einspannung–Gelenk–Loslager, Zwischenfeld zwischen zwei Einspannungen, Gelenk auf Wegfeder, auf und neben
+  Abschnittsgrenzen, Trapezlast über das Gelenk, Kraft auf dem Gelenk, zwei Gelenke bei drei Lagern) und die
+  Nahfälle (Gelenk 10⁻³ … 10⁻¹¹ neben dem Lager, ein Bit neben dem Lager, Kraft 6 nm neben dem Gelenk, zwei
+  Gelenke 6 nm auseinander) werden geliefert, und jeder Ausgabewert (Reaktionen, Felder an allen Stationsseiten
+  und im Stück, Extrema) liegt innerhalb seiner verifizierten Schranke; Gate und τ = 10⁻⁸ sind unverändert.
+- **Analytik und eingefrorener Prototyp.** Gerber-Träger (R_C = 5 kN, V_G = 5 kN, R_B = 7,5 kN, R_A = −2,5 kN,
+  M_B = −10 kNm, Rotationen und Durchbiegung am Gelenk aus den Einzelfeldern), Gelenk über einem Lager als zwei
+  Einfeldträger, Einspannung–Gelenk–Loslager, Zwischenfeld zwischen zwei Einspannungen, Gelenk an einer
+  Nullstelle von M (ändert M, V, w nicht, θ springt dort nicht). `SolverMomentReleaseTests` vergleicht
+  Knoten, Felder an beiden Seiten und Extrema in zwölf Modellen mit dem eingefrorenen Prototyp
+  (`ReferenceBeamSolver.Prototype` mit `SolverLoads.Hinges`).
+- **Mechanismen exakt.** Die Teilkörper-Rangprüfung wird in einem Differentialtest über 4000 Zufallskonfigurationen
+  (seed-fest, gitterartige und freie Positionen, Fest-, Los- und Einspannungen, Weg-, Dreh- und Teileinspannungsfedern)
+  gegen die unabhängige rationale Gauß-Elimination `DofMap.IsKinematicallyStable` des eingefrorenen Prototyps
+  verglichen (je mehr als 200 stabile und instabile Fälle), dazu eine Tabelle benannter Fälle (Kragarm mit Gelenk,
+  Gelenk zwischen zwei Festlagern, Pinned–Roller–Roller mit einem und zwei Gelenken, Gelenk ein Bit neben dem Lager).
+  Ein Mechanismus ist `UnstableModel` und hat Vorrang vor numerischen Bereichsfehlern des EI.
+- **Unabhängige Validierung V30–V37.** Das Eingabeformat erhält die optionale Liste `momentReleases`; Fälle
+  mit Schema 1 und 2 und ihre Hashes bleiben unverändert. Die analytische Referenz fügt je Gelenk die
+  Rotationssprung-Unbekannte und die Bedingung M(h⁻) = 0 zur exakten rationalen Statik hinzu; PyCBA bildet ein
+  Gelenk als gelenkiges rechtes Ende (Elementtyp 2) des linken Elements und liest die linke Rotation aus dem
+  Elementfeld. IndeterminateBeam kennt keine inneren Gelenke und fehlt für diese Fälle. V30 (Gerber-Träger),
+  V31 (Gelenk auf dem Mittellager), V32 (Einspannung, Gelenk, Trapezlast), V33 (Zwischenfeld zwischen zwei
+  Einspannungen), V34 (Gelenk auf einer Wegfeder), V35 (Gelenk auf einem Querschnittswechsel mit
+  Einzelkraft auf dem Gelenk), V36 (Gelenk 4 mm neben dem Mittellager mit Lasten nahe am Gelenk), V37
+  (statisch unbestimmt). Die physikalische Prüfung ersetzt am Gelenk die θ-Stetigkeit durch M = 0 auf
+  beiden Seiten und die Übereinstimmung von `RotationRadians` und `RotationLeftRadians` mit den Seiten von
+  `EvaluateAt`. Weil der Quellhash der Python-Adapter in jeder Referenz steht, wurden alle Referenzen neu
+  erzeugt; die numerischen Inhalte der 78 älteren Dateien sind bis auf Zeitstempel und Adapterhash identisch.
+- **Gezielte Fehlerfälle.** Gelenk an den Balkenenden, doppelt, an Einspannung, Drehfeder und Punktmoment
+  ist `InvalidModel` (Validator und Kernel); ein Mechanismus ist `UnstableModel` mit eigener Meldung; ein
+  berechnetes Moment links des Gelenks außerhalb seiner Schranke um null ist `InternalInconsistency`.
+
+**Fehlerinjektion.** `validation/investigations/moment-release-mutants/mutate.py` baut je Mutante einen Fehler
+in die Gelenklogik (Validator, Stationsmodell, Rang, Gleichungssystem, Felder, Adapter, Fassade, Editorzustand,
+Format, Übersicht), baut neu und führt zuerst die Test-Klassen des Features, bei Überleben die gesamte
+Product-Suite aus. Von 69 Mutanten werden 68 von mindestens einem Test erkannt. Beim ersten Lauf überlebten
+fünf (R8, R9, F1, E5, E6); R8 (Gelenk auf der einzigen Axiallagerung), F1 (exakte Null des linken Moments bei
+nicht verschwindendem Rechenwert), E5 (Bearbeiten ohne Positionsänderung) und E6 (Punktkraft am Gelenk) führten zu
+zusätzlichen Tests. R9 ist äquivalent: Die Teilkörper bilden eine Kette, ein Vorzeichen der Stetigkeitszeile
+lässt sich durch eine Spaltenvorzeichen-Umkehr der Teilkörper aufnehmen, der Rang hängt nicht davon ab.
+
+| Mutante | Fehler | Ergebnis |
+| --- | --- | --- |
+| V1 | validator: a release at the beam start is accepted | killed (6 Tests) |
+| V2 | validator: a release at the beam end is accepted | killed (5 Tests) |
+| V3 | validator: duplicate releases are accepted | killed (4 Tests) |
+| V4 | validator: a release on a fixed support is accepted | killed (6 Tests) |
+| V5 | validator: a release on a rotational spring is accepted | killed (4 Tests) |
+| V6 | validator: a release on a point moment is accepted | killed (6 Tests) |
+| V7 | validator: a release on a point force is rejected as a point moment | killed (12 Tests) |
+| V8 | validator: only the first spring counts for the rotational spring rule | killed (4 Tests) |
+| M1 | model: releases are dropped by the segment constructor | killed (84 Tests) |
+| S1 | station: a release outside the interior is accepted | killed (6 Tests) |
+| S2 | station: duplicate releases are accepted | killed (87 Tests) |
+| S3 | station: a release on an applied moment is accepted | killed (2 Tests) |
+| S4 | station: a release on a rigid rotation is accepted | killed (2 Tests) |
+| S5 | station: a release on a rotational spring is accepted | killed (3 Tests) |
+| S6 | station: a release is no mechanical station of its own | killed (102 Tests) |
+| S7 | station: mechanical stations never carry the release flag | killed (82 Tests) |
+| S8 | station: event stations never carry the release flag | killed (26 Tests) |
+| R1 | rank: the continuity row of a release is missing | killed (71 Tests) |
+| R2 | rank: a support at a release constrains only the left body | killed (94 Tests) |
+| R3 | rank: a support at a release constrains only the right body | killed (115 Tests) |
+| R4 | rank: the bending modes stay two whatever the number of bodies | killed (85 Tests) |
+| R5 | rank: the continuity row compares the wrong bodies | killed (6 Tests) |
+| R6 | rank: a rotational restraint is ignored for the rank | killed (47 Tests) |
+| R7 | rank: a translational restraint is ignored for the rank | killed (134 Tests) |
+| R8 | rank: the release changes the axial mode | killed (2 Tests) |
+| R9 | rank: the continuity row has the wrong sign (the two bodies become the same line) | survived, equivalent (the continuity sign can be absorbed by a column sign flip of every second body; the bodies form a chain, so the rank cannot depend on it) |
+| B1 | system: the moment right of a release stays an unknown | killed (68 Tests) |
+| B2 | system: the rotation continuity row stays at a release | killed (68 Tests) |
+| F1 | fields: the left moment of a release is the computed value, not zero | killed (1 Tests) |
+| F2 | fields: the rotation is shared across a release | killed (51 Tests) |
+| F3 | fields: the self-test of the exact zero is dropped | killed (1 Tests) |
+| F4 | fields: the self-test of the exact zero accepts any value | killed (67 Tests) |
+| F5 | fields: the exact zero carries no error bound | killed (31 Tests) |
+| K1 | kernel: a release station reports no release jump flag | killed (25 Tests) |
+| A1 | adapter: releases are not mapped | killed (51 Tests) |
+| A2 | adapter: the mechanism check of an unrepresentable stiffness ignores the releases | killed (1 Tests) |
+| A3 | facade: no node carries the left rotation | killed (23 Tests) |
+| A4 | facade: the left rotation is the right one | killed (18 Tests) |
+| A5 | facade: every node with a left limit carries a left rotation | killed (16 Tests) |
+| A6 | facade: the mechanism message ignores the releases | killed (1 Tests) |
+| D1 | document: releases are no named entities | killed (8 Tests) |
+| D2 | document: releases do not reach the beam model | killed (36 Tests) |
+| D3 | comparer: releases are not compared | killed (6 Tests) |
+| D4 | content equality ignores the releases | killed (2 Tests) |
+| D5 | constraints: a release at the new end is allowed | killed (2 Tests) |
+| D6 | constraints: the length error ignores the releases | killed (2 Tests) |
+| D7 | document: a release name may repeat a support name (names are not shared) | killed (8 Tests) |
+| N1 | naming: the release counter is not consumed | killed (3 Tests) |
+| N2 | naming: the release name is formatted like a force | killed (5 Tests) |
+| N3 | naming: the release counter may move backwards | killed (1 Tests) |
+| E1 | rules: a duplicate release is no conflict | killed (3 Tests) |
+| E2 | rules: a fixed support is no conflict | killed (2 Tests) |
+| E3 | rules: a rotational spring is no conflict | killed (1 Tests) |
+| E4 | rules: a point moment is no conflict | killed (2 Tests) |
+| E5 | rules: the edited release conflicts with itself | killed (1 Tests) |
+| E6 | rules: a point force counts as a point moment | killed (1 Tests) |
+| E7 | rules: a support at a release is never refused | killed (2 Tests) |
+| E8 | rules: a pinned support at a release is refused too | killed (1 Tests) |
+| E9 | editor: the support draft ignores the release rule | killed (1 Tests) |
+| E10 | editor: the moment draft ignores the release rule | killed (1 Tests) |
+| E11 | editor: a support placement ignores the release rule | killed (2 Tests) |
+| P1 | format: releases are not written | killed (3 Tests) |
+| P2 | format: releases are not read | killed (9 Tests) |
+| P3 | format: the release counter is not written | killed (4 Tests) |
+| P4 | format: the release counter is not read | killed (5 Tests) |
+| P5 | format: the release counter is written even at its start value | killed (1 Tests) |
+| P6 | format: a release id is not registered as an entity | killed (8 Tests) |
+| O1 | overview: the left rotation shows the right one | killed (1 Tests) |
+| O2 | overview: the shear cell shows the left value only | killed (1 Tests) |

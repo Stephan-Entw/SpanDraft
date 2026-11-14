@@ -11,7 +11,7 @@ Berechnet wird ein einzelner gerader Euler-Bernoulli-Balken aus einem oder mehre
 Abschnitten mit je konstantem Werkstoff und Querschnitt, linear elastisch bei kleinen Verschiebungen und
 Rotationen. Querschnitte bleiben eben und senkrecht zur verformten Balkenachse;
 Schubverformung wird vernachlässigt. Unterstützt sind starre Einspannungen,
-Fest- und Loslager, linear-elastische Federlager, Überhänge, transversale Punktkräfte, Punktmomente und
+Fest- und Loslager, linear-elastische Federlager, innere Gelenke (Momentenfreigaben), Überhänge, transversale Punktkräfte, Punktmomente und
 konstante und linear veränderliche, auch überlappende Streckenlasten. Eigengewicht wird bereits im
 Fachmodell als konstante Streckenlast abgeleitet. Alle Werte verwenden SI.
 
@@ -31,8 +31,8 @@ Die Fläche bleibt unter anderem für Eigengewicht und Engineering relevant.
 
 ## Stationen, Ereignisse und Lager
 
-Mechanische Stationen liegen an beiden Balkenenden und an allen Lagerpositionen
-(auch an Federlagern).
+Mechanische Stationen liegen an beiden Balkenenden, an allen Lagerpositionen
+(auch an Federlagern) und an allen Gelenken.
 Nur dort entstehen freie Komponenten des lokalen Biegezustands `(w, θ, M, V)`.
 Vorgeschriebene Komponenten werden exakt eliminiert. Reine Lastpositionen,
 Streckenlastgrenzen und spätere Auswertungspositionen erzeugen keine zusätzlichen
@@ -85,6 +85,36 @@ einen Mechanismus (`UnstableModel`), ein Balken nur auf Federn ist dagegen stabi
 Ein Federlager darf an keiner Position mit einem anderen Lager oder einer weiteren Feder
 zusammenfallen (`SpringSupportCoincidence`, `InvalidModel`); der Kernel prüft das zusätzlich.
 Lasten genau auf der Feder sind zulässig.
+
+### Innere Gelenke
+
+Ein inneres Gelenk (`MomentRelease`) ist eine mechanische Station ohne Sperre. Auf ihr gilt
+M⁺ = 0 als vorgeschriebener Wert; die Spalte entfällt, die Momentensprungzeile bleibt und erzwingt
+M⁻ = 0. Die Zeile der Rotationsstetigkeit entfällt, weil θ springt; w, V und N bleiben stetig, die
+Querkraft springt um eine Punktkraft und eine Reaktion. Das System bleibt quadratisch (ein Gelenk
+entfernt eine Spalte und eine Zeile), die Matrixeinträge und das Bandmuster bleiben unverändert. An
+der Station liefern `EvaluateAt` und die Knotenstation beide Rotationen: `RotationRadians` ist der
+rechtsseitige Grenzwert und `BeamNodeResult.RotationLeftRadians` der linksseitige, der nur an einem
+Gelenk vorhanden ist (sonst `null`). Das Moment wird auf beiden Seiten als exakt 0 geliefert; seine
+Schranke ist die fortgepflanzte Schranke des linken Stücks, und ein berechneter Wert außerhalb dieser
+Schranke ist ein `InternalInconsistency`. Es gibt keine Strafsteifigkeit, kein Snapping und kein
+Zusammenlegen von Positionen; Gate und τ = 10⁻⁸ bleiben unverändert.
+
+Eine Last genau auf einem Gelenk ist zulässig, ein Punktmoment dagegen nicht: ohne Seitenzuordnung
+hätte das Gelenk kein Gleichgewicht (`InvalidModel`). Ebenso lehnt der Kernel ein Gelenk ab, das nicht
+im Balkeninneren liegt, ein zweites an gleicher Position und eines an einer Drehbehinderung
+(Einspannung, Drehfeder, Teileinspannung). Ein Gelenk auf einem Fest-, Los- oder Wegfederlager trennt
+den Balken in zwei Felder mit gemeinsamer Reaktion; auf einer Abschnittsgrenze behält jedes Intervall
+das EI seines eigenen Abschnitts.
+
+Die Mechanismusprüfung bildet die Teilkörper zwischen den Gelenken: je Teilkörper `w = a + b·x`, je
+Gelenk eine Stetigkeitszeile für w, je gesperrter oder federnder Translation eine Zeile `a + b·x = 0`
+für jeden Teilkörper, der die Position berührt, je Drehsperre oder Drehfeder `b = 0`. Der exakte Rang
+muss alle `2·(Gelenke + 1)` Moden binden; Federn zählen durch ihre Wirkrichtung, Abschnittsgrenzen
+erzeugen keine Zeilen. Ein Kragarm mit Gelenk, ein Gelenk zwischen zwei Festlagern, ein Teilstück ohne
+Halt und zu viele Gelenke sind Mechanismen (`UnstableModel`; die Meldung nennt bei vorhandenen
+Gelenken diese). Die Prüfung entscheidet exakt, nicht durch Zählen: Pinned–Roller–Roller ist mit einem
+Gelenk bestimmt und mit zweien ein Mechanismus.
 
 ## Vorzeichen und Lastabbildung
 
@@ -151,7 +181,7 @@ Steifigkeit: axiale Translation `u = c` und Biegebewegung `w = a + bx`, `θ = b`
 Er verwendet den exakten Rang der Lagerbedingungen auf den gespeicherten
 Binary64-Koordinaten, ohne numerische Rangschwelle. Nötig sind mindestens eine
 u-Sperre und entweder eine Einspannung oder w-Sperren an zwei verschiedenen
-Positionen. Die Mechanismusprüfung hat Vorrang vor numerischen Bereichsfehlern,
+Positionen; mit Gelenken gilt die Teilkörperprüfung von „Innere Gelenke“. Die Mechanismusprüfung hat Vorrang vor numerischen Bereichsfehlern,
 auch wenn bereits das Adapterprodukt E·I nicht darstellbar wäre.
 Sie findet auch bei unbelasteten Modellen statt.
 
@@ -225,7 +255,8 @@ zusätzliche öffentliche API. Außer bei `InvalidModel` ist `ValidationErrors` 
 `Nodes` ist eine unveränderliche, nach Ereignisposition sortierte Liste von
 `BeamNodeResult`: fortlaufender Index, Position als Core-`Length`, u/w als
 solver-eigener signed `Displacement` mit `Meters`, Rotation als
-`RotationRadians` und nullable Reaktionen in Core-`Force` bzw. Core-`Moment`.
+`RotationRadians` (an einem Gelenk der rechtsseitige Grenzwert; der linksseitige steht in
+`RotationLeftRadians`, sonst `null`) und nullable Reaktionen in Core-`Force` bzw. Core-`Moment`.
 `null` bezeichnet eine freie Richtung. Eine nullwertige Reaktion an einer
 gesperrten Richtung bleibt ein vorhandener Wert.
 
@@ -251,7 +282,8 @@ An inneren Ereignissen wählt `Left` den linksseitigen und `Right` den
 rechtsseitigen Grenzwert. Innerhalb eines offenen Stücks liefern beide Seiten
 dieselben Werte. An x = 0 liefern beide den vorhandenen inneren Grenzwert 0+,
 an x = L beide L−. An exakten Stationen stimmen w und θ auf beiden Seiten
-bitgleich mit dem gemeinsamen Knotenergebnis überein; gesperrte Komponenten
+bitgleich mit dem gemeinsamen Knotenergebnis überein, mit Ausnahme von θ an einem Gelenk, wo
+die Seiten verschieden sind; gesperrte Komponenten
 bleiben exakt null. V und M behalten dagegen ihre jeweilige Seite und werden
 weder gemittelt noch geglättet. u und N bleiben auf beiden Seiten exakt +0.
 
@@ -341,8 +373,8 @@ Ursprung können die Darstellung innerer globaler Extrempositionen begrenzen.
 Die Rechnung verwendet `double`; kleine Rundungsreste werden nicht pauschal
 auf null gesetzt oder geglättet.
 
-Nicht unterstützt sind belastete Axialmechanik, Axialfedern, Gelenkfreigaben,
-veränderliche Steifigkeiten, nichtlineare Streckenlastverläufe, Lagerbewegungen,
+Nicht unterstützt sind belastete Axialmechanik, Axialfedern, Querkraft- und Axialgelenke
+(nur Momentenfreigaben), Federgelenke mit `M = k·Δθ`, veränderliche Steifigkeiten, nichtlineare Streckenlastverläufe, Lagerbewegungen,
 Schubverformung und geometrische Nichtlinearität. Historische Prototypen und
 eingefrorene FE-Vergleichsrechner liegen ausschließlich außerhalb des Produktpfads.
 Der Solver liefert keinen Knick-, Festigkeits- oder normativen Nachweis.

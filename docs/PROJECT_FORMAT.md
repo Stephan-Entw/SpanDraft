@@ -106,12 +106,21 @@ letzten die Länge; Lücken und Überlappungen sind damit nicht darstellbar. Ohn
 (ein Abschnitt) wird nichts geschrieben, sodass sich bestehende Dateien beim Öffnen und
 Speichern nicht verändern. Eigengewicht bleibt ein Eintrag `selfWeight`; seine Last je
 Abschnitt wird abgeleitet und verlangt die Dichte jedes Werkstoffs.
+Innere Gelenke (Momentenfreigaben) stehen in der optionalen Liste `momentReleases` des
+Dokuments. Jeder Eintrag hat `id`, `name` und `position` (m, streng im Balkeninneren). Ohne Gelenk
+wird die Liste nicht geschrieben, sodass sich bestehende Dateien beim Öffnen und Speichern nicht
+verändern; eine Datei ohne das Feld hat keine Gelenke. Die Core-Regeln (kein Gelenk an einem
+Balkenende, kein zweites an gleicher Position, keines an einer Einspannung, einem Drehfederlager
+oder einem Punktmoment) prüft der Leser als `ProjectFormatException`; ob ein Modell mit Gelenken
+ein Mechanismus ist, entscheidet der Solver. Die Annotation-GUID eines Gelenks ist seine `id`.
 Streckenlasten stehen in `distributedLoads` und speichern Anfangs- und Endposition
 sowie `startIntensity` und `endIntensity` (N/m, vorzeichenbehaftet, beide Pflicht).
 Die Intensität ändert sich zwischen den Enden linear. Gleiche Werte bezeichnen eine
 konstante Last; Null und Vorzeichenwechsel sind gültig. Das Projekt speichert weder
 Resultierende noch Schwerpunkt.
-Naming-Zähler sind positive Ganzzahlen und unabhängig von den Entity-Namen.
+Naming-Zähler sind positive Ganzzahlen und unabhängig von den Entity-Namen. Der Zähler der
+Gelenke, `namingState.nextMomentReleaseNumber`, ist optional und gilt ohne Feld als 1; er wird nur
+geschrieben, wenn er größer als 1 ist.
 
 Annotation-Offsets referenzieren Entities durch GUID und speichern relative
 DIPs zum automatischen Anker. Ein fehlender Offset bedeutet automatische
@@ -180,8 +189,8 @@ V1 und V2 werden mit fehlenden Projektangaben (`Info == null`) gelesen.
 V3 und V4 verwenden weiterhin die Dokument-/Presentation-Struktur aus V2.
 V5 ersetzt das Streckenlastfeld `intensity` durch `startIntensity`
 und `endIntensity` und erweitert Lager additiv um den Typ `spring` mit seinen optionalen
-Feldern (V1–V4 kennen ihn nicht und lehnen ihn ab) sowie das Dokument um die optionale Liste
-`furtherSegments`; beim Lesen von V1–V4 wird die einzelne Intensität zu beiden
+Feldern (V1–V4 kennen ihn nicht und lehnen ihn ab) sowie das Dokument um die optionalen Listen
+`furtherSegments` und `momentReleases` und den optionalen Naming-Zähler der Gelenke; beim Lesen von V1–V4 wird die einzelne Intensität zu beiden
 Enden. V5 ist eine reine Erweiterung des Dokumentformats, ältere Programmstände
 lehnen V5-Dateien als nicht unterstützt ab, auch wenn alle Lasten konstant sind.
 V1 wird beim Laden unmittelbar ins aktuelle In-Memory-Modell migriert:

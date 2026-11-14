@@ -20,7 +20,7 @@ Die Bewegungen `u`, `w` und `θ` sind auf [Koordinatensystem und Einheiten](koor
 
 ## Ausreichend lagern
 
-Eine Einspannung kann den Balken allein ausreichend halten. Typisch ist auch ein Festlager mit einem Loslager an einer anderen Position; ein Festlager allein lässt die Drehung um seinen Lagerpunkt frei. Mehrere Lager sind möglich, ohne dass dadurch innere Gelenke entstehen. Zwei reine Loslager lassen die axiale Starrkörperbewegung frei – dann kann SpanDraft auch ohne äußere Längslast nicht rechnen.
+Eine Einspannung kann den Balken allein ausreichend halten. Typisch ist auch ein Festlager mit einem Loslager an einer anderen Position; ein Festlager allein lässt die Drehung um seinen Lagerpunkt frei. Mehrere Lager sind möglich, ohne dass dadurch innere Gelenke entstehen; Gelenke setzen Sie ausdrücklich (siehe unten). Zwei reine Loslager lassen die axiale Starrkörperbewegung frei – dann kann SpanDraft auch ohne äußere Längslast nicht rechnen.
 
 Die Lager sind idealisiert: Gesperrte Bewegungen werden als null angesetzt; ein Loslager sperrt immer die vertikale Verschiebung `w`. Reibung, Spiel und vorgegebene Lagerverschiebungen sind nicht enthalten. Lagernachgiebigkeit gibt es nur dort, wo Sie ein Federlager einsetzen.
 
@@ -36,6 +36,16 @@ Die Federkraft beziehungsweise das Federmoment erscheint als Reaktion `Ry` bezie
 
 SpanDraft kennt keine Steifigkeitsgrenze und ersetzt kein starres Lager durch eine Feder: Eine sehr steife Feder bleibt eine Feder. Bei extremen Steifigkeiten oder extrem nah beieinanderliegenden Federn kann SpanDraft das Modell als numerisch nicht sicher lösbar ablehnen, statt ein zweifelhaftes Ergebnis zu liefern.
 
-Die Einheiten der Steifigkeiten wählen Sie in den Einstellungen. Wählen Sie die Lagerart nach den tatsächlichen Bewegungsbeschränkungen; Details stehen unter [Was SpanDraft berechnet – und was nicht](../hintergrund/modellannahmen.md).
+Die Einheiten der Steifigkeiten wählen Sie in den Einstellungen.
+
+## Gelenke
+
+Ein **Gelenk** ist eine Momentenfreigabe im Balken: Das Biegemoment ist dort auf beiden Seiten null, der Balken darf an dieser Stelle knicken. Durchbiegung, Querkraft und Längskraft werden übertragen. Gerber-Träger sind das typische Beispiel. Das Gelenk steht in der Werkzeugleiste hinter den Lagern; der Ring auf der Balkenachse lässt sich wie ein Lager platzieren, ziehen und bearbeiten.
+
+- Ein Gelenk liegt **im Inneren** des Balkens, nicht an einem Ende, und höchstens eines an derselben Position.
+- Es darf auf einem Festlager, Loslager oder Federlager mit reiner Wegfeder liegen, an einer Abschnittsgrenze, unter einer Streckenlast und an einer Punktkraft. Auf einer Einspannung, einem Federlager mit Drehfeder (auch Teileinspannung) und an einem Punktmoment ist kein Gelenk möglich.
+- Jedes Gelenk nimmt dem Balken eine Bindung. Ein Balken mit Gelenken braucht deshalb entsprechend mehr Lager: Pinned–Roller–Roller mit einem Gelenk ist bestimmt, mit zwei Gelenken ein Mechanismus. SpanDraft erkennt Mechanismen exakt und meldet dann, dass die Lagerung nicht ausreicht oder zu viele Gelenke gesetzt sind.
+
+In der Übersicht und im Bericht zeigt die Tabelle **Gelenkgrößen** die Rotation links `θ−` und rechts `θ+` des Gelenks und die übertragene Querkraft `V`; an einem Gelenk über einem Lager oder mit einer Last springt die Querkraft, dann stehen beide Werte. Das Durchbiegungsdiagramm zeigt den Knick. Wählen Sie die Lagerart nach den tatsächlichen Bewegungsbeschränkungen; Details stehen unter [Was SpanDraft berechnet – und was nicht](../hintergrund/modellannahmen.md).
 
 Weiter: [Kräfte, Momente und Streckenlasten](lasten.md).

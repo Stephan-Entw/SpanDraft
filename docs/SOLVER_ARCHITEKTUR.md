@@ -350,11 +350,11 @@ Die offenen Semantiken aus B lassen sich als **Daten** ausdrücken:
 
 | Fall (Track) | Ausdruck im Teilpunktmodell |
 |---|---|
-| Punktmoment genau auf Gelenk (DEV-20) | Moment links oder rechts des Gelenkteilpunkts, oder Ablehnung |
-| Gelenk an Einspannung (DEV-20) | Einspannung links oder rechts des Gelenks, oder Ablehnung |
-| Gelenk auf Lager ohne Drehbehinderung (DEV-20) | Lager und Gelenk am selben oder an getrennten Teilpunkten |
+| Punktmoment genau auf Gelenk (DEV-20) | Ablehnung (`InvalidModel`, entschieden) |
+| Gelenk an Einspannung oder Drehfeder (DEV-20) | Ablehnung (`InvalidModel`, entschieden) |
+| Gelenk auf Lager ohne Drehbehinderung (DEV-20) | Erlaubt; Gelenk und Lager verschmelzen zu einer Station ohne Teilpunkt, die Reaktion bleibt eine Zahl je Station (entschieden) |
 | Feder und starres Lager an gleicher Position (DEV-19) | Ablehnung (`InvalidModel`, entschieden) |
-| Abschnittswechsel an Lager, Gelenk, Einspannung (DEV-11) | Grenze und Halterung verschmelzen zu einer Station; die Grenze ist ein eigener Teilpunkt ohne Sperren (Lager, Einspannung, Federlager entschieden; Gelenk bleibt DEV-20) |
+| Abschnittswechsel an Lager, Gelenk, Einspannung (DEV-11) | Grenze und Halterung verschmelzen zu einer Station; die Grenze ist ein eigener Teilpunkt ohne Sperren (Lager, Einspannung, Federlager, Gelenk entschieden) |
 | Schräge Kraft am Gelenk oder Lager (DEV-12) | Axial- und Querkomponente am gewählten Teilpunkt |
 
 Die Koinzidenzregeln beschreiben zulässige Kombinationen und ihre Reihenfolge.

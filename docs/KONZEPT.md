@@ -49,6 +49,7 @@ Der aktuelle fachliche Umfang umfasst:
 - frei definierbare Balkenlänge
 - Einspannung, Festlager und Loslager
 - Federlager mit Weg- und/oder Drehfeder, auch als Teileinspannung
+- innere Gelenke (Momentenfreigaben) im Balken, auch auf Lagern, Federlagern und Abschnittsgrenzen
 - beliebig positionierte Lager einschließlich Überhängen
 - Punktkräfte
 - Punktmomente
@@ -73,7 +74,7 @@ Der Rechenkern liefert unter anderem:
 - Lagerreaktionen
 - axiale Verschiebung und Normalkraft als exakte Nullgrößen im heutigen Lastumfang
 - transversale Verschiebung
-- Rotation
+- Rotation, an einem Gelenk links und rechts
 - Querkraft
 - Biegemoment
 - analytische globale Extremwerte

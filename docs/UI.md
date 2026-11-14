@@ -34,6 +34,23 @@ nicht bestehendes Core-Objekt entsteht. Das Werkzeug der Federlager ist in der W
 bewusst ohne Beschriftung: Bei der schmalsten Fensterbreite wäre sonst die deutsche Leiste
 überlaufen.
 
+## Gelenk-Draft und Werkzeugleiste
+
+Ein Gelenk hat nur Name und Position; sein Draft ist deshalb ein eigener, schmaler Draft und kein
+Typ des Lager-Drafts. Die Positionsregeln gegenüber Einspannung, Drehfeder, Punktmoment und
+Balkenenden prüft der Editor schon bei der Eingabe mit denselben exakten Vergleichen wie der
+Validator: Das Projektformat lehnt beim Laden jede Core-Verletzung ab, ein im Editor festgeschriebener
+Verstoß ließe sich also später nicht mehr öffnen. Der Ring liegt auf der Balkenachse und damit oft auf
+einem Lagersymbol; ein Treffer auf den Ring selbst gehört deshalb dem Gelenk allein, sonst wäre ein Gelenk
+über einem Lager nie ohne Auswahlmenü greifbar. Ein Gelenk rastet nicht an den Balkenenden ein, die es
+nicht tragen dürfen.
+
+Die deutsche Werkzeugleiste hat bei der Mindestbreite des Fensters kaum Reserve. Das beschriftungslose
+Gelenkwerkzeug passte erst, nachdem Innenabstand der Werkzeugschaltflächen und Leistenrand knapper wurden;
+die Mindestbreite blieb bewusst unverändert, weil sie jedes Layout des Editors betrifft. Ein Test hält fest,
+dass die Leiste in beiden Sprachen bei der Mindestbreite nichts abschneidet, nicht nur, dass ihre zugeteilte
+Fläche in der Zeile liegt.
+
 ## Abschnitte in der Projekteinrichtung
 
 Abschnitte werden nur beim Bearbeiten eines Projekts angelegt; ein neues Projekt beginnt mit

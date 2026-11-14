@@ -6,6 +6,7 @@
 - Show both end intensities in the editor drawing, the project overview and the calculation report.
 - Add spring supports: a transverse spring, a rotational spring or both, and a partial restraint (rigid transverse translation with an elastic rotation). Stiffnesses are entered in selectable units (N/mm, kN/m, kN·m/rad and others) and appear in the drawing, the overview, the results and the calculation report.
 - Add beams of several segments: each segment has its own material, cross-section and bending axis, and a segment boundary may lie anywhere, including on supports, spring supports and loads. Self-weight, results, the calculation report and the stress assessment follow each segment; stress and safety factor refer to the segment with the smallest safety factor.
+- Add internal hinges (moment releases): the bending moment is zero at a hinge and the rotation jumps there, so Gerber beams and similar systems can be modelled. A hinge may lie on pinned, roller and transverse spring supports, on a segment boundary and under loads. The overview and the calculation report list the rotations on both sides and the shear force of each hinge.
 
 **Project compatibility:** Saving a project now writes format V5, which SpanDraft 1.1.0 and earlier cannot open, even when all loads are constant. Projects from earlier versions still open.
 

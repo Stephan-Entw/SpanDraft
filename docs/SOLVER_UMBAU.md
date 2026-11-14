@@ -177,14 +177,13 @@ Feature freigegeben ist. Bis zur Freigabe ist sie über Produktpfade nicht errei
 ### DEV-20 Innere Gelenke
 
 - **Anforderung:** Momentenfreigabe im geraden Balken, Kräfte werden übertragen. Kein geknickter 2D-Rahmen.
-- **Ergebnisse:** Beide Drehwinkel am Gelenk.
-- **Mechanismen:** Sie werden exakt erkannt.
-- **Nicht eindeutig definiert, vorerst Ablehnung:**
-  - Punktmoment genau auf einem Gelenk
-  - Gelenk genau an einer Einspannung
-  - Gelenk genau an einer Drehbehinderung durch eine Feder
-- **Zu klären:** Gelenk genau auf einem Lager ohne Drehbehinderung (Prototyp: erlaubt, trennt den Balken). Die fachliche Bestätigung fehlt noch.
-- **Prototyp:** Vorhanden.
+- **Entschieden und umgesetzt:**
+  - Der Typ heißt `MomentRelease` (nicht „Hinged“: das ist im Repository das Festlager). Ergebnisse: beide Drehwinkel am Gelenk (`EvaluateAt`, additiv `BeamNodeResult.RotationLeftRadians`), M exakt 0 auf beiden Seiten.
+  - Mechanismen werden exakt über den Rang der Teilkörper erkannt (`UnstableModel`); Federn zählen durch ihre Wirkrichtung, Abschnittsgrenzen erzeugen keine Zeilen.
+  - Erlaubt: Gelenk auf Fest-, Los- und Wegfederlager, an einer Abschnittsgrenze, unter einer Streckenlast und mit einer Punktkraft.
+  - Abgelehnt (`InvalidModel`): Position ≤ 0 oder ≥ L, zweites Gelenk an gleicher Position, Gelenk an einer Einspannung, an einer Drehfeder (auch Teileinspannung), Punktmoment genau auf einem Gelenk (auch Wert 0).
+  - Keine Strafsteifigkeit, kein Snapping, kein Zusammenlegen von Positionen; ein Gelenk ist eine mechanische Station ohne Teilpunkte.
+- **Prototyp:** Vorhanden und als eingefrorener Vergleich im Einsatz.
 
 ### DEV-19 Federlager
 
@@ -202,7 +201,7 @@ Feature freigegeben ist. Bis zur Freigabe ist sie über Produktpfade nicht errei
 
 - **Anforderung:** Aufeinanderfolgende Abschnitte mit unterschiedlichem Querschnitt und/oder Werkstoff auf gemeinsamer gerader Achse, also EI und EA je Abschnitt. Kein Rahmenmodell.
 - **Entschieden und umgesetzt:**
-  - Ein Abschnittswechsel ist an Lager, Einspannung und Federlager sowie im freien Feld und an Lasten zulässig. Die Grenze ist eine mechanische Station ohne Sperren; Gelenke (DEV-20) dürfen später auf einer Grenze liegen und verlangen die Rangprüfung über die Teilkörper aller Abschnitte.
+  - Ein Abschnittswechsel ist an Lager, Einspannung und Federlager sowie im freien Feld und an Lasten zulässig. Die Grenze ist eine mechanische Station ohne Sperren; Ein Gelenk (DEV-20) darf auf einer Grenze liegen; die Rangprüfung läuft über die Teilkörper, jedes Intervall behält das EI seines Abschnitts.
   - Eigengewicht ist je Abschnitt eine konstante Last aus dessen Dichte und Fläche.
   - Die Spannungsbewertung läuft je Abschnitt im Engineering; maßgebend ist der kleinste Sicherheitsfaktor. Der Solver liefert dafür `SegmentExtrema`.
   - Die Biegeachse ist je Abschnitt frei wählbar. EA wird nicht gebildet (DEV-12).
@@ -250,8 +249,8 @@ Bedienung, Persistenz und Report werden in den Feature-Issues separat geplant.
 | 1 | Alter FE-Solver | Nach der Migration eingefrorenes unabhängiges Vergleichswerkzeug außerhalb des Produktpfads. |
 | 2 | Sehr nahe Positionen | Keine Mindestdistanz, kein Zusammenführen. Verschiedene Koordinaten sind verschiedene Positionen. |
 | 3 | Sehr nahe Lager und Federn | Große Reaktionen und Querkräfte bleiben unverändert. Stabilisierung nur für die numerische Darstellung. |
-| 4 | Punktmoment genau auf Gelenk | Nicht implizit interpretieren. Bis zu einer fachlichen Semantik nicht eindeutig definiert. |
-| 5 | Gelenk genau an Einspannung | Nicht stillschweigend interpretieren. Erst Semantik festlegen. |
+| 4 | Punktmoment genau auf Gelenk | `InvalidModel` (Core, Kernel), auch bei Wert 0. |
+| 5 | Gelenk genau an Einspannung | `InvalidModel`; ebenso an einer Drehfeder und an den Balkenenden. |
 | 6 | Temperaturkrümmung | Nicht Teil des Umbaus, bleibt DEV-27. Der Code im Prototyp wird entfernt. |
 | 7 | `SolverLoads` und ähnliche Strukturen | Übergangslösung, nicht Zielarchitektur. |
 | 8 | Nähe-Warnung wie L/1000 | Nicht übernehmen. Diagnosen beruhen auf numerischer Qualität oder Modellgrenzen. |

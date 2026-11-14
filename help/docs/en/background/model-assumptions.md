@@ -40,7 +40,7 @@ Self-weight can be included as a downward constant distributed load derived from
 
 Distributed loads are constant or linearly varying; nonlinear intensity profiles and external axial loads are not currently supported load types in the user interface.
 
-Spring supports are linear elastic with a stiffness that does not depend on the load, and they are rigid in the axial direction; there is no axial spring. Prescribed support displacements and internal hinge releases are not included.
+Spring supports are linear elastic with a stiffness that does not depend on the load, and they are rigid in the axial direction; there is no axial spring. Internal hinges are pure moment releases; shear or axial hinges, spring hinges, and prescribed support displacements are not included.
 
 ### Nonlinear and dynamic effects
 

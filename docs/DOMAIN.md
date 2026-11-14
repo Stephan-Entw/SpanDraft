@@ -335,6 +335,32 @@ mit `ArgumentException` abgewiesen. Ein Federlager hält axial starr; es gibt ke
 Axialfeder. Das Federgesetz ist die Rückstellkraft `R = −k·w` und das Rückstellmoment
 `C = −k_θ·θ` auf den Balken. Die mechanische Bedeutung steht in [SOLVER.md](SOLVER.md).
 
+## Innere Gelenke (Momentenfreigaben)
+
+`MomentRelease(Position)` ist ein inneres Gelenk: Das Biegemoment ist dort auf beiden Seiten null,
+die Rotation darf springen, Durchbiegung, Querkraft und Normalkraft werden übertragen. Der Typ heißt
+durchgängig `MomentRelease`; „Hinged“ bezeichnet im Repository das Festlager. `BeamModel.MomentReleases`
+ist die Liste in gegebener Reihenfolge, die bisherigen Konstruktoren erzeugen eine leere. Die Position
+liegt exakt im Inneren des Balkens; ein Gelenk an einem Ende würde einen Teilkörper der Länge null
+erzeugen. Positionen werden ohne Toleranz verglichen und nie zusammengelegt.
+
+Erlaubt sind ein Gelenk auf einem Festlager, Loslager oder Federlager mit reiner Wegfeder, an einer
+Abschnittsgrenze, unter einer Streckenlast und zusammen mit einer Punktkraft, die als Querkraftsprung
+wirkt. Der Validator lehnt ab: Position ≤ 0 oder ≥ L (`MomentReleaseNotInsideBeam`), ein zweites
+Gelenk an exakt gleicher Position (`DuplicateMomentRelease`), ein Gelenk an einer Einspannung
+(`MomentReleaseAtFixedSupport`), an einer Drehfeder einschließlich Teileinspannung
+(`MomentReleaseAtRotationalSpring`) und an einem Punktmoment, auch mit Wert 0
+(`MomentReleaseAtPointMoment`). Die Pfade lauten `MomentReleases[i].Position` beziehungsweise
+`MomentReleases[i]`. Ob die Gelenke den Balken zum Mechanismus machen, ist Sache des Solvers.
+
+`EditorDocument.MomentReleases` hält `EditorMomentRelease(Id, Position, Name)` in Erstellungsreihenfolge.
+Gelenke sind benannte Entities mit eigenem Naming-Zähler; der automatische Name ist `G1`, `G2`, …
+(G für Gelenk, nie das reservierte Eigengewichtssymbol `g` allein). Der Editor wendet dieselben
+Positionsregeln an wie der Validator (`MomentReleaseRules`), damit er kein Dokument festschreibt, das der
+Solver ablehnen würde: Einspannung und Drehfeder am Gelenk, ein Punktmoment am Gelenk und ein Gelenk an
+Ende, Einspannung, Drehfeder, Moment oder zweitem Gelenk sind ungültige Eingaben. Die Balkenlänge darf
+nicht auf ein Gelenk oder dahinter verkürzt werden.
+
 ## Modellvalidierung
 
 `BeamModel` kopiert übergebene Lager- und Lastlisten und stellt sie lesbar
@@ -349,7 +375,9 @@ Nachricht und Property-Pfad; Listenindizes sind nullbasiert. Geprüft werden:
 - teilweise oder vollständig außerhalb liegende Streckenlasten,
 - Abschnitte, die den Balken nicht exakt überdecken (`SegmentsNotContiguous`),
 - identische Lager mit gleichem Typ und exakt gleicher Position,
-- ein Federlager an exakt derselben Position wie ein anderes Lager (`SpringSupportCoincidence`).
+- ein Federlager an exakt derselben Position wie ein anderes Lager (`SpringSupportCoincidence`),
+- Gelenke außerhalb des Balkeninneren sowie Gelenke an gleicher Position, an einer Einspannung, an
+  einer Drehfeder oder an einem Punktmoment (siehe oben).
 
 Bereichsgrenzen und Duplikate werden ohne numerische Toleranz verglichen.
 Negative Positionen werden bereits vom Längenwerttyp ausgeschlossen.

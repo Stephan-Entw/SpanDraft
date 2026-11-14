@@ -21,7 +21,7 @@ The current desktop application supports:
 - built-in and custom material libraries
 - reusable custom section presets
 - explicit bending-axis selection
-- fixed, pinned and roller supports, and spring supports with a transverse and/or rotational spring
+- fixed, pinned and roller supports, spring supports with a transverse and/or rotational spring, and internal hinges (moment releases)
 - point forces and point moments
 - constant and linearly varying distributed loads (triangular, trapezoidal, with sign change)
 - optional self-weight derived from material density and cross-section area
