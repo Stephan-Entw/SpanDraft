@@ -7,6 +7,9 @@ using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.State;
 
+/// <summary>One beam segment of the overview: its range in the display length unit, section, material and bending axis.</summary>
+public sealed record ProjectOverviewSegment(int Number, string Range, string Section, string Material, string Axis);
+
 public sealed record ProjectOverviewItem(Guid Id, string Name, string Type, string Value, string Position);
 /// <summary>
 /// One reaction row per support station. <see cref="Id"/> identifies the row's single support; a row
@@ -23,8 +26,16 @@ public sealed class ProjectOverviewState
     private ProjectOverviewState(EditorDocument document, AnalysisPresentationState analysis)
     {
         Analysis = analysis;
-        Section = document.SectionDisplayName ?? SectionDisplay.Name(document.Section, analysis.Options);
-        Material = MaterialDisplay.Format(document.Material);
+        Segments = Array.AsReadOnly(document.Segments.Select((segment, index) =>
+        {
+            var (start, end) = document.SegmentRange(index);
+            return new ProjectOverviewSegment(index + 1, Position(start) + "…" + Position(end),
+                segment.SectionDisplayName ?? SectionDisplay.Name(segment.Section, analysis.Options),
+                MaterialDisplay.Format(segment.Material), segment.BendingAxis.ToString().ToLowerInvariant());
+        }).ToArray());
+        // The single-segment summary; a beam of several segments is described by Segments only.
+        Section = Segments.Count == 1 ? Segments[0].Section : "";
+        Material = Segments.Count == 1 ? Segments[0].Material : "";
         Length = string.Format(CultureInfo.CurrentUICulture, Strings.OverviewLength, Position(document.Length),
             analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
         Supports = Array.AsReadOnly(document.Supports.Select(s => new ProjectOverviewItem(s.Id, s.Name,
@@ -51,10 +62,11 @@ public sealed class ProjectOverviewState
         ProjectOverviewItem Distributed(Guid id, string name, string type, double startIntensity, double endIntensity,
             Length start, Length end, bool calculated = false) =>
             new(id, name, type, Intensity(startIntensity, endIntensity, calculated), Position(start) + "…" + Position(end));
-        DistributedLoads = Array.AsReadOnly((document.SelfWeightLoad is { } weight
-            ? new[] { Distributed(document.SelfWeight!.Id, EditorSelfWeight.Symbol, EditorSelfWeight.Symbol,
+        // One self-weight row per segment, each with its own intensity and range.
+        DistributedLoads = Array.AsReadOnly(document.SelfWeightLoads
+            .Select(weight => Distributed(document.SelfWeight!.Id, EditorSelfWeight.Symbol, EditorSelfWeight.Symbol,
                 weight.StartIntensity.NewtonsPerMeter, weight.EndIntensity.NewtonsPerMeter, weight.StartPosition,
-                weight.EndPosition, calculated: true) } : [])
+                weight.EndPosition, calculated: true))
             .Concat(document.DistributedLoads.Select(l => Distributed(l.Id, l.Name, "q", l.StartIntensity.NewtonsPerMeter,
                 l.EndIntensity.NewtonsPerMeter, l.StartPosition, l.EndPosition))).ToArray());
         // The solver reports one common reaction per station and restrained direction. Supports sharing
@@ -74,6 +86,8 @@ public sealed class ProjectOverviewState
 
     public static ProjectOverviewState From(EditorDocument document, AnalysisPresentationState analysis) => new(document, analysis);
 
+    public IReadOnlyList<ProjectOverviewSegment> Segments { get; }
+    public bool HasSeveralSegments => Segments.Count > 1;
     public string Section { get; }
     public string Material { get; }
     public string Length { get; }

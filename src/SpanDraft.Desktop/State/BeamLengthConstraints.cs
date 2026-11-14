@@ -14,6 +14,8 @@ public static class BeamLengthConstraints
     public static string? Error(EditorDocument document, Length length)
     {
         if (!double.IsFinite(length.Meters) || length.Meters <= 0) return Strings.InvalidLength;
+        if (document.SegmentBoundaries.Count > 0 && !(length.Meters > document.SegmentBoundaries[^1].Meters))
+            return Strings.LengthExcludesSegments;
         if (document.Loads.Any(l => l.Position.Meters > length.Meters)
             || document.DistributedLoads.Any(l => l.EndPosition.Meters > length.Meters)) return Strings.LengthExcludesEntities;
         return document.Supports.Any(s => s.Position.Meters > length.Meters) ? Strings.LengthExcludesSupports : null;

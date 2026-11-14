@@ -406,6 +406,8 @@ public static class Strings
     public static string NumberPreviewResult => Get(nameof(NumberPreviewResult));
     public static string NumberPreviewSmall => Get(nameof(NumberPreviewSmall));
     public static string SelfWeight => Get(nameof(SelfWeight));
+    public static string SelfWeightMissingDensitySegment => Get(nameof(SelfWeightMissingDensitySegment));
+    public static string LengthExcludesSegments => Get(nameof(LengthExcludesSegments));
     public static string SelfWeightMissingDensity => Get(nameof(SelfWeightMissingDensity));
     public static string SelfWeightNameConflict => Get(nameof(SelfWeightNameConflict));
     public static string ReservedEntityName => Get(nameof(ReservedEntityName));

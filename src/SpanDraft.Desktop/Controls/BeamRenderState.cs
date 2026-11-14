@@ -41,10 +41,11 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
                 preview.Type == SupportType.Fixed && FixedSupportGeometry.AtPosition(preview.Position.Meters, document.Length.Meters).IsMirrored));
         var loads = PointLoadSymbol.Layout(document.Loads, frame, loadPreview, hiddenLoadId, loadName, loadSymbolScale);
         var distributed = DistributedLoadSymbol.Layout(document.DistributedLoads, frame, distributedPreview, hiddenDistributedId, distributedName, loadSymbolScale).ToList();
-        if (presentation?.SelfWeightVisible != false && document.SelfWeightLoad is { } weight)
-            distributed.Insert(0, DistributedLoadSymbol.CreateVisual(document.SelfWeight!.Id,
-                new(weight.StartPosition, weight.EndPosition, weight.StartIntensity.NewtonsPerMeter), EditorSelfWeight.Symbol,
-                frame, symbolScale: loadSymbolScale) with { CanDragEndpoints = false, IsSelfWeight = true });
+        if (presentation?.SelfWeightVisible != false)
+            // One visual per segment, all of the one self-weight entity.
+            distributed.InsertRange(0, document.SelfWeightLoads.Select(weight => DistributedLoadSymbol.CreateVisual(
+                document.SelfWeight!.Id, new(weight.StartPosition, weight.EndPosition, weight.StartIntensity.NewtonsPerMeter),
+                EditorSelfWeight.Symbol, frame, symbolScale: loadSymbolScale) with { CanDragEndpoints = false, IsSelfWeight = true }));
         // The profile selects the units of all load labels; the options round given and calculated values alike.
         var results = options is null ? new ResultPresentationOptions(profile)
             : profile is null ? options : new(profile, options.SignificantDigits, options.Notation);

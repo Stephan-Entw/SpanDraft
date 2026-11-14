@@ -15,13 +15,8 @@ public static class BeamModelMechanicalComparer
 {
     public static bool AreEquivalent(BeamModel left, BeamModel right) =>
         left.Length == right.Length
-        && left.Material.YoungsModulus == right.Material.YoungsModulus
-        && left.Material.YieldStrength == right.Material.YieldStrength
-        && left.Section.Area == right.Section.Area
-        && left.BendingAxis == right.BendingAxis
-        && left.BendingAxisProperties.SecondMomentOfArea == right.BendingAxisProperties.SecondMomentOfArea
-        && left.BendingAxisProperties.PositiveSectionModulus == right.BendingAxisProperties.PositiveSectionModulus
-        && left.BendingAxisProperties.NegativeSectionModulus == right.BendingAxisProperties.NegativeSectionModulus
+        && left.Segments.Count == right.Segments.Count
+        && left.Segments.Zip(right.Segments).All(pair => SegmentsEquivalent(pair.First, pair.Second))
         && left.Supports.Count == right.Supports.Count
         && left.Supports.Zip(right.Supports).All(pair => IsKnownSupportType(pair.First.Type)
             && pair.First.Type == pair.Second.Type && pair.First.Position == pair.Second.Position
@@ -30,6 +25,17 @@ public static class BeamModelMechanicalComparer
             && pair.First.RigidTranslation == pair.Second.RigidTranslation)
         && left.Loads.Count == right.Loads.Count
         && left.Loads.Zip(right.Loads).All(pair => LoadsEquivalent(pair.First, pair.Second));
+
+    /// <summary>A segment is compared by its extent and the properties the analysis reads; names and metadata are not.</summary>
+    public static bool SegmentsEquivalent(BeamSegment left, BeamSegment right) =>
+        left.Start == right.Start && left.End == right.End
+        && left.Material.YoungsModulus == right.Material.YoungsModulus
+        && left.Material.YieldStrength == right.Material.YieldStrength
+        && left.Section.Area == right.Section.Area
+        && left.BendingAxis == right.BendingAxis
+        && left.BendingAxisProperties.SecondMomentOfArea == right.BendingAxisProperties.SecondMomentOfArea
+        && left.BendingAxisProperties.PositiveSectionModulus == right.BendingAxisProperties.PositiveSectionModulus
+        && left.BendingAxisProperties.NegativeSectionModulus == right.BendingAxisProperties.NegativeSectionModulus;
 
     public static bool IsKnownSupportType(SupportType type) => type is SupportType.Fixed or SupportType.Pinned or SupportType.Roller or SupportType.Spring;
 

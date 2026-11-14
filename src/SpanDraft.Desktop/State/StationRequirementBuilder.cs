@@ -13,6 +13,9 @@ public static class StationRequirementBuilder
         LayoutNumbers.Positive(loadSymbolScale, nameof(loadSymbolScale));
         const double stroke = SchematicMetrics.SymbolStrokeWidth / 2;
         var requirements = new List<StationRequirement> { new(0, 0, 0), new(document.Length.Meters, 0, 0) };
+        // A segment boundary is a station without extent, so that the layout keeps it as a distinct position.
+        foreach (var boundary in document.SegmentBoundaries)
+            requirements.Add(new(boundary.Meters, 0, 0));
         foreach (var support in document.Supports)
         {
             if (support.Type == SupportType.Fixed)
@@ -42,7 +45,7 @@ public static class StationRequirementBuilder
             requirements.Add(new(load.StartPosition.Meters, start, start));
             requirements.Add(new(load.EndPosition.Meters, end, end));
         }
-        if (document.SelfWeightLoad is { } weight)
+        foreach (var weight in document.SelfWeightLoads)
         {
             double extent = (SchematicMetrics.DistributedArrowHeadHalfWidth + stroke) * loadSymbolScale;
             requirements.Add(new(weight.StartPosition.Meters, extent, extent));
@@ -55,8 +58,8 @@ public static class StationRequirementBuilder
     public static IReadOnlyList<SpanRequirement> SpansFromDocument(EditorDocument document) =>
         Array.AsReadOnly(document.DistributedLoads.Select(l => new SpanRequirement(l.StartPosition.Meters,
             l.EndPosition.Meters, SchematicMetrics.DistributedMinimumWidth))
-            .Concat(document.SelfWeightLoad is { } weight ? new[] { new SpanRequirement(weight.StartPosition.Meters,
-                weight.EndPosition.Meters, SchematicMetrics.DistributedMinimumWidth) } : []).ToArray());
+            .Concat(document.SelfWeightLoads.Select(weight => new SpanRequirement(weight.StartPosition.Meters,
+                weight.EndPosition.Meters, SchematicMetrics.DistributedMinimumWidth))).ToArray());
 
     private static (double Left, double Right) Extents(EditorSupport support) => support.Type switch
     {

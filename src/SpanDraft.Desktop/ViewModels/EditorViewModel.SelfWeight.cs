@@ -17,13 +17,16 @@ public sealed partial class EditorViewModel
     public bool IsSelfWeightVisible => EditorPresentation.SelfWeightVisible;
     public bool IsSelfWeightFlyoutVisible => _selfWeightFlyout && IsSelfWeightEnabled;
     public string SelfWeightVisibilityAction => IsSelfWeightVisible ? Strings.HideSelfWeight : Strings.ShowSelfWeight;
-    public string SelfWeightLabel => Document.SelfWeightLoad is { } load
-        ? EditorSelfWeight.Symbol + " = " + QuantityFormatter.FormatResult(load.StartIntensity.NewtonsPerMeter, QuantityKind.DistributedLoad, ResultPresentation) : "";
+    // Segments with the same intensity share one label value; otherwise the label lists each intensity in segment order.
+    public string SelfWeightLabel => Document.SelfWeightLoads is { Count: > 0 } loads
+        ? EditorSelfWeight.Symbol + " = " + string.Join("; ", loads.Select(load => load.StartIntensity.NewtonsPerMeter).Distinct()
+            .Select(value => QuantityFormatter.FormatResult(value, QuantityKind.DistributedLoad, ResultPresentation))) : "";
     public TechnicalText SelfWeightValue => SelfWeightLabel is { Length: > 0 } label
         ? new TechnicalText(new TechnicalRun(EditorSelfWeight.Symbol, Role: TechnicalRole.Variable)) + label[EditorSelfWeight.Symbol.Length..] : "";
+    // The flyout shows the area and density of the first segment; further segments have their own values in Project Setup.
     public TechnicalText SelfWeightArea => TechnicalSymbols.Area + " = "
-        + SectionDisplay.Property(Document.Section, Document.Section.Area.SquareMeters, QuantityKind.Area, ResultPresentation);
-    public TechnicalText SelfWeightDensity => Document.Material.Density is { } density
+        + SectionDisplay.Property(Document.Segments[0].Section, Document.Segments[0].Section.Area.SquareMeters, QuantityKind.Area, ResultPresentation);
+    public TechnicalText SelfWeightDensity => Document.Segments[0].Material.Density is { } density
         ? TechnicalSymbols.Density + QuantityFormatter.FormatInputEquation("", density.KilogramsPerCubicMeter, ResultPresentation.Profile[QuantityKind.Density], ResultPresentation)
         : TechnicalSymbols.Density + " = —";
     public string? SelfWeightFeedback => _selfWeightFeedback;

@@ -392,6 +392,8 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="RemoveFromRecent" xml:space="preserve"><value>Aus Liste entfernen</value></data>
   <data name="ResultProbe" xml:space="preserve"><value>Probe</value></data>
   <data name="SelfWeight" xml:space="preserve"><value>Eigengewicht</value></data>
+  <data name="SelfWeightMissingDensitySegment" xml:space="preserve"><value>Eigengewicht kann nicht berücksichtigt werden. Für den Werkstoff von Abschnitt {0} ist keine Dichte angegeben.</value></data>
+  <data name="LengthExcludesSegments" xml:space="preserve"><value>Die Länge muss größer als die letzte Abschnittsgrenze sein.</value></data>
   <data name="SelfWeightMissingDensity" xml:space="preserve"><value>Eigengewicht kann nicht berücksichtigt werden. Für den Werkstoff ist keine Dichte angegeben.</value></data>
   <data name="SelfWeightNameConflict" xml:space="preserve"><value>Eigengewicht kann nicht berücksichtigt werden. Benennen Sie zuerst die vorhandene Entity mit der Bezeichnung g oder G um.</value></data>
   <data name="ReservedEntityName" xml:space="preserve"><value>Die Bezeichnung g ist für Eigengewicht reserviert.</value></data>
