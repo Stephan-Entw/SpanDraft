@@ -8,8 +8,12 @@ namespace SpanDraft.Tests;
 // Fixed statics/compatibility solutions, independent of the kernel's station equations.
 // Field expectations are exact Macaulay expressions on the original SI doubles; no numerical solve.
 internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumber W0, SolverExactNumber Theta0,
-    (double X, RestrainedDirections Direction, SolverExactNumber Value)[] Reactions)
+    (double X, RestrainedDirections Direction, SolverExactNumber Value)[] Reactions,
+    (double X, SolverExactNumber Jump)[]? RotationJumps = null)
 {
+    /// <summary>The rotation jump at every moment release, left to right; empty without releases.</summary>
+    internal (double X, SolverExactNumber Jump)[] Jumps => RotationJumps ?? [];
+
     internal static SolverExactNumber Q(long a, long b = 1) => Integer(a) / Integer(b);
 
     // Global force method: unknown initial kinematics and support reactions, rather than
@@ -26,13 +30,18 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
                 (X: e.Position, Direction: Theta, Stiffness: e.RotationalStiffness)
             }.Where(k => k.Stiffness != 0 || k.Direction == W && e.RigidTranslation)))
             .Distinct().OrderBy(r => r.X).ThenBy(r => r.Direction).ToArray();
-        int n = keys.Length + 2;
-        var zeroLoads = new MechanicalInput(input.Length, input.Sections, input.Restraints, [], [], [], input.ElasticRestraints);
+        // A moment release adds the unknown rotation jump and the condition that the moment left of it is zero.
+        double[] releases = [.. input.MomentReleases.Select(r => r.Position).Distinct().Order()];
+        int n = keys.Length + releases.Length + 2;
+        var zeroLoads = new MechanicalInput(input.Length, input.Sections, input.Restraints, [], [], [], input.ElasticRestraints,
+            input.MomentReleases);
         var basis = new SolverOutputOracle[n];
         basis[0] = new(zeroLoads, Q(1), Q(0), []);
         basis[1] = new(zeroLoads, Q(0), Q(1), []);
         for (int j = 2; j < n; j++)
-            basis[j] = new(zeroLoads, Q(0), Q(0), [(keys[j - 2].X, keys[j - 2].Direction, Q(1))]);
+            basis[j] = j - 2 < keys.Length
+                ? new(zeroLoads, Q(0), Q(0), [(keys[j - 2].X, keys[j - 2].Direction, Q(1))])
+                : new(zeroLoads, Q(0), Q(0), [], [(releases[j - 2 - keys.Length], Q(1))]);
         var applied = new SolverOutputOracle(input, Q(0), Q(0), []);
         var a = new SolverExactNumber[n, n];
         var b = new SolverExactNumber[n];
@@ -58,7 +67,8 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
             }
             return [.. keys.Select(k => oracle.Field(k.X, FieldSide.Right)[k.Direction == W ? 0 : 1] +
                 (k.Stiffness == 0 ? Q(0) : oracle.Reactions.Where(r => r.X == k.X && r.Direction == k.Direction)
-                    .Aggregate(Q(0), (sum, r) => sum + r.Value) / From(k.Stiffness))), force, moment];
+                    .Aggregate(Q(0), (sum, r) => sum + r.Value) / From(k.Stiffness))),
+                .. releases.Select(h => oracle.Field(h, FieldSide.Left)[2]), force, moment];
         }
         SolverExactNumber[] loads = Conditions(applied);
         for (int j = 0; j < n; j++)
@@ -68,7 +78,8 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
         }
         for (int i = 0; i < n; i++) b[i] = Q(0) - loads[i];
         SolverExactNumber[] solved = SolverExactLinearAlgebra.Solve(a, b);
-        return new(input, solved[0], solved[1], keys.Select((k, i) => (k.X, k.Direction, solved[i + 2])).ToArray());
+        return new(input, solved[0], solved[1], keys.Select((k, i) => (k.X, k.Direction, solved[i + 2])).ToArray(),
+            releases.Select((h, i) => (h, solved[keys.Length + 2 + i])).ToArray());
     }
     internal static SolverOutputOracle Case(string name)
     {
@@ -160,6 +171,13 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
             }
         }
         SolverExactNumber theta = Theta0, w = W0 + Theta0 * x;
+        // A rotation jump at a release turns the right part about the release point: w stays continuous.
+        foreach (var (h, jump) in Jumps)
+            if (position > h || position == h && side == FieldSide.Right)
+            {
+                theta += jump;
+                w += jump * (x - From(h));
+            }
         foreach (var (c, a, p) in terms)
             foreach (StiffnessSection section in Input.Sections)
             {

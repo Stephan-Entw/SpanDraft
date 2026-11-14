@@ -8,9 +8,9 @@ internal static class SolverBendingTestSupport
 {
     internal static MechanicalInput Model(double length = 2, double ei = 1, RigidRestraint[]? restraints = null,
         TransversePointForce[]? forces = null, AppliedPointMoment[]? moments = null, TransverseLineLoad[]? lines = null,
-        ElasticRestraint[]? elastic = null) =>
+        ElasticRestraint[]? elastic = null, InternalMomentRelease[]? releases = null) =>
         new(length, ei, restraints ?? (elastic is null ? [new(0, RestrainedDirections.U | RestrainedDirections.W | RestrainedDirections.Theta)] : []),
-            forces ?? [], moments ?? [], lines ?? [], elastic);
+            forces ?? [], moments ?? [], lines ?? [], elastic, releases);
 
     internal static BendingPreparation Prepare(MechanicalInput input) =>
         BendingPreparation.Create(input, StationModel.Create(input));

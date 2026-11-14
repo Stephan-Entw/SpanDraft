@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 namespace SpanDraft.Solver.Kernel;
 
 [Flags]
-internal enum BendingJump { None = 0, PointForce = 1, PointMoment = 2, ReactionY = 4, ReactionMoment = 8 }
+internal enum BendingJump { None = 0, PointForce = 1, PointMoment = 2, ReactionY = 4, ReactionMoment = 8, Release = 16 }
 internal sealed record BendingStation(double Position, BendingField? Left, BendingField? Right, BendingJump Jumps);
 internal sealed record BendingPiece(double Start, double End, ImmutableArray<double> ThetaCoefficients,
     ImmutableArray<double> ShearCoefficients, double Intensity, PieceQuality Quality, double IntensityChange = 0)

@@ -26,8 +26,10 @@ internal static class BendingSystemBuilder
         for (int i = 0; i < stations.Length; i++)
             for (int q = 0; q < 4; q++)
             {
+                // At a moment release the right-hand moment is prescribed zero: the release carries no moment.
                 bool prescribed = q == 0 && stations[i].RigidW ||
                     q == 1 && stations[i].RigidTheta ||
+                    q == 2 && stations[i].Release ||
                     i == stations.Length - 1 && q >= 2;
                 if (prescribed)
                     continue;
@@ -58,7 +60,10 @@ internal static class BendingSystemBuilder
             if (i > 0)
             {
                 Jump(0, default);
-                Jump(1, default);
+                // The rotation jumps at a release, so its continuity row drops out together with the moment column;
+                // the moment row stays and forces the left-hand moment to zero as well.
+                if (!stations[i].Release)
+                    Jump(1, default);
             }
             if (!rigidTheta)
                 Jump(2, -loads.Stations[i].Moment);

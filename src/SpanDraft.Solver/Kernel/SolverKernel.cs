@@ -24,6 +24,7 @@ internal static class SolverKernel
             if (!e.PointMoments.IsEmpty) jumps |= BendingJump.PointMoment;
             if (e.MechanicalStation?.ConstrainsW == true) jumps |= BendingJump.ReactionY;
             if (e.MechanicalStation?.ConstrainsTheta == true) jumps |= BendingJump.ReactionMoment;
+            if (e.MechanicalStation?.Release == true) jumps |= BendingJump.Release;
             return new BendingStation(e.Position, e.Position == 0 ? null : fields.EvaluateAt(e.Position, FieldSide.Left),
                 e.Position == input.Length ? null : fields.EvaluateAt(e.Position, FieldSide.Right), jumps);
         }).ToImmutableArray();

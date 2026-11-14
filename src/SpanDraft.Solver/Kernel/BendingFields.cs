@@ -46,6 +46,8 @@ internal sealed record BendingFields(ImmutableArray<MechanicalStation> Stations,
         if (x == Stations[^1].Position) side = FieldSide.Left;
         int j = SegmentOf(x);
         int station = x == Stations[^1].Position ? Stations.Length - 1 : x == Stations[j].Position ? j : -1;
+        // The left side of a release: w is shared, the rotation is the one of the left piece and M is exactly zero.
+        bool release = station >= 0 && Stations[station].Release;
         if (x == Stations[j].Position)
         {
             if (side == FieldSide.Right)
@@ -70,8 +72,19 @@ internal sealed record BendingFields(ImmutableArray<MechanicalStation> Stations,
             field += q < 2 ? load / e : load;
             KernelFailureException.RequireFinite(field.Value);
             KernelFailureException.RequireFinite(field.Error);
-            // Both sides share the verified station kinematics, including exact restrained zeros.
-            bool stationKinematics = q < 2 && station >= 0;
+            if (release && q == 2)
+            {
+                // The prescribed zero is exact: the computed value can only differ by its own error bound.
+                if (!(Math.Abs(field.Value) <= field.Error))
+                    throw new KernelFailureException(KernelFailureCause.InternalInconsistency,
+                        "The moment left of a release is not enclosed by its bound around zero.");
+                values.Add(0);
+                bounds.Add(field.Error);
+                continue;
+            }
+            // Both sides share the verified station kinematics, including exact restrained zeros; the rotation
+            // jumps at a release and keeps the left piece's value there.
+            bool stationKinematics = q < 2 && station >= 0 && !(release && q == 1);
             values.Add(stationKinematics ? State[4 * station + q] : field.Value);
             // Retain the propagated bound for open-piece certification as well as the shared state's bound.
             bounds.Add(stationKinematics ? Math.Max(field.Error, StateBound[4 * station + q]) : field.Error);
