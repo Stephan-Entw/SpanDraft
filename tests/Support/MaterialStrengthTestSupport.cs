@@ -21,7 +21,7 @@ public abstract class MaterialStrengthTestSupport
     protected static byte[] LegacyProject(int version = 3)
     {
         var root = JsonNode.Parse(ProjectFileCodec.Serialize(WithMaterial(Typed(MaterialStrengthType.Re))))!;
-        root["formatVersion"] = version;
+        ProjectTestSupport.AsHistorical(root, version);
         root["document"]!["material"]!.AsObject().Remove("strengthType");
         if (version == 2) root.AsObject().Remove("info");
         return Encoding.UTF8.GetBytes(root.ToJsonString());

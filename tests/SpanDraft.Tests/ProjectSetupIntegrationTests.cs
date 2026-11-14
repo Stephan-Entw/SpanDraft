@@ -434,7 +434,7 @@ public sealed class ProjectSetupIntegrationTests
     public async Task LegacyCanBeOpenedEditedAndSavedWithoutInfoButPartialInfoIsRejected()
     {
         var app = new App(create: false); var path = TestPath("legacy.spandraft");
-        var json = JsonNode.Parse(ProjectFileCodec.Serialize(State()))!; json["formatVersion"] = 2;
+        var json = AsHistorical(JsonNode.Parse(ProjectFileCodec.Serialize(State()))!, 2);
         app.Files.Data[path] = Encoding.UTF8.GetBytes(json.ToJsonString());
         Assert.True(await app.Main.OpenAsync(path)); Assert.False(app.Main.Session!.IsDirty);
         Assert.Null(app.Main.Session.CurrentRevision.State.Info); app.Main.EditProject();
@@ -443,7 +443,7 @@ public sealed class ProjectSetupIntegrationTests
         setup.LengthInput.Begin(); setup.LengthInput.Text = "2000";
         Assert.True(await setup.ConfirmAsync()); Assert.Null(app.Main.Session.CurrentRevision.State.Info);
         Assert.True(await app.Main.SaveAsync()); Assert.False(app.Main.Session.IsDirty);
-        Assert.Equal(4, JsonNode.Parse(app.Files.Data[path])!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(5, JsonNode.Parse(app.Files.Data[path])!["formatVersion"]!.GetValue<int>());
         app.Main.EditProject(); setup = app.Main.Setup;
         setup.ReferenceInput.Text = "Drawing"; Assert.False(setup.CanApply);
         Assert.False(await setup.ConfirmAsync()); Assert.True(setup.CalculationTitleInput.HasError); Assert.False(setup.AuthorInput.HasError);

@@ -4,8 +4,8 @@
 
 Dateiendung: `.spandraft` (beim Speichern ohne Beachtung der Groß-/Kleinschreibung).
 Projektdateien sind lesbares, eingerücktes UTF-8-JSON mit `format = "SpanDraft.Project"`,
-`formatVersion`, optionalem `info`, `document` und `presentation`. **V4 ist das einzige
-aktuelle Schreibformat; V1–V3 bleiben historische Leseverträge.**
+`formatVersion`, optionalem `info`, `document` und `presentation`. **V5 ist das einzige
+aktuelle Schreibformat; V1–V4 bleiben historische Leseverträge.**
 DTOs und Codec-Tests definieren die technischen Felder und Typen; dieser Text
 beschreibt die dauerhaften fachlichen Regeln. Core- und Editorobjekte werden
 nicht direkt serialisiert. Es gibt weder CLR-Typnamen noch numerische Enumwerte.
@@ -91,7 +91,11 @@ Anzeigeeinstellungen sind davon unabhängig. Null ist für Positionen und Lasten
 
 IDs, Namen, Entity-Reihenfolge, Lasten, Lager und Naming-Zähler bleiben erhalten.
 Lager verwenden `fixed`, `pinned`, `roller`; Punktlasten `force`, `moment`.
-Konstante Streckenlasten werden durch ihr Array bezeichnet.
+Streckenlasten stehen in `distributedLoads` und speichern Anfangs- und Endposition
+sowie `startIntensity` und `endIntensity` (N/m, vorzeichenbehaftet, beide Pflicht).
+Die Intensität ändert sich zwischen den Enden linear. Gleiche Werte bezeichnen eine
+konstante Last; Null und Vorzeichenwechsel sind gültig. Das Projekt speichert weder
+Resultierende noch Schwerpunkt.
 Naming-Zähler sind positive Ganzzahlen und unabhängig von den Entity-Namen.
 
 Annotation-Offsets referenzieren Entities durch GUID und speichern relative
@@ -130,7 +134,7 @@ Inhaltsvergleich, Dirty-State, Undo/Redo und zur vollständigen Projekt-Recovery
 
 Diese optionalen Felder erweitern V3 kompatibel ohne Versionssprung. Historische
 V1-/V2-/V3-Dateien ohne Eigengewicht behalten ihre bisherigen Analyseergebnisse;
-der gemeinsame Dokumentreader für V2–V4 akzeptiert die optionalen Erweiterungen.
+der gemeinsame Dokumentreader für V2–V5 akzeptiert die optionalen Erweiterungen.
 
 ## Projektangaben
 
@@ -150,7 +154,7 @@ Ableitungen aus dem Dateinamen.
 
 Neue Projekte besitzen einen Berechnungstitel; ein Ersteller ist freiwillig.
 Bei migrierten Legacy-Projekten darf `info` fehlen oder null sein, auch nach
-erneutem Speichern als V4. Legacy-Bearbeitung mit vier leeren Angaben erhält null;
+erneutem Speichern als V5. Legacy-Bearbeitung mit vier leeren Angaben erhält null;
 sobald Angaben angelegt werden, wird ausschließlich der Berechnungstitel verlangt.
 Projektangaben gehören zu Inhaltsvergleich, Dirty-State, Undo/Redo und Recovery.
 Ihre Änderung allein löst keine Analysis aus.
@@ -159,6 +163,10 @@ Ihre Änderung allein löst keine Analysis aus.
 
 V1 und V2 werden mit fehlenden Projektangaben (`Info == null`) gelesen.
 V3 und V4 verwenden weiterhin die Dokument-/Presentation-Struktur aus V2.
+V5 ersetzt ausschließlich das Streckenlastfeld `intensity` durch `startIntensity`
+und `endIntensity`; beim Lesen von V1–V4 wird die einzelne Intensität zu beiden
+Enden. V5 ist eine reine Erweiterung des Dokumentformats, ältere Programmstände
+lehnen V5-Dateien als nicht unterstützt ab, auch wenn alle Lasten konstant sind.
 V1 wird beim Laden unmittelbar ins aktuelle In-Memory-Modell migriert:
 Rechteck, Rechteckrohr, Kreis und Rundrohr werden parametrische Definitionen;
 Rechteckrohre erhalten Außenradius 0. V1-`custom` wird Manual mit originalem
@@ -167,8 +175,8 @@ bleiben null. Ihre mechanischen Kennwerte und Berechnungsergebnisse bleiben erha
 
 Bloßes Öffnen verändert keine Benutzerdatei und macht das geöffnete Projekt
 nicht allein wegen der Migration dirty. Erst ein tatsächliches Speichern nach
-expliziter Klärung des Kennwerttyps schreibt V4; ursprünglicher Dateipfad und normales Save-/Save-As-Verhalten bleiben erhalten.
-Es gibt keinen V1-/V2-/V3-Writer. Noch verwendete Legacy-Sections werden beim V4-Schreiben
+expliziter Klärung des Kennwerttyps schreibt V5; ursprünglicher Dateipfad und normales Save-/Save-As-Verhalten bleiben erhalten.
+Es gibt keinen V1-/V2-/V3-/V4-Writer. Noch verwendete Legacy-Sections werden beim V5-Schreiben
 auf dieselben kanonischen Formen normalisiert; es gibt keinen Legacy-Wiretyp.
 
 `Load → Save → Load` erhält den fachlichen Inhalt. Der Inhaltsvergleich verwendet
@@ -197,7 +205,7 @@ Lagerung bleiben persistierbar; Analysis beschreibt ihre Berechenbarkeit.
 Recovery ist ein privater lokaler Slot, kein Autosave der Benutzerdatei.
 Das bestehende interne Envelope bleibt bei `recoveryVersion = 1`, optionalem
 Originalpfad und UTC-Zeitstempel. Sein eingebettetes Projekt verwendet genau
-denselben Codec: neue Recovery schreibt V4; historische V1-/V2-/V3-Projekte bleiben lesbar.
+denselben Codec: neue Recovery schreibt V5; historische V1-/V2-/V3-/V4-Projekte bleiben lesbar.
 Ausschließlich private Recovery darf ungeklärte Legacy-Materialien weiterhin
 verlustfrei sichern; dieselben Materialmappings erhalten den fehlenden Typ.
 Das gilt auch für Setup-Recovery. Reguläres Projektspeichern und neue

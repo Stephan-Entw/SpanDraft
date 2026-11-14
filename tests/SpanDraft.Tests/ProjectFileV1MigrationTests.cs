@@ -82,7 +82,7 @@ public sealed class ProjectFileV1MigrationTests
         Assert.True(BeamModelMechanicalComparer.AreEquivalent(doc.ToBeamModel(), again.Document.ToBeamModel()));
         SolverTestSupport.SameResults(solution, SolverTestSupport.Solve(again.Document.ToBeamModel()));
         var wire = JsonNode.Parse(current)!;
-        Assert.Equal(4, wire["formatVersion"]!.GetValue<int>());
+        Assert.Equal(5, wire["formatVersion"]!.GetValue<int>());
         Assert.Equal(kind == 4 ? "manual" : Types[kind], wire["document"]!["section"]!["type"]!.GetValue<string>());
         Assert.Null(wire["document"]!["material"]!["density"]);
         Assert.Null(wire["document"]!["material"]!["poissonRatio"]);
@@ -138,7 +138,7 @@ public sealed class ProjectFileV1MigrationTests
         Assert.True(await app.Main.Setup.ConfirmAsync());
         Assert.True(await app.Main.SaveAsync());
         Assert.Equal(path, app.Main.Session.FilePath);
-        Assert.Equal(4, JsonNode.Parse(app.Files.Data[path])!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(5, JsonNode.Parse(app.Files.Data[path])!["formatVersion"]!.GetValue<int>());
         Assert.True(ConfirmStrength(ProjectFileCodec.Deserialize(original)).ContentEquals(ProjectFileCodec.Deserialize(app.Files.Data[path])));
         Assert.False(app.Main.Session.IsDirty);
     }
@@ -149,7 +149,7 @@ public sealed class ProjectFileV1MigrationTests
     [InlineData(2)]
     [InlineData(3)]
     [InlineData(4)]
-    public async Task HistoricalRecoveryUsesTheGeneralReaderAndSubsequentRecoveryWritesV2(int kind)
+    public async Task HistoricalRecoveryUsesTheGeneralReaderAndSubsequentRecoveryWritesTheCurrentVersion(int kind)
     {
         var files = new Files(); var path = TestPath("historical-recovery.json");
         files.Data[path] = Encoding.UTF8.GetBytes(new JsonObject
@@ -166,7 +166,7 @@ public sealed class ProjectFileV1MigrationTests
         await recovery.FlushAsync(session.CurrentRevision.State, session.FilePath);
         var root = JsonNode.Parse(files.Data[path])!;
         Assert.Equal(1, root["recoveryVersion"]!.GetValue<int>());
-        Assert.Equal(4, root["project"]!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(5, root["project"]!["formatVersion"]!.GetValue<int>());
         Assert.True(snapshot.State.ContentEquals((await recovery.ReadAsync())!.State));
     }
 

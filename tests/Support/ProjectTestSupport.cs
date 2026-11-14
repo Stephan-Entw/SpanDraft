@@ -63,6 +63,26 @@ internal static class ProjectTestSupport
         return new(document, new([new(SupportId, new(12.345678901234567, -75)), new(LoadId, new(0, 0))]));
     }
 
+    /// <summary>
+    /// Rewrites a current project document into the shape of a historical format version: distributed loads
+    /// carry one intensity again. Only constant loads can be expressed that way.
+    /// </summary>
+    public static System.Text.Json.Nodes.JsonNode AsHistorical(System.Text.Json.Nodes.JsonNode root, int version)
+    {
+        root["formatVersion"] = version;
+        if (version >= ProjectFileCodec.Version) return root;
+        foreach (var load in root["document"]!["distributedLoads"]!.AsArray())
+        {
+            var entry = load!.AsObject();
+            double start = entry["startIntensity"]!.GetValue<double>(), end = entry["endIntensity"]!.GetValue<double>();
+            if (start != end) throw new InvalidOperationException("A historical format cannot hold a linear load.");
+            entry.Remove("startIntensity");
+            entry.Remove("endIntensity");
+            entry["intensity"] = start;
+        }
+        return root;
+    }
+
     public static void CompleteSetup(MainWindowViewModel main)
     {
         var setup = main.Setup;

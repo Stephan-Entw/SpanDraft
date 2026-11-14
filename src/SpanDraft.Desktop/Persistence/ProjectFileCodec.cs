@@ -15,7 +15,7 @@ public sealed class ProjectFormatException(string message, Exception? inner = nu
 public static class ProjectFileCodec
 {
     public const string Format = "SpanDraft.Project";
-    public const int Version = 4;
+    public const int Version = 5;
     internal static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -46,6 +46,7 @@ public static class ProjectFileCodec
                 2 => FromDto(root.Deserialize<ProjectFileV2>(JsonOptions)!),
                 3 => FromDto(root.Deserialize<ProjectFileV3>(JsonOptions)!),
                 4 => FromDto(root.Deserialize<ProjectFileV4>(JsonOptions)!),
+                5 => FromDto(root.Deserialize<ProjectFileV5>(JsonOptions)!),
                 _ => throw new ProjectFormatException("Unsupported project format version.")
             };
         }
@@ -57,12 +58,12 @@ public static class ProjectFileCodec
 
     public static ProjectState FromDto(ProjectFileV1 file) => FromDto(ProjectFileV1Reader.Migrate(file));
 
-    public static ProjectFileV4 ToDto(ProjectState state) => ToDto(state, allowLegacy: false);
+    public static ProjectFileV5 ToDto(ProjectState state) => ToDto(state, allowLegacy: false);
 
     internal static byte[] SerializeRecovery(ProjectState state) =>
         JsonSerializer.SerializeToUtf8Bytes(ToDto(state, allowLegacy: true), JsonOptions);
 
-    private static ProjectFileV4 ToDto(ProjectState state, bool allowLegacy)
+    private static ProjectFileV5 ToDto(ProjectState state, bool allowLegacy)
     {
         if (!allowLegacy && state.Document.Material.StrengthType is null)
             throw new ProjectFormatException("The material strength type must be confirmed before saving.");
@@ -89,10 +90,9 @@ public static class ProjectFileCodec
                     Type = l.Kind switch { PointLoadKind.Force => "force", PointLoadKind.Moment => "moment",
                         _ => throw new ProjectFormatException("Unknown point load type.") },
                     Position = l.Position.Meters, Value = l.Value }).ToArray(),
-                DistributedLoads = d.DistributedLoads.Select(l => new DistributedLoadV2 { Id = l.Id, Name = l.Name,
+                DistributedLoads = d.DistributedLoads.Select(l => new DistributedLoadV5 { Id = l.Id, Name = l.Name,
                     StartPosition = l.StartPosition.Meters, EndPosition = l.EndPosition.Meters,
-                    Intensity = l.IsConstant ? l.StartIntensity.NewtonsPerMeter
-                        : throw new ProjectFormatException("Linearly varying loads need project format version 5.") }).ToArray(),
+                    StartIntensity = l.StartIntensity.NewtonsPerMeter, EndIntensity = l.EndIntensity.NewtonsPerMeter }).ToArray(),
                 NamingState = new() { NextSupportOrdinal = n.NextSupportOrdinal, NextForceNumber = n.NextForceNumber,
                     NextMomentNumber = n.NextMomentNumber, NextDistributedLoadNumber = n.NextDistributedLoadNumber }
             },
@@ -201,7 +201,7 @@ public static class ProjectFileCodec
             Required(file, "project");
             if (file.Format != Format || file.FormatVersion != 2)
                 throw new ProjectFormatException("Invalid V2 project format or version.");
-            return MapValidated(file.Document, file.Presentation);
+            return MapValidated(ToV5(Required(file.Document, "document")), file.Presentation);
         }
         catch (Exception e) when (e is ArgumentException or OverflowException)
         { throw new ProjectFormatException("Invalid project data: " + e.Message, e); }
@@ -216,7 +216,7 @@ public static class ProjectFileCodec
             throw new ProjectFormatException("A non-empty V3 author is required.");
         return FromDto(new ProjectFileV4
         {
-            Format = file.Format, FormatVersion = Version,
+            Format = file.Format, FormatVersion = 4,
             Document = file.Document, Presentation = file.Presentation,
             Info = file.Info is { } i ? new() { CalculationTitle = i.CalculationTitle,
                 ProjectTitle = i.ProjectTitle, Reference = i.Reference, Author = i.Author } : null
@@ -228,8 +228,22 @@ public static class ProjectFileCodec
         try
         {
             Required(file, "project");
-            if (file.Format != Format || file.FormatVersion != Version)
+            if (file.Format != Format || file.FormatVersion != 4)
                 throw new ProjectFormatException("Invalid V4 project format or version.");
+            var info = file.Info is { } i ? new ProjectInfo(i.CalculationTitle, i.ProjectTitle, i.Reference, i.Author) : null;
+            return MapValidated(ToV5(Required(file.Document, "document")), file.Presentation) with { Info = info };
+        }
+        catch (Exception e) when (e is ArgumentException or OverflowException)
+        { throw new ProjectFormatException("Invalid project data: " + e.Message, e); }
+    }
+
+    public static ProjectState FromDto(ProjectFileV5 file)
+    {
+        try
+        {
+            Required(file, "project");
+            if (file.Format != Format || file.FormatVersion != Version)
+                throw new ProjectFormatException("Invalid V5 project format or version.");
             var info = file.Info is { } i ? new ProjectInfo(i.CalculationTitle, i.ProjectTitle, i.Reference, i.Author) : null;
             return MapValidated(file.Document, file.Presentation) with { Info = info };
         }
@@ -237,7 +251,21 @@ public static class ProjectFileCodec
         { throw new ProjectFormatException("Invalid project data: " + e.Message, e); }
     }
 
-    private static ProjectState MapValidated(DocumentV2 documentDto, PresentationV2 presentationDto)
+    /// <summary>Historical distributed loads had one intensity, which is both end intensities of a constant load.</summary>
+    private static DocumentV5 ToV5(DocumentV2 d) => new()
+    {
+        Length = d.Length, BendingAxis = d.BendingAxis, SectionDisplayName = d.SectionDisplayName,
+        Material = d.Material, Section = d.Section, Supports = d.Supports, PointLoads = d.PointLoads,
+        DistributedLoads = Required(d.DistributedLoads, "distributedLoads").Select(entry =>
+        {
+            var x = Required(entry, "distributedLoad");
+            return new DistributedLoadV5 { Id = x.Id, Name = x.Name, StartPosition = x.StartPosition,
+                EndPosition = x.EndPosition, StartIntensity = x.Intensity, EndIntensity = x.Intensity };
+        }).ToArray(),
+        NamingState = d.NamingState, SelfWeight = d.SelfWeight
+    };
+
+    private static ProjectState MapValidated(DocumentV5 documentDto, PresentationV2 presentationDto)
     {
         var d = Required(documentDto, "document");
         var m = Required(d.Material, "material");
@@ -273,7 +301,8 @@ public static class ProjectFileCodec
             {
                 var x = Required(entry, "distributedLoad");
                 return new EditorDistributedLoad(EntityId(x.Id), L(x.StartPosition, "startPosition"),
-                    L(x.EndPosition, "endPosition"), ForcePerLength.FromNewtonsPerMeter(Number(x.Intensity, "intensity")), Name(x.Name));
+                    L(x.EndPosition, "endPosition"), ForcePerLength.FromNewtonsPerMeter(Number(x.StartIntensity, "startIntensity")),
+                    ForcePerLength.FromNewtonsPerMeter(Number(x.EndIntensity, "endIntensity")), Name(x.Name));
             }), d.SectionDisplayName,
             d.SelfWeight is { } weight ? new EditorSelfWeight(EntityId(weight.Id), weight.Enabled) : null);
         var errors = BeamModelValidator.Validate(document.ToBeamModel()).Where(e => e.Code != ValidationErrorCode.MissingSupports).ToArray();

@@ -82,7 +82,7 @@ public sealed class MaterialNoteTests
         var projectBytes = ProjectFileCodec.Serialize(state);
         Assert.True(state.ContentEquals(ProjectFileCodec.Deserialize(projectBytes)));
         Assert.Equal(projectBytes, ProjectFileCodec.Serialize(ProjectFileCodec.Deserialize(projectBytes)));
-        Assert.Equal(4, JsonNode.Parse(projectBytes)!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(5, JsonNode.Parse(projectBytes)!["formatVersion"]!.GetValue<int>());
         Assert.Equal(1, JsonNode.Parse(libraryBytes)!["formatVersion"]!.GetValue<int>());
         if (!translated) Assert.DoesNotContain("translations", Encoding.UTF8.GetString(projectBytes));
 

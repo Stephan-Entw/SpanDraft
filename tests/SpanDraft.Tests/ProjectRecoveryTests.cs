@@ -338,13 +338,13 @@ public sealed class ProjectRecoveryTests
     }
 
     [Fact]
-    public async Task AuthorlessProjectRecoveryWritesVersionFourAndPreservesEveryValueWithoutLearningAnAuthor()
+    public async Task AuthorlessProjectRecoveryWritesVersionFiveAndPreservesEveryValueWithoutLearningAnAuthor()
     {
         var state = State() with { Info = new("Beam", "Project", "Drawing", null) };
         var bytes = ProjectRecovery.Encode(new(state, TestPath("original.spandraft"), Now));
         var json = JsonNode.Parse(bytes)!;
         Assert.Equal(1, json["recoveryVersion"]!.GetValue<int>());
-        Assert.Equal(4, json["project"]!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(5, json["project"]!["formatVersion"]!.GetValue<int>());
         Assert.False(json["project"]!["info"]!.AsObject().ContainsKey("author"));
         var files = new Files(); files.Data[App.Slot] = bytes;
         var recovery = new ProjectRecovery(files, App.Slot);

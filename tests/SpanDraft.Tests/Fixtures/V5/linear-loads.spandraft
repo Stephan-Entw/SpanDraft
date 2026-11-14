@@ -1,0 +1,65 @@
+{
+  "format": "SpanDraft.Project",
+  "formatVersion": 5,
+  "info": {
+    "calculationTitle": "Simply supported beam with linear loads",
+    "author": "A. Author"
+  },
+  "document": {
+    "length": 2,
+    "bendingAxis": "y",
+    "material": {
+      "name": "Test steel",
+      "youngsModulus": 210000000000,
+      "yieldStrength": 235000000,
+      "strengthType": "re"
+    },
+    "section": {
+      "type": "rectangle",
+      "width": 0.04,
+      "height": 0.08
+    },
+    "supports": [
+      {
+        "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "name": "A",
+        "type": "pinned",
+        "position": 0
+      },
+      {
+        "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+        "name": "B",
+        "type": "roller",
+        "position": 2
+      }
+    ],
+    "pointLoads": [],
+    "distributedLoads": [
+      {
+        "id": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+        "name": "q1",
+        "startPosition": 0,
+        "endPosition": 2,
+        "startIntensity": -1000,
+        "endIntensity": 1000
+      },
+      {
+        "id": "99999999-9999-9999-9999-999999999999",
+        "name": "q2",
+        "startPosition": 0.5,
+        "endPosition": 1.5,
+        "startIntensity": 0,
+        "endIntensity": -400
+      }
+    ],
+    "namingState": {
+      "nextSupportOrdinal": 3,
+      "nextForceNumber": 1,
+      "nextMomentNumber": 1,
+      "nextDistributedLoadNumber": 3
+    }
+  },
+  "presentation": {
+    "annotationOffsets": []
+  }
+}

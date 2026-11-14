@@ -11,14 +11,14 @@ public sealed class ProjectSelfWeightTests
 {
     [Theory]
     [InlineData(true, true)] [InlineData(true, false)] [InlineData(false, true)] [InlineData(false, false)]
-    public void V4RoundTripRetainsWeightIdentityVisibilityAndAnnotation(bool enabled, bool visible)
+    public void V5RoundTripRetainsWeightIdentityVisibilityAndAnnotation(bool enabled, bool visible)
     {
         var d = SelfWeightTestProjects.Document(true);
         d = d with { SelfWeight = d.SelfWeight! with { Enabled = enabled } };
         var state = new ProjectState(d, new([new(d.SelfWeight!.Id, new(31.25, -17.75))], visible));
         var bytes = ProjectFileCodec.Serialize(state);
         var json = JsonNode.Parse(bytes)!;
-        Assert.Equal(4, json["formatVersion"]!.GetValue<int>());
+        Assert.Equal(5, json["formatVersion"]!.GetValue<int>());
         var weight = json["document"]!["selfWeight"]!.AsObject();
         Assert.Equal(new[] { "id", "enabled" }, weight.Select(e => e.Key));
         Assert.Equal(enabled, weight["enabled"]!.GetValue<bool>());
@@ -38,7 +38,7 @@ public sealed class ProjectSelfWeightTests
     {
         var state = new ProjectState(SelfWeightTestProjects.Document(), new());
         var json = JsonNode.Parse(ProjectFileCodec.Serialize(state))!.AsObject();
-        json["formatVersion"] = version;
+        AsHistorical(json, version);
         json["document"]!.AsObject().Remove("selfWeight");
         json["presentation"]!.AsObject().Remove("selfWeightVisible");
         var loaded = ProjectFileCodec.Deserialize(JsonSerializer.SerializeToUtf8Bytes(json));
@@ -93,7 +93,7 @@ public sealed class ProjectSelfWeightTests
         app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         var recovered = Assert.IsType<RecoverySnapshot>(await app.Recovery.ReadAsync());
         Assert.True(state.ContentEquals(recovered.State));
-        Assert.Equal(4, JsonNode.Parse(app.Files.Data[ProjectTestSupport.App.Slot])!["project"]!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(5, JsonNode.Parse(app.Files.Data[ProjectTestSupport.App.Slot])!["project"]!["formatVersion"]!.GetValue<int>());
         Assert.True(ProjectSession.Restore(recovered.State, recovered.OriginalFilePath).IsDirty);
     }
 }
