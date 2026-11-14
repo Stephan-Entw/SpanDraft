@@ -48,6 +48,25 @@ public sealed class SolverSpringInvariantTests
     }
 
     [Fact]
+    public void LoadsAndLoadStationsLeaveTheRotationalSpringMatrixBitIdentical()
+    {
+        ElasticRestraint[] elastic = [new(1, 0, 3e4, true), new(Math.BitIncrement(1), 6e3, 9e2, false)];
+        RigidRestraint[] rigid = [new(0, U | W)];
+        BendingSystem baseline = SolverKernel.BuildSystem(Model(restraints: rigid, elastic: elastic));
+        foreach (MechanicalInput input in new[]
+        {
+            Model(restraints: rigid, elastic: elastic, forces: [new(0.75, -3)]),
+            Model(restraints: rigid, elastic: elastic, moments: [new(1, 11)], lines: [new(0.25, 1.75, -7)]),
+            Model(restraints: rigid, elastic: elastic, forces: [new(1, 13)], moments: [new(Math.BitIncrement(1), -17)])
+        })
+        {
+            BendingSystem loaded = SolverKernel.BuildSystem(input);
+            AssertBits(baseline.A, loaded.A);
+            Assert.Equal(baseline.K, loaded.K);
+        }
+    }
+
+    [Fact]
     public void ZeroLoadsOnASpringBeamGiveTheExactNullPathWithZeroReactions()
     {
         BeamSolution solution = Solve(Beam([Spring(0, 1e5), Spring(L, 3e5)], [Point(1, 0)]));

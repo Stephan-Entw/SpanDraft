@@ -20,10 +20,12 @@ public sealed class SolverSpringAcceptanceTests
     public static TheoryData<string> Configurations => new()
     {
         "stiff-between-rigid", "stiff-next-to-rigid", "soft-between-rigid", "pair", "side-support", "springs-only",
-        "three", "eight", "force-on-spring"
+        "three", "eight", "force-on-spring",
+        "rotational-next-to-fixed", "combined-between-rigid", "partial-restraint", "rotational-pair", "rotational-eight",
+        "mixed-cluster"
     };
 
-    private static MechanicalInput Build(string name, double g, double k)
+    private static MechanicalInput Build(string name, double g, double k, double kt)
     {
         const double m = L / 2;
         TransversePointForce[] forces = [new(.3 * L, -1e4), new(.8 * L, -1e4)];
@@ -47,6 +49,17 @@ public sealed class SolverSpringAcceptanceTests
                 [.. Enumerable.Range(0, 8).Select(i => new ElasticRestraint(m + i * g, k, 0, false))]),
             "force-on-spring" => Case([new(0, U | W), new(L, W)], [new(m, k, 0, false), new(m + g, k, 0, false)],
                 [new(m, -2e4), new(.3 * L, -1e4)], [new(m + g, 900)]),
+            // Rotational stiffness kθ L/EI follows the same ladder as k L³/EI.
+            "rotational-next-to-fixed" => Case([new(0, U | W), new(L, U | W | Theta)], [new(L - g, 0, kt, false)],
+                moments: [new(L - 0.1, 5e4)]),
+            "combined-between-rigid" => Case([new(0, U | W | Theta), new(m, W), new(m + 2 * g, W), new(L, U | W | Theta)],
+                [new(m + g, k, kt, false)], moments: [new(m - 0.1, 5e4)]),
+            "partial-restraint" => Case([new(g, W), new(L, W)], [new(0, 0, kt, true)]),
+            "rotational-pair" => Case([new(0, U | W), new(L, W)], [new(m, 0, kt, false), new(m + g, 0, kt, false)]),
+            "rotational-eight" => Case([new(0, U | W), new(L, W)],
+                [.. Enumerable.Range(0, 8).Select(i => new ElasticRestraint(m + i * g, k, kt, false))]),
+            "mixed-cluster" => Case([new(0, U | W), new(m, W), new(m + 2 * g, W), new(L, W)],
+                [new(m + g, k, 0, false), new(m + 3 * g, 0, kt, true)]),
             _ => throw new ArgumentOutOfRangeException(nameof(name))
         };
     }
@@ -59,11 +72,11 @@ public sealed class SolverSpringAcceptanceTests
         foreach (double ratio in new[] { 1e-1, 1e-3, 1e-5, 1e-7, 1e-9, 1e-11 })
             foreach (int exponent in new[] { -3, 0, 3, 6, 9, 12, 15 })
             {
-                double g = ratio * L, k = Math.Pow(10, exponent) * EI / (L * L * L);
-                // The eight-spring cluster does not fit into the beam at the coarsest distance.
-                if (name == "eight" && L / 2 + 7 * g > L)
+                double g = ratio * L, k = Math.Pow(10, exponent) * EI / (L * L * L), kt = Math.Pow(10, exponent) * EI / L;
+                // The eight-spring clusters do not fit into the beam at the coarsest distance.
+                if (name is "eight" or "rotational-eight" && L / 2 + 7 * g > L)
                     continue;
-                MechanicalInput input = Build(name, g, k);
+                MechanicalInput input = Build(name, g, k, kt);
                 try
                 {
                     SolverBendingOutputTests.CheckExactOutputs(FromCompatibility(input));
@@ -74,7 +87,7 @@ public sealed class SolverSpringAcceptanceTests
                 }
                 checkedModels++;
             }
-        Assert.Equal(name == "eight" ? 35 : 42, checkedModels);
+        Assert.Equal(name is "eight" or "rotational-eight" ? 35 : 42, checkedModels);
     }
 
     [Fact]

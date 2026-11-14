@@ -69,6 +69,29 @@ public sealed class SolverSpringFailureTests
     }
 
     [Fact]
+    public void ARotationalStiffnessWhoseScaledCoefficientIsNotNormalIsANumericalRangeFailure()
+    {
+        // k_theta 2^(e_L - e_EI) underflows for a stiff beam and overflows for a beam of tiny bending stiffness.
+        BeamModel Tiny(double kTheta) => Beam([SupportAt(0, SupportType.Pinned), SolverRotationalSpringTests.Rotational(L, kTheta)],
+            [Point(1, -1e-290)], material: new Material("Soft", Pressure.FromPascals(1e-150), Pressure.FromPascals(1),
+                MaterialStrengthType.Re), section: new CustomSection(Area.FromSquareMeters(1),
+                SecondMomentOfArea.FromMetersToTheFourth(1e-150), SectionModulus.FromCubicMeters(1)));
+        foreach (BeamModel beam in new[]
+        {
+            Beam([SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller),
+                SolverRotationalSpringTests.Rotational(1, 1e-304)], [Point(1.5, -1000)]),
+            Tiny(1e100),
+            // A subnormal input is outside the range contract even where its scaled value would be normal.
+            Tiny(double.Epsilon)
+        })
+        {
+            BeamSolverException exception = Reject(beam);
+            Assert.Equal(SolverErrorCode.NumericalFailure, exception.Code);
+            Assert.IsType<NumericalRangeException>(exception.InnerException);
+        }
+    }
+
+    [Fact]
     public void AnUnstableSpringModelWinsOverTheRangeRulesOfItsStiffness()
     {
         // The mechanism check reads neither the stiffness nor the loads.
