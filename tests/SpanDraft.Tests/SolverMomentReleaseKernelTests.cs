@@ -210,4 +210,22 @@ public sealed class SolverMomentReleaseKernelTests
         tampered.EvaluateNormalized(5, FieldSide.Interior);
         tampered.EvaluateNormalized(6, FieldSide.Right);
     }
+
+    [Fact]
+    public void TheMomentLeftOfAReleaseIsTheExactZeroEvenWhenTheComputedValueIsNotZero()
+    {
+        BendingResult result = SolverKernel.Solve(Case("gerber"));
+        BendingFields fields = result.Fields;
+        int roller = Array.FindIndex(fields.Stations.ToArray(), s => s.Position == 4);
+        int index = 4 * roller + 2;
+        NormalizedBendingField computed = fields.EvaluateNormalized(6, FieldSide.Left);
+        // Shift the moment state of the left piece by half the bound: the computed left moment is then clearly not zero,
+        // but still inside its bound around the exact zero, which is what the output must be.
+        BendingFields shifted = fields with { State = fields.State.SetItem(index, fields.State[index] + computed.Bounds[2] / 2) };
+        NormalizedBendingField output = shifted.EvaluateNormalized(6, FieldSide.Left);
+        Assert.Equal(0d, output.Values[2]);
+        Assert.True(output.Bounds[2] > 0);
+        // The shift reaches the moment only through the transfer; without the exact zero the value would show it.
+        Assert.NotEqual(0d, shifted.EvaluateNormalized(5, FieldSide.Interior).Values[2]);
+    }
 }

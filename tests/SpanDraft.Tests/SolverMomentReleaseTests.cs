@@ -105,6 +105,15 @@ public sealed class SolverMomentReleaseTests
     }
 
     [Fact]
+    public void AReleaseOnTheOnlyPinnedSupportStillHoldsTheBeamAxially()
+    {
+        BeamSolution solution = Run(4, [Roller(0), Pin(2), Roller(4)], [Point(1, -1000), Point(3, -2000)], 2);
+        ForceClose(0, At(solution, 2).ReactionX);
+        ForceClose(1000 * 0.5 + 2000 * 0.5, At(solution, 2).ReactionY);
+        Assert.NotNull(At(solution, 2).RotationLeftRadians);
+    }
+
+    [Fact]
     public void ADropInSpanBetweenTwoClampsIsStaticallyDeterminate()
     {
         BeamSolution solution = Run(2, [Clamp(0), Clamp(2)], [Point(1, -1000)], .5, 1.5);

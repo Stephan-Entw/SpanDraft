@@ -332,4 +332,38 @@ public sealed class DesktopMomentReleaseEditTests
         editor.Undo();
         Assert.Single(editor.Document.MomentReleases);
     }
+
+    [Fact]
+    public void EditingOnlyTheNameOrDraggingBackOntoTheOwnPositionIsNotAConflictWithItself()
+    {
+        var id = Guid.NewGuid();
+        var editor = Editor(releases: new EditorMomentRelease(id, Mm(1000), "G1"));
+        Assert.True(editor.EditMomentRelease(id));
+        editor.MomentReleaseDraft!.NameText = "Hinge A";
+        Assert.True(editor.MomentReleaseDraft.IsValid);
+        Assert.True(editor.ConfirmMomentRelease());
+        Assert.Equal((Mm(1000), "Hinge A"), (editor.Document.MomentReleases[0].Position, editor.Document.MomentReleases[0].Name));
+        Assert.Equal(MomentReleaseConflict.None, MomentReleaseRules.Conflict(editor.Document, Mm(1000), id));
+        Assert.Equal(MomentReleaseConflict.Duplicate, MomentReleaseRules.Conflict(editor.Document, Mm(1000)));
+        Assert.True(editor.BeginMomentReleaseDrag(id));
+        editor.UpdateMomentReleaseDrag(Mm(1000));
+        Assert.False(editor.MomentReleasePreview!.IsInvalid);
+        Assert.True(editor.EndMomentReleaseDrag());
+    }
+
+    [Fact]
+    public void APointForceOrALoadOtherThanAMomentNeverBlocksAReleaseAtItsPosition()
+    {
+        var editor = Editor(loads: [EditorPointLoad.Create(Guid.NewGuid(), Mm(1000), PointLoadKind.Force, -1000, "F1"),
+            EditorPointLoad.Create(Guid.NewGuid(), Mm(1500), PointLoadKind.Moment, 10, "M1")]);
+        Assert.Equal(MomentReleaseConflict.None, MomentReleaseRules.Conflict(editor.Document, Mm(1000)));
+        Assert.Equal(MomentReleaseConflict.PointMoment, MomentReleaseRules.Conflict(editor.Document, Mm(1500)));
+        var draft = Place(editor, 1000);
+        Assert.True(draft.IsValid);
+        Assert.True(editor.ConfirmMomentRelease());
+        Assert.Equal(Mm(1000), Assert.Single(editor.Document.MomentReleases).Position);
+        Assert.True(editor.Presentation.IsSuccess);
+        var node = editor.Presentation.Result!.Solution.Nodes.Single(n => n.Position == Mm(1000));
+        Assert.NotNull(node.RotationLeftRadians);
+    }
 }

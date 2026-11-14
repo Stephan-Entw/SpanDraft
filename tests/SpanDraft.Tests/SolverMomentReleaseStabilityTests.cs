@@ -77,6 +77,16 @@ public sealed class SolverMomentReleaseStabilityTests
     }
 
     [Fact]
+    public void AReleaseOnTheOnlyAxialSupportKeepsTheAxialModeBound()
+    {
+        // The axial force passes through a release, so the pinned support at the release still holds both bodies axially.
+        MechanicalStability stability = Check(Input([new(0, W), new(2, U | W), new(4, W)], [2]));
+        Assert.Equal(new MechanicalStability(4, true, 4), stability);
+        Assert.True(stability.IsStable);
+        SolverKernel.BuildSystem(Input([new(0, W), new(2, U | W), new(4, W)], [2]));
+    }
+
+    [Fact]
     public void NoReleaseKeepsTheTwoRigidBodyModesOfASingleBody()
     {
         Assert.Equal(new MechanicalStability(2, true, 2), Check(Input([new(0, U | W), new(4, W)], [])));
