@@ -1073,3 +1073,20 @@ lässt sich durch eine Spaltenvorzeichen-Umkehr der Teilkörper aufnehmen, der R
 | P6 | format: a release id is not registered as an entity | killed (8 Tests) |
 | O1 | overview: the left rotation shows the right one | killed (1 Tests) |
 | O2 | overview: the shear cell shows the left value only | killed (1 Tests) |
+
+**Abnahme der inneren Gelenke.** Nach dem letzten Core-/Solver-Commit erzeugte ein frischer
+`compare` ohne `--actual` den Report
+[`acceptance-moment-releases.json`](../validation/results/acceptance-moment-releases.json)
+(2026-11-14T21:26:00Z, macOS ARM64, `entryPoint` `EulerBernoulliBeamSolver`): 40 Fälle,
+5088 externe und 3137 analytische Skalarvergleiche, 228 metamorphe Prüfungen,
+`validated = true`. Die Product-Suite (5843 Tests, einer übersprungen) und die separate
+Validierungs-Suite (433 Tests) bestanden vollständig. Die Abnahme auf Windows steht für die CI aus.
+
+**SolverSourceSha256:**
+
+```text
+c22a5e106b68b71d71cabd3078de4230d09b67a587220d72df43526b688df33c
+```
+
+Dieser Hash ist die neue CI-Baseline in [ci.yml](../.github/workflows/ci.yml). Die Reports der
+Mehrsegment-, Federlager-, Linearlast- und M4-Abnahme bleiben als historische Evidenz unverändert.
