@@ -291,4 +291,25 @@ public sealed class ResultDiagramControlTests : DesktopResultDiagramControlTestS
         Assert.Equal(1, restored.Analyses);
         Assert.All(Diagrams(view), d => { Assert.NotNull(d.Projection); Assert.Same(restored.Main.Editor!.Presentation, d.Presentation); });
     }
+
+    [Fact]
+    public void DiagramsMarkEverySegmentBoundaryAtItsStationPosition()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var document = Document();
+        var first = document.Segments[0];
+        document = new EditorDocument(document.Length, [Length.FromMeters(document.Length.Meters / 2)],
+            [first, first], document.Supports, document.Loads, document.NamingState,
+            document.DistributedLoads, document.SelfWeight);
+        var editor = new EditorViewModel(document, () => { });
+        var view = new EditorView { DataContext = editor };
+        var window = new Window { Content = view };
+        Arrange(window, 1250, 1300);
+
+        var diagrams = Diagrams(view);
+        Assert.NotEmpty(diagrams);
+        var surface = view.FindControl<BeamEditorSurface>("BeamSurface")!;
+        double expected = surface.StationLayout!.Transform.PhysicalToScreen(document.Length.Meters / 2);
+        Assert.All(diagrams, d => Assert.Equal([expected], d.SegmentBoundaryXs));
+    }
 }

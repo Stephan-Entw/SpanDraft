@@ -64,6 +64,10 @@ public sealed class BeamCanvas : Control
             DistributedLoadSymbol.DrawFills(context, scene.DistributedLoads, BeamBrush);
             var length = BeamConflictGeometry.Create(frame.Layout.Transform, ConstraintConflict);
             context.DrawLine(new Pen(BeamBrush, SchematicMetrics.BeamStrokeWidth), new(frame.Layout.Stations[0].ScreenX, y), new(length.EndX, y));
+            // A segment boundary is a thin cross line over the beam; it is no support and carries no label.
+            foreach (double boundaryX in scene.SegmentBoundaryXs)
+                context.DrawLine(new Pen(BeamBrush, 1), new(boundaryX, y - SchematicMetrics.SegmentBoundaryHalfHeight),
+                    new(boundaryX, y + SchematicMetrics.SegmentBoundaryHalfHeight));
             if (length.HasGhost)
             {
                 using (context.PushOpacity(0.5))

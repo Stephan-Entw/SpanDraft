@@ -17,6 +17,9 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
     IReadOnlyList<EntityAnnotation> Annotations, double MinimumPaneHeight)
 {
     public IReadOnlyList<DistributedLoadVisual> DistributedLoads { get; init; } = [];
+
+    /// <summary>The screen x of every segment boundary; empty for a beam of one segment.</summary>
+    public IReadOnlyList<double> SegmentBoundaryXs { get; init; } = [];
     public double RequiredBelowBeamSpace { get; init; } = SchematicMetrics.BelowBeamSpace;
 
     public static BeamRenderState Create(EditorDocument document, BeamLayoutFrame frame, Func<string, Size> measure,
@@ -102,7 +105,10 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         double visibleHeight = Math.Min(double.MaxValue, above + below);
         return new(frame, supports.AsReadOnly(), loads, PointLoadSymbol.Group(loads), annotations.AsReadOnly(),
             Math.Max(visibleHeight, minimumPaneHeight))
-            { DistributedLoads = distributed.AsReadOnly(), RequiredBelowBeamSpace = below };
+            {
+                DistributedLoads = distributed.AsReadOnly(), RequiredBelowBeamSpace = below,
+                SegmentBoundaryXs = document.SegmentBoundaries.Select(b => frame.Layout.Transform.PhysicalToScreen(b.Meters)).ToArray()
+            };
 
         void AvoidManual(bool support)
         {

@@ -30,6 +30,10 @@ public sealed class ResultDiagram : Control
     public ResultDiagramKind Kind { get => GetValue(KindProperty); set => SetValue(KindProperty, value); }
     public double MarkerFontSize { get => GetValue(MarkerFontSizeProperty); set => SetValue(MarkerFontSizeProperty, value); }
     public ResultDiagramProjection? Projection { get; private set; }
+
+    /// <summary>The screen x of every segment boundary of the analysed beam; empty for one segment.</summary>
+    public IReadOnlyList<double> SegmentBoundaryXs => Projection is { } projection && Presentation?.Result is { } result
+        ? result.Solution.Beam.Segments.Skip(1).Select(s => projection.StationLayout.Transform.PhysicalToScreen(s.Start.Meters)).ToArray() : [];
     public IReadOnlyList<ResultDiagramMarkerLabel> MarkerLabels { get; private set; } = [];
     internal IReadOnlyList<ResultDiagramRegion> Regions { get; private set; } = [];
     private double SecondarySize => AppTypography.Size("SecondarySize");
@@ -205,6 +209,10 @@ public sealed class ResultDiagram : Control
             foreach (var region in Regions)
                 foreach (var line in ResultDiagramRegions.Hatch(region, projection.Scale.ZeroY))
                     context.DrawLine(hatchPen, line.Start, line.End);
+            // Dashed helper lines mark where the section changes; the curves themselves have no corner there.
+            var boundaryPen = new Pen(Brush("Border"), 1, dashStyle: DashStyle.Dash);
+            foreach (double boundaryX in SegmentBoundaryXs)
+                context.DrawLine(boundaryPen, new(boundaryX, 36), new(boundaryX, Bounds.Height - 12));
             var gridPen = new Pen(Brush("Border"), 1);
             foreach (var tick in projection.Ticks.Where(t => t.Index != 0))
                 context.DrawLine(gridPen, new(left, tick.ScreenY), new(right, tick.ScreenY));

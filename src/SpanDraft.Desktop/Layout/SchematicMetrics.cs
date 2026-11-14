@@ -4,6 +4,8 @@ namespace SpanDraft.Desktop.Layout;
 public static class SchematicMetrics
 {
     public const double BeamStrokeWidth = 3;
+    /// <summary>Half the height of the thin cross line that marks a segment boundary on the beam.</summary>
+    public const double SegmentBoundaryHalfHeight = 9;
     public const double SymbolStrokeWidth = 1.5;
     public const double ForceArrowHalfWidth = 4;
     public const double ArrowHeadLength = 8;
