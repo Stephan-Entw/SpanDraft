@@ -26,11 +26,12 @@ internal sealed record BendingPreparation(int EL, int EEI, int EF, ImmutableArra
             CheckInput(moment.Position);
             CheckInput(moment.NewtonMeters);
         }
-        foreach (ConstantLineLoad load in input.LineLoads)
+        foreach (TransverseLineLoad load in input.LineLoads)
         {
             CheckInput(load.Start);
             CheckInput(load.End);
-            CheckInput(load.NewtonsPerMeter);
+            CheckInput(load.StartNewtonsPerMeter);
+            CheckInput(load.EndNewtonsPerMeter);
         }
 
         int eL = PowerOfTwoExponent(input.Length);
@@ -61,9 +62,12 @@ internal sealed record BendingPreparation(int EL, int EEI, int EF, ImmutableArra
             CheckScaled(force.Newtons, preparation.ForceExponent);
         foreach (AppliedPointMoment moment in input.PointMoments)
             CheckScaled(moment.NewtonMeters, preparation.MomentExponent);
-        foreach (ConstantLineLoad load in input.LineLoads)
-            CheckScaled(load.NewtonsPerMeter, preparation.LineLoadExponent);
-        foreach (ConstantLineLoad load in input.LineLoads)
+        foreach (TransverseLineLoad load in input.LineLoads)
+        {
+            CheckScaled(load.StartNewtonsPerMeter, preparation.LineLoadExponent);
+            CheckScaled(load.EndNewtonsPerMeter, preparation.LineLoadExponent);
+        }
+        foreach (TransverseLineLoad load in input.LineLoads)
         {
             double distance = ScaleByPowerOfTwo(load.End - load.Start, -eL);
             if (distance < ScaleByPowerOfTwo(1, -969))

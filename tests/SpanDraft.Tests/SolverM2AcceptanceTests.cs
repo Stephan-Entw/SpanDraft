@@ -117,7 +117,7 @@ public sealed class SolverM2AcceptanceTests
             input.Restraints.Select(r => r with { Position = Math.ScaleB(r.Position, 20) }),
             input.PointForces.Select(p => new TransversePointForce(Math.ScaleB(p.Position, 20), Math.ScaleB(p.Newtons, 5))),
             input.PointMoments.Select(p => new AppliedPointMoment(Math.ScaleB(p.Position, 20), Math.ScaleB(p.NewtonMeters, 25))),
-            input.LineLoads.Select(q => new ConstantLineLoad(Math.ScaleB(q.Start, 20), Math.ScaleB(q.End, 20), Math.ScaleB(q.NewtonsPerMeter, -15))));
+            input.LineLoads.Select(q => new TransverseLineLoad(Math.ScaleB(q.Start, 20), Math.ScaleB(q.End, 20), Math.ScaleB(q.StartNewtonsPerMeter, -15), Math.ScaleB(q.EndNewtonsPerMeter, -15))));
         var a = SolverKernel.Solve(input);
         var b = SolverKernel.Solve(changed);
         Assert.Equal(a.Quality.MaxRatios, b.Quality.MaxRatios);

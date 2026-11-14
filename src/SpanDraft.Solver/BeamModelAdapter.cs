@@ -11,7 +11,7 @@ internal static class BeamModelAdapter
     {
         var pointForces = new List<TransversePointForce>();
         var pointMoments = new List<AppliedPointMoment>();
-        var lineLoads = new List<ConstantLineLoad>();
+        var lineLoads = new List<TransverseLineLoad>();
 
         foreach (BeamLoad load in beam.Loads)
         {
@@ -24,11 +24,11 @@ internal static class BeamModelAdapter
                     pointMoments.Add(new(moment.Position.Meters, moment.Moment.NewtonMeters));
                     break;
                 case DistributedLoad distributed:
-                    // Linearly varying intensities arrive with the kernel generalization.
+                    // Linearly varying intensities arrive with the kernel integration.
                     if (!distributed.IsConstant)
                         throw new NotSupportedException("Linearly varying distributed loads are not yet supported.");
                     lineLoads.Add(new(distributed.StartPosition.Meters, distributed.EndPosition.Meters,
-                        distributed.StartIntensity.NewtonsPerMeter));
+                        distributed.StartIntensity.NewtonsPerMeter, distributed.EndIntensity.NewtonsPerMeter));
                     break;
                 default:
                     throw new NotSupportedException($"Unsupported beam load {load.GetType().Name}.");

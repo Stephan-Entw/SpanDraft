@@ -7,7 +7,7 @@ namespace SpanDraft.Tests;
 internal static class SolverBendingTestSupport
 {
     internal static MechanicalInput Model(double length = 2, double ei = 1, RigidRestraint[]? restraints = null,
-        TransversePointForce[]? forces = null, AppliedPointMoment[]? moments = null, ConstantLineLoad[]? lines = null) =>
+        TransversePointForce[]? forces = null, AppliedPointMoment[]? moments = null, TransverseLineLoad[]? lines = null) =>
         new(length, ei, restraints ?? [new(0, RestrainedDirections.U | RestrainedDirections.W | RestrainedDirections.Theta)],
             forces ?? [], moments ?? [], lines ?? []);
 
@@ -216,14 +216,14 @@ public sealed class SolverBendingNumericsTests
                     result -= From(moment.NewtonMeters) * PowerOfTwo(preparation.MomentExponent) *
                         SolverBendingTestSupport.Pow((From(x) - From(moment.Position)) * scale, p - 2) /
                         Integer(SolverBendingTestSupport.Factorial(p - 2));
-        foreach (ConstantLineLoad line in input.LineLoads)
+        foreach (TransverseLineLoad line in input.LineLoads)
         {
             double a = Math.Max(segmentStart, line.Start), b = Math.Min(segmentEnd, line.End);
             if (b <= a || x <= a)
                 continue;
             SolverExactNumber near = (From(x) - From(a)) * scale;
             SolverExactNumber far = x > b ? (From(x) - From(b)) * scale : Integer(0);
-            result += From(line.NewtonsPerMeter) * PowerOfTwo(preparation.LineLoadExponent) *
+            result += From(line.StartNewtonsPerMeter) * PowerOfTwo(preparation.LineLoadExponent) *
                 (SolverBendingTestSupport.Pow(near, p) - SolverBendingTestSupport.Pow(far, p)) /
                 Integer(SolverBendingTestSupport.Factorial(p));
         }

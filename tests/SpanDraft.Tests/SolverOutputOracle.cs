@@ -42,7 +42,7 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
                 moment += value;
             foreach (var line in oracle.Input.LineLoads)
             {
-                SolverExactNumber resultant = From(line.NewtonsPerMeter) * (From(line.End) - From(line.Start));
+                SolverExactNumber resultant = From(line.StartNewtonsPerMeter) * (From(line.End) - From(line.Start));
                 force += resultant;
                 moment += resultant * (From(line.Start) + From(line.End)) / Q(2);
             }
@@ -132,11 +132,11 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
                 theta -= value * d / ei;
                 w -= value * d * d / Q(2) / ei;
             }
-        foreach (ConstantLineLoad line in Input.LineLoads)
+        foreach (TransverseLineLoad line in Input.LineLoads)
         {
             SolverExactNumber near = position > line.Start ? x - From(line.Start) : Q(0);
             SolverExactNumber far = position > line.End ? x - From(line.End) : Q(0);
-            SolverExactNumber q = From(line.NewtonsPerMeter);
+            SolverExactNumber q = From(line.StartNewtonsPerMeter);
             v += q * (near - far);
             m += q * (Pow(near, 2) - Pow(far, 2)) / Q(2);
             theta += q * (Pow(near, 3) - Pow(far, 3)) / Q(6) / ei;
@@ -158,7 +158,7 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
         SolverExactNumber force = Q(0), l = From(Input.Length), ei = From(Input.EI);
         foreach (var p in Input.PointForces) force += From(p.Newtons).Abs();
         foreach (var p in Input.PointMoments) force += From(p.NewtonMeters).Abs() / l;
-        foreach (var q in Input.LineLoads) force += From(q.NewtonsPerMeter).Abs() * (From(q.End) - From(q.Start));
+        foreach (var q in Input.LineLoads) force += From(q.StartNewtonsPerMeter).Abs() * (From(q.End) - From(q.Start));
         SolverExactNumber sm = Max(mx[2], force * l), sv = Max(sm / l, force);
         SolverExactNumber st = Max(mx[1], sm * l / ei), sw = Max(Max(mx[0], sm * l * l / ei), st * l);
         return [sw, st, sm, sv];

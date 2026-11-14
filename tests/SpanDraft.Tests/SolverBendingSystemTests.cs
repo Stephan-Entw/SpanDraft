@@ -132,7 +132,7 @@ public sealed class SolverBendingSystemTests
         RigidRestraint[] restraints = [new(0, U | W | Theta), new(1, U | W), new(1, W), new(2, W)];
         TransversePointForce[] forces = [new(1, 1), new(1, -1), new(1, Math.ScaleB(1, -52)), new(0.75, -3), new(0.25, 7)];
         AppliedPointMoment[] moments = [new(1, -7), new(1, 3), new(0.5, 11), new(1.5, -2)];
-        ConstantLineLoad[] lines = [new(0, 2, 1), new(0.25, 1.75, -5), new(0, 1, 7), new(0, 2, -1)];
+        TransverseLineLoad[] lines = [new(0, 2, 1), new(0.25, 1.75, -5), new(0, 1, 7), new(0, 2, -1)];
         BendingSystem a = SolverKernel.BuildSystem(Model(restraints: restraints, forces: forces, moments: moments, lines: lines));
         BendingSystem b = SolverKernel.BuildSystem(Model(restraints: restraints.Reverse().ToArray(),
             forces: forces.Reverse().ToArray(), moments: moments.Reverse().ToArray(), lines: lines.Reverse().ToArray()));

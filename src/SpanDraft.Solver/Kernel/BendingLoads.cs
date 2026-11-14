@@ -97,11 +97,13 @@ internal sealed record PreparedBendingLoads(ImmutableArray<SegmentBendingLoads> 
             Binary64.ScaleByPowerOfTwo(m.NewtonMeters, preparation.MomentExponent))), moments, stationMoments);
 
         int firstSegment = 0;
-        foreach (ConstantLineLoad load in input.LineLoads)
+        foreach (TransverseLineLoad load in input.LineLoads)
         {
+            if (!load.IsConstant)
+                throw new NotSupportedException("Linearly varying line loads are not yet integrated.");
             while (firstSegment < count - 2 && stations[firstSegment + 1].Position <= load.Start)
                 firstSegment++;
-            double value = Binary64.ScaleByPowerOfTwo(load.NewtonsPerMeter, preparation.LineLoadExponent);
+            double value = Binary64.ScaleByPowerOfTwo(load.StartNewtonsPerMeter, preparation.LineLoadExponent);
             for (int j = firstSegment; j < count - 1 && stations[j].Position < load.End; j++)
             {
                 double start = Math.Max(load.Start, stations[j].Position);

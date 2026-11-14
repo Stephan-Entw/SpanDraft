@@ -33,6 +33,47 @@ public sealed class SolverExcitationTests
     }
 
     [Fact]
+    public void EnclosesTheTrapezoidNormOfLinearlyVaryingLoads()
+    {
+        Check(Model(lines: [new(0, 2, 1, 3)]), unloaded: false);
+        Check(Model(lines: [new(0, 2, 0, 3)]), unloaded: false);
+        Check(Model(lines: [new(0, 2, -3, 0)]), unloaded: false);
+        Check(Model(lines: [new(0, 3, -1, 1)]), unloaded: false);
+        Check(Model(lines: [new(0, Short, Short, -Short)]), unloaded: false);
+        Check(Model(lines: [new(0, Tiny, Tiny, Max)]), unloaded: false);
+        Check(Model(lines: [new(-Max, Max, -Max, Max)], length: Max), unloaded: false);
+        Check(Model(forces: [new(2, 1)], moments: [new(3, 2)], lines: [new(0, 1, 0.5, -3)], length: 3), unloaded: false);
+        Check(Model(lines: [new(0, Short, 0, -0d)]), unloaded: true);
+    }
+
+    [Fact]
+    public void ACompensatingLoadStaysLoadedAndKeepsItsPositiveNorm()
+    {
+        MechanicalInput input = Model(lines: [new(0, 2, -5, 5)]);
+        Assert.False(BendingExcitation.IsUnloaded(input));
+        // Equal and opposite end intensities have the norm 5 * 2 = 10 with exponent floor(log2 10) = 3, not their zero resultant.
+        Assert.Equal(3, Check(input, unloaded: false).Exponent);
+    }
+
+    [Fact]
+    public void EqualEndIntensitiesKeepTheConstantLoadBounds()
+    {
+        ExcitationBounds constant = BendingExcitation.Excitation(Model(lines: [new(0, 2, 7, 7)]));
+        ExcitationBounds twoTerms = BendingExcitation.Excitation(Model(lines: [new(0, 2, 7, Math.BitIncrement(7))]));
+        Assert.Equal(constant.Exponent, twoTerms.Exponent);
+        Assert.True(twoTerms.Upper >= constant.Lower);
+    }
+
+    [Fact]
+    public void ExactExponentFallbackIncludesBothEndIntensities()
+    {
+        TransversePointForce[] forces = [new(2, Math.BitDecrement(0.25))];
+        AppliedPointMoment[] moments = [new(2, 1)];
+        // The trapezoid mean of 1 and 3 on a width of 0.25 is 0.5.
+        Assert.Equal(-1, Check(Model(forces, moments, [new(0, 0.25, 1, 3)]), unloaded: false).Exponent);
+    }
+
+    [Fact]
     public void ExactWidthCanPutAnApparentlyUnitContributionBelowOne()
     {
         MechanicalInput input = Model(lines: [new(Math.ScaleB(1, -54), 1, 1)]);
@@ -74,7 +115,7 @@ public sealed class SolverExcitationTests
     }
 
     private static MechanicalInput Model(TransversePointForce[]? forces = null, AppliedPointMoment[]? moments = null,
-        ConstantLineLoad[]? lines = null, double length = 4) =>
+        TransverseLineLoad[]? lines = null, double length = 4) =>
         new(length, 1, [], forces ?? [], moments ?? [], lines ?? []);
 
     private static ExcitationBounds Check(MechanicalInput input, bool unloaded)
@@ -84,8 +125,9 @@ public sealed class SolverExcitationTests
             exact += From(force.Newtons).Abs();
         foreach (AppliedPointMoment moment in input.PointMoments)
             exact += From(moment.NewtonMeters).Abs() / From(input.Length);
-        foreach (ConstantLineLoad line in input.LineLoads)
-            exact += From(line.NewtonsPerMeter).Abs() * (From(line.End) - From(line.Start));
+        foreach (TransverseLineLoad line in input.LineLoads)
+            exact += (From(line.StartNewtonsPerMeter).Abs() + From(line.EndNewtonsPerMeter).Abs())
+                * (From(line.End) - From(line.Start)) / Integer(2);
 
         Assert.Equal(unloaded, exact.Numerator.IsZero);
         Assert.Equal(unloaded, BendingExcitation.IsUnloaded(input));

@@ -54,4 +54,4 @@ internal readonly record struct MechanicalStation(double Position, RestrainedDir
 
 internal sealed record EventStation(double Position, MechanicalStation? MechanicalStation,
     ImmutableArray<TransversePointForce> PointForces, ImmutableArray<AppliedPointMoment> PointMoments,
-    ImmutableArray<ConstantLineLoad> LineLoadStarts, ImmutableArray<ConstantLineLoad> LineLoadEnds);
+    ImmutableArray<TransverseLineLoad> LineLoadStarts, ImmutableArray<TransverseLineLoad> LineLoadEnds);

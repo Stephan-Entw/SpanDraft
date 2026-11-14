@@ -11,7 +11,7 @@ internal static class BendingExcitation
     internal static bool IsUnloaded(MechanicalInput input) =>
         input.PointForces.All(force => IsZero(force.Newtons)) &&
         input.PointMoments.All(moment => IsZero(moment.NewtonMeters)) &&
-        input.LineLoads.All(load => IsZero(load.NewtonsPerMeter));
+        input.LineLoads.All(load => IsZero(load.StartNewtonsPerMeter) && IsZero(load.EndNewtonsPerMeter));
 
     internal static ExcitationBounds Excitation(MechanicalInput input)
     {
@@ -38,18 +38,33 @@ internal static class BendingExcitation
                 Divide(term.Upper, length.Lower, upper: true)));
         }
 
-        foreach (ConstantLineLoad load in input.LineLoads)
+        foreach (TransverseLineLoad load in input.LineLoads)
         {
-            if (IsZero(load.NewtonsPerMeter))
+            if (IsUnloadedLine(load))
                 continue;
 
             BigInteger width = WidthInUnits(load);
             int widthExponent = (int)width.GetBitLength() + UnitExponent;
             double widthMantissa = RoundExact(width, BigInteger.One, UnitExponent - widthExponent);
-            ExcitationBounds intensity = Mantissa(load.NewtonsPerMeter);
-            terms.Add(new(intensity.Exponent + widthExponent,
-                Multiply(intensity.Lower, Outward(widthMantissa, upper: false), upper: false),
-                Multiply(intensity.Upper, Outward(widthMantissa, upper: true), upper: true)));
+            // The trapezoid norm ((|q1| + |q2|) / 2) * l has one term for equal end intensities
+            // and one half term per nonzero end otherwise.
+            if (load.IsConstant)
+                AddLineTerm(load.StartNewtonsPerMeter, 0);
+            else
+            {
+                AddLineTerm(load.StartNewtonsPerMeter, -1);
+                AddLineTerm(load.EndNewtonsPerMeter, -1);
+            }
+
+            void AddLineTerm(double newtonsPerMeter, int halvings)
+            {
+                if (IsZero(newtonsPerMeter))
+                    return;
+                ExcitationBounds intensity = Mantissa(newtonsPerMeter);
+                terms.Add(new(intensity.Exponent + widthExponent + halvings,
+                    Multiply(intensity.Lower, Outward(widthMantissa, upper: false), upper: false),
+                    Multiply(intensity.Upper, Outward(widthMantissa, upper: true), upper: true)));
+            }
         }
 
         if (terms.Count == 0)
@@ -80,7 +95,10 @@ internal static class BendingExcitation
         return new(exponent, mantissa, mantissa);
     }
 
-    private static BigInteger WidthInUnits(ConstantLineLoad load)
+    private static bool IsUnloadedLine(TransverseLineLoad load) =>
+        IsZero(load.StartNewtonsPerMeter) && IsZero(load.EndNewtonsPerMeter);
+
+    private static BigInteger WidthInUnits(TransverseLineLoad load)
     {
         BigInteger width = ExactUnits(load.End) - ExactUnits(load.Start);
         if (width.Sign <= 0)
@@ -98,16 +116,19 @@ internal static class BendingExcitation
         foreach (AppliedPointMoment moment in input.PointMoments)
             moments += BigInteger.Abs(ExactUnits(moment.NewtonMeters));
 
-        // Align force and line terms to squared subnormal units, then add moments over the common length.
-        BigInteger sum = forces << -UnitExponent;
-        foreach (ConstantLineLoad load in input.LineLoads)
-            if (!IsZero(load.NewtonsPerMeter))
-                sum += BigInteger.Abs(ExactUnits(load.NewtonsPerMeter)) * WidthInUnits(load);
+        // Everything is doubled so that the half of the trapezoid norm stays an integer; the final exponent
+        // is reduced by one. Align force and line terms to squared subnormal units, then add moments over
+        // the common length.
+        BigInteger sum = forces << (1 - UnitExponent);
+        foreach (TransverseLineLoad load in input.LineLoads)
+            if (!IsUnloadedLine(load))
+                sum += (BigInteger.Abs(ExactUnits(load.StartNewtonsPerMeter)) +
+                    BigInteger.Abs(ExactUnits(load.EndNewtonsPerMeter))) * WidthInUnits(load);
         if (moments.IsZero)
-            return (int)sum.GetBitLength() - 1 + 2 * UnitExponent;
+            return (int)sum.GetBitLength() - 1 + 2 * UnitExponent - 1;
 
         BigInteger length = ExactUnits(input.Length);
-        BigInteger numerator = sum * length + (moments << (-2 * UnitExponent));
-        return ExactExponent(numerator, length) + 2 * UnitExponent;
+        BigInteger numerator = sum * length + (moments << (1 - 2 * UnitExponent));
+        return ExactExponent(numerator, length) + 2 * UnitExponent - 1;
     }
 }

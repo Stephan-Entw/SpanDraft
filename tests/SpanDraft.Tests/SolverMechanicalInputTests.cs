@@ -34,7 +34,7 @@ public sealed class SolverMechanicalInputTests
         Assert.Equal(new RigidRestraint(1, U | W | Theta), Assert.Single(input.Restraints));
         var force = new TransversePointForce(1, -7);
         var moment = new AppliedPointMoment(1.25, 11);
-        var lineLoad = new ConstantLineLoad(0.25, 1.75, -13);
+        var lineLoad = new TransverseLineLoad(0.25, 1.75, -13);
         Assert.Equal(force, Assert.Single(input.PointForces));
         Assert.Equal(moment, Assert.Single(input.PointMoments));
         Assert.Equal(lineLoad, Assert.Single(input.LineLoads));
