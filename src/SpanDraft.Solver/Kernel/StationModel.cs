@@ -57,6 +57,25 @@ internal sealed class StationModel
 
         var forces = input.PointForces.ToLookup(f => StationPosition(f.Position));
         var moments = input.PointMoments.ToLookup(m => StationPosition(m.Position));
+
+        // A release is a mechanical station of its own unless a support, a spring or a section boundary is there.
+        // The rotation is free to jump at a release, so no rotational restraint and no applied moment may act on it:
+        // it would be undefined which side carries them.
+        var releases = new HashSet<double>();
+        foreach (InternalMomentRelease release in input.MomentReleases)
+        {
+            double position = StationPosition(release.Position);
+            if (!(position > 0 && position < input.Length))
+                throw new InvalidMechanicalModelException("A moment release must lie strictly inside the beam.");
+            if (!releases.Add(position))
+                throw new InvalidMechanicalModelException("Two moment releases cannot share a position.");
+            if (moments.Contains(position))
+                throw new InvalidMechanicalModelException("A moment release cannot share its position with an applied moment.");
+            restraints.TryAdd(position, RestrainedDirections.None);
+            if (restraints[position].HasFlag(RestrainedDirections.Theta) || springs.GetValueOrDefault(position).Rotational != 0)
+                throw new InvalidMechanicalModelException(
+                    "A moment release cannot share its position with a rotational restraint.");
+        }
         var lineStarts = input.LineLoads.ToLookup(q => StationPosition(q.Start));
         var lineEnds = input.LineLoads.ToLookup(q => StationPosition(q.End));
 
@@ -67,12 +86,14 @@ internal sealed class StationModel
         eventPositions.UnionWith(lineEnds.Select(group => group.Key));
 
         ImmutableArray<MechanicalStation> mechanical = restraints
-            .Select(pair => new MechanicalStation(pair.Key, pair.Value, springs.GetValueOrDefault(pair.Key)))
+            .Select(pair => new MechanicalStation(pair.Key, pair.Value, springs.GetValueOrDefault(pair.Key),
+                releases.Contains(pair.Key)))
             .ToImmutableArray();
         return new StationModel(mechanical,
             eventPositions.Select(position => new EventStation(position,
                 restraints.TryGetValue(position, out RestrainedDirections directions)
-                    ? new MechanicalStation(position, directions, springs.GetValueOrDefault(position))
+                    ? new MechanicalStation(position, directions, springs.GetValueOrDefault(position),
+                        releases.Contains(position))
                     : null,
                 forces[position].ToImmutableArray(), moments[position].ToImmutableArray(),
                 lineStarts[position].ToImmutableArray(), lineEnds[position].ToImmutableArray())).ToImmutableArray(),
@@ -146,10 +167,11 @@ internal readonly record struct SpringStiffnesses(double Translational, double R
 
 /// <summary>
 /// The mechanical restraints at one position. <see cref="Directions"/> holds the rigid ones, including the axial
-/// restraint of a spring support; springs act through <see cref="Springs"/>.
+/// restraint of a spring support; springs act through <see cref="Springs"/>. A <see cref="Release"/> is an internal
+/// moment release: the bending moment is zero on both sides and the rotation may jump.
 /// </summary>
 internal readonly record struct MechanicalStation(double Position, RestrainedDirections Directions,
-    SpringStiffnesses Springs = default)
+    SpringStiffnesses Springs = default, bool Release = false)
 {
     internal bool RigidW => Directions.HasFlag(RestrainedDirections.W);
     internal bool RigidTheta => Directions.HasFlag(RestrainedDirections.Theta);

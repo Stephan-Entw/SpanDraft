@@ -9,9 +9,10 @@ internal sealed class MechanicalInput
     /// <summary>A beam of constant bending stiffness over its whole length.</summary>
     internal MechanicalInput(double length, double ei, IEnumerable<RigidRestraint> restraints,
         IEnumerable<TransversePointForce> pointForces, IEnumerable<AppliedPointMoment> pointMoments,
-        IEnumerable<TransverseLineLoad> lineLoads, IEnumerable<ElasticRestraint>? elasticRestraints = null)
+        IEnumerable<TransverseLineLoad> lineLoads, IEnumerable<ElasticRestraint>? elasticRestraints = null,
+        IEnumerable<InternalMomentRelease>? momentReleases = null)
         : this(length, [new StiffnessSection(0, length, ei)], restraints, pointForces, pointMoments, lineLoads,
-            elasticRestraints)
+            elasticRestraints, momentReleases)
     {
     }
 
@@ -21,7 +22,8 @@ internal sealed class MechanicalInput
     /// </summary>
     internal MechanicalInput(double length, IEnumerable<StiffnessSection> sections, IEnumerable<RigidRestraint> restraints,
         IEnumerable<TransversePointForce> pointForces, IEnumerable<AppliedPointMoment> pointMoments,
-        IEnumerable<TransverseLineLoad> lineLoads, IEnumerable<ElasticRestraint>? elasticRestraints = null)
+        IEnumerable<TransverseLineLoad> lineLoads, IEnumerable<ElasticRestraint>? elasticRestraints = null,
+        IEnumerable<InternalMomentRelease>? momentReleases = null)
     {
         Length = length;
         Sections = sections.ToImmutableArray();
@@ -30,6 +32,9 @@ internal sealed class MechanicalInput
 
         ElasticRestraints = (elasticRestraints ?? []).OrderBy(r => (r.Position, DoubleToInt64Bits(r.Position),
                 DoubleToInt64Bits(r.TranslationalStiffness), DoubleToInt64Bits(r.RotationalStiffness), r.RigidTranslation))
+            .ToImmutableArray();
+
+        MomentReleases = (momentReleases ?? []).OrderBy(r => (r.Position, DoubleToInt64Bits(r.Position)))
             .ToImmutableArray();
 
         // Bit keys make the storage order deterministic, including signed zeros.
@@ -50,6 +55,9 @@ internal sealed class MechanicalInput
         throw new InvalidOperationException("The input has several stiffness sections.");
     internal ImmutableArray<RigidRestraint> Restraints { get; }
     internal ImmutableArray<ElasticRestraint> ElasticRestraints { get; }
+
+    /// <summary>Internal moment releases: positions where M is zero and the rotation may jump.</summary>
+    internal ImmutableArray<InternalMomentRelease> MomentReleases { get; }
     internal ImmutableArray<TransversePointForce> PointForces { get; }
     internal ImmutableArray<AppliedPointMoment> PointMoments { get; }
     internal ImmutableArray<TransverseLineLoad> LineLoads { get; }
@@ -76,6 +84,12 @@ internal readonly record struct RigidRestraint(double Position, RestrainedDirect
 /// </summary>
 internal readonly record struct ElasticRestraint(double Position, double TranslationalStiffness,
     double RotationalStiffness, bool RigidTranslation);
+
+/// <summary>
+/// An internal moment release at a position strictly inside the beam: the bending moment is zero on both sides,
+/// w, V and N stay continuous (up to applied loads and reactions) and the rotation may jump.
+/// </summary>
+internal readonly record struct InternalMomentRelease(double Position);
 internal readonly record struct TransversePointForce(double Position, double Newtons);
 internal readonly record struct AppliedPointMoment(double Position, double NewtonMeters);
 /// <summary>

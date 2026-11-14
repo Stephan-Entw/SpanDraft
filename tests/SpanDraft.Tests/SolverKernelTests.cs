@@ -45,7 +45,7 @@ public sealed class SolverKernelTests
         Assert.True(typeof(BeamModelAdapter).IsNotPublic);
         Assert.All(typeof(BeamModelAdapter).GetMethods(Declared).Where(m => !m.IsPrivate), entry =>
             Assert.Equal(typeof(BeamModel), Assert.Single(entry.GetParameters()).ParameterType));
-        Assert.Equal(new[] { "EI", "ElasticRestraints", "Length", "LineLoads", "PointForces", "PointMoments", "Restraints", "Sections" },
+        Assert.Equal(new[] { "EI", "ElasticRestraints", "Length", "LineLoads", "MomentReleases", "PointForces", "PointMoments", "Restraints", "Sections" },
             typeof(MechanicalInput).GetProperties(BindingFlags.Instance | BindingFlags.NonPublic)
                 .Select(p => p.Name).Order(StringComparer.Ordinal));
     }

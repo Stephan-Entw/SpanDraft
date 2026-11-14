@@ -35,10 +35,14 @@ internal static class SolverKernel
 
     internal static VerifiedBendingState SolveSystem(BendingSystem system) => BendingStateSolver.Solve(system);
 
-    /// <summary>Exact mechanism check of the restraints alone; it reads neither length nor stiffness nor loads.</summary>
+    /// <summary>
+    /// Exact mechanism check of the restraints and releases alone; it reads neither stiffness nor loads. The length
+    /// only places the releases inside the beam.
+    /// </summary>
     internal static void RequireStable(IEnumerable<RigidRestraint> restraints,
-        IEnumerable<ElasticRestraint>? elastic = null) =>
-        RequireStable(StationModel.Create(new MechanicalInput(1, 1, restraints, [], [], [], elastic)));
+        IEnumerable<ElasticRestraint>? elastic = null, IEnumerable<InternalMomentRelease>? releases = null,
+        double length = 1) =>
+        RequireStable(StationModel.Create(new MechanicalInput(length, 1, restraints, [], [], [], elastic, releases)));
 
     private static void RequireStable(StationModel stations)
     {

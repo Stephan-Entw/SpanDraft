@@ -27,6 +27,8 @@ internal sealed record BendingPreparation(int EL, int EEI, int EF, ImmutableArra
             CheckInput(elastic.TranslationalStiffness);
             CheckInput(elastic.RotationalStiffness);
         }
+        foreach (InternalMomentRelease release in input.MomentReleases)
+            CheckInput(release.Position);
         foreach (TransversePointForce force in input.PointForces)
         {
             CheckInput(force.Position);
