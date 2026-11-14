@@ -143,6 +143,28 @@ public sealed class DesktopResultDiagramProjectionTests
             jump.Right.Value - jump.Left.Value, 1e-7);
     }
 
+    [Fact]
+    public void ASpringSupportProducesAShearJumpEqualToItsForceAndNoMomentJump()
+    {
+        var solution = Solve(Beam([SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller),
+            SolverSpringAnalyticalTests.Spring(1, 5e4)], [Point(.5, -1000), Point(1.5, -400)]));
+        var jump = Assert.Single(Project(solution, ResultDiagramKind.ShearForce).Jumps, j => j.Left.Position == M(1));
+        Close(At(solution, 1).ReactionY!.Value.Newtons, jump.Right.Value - jump.Left.Value, 1e-6);
+        Assert.NotEqual(0, At(solution, 1).ReactionY!.Value.Newtons);
+        Assert.DoesNotContain(Project(solution, ResultDiagramKind.BendingMoment).Jumps, j => j.Left.Position == M(1));
+    }
+
+    [Fact]
+    public void ARotationalSpringProducesAMomentJumpEqualToMinusItsSupportMomentAndNoShearJump()
+    {
+        var solution = Solve(Beam([SupportAt(0, SupportType.Pinned), SupportAt(L, SupportType.Roller),
+            SolverRotationalSpringTests.Rotational(1, 2e4)], [Point(.5, -1000)]));
+        var jump = Assert.Single(Project(solution, ResultDiagramKind.BendingMoment).Jumps, j => j.Left.Position == M(1));
+        Close(-At(solution, 1).ReactionMoment!.Value.NewtonMeters, jump.Right.Value - jump.Left.Value, 1e-6);
+        Assert.NotEqual(0, At(solution, 1).ReactionMoment!.Value.NewtonMeters);
+        Assert.DoesNotContain(Project(solution, ResultDiagramKind.ShearForce).Jumps, j => j.Left.Position == M(1));
+    }
+
     [Theory]
     [InlineData(ResultDiagramKind.ShearForce)]
     [InlineData(ResultDiagramKind.BendingMoment)]
