@@ -32,8 +32,46 @@ public sealed class SolverM2AcceptanceTests
     [InlineData(52, 1d, false)]
     public void CompleteRigidSupportCasesEncloseExactErrorsAndRespectMathematicalTau(int exponent, double factor, bool delivered)
     {
+        var (worstGate, worstError) = CheckRigidSupportCase(exponent, factor, delivered, [new(0.25, 1.75, 3)]);
+        SolverExactNumber tau = Q(1, 100_000_000);
+        // The rejected fixtures demonstrate conservative rejection, not unsafe delivery.
+        if (exponent <= 28) Assert.True(worstError.CompareTo(tau) < 0);
+        if (exponent == 10) Assert.True(worstGate.CompareTo(tau / Q(100)) < 0);
+        if (exponent == 24)
+        {
+            Assert.True(worstGate.CompareTo(tau * Q(9, 10)) > 0);
+            Assert.True(worstGate.CompareTo(tau * Q(11, 10)) < 0);
+        }
+    }
+
+    // A symmetric tent of two linear loads about the support pair has no net moment there, like the constant load,
+    // so the pair reaction cancels. The gate passes up to 2^-22 and rejects 2^-23, where it exceeds tau by about 1.6.
+    [Theory]
+    [InlineData(10, 1d, true)]
+    [InlineData(22, 1d, true)]
+    [InlineData(23, 1d, false)]
+    [InlineData(28, 1d, false)]
+    [InlineData(52, 1d, false)]
+    public void CompleteRigidSupportCasesWithLinearLoadsEncloseExactErrorsAndRespectMathematicalTau(
+        int exponent, double factor, bool delivered)
+    {
+        var (worstGate, worstError) = CheckRigidSupportCase(exponent, factor, delivered,
+            [new(0.25, 1, 1, 3), new(1, 1.75, 3, 1)]);
+        SolverExactNumber tau = Q(1, 100_000_000);
+        if (exponent <= 28) Assert.True(worstError.CompareTo(tau) < 0);
+        if (exponent == 22)
+        {
+            Assert.True(worstGate.CompareTo(tau / Q(2)) > 0);
+            Assert.True(worstGate.CompareTo(tau) < 0);
+        }
+        if (exponent == 23) Assert.True(worstGate.CompareTo(tau) > 0);
+    }
+
+    private static (SolverExactNumber WorstGate, SolverExactNumber WorstError) CheckRigidSupportCase(
+        int exponent, double factor, bool delivered, TransverseLineLoad[] lines)
+    {
         double gap = Math.ScaleB(factor, -exponent);
-        var input = Model(restraints: [new(1, U | W), new(1 + gap, W)], lines: [new(0.25, 1.75, 3)]);
+        var input = Model(restraints: [new(1, U | W), new(1 + gap, W)], lines: lines);
         var oracle = FromCompatibility(input);
         BendingSystem system = SolverKernel.BuildSystem(input);
         VerifiedBendingState state = BendingStateSolver.Solve(system, out var context);
@@ -75,16 +113,9 @@ public sealed class SolverM2AcceptanceTests
         foreach (var range in new[] { extrema.W, extrema.V, extrema.M })
             foreach (var extreme in new[] { range.Minimum, range.Maximum }) CheckField(extreme.Position, extreme.Side);
         Assert.Equal(delivered, worstGate.CompareTo(tau) <= 0);
-        // The rejected fixtures demonstrate conservative rejection, not unsafe delivery.
-        if (exponent <= 28) Assert.True(worstError.CompareTo(tau) < 0);
-        if (exponent == 10) Assert.True(worstGate.CompareTo(tau / Q(100)) < 0);
-        if (exponent == 24)
-        {
-            Assert.True(worstGate.CompareTo(tau * Q(9, 10)) > 0);
-            Assert.True(worstGate.CompareTo(tau * Q(11, 10)) < 0);
-        }
         if (delivered) Assert.True(SolverKernel.Solve(input).Quality.GatePassed);
         else Assert.Equal(KernelFailureCause.Gate, Assert.Throws<KernelFailureException>(() => SolverKernel.Solve(input)).Cause);
+        return (worstGate, worstError);
 
         void CheckGate(double bound, double denominator, int q)
         {

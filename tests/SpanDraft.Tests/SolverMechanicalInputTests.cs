@@ -125,6 +125,25 @@ public sealed class SolverMechanicalInputTests
     }
 
     [Fact]
+    public void LinearLoadsMapBothEndIntensitiesAndKeepADeterministicOrderForEqualStarts()
+    {
+        // Two loads share start, end and start intensity and differ only in the end intensity.
+        BeamLoad[] loads = [Linear(0.25, 1.75, 5, -3), Linear(0.25, 1.75, 5, 7), Linear(0.25, 1.75, 5, 5)];
+        MechanicalInput first = BeamModelAdapter.Adapt(Cantilever(loads));
+        MechanicalInput second = BeamModelAdapter.Adapt(Cantilever(loads.Reverse().ToArray()));
+
+        Assert.Equal(first.LineLoads.AsEnumerable(), second.LineLoads.AsEnumerable());
+        Assert.Equal(new[] { -3d, 5, 7 }.Order(), first.LineLoads.Select(q => q.EndNewtonsPerMeter).Order());
+        Assert.All(first.LineLoads, q => Assert.Equal(5, q.StartNewtonsPerMeter));
+        Assert.Equal(new[] { false, true, true }.Order(), first.LineLoads.Select(q => !q.IsConstant).Order());
+        StationModel stations = StationModel.Create(first);
+        EventStation start = Assert.Single(stations.EventStations, s => s.Position == 0.25);
+        EventStation end = Assert.Single(stations.EventStations, s => s.Position == 1.75);
+        Assert.Equal(3, start.LineLoadStarts.Length);
+        Assert.Equal(3, end.LineLoadEnds.Length);
+    }
+
+    [Fact]
     public void PermutationsPreserveCanonicalPrimitivesAndEventAttachments()
     {
         Support[] supports = [SupportAt(L, SupportType.Roller), SupportAt(-0d, SupportType.Fixed),

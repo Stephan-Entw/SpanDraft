@@ -80,7 +80,9 @@ internal static class BendingOutputQuality
         KernelFailureException.RequireFinite(sum);
         return sum;
 
-        static double Majorant(Bounded intensity) => Add(intensity.Magnitude, intensity.Error, true);
+        // The stored magnitude is the sum of the absolute terms and would be loose at a sign change;
+        // |q| is enclosed by the computed value plus its propagated error.
+        static double Majorant(Bounded intensity) => Add(Abs(intensity.Value), intensity.Error, true);
     }
 
     internal static PieceQuality Piece(BendingFields fields, double x0, double x1,

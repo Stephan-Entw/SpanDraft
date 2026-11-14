@@ -17,7 +17,9 @@ public sealed class SolverLinearLoadTests
     public static TheoryData<string> Cases => new()
     {
         "triangle", "trapezoid-overhang", "sign-change", "antisymmetric-cantilever", "ends-at-support",
-        "overlapping", "short-far-from-origin", "right-fixed-ramp", "zero-end-intensities", "ramp-with-point-loads"
+        "overlapping", "short-far-from-origin", "right-fixed-ramp", "zero-end-intensities", "ramp-with-point-loads",
+        "zero-crossing-at-support", "zero-crossing-ulp-below-support", "zero-crossing-ulp-above-support",
+        "extremely-short-far-from-origin", "load-from-fixed-end-to-free-end", "one-ulp-rise", "steep-short-triangle", "non-dyadic-clips", "cancelling-clip"
     };
 
     internal static MechanicalInput Input(string name) => name switch
@@ -39,6 +41,28 @@ public sealed class SolverLinearLoadTests
             lines: [new(0, 1, 0, 0), new(0.5, 2, 0, 6)]),
         "ramp-with-point-loads" => Model(length: 3, ei: 9, restraints: [new(0, U | W), new(2, W)],
             forces: [new(1, -3), new(2.5, 2)], moments: [new(1.5, 4)], lines: [new(0.5, 2.75, -6, 9)]),
+        // The load -3 ... 3 on [0, 2] crosses zero at x = 1, exactly at, one ulp below and one ulp above a support.
+        "zero-crossing-at-support" => Model(length: 2, ei: 7, restraints: [new(0, U | W), new(1, W), new(2, W)],
+            lines: [new(0, 2, -3, 3)]),
+        "zero-crossing-ulp-below-support" => Model(length: 2, ei: 7,
+            restraints: [new(0, U | W), new(Math.BitDecrement(1), W), new(2, W)], lines: [new(0, 2, -3, 3)]),
+        "zero-crossing-ulp-above-support" => Model(length: 2, ei: 7,
+            restraints: [new(0, U | W), new(Math.BitIncrement(1), W), new(2, W)], lines: [new(0, 2, -3, 3)]),
+        "extremely-short-far-from-origin" => Model(length: 2, ei: 1, restraints: [new(0, U | W), new(2, W)],
+            lines: [new(1.5, 1.5 + Math.ScaleB(1, -42), 1e5, -Math.ScaleB(1, 45))]),
+        "load-from-fixed-end-to-free-end" => Model(length: 2, ei: 5, lines: [new(0, 2, 8, -8)]),
+        "one-ulp-rise" => Model(length: 2, ei: 3, restraints: [new(0, U | W), new(2, W)],
+            lines: [new(0.25, 1.75, 3, Math.BitIncrement(3))]),
+        "steep-short-triangle" => Model(length: 3, ei: 2, restraints: [new(0, U | W), new(3, W)],
+            lines: [new(1, 1 + Math.ScaleB(1, -20), 0, 1e9)]),
+        // Interpolation at the clip ends of decimal data rounds, so the data error of the clipped end is nonzero.
+        "non-dyadic-clips" => Model(length: 3, ei: 7, restraints: [new(0, U | W), new(1.1, W), new(1.7, W), new(3, W)],
+            lines: [new(0.3, 2.9, -1.7, 4.3), new(0.2, 2.7, 3.1, -0.7)]),
+        // Both clip ends of the narrow section lie next to the zero crossing, where the interpolation cancels
+        // almost completely and the absolute data error dominates the value.
+        "cancelling-clip" => Model(length: 3, ei: 7,
+            restraints: [new(0, U | W), new(1.6, W), new(1.6 + Math.ScaleB(1, -24), W), new(3, W)],
+            lines: [new(0.3, 2.9, 3.3e9, -3.3e9 + 0.1)]),
         _ => throw new ArgumentOutOfRangeException(nameof(name))
     };
 
@@ -231,13 +255,48 @@ public sealed class SolverLinearLoadTests
                 var polynomial = SolverExactRootOracle.FieldPolynomial(oracle, piece.Start, piece.End, field);
                 if (derivative)
                     polynomial = polynomial.Derivative();
-                var exact = SolverExactRootOracle.InteriorRoots(polynomial);
-                double[] candidates = piece.Candidates(component).Where(t => t > 0 && t < 1).ToArray();
+                // A root closer to an end than the local boundary tolerance (32 ulps of 1) is mapped to that end,
+                // whose value is an endpoint candidate of the piece anyway; no separate interior root exists.
+                const double boundary = 1e-13;
+                var exact = SolverExactRootOracle.InteriorRoots(polynomial)
+                    .Where(r => r.Low.ToDouble() > boundary && r.High.ToDouble() < 1 - boundary).ToList();
+                double[] candidates = piece.Candidates(component).Where(t => t > boundary && t < 1 - boundary).ToArray();
                 string context = $"{name} piece [{piece.Start:R}, {piece.End:R}] {component}";
                 Assert.True(exact.Count == candidates.Length, $"{context}: {exact.Count} exact roots, {candidates.Length} candidates");
+                // The clip data error of a cancelling load shifts a root by about error / (slope * piece length);
+                // the extremum value stays verified at the candidate, so only that case needs a wider position bound.
+                double tolerance = name == "cancelling-clip" ? 1e-7 : 1e-9;
                 foreach (var ((low, high), t) in exact.Zip(candidates))
-                    Assert.True(t >= low.ToDouble() - 1e-9 && t <= high.ToDouble() + 1e-9,
+                    Assert.True(t >= low.ToDouble() - tolerance && t <= high.ToDouble() + tolerance,
                         $"{context}: candidate {t:R} outside the exact root interval [{low.ToDouble():R}, {high.ToDouble():R}]");
             }
+    }
+
+    [Theory]
+    [MemberData(nameof(Cases))]
+    public void PieceMajorantEnclosesTheExactLargerEndIntensitySumTightly(string name)
+    {
+        MechanicalInput input = Input(name);
+        BendingResult result = SolverKernel.Solve(input);
+        SolverExactNumber scale = PowerOfTwo(Prepare(input).LineLoadExponent);
+        foreach (BendingPiece piece in result.Pieces)
+        {
+            SolverExactNumber exact = Integer(0);
+            foreach (TransverseLineLoad load in input.LineLoads.Where(l => l.Start <= piece.Start && l.End >= piece.End))
+            {
+                SolverExactNumber width = From(load.End) - From(load.Start), first = From(load.StartNewtonsPerMeter);
+                SolverExactNumber rise = From(load.EndNewtonsPerMeter) - first;
+                SolverExactNumber atStart = (first + rise * (From(piece.Start) - From(load.Start)) / width).Abs();
+                SolverExactNumber atEnd = (first + rise * (From(piece.End) - From(load.Start)) / width).Abs();
+                exact += SolverOutputOracle.Max(atStart, atEnd) * scale;
+            }
+            double majorant = BendingOutputQuality.QSum(result.Fields, piece.Start, piece.End);
+            Assert.True(From(majorant).CompareTo(exact) >= 0,
+                $"{name} [{piece.Start:R}, {piece.End:R}]: majorant {majorant:R} below the exact sum");
+            // Tightness holds except where the clip data error itself dominates the intensity.
+            Assert.True(name == "cancelling-clip" ||
+                From(majorant).CompareTo(exact * (Integer(1) + PowerOfTwo(-40)) + PowerOfTwo(-1000)) <= 0,
+                $"{name} [{piece.Start:R}, {piece.End:R}]: majorant {majorant:R} is loose");
+        }
     }
 }
