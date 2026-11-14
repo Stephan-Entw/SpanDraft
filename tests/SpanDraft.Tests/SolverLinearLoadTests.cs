@@ -210,4 +210,34 @@ public sealed class SolverLinearLoadTests
         MechanicalInput input = Model(length: 2, restraints: [new(0, U | W), new(2, W)], lines: [new(0, 2, first, second)]);
         Assert.ThrowsAny<Exception>(() => SolverKernel.Solve(input));
     }
+
+    [Theory]
+    [MemberData(nameof(Cases))]
+    public void EveryExtremumCandidateMatchesTheExactRootIsolationOfItsPiece(string name) =>
+        CheckCandidatesAgainstExactRoots(name, Input(name));
+
+    /// <summary>
+    /// Compares the candidate positions of every piece with the exact roots of the derivative polynomials
+    /// isolated by a Sturm sequence on exactly interpolated oracle fields: no missed and no spurious roots.
+    /// </summary>
+    internal static void CheckCandidatesAgainstExactRoots(string name, MechanicalInput input)
+    {
+        SolverOutputOracle oracle = SolverOutputOracle.FromCompatibility(input);
+        BendingResult result = SolverKernel.Solve(input);
+        foreach (BendingPiece piece in result.Pieces)
+            foreach ((BendingComponent component, int field, bool derivative) in new[]
+                { (BendingComponent.W, 1, false), (BendingComponent.M, 3, false), (BendingComponent.V, 3, true) })
+            {
+                var polynomial = SolverExactRootOracle.FieldPolynomial(oracle, piece.Start, piece.End, field);
+                if (derivative)
+                    polynomial = polynomial.Derivative();
+                var exact = SolverExactRootOracle.InteriorRoots(polynomial);
+                double[] candidates = piece.Candidates(component).Where(t => t > 0 && t < 1).ToArray();
+                string context = $"{name} piece [{piece.Start:R}, {piece.End:R}] {component}";
+                Assert.True(exact.Count == candidates.Length, $"{context}: {exact.Count} exact roots, {candidates.Length} candidates");
+                foreach (var ((low, high), t) in exact.Zip(candidates))
+                    Assert.True(t >= low.ToDouble() - 1e-9 && t <= high.ToDouble() + 1e-9,
+                        $"{context}: candidate {t:R} outside the exact root interval [{low.ToDouble():R}, {high.ToDouble():R}]");
+            }
+    }
 }

@@ -56,6 +56,29 @@ internal static class SolverTestSupport
         return Beam(loads: [Uniform(0, L, sign * 24 * EI / Math.Pow(L, 4)), Couple(0, -endMoment), Couple(L, endMoment)]);
     }
 
+    /// <summary>
+    /// A simply supported beam under the linear load q = 24 EI (ξ - 1/2) / L⁴ and end couples whose deflection is
+    /// the quintic w = p(ξ) with p' = ((ξ - 1/2)² - a²)((ξ - 1/2)² - b²). It has four interior stationary points
+    /// at ξ = 1/2 ± a and 1/2 ± b (a = 0.2), and p is odd about the midspan with p(0) = p(1) = 0.
+    /// </summary>
+    internal static (BeamModel Beam, double[] StationaryXi, Func<double, double> Deflection) FourStationaryPointQuintic()
+    {
+        const double a2 = 0.04;
+        double b2 = (a2 / 24 - 1.0 / 160) / (a2 / 2 - 1.0 / 24);
+        double Deflection(double xi)
+        {
+            double s = xi - 0.5;
+            return s * s * s * s * s / 5 - (a2 + b2) * s * s * s / 3 + a2 * b2 * s;
+        }
+        // p''(s) = 4 s³ - 2 (a² + b²) s; the bending moment is EI p'' / L² and the applied couples follow M(0+) = -C(0), M(L-) = C(L).
+        double endMoment0 = EI / (L * L) * (4 * -0.125 - 2 * (a2 + b2) * -0.5);
+        double endMoment1 = EI / (L * L) * (4 * 0.125 - 2 * (a2 + b2) * 0.5);
+        double[] xi = [0.5 - Math.Sqrt(b2), 0.5 - Math.Sqrt(a2), 0.5 + Math.Sqrt(a2), 0.5 + Math.Sqrt(b2)];
+        BeamModel beam = Beam(loads: [Linear(0, L, -12 * EI / Math.Pow(L, 4), 12 * EI / Math.Pow(L, 4)),
+            Couple(0, -endMoment0), Couple(L, endMoment1)]);
+        return (beam, xi, Deflection);
+    }
+
     internal static BeamSolution Solve(BeamModel beam) => new EulerBernoulliBeamSolver().Solve(beam);
     internal static BeamNodeResult At(BeamSolution solution, double x) =>
         Assert.Single(solution.Nodes, node => node.Position == M(x));
