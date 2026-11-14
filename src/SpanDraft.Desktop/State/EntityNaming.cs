@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace SpanDraft.Desktop.State;
 
-public enum AutoNameKind { Support, Force, Moment, DistributedLoad }
+public enum AutoNameKind { Support, Force, Moment, DistributedLoad, MomentRelease }
 public enum NameValidationError { None, Empty, Duplicate, Reserved }
 public readonly record struct AutoNameCandidate(AutoNameKind Kind, long Ordinal, string Name);
 
@@ -10,21 +10,30 @@ public readonly record struct AutoNameCandidate(AutoNameKind Kind, long Ordinal,
 public sealed record NamingState
 {
     public NamingState(long nextSupportOrdinal = 1, long nextForceNumber = 1, long nextMomentNumber = 1,
-        long nextDistributedLoadNumber = 1)
+        long nextDistributedLoadNumber = 1, long nextMomentReleaseNumber = 1)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(nextSupportOrdinal, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(nextForceNumber, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(nextMomentNumber, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(nextDistributedLoadNumber, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(nextMomentReleaseNumber, 1);
         NextSupportOrdinal = nextSupportOrdinal;
         NextForceNumber = nextForceNumber;
         NextMomentNumber = nextMomentNumber;
         NextDistributedLoadNumber = nextDistributedLoadNumber;
+        NextMomentReleaseNumber = nextMomentReleaseNumber;
     }
     public long NextSupportOrdinal { get; }
     public long NextForceNumber { get; }
     public long NextMomentNumber { get; }
     public long NextDistributedLoadNumber { get; }
+    public long NextMomentReleaseNumber { get; }
+
+    /// <summary>True when no counter of this state is below the corresponding counter of <paramref name="other"/>.</summary>
+    public bool IsNotBehind(NamingState other) => NextSupportOrdinal >= other.NextSupportOrdinal
+        && NextForceNumber >= other.NextForceNumber && NextMomentNumber >= other.NextMomentNumber
+        && NextDistributedLoadNumber >= other.NextDistributedLoadNumber
+        && NextMomentReleaseNumber >= other.NextMomentReleaseNumber;
 
     public long Next(AutoNameKind kind) => kind switch
     {
@@ -32,6 +41,7 @@ public sealed record NamingState
         AutoNameKind.Force => NextForceNumber,
         AutoNameKind.Moment => NextMomentNumber,
         AutoNameKind.DistributedLoad => NextDistributedLoadNumber,
+        AutoNameKind.MomentRelease => NextMomentReleaseNumber,
         _ => throw new ArgumentOutOfRangeException(nameof(kind))
     };
 
@@ -42,13 +52,18 @@ public sealed record NamingState
         long next = checked(candidate.Ordinal + 1);
         return candidate.Kind switch
         {
-            AutoNameKind.Support => new(next, NextForceNumber, NextMomentNumber, NextDistributedLoadNumber),
-            AutoNameKind.Force => new(NextSupportOrdinal, next, NextMomentNumber, NextDistributedLoadNumber),
-            AutoNameKind.Moment => new(NextSupportOrdinal, NextForceNumber, next, NextDistributedLoadNumber),
-            AutoNameKind.DistributedLoad => new(NextSupportOrdinal, NextForceNumber, NextMomentNumber, next),
+            AutoNameKind.Support => With(support: next),
+            AutoNameKind.Force => With(force: next),
+            AutoNameKind.Moment => With(moment: next),
+            AutoNameKind.DistributedLoad => With(distributed: next),
+            AutoNameKind.MomentRelease => With(release: next),
             _ => throw new ArgumentOutOfRangeException(nameof(candidate))
         };
     }
+
+    private NamingState With(long? support = null, long? force = null, long? moment = null, long? distributed = null,
+        long? release = null) => new(support ?? NextSupportOrdinal, force ?? NextForceNumber, moment ?? NextMomentNumber,
+        distributed ?? NextDistributedLoadNumber, release ?? NextMomentReleaseNumber);
 }
 
 public static class EntityNaming
@@ -88,6 +103,8 @@ public static class EntityNaming
             AutoNameKind.Force => "F" + ordinal.ToString(CultureInfo.InvariantCulture),
             AutoNameKind.Moment => "M" + ordinal.ToString(CultureInfo.InvariantCulture),
             AutoNameKind.DistributedLoad => "q" + ordinal.ToString(CultureInfo.InvariantCulture),
+            // G for Gelenk; never the bare reserved self-weight symbol, which has no number.
+            AutoNameKind.MomentRelease => "G" + ordinal.ToString(CultureInfo.InvariantCulture),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
     }

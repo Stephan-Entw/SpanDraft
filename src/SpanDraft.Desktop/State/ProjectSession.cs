@@ -41,8 +41,7 @@ public sealed class ProjectSession
         if (change == EditorChangeKind.None) return false;
         var a = previous.Document.NamingState;
         var b = next.Document.NamingState;
-        if (b.NextSupportOrdinal < a.NextSupportOrdinal || b.NextForceNumber < a.NextForceNumber
-            || b.NextMomentNumber < a.NextMomentNumber || b.NextDistributedLoadNumber < a.NextDistributedLoadNumber)
+        if (!b.IsNotBehind(a))
             throw new ArgumentException("Normal commits cannot move naming counters backwards.", nameof(next));
         _undo.Add(CurrentRevision);
         if (_undo.Count > HistoryLimit) _undo.RemoveAt(0);

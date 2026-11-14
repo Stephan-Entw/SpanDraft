@@ -35,7 +35,8 @@ public sealed record EditorDocument
     /// </summary>
     public EditorDocument(Length length, IEnumerable<Length> segmentBoundaries, IEnumerable<EditorSegment> segments,
         IEnumerable<EditorSupport>? supports = null, IEnumerable<EditorPointLoad>? loads = null, NamingState? namingState = null,
-        IEnumerable<EditorDistributedLoad>? distributedLoads = null, EditorSelfWeight? selfWeight = null)
+        IEnumerable<EditorDistributedLoad>? distributedLoads = null, EditorSelfWeight? selfWeight = null,
+        IEnumerable<EditorMomentRelease>? momentReleases = null)
     {
         ArgumentNullException.ThrowIfNull(segmentBoundaries);
         ArgumentNullException.ThrowIfNull(segments);
@@ -56,6 +57,7 @@ public sealed record EditorDocument
         Supports = Array.AsReadOnly((supports ?? []).ToArray());
         Loads = Array.AsReadOnly((loads ?? []).ToArray());
         DistributedLoads = Array.AsReadOnly((distributedLoads ?? []).ToArray());
+        MomentReleases = Array.AsReadOnly((momentReleases ?? []).ToArray());
         NamingState = namingState ?? new();
         SelfWeight = selfWeight;
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -117,6 +119,9 @@ public sealed record EditorDocument
     public IReadOnlyList<EditorSupport> Supports { get; }
     public IReadOnlyList<EditorPointLoad> Loads { get; }
     public IReadOnlyList<EditorDistributedLoad> DistributedLoads { get; }
+
+    /// <summary>The internal moment releases (hinges), in creation order; empty for a beam without any.</summary>
+    public IReadOnlyList<EditorMomentRelease> MomentReleases { get; }
     public NamingState NamingState { get; }
     public EditorSelfWeight? SelfWeight { get; init; }
     public IEnumerable<Guid> EntityIds => NamedEntities.Select(e => e.Id)
@@ -158,29 +163,32 @@ public sealed record EditorDocument
 
     public IEnumerable<(Guid Id, string Name)> NamedEntities =>
         Supports.Select(s => (s.Id, s.Name)).Concat(Loads.Select(l => (l.Id, l.Name)))
-            .Concat(DistributedLoads.Select(l => (l.Id, l.Name)));
+            .Concat(DistributedLoads.Select(l => (l.Id, l.Name))).Concat(MomentReleases.Select(r => (r.Id, r.Name)));
 
     public EditorDocument WithSupports(IEnumerable<EditorSupport> supports, NamingState? namingState = null) =>
-        new(Length, _boundaries, _segments, supports, Loads, NextNamingState(namingState), DistributedLoads, SelfWeight);
+        new(Length, _boundaries, _segments, supports, Loads, NextNamingState(namingState), DistributedLoads, SelfWeight, MomentReleases);
 
     public EditorDocument WithLoads(IEnumerable<EditorPointLoad> loads, NamingState? namingState = null) =>
-        new(Length, _boundaries, _segments, Supports, loads, NextNamingState(namingState), DistributedLoads, SelfWeight);
+        new(Length, _boundaries, _segments, Supports, loads, NextNamingState(namingState), DistributedLoads, SelfWeight, MomentReleases);
 
     public EditorDocument WithDistributedLoads(IEnumerable<EditorDistributedLoad> loads, NamingState? namingState = null) =>
-        new(Length, _boundaries, _segments, Supports, Loads, NextNamingState(namingState), loads, SelfWeight);
+        new(Length, _boundaries, _segments, Supports, Loads, NextNamingState(namingState), loads, SelfWeight, MomentReleases);
+
+    public EditorDocument WithMomentReleases(IEnumerable<EditorMomentRelease> releases, NamingState? namingState = null) =>
+        new(Length, _boundaries, _segments, Supports, Loads, NextNamingState(namingState), DistributedLoads, SelfWeight, releases);
 
     public EditorDocument WithSection(ISectionDefinition section, SectionAxisDesignation bendingAxis) =>
         WithSection(section, bendingAxis, SectionDisplayName);
 
     public EditorDocument WithSection(ISectionDefinition section, SectionAxisDesignation bendingAxis, string? sectionDisplayName) =>
         new(Length, _boundaries, [new EditorSegment(Only.Material, section, bendingAxis, sectionDisplayName)],
-            Supports, Loads, NamingState, DistributedLoads, SelfWeight);
+            Supports, Loads, NamingState, DistributedLoads, SelfWeight, MomentReleases);
 
     public EditorDocument WithBendingAxis(SectionAxisDesignation bendingAxis) => WithSection(Section, bendingAxis);
 
     /// <summary>Replaces the segment boundaries and the segments together; everything else is kept.</summary>
     public EditorDocument WithSegments(IEnumerable<Length> segmentBoundaries, IEnumerable<EditorSegment> segments) =>
-        new(Length, segmentBoundaries, segments, Supports, Loads, NamingState, DistributedLoads, SelfWeight);
+        new(Length, segmentBoundaries, segments, Supports, Loads, NamingState, DistributedLoads, SelfWeight, MomentReleases);
 
     /// <summary>Replaces one segment; boundaries and all other segments are kept.</summary>
     public EditorDocument WithSegment(int index, EditorSegment segment)
@@ -224,9 +232,7 @@ public sealed record EditorDocument
     private NamingState NextNamingState(NamingState? requested)
     {
         var next = requested ?? NamingState;
-        if (next.NextSupportOrdinal < NamingState.NextSupportOrdinal || next.NextForceNumber < NamingState.NextForceNumber
-            || next.NextMomentNumber < NamingState.NextMomentNumber
-            || next.NextDistributedLoadNumber < NamingState.NextDistributedLoadNumber)
+        if (!next.IsNotBehind(NamingState))
             throw new ArgumentException("Project naming counters cannot move backwards.", nameof(requested));
         return next;
     }
@@ -240,5 +246,5 @@ public sealed record EditorDocument
             ? (s.Spring ?? throw new InvalidOperationException("A spring support needs its springs.")).ToCore(s.Position)
             : new Support(s.Position, s.Type)),
         Loads.Select(l => l.ToCore()).Concat(DistributedLoads.Select(l => l.ToCore()))
-            .Concat(SelfWeightLoads));
+            .Concat(SelfWeightLoads), MomentReleases.Select(r => r.ToCore()));
 }

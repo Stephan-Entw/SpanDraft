@@ -24,7 +24,9 @@ public static class BeamModelMechanicalComparer
             && pair.First.RotationalSpring == pair.Second.RotationalSpring
             && pair.First.RigidTranslation == pair.Second.RigidTranslation)
         && left.Loads.Count == right.Loads.Count
-        && left.Loads.Zip(right.Loads).All(pair => LoadsEquivalent(pair.First, pair.Second));
+        && left.Loads.Zip(right.Loads).All(pair => LoadsEquivalent(pair.First, pair.Second))
+        && left.MomentReleases.Count == right.MomentReleases.Count
+        && left.MomentReleases.Zip(right.MomentReleases).All(pair => pair.First.Position == pair.Second.Position);
 
     /// <summary>A segment is compared by its extent and the properties the analysis reads; names and metadata are not.</summary>
     public static bool SegmentsEquivalent(BeamSegment left, BeamSegment right) =>
