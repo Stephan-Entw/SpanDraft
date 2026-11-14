@@ -32,8 +32,9 @@ internal static class SolverKernel
     internal static VerifiedBendingState SolveSystem(BendingSystem system) => BendingStateSolver.Solve(system);
 
     /// <summary>Exact mechanism check of the restraints alone; it reads neither length nor stiffness nor loads.</summary>
-    internal static void RequireStable(IEnumerable<RigidRestraint> restraints) =>
-        RequireStable(StationModel.Create(new MechanicalInput(1, 1, restraints, [], [], [])));
+    internal static void RequireStable(IEnumerable<RigidRestraint> restraints,
+        IEnumerable<ElasticRestraint>? elastic = null) =>
+        RequireStable(StationModel.Create(new MechanicalInput(1, 1, restraints, [], [], [], elastic)));
 
     private static void RequireStable(StationModel stations)
     {
@@ -46,6 +47,8 @@ internal static class SolverKernel
     {
         StationModel stations = StationModel.Create(input);
         RequireStable(stations);
+        if (!input.ElasticRestraints.IsEmpty)
+            throw new NotSupportedException("The bending system does not yet contain spring rows.");
 
         BendingPreparation preparation = BendingPreparation.Create(input, stations);
         PreparedBendingLoads loads = PreparedBendingLoads.Create(input, stations, preparation);

@@ -8,11 +8,15 @@ internal sealed class MechanicalInput
 {
     internal MechanicalInput(double length, double ei, IEnumerable<RigidRestraint> restraints,
         IEnumerable<TransversePointForce> pointForces, IEnumerable<AppliedPointMoment> pointMoments,
-        IEnumerable<TransverseLineLoad> lineLoads)
+        IEnumerable<TransverseLineLoad> lineLoads, IEnumerable<ElasticRestraint>? elasticRestraints = null)
     {
         Length = length;
         EI = ei;
         Restraints = restraints.OrderBy(r => (r.Position, r.Directions, DoubleToInt64Bits(r.Position)))
+            .ToImmutableArray();
+
+        ElasticRestraints = (elasticRestraints ?? []).OrderBy(r => (r.Position, DoubleToInt64Bits(r.Position),
+                DoubleToInt64Bits(r.TranslationalStiffness), DoubleToInt64Bits(r.RotationalStiffness), r.RigidTranslation))
             .ToImmutableArray();
 
         // Bit keys make the storage order deterministic, including signed zeros.
@@ -28,6 +32,7 @@ internal sealed class MechanicalInput
     internal double Length { get; }
     internal double EI { get; }
     internal ImmutableArray<RigidRestraint> Restraints { get; }
+    internal ImmutableArray<ElasticRestraint> ElasticRestraints { get; }
     internal ImmutableArray<TransversePointForce> PointForces { get; }
     internal ImmutableArray<AppliedPointMoment> PointMoments { get; }
     internal ImmutableArray<TransverseLineLoad> LineLoads { get; }
@@ -43,6 +48,14 @@ internal enum RestrainedDirections
 }
 
 internal readonly record struct RigidRestraint(double Position, RestrainedDirections Directions);
+
+/// <summary>
+/// A linear-elastic support in SI units: a transverse spring (N/m), a rotational spring (N·m/rad) or both; zero
+/// means no spring in that direction. A support with a rotational spring may hold the translation rigidly
+/// (partial restraint). It is always axially rigid.
+/// </summary>
+internal readonly record struct ElasticRestraint(double Position, double TranslationalStiffness,
+    double RotationalStiffness, bool RigidTranslation);
 internal readonly record struct TransversePointForce(double Position, double Newtons);
 internal readonly record struct AppliedPointMoment(double Position, double NewtonMeters);
 /// <summary>

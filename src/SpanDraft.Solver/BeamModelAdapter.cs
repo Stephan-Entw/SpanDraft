@@ -32,14 +32,18 @@ internal static class BeamModelAdapter
             }
         }
 
-        return new MechanicalInput(beam.Length.Meters, BendingStiffness(beam),
-            beam.Supports.Select(AdaptSupport), pointForces, pointMoments, lineLoads);
+        (IEnumerable<RigidRestraint> rigid, IEnumerable<ElasticRestraint> elastic) = AdaptRestraints(beam);
+        return new MechanicalInput(beam.Length.Meters, BendingStiffness(beam), rigid, pointForces, pointMoments,
+            lineLoads, elastic);
     }
 
     /// <summary>The restraints alone, for the mechanism check of a beam whose EI is not representable.</summary>
-    internal static IEnumerable<RigidRestraint> AdaptRestraints(BeamModel beam) => beam.Supports.Select(AdaptSupport);
+    internal static (IEnumerable<RigidRestraint> Rigid, IEnumerable<ElasticRestraint> Elastic) AdaptRestraints(
+        BeamModel beam) =>
+        (beam.Supports.Where(s => s.Type != SupportType.Spring).Select(AdaptRigid),
+            beam.Supports.Where(s => s.Type == SupportType.Spring).Select(AdaptSpring));
 
-    private static RigidRestraint AdaptSupport(Support support) =>
+    private static RigidRestraint AdaptRigid(Support support) =>
         new(support.Position.Meters, support.Type switch
         {
             SupportType.Fixed => RestrainedDirections.U | RestrainedDirections.W | RestrainedDirections.Theta,
@@ -47,6 +51,10 @@ internal static class BeamModelAdapter
             SupportType.Roller => RestrainedDirections.W,
             _ => throw new ArgumentOutOfRangeException(nameof(support), support.Type, "Unknown support type.")
         });
+
+    private static ElasticRestraint AdaptSpring(Support support) =>
+        new(support.Position.Meters, support.TranslationalSpring?.NewtonsPerMeter ?? 0,
+            support.RotationalSpring?.NewtonMetersPerRadian ?? 0, support.RigidTranslation);
 
     private static double BendingStiffness(BeamModel beam) =>
         Binary64.StiffnessProduct(beam.Material.YoungsModulus.Pascals,

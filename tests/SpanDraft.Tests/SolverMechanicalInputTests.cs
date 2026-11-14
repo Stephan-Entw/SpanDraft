@@ -79,6 +79,89 @@ public sealed class SolverMechanicalInputTests
         Assert.Equal(new RigidRestraint(0, (RestrainedDirections)directions), Assert.Single(input.Restraints));
     }
 
+    private static Support Spring(double x, double? kw, double? kt = null, bool rigid = false) =>
+        Support.CreateSpring(M(x), kw is { } w ? TranslationalStiffness.FromNewtonsPerMeter(w) : null,
+            kt is { } t ? RotationalStiffness.FromNewtonMetersPerRadian(t) : null, rigid);
+
+    [Fact]
+    public void AdaptsSpringSupportsToElasticRestraintsWithoutRigidOnes()
+    {
+        MechanicalInput input = BeamModelAdapter.Adapt(Beam(
+            [Spring(0, 1e6), Spring(1, null, 2e3), Spring(1.5, 3e5, 4e3), Spring(L, null, 5e2, true),
+                SupportAt(0.5, SupportType.Roller)]));
+
+        Assert.Equal(new[]
+        {
+            new ElasticRestraint(0, 1e6, 0, false), new ElasticRestraint(1, 0, 2e3, false),
+            new ElasticRestraint(1.5, 3e5, 4e3, false), new ElasticRestraint(L, 0, 5e2, true)
+        }, input.ElasticRestraints.AsEnumerable());
+        Assert.Equal(new RigidRestraint(0.5, W), Assert.Single(input.Restraints));
+    }
+
+    [Fact]
+    public void SpringStationsAreAxiallyRigidAndKeepTheirStiffnessesExactly()
+    {
+        StationModel stations = StationModel.Create(BeamModelAdapter.Adapt(Beam(
+            [Spring(0, 1e6), Spring(1, null, 2e3), Spring(1.5, 3e5, 4e3), Spring(L, null, 5e2, true)])));
+
+        Assert.Equal(new[]
+        {
+            new MechanicalStation(0, U, new(1e6, 0)), new MechanicalStation(1, U, new(0, 2e3)),
+            new MechanicalStation(1.5, U, new(3e5, 4e3)), new MechanicalStation(L, U | W, new(0, 5e2))
+        }, stations.MechanicalStations.AsEnumerable());
+        Assert.All(stations.MechanicalStations, s => Assert.True(s.ConstrainsW || s.ConstrainsTheta));
+        Assert.Equal(stations.MechanicalStations.AsEnumerable(),
+            stations.EventStations.Select(e => e.MechanicalStation!.Value));
+        MechanicalStation partial = stations.MechanicalStations[^1];
+        Assert.True(partial.RigidW);
+        Assert.True(partial.ElasticTheta);
+        Assert.False(partial.ElasticW);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void ASpringOnABeamEndOrInsideDoesNotChangeTheEndStations(double x)
+    {
+        StationModel stations = StationModel.Create(BeamModelAdapter.Adapt(
+            Beam([SupportAt(2, SupportType.Pinned), Spring(x, 3)])));
+        Assert.Contains(stations.MechanicalStations, s => s.Position == x && s.ElasticW);
+        Assert.Equal(x == 0 ? 2 : 3, stations.MechanicalStations.Length);
+    }
+
+    [Theory]
+    [InlineData(SupportType.Fixed)]
+    [InlineData(SupportType.Pinned)]
+    [InlineData(SupportType.Roller)]
+    public void ASpringAtARigidSupportPositionIsAnInvalidModelInTheKernel(SupportType rigid)
+    {
+        MechanicalInput input = BeamModelAdapter.Adapt(Beam([SupportAt(1, rigid), Spring(1, 3)]));
+        Assert.Throws<InvalidMechanicalModelException>(() => StationModel.Create(input));
+        Assert.Throws<InvalidMechanicalModelException>(() => SolverKernel.BuildSystem(input));
+    }
+
+    [Fact]
+    public void TwoSpringsAtOnePositionAreAnInvalidModelInTheKernel()
+    {
+        MechanicalInput input = BeamModelAdapter.Adapt(Beam([Spring(1, 3), Spring(1, null, 3)]));
+        Assert.Throws<InvalidMechanicalModelException>(() => StationModel.Create(input));
+    }
+
+    [Theory]
+    [InlineData(0d, 0d, false)]
+    [InlineData(-1d, 0d, false)]
+    [InlineData(0d, -1d, false)]
+    [InlineData(double.NaN, 0d, false)]
+    [InlineData(0d, double.PositiveInfinity, false)]
+    [InlineData(1d, 1d, true)]
+    [InlineData(0d, 0d, true)]
+    public void MalformedElasticRestraintsAreRejected(double kw, double kt, bool rigid)
+    {
+        MechanicalInput input = SolverBendingTestSupport.Model(
+            restraints: [new(0, U | W)], elastic: [new(1, kw, kt, rigid)]);
+        Assert.Throws<InvalidMechanicalModelException>(() => StationModel.Create(input));
+    }
+
     [Theory]
     [InlineData(SupportType.Fixed)]
     [InlineData(SupportType.Pinned)]

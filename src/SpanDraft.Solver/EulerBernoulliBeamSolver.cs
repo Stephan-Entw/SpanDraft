@@ -29,6 +29,10 @@ public sealed class EulerBernoulliBeamSolver
                 "Supports leave an axial translation or a transverse rigid-body motion unconstrained.",
                 innerException: mechanism);
         }
+        catch (InvalidMechanicalModelException invalid)
+        {
+            throw new BeamSolverException(SolverErrorCode.InvalidModel, invalid.Message, innerException: invalid);
+        }
         catch (NumericalRangeException range)
         {
             throw BeamSolverException.Rejected(range.Cause, range);
@@ -48,7 +52,9 @@ public sealed class EulerBernoulliBeamSolver
         catch (NumericalRangeException)
         {
             // The exact mechanism check precedes every range rule, including the adapter's EI product.
-            SolverKernel.RequireStable(BeamModelAdapter.AdaptRestraints(beam));
+            (IEnumerable<RigidRestraint> rigid, IEnumerable<ElasticRestraint> elastic) =
+                BeamModelAdapter.AdaptRestraints(beam);
+            SolverKernel.RequireStable(rigid, elastic);
             throw;
         }
     }

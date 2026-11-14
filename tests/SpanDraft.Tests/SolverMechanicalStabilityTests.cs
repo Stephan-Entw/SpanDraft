@@ -39,6 +39,55 @@ public sealed class SolverMechanicalStabilityTests
         }
     }
 
+    private static (ElasticRestraint[] Elastic, RigidRestraint[] Rigid, int Rank, bool Axial)[] SpringCases =>
+    [
+        ([new(1, 5, 0, false)], [], 1, true),
+        ([new(0, 5, 0, false), new(2, 7, 0, false)], [], 2, true),
+        ([new(1, 0, 5, false)], [], 1, true),
+        ([new(1, 5, 7, false)], [], 2, true),
+        ([new(1, 0, 7, true)], [], 2, true),
+        ([new(1, 5, 0, false)], [new(0, W)], 2, true),
+        ([new(1, 0, 5, false)], [new(0, U | W)], 2, true),
+        ([new(1, 0, 5, false)], [new(0, Theta)], 1, true),
+        ([new(1, 5, 0, false), new(Math.BitIncrement(1), 5, 0, false)], [], 2, true),
+        ([new(1, 5, 0, false)], [new(2, U | W)], 2, true)
+    ];
+
+    [Fact]
+    public void SpringsCountThroughTheirActingDirectionIndependentOfStiffness()
+    {
+        foreach ((ElasticRestraint[] elastic, RigidRestraint[] rigid, int rank, bool axial) in SpringCases)
+            foreach (double scale in new[] { 1, 1e-300, 1e300 })
+            {
+                ElasticRestraint[] scaled = [.. elastic.Select(e => e with
+                {
+                    TranslationalStiffness = e.TranslationalStiffness * scale,
+                    RotationalStiffness = e.RotationalStiffness * scale
+                })];
+                MechanicalInput input = SolverBendingTestSupport.Model(restraints: rigid, elastic: scaled);
+                MechanicalStability stability = MechanicalStability.Check(StationModel.Create(input));
+                Assert.Equal(rank, stability.BendingRank);
+                Assert.Equal(axial, stability.AxiallyRestrained);
+            }
+    }
+
+    [Fact]
+    public void ASpringSupportIsAxiallyRigidSoALoneRollerPairStaysUnstableButSpringsDoNot()
+    {
+        MechanicalInput rollers = SolverBendingTestSupport.Model(restraints: [new(0, W), new(2, W)]);
+        MechanicalInput springs = SolverBendingTestSupport.Model(elastic: [new(0, 5, 0, false), new(2, 5, 0, false)]);
+        Assert.False(MechanicalStability.Check(StationModel.Create(rollers)).IsStable);
+        Assert.True(MechanicalStability.Check(StationModel.Create(springs)).IsStable);
+    }
+
+    [Fact]
+    public void ASingleTranslationalOrRotationalSpringLeavesAMechanism()
+    {
+        foreach (ElasticRestraint elastic in new ElasticRestraint[] { new(1, 5, 0, false), new(1, 0, 5, false) })
+            Assert.Throws<MechanicalMechanismException>(() =>
+                SolverKernel.RequireStable([], [elastic]));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

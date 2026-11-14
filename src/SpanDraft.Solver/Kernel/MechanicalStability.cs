@@ -13,9 +13,9 @@ internal readonly record struct MechanicalStability(int BendingRank, bool Axiall
         foreach (MechanicalStation station in stations.MechanicalStations)
         {
             axial |= station.Directions.HasFlag(RestrainedDirections.U);
-            if (station.Directions.HasFlag(RestrainedDirections.W))
+            if (station.ConstrainsW)
                 rows.Add([Binary64.ExactUnits(1), Binary64.ExactUnits(station.Position)]);
-            if (station.Directions.HasFlag(RestrainedDirections.Theta))
+            if (station.ConstrainsTheta)
                 rows.Add([BigInteger.Zero, BigInteger.One]);
         }
 
