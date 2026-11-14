@@ -155,7 +155,7 @@ public sealed class SolverVerifiedBendingStateTests
         for (int i = 0; i < weights.Length; i++)
             Assert.Equal(Math.ScaleB(expected[(int)system.FreeComponents[i].Component], -cs[i]), weights[i]);
 
-        system = system with { Excitation = default, NormalizedEI = new(1.25) };
+        system = system with { Excitation = default, IntervalEI = [new(1.25)] };
         x = new double[system.ReducedColumns.Length];
         x[0] = Math.BitDecrement(Binary64.Lambda);
         cs = Enumerable.Repeat(-100, system.Dimension).ToArray();

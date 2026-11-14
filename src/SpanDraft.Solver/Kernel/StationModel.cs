@@ -4,13 +4,21 @@ namespace SpanDraft.Solver.Kernel;
 
 internal sealed class StationModel
 {
-    private StationModel(ImmutableArray<MechanicalStation> mechanicalStations, ImmutableArray<EventStation> eventStations)
+    private StationModel(ImmutableArray<MechanicalStation> mechanicalStations, ImmutableArray<EventStation> eventStations,
+        ImmutableArray<int> intervalSections)
     {
         MechanicalStations = mechanicalStations;
         EventStations = eventStations;
+        IntervalSections = intervalSections;
     }
 
     internal ImmutableArray<MechanicalStation> MechanicalStations { get; }
+
+    /// <summary>
+    /// For every interval between consecutive mechanical stations the index of the stiffness section that
+    /// contains it. Every section boundary is a mechanical station, so no interval straddles a boundary.
+    /// </summary>
+    internal ImmutableArray<int> IntervalSections { get; }
     internal ImmutableArray<EventStation> EventStations { get; }
 
     internal static StationModel Create(MechanicalInput input)
@@ -20,6 +28,11 @@ internal sealed class StationModel
             [0d] = RestrainedDirections.None,
             [input.Length] = RestrainedDirections.None
         };
+        // A section boundary is a mechanical station without restraints. It never counts as occupied: a support
+        // or a spring may sit on it.
+        RequireTiling(input);
+        foreach (StiffnessSection section in input.Sections.Skip(1))
+            restraints[StationPosition(section.Start)] = RestrainedDirections.None;
         var occupied = new HashSet<double>();
         foreach (RigidRestraint restraint in input.Restraints)
         {
@@ -53,15 +66,65 @@ internal sealed class StationModel
         eventPositions.UnionWith(lineStarts.Select(group => group.Key));
         eventPositions.UnionWith(lineEnds.Select(group => group.Key));
 
-        return new StationModel(
-            restraints.Select(pair => new MechanicalStation(pair.Key, pair.Value, springs.GetValueOrDefault(pair.Key)))
-                .ToImmutableArray(),
+        ImmutableArray<MechanicalStation> mechanical = restraints
+            .Select(pair => new MechanicalStation(pair.Key, pair.Value, springs.GetValueOrDefault(pair.Key)))
+            .ToImmutableArray();
+        return new StationModel(mechanical,
             eventPositions.Select(position => new EventStation(position,
                 restraints.TryGetValue(position, out RestrainedDirections directions)
                     ? new MechanicalStation(position, directions, springs.GetValueOrDefault(position))
                     : null,
                 forces[position].ToImmutableArray(), moments[position].ToImmutableArray(),
-                lineStarts[position].ToImmutableArray(), lineEnds[position].ToImmutableArray())).ToImmutableArray());
+                lineStarts[position].ToImmutableArray(), lineEnds[position].ToImmutableArray())).ToImmutableArray(),
+            AssignSections(input, mechanical));
+    }
+
+    private static void RequireTiling(MechanicalInput input)
+    {
+        if (input.Sections.IsEmpty)
+            throw new InvalidMechanicalModelException("The beam needs at least one stiffness section.");
+        if (input.Sections.Length == 1)
+        {
+            // One section covers the beam by definition; its range is judged by the range rules of the kernel,
+            // so NaN and degenerate lengths are compared by identity only.
+            StiffnessSection only = input.Sections[0];
+            if (!StationPosition(only.Start).Equals(0d) || !only.End.Equals(input.Length))
+                throw new InvalidMechanicalModelException("The stiffness section must cover the whole beam.");
+            return;
+        }
+        double expected = 0;
+        foreach (StiffnessSection section in input.Sections)
+        {
+            // Exact comparison: sections tile the beam or the model is invalid.
+            if (StationPosition(section.Start) != expected || !(section.End > section.Start))
+                throw new InvalidMechanicalModelException(
+                    "Stiffness sections must follow each other in ascending order without gap or overlap.");
+            expected = section.End;
+        }
+        if (expected != input.Length)
+            throw new InvalidMechanicalModelException("The stiffness sections must end exactly at the beam end.");
+    }
+
+    // Exact classification by station identity: a section boundary is itself a station, so the left station of an
+    // interval decides its section and the right one is checked to stay inside it. No midpoint is ever tested.
+    private static ImmutableArray<int> AssignSections(MechanicalInput input, ImmutableArray<MechanicalStation> stations)
+    {
+        var result = ImmutableArray.CreateBuilder<int>(stations.Length - 1);
+        if (input.Sections.Length == 1)
+        {
+            result.AddRange(Enumerable.Repeat(0, stations.Length - 1));
+            return result.MoveToImmutable();
+        }
+        int section = 0;
+        for (int i = 0; i < stations.Length - 1; i++)
+        {
+            while (input.Sections[section].End <= stations[i].Position)
+                section++;
+            if (input.Sections[section].Start > stations[i].Position || input.Sections[section].End < stations[i + 1].Position)
+                throw new InvalidMechanicalModelException("A mechanical interval straddles a stiffness section boundary.");
+            result.Add(section);
+        }
+        return result.MoveToImmutable();
     }
 
     private static double StationPosition(double position) => position == 0d ? 0d : position;

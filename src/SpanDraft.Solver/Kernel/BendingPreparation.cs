@@ -5,14 +5,19 @@ namespace SpanDraft.Solver.Kernel;
 
 internal sealed record BendingPreparation(int EL, int EEI, int EF, ImmutableArray<int> StateExponents,
     int ForceExponent, int MomentExponent, int LineLoadExponent, bool IsUnloaded, ExcitationBounds Excitation,
-    RoundCounted NormalizedEI)
+    ImmutableArray<RoundCounted> IntervalEI)
 {
     internal static BendingPreparation Create(MechanicalInput input, StationModel stations)
     {
         CheckInput(input.Length);
-        CheckInput(input.EI);
+        foreach (StiffnessSection section in input.Sections)
+        {
+            CheckInput(section.Start);
+            CheckInput(section.End);
+            CheckInput(section.EI);
+        }
         if (!IsPositive(input.Length) || !IsNormal(input.Length) ||
-            !IsPositive(input.EI) || !IsNormal(input.EI))
+            input.Sections.Any(section => !IsPositive(section.EI) || !IsNormal(section.EI)))
             throw new NumericalRangeException("Length and EI must be positive normal reference scales.");
         foreach (RigidRestraint restraint in input.Restraints)
             CheckInput(restraint.Position);
@@ -41,9 +46,16 @@ internal sealed record BendingPreparation(int EL, int EEI, int EF, ImmutableArra
         }
 
         int eL = PowerOfTwoExponent(input.Length);
-        int eEI = PowerOfTwoExponent(input.EI);
-        var e = new RoundCounted(ScaleByPowerOfTwo(input.EI, -eEI), 1);
-        e.RequireNormal();
+        // The normalization follows the stiffest section; every other section must stay a normal number.
+        int eEI = PowerOfTwoExponent(input.Sections.Max(section => section.EI));
+        RoundCounted[] sectionEI = input.Sections.Select(section =>
+        {
+            var e = new RoundCounted(ScaleByPowerOfTwo(section.EI, -eEI), 1);
+            e.RequireNormal();
+            return e;
+        }).ToArray();
+        ImmutableArray<RoundCounted> intervalEI = stations.IntervalSections.Select(index => sectionEI[index])
+            .ToImmutableArray();
         if (input.Length < ScaleByPowerOfTwo(1, -968))
             throw new NumericalRangeException("Beam length is below the contract range.");
 
@@ -56,7 +68,7 @@ internal sealed record BendingPreparation(int EL, int EEI, int EF, ImmutableArra
             {
                 int eF = unloaded ? 0 : excitation.Exponent + 2 * eL - eEI;
                 preparation = new(eL, eEI, eF, [eL + eF, eF, eEI - eL + eF, eEI - 2 * eL + eF],
-                    2 * eL - eEI - eF, eL - eEI - eF, 3 * eL - eEI - eF, unloaded, excitation, e);
+                    2 * eL - eEI - eF, eL - eEI - eF, 3 * eL - eEI - eF, unloaded, excitation, intervalEI);
             }
         }
         catch (OverflowException)
@@ -136,10 +148,12 @@ internal sealed record BendingPreparation(int EL, int EEI, int EF, ImmutableArra
 internal readonly record struct TransferCoefficients(RoundCounted A, RoundCounted AE,
     RoundCounted A2, RoundCounted A3)
 {
-    internal static TransferCoefficients Create(double start, double end, BendingPreparation preparation)
+    /// <summary>The transfer coefficients of one mechanical interval with the stiffness of its own section.</summary>
+    internal static TransferCoefficients Create(double start, double end, BendingPreparation preparation,
+        int interval = 0)
     {
         RoundCounted a = RoundCounted.Distance(end, start, preparation.EL);
-        RoundCounted e = preparation.NormalizedEI;
+        RoundCounted e = preparation.IntervalEI[interval];
         RoundCounted square = a * a;
         var coefficients = new TransferCoefficients(a, a / e, (square / 2) / e, ((square * a) / 6) / e);
         coefficients.A.RequireNormal();

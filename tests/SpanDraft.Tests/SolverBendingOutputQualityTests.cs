@@ -119,7 +119,7 @@ public sealed class SolverBendingOutputQualityTests
         var sentinel = new NormalizedBendingField([31, 29, 23, 19], [0, 0, 0, 0]);
         (low, high) = BendingOutputQuality.Scales(fields, system.Excitation, [sentinel]);
         Assert.True(low[0] > 30 && low[1] > 28 && low[2] > 22);
-        var longer = fields with { Stations = [new(0, 0), new(1.5, 0)], EL = 0, EI = new(1) };
+        var longer = fields with { Stations = [new(0, 0), new(1.5, 0)], EL = 0, IntervalEI = [new(1)] };
         (low, high) = BendingOutputQuality.Scales(longer, new(0, 1, 1), []);
         AssertEncloses(low[2], Q(3, 2), high[2]);
         AssertEncloses(low[1], Q(9, 4), high[1]);

@@ -46,7 +46,7 @@ internal sealed record BendingPiece(double Start, double End, ImmutableArray<dou
             double width = RoundCounted.BoundedDistance(line.End, line.Start, fields.EL).Value;
             change += line.Rise.Value * (h / width);
         }
-        double ei = fields.EI.Value;
+        double ei = fields.IntervalEI[fields.SegmentOf(a)].Value;
         double m = start.Values[2], v = start.Values[3], q = intensity.Value;
         ImmutableArray<double> theta = [start.Values[1], (m * h) / ei, ((v * h) * h / 2) / ei,
             (((q * h) * h) * h / 6) / ei];

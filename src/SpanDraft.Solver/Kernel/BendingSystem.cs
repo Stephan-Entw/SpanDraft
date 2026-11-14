@@ -9,8 +9,12 @@ internal sealed record BendingSystem(int Dimension, ImmutableArray<double> A, Im
     ImmutableArray<double> B, ImmutableArray<double> BB, ImmutableArray<MechanicalStation> Stations,
     ImmutableArray<FreeBendingComponent> FreeComponents, ImmutableArray<int> ReducedColumns,
     int EL, int EEI, int EF, ImmutableArray<int> StateExponents, int ForceExponent, int MomentExponent,
-    int LineLoadExponent, bool IsUnloaded, ExcitationBounds Excitation, RoundCounted NormalizedEI,
-    ImmutableArray<EventStation> EventStations, PreparedBendingLoads Loads);
+    int LineLoadExponent, bool IsUnloaded, ExcitationBounds Excitation, ImmutableArray<RoundCounted> IntervalEI,
+    ImmutableArray<EventStation> EventStations, PreparedBendingLoads Loads)
+{
+    /// <summary>The smallest normalized stiffness of any interval: the conservative scale for rotations.</summary>
+    internal RoundCounted LeastEI => IntervalEI.MinBy(e => e.Value);
+}
 
 internal static class BendingSystemBuilder
 {
@@ -40,14 +44,14 @@ internal static class BendingSystemBuilder
         for (int i = 0; i < stations.Length; i++)
         {
             TransferCoefficients co = i == 0 ? default : TransferCoefficients.Create(
-                stations[i - 1].Position, stations[i].Position, preparation);
+                stations[i - 1].Position, stations[i].Position, preparation, i - 1);
             var transferred = new Bounded[4];
             if (i > 0)
                 for (int q = 0; q < 4; q++)
                 {
                     transferred[q] = loads.Segments[i - 1].Integral(stations[i].Position, 4 - q);
                     if (q < 2)
-                        transferred[q] /= new Bounded(preparation.NormalizedEI.Value, preparation.NormalizedEI.Bound());
+                        transferred[q] /= new Bounded(preparation.IntervalEI[i - 1].Value, preparation.IntervalEI[i - 1].Bound());
                 }
             bool rigidW = stations[i].RigidW;
             bool rigidTheta = stations[i].RigidTheta;
@@ -119,7 +123,7 @@ internal static class BendingSystemBuilder
         return new(n, a.ToImmutableArray(), k.ToImmutableArray(), b.ToImmutableArray(), bb.ToImmutableArray(),
             stations, free.ToImmutable(), columns.ToImmutableArray(), preparation.EL, preparation.EEI, preparation.EF,
             preparation.StateExponents, preparation.ForceExponent, preparation.MomentExponent,
-            preparation.LineLoadExponent, preparation.IsUnloaded, preparation.Excitation, preparation.NormalizedEI,
+            preparation.LineLoadExponent, preparation.IsUnloaded, preparation.Excitation, preparation.IntervalEI,
             model.EventStations, loads);
     }
 }

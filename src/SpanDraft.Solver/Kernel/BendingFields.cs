@@ -16,12 +16,12 @@ internal sealed record BendingField(double Position, FieldSide Side, ImmutableAr
 internal sealed record BendingFields(ImmutableArray<MechanicalStation> Stations, ImmutableArray<double> EventPositions,
     PreparedBendingLoads Loads,
     ImmutableArray<double> State, ImmutableArray<double> StateBound, int EL,
-    ImmutableArray<int> Exponents, RoundCounted EI, bool IsUnloaded)
+    ImmutableArray<int> Exponents, ImmutableArray<RoundCounted> IntervalEI, bool IsUnloaded)
 {
     internal static BendingFields From(VerifiedBendingState state) => new(state.System.Stations,
         state.System.EventStations.Select(s => s.Position).ToImmutableArray(),
         state.System.Loads, state.FullState, state.FullStateBound, state.System.EL,
-        state.System.StateExponents, state.System.NormalizedEI, state.IsUnloaded);
+        state.System.StateExponents, state.System.IntervalEI, state.IsUnloaded);
 
     internal bool IsEventPosition(double x) => EventPositions.BinarySearch(x) >= 0;
 
@@ -54,7 +54,7 @@ internal sealed record BendingFields(ImmutableArray<MechanicalStation> Stations,
             side = FieldSide.Left;
         }
         Bounded s = RoundCounted.BoundedDistance(x, Stations[j].Position, EL);
-        var e = new Bounded(EI.Value, EI.Bound());
+        var e = new Bounded(IntervalEI[j].Value, IntervalEI[j].Bound());
         Bounded one = new(1);
         Bounded a2 = ((s * s) / new Bounded(2)) / e;
         Bounded[][] g = [[one, s, a2, (((s * s) * s) / new Bounded(6)) / e],

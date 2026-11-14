@@ -97,7 +97,7 @@ public sealed class SolverBendingNumericsTests
         RoundCounted[] actual = [co.A, co.AE, co.A2, co.A3];
         SolverExactNumber[] exact = [a, a / e, a * a / Integer(2) / e, a * a * a / Integer(6) / e];
         Assert.Equal(new long[] { 1, 3, 5, 8 }, actual.Select(t => t.Count));
-        Assert.Equal(1, preparation.NormalizedEI.Count);
+        Assert.Equal(1, preparation.IntervalEI[0].Count);
         for (int i = 0; i < actual.Length; i++)
         {
             actual[i].RequireNormal();

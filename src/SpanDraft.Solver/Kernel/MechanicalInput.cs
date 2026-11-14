@@ -6,12 +6,25 @@ namespace SpanDraft.Solver.Kernel;
 /// <summary>Immutable snapshot of mechanical primitives in SI units.</summary>
 internal sealed class MechanicalInput
 {
+    /// <summary>A beam of constant bending stiffness over its whole length.</summary>
     internal MechanicalInput(double length, double ei, IEnumerable<RigidRestraint> restraints,
+        IEnumerable<TransversePointForce> pointForces, IEnumerable<AppliedPointMoment> pointMoments,
+        IEnumerable<TransverseLineLoad> lineLoads, IEnumerable<ElasticRestraint>? elasticRestraints = null)
+        : this(length, [new StiffnessSection(0, length, ei)], restraints, pointForces, pointMoments, lineLoads,
+            elasticRestraints)
+    {
+    }
+
+    /// <summary>
+    /// A beam of piecewise constant bending stiffness. The sections are kept in the given order; the station
+    /// model requires them to tile the beam exactly.
+    /// </summary>
+    internal MechanicalInput(double length, IEnumerable<StiffnessSection> sections, IEnumerable<RigidRestraint> restraints,
         IEnumerable<TransversePointForce> pointForces, IEnumerable<AppliedPointMoment> pointMoments,
         IEnumerable<TransverseLineLoad> lineLoads, IEnumerable<ElasticRestraint>? elasticRestraints = null)
     {
         Length = length;
-        EI = ei;
+        Sections = sections.ToImmutableArray();
         Restraints = restraints.OrderBy(r => (r.Position, r.Directions, DoubleToInt64Bits(r.Position)))
             .ToImmutableArray();
 
@@ -30,13 +43,20 @@ internal sealed class MechanicalInput
     }
 
     internal double Length { get; }
-    internal double EI { get; }
+    internal ImmutableArray<StiffnessSection> Sections { get; }
+
+    /// <summary>The bending stiffness of an input with exactly one section.</summary>
+    internal double EI => Sections.Length == 1 ? Sections[0].EI :
+        throw new InvalidOperationException("The input has several stiffness sections.");
     internal ImmutableArray<RigidRestraint> Restraints { get; }
     internal ImmutableArray<ElasticRestraint> ElasticRestraints { get; }
     internal ImmutableArray<TransversePointForce> PointForces { get; }
     internal ImmutableArray<AppliedPointMoment> PointMoments { get; }
     internal ImmutableArray<TransverseLineLoad> LineLoads { get; }
 }
+
+/// <summary>The bending stiffness EI (N·m²) of the beam between two exact positions (m).</summary>
+internal readonly record struct StiffnessSection(double Start, double End, double EI);
 
 [Flags]
 internal enum RestrainedDirections

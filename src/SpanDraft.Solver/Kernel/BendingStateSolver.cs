@@ -134,8 +134,10 @@ internal static class BendingStateSolver
         double f = Math.Max(system.Excitation.Lower, Lambda);
         double sm = Math.Max(maxima[2], f);
         double sv = Math.Max(sm, f);
-        double st = Math.Max(maxima[1], sm / system.NormalizedEI.Value);
-        double sw = Math.Max(Math.Max(maxima[0], sm / system.NormalizedEI.Value), st);
+        // The least stiffness bounds the rotation scale from above, as it does the largest curvature.
+        double least = system.LeastEI.Value;
+        double st = Math.Max(maxima[1], sm / least);
+        double sw = Math.Max(Math.Max(maxima[0], sm / least), st);
         double[] sq = [sw, st, sm, sv];
         var d = new double[system.Dimension];
         try

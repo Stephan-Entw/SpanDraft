@@ -35,8 +35,9 @@ internal static class BendingOutputQuality
             }
         double ln = ScaleByPowerOfTwo(fields.Stations[^1].Position, -fields.EL);
         double ld = Outward(ln, false), lu = Outward(ln, true);
-        double eiHigh = Add(fields.EI.Value, fields.EI.Bound(), true);
-        double eiLow = Subtract(fields.EI.Value, fields.EI.Bound(), false);
+        // The rotation and deflection scales divide by the stiffest section below and by the softest above.
+        double eiHigh = fields.IntervalEI.Max(e => Add(e.Value, e.Bound(), true));
+        double eiLow = fields.IntervalEI.Min(e => Subtract(e.Value, e.Bound(), false));
         double sm = Math.Max(low[2], Multiply(excitation.Lower, ld, false));
         double sv = Math.Max(Divide(sm, lu, false), excitation.Lower);
         double st = Math.Max(low[1], Divide(Multiply(sm, ld, false), eiHigh, false));
@@ -106,7 +107,8 @@ internal static class BendingOutputQuality
         d[2] = Math.Max(d[2], Subtract(lm, Multiply(2, b[2], true), false));
         double uv = Sum(Abs(start.Values[3]), b[3], Multiply(h, qs, true));
         double um = Sum(Abs(start.Values[2]), b[2], Multiply(uv, h, true));
-        double el = Subtract(fields.EI.Value, fields.EI.Bound(), false);
+        RoundCounted own = fields.IntervalEI[fields.SegmentOf(x0)];
+        double el = Subtract(own.Value, own.Bound(), false);
         double ut = Sum(Abs(start.Values[1]), b[1], Divide(Multiply(um, h, true), el, true));
         double uw = Sum(Abs(start.Values[0]), b[0], Multiply(ut, h, true));
         double[] upper = [uw, ut, um, uv];
