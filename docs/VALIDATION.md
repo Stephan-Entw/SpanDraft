@@ -845,7 +845,7 @@ Validierungs-Suite (304 Tests) bestanden vollständig.
 4ef3168745739779f580ccee60998e85e1dbe37f678c7368a8e7e44aeb39d48e
 ```
 
-Dieser Hash ist die neue CI-Baseline in [ci.yml](../.github/workflows/ci.yml). Der Report der
+Dieser Hash war die CI-Baseline nach den Federlagern. Der Report der
 Linearlast-Abnahme und der M4-Abnahme bleiben als historische Evidenz unverändert.
 
 ## 7. Mehrsegment-Balken (DEV-11)
@@ -935,3 +935,20 @@ garantieren, D6 den Vergleich der Abschnittsanzahl, die sich immer auch in einem
 | P1 | format: a further segment is written with the first boundary | killed (3 Tests) |
 | P2 | format: further segments are not read | killed (11 Tests) |
 | P3 | format: strength confirmation is checked for the first segment only | killed (1 Tests) |
+
+**Abnahme der Mehrsegment-Balken.** Nach dem letzten Core-/Solver-Commit erzeugte ein frischer
+`compare` ohne `--actual` den Report
+[`acceptance-multi-segment.json`](../validation/results/acceptance-multi-segment.json)
+(2026-11-14T18:03:52Z, macOS ARM64, `entryPoint` `EulerBernoulliBeamSolver`): 32 Fälle,
+4390 externe und 2141 analytische Skalarvergleiche, 180 metamorphe Prüfungen,
+`validated = true`. Die Product-Suite (5614 Tests, einer übersprungen) und die separate
+Validierungs-Suite (353 Tests) bestanden vollständig. Die Abnahme auf Windows steht für die CI aus.
+
+**SolverSourceSha256:**
+
+```text
+2fba8f23fe250bc359083be10150f312efaf644b00e5b0ec04719215275e15a2
+```
+
+Dieser Hash ist die neue CI-Baseline in [ci.yml](../.github/workflows/ci.yml). Die Reports der
+Federlager-, Linearlast- und M4-Abnahme bleiben als historische Evidenz unverändert.
