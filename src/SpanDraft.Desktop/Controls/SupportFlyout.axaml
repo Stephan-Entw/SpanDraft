@@ -26,6 +26,35 @@
           </ComboBox.ItemTemplate>
         </ComboBox>
       </Grid>
+      <StackPanel x:Name="SpringSection" Spacing="{StaticResource Space4}" IsVisible="{Binding SupportDraft.IsSpring}">
+        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+          <CheckBox x:Name="TranslationalToggle" Content="{x:Static resources:Strings.SpringTranslationalLabel}"
+                    IsChecked="{Binding SupportDraft.HasTranslational, Mode=TwoWay}" VerticalAlignment="Center"
+                    AutomationProperties.Name="{x:Static resources:Strings.SpringTranslationalName}" />
+          <TextBox Classes="numeric" Grid.Column="1" x:Name="TranslationalInput" Text="{Binding SupportDraft.TranslationalText, Mode=TwoWay}"
+                   IsEnabled="{Binding SupportDraft.HasTranslational}" Classes.error="{Binding SupportDraft.HasTranslationalError}"
+                   AutomationProperties.Name="{x:Static resources:Strings.SpringTranslationalName}" />
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="TranslationalUnit" Text="{Binding SupportDraft.TranslationalUnit}" VerticalAlignment="Center" />
+        </Grid>
+        <controls:TechnicalTextBlock Text="{Binding SupportDraft.TranslationalError}" IsVisible="{Binding SupportDraft.HasTranslationalError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+          <CheckBox x:Name="RotationalToggle" Content="{x:Static resources:Strings.SpringRotationalLabel}"
+                    IsChecked="{Binding SupportDraft.HasRotational, Mode=TwoWay}" VerticalAlignment="Center"
+                    AutomationProperties.Name="{x:Static resources:Strings.SpringRotationalName}" />
+          <TextBox Classes="numeric" Grid.Column="1" x:Name="RotationalInput" Text="{Binding SupportDraft.RotationalText, Mode=TwoWay}"
+                   IsEnabled="{Binding SupportDraft.HasRotational}" Classes.error="{Binding SupportDraft.HasRotationalError}"
+                   AutomationProperties.Name="{x:Static resources:Strings.SpringRotationalName}" />
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="RotationalUnit" Text="{Binding SupportDraft.RotationalUnit}" VerticalAlignment="Center" />
+        </Grid>
+        <controls:TechnicalTextBlock Text="{Binding SupportDraft.RotationalError}" IsVisible="{Binding SupportDraft.HasRotationalError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+        <CheckBox x:Name="RigidTranslationToggle" Content="{x:Static resources:Strings.SpringRigidTranslationLabel}"
+                  IsChecked="{Binding SupportDraft.RigidTranslation, Mode=TwoWay}" IsEnabled="{Binding SupportDraft.CanRigidTranslation}"
+                  AutomationProperties.Name="{x:Static resources:Strings.SpringRigidTranslationLabel}" />
+        <controls:TechnicalTextBlock Text="{Binding SupportDraft.SpringError}" IsVisible="{Binding SupportDraft.HasSpringError}"
+                   Classes="validationMessage" TextWrapping="Wrap" />
+      </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
         <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
           <TextBlock controls:TechnicalTextPresenter.Content="{Binding SupportDraft.PositionLabel}" Classes="propertyLabel" VerticalAlignment="Center" />

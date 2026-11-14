@@ -137,8 +137,14 @@
   <data name="UnitTranslationalStiffness" xml:space="preserve"><value>Translational spring stiffness</value></data>
   <data name="UnitRotationalStiffness" xml:space="preserve"><value>Rotational spring stiffness</value></data>
   <data name="SpringSupport" xml:space="preserve"><value>Spring Support</value></data>
-  <data name="ToolbarSpringSupport" xml:space="preserve"><value>Spring</value></data>
   <data name="SpringRigidTranslation" xml:space="preserve"><value>rigid in w</value></data>
+  <data name="InvalidStiffness" xml:space="preserve"><value>Enter a stiffness greater than zero.</value></data>
+  <data name="SpringRequired" xml:space="preserve"><value>Select at least one spring.</value></data>
+  <data name="SpringTranslationalLabel" xml:space="preserve"><value>Spring w</value></data>
+  <data name="SpringRotationalLabel" xml:space="preserve"><value>Spring θ</value></data>
+  <data name="SpringTranslationalName" xml:space="preserve"><value>Translational spring stiffness</value></data>
+  <data name="SpringRotationalName" xml:space="preserve"><value>Rotational spring stiffness</value></data>
+  <data name="SpringRigidTranslationLabel" xml:space="preserve"><value>Rigid in w</value></data>
   <data name="SettingsNumeric" xml:space="preserve"><value>Number formatting</value></data>
   <data name="PresentationCalculationHint" xml:space="preserve"><value>≈ marks rounded inputs. Values are stored and calculated in full.</value></data>
   <data name="SettingsLanguage" xml:space="preserve"><value>Language and region</value></data>

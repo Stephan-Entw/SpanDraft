@@ -69,6 +69,7 @@ public sealed partial class EditorViewModel : ObservableObject
         FixedToolCommand = new(() => ToggleSupportTool(SupportType.Fixed));
         PinnedToolCommand = new(() => ToggleSupportTool(SupportType.Pinned));
         RollerToolCommand = new(() => ToggleSupportTool(SupportType.Roller));
+        SpringToolCommand = new(() => ToggleSupportTool(SupportType.Spring));
         ResultProbeToolCommand = new(ToggleResultProbeTool, () => CanResultProbe);
         ConfirmSupportCommand = new(() => ConfirmSupport());
         CancelSupportCommand = new(CancelSupportInteraction);
@@ -125,6 +126,7 @@ public sealed partial class EditorViewModel : ObservableObject
     public ActionCommand FixedToolCommand { get; }
     public ActionCommand PinnedToolCommand { get; }
     public ActionCommand RollerToolCommand { get; }
+    public ActionCommand SpringToolCommand { get; }
     public ActionCommand ConfirmSupportCommand { get; }
     public ActionCommand CancelSupportCommand { get; }
     public ActionCommand DeleteSupportCommand { get; }
@@ -133,6 +135,7 @@ public sealed partial class EditorViewModel : ObservableObject
     public bool IsFixedTool => PlacementTool == SupportType.Fixed;
     public bool IsPinnedTool => PlacementTool == SupportType.Pinned;
     public bool IsRollerTool => PlacementTool == SupportType.Roller;
+    public bool IsSpringTool => PlacementTool == SupportType.Spring;
     public SupportDraftViewModel? SupportDraft => _draft;
     public bool IsSupportFlyoutVisible => _draft is not null && Interaction is SupportInteraction.NewDraft or SupportInteraction.EditDraft;
     public SupportPreview? Preview => _preview;
@@ -164,7 +167,8 @@ public sealed partial class EditorViewModel : ObservableObject
     public void HoverPlacement(Length? position)
     {
         if (Interaction != SupportInteraction.Placement) return;
-        _preview = position is { } p ? new(p, PlacementTool!.Value, !CanPosition(p)) : null;
+        _preview = position is { } p ? new(p, PlacementTool!.Value, !CanPosition(p),
+            PlacementTool == SupportType.Spring ? PlacementSpring : null) : null;
         _supportFeedback = _preview?.IsInvalid == true ? PositionError(position!.Value) : null;
         NotifySupportState();
     }
@@ -192,7 +196,7 @@ public sealed partial class EditorViewModel : ObservableObject
         if (!IsEditorNeutral) return false;
         var support = Document.Supports.FirstOrDefault(s => s.Id == id);
         if (support is null) return false;
-        OpenDraft(support.Id, support.Type, support.Position);
+        OpenDraft(support.Id, support.Type, support.Position, support.Spring);
         return true;
     }
 
@@ -203,7 +207,7 @@ public sealed partial class EditorViewModel : ObservableObject
             || DistributedLoadState != DistributedLoadInteraction.Neutral) return false;
         var support = Document.Supports.FirstOrDefault(s => s.Id == id);
         if (support is null) return false;
-        if (editing) support = support with { Position = _draft!.CanvasPosition, Type = _draft.Preview.Type };
+        if (editing) support = support with { Position = _draft!.CanvasPosition, Type = _draft.Preview.Type, Spring = _draft.Preview.Spring };
         _dragSupport = support;
         _interaction = SupportInteraction.Drag;
         _hoveredSupportId = null;
@@ -217,7 +221,7 @@ public sealed partial class EditorViewModel : ObservableObject
         _dragValid = position is { } p && CanPosition(p, _dragSupport.Id);
         _supportFeedback = _dragValid ? null : position is { } invalid
             ? PositionError(invalid, _dragSupport.Id) : Strings.PositionInsideBeam;
-        _preview = new(position ?? _preview?.Position ?? _dragSupport.Position, _dragSupport.Type, !_dragValid);
+        _preview = new(position ?? _preview?.Position ?? _dragSupport.Position, _dragSupport.Type, !_dragValid, _dragSupport.Spring);
         NotifySupportState();
     }
 
@@ -250,7 +254,7 @@ public sealed partial class EditorViewModel : ObservableObject
             _supportFeedback = null;
             NotifySupportState();
         }
-        else OpenDraft(support.Id, support.Type, position);
+        else OpenDraft(support.Id, support.Type, position, support.Spring);
         return true;
     }
 
@@ -265,11 +269,11 @@ public sealed partial class EditorViewModel : ObservableObject
         {
             int index = Array.FindIndex(supports, s => s.Id == id);
             if (index < 0) { CancelSupportInteraction(); return false; }
-            supports[index] = supports[index] with { Position = position, Type = draft.Type, Name = draft.NameText };
+            supports[index] = supports[index] with { Position = position, Type = draft.Type, Name = draft.NameText, Spring = draft.Spring };
         }
         else
         {
-            supports = [.. supports, new(Guid.NewGuid(), position, draft.Type, draft.NameText)];
+            supports = [.. supports, new(Guid.NewGuid(), position, draft.Type, draft.NameText, draft.Spring)];
             naming = naming.Consume(draft.AutoCandidate!.Value);
         }
         var document = Document.WithSupports(supports, naming);
@@ -313,9 +317,12 @@ public sealed partial class EditorViewModel : ObservableObject
         ? Strings.PositionInsideBeam : Document.Supports.Any(s => s.Id != exclude && s.Position == position)
             ? Strings.SupportAlreadyExists : Strings.PositionInsideBeam;
 
-    private void OpenDraft(Guid? id, SupportType type, Length position)
+    /// <summary>The symbol shown while a spring support is placed; the stiffness is entered in the flyout.</summary>
+    private static readonly SpringData PlacementSpring = new(TranslationalStiffness.FromNewtonsPerMeter(1), null);
+
+    private void OpenDraft(Guid? id, SupportType type, Length position, SpringData? spring = null)
     {
-        _draft = new(() => Document, id, type, position, ResultPresentation.Profile);
+        _draft = new(() => Document, id, type, position, ResultPresentation.Profile, spring);
         _draft.PropertyChanged += DraftChanged;
         _preview = _draft.Preview;
         _hoveredSupportId = null;
@@ -335,7 +342,7 @@ public sealed partial class EditorViewModel : ObservableObject
     private void NotifySupportState()
     {
         foreach (string name in new[] { nameof(Interaction), nameof(PlacementTool), nameof(IsFixedTool),
-            nameof(IsPinnedTool), nameof(IsRollerTool), nameof(SupportDraft), nameof(IsSupportFlyoutVisible), nameof(Preview),
+            nameof(IsPinnedTool), nameof(IsRollerTool), nameof(IsSpringTool), nameof(SupportDraft), nameof(IsSupportFlyoutVisible), nameof(Preview),
             nameof(HoveredSupportId), nameof(HiddenSupportId), nameof(SupportFeedback),
             nameof(HasSupportFeedback), nameof(HasCoordinate), nameof(CoordinateText), nameof(SupportPreviewName) }) Notify(name);
     }

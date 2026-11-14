@@ -7,9 +7,9 @@
              x:Class="SpanDraft.Desktop.Views.EditorView"
              x:DataType="vm:EditorViewModel" KeyDown="EditorKeyDown">
   <UserControl.Styles>
-    <!-- Keep the complete text toolbar readable at the minimum window width. -->
+    <!-- Keep the complete toolbar readable at the minimum window width; the spring support tool has no caption. -->
     <Style Selector="Border#EditorToolbar :is(Button).toolbar">
-      <Setter Property="Padding" Value="2,4,8,4" />
+      <Setter Property="Padding" Value="2,4,4,4" />
       <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
     </Style>
     <Style Selector="controls|BeamEditorSurface#BeamSurface, StackPanel#ResultDiagrams">
@@ -72,6 +72,12 @@
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.RollerSupport}" Stretch="Uniform" />
               <TextBlock Text="{x:Static resources:Strings.ToolbarRollerSupport}" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton Classes="toolbar" IsChecked="{Binding IsSpringTool, Mode=OneWay}" Command="{Binding SpringToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.SpringSupport}"
+                        ToolTip.Tip="{x:Static resources:Strings.SpringSupport}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.SpringSupport}" Stretch="Uniform" />
             </StackPanel>
           </ToggleButton>
           <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />

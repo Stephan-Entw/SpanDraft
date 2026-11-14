@@ -103,7 +103,7 @@ public sealed class DesktopLoadFlyoutControlTests
         Assert.True(typeInput.IsDropDownOpen);
         var popup = Assert.Single(typeInput.GetVisualDescendants().OfType<Popup>());
         Assert.True(popup.IsOpen);
-        Assert.Equal(3, typeInput.ItemCount);
+        Assert.Equal(4, typeInput.ItemCount);
         Assert.All(SupportDraftViewModel.Types, option => Assert.Contains(option, typeInput.Items));
         var next = SupportDraftViewModel.Types.First(option => option.Type != type);
         typeInput.SelectedItem = next; Dispatcher.UIThread.RunJobs();
