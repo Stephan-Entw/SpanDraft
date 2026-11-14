@@ -56,6 +56,7 @@ public sealed class SolverBendingOutputTests
             .Concat(oracle.Input.ElasticRestraints.Select(s => s.Position))
             .Concat(oracle.Input.PointForces.Select(p => p.Position)).Concat(oracle.Input.PointMoments.Select(p => p.Position))
             .Concat(oracle.Input.LineLoads.SelectMany(q => new[] { q.Start, q.End })).Concat([0, oracle.Input.Length])
+            .Concat(oracle.Input.Sections.Skip(1).Select(section => section.Start))
             .Distinct().Order().ToArray();
         Assert.Equal(events, result.Stations.Select(s => s.Position));
         Assert.Equal(events.Length - 1, result.Pieces.Length);

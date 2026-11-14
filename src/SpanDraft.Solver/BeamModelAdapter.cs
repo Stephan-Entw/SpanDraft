@@ -33,7 +33,7 @@ internal static class BeamModelAdapter
         }
 
         (IEnumerable<RigidRestraint> rigid, IEnumerable<ElasticRestraint> elastic) = AdaptRestraints(beam);
-        return new MechanicalInput(beam.Length.Meters, BendingStiffness(beam), rigid, pointForces, pointMoments,
+        return new MechanicalInput(beam.Length.Meters, StiffnessSections(beam), rigid, pointForces, pointMoments,
             lineLoads, elastic);
     }
 
@@ -56,7 +56,11 @@ internal static class BeamModelAdapter
         new(support.Position.Meters, support.TranslationalSpring?.NewtonsPerMeter ?? 0,
             support.RotationalSpring?.NewtonMetersPerRadian ?? 0, support.RigidTranslation);
 
-    private static double BendingStiffness(BeamModel beam) =>
-        Binary64.StiffnessProduct(beam.Material.YoungsModulus.Pascals,
-            beam.BendingAxisProperties.SecondMomentOfArea.MetersToTheFourth);
+    /// <summary>
+    /// One stiffness section per beam segment, never merged: equal neighbours keep their boundary as a station.
+    /// </summary>
+    private static IEnumerable<StiffnessSection> StiffnessSections(BeamModel beam) =>
+        beam.Segments.Select(segment => new StiffnessSection(segment.Start.Meters, segment.End.Meters,
+            Binary64.StiffnessProduct(segment.Material.YoungsModulus.Pascals,
+                segment.BendingAxisProperties.SecondMomentOfArea.MetersToTheFourth))).ToArray();
 }

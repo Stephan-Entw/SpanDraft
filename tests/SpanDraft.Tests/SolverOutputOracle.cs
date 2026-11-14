@@ -27,7 +27,7 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
             }.Where(k => k.Stiffness != 0 || k.Direction == W && e.RigidTranslation)))
             .Distinct().OrderBy(r => r.X).ThenBy(r => r.Direction).ToArray();
         int n = keys.Length + 2;
-        var zeroLoads = new MechanicalInput(input.Length, input.EI, input.Restraints, [], [], [], input.ElasticRestraints);
+        var zeroLoads = new MechanicalInput(input.Length, input.Sections, input.Restraints, [], [], [], input.ElasticRestraints);
         var basis = new SolverOutputOracle[n];
         basis[0] = new(zeroLoads, Q(1), Q(0), []);
         basis[1] = new(zeroLoads, Q(0), Q(1), []);
@@ -123,26 +123,24 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
     {
         if (position == 0) side = FieldSide.Right;
         if (position == Input.Length) side = FieldSide.Left;
-        SolverExactNumber x = From(position), ei = From(Input.EI);
-        SolverExactNumber w = W0 + Theta0 * x, theta = Theta0, m = Q(0), v = Q(0);
+        SolverExactNumber x = From(position);
+        SolverExactNumber m = Q(0), v = Q(0);
+        // The bending moment as Macaulay terms c (x - a)^p / p!; theta and w integrate M / EI(x) section by section.
+        var terms = new List<(SolverExactNumber C, double A, int P)>();
         foreach (var (a, value) in Input.PointForces.Select(p => (p.Position, From(p.Newtons)))
             .Concat(Reactions.Where(r => r.Direction == W).Select(r => (r.X, r.Value))))
             if (position > a || position == a && side == FieldSide.Right)
             {
-                SolverExactNumber d = x - From(a);
                 v += value;
-                m += value * d;
-                theta += value * d * d / Q(2) / ei;
-                w += value * d * d * d / Q(6) / ei;
+                m += value * (x - From(a));
+                terms.Add((value, a, 1));
             }
         foreach (var (a, value) in Input.PointMoments.Select(p => (p.Position, From(p.NewtonMeters)))
             .Concat(Reactions.Where(r => r.Direction == Theta).Select(r => (r.X, r.Value))))
             if (position > a || position == a && side == FieldSide.Right)
             {
-                SolverExactNumber d = x - From(a);
                 m -= value;
-                theta -= value * d / ei;
-                w -= value * d * d / Q(2) / ei;
+                terms.Add((Q(0) - value, a, 0));
             }
         foreach (TransverseLineLoad line in Input.LineLoads)
         {
@@ -152,9 +150,27 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
             SolverExactNumber rise = From(line.EndNewtonsPerMeter) - q, width = From(line.End) - From(line.Start);
             v += LineIntegral(q, rise, width, near, far, 1);
             m += LineIntegral(q, rise, width, near, far, 2);
-            theta += LineIntegral(q, rise, width, near, far, 3) / ei;
-            w += LineIntegral(q, rise, width, near, far, 4) / ei;
+            terms.Add((q, line.Start, 2));
+            terms.Add((Q(0) - q, line.End, 2));
+            if (!rise.Numerator.IsZero)
+            {
+                terms.Add((rise / width, line.Start, 3));
+                terms.Add((Q(0) - rise / width, line.End, 3));
+                terms.Add((Q(0) - rise, line.End, 2));
+            }
         }
+        SolverExactNumber theta = Theta0, w = W0 + Theta0 * x;
+        foreach (var (c, a, p) in terms)
+            foreach (StiffnessSection section in Input.Sections)
+            {
+                double lo = Math.Max(a, section.Start), hi = Math.Min(position, section.End);
+                if (!(hi > lo)) continue;
+                SolverExactNumber ei = From(section.EI), uLo = From(lo) - From(a), uHi = From(hi) - From(a);
+                SolverExactNumber distance = x - From(a);
+                theta += c * (Pow(uHi, p + 1) - Pow(uLo, p + 1)) / Integer(Factorial(p + 1)) / ei;
+                w += c * (distance * (Pow(uHi, p + 1) - Pow(uLo, p + 1)) / Integer(Factorial(p + 1)) -
+                    Integer(p + 1) * (Pow(uHi, p + 2) - Pow(uLo, p + 2)) / Integer(Factorial(p + 2))) / ei;
+            }
         return [w, theta, m, v];
     }
 
@@ -168,7 +184,8 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
                 SolverExactNumber[] f = Field(x, side);
                 for (int q = 0; q < 4; q++) mx[q] = Max(mx[q], f[q].Abs());
             }
-        SolverExactNumber force = Q(0), l = From(Input.Length), ei = From(Input.EI);
+        // The reference scale uses the stiffest section; the kernel's low and high scales sandwich it.
+        SolverExactNumber force = Q(0), l = From(Input.Length), ei = From(Input.Sections.Max(section => section.EI));
         foreach (var p in Input.PointForces) force += From(p.Newtons).Abs();
         foreach (var p in Input.PointMoments) force += From(p.NewtonMeters).Abs() / l;
         foreach (var q in Input.LineLoads)
