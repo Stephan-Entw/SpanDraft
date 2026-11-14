@@ -728,3 +728,122 @@ e65af778b7c5a42522a8bbaa86e6bbdb49d1a8d1d8202be000490f2ff39ea050
 
 Dieser Hash ist die neue CI-Baseline in [ci.yml](../.github/workflows/ci.yml). Der Report
 der M4-Abnahme bleibt als historische Evidenz unverändert und gehört zum Stand davor.
+
+## 6. Federlager (DEV-19)
+
+Ein Federlager hält axial starr und trägt eine Weg- und/oder Drehfeder, mit Drehfeder auch
+mit starrer Querverschiebung (Teileinspannung). Der Nachweis ist fünffach getrennt:
+
+- **Exakte rationale Referenz in der Product-Suite.** Das Orakel der Ausgabetests löst die
+  globale Kraftgrößenmethode mit dem Federgesetz als weiterer exakter Verträglichkeitsbedingung
+  (`w + R/k = 0`, `θ + C/k_θ = 0`). Die Abnahmematrix `SolverSpringAcceptanceTests` rechnet
+  fünfzehn Konfigurationen (steife und weiche Feder zwischen und neben starren Lagern, nur Federn,
+  Dreier- und Achter-Cluster, Last auf der Feder, Drehfeder neben der Einspannung, Weg- und
+  Drehfeder zwischen starren Lagern, Teileinspannung, Drehfederpaare, gemischte Cluster) über die
+  Abstände L/10 … L/10¹¹ und k·L³/EI beziehungsweise k_θ·L/EI von 10⁻³ bis 10¹⁵. Jedes dieser
+  Modelle wird geliefert, und jeder Ausgabewert (Reaktionen, Felder an allen Stationsseiten und im
+  Stück, Extrema) liegt innerhalb seiner verifizierten Schranke; es gibt keine Ablehnung. Dazu der
+  eingefrorene Wert zweier steifer Federn im Abstand 6 nm.
+- **Reaktionsidentität.** Sprung und Federgesetz umschließen für Weg- und Drehfedern in vierzehn
+  Modellen die exakte Reaktion mit ihrer eigenen Schranke; geliefert wird der Wert mit der
+  kleineren Schranke, bei Gleichheit der Sprung. Die Differenz beider Werte darf die Summe der
+  Schranken nicht übersteigen, sonst `InternalInconsistency`.
+- **Analytik.** Mittige Feder auf dem Einfeldträger (`w = −P f / (1 + k f)`, `f = L³/(48 EI)`),
+  Starrkörperanteil bei zwei Endfedern, Zweifeldträger mit Mittelfeder und die Grenze k → ∞ gegen
+  das starre Mittellager (relativer Abstand `1/(1 + k δ)` für k·L³/EI = 10⁻³ … 10¹²), Kragarm mit
+  Teileinspannung (`w = −(P L³/(3 EI) + P L²/k_θ)`), zwei Endmomentenfedern unter Gleichlast
+  (`M = q L²/12 / (1 + 2 EI/(k_θ L))`), Drehfeder im Feld und Balken nur auf Federn.
+- **Unabhängige Validierung V20–V24.** Die analytische Referenz ist exakte rationale Statik
+  (`analytical.py` mit Federgesetz) und stimmt in der Kalibrierung mit PyCBA und IndeterminateBeam überein.
+  V20 (mittige Wegfeder), V21 (nur Endfedern) vergleichen beide externen Löser, V22 (Teileinspannung)
+  und V23 (Weg- und Drehfeder) nur PyCBA, weil IndeterminateBeam keine Drehfeder besitzt. V24 hat bei
+  k·L³/EI = 10¹² nur die analytische Referenz: PyCBA und IndeterminateBeam verlieren dort die für die
+  Vergleichstoleranz 10⁻⁵ nötigen Stellen (dokumentierte Grenze nach A7). Zusätzlich gelten das
+  Federgesetz `Ry = −k w`, `Rm = −k_θ θ` als physikalische Prüfung (für k·L³/EI ≤ 10⁸), skalierte
+  Steifigkeiten in den Relationen E2/I2 und die metamorphe Relation `rigidLimit` (V24 gegen das gelenkige
+  Lager, innerhalb des doppelten Ausgabevertrags 10⁻⁸ gegen die Feldskala, weil der physikalische
+  Abstand `1/(1 + k f)` ≈ 5·10⁻¹¹ darunter liegt). Das Eingabeformat erhält optionale Felder
+  (`translationalStiffness`, `rotationalStiffness`, `rigidTranslation`); Eingaben und Hashes der älteren
+  Fälle bleiben unverändert. Weil sich der Quellhash der Python-Adapter in jeder Referenz niederschlägt,
+  wurden alle Referenzen neu erzeugt; die numerischen Inhalte der 57 älteren Dateien sind bis auf
+  Zeitstempel und Adapterhash identisch.
+- **Gezielte Fehlerfälle.** Eine einzelne Feder ist für jede Steifigkeit ein Mechanismus
+  (`UnstableModel`); Feder auf einem anderen Lager oder einer weiteren Feder ist `InvalidModel`
+  (Core und Kernel); ein nicht normaler skalierter Koeffizient, auch durch eine subnormale Eingabe,
+  ist `NumericalFailure` (`NumericalRange`). Federn weit weicher als der Nachweisbereich
+  (k·L³/EI ≈ 2·10⁻⁸ bei zwei Endfedern) lehnt das Gate ab (`IllConditionedSystem`), statt sie falsch zu liefern.
+
+**Fehlerinjektion.** `validation/investigations/spring-support-mutants/mutate.py` baut je Mutante
+einen Fehler in die Federterme, baut neu und führt die Product-Suite aus. Alle 48 Mutanten werden
+von mindestens einem Test erkannt. Zwei Mutanten überlebten zunächst (Bereichsprüfung der
+subnormalen Steifigkeitseingabe, Koinzidenzmarke bei mehreren Lagern nach einer Feder); sie
+führten zu je einem zusätzlichen Test. Eine weitere Prüfung des Core (starre Translation ohne
+Drehfeder) war nicht erreichbar und wurde entfernt.
+
+| Mutante | Fehler | Ergebnis |
+| --- | --- | --- |
+| S1 | spring term of the shear row: sign reversed | killed (78 Tests) |
+| S2 | spring term of the shear row omitted | killed (79 Tests) |
+| S3 | spring term placed in the rotation column | killed (77 Tests) |
+| S4 | stiffness exponent 3 e_L + e_EI instead of 3 e_L - e_EI | killed (44 Tests) |
+| S5 | stiffness exponent 2 e_L - e_EI | killed (54 Tests) |
+| S6 | scaled stiffness not required to be normal | killed (2 Tests) |
+| S7 | spring input not range-checked | killed (1 Tests) |
+| R1 | reaction choice reversed: the larger bound is delivered | killed (20 Tests) |
+| R2 | reaction choice: the law wins a tie | killed (2 Tests) |
+| R3 | reaction choice: always the jump | killed (14 Tests) |
+| R4 | reaction choice: always the spring law | killed (9 Tests) |
+| R5 | identity check removed | killed (3 Tests) |
+| R6 | identity check against the jump bound only | killed (2 Tests) |
+| R7 | identity check against the law bound only | killed (26 Tests) |
+| R8 | identity check with a rounded sum of the bounds | killed (1 Tests) |
+| R9 | spring law without the minus sign | killed (95 Tests) |
+| R10 | spring law without the state bound | killed (31 Tests) |
+| R11 | spring law reads the rotation instead of the deflection | killed (64 Tests) |
+| R12 | spring law with the unscaled stiffness exponent | killed (65 Tests) |
+| R13 | spring reactions not selected between jump and law | killed (9 Tests) |
+| R14 | no reaction reported for a spring | killed (54 Tests) |
+| Q1 | rotational stiffness exponent e_L + e_EI | killed (31 Tests) |
+| Q2 | rotational stiffness exponent 3 e_L - e_EI | killed (39 Tests) |
+| Q3 | rotational spring term of the moment row: sign reversed | killed (50 Tests) |
+| Q4 | rotational spring term of the moment row omitted | killed (51 Tests) |
+| Q5 | rotational spring term placed in the deflection column | killed (51 Tests) |
+| Q6 | rotational spring law reads the deflection | killed (42 Tests) |
+| Q7 | rotational reaction not selected between jump and law | killed (5 Tests) |
+| Q8 | no moment reaction reported for a rotational spring | killed (35 Tests) |
+| Q9 | rotational spring station not marked as a moment jump | killed (1 Tests) |
+| Q10 | rotational spring input not range-checked | killed (1 Tests) |
+| Q11 | adapter: rotational stiffness dropped | killed (29 Tests) |
+| Q12 | adapter: rigid translation dropped | killed (16 Tests) |
+| Q13 | rigid translation of a spring station does not restrain w | killed (24 Tests) |
+| K1 | spring station not marked as a reaction jump | killed (1 Tests) |
+| T1 | rank: a translational spring does not count | killed (36 Tests) |
+| T2 | rank: a rotational spring does not count | killed (19 Tests) |
+| T3 | spring support is not axially rigid | killed (70 Tests) |
+| T4 | spring coincident with a rigid support accepted by the kernel | killed (4 Tests) |
+| T5 | spring stiffness lost at the mechanical station | killed (104 Tests) |
+| T6 | rigid translation accepted together with a translational spring | killed (1 Tests) |
+| A1 | adapter: translational stiffness dropped | killed (41 Tests) |
+| A2 | adapter: springs treated as rollers | killed (61 Tests) |
+| V1 | validator: a spring after a rigid support is accepted | killed (5 Tests) |
+| V2 | validator: duplicate check also applies to springs | killed (2 Tests) |
+| V3 | validator: coincidence flag of a position forgotten | killed (1 Tests) |
+| C1 | Core: rigid translation accepted together with a translational spring | killed (4 Tests) |
+| C2 | Core: no spring at all accepted | killed (4 Tests) |
+
+**Abnahme der Federlager.** Nach dem letzten Core-/Solver-Commit erzeugte ein frischer
+`compare` ohne `--actual` den Report
+[`acceptance-spring-supports.json`](../validation/results/acceptance-spring-supports.json)
+(2026-11-14T13:09:12Z, macOS ARM64, `entryPoint` `EulerBernoulliBeamSolver`): 27 Fälle,
+3979 externe und 1555 analytische Skalarvergleiche, 151 metamorphe Prüfungen,
+`validated = true`. Die Product-Suite (5473 Tests, einer übersprungen) und die separate
+Validierungs-Suite (304 Tests) bestanden vollständig.
+
+**SolverSourceSha256:**
+
+```text
+4ef3168745739779f580ccee60998e85e1dbe37f678c7368a8e7e44aeb39d48e
+```
+
+Dieser Hash ist die neue CI-Baseline in [ci.yml](../.github/workflows/ci.yml). Der Report der
+Linearlast-Abnahme und der M4-Abnahme bleiben als historische Evidenz unverändert.
