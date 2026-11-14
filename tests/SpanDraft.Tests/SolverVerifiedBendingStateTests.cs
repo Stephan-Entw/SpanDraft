@@ -155,6 +155,16 @@ public sealed class SolverVerifiedBendingStateTests
         for (int i = 0; i < weights.Length; i++)
             Assert.Equal(Math.ScaleB(expected[(int)system.FreeComponents[i].Component], -cs[i]), weights[i]);
 
+        // Several stiffnesses: the least one bounds the rotation scale, whatever the order of the intervals.
+        foreach (double[] stiffness in new[] { new[] { 1.25, 0.5, 1.75 }, new[] { 0.5, 1.25 } })
+        {
+            var mixed = system with { Excitation = new(0, 31, 31), IntervalEI = [..stiffness.Select(e => new RoundCounted(e))] };
+            weights = BendingStateSolver.Weights(mixed, x, cs);
+            expected = [31 / 0.5, 31 / 0.5, 31, 31];
+            for (int i = 0; i < weights.Length; i++)
+                Assert.Equal(Math.ScaleB(expected[(int)system.FreeComponents[i].Component], -cs[i]), weights[i]);
+        }
+
         system = system with { Excitation = default, IntervalEI = [new(1.25)] };
         x = new double[system.ReducedColumns.Length];
         x[0] = Math.BitDecrement(Binary64.Lambda);

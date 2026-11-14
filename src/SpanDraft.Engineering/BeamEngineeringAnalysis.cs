@@ -9,8 +9,8 @@ public static class BeamEngineeringAnalysis
 {
     /// <summary>
     /// Uses only analytical extrema and the section and material of each segment. The governing segment has the
-    /// smallest safety factor; a tie goes to the smaller position of its critical moment, then to the smaller
-    /// index. Stress and safety factor of the result are those of that segment. Notch effects and local stresses
+    /// smallest safety factor; a tie goes to the smaller index, which has the smaller position of its
+    /// critical moment. Stress and safety factor of the result are those of that segment. Notch effects and local stresses
     /// at a change of section are not assessed.
     /// </summary>
     public static BeamEngineeringResult Analyze(BeamSolution solution)
@@ -55,9 +55,9 @@ public static class BeamEngineeringAnalysis
         double a = candidate.SafetyFactor, b = current.SafetyFactor;
         bool tied = a == b || double.IsFinite(a) && double.IsFinite(b) &&
             Math.Abs(a - b) <= 64 * 2.2204460492503131e-16 * Math.Max(a, b);
-        if (!tied) return a < b;
-        // Equal safety: the earlier critical position wins; the earlier index keeps a full tie.
-        return candidate.CriticalBendingMoment.Position.Meters < current.CriticalBendingMoment.Position.Meters;
+        // Segments are visited in order and later ones lie further right, so on a tie the earlier segment, which
+        // also has the smaller critical position, is kept.
+        return !tied && a < b;
     }
 
     internal static BeamExtremum<T> SelectMaximumAbsolute<T>(BeamExtremum<T> minimum,

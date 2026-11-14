@@ -174,7 +174,7 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
         return [w, theta, m, v];
     }
 
-    internal SolverExactNumber[] Scales(IEnumerable<double> events)
+    internal SolverExactNumber[] Scales(IEnumerable<double> events, bool softest = false)
     {
         SolverExactNumber[] mx = [Q(0), Q(0), Q(0), Q(0)];
         foreach (double x in events)
@@ -184,8 +184,9 @@ internal sealed record SolverOutputOracle(MechanicalInput Input, SolverExactNumb
                 SolverExactNumber[] f = Field(x, side);
                 for (int q = 0; q < 4; q++) mx[q] = Max(mx[q], f[q].Abs());
             }
-        // The reference scale uses the stiffest section; the kernel's low and high scales sandwich it.
-        SolverExactNumber force = Q(0), l = From(Input.Length), ei = From(Input.Sections.Max(section => section.EI));
+        // The reference scale uses the stiffest section, or the softest one: the kernel's low and high scales sandwich both.
+        SolverExactNumber force = Q(0), l = From(Input.Length),
+            ei = From(softest ? Input.Sections.Min(section => section.EI) : Input.Sections.Max(section => section.EI));
         foreach (var p in Input.PointForces) force += From(p.Newtons).Abs();
         foreach (var p in Input.PointMoments) force += From(p.NewtonMeters).Abs() / l;
         foreach (var q in Input.LineLoads)

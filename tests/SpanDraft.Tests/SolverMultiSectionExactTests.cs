@@ -1,4 +1,5 @@
 using SpanDraft.Solver;
+using static SpanDraft.Tests.SolverExactNumber;
 using SpanDraft.Solver.Kernel;
 using Xunit;
 using static SpanDraft.Solver.Kernel.RestrainedDirections;
@@ -107,5 +108,38 @@ public sealed class SolverMultiSectionExactTests
         double expected = -1500 * ((8 - l2 * l2 * l2) / (3 * Ei) + l2 * l2 * l2 * ratio / (3 * Ei));
         Assert.True(Relative(expected, result.EvaluateAt(2, FieldSide.Left).Bending[0].Value) < 1e-9);
         Assert.True(Relative(1500, result.Reactions.Single(r => r.Position == 0 && r.Direction == W).Output.Value) < 1e-9);
+    }
+
+    [Fact]
+    public void TheNormalizationFollowsTheStiffestSectionAndEveryIntervalKeepsItsOwnNormalizedStiffness()
+    {
+        StiffnessSection[] sections = [new(0, 0.8, 3), new(0.8, 1.3, 3e5), new(1.3, 2, 12)];
+        BendingSystem system = SolverKernel.BuildSystem(Multi(2, sections, forces: [new(2, -1)]));
+
+        Assert.Equal(Binary64.PowerOfTwoExponent(3e5), system.EEI);
+        Assert.Equal(sections.Select(s => Math.ScaleB(s.EI, -system.EEI)), system.IntervalEI.Select(e => e.Value));
+        Assert.All(system.IntervalEI, e => Assert.InRange(e.Value, double.Epsilon, 2));
+        Assert.InRange(system.IntervalEI.Max(e => e.Value), 1, 2);
+        Assert.Equal(system.IntervalEI.Min(e => e.Value), system.LeastEI.Value);
+    }
+
+    [Theory]
+    [InlineData(5)]
+    [InlineData(0.2)]
+    public void InteriorDisplacementExtremaAreStationaryPointsOfTheExactRotationInEverySection(double ratio)
+    {
+        // The second span has another EI than the first; a piece built with the wrong section's EI would miss the root.
+        var input = Multi(2, Two(1.25, ratio), [new(0, U | W), new(1.25, W), new(2, W)], lines: [new(0, 2, -800)]);
+        BendingResult result = SolverKernel.Solve(input);
+        var oracle = SolverOutputOracle.FromCompatibility(input);
+        double thetaScale = new[] { 0d, 0.5, 1.25, 1.6, 2 }.Max(x => Math.Abs(result.EvaluateAt(x, x == 2 ? FieldSide.Left : FieldSide.Right).Bending[1].Value));
+        BendingExtremum[] interior = new[] { result.Extrema.W.Minimum, result.Extrema.W.Maximum }
+            .Where(e => e.Side == FieldSide.Interior).ToArray();
+
+        Assert.NotEmpty(interior);
+        Assert.Contains(interior, e => e.Position > 1.25);
+        foreach (BendingExtremum extremum in interior)
+            Assert.True(oracle.Field(extremum.Position, FieldSide.Interior)[1].Abs().CompareTo(From(1e-7 * thetaScale)) <= 0,
+                $"w' is not zero at x = {extremum.Position:R}");
     }
 }

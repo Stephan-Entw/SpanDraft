@@ -61,12 +61,13 @@ public sealed class SolverBendingOutputTests
         Assert.Equal(events, result.Stations.Select(s => s.Position));
         Assert.Equal(events.Length - 1, result.Pieces.Length);
         Assert.Equal(events.Zip(events.Skip(1)), result.Pieces.Select(p => (p.Start, p.End)));
-        SolverExactNumber[] scales = oracle.Scales(events);
+        SolverExactNumber[] scales = oracle.Scales(events), softScales = oracle.Scales(events, softest: true);
         if (!result.Quality.IsUnloaded)
         {
             for (int q = 0; q < 4; q++)
             {
                 AssertEncloses(result.Quality.ScalesLowSI[q], scales[q], result.Quality.ScalesHighSI[q]);
+                AssertEncloses(result.Quality.ScalesLowSI[q], softScales[q], result.Quality.ScalesHighSI[q]);
                 Assert.InRange(result.Quality.ScalesLowSI[q], BendingOutputQuality.SiMin, BendingOutputQuality.SiMax);
                 Assert.InRange(result.Quality.MaxRatios[q], 0, 1d / Binary64.TauDenominator);
             }
