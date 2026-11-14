@@ -158,7 +158,7 @@ public sealed class SolverMultiSectionAnalyticalTests
             [SupportAt(0, SupportType.Fixed), SolverSpringAnalyticalTests.Spring(L / 2, 1e5),
                 SolverSpringAnalyticalTests.Spring(L, 2e5)], [Point(L, -500)]);
         Assert.Empty(SpanDraft.Core.Validation.BeamModelValidator.Validate(beam));
-        Assert.True(Solve(beam).Nodes.Any(node => node.Position == M(L / 2) && node.ReactionY is not null));
+        Assert.Contains(Solve(beam).Nodes, node => node.Position == M(L / 2) && node.ReactionY is not null);
     }
 
     [Fact]
