@@ -9,7 +9,8 @@ public enum ValidationErrorCode
     PointForceOutsideBeam,
     PointMomentOutsideBeam,
     DistributedLoadOutsideBeam,
-    SpringSupportCoincidence
+    SpringSupportCoincidence,
+    SegmentsNotContiguous
 }
 
 /// <summary>A model error with a machine-readable code, explanatory message and property path (zero-based collection indices).</summary>

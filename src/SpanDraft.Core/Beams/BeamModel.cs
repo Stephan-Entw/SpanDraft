@@ -7,10 +7,11 @@ using SpanDraft.Core.Units;
 namespace SpanDraft.Core.Beams;
 
 /// <summary>
-/// A single straight beam with constant material and section. Local x runs rightwards
-/// from zero at the left end; transverse positive is upwards in the selected planar
-/// bending plane; positive rotation and moment are counterclockwise. The bending axis
-/// is resolved at construction. Further consistency is checked by BeamModelValidator.
+/// A single straight beam of one or more segments; each segment has constant material, section and bending
+/// axis. Local x runs rightwards from zero at the left end; transverse positive is upwards in the selected
+/// planar bending plane; positive rotation and moment are counterclockwise. Bending axes are resolved at
+/// construction. Further consistency, including the exact tiling of the beam by its segments, is checked by
+/// BeamModelValidator.
 /// </summary>
 public sealed class BeamModel
 {
@@ -20,52 +21,67 @@ public sealed class BeamModel
     {
     }
 
-    /// <summary>Creates a beam using exactly the explicitly selected section axis.</summary>
+    /// <summary>Creates a beam of one segment using exactly the explicitly selected section axis.</summary>
     public BeamModel(Length length, Material material, ISectionDefinition section,
         SectionAxisDesignation bendingAxis, IEnumerable<Support> supports, IEnumerable<BeamLoad> loads)
+        : this(length, [new BeamSegment(default, PositiveLength(length), material, section, bendingAxis)],
+            supports, loads)
+    {
+    }
+
+    /// <summary>
+    /// Creates a beam from consecutive segments. The segments are taken as given; the validator reports gaps,
+    /// overlaps and ends that differ from the beam ends.
+    /// </summary>
+    public BeamModel(Length length, IEnumerable<BeamSegment> segments,
+        IEnumerable<Support> supports, IEnumerable<BeamLoad> loads)
     {
         DomainGuard.Positive(length.Meters, nameof(length));
-        ArgumentNullException.ThrowIfNull(material);
-        ArgumentNullException.ThrowIfNull(section);
+        ArgumentNullException.ThrowIfNull(segments);
         ArgumentNullException.ThrowIfNull(supports);
         ArgumentNullException.ThrowIfNull(loads);
 
-        if (!Enum.IsDefined(bendingAxis))
-            throw new ArgumentOutOfRangeException(nameof(bendingAxis), bendingAxis, "Unknown bending axis.");
-        SectionAxisProperties axisProperties;
-        try
-        {
-            axisProperties = section.GetAxis(bendingAxis);
-        }
-        catch (KeyNotFoundException exception)
-        {
-            throw new ArgumentException($"The section does not provide bending axis {bendingAxis}.",
-                nameof(bendingAxis), exception);
-        }
-        if (axisProperties is null || axisProperties.AxisDesignation != bendingAxis)
-            throw new ArgumentException("The section did not resolve the selected bending axis.", nameof(bendingAxis));
-
+        BeamSegment[] segmentArray = segments.ToArray();
         Support[] supportArray = supports.ToArray();
         BeamLoad[] loadArray = loads.ToArray();
+        if (segmentArray.Length == 0)
+            throw new ArgumentException("A beam requires at least one segment.", nameof(segments));
+        if (segmentArray.Any(segment => segment is null))
+            throw new ArgumentException("Segments must not contain null entries.", nameof(segments));
         if (supportArray.Any(support => support is null))
             throw new ArgumentException("Supports must not contain null entries.", nameof(supports));
         if (loadArray.Any(load => load is null))
             throw new ArgumentException("Loads must not contain null entries.", nameof(loads));
 
         Length = length;
-        Material = material;
-        Section = section;
-        BendingAxis = bendingAxis;
-        BendingAxisProperties = axisProperties;
+        Segments = Array.AsReadOnly(segmentArray);
         Supports = Array.AsReadOnly(supportArray);
         Loads = Array.AsReadOnly(loadArray);
     }
 
     public Length Length { get; }
-    public Material Material { get; }
-    public ISectionDefinition Section { get; }
-    public SectionAxisDesignation BendingAxis { get; }
-    public SectionAxisProperties BendingAxisProperties { get; }
+    public IReadOnlyList<BeamSegment> Segments { get; }
     public IReadOnlyList<Support> Supports { get; }
     public IReadOnlyList<BeamLoad> Loads { get; }
+
+    /// <summary>The material of a beam with exactly one segment; use <see cref="Segments"/> otherwise.</summary>
+    public Material Material => OnlySegment.Material;
+
+    /// <summary>The section of a beam with exactly one segment; use <see cref="Segments"/> otherwise.</summary>
+    public ISectionDefinition Section => OnlySegment.Section;
+
+    /// <summary>The bending axis of a beam with exactly one segment; use <see cref="Segments"/> otherwise.</summary>
+    public SectionAxisDesignation BendingAxis => OnlySegment.BendingAxis;
+
+    /// <summary>The axis properties of a beam with exactly one segment; use <see cref="Segments"/> otherwise.</summary>
+    public SectionAxisProperties BendingAxisProperties => OnlySegment.BendingAxisProperties;
+
+    private static Length PositiveLength(Length length)
+    {
+        DomainGuard.Positive(length.Meters, nameof(length));
+        return length;
+    }
+
+    private BeamSegment OnlySegment => Segments.Count == 1 ? Segments[0] :
+        throw new InvalidOperationException("The beam has several segments; read them from Segments.");
 }

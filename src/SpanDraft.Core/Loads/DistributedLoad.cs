@@ -39,9 +39,15 @@ public sealed class DistributedLoad : BeamLoad
     public static DistributedLoad FromSelfWeight(Length length, MassDensity density, Area area)
     {
         DomainGuard.Positive(length.Meters, nameof(length));
+        return FromSelfWeight(default, length, density, area);
+    }
+
+    /// <summary>Creates the downward constant self-weight load of one beam segment between two positions.</summary>
+    public static DistributedLoad FromSelfWeight(Length start, Length end, MassDensity density, Area area)
+    {
         DomainGuard.Positive(density.KilogramsPerCubicMeter, nameof(density));
         DomainGuard.Positive(area.SquareMeters, nameof(area));
-        return new(default, length, ForcePerLength.FromNewtonsPerMeter(
+        return new(start, end, ForcePerLength.FromNewtonsPerMeter(
             -density.KilogramsPerCubicMeter * area.SquareMeters * 9.80665));
     }
 }

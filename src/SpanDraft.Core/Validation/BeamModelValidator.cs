@@ -6,7 +6,8 @@ namespace SpanDraft.Core.Validation;
 
 /// <summary>
 /// Checks cross-object consistency. Beam endpoints are included; duplicate and coincidence comparisons are exact.
-/// A spring support must not share its exact position with any other support.
+/// A spring support must not share its exact position with any other support. The segments must tile the beam
+/// exactly; a segment boundary may share its position with supports and loads.
 /// </summary>
 public static class BeamModelValidator
 {
@@ -14,6 +15,19 @@ public static class BeamModelValidator
     {
         ArgumentNullException.ThrowIfNull(beam);
         var errors = new List<ValidationError>();
+        double expectedStart = 0;
+        for (int i = 0; i < beam.Segments.Count; i++)
+        {
+            BeamSegment segment = beam.Segments[i];
+            if (segment.Start.Meters != expectedStart)
+                errors.Add(new(ValidationErrorCode.SegmentsNotContiguous, i == 0
+                    ? "The first segment must start at the beam start."
+                    : "A segment must start exactly where the previous one ends.", $"Segments[{i}].Start"));
+            expectedStart = segment.End.Meters;
+        }
+        if (expectedStart != beam.Length.Meters)
+            errors.Add(new(ValidationErrorCode.SegmentsNotContiguous,
+                "The last segment must end at the beam end.", $"Segments[{beam.Segments.Count - 1}].End"));
         if (beam.Supports.Count == 0)
             errors.Add(new(ValidationErrorCode.MissingSupports, "The beam requires at least one support.", "Supports"));
 
