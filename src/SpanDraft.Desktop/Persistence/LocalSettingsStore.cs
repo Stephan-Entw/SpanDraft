@@ -95,6 +95,10 @@ public static class SettingsCodec
                 foreach (var kind in new[] { QuantityKind.YoungsModulus, QuantityKind.MaterialStrength, QuantityKind.Density, QuantityKind.PoissonRatio })
                     units.TryAdd(kind, UserSettings.Standard(dto.LastStandardProfile)[kind]);
             }
+            // Every version predating the spring supports lacks their stiffness quantities; a missing entry takes the
+            // unit of the last standard profile instead of invalidating the custom profile.
+            foreach (var kind in new[] { QuantityKind.TranslationalStiffness, QuantityKind.RotationalStiffness })
+                units.TryAdd(kind, UserSettings.Standard(dto.LastStandardProfile)[kind]);
             custom = new UnitProfile(units);
             if (UserSettings.Recognize(custom).Kind != UnitProfileKind.Custom)
                 throw new JsonException("A custom profile must be an individual combination.");

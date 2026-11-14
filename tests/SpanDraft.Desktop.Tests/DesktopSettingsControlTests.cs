@@ -84,7 +84,7 @@ public sealed class DesktopSettingsControlTests
         {
             var list = window.FindControl<ItemsControl>(name)!;
             var combos = list.GetVisualDescendants().OfType<ComboBox>().Where(c => c.IsVisible).ToArray();
-            Assert.Equal(name == "LeftUnitList" ? 7 : 7, combos.Length);
+            Assert.Equal(name == "LeftUnitList" ? 9 : 7, combos.Length);
             Assert.All(combos, c => Assert.Equal(132, c.Bounds.Width, 6));
             double x = combos[0].TranslatePoint(default, list)!.Value.X;
             Assert.All(combos, c => Assert.Equal(x, c.TranslatePoint(default, list)!.Value.X, 6));

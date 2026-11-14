@@ -20,7 +20,9 @@ public enum QuantityKind
     YoungsModulus,
     MaterialStrength,
     Density,
-    PoissonRatio
+    PoissonRatio,
+    TranslationalStiffness,
+    RotationalStiffness
 }
 
 public enum UnitDimension
@@ -35,5 +37,7 @@ public enum UnitDimension
     DistributedLoad,
     Pressure,
     Dimensionless,
-    MassDensity
+    MassDensity,
+    TranslationalStiffness,
+    RotationalStiffness
 }

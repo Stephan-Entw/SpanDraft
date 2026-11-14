@@ -31,7 +31,7 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         foreach (var support in document.Supports)
         {
             bool draft = support.Id == hiddenSupportId && supportPreview is not null;
-            AddSupport(support.Id, draft ? supportPreview! : new(support.Position, support.Type),
+            AddSupport(support.Id, draft ? supportPreview! : new(support.Position, support.Type, false, support.Spring),
                 draft ? supportName ?? support.Name : support.Name, draft);
         }
         if (supportPreview is not null && !document.Supports.Any(s => s.Id == hiddenSupportId))

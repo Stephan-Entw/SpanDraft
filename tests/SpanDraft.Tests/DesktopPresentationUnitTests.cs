@@ -27,7 +27,11 @@ public sealed class DesktopPresentationUnitTests
             (UnitCatalog.KilonewtonPerMeter, 1000), (UnitCatalog.KipPerFoot, kip / foot),
             (UnitCatalog.Pascal, 1), (UnitCatalog.Megapascal, 1e6), (UnitCatalog.Gigapascal, 1e9),
             (UnitCatalog.KilogramsPerCubicMeter, 1),
-            (UnitCatalog.Ksi, kip / (inch * inch)), (UnitCatalog.Dimensionless, 1)
+            (UnitCatalog.Ksi, kip / (inch * inch)), (UnitCatalog.Dimensionless, 1),
+            (UnitCatalog.NewtonPerMeterStiffness, 1), (UnitCatalog.KilonewtonPerMeterStiffness, 1000),
+            (UnitCatalog.NewtonPerMillimeter, 1000), (UnitCatalog.KilonewtonPerMillimeter, 1e6),
+            (UnitCatalog.KipPerInch, kip / inch), (UnitCatalog.NewtonMeterPerRadian, 1),
+            (UnitCatalog.KilonewtonMeterPerRadian, 1000), (UnitCatalog.KipFootPerRadian, kip * foot)
         ];
         foreach (var (unit, scale) in units) yield return [unit, scale];
     }
@@ -50,15 +54,16 @@ public sealed class DesktopPresentationUnitTests
     {
         Assert.Equal(Units().Count(), UnitCatalog.All.Count);
         Assert.Equal(UnitCatalog.All.Count, UnitCatalog.All.Select(unit => unit.Id).Distinct().Count());
-        Assert.Equal(UnitCatalog.All.Count, UnitCatalog.All.Select(unit => unit.Symbol).Distinct().Count());
+        // A symbol may recur across quantities (N/m is a line load and a spring stiffness) but not within one dimension.
+        Assert.Equal(UnitCatalog.All.Count, UnitCatalog.All.Select(unit => (unit.Dimension, unit.Symbol)).Distinct().Count());
         Assert.Throws<NotSupportedException>(() => ((IList<UnitDefinition>)UnitCatalog.All).Clear());
         Assert.All(Enum.GetValues<QuantityKind>(), kind => Assert.Equal(UnitCatalog.DimensionOf(kind), UnitProfile.Default[kind].Dimension));
     }
 
     [Theory]
-    [InlineData(UnitProfileKind.MechanicalEngineering, "mm|mm|mm|mm|mm²|mm⁴|mm³|rad|N|N|N·m|N/m|MPa||GPa|MPa|kg/m³|")]
-    [InlineData(UnitProfileKind.StructuralEngineering, "m|mm|mm|mm|cm²|cm⁴|cm³|rad|kN|kN|kN·m|kN/m|MPa||GPa|MPa|kg/m³|")]
-    [InlineData(UnitProfileKind.UnitedStates, "ft|in|in|in|in²|in⁴|in³|rad|kip|kip|kip·ft|kip/ft|ksi||ksi|ksi|kg/m³|")]
+    [InlineData(UnitProfileKind.MechanicalEngineering, "mm|mm|mm|mm|mm²|mm⁴|mm³|rad|N|N|N·m|N/m|MPa||GPa|MPa|kg/m³||N/mm|N·m/rad")]
+    [InlineData(UnitProfileKind.StructuralEngineering, "m|mm|mm|mm|cm²|cm⁴|cm³|rad|kN|kN|kN·m|kN/m|MPa||GPa|MPa|kg/m³||kN/m|kN·m/rad")]
+    [InlineData(UnitProfileKind.UnitedStates, "ft|in|in|in|in²|in⁴|in³|rad|kip|kip|kip·ft|kip/ft|ksi||ksi|ksi|kg/m³||kip/in|kip·ft/rad")]
     public void BuiltInProfileMatchesSpecification(UnitProfileKind kind, string expected)
     {
         var profile = kind == UnitProfileKind.MechanicalEngineering ? UnitProfile.MechanicalEngineering

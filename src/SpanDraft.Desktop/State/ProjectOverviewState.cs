@@ -28,7 +28,7 @@ public sealed class ProjectOverviewState
         Length = string.Format(CultureInfo.CurrentUICulture, Strings.OverviewLength, Position(document.Length),
             analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
         Supports = Array.AsReadOnly(document.Supports.Select(s => new ProjectOverviewItem(s.Id, s.Name,
-            SupportTypeName(s.Type), "", Position(s.Position))).ToArray());
+            SupportTypeName(s), "", Position(s.Position))).ToArray());
         IReadOnlyList<ProjectOverviewItem> PointLoads(PointLoadKind kind) => Array.AsReadOnly(document.Loads
             .Where(l => l.Kind == kind).Select(l => new ProjectOverviewItem(l.Id, l.Name,
                 kind == PointLoadKind.Force ? "F" : "M",
@@ -103,11 +103,28 @@ public sealed class ProjectOverviewState
     private string Position(Length position) => QuantityFormatter.FormatInputNumber(position.Meters, Analysis.Options.Profile[QuantityKind.BeamLength],
         Analysis.Options);
 
-    private static string SupportTypeName(SupportType type) => type switch
+    private string SupportTypeName(EditorSupport support) => support.Type switch
     {
         SupportType.Fixed => Strings.FixedSupport,
         SupportType.Pinned => Strings.PinnedSupport,
         SupportType.Roller => Strings.RollerSupport,
-        _ => throw new ArgumentOutOfRangeException(nameof(type))
+        SupportType.Spring => SpringDescription(support.Spring!),
+        _ => throw new ArgumentOutOfRangeException(nameof(support))
     };
+
+    /// <summary>The spring support with its stiffness values in the display units, one per acting spring.</summary>
+    private string SpringDescription(SpringData spring)
+    {
+        var options = Analysis.Options;
+        var parts = new List<string> { Strings.SpringSupport };
+        if (spring.Translational is { } translational)
+            parts.Add("k = " + QuantityFormatter.FormatInput(translational.NewtonsPerMeter,
+                options.Profile[QuantityKind.TranslationalStiffness], options));
+        if (spring.RigidTranslation)
+            parts.Add(Strings.SpringRigidTranslation);
+        if (spring.Rotational is { } rotational)
+            parts.Add("kθ = " + QuantityFormatter.FormatInput(rotational.NewtonMetersPerRadian,
+                options.Profile[QuantityKind.RotationalStiffness], options));
+        return string.Join(", ", parts);
+    }
 }

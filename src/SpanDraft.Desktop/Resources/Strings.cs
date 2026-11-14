@@ -22,6 +22,7 @@ public static class Strings
     public static string ReportPage => Get(nameof(ReportPage));
     public static string ReportNotes => Get(nameof(ReportNotes));
     public static string ReportTheory => Get(nameof(ReportTheory));
+    public static string ReportSpringTheory => Get(nameof(ReportSpringTheory));
     public static string ReportRounding => Get(nameof(ReportRounding));
     public static string ReportPosition => Get(nameof(ReportPosition));
     public static string ReportSavePdf => Get(nameof(ReportSavePdf));
@@ -253,6 +254,11 @@ public static class Strings
     public static string UnitAxialForce => Get(nameof(UnitAxialForce));
     public static string UnitStress => Get(nameof(UnitStress));
     public static string UnitRotation => Get(nameof(UnitRotation));
+    public static string UnitTranslationalStiffness => Get(nameof(UnitTranslationalStiffness));
+    public static string UnitRotationalStiffness => Get(nameof(UnitRotationalStiffness));
+    public static string SpringSupport => Get(nameof(SpringSupport));
+    public static string ToolbarSpringSupport => Get(nameof(ToolbarSpringSupport));
+    public static string SpringRigidTranslation => Get(nameof(SpringRigidTranslation));
     public static string SettingsNumeric => Get(nameof(SettingsNumeric));
     public static string PresentationCalculationHint => Get(nameof(PresentationCalculationHint));
     public static string SettingsLanguage => Get(nameof(SettingsLanguage));

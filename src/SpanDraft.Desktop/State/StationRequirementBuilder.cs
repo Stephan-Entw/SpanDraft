@@ -1,3 +1,4 @@
+using SpanDraft.Desktop.Controls;
 using SpanDraft.Core.Supports;
 using SpanDraft.Desktop.Layout;
 
@@ -20,13 +21,8 @@ public static class StationRequirementBuilder
                 requirements.Add(new(support.Position.Meters, geometry.LeftExtent * supportSymbolScale, geometry.RightExtent * supportSymbolScale));
                 continue;
             }
-            var hinged = support.Type switch
-            {
-                SupportType.Pinned => new HingedSupportGeometry(false),
-                SupportType.Roller => new HingedSupportGeometry(true),
-                _ => throw new ArgumentOutOfRangeException(nameof(document))
-            };
-            requirements.Add(new(support.Position.Meters, hinged.LeftExtent * supportSymbolScale, hinged.RightExtent * supportSymbolScale));
+            var (left, right) = Extents(support);
+            requirements.Add(new(support.Position.Meters, left * supportSymbolScale, right * supportSymbolScale));
         }
         foreach (var load in document.Loads)
         {
@@ -61,4 +57,13 @@ public static class StationRequirementBuilder
             l.EndPosition.Meters, SchematicMetrics.DistributedMinimumWidth))
             .Concat(document.SelfWeightLoad is { } weight ? new[] { new SpanRequirement(weight.StartPosition.Meters,
                 weight.EndPosition.Meters, SchematicMetrics.DistributedMinimumWidth) } : []).ToArray());
+
+    private static (double Left, double Right) Extents(EditorSupport support) => support.Type switch
+    {
+        SupportType.Pinned => (new HingedSupportGeometry(false).LeftExtent, new HingedSupportGeometry(false).RightExtent),
+        SupportType.Roller => (new HingedSupportGeometry(true).LeftExtent, new HingedSupportGeometry(true).RightExtent),
+        SupportType.Spring when support.Spring is { } spring =>
+            (SupportSymbol.SpringGeometry(spring).LeftExtent, SupportSymbol.SpringGeometry(spring).RightExtent),
+        _ => throw new ArgumentOutOfRangeException(nameof(support))
+    };
 }

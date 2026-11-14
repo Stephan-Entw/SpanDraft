@@ -47,7 +47,9 @@ public sealed class SettingsViewModel : ObservableObject
             Row(QuantityKind.TransverseDisplacement, Strings.UnitDeflection), Row(QuantityKind.AxialDisplacement, Strings.UnitAxialDisplacement),
             Row(QuantityKind.Area, Strings.UnitArea + " " + TechnicalSymbols.Area),
             Row(QuantityKind.SecondMomentOfArea, Strings.UnitInertia + " " + TechnicalSymbols.Inertia()),
-            Row(QuantityKind.SectionModulus, Strings.UnitModulus + " " + TechnicalSymbols.Modulus())
+            Row(QuantityKind.SectionModulus, Strings.UnitModulus + " " + TechnicalSymbols.Modulus()),
+            Row(QuantityKind.TranslationalStiffness, Strings.UnitTranslationalStiffness),
+            Row(QuantityKind.RotationalStiffness, Strings.UnitRotationalStiffness)
         };
         RightUnits = new[]
         {

@@ -76,6 +76,15 @@ public static class UnitCatalog
     public static UnitDefinition KilogramsPerCubicMeter { get; } = Unit("kg/m3", "kg/m³", UnitDimension.MassDensity, "1");
     public static UnitDefinition Megapascal { get; } = Unit("MPa", "MPa", UnitDimension.Pressure, "1e6");
     public static UnitDefinition Ksi { get; } = new("ksi", "ksi", UnitDimension.Pressure, KipScale / (InchScale * InchScale));
+    // Stiffness units share symbols with the line-load units but not their identifiers, which settings persist.
+    public static UnitDefinition NewtonPerMeterStiffness { get; } = Unit("k:N/m", "N/m", UnitDimension.TranslationalStiffness, "1");
+    public static UnitDefinition KilonewtonPerMeterStiffness { get; } = Unit("k:kN/m", "kN/m", UnitDimension.TranslationalStiffness, "1000");
+    public static UnitDefinition NewtonPerMillimeter { get; } = Unit("k:N/mm", "N/mm", UnitDimension.TranslationalStiffness, "1000");
+    public static UnitDefinition KilonewtonPerMillimeter { get; } = Unit("k:kN/mm", "kN/mm", UnitDimension.TranslationalStiffness, "1e6");
+    public static UnitDefinition KipPerInch { get; } = new("k:kip/in", "kip/in", UnitDimension.TranslationalStiffness, KipScale / InchScale);
+    public static UnitDefinition NewtonMeterPerRadian { get; } = Unit("Nm/rad", "N·m/rad", UnitDimension.RotationalStiffness, "1");
+    public static UnitDefinition KilonewtonMeterPerRadian { get; } = Unit("kNm/rad", "kN·m/rad", UnitDimension.RotationalStiffness, "1000");
+    public static UnitDefinition KipFootPerRadian { get; } = new("kipft/rad", "kip·ft/rad", UnitDimension.RotationalStiffness, KipScale * FootScale);
     public static UnitDefinition Dimensionless { get; } = Unit("1", "", UnitDimension.Dimensionless, "1");
 
     public static IReadOnlyList<UnitDefinition> All { get; } = Array.AsReadOnly(new[]
@@ -84,7 +93,9 @@ public static class UnitCatalog
         MeterToFourth, MillimeterToFourth, CentimeterToFourth, InchToFourth,
         CubicMeter, CubicMillimeter, CubicCentimeter, CubicInch, Radian,
         Newton, Kilonewton, Kip, NewtonMeter, KilonewtonMeter, KipFoot,
-        NewtonPerMeter, KilonewtonPerMeter, KipPerFoot, Pascal, Megapascal, Gigapascal, Ksi, KilogramsPerCubicMeter, Dimensionless
+        NewtonPerMeter, KilonewtonPerMeter, KipPerFoot, Pascal, Megapascal, Gigapascal, Ksi, KilogramsPerCubicMeter, Dimensionless,
+        NewtonPerMeterStiffness, KilonewtonPerMeterStiffness, NewtonPerMillimeter, KilonewtonPerMillimeter, KipPerInch,
+        NewtonMeterPerRadian, KilonewtonMeterPerRadian, KipFootPerRadian
     });
 
     public static UnitDimension DimensionOf(QuantityKind kind) => kind switch
@@ -100,6 +111,8 @@ public static class UnitCatalog
         QuantityKind.DistributedLoad => UnitDimension.DistributedLoad,
         QuantityKind.Stress or QuantityKind.YoungsModulus or QuantityKind.MaterialStrength => UnitDimension.Pressure,
         QuantityKind.Density => UnitDimension.MassDensity,
+        QuantityKind.TranslationalStiffness => UnitDimension.TranslationalStiffness,
+        QuantityKind.RotationalStiffness => UnitDimension.RotationalStiffness,
         QuantityKind.SafetyFactor or QuantityKind.PoissonRatio => UnitDimension.Dimensionless,
         _ => throw new ArgumentOutOfRangeException(nameof(kind))
     };

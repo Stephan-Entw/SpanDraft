@@ -134,6 +134,11 @@
   <data name="UnitAxialForce" xml:space="preserve"><value>Axial force</value></data>
   <data name="UnitStress" xml:space="preserve"><value>Stress</value></data>
   <data name="UnitRotation" xml:space="preserve"><value>Rotation</value></data>
+  <data name="UnitTranslationalStiffness" xml:space="preserve"><value>Translational spring stiffness</value></data>
+  <data name="UnitRotationalStiffness" xml:space="preserve"><value>Rotational spring stiffness</value></data>
+  <data name="SpringSupport" xml:space="preserve"><value>Spring Support</value></data>
+  <data name="ToolbarSpringSupport" xml:space="preserve"><value>Spring</value></data>
+  <data name="SpringRigidTranslation" xml:space="preserve"><value>rigid in w</value></data>
   <data name="SettingsNumeric" xml:space="preserve"><value>Number formatting</value></data>
   <data name="PresentationCalculationHint" xml:space="preserve"><value>≈ marks rounded inputs. Values are stored and calculated in full.</value></data>
   <data name="SettingsLanguage" xml:space="preserve"><value>Language and region</value></data>
@@ -320,6 +325,7 @@
   <data name="ReportPage" xml:space="preserve"><value>Page {0} of {1}</value></data>
   <data name="ReportNotes" xml:space="preserve"><value>Calculation model</value></data>
   <data name="ReportRounding" xml:space="preserve"><value>Numerical values are rounded to {0}.</value></data>
+  <data name="ReportSpringTheory" xml:space="preserve"><value>Spring supports are ideal linear-elastic with a load-independent stiffness and are rigid in the axial direction.</value></data>
   <data name="ReportTheory" xml:space="preserve"><value>Calculation based on Euler-Bernoulli theory, assuming linear-elastic behavior and small deformations. Material and cross-section are constant along the beam length; shear deformations are neglected.</value></data>
   <data name="ReportPosition" xml:space="preserve"><value>x = {0} {1}{2}</value></data>
   <data name="ReportSavePdf" xml:space="preserve"><value>Save PDF</value></data>

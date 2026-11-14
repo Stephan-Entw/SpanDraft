@@ -24,11 +24,14 @@ public static class BeamModelMechanicalComparer
         && left.BendingAxisProperties.NegativeSectionModulus == right.BendingAxisProperties.NegativeSectionModulus
         && left.Supports.Count == right.Supports.Count
         && left.Supports.Zip(right.Supports).All(pair => IsKnownSupportType(pair.First.Type)
-            && pair.First.Type == pair.Second.Type && pair.First.Position == pair.Second.Position)
+            && pair.First.Type == pair.Second.Type && pair.First.Position == pair.Second.Position
+            && pair.First.TranslationalSpring == pair.Second.TranslationalSpring
+            && pair.First.RotationalSpring == pair.Second.RotationalSpring
+            && pair.First.RigidTranslation == pair.Second.RigidTranslation)
         && left.Loads.Count == right.Loads.Count
         && left.Loads.Zip(right.Loads).All(pair => LoadsEquivalent(pair.First, pair.Second));
 
-    public static bool IsKnownSupportType(SupportType type) => type is SupportType.Fixed or SupportType.Pinned or SupportType.Roller;
+    public static bool IsKnownSupportType(SupportType type) => type is SupportType.Fixed or SupportType.Pinned or SupportType.Roller or SupportType.Spring;
 
     public static bool LoadsEquivalent(BeamLoad left, BeamLoad right) => (left, right) switch
     {

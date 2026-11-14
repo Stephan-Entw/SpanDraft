@@ -182,7 +182,7 @@ public sealed class DesktopSettingsTests
         model.Select(kind);
         Assert.Same(UserSettings.Standard(kind), model.Pending.Profile);
         Assert.False(model.HasCustomProfile);
-        Assert.Equal(7, model.LeftUnits.Count);
+        Assert.Equal(9, model.LeftUnits.Count);
         Assert.Equal(9, model.RightUnits.Count);
         foreach (var row in model.LeftUnits.Concat(model.RightUnits))
             Assert.All(row.Units, unit => Assert.Equal(UnitCatalog.DimensionOf(row.Quantity), unit.Dimension));

@@ -134,6 +134,11 @@
   <data name="UnitAxialForce" xml:space="preserve"><value>Normalkraft</value></data>
   <data name="UnitStress" xml:space="preserve"><value>Spannung</value></data>
   <data name="UnitRotation" xml:space="preserve"><value>Rotation</value></data>
+  <data name="UnitTranslationalStiffness" xml:space="preserve"><value>Wegfedersteifigkeit</value></data>
+  <data name="UnitRotationalStiffness" xml:space="preserve"><value>Drehfedersteifigkeit</value></data>
+  <data name="SpringSupport" xml:space="preserve"><value>Federlager</value></data>
+  <data name="ToolbarSpringSupport" xml:space="preserve"><value>Feder</value></data>
+  <data name="SpringRigidTranslation" xml:space="preserve"><value>starr in w</value></data>
   <data name="SettingsNumeric" xml:space="preserve"><value>Zahlendarstellung</value></data>
   <data name="PresentationCalculationHint" xml:space="preserve"><value>≈ kennzeichnet gerundete Eingaben. Gespeichert und gerechnet wird mit den vollen Werten.</value></data>
   <data name="SettingsLanguage" xml:space="preserve"><value>Sprache und Region</value></data>
@@ -320,6 +325,7 @@
   <data name="ReportPage" xml:space="preserve"><value>Seite {0} von {1}</value></data>
   <data name="ReportNotes" xml:space="preserve"><value>Berechnungsmodell</value></data>
   <data name="ReportRounding" xml:space="preserve"><value>Zahlenwerte sind auf {0} gerundet.</value></data>
+  <data name="ReportSpringTheory" xml:space="preserve"><value>Federlager sind ideal linear-elastisch mit lastunabhängiger Steifigkeit und in Balkenlängsrichtung starr.</value></data>
   <data name="ReportTheory" xml:space="preserve"><value>Berechnung nach Euler-Bernoulli, linear-elastisch und für kleine Verformungen. Werkstoff und Querschnitt sind über die Balkenlänge konstant; Schubverformungen werden vernachlässigt.</value></data>
   <data name="ReportPosition" xml:space="preserve"><value>x = {0} {1}{2}</value></data>
   <data name="ReportSavePdf" xml:space="preserve"><value>PDF speichern</value></data>

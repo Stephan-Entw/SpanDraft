@@ -116,7 +116,9 @@ public sealed record EditorDocument
     }
 
     public BeamModel ToBeamModel() => new(Length, Material, Section, BendingAxis,
-        Supports.Select(s => new Support(s.Position, s.Type)),
+        Supports.Select(s => s.Type == SupportType.Spring
+            ? (s.Spring ?? throw new InvalidOperationException("A spring support needs its springs.")).ToCore(s.Position)
+            : new Support(s.Position, s.Type)),
         Loads.Select(l => l.ToCore()).Concat(DistributedLoads.Select(l => l.ToCore()))
             .Concat(SelfWeightLoad is { } weight ? new BeamLoad[] { weight } : []));
 }

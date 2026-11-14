@@ -71,7 +71,9 @@ public sealed class UnitProfile
             [QuantityKind.YoungsModulus] = us ? UnitCatalog.Ksi : UnitCatalog.Gigapascal,
             [QuantityKind.MaterialStrength] = us ? UnitCatalog.Ksi : UnitCatalog.Megapascal,
             [QuantityKind.Density] = UnitCatalog.KilogramsPerCubicMeter,
-            [QuantityKind.PoissonRatio] = UnitCatalog.Dimensionless
+            [QuantityKind.PoissonRatio] = UnitCatalog.Dimensionless,
+            [QuantityKind.TranslationalStiffness] = us ? UnitCatalog.KipPerInch : civil ? UnitCatalog.KilonewtonPerMeterStiffness : UnitCatalog.NewtonPerMillimeter,
+            [QuantityKind.RotationalStiffness] = us ? UnitCatalog.KipFootPerRadian : civil ? UnitCatalog.KilonewtonMeterPerRadian : UnitCatalog.NewtonMeterPerRadian
         };
         return new UnitProfile(kind, units);
     }
