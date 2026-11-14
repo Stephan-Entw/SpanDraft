@@ -188,5 +188,12 @@ Dirty-State. Historische Standard-/Detailed-Einstellungen werden unter
 Beibehaltung ihrer Einheiten auf die oben beschriebenen Standardwerte migriert;
 das Projektformat bleibt unverändert.
 
+Federsteifigkeiten haben eigene Größen: Wegfedersteifigkeit (N/m, kN/m, N/mm, kN/mm, kip/in)
+und Drehfedersteifigkeit (N·m/rad, kN·m/rad, kip·ft/rad); die Standardprofile verwenden
+N/mm und N·m/rad, kN/m und kN·m/rad beziehungsweise kip/in und kip·ft/rad. Individuelle
+Profile aus Einstellungen vor den Federlagern enthalten diese Größen nicht; beim Laden
+übernehmen sie fehlende Einträge aus dem zuletzt gewählten Standardprofil, ohne ihre
+übrigen Einheiten zu verlieren.
+
 Diagramm-Achsenticks behalten ihre eigenständige Nice-Tick-Logik. Zoom, Seitenzahlen
 und reine UI-Zähler unterliegen ebenfalls nicht der Einstellung der signifikanten Stellen.

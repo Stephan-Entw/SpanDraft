@@ -191,11 +191,12 @@ Feature freigegeben ist. Bis zur Freigabe ist sie über Produktpfade nicht errei
 - **Anforderung:** Translatorische und rotatorische Federsteifigkeit sowie deren zulässige Kombinationen. Bleibt im geraden 1D-Balkenmodell.
 - **Kombinationen:** Starre Verschiebung mit Drehfeder (Teileinspannung), Wegfeder mit Drehfeder, Balken nur auf Federn.
 - **Steife, eng benachbarte Federn:** Sie werden ohne Modelländerung genau gerechnet (A3).
-- **Zu klären:**
-  - Hält ein Federlager axial? Gibt es axiale Federn?
-  - Darf eine Feder an derselben Position wie ein starres Lager liegen (Prototyp: Ablehnung)?
-  - Wie wird mit sehr großen und sehr kleinen Steifigkeiten umgegangen, ohne einen Ersatz für starre Lager einzuführen?
-- **Prototyp:** Vorhanden. Die Gruppierung (5 % der Teillänge, k·L³/EI ≥ 1) ist eine Heuristik; der Architekturentwurf sieht keine Gruppierung mehr vor (Bestätigung durch die Abnahme offen, [SOLVER_ARCHITEKTUR.md](SOLVER_ARCHITEKTUR.md#54-steife-und-enge-federgruppen)).
+- **Entschieden und umgesetzt:**
+  - Ein Federlager hält axial starr (`ReactionX` exakt +0); es gibt keine Axialfeder (bleibt DEV-12).
+  - Eine Feder an derselben Position wie ein starres Lager oder eine weitere Feder ist `InvalidModel`. Lasten genau auf der Feder sind zulässig.
+  - Steifigkeiten sind endlich und streng positiv; „keine Feder“ ist `null`. Es gibt keinen Ersatz für starre Lager und keine Eingabegrenze. Der Solver skaliert sie exakt (Zweierpotenz) und verlangt normale Koeffizienten; der dokumentierte Nachweisbereich ist k·L³/EI und k_θ·L/EI von 10⁻³ bis 10¹⁵, darüber und darunter entscheidet das Gate.
+  - Teileinspannung ist eine starre Querverschiebung mit Drehfeder (`RigidTranslation`).
+- **Prototyp:** Vorhanden. Die Gruppierung (5 % der Teillänge, k·L³/EI ≥ 1) ist eine Heuristik; der Produktkern kennt keine Gruppierung. Die gezielte Federmatrix der Abnahme (Abstände bis L/10¹¹, k·L³/EI bis 10¹⁵) wurde ohne Ablehnung gerechnet ([SOLVER_ARCHITEKTUR.md](SOLVER_ARCHITEKTUR.md#54-steife-und-enge-federgruppen), [VALIDATION.md](VALIDATION.md)).
 
 ### DEV-11 Mehrsegment-Balken
 

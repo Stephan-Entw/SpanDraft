@@ -24,6 +24,16 @@ beeinflussen jedoch nicht die Mechanik. Die gemeinsame Änderungsgrenze entschei
 über eine Neuberechnung, damit einzelne Controls diese Unterscheidung nicht
 unterschiedlich treffen. Ein Ergebnis beschreibt immer ein bestätigtes Modell.
 
+## Federlager-Draft
+
+Ein neu gesetztes Federlager startet mit einer Wegfeder ohne Wert: Der Anwender muss
+die Steifigkeit selbst eingeben, weil jeder Vorgabewert eine falsche Lagernachgiebigkeit
+unbemerkt in die Berechnung tragen würde. Die Kombinationsregeln (mindestens eine Feder,
+„starr in w“ nur mit Drehfeder und ohne Wegfeder) sind im Draft erzwungen, damit nie ein
+nicht bestehendes Core-Objekt entsteht. Das Werkzeug der Federlager ist in der Werkzeugleiste
+bewusst ohne Beschriftung: Bei der schmalsten Fensterbreite wäre sonst die deutsche Leiste
+überlaufen.
+
 ## Streckenlast-Draft
 
 Eine Streckenlast hat zwei Randintensitäten, meistens aber ist sie konstant. Der

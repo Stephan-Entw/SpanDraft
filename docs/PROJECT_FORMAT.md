@@ -90,7 +90,13 @@ Keine Einheitensymbole, Anzeigeeinheiten oder lokalisierten Zahlstrings.
 Anzeigeeinstellungen sind davon unabhängig. Null ist für Positionen und Lasten gültig.
 
 IDs, Namen, Entity-Reihenfolge, Lasten, Lager und Naming-Zähler bleiben erhalten.
-Lager verwenden `fixed`, `pinned`, `roller`; Punktlasten `force`, `moment`.
+Lager verwenden `fixed`, `pinned`, `roller` oder `spring`; Punktlasten `force`, `moment`.
+Ein Federlager speichert optional `translationalStiffness` (N/m) und `rotationalStiffness`
+(N·m/rad), beide endlich und streng positiv, sowie `rigidTranslation` (nur `true` wird
+geschrieben). Mindestens eine Feder ist verpflichtend; `rigidTranslation` verlangt eine
+Drehfeder ohne Wegfeder. Diese Felder sind nur bei `spring` zulässig und lassen
+Dateien ohne sie unverändert gültig. Positionen eines Federlagers dürfen nicht mit
+denen anderer Lager zusammenfallen.
 Streckenlasten stehen in `distributedLoads` und speichern Anfangs- und Endposition
 sowie `startIntensity` und `endIntensity` (N/m, vorzeichenbehaftet, beide Pflicht).
 Die Intensität ändert sich zwischen den Enden linear. Gleiche Werte bezeichnen eine
@@ -163,8 +169,9 @@ Ihre Änderung allein löst keine Analysis aus.
 
 V1 und V2 werden mit fehlenden Projektangaben (`Info == null`) gelesen.
 V3 und V4 verwenden weiterhin die Dokument-/Presentation-Struktur aus V2.
-V5 ersetzt ausschließlich das Streckenlastfeld `intensity` durch `startIntensity`
-und `endIntensity`; beim Lesen von V1–V4 wird die einzelne Intensität zu beiden
+V5 ersetzt das Streckenlastfeld `intensity` durch `startIntensity`
+und `endIntensity` und erweitert Lager additiv um den Typ `spring` mit seinen optionalen
+Feldern (V1–V4 kennen ihn nicht und lehnen ihn ab); beim Lesen von V1–V4 wird die einzelne Intensität zu beiden
 Enden. V5 ist eine reine Erweiterung des Dokumentformats, ältere Programmstände
 lehnen V5-Dateien als nicht unterstützt ab, auch wenn alle Lasten konstant sind.
 V1 wird beim Laden unmittelbar ins aktuelle In-Memory-Modell migriert:

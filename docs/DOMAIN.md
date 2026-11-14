@@ -291,6 +291,19 @@ Der dauerhafte Dateivertrag steht in [PROJECT_FORMAT.md](PROJECT_FORMAT.md).
 Die 2D-Balkendarstellung repräsentiert jeweils die ausgewählte Biegeebene,
 keine räumliche Einbaulage des Querschnitts.
 
+## Lager und Federlager
+
+`Support` hat eine Position und einen `SupportType`: `Fixed`, `Pinned`, `Roller` oder
+`Spring`. Starre Lager entstehen mit dem Konstruktor. Ein Federlager entsteht über
+`Support.CreateSpring` mit einer translatorischen Steifigkeit (`TranslationalStiffness`, N/m),
+einer rotatorischen (`RotationalStiffness`, N·m/rad) oder beiden; beide Werttypen sind
+endlich und streng positiv, der Nullwert ist ungültig. Eine „keine Feder“ ist `null`.
+`RigidTranslation` hält die Querverschiebung starr und ist nur zusammen mit einer
+Drehfeder ohne Wegfeder zulässig (Teileinspannung). Ungültige Kombinationen werden
+mit `ArgumentException` abgewiesen. Ein Federlager hält axial starr; es gibt keine
+Axialfeder. Das Federgesetz ist die Rückstellkraft `R = −k·w` und das Rückstellmoment
+`C = −k_θ·θ` auf den Balken. Die mechanische Bedeutung steht in [SOLVER.md](SOLVER.md).
+
 ## Modellvalidierung
 
 `BeamModel` kopiert übergebene Lager- und Lastlisten und stellt sie lesbar
@@ -303,10 +316,11 @@ Nachricht und Property-Pfad; Listenindizes sind nullbasiert. Geprüft werden:
 - fehlende Lager,
 - Lager, Einzelkräfte und Einzelmomente außerhalb des Balkens,
 - teilweise oder vollständig außerhalb liegende Streckenlasten,
-- identische Lager mit gleichem Typ und exakt gleicher Position.
+- identische Lager mit gleichem Typ und exakt gleicher Position,
+- ein Federlager an exakt derselben Position wie ein anderes Lager (`SpringSupportCoincidence`).
 
 Bereichsgrenzen und Duplikate werden ohne numerische Toleranz verglichen.
 Negative Positionen werden bereits vom Längenwerttyp ausgeschlossen.
-Unterschiedliche Lagertypen am gleichen Ort, überlappende Lasten und
+Unterschiedliche starre Lagertypen am gleichen Ort, überlappende Lasten und
 Überhänge werden hier nicht abgelehnt. Stabilitätsprüfung und Zuordnung der
 Randbedingungen erfolgen im Solver; Details stehen in [SOLVER.md](SOLVER.md).

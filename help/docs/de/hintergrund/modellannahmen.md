@@ -28,7 +28,7 @@ Schräg beziehungsweise frei im Raum gerichtete Kräfte, gleichzeitige Biegung u
 
 ### Erweiterte Lasten und Lager
 
-Eigengewicht kann als konstante, nach unten gerichtete Streckenlast aus Werkstoffdichte und Querschnittsfläche berücksichtigt werden. Streckenlasten sind konstant oder linear veränderlich; nichtlineare Verläufe und äußere axiale Lasten sind in der aktuellen Benutzeroberfläche keine unterstützten Lasttypen. Elastische Lager beziehungsweise Federn, Auflagerverschiebungen und innere Gelenkfreigaben sind ebenfalls nicht enthalten.
+Eigengewicht kann als konstante, nach unten gerichtete Streckenlast aus Werkstoffdichte und Querschnittsfläche berücksichtigt werden. Streckenlasten sind konstant oder linear veränderlich; nichtlineare Verläufe und äußere axiale Lasten sind in der aktuellen Benutzeroberfläche keine unterstützten Lasttypen. Federlager sind linear-elastisch mit lastunabhängiger Steifigkeit und in Balkenlängsrichtung starr; eine Axialfeder gibt es nicht. Auflagerverschiebungen und innere Gelenkfreigaben sind nicht enthalten.
 
 ### Nichtlineare und dynamische Effekte
 

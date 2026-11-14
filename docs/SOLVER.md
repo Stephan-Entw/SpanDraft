@@ -11,7 +11,7 @@ Berechnet wird ein einzelner gerader Euler-Bernoulli-Balken mit konstantem
 Werkstoff und Querschnitt, linear elastisch bei kleinen Verschiebungen und
 Rotationen. Querschnitte bleiben eben und senkrecht zur verformten Balkenachse;
 Schubverformung wird vernachlässigt. Unterstützt sind starre Einspannungen,
-Fest- und Loslager, Überhänge, transversale Punktkräfte, Punktmomente und
+Fest- und Loslager, linear-elastische Federlager, Überhänge, transversale Punktkräfte, Punktmomente und
 konstante und linear veränderliche, auch überlappende Streckenlasten. Eigengewicht wird bereits im
 Fachmodell als konstante Streckenlast abgeleitet. Alle Werte verwenden SI.
 
@@ -31,7 +31,8 @@ Die Fläche bleibt unter anderem für Eigengewicht und Engineering relevant.
 
 ## Stationen, Ereignisse und Lager
 
-Mechanische Stationen liegen an beiden Balkenenden und an allen Lagerpositionen.
+Mechanische Stationen liegen an beiden Balkenenden und an allen Lagerpositionen
+(auch an Federlagern).
 Nur dort entstehen freie Komponenten des lokalen Biegezustands `(w, θ, M, V)`.
 Vorgeschriebene Komponenten werden exakt eliminiert. Reine Lastpositionen,
 Streckenlastgrenzen und spätere Auswertungspositionen erzeugen keine zusätzlichen
@@ -51,6 +52,7 @@ Koordinaten und nicht aus einer gerundeten lokalen Koordinatendifferenz.
 | Fixed / Einspannung | u, w, θ | keine |
 | Pinned / Festlager | u, w | θ |
 | Roller / Loslager | w | u, θ |
+| Spring / Federlager | u | w und θ elastisch, je nach Federn |
 
 Alle vorgeschriebenen Verschiebungen und Rotationen sind exakt null.
 Verschiedene Lagertypen an derselben Position vereinigen ihre Sperren.
@@ -58,6 +60,31 @@ Die Reaktion wird einmal je Station und gesperrter Richtung ausgegeben;
 eine Aufteilung auf übereinanderliegende Lager ist nicht eindeutig und wird
 nicht vorgenommen. Die Core-Prüfung gleicher Lagerduplikate bleibt vorgeschaltet.
 Es gibt keine Strafsteifigkeiten, künstlichen Federn oder Regularisierung.
+
+### Federlager
+
+Ein Federlager hält axial starr (u = 0, `ReactionX` exakt +0, keine Axialfeder) und
+besitzt eine Wegfeder k (N/m), eine Drehfeder k_θ (N·m/rad) oder beide. Mit Drehfeder
+darf die Querverschiebung starr gehalten werden (Teileinspannung: w = 0, θ elastisch);
+eine starre Translation ohne Drehfeder wäre ein Loslager und ist ungültig, ebenso eine
+starre Translation mit Wegfeder. Die Federgesetze `R = −k·w⁺` und `C = −k_θ·θ⁺` (Rückstellkraft
+beziehungsweise -moment auf den Balken) sind Teil der Stationsregeln und
+ersetzen die Zeile des Querkraft- beziehungsweise Momentensprungs:
+`V⁺ − V⁻ + k·w⁺ = P`, `M⁺ − M⁻ − k_θ·θ⁺ = −C`. w und θ bleiben freie Unbekannte,
+die Zeilenzahl ändert sich nicht. Die Steifigkeiten gehen als exakte Zweierpotenz-Skalierung
+`k·2^(3·e_L − e_EI)` beziehungsweise `k_θ·2^(e_L − e_EI)` ohne Rundung ein und müssen
+normal darstellbar sein (sonst `NumericalFailure`, `NumericalRange`). Es gibt keinen Ersatz für starre
+Lager und keine Steifigkeitsgrenze; ein starres Lager ist kein k = ∞.
+Der dokumentierte Nachweisbereich ist k·L³/EI und k_θ·L/EI von 10⁻³ bis 10¹⁵; darunter
+und darüber entscheidet das Ausgabe-Gate.
+
+Für den Rang zählt eine Feder durch ihre Wirkrichtung, unabhängig vom Wert: eine Wegfeder
+wie eine w-Sperre, eine Drehfeder wie eine θ-Sperre. Eine einzelne Feder lässt deshalb
+einen Mechanismus (`UnstableModel`), ein Balken nur auf Federn ist dagegen stabil.
+
+Ein Federlager darf an keiner Position mit einem anderen Lager oder einer weiteren Feder
+zusammenfallen (`SpringSupportCoincidence`, `InvalidModel`); der Kernel prüft das zusätzlich.
+Lasten genau auf der Feder sind zulässig.
 
 ## Vorzeichen und Lastabbildung
 
@@ -179,6 +206,13 @@ mechanischen Station; ihre Fehler werden mit eigenen Reaktionsfunktionalen
 verifiziert. Lasten unmittelbar am Lager sind eingeschlossen. Freie Richtungen
 veröffentlichen kein numerisches Residuum als Reaktion.
 
+Eine Federreaktion hat zwei exakte Auswertungen, den Sprung und das Federgesetz. Beide
+erhalten ihre eigene verifizierte Schranke, ihre Differenz ist das Residuum der Federzeile
+und darf die Summe der Schranken nicht übersteigen (sonst `NumericalFailure`,
+`InternalInconsistency`). Geliefert wird der Wert mit der kleineren Schranke, bei Gleichheit
+der Sprung. `ReactionY` eines Wegfederlagers ist die Federkraft, `ReactionMoment` eines
+Drehfederlagers das Federmoment; beide gehen mit ihrer Schranke in das Gate ein.
+
 `BeamSolution.EvaluateAt(Length position, EvaluationSide side)` liefert einen
 unveränderlichen `BeamSectionResult` mit Position, `AxialDisplacement`,
 `TransverseDisplacement`, `RotationRadians`, `AxialForce`, `ShearForce` und
@@ -267,6 +301,8 @@ Bereichsgrenzen schützen die Gleitkomma-Prämissen für Eingaben, EI, Abstände
 normierte Lasten, Koeffizienten, Pivots und SI-Ausgaben. Auch ein mechanisch
 stabiles Modell kann deshalb oder wegen konservativer Bounds abgelehnt werden.
 Nähe allein ist kein Mechanismus und kein pauschaler Ablehnungsgrund.
+Auch eng benachbarte und sehr steife oder weiche Federn werden ohne Gruppierung und
+ohne Modelländerung gerechnet; was das Gate nicht trägt, wird abgelehnt.
 Gespeicherte Eingabepositionen werden nicht nachträglich vereinigt.
 
 Die Implementierung verwendet dichte Matrizen mit quadratischem Speicherbedarf
@@ -277,7 +313,7 @@ Ursprung können die Darstellung innerer globaler Extrempositionen begrenzen.
 Die Rechnung verwendet `double`; kleine Rundungsreste werden nicht pauschal
 auf null gesetzt oder geglättet.
 
-Nicht unterstützt sind belastete Axialmechanik, Federn, Gelenkfreigaben,
+Nicht unterstützt sind belastete Axialmechanik, Axialfedern, Gelenkfreigaben,
 veränderliche Steifigkeiten, nichtlineare Streckenlastverläufe, Lagerbewegungen,
 Schubverformung und geometrische Nichtlinearität. Historische Prototypen und
 eingefrorene FE-Vergleichsrechner liegen ausschließlich außerhalb des Produktpfads.

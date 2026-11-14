@@ -353,7 +353,7 @@ Die offenen Semantiken aus B lassen sich als **Daten** ausdrücken:
 | Punktmoment genau auf Gelenk (DEV-20) | Moment links oder rechts des Gelenkteilpunkts, oder Ablehnung |
 | Gelenk an Einspannung (DEV-20) | Einspannung links oder rechts des Gelenks, oder Ablehnung |
 | Gelenk auf Lager ohne Drehbehinderung (DEV-20) | Lager und Gelenk am selben oder an getrennten Teilpunkten |
-| Feder und starres Lager an gleicher Position (DEV-19) | Ablehnung oder fachlich definierte Anbindung am Teilpunkt |
+| Feder und starres Lager an gleicher Position (DEV-19) | Ablehnung (`InvalidModel`, entschieden) |
 | Abschnittswechsel an Lager, Gelenk, Einspannung (DEV-11) | Grenze vor oder nach dem Teilpunkt der Halterung |
 | Schräge Kraft am Gelenk oder Lager (DEV-12) | Axial- und Querkomponente am gewählten Teilpunkt |
 
@@ -1128,7 +1128,7 @@ Abhängigkeit dieses Testprojekts. Die öffentliche Fehlerzuordnung aus 6.6 setz
 | O7 | N-Extrema in der Schnittstelle (DEV-12) | Track |
 | O8 | Eingabesensitivität anzeigen ja/nein | Produkt |
 | O9 | Modellgrößen- und Latenzgrenze nach C#-Messung festlegen. [GV 12] liefert eine Größenordnungsschätzung | Produkt nach C#-Messung |
-| O10 | Keine Federgruppierung. Umsetzung an den Federextremen bestätigen | DEV-19; außerhalb des heutigen Migrationsumfangs |
+| O10 | Keine Federgruppierung. In der C#-Abnahme an den Federextremen bestätigt (Abstände bis L/10¹¹, k·L³/EI und k_θ·L/EI bis 10¹⁵, keine Ablehnung; VALIDATION.md) | Geschlossen (DEV-19) |
 | O11 | M3 erhält `IllConditionedSystem` und `Nodes`; eine spätere Umbenennung bleibt optional | Produkt |
 | O12 | Heutiger Umfang auf macOS ARM64 und Windows x64 abgenommen; separate Validation auch in Linux-CI (VALIDATION.md). Fachliche Entscheidungen, Schranken, τ und Fehlerklassen gelten unabhängig; Bitvergleiche dienen der Diagnose | Für heutigen Migrationsumfang geschlossen (M2/M4); Pflicht für Feature-Tracks und weitere unterstützte Plattformen bleibt |
 | O13 | Geschlossen (Runde 4): 75 gezielte Grenzfälle, 41 mit Gate in (10⁻¹⁰, 10⁻⁸], kein gelieferter Fehler > τ, Gate/Fehler ≥ 11,8 (7.6). Die für den heutigen Umfang relevanten Grenzfälle sind in M2 übernommen; Feature-Fälle bleiben ihren Tracks zugeordnet | – |

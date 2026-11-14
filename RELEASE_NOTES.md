@@ -4,6 +4,7 @@
 
 - Add linearly varying distributed loads with a start and an end intensity: triangular and trapezoidal loads and loads with a sign change. The extremum of the shear force at the zero of the load is found in the result diagrams.
 - Show both end intensities in the editor drawing, the project overview and the calculation report.
+- Add spring supports: a transverse spring, a rotational spring or both, and a partial restraint (rigid transverse translation with an elastic rotation). Stiffnesses are entered in selectable units (N/mm, kN/m, kN·m/rad and others) and appear in the drawing, the overview, the results and the calculation report.
 
 **Project compatibility:** Saving a project now writes format V5, which SpanDraft 1.1.0 and earlier cannot open, even when all loads are constant. Projects from earlier versions still open.
 

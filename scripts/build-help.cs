@@ -12,7 +12,7 @@ if (args.Length > 1 || (args.Length == 1 && args[0] != "--no-regenerate-assets")
 
 string root = Path.GetFullPath(Path.Combine(ScriptDirectory(), ".."));
 string help = Path.Combine(root, "help"), site = Path.Combine(help, "site"), work = Path.Combine(help, ".build");
-string[] shared = ["koordinaten", "querschnitt-achsen", "lager-einspannung", "lager-festlager", "lager-loslager",
+string[] shared = ["koordinaten", "querschnitt-achsen", "lager-einspannung", "lager-festlager", "lager-loslager", "lager-federlager",
     "punktkraft-vorzeichen", "punktmoment-vorzeichen", "streckenlast-vorzeichen"];
 string[] localized = ["beispiel-lagerung", "beispiel-belastung", "diagramm-durchbiegung", "diagramm-querkraft", "diagramm-biegemoment"];
 string[] names = [.. shared, .. localized];
@@ -114,7 +114,7 @@ try
         foreach (string language in new[] { "de", "en" })
             ValidateLanguageSwitch(Path.Combine(site, language, Path.ChangeExtension(language == "de" ? pair.De : pair.En, ".html")),
                 language, Path.Combine(site, "de", Path.ChangeExtension(pair.De, ".html")), Path.Combine(site, "en", Path.ChangeExtension(pair.En, ".html")));
-    Console.WriteLine("Offline help validated: DE/EN, eleven pages each, eighteen shared/localized PNGs, page-preserving language switches, links, MathML and local runtime resources.");
+    Console.WriteLine("Offline help validated: DE/EN, eleven pages each, nineteen shared/localized PNGs, page-preserving language switches, links, MathML and local runtime resources.");
     return 0;
 }
 catch (Exception error)

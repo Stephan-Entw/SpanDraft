@@ -48,6 +48,7 @@ Der aktuelle fachliche Umfang umfasst:
 
 - frei definierbare Balkenlänge
 - Einspannung, Festlager und Loslager
+- Federlager mit Weg- und/oder Drehfeder, auch als Teileinspannung
 - beliebig positionierte Lager einschließlich Überhängen
 - Punktkräfte
 - Punktmomente
