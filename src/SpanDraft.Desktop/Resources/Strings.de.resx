@@ -427,4 +427,6 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="SupportAtMomentRelease" xml:space="preserve"><value>An einem Gelenk sind Einspannung und Drehfeder nicht möglich.</value></data>
   <data name="MomentAtMomentRelease" xml:space="preserve"><value>An einem Gelenk kann kein Moment wirken.</value></data>
   <data name="InsufficientSupportWithMomentReleases" xml:space="preserve"><value>Lagerung nicht ausreichend oder zu viele Gelenke</value></data>
+  <data name="MomentReleaseResults" xml:space="preserve"><value>Gelenkgrößen</value></data>
+  <data name="ReportMomentReleaseTheory" xml:space="preserve"><value>Gelenke übertragen Quer- und Normalkraft; das Biegemoment ist dort null, die Rotation springt (θ− links, θ+ rechts).</value></data>
 </root>

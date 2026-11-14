@@ -12,6 +12,12 @@ public sealed record ProjectOverviewSegment(int Number, string Range, string Sec
 
 public sealed record ProjectOverviewItem(Guid Id, string Name, string Type, string Value, string Position);
 /// <summary>
+/// The rotations on both sides of a moment release and the shear force it transmits, in the display units. The shear is
+/// one value, or the left and the right one separated by a slash where a load or a support at the release makes it jump.
+/// </summary>
+public sealed record ProjectOverviewReleaseResult(Guid Id, string Name, string RotationLeft, string RotationRight, string Shear);
+
+/// <summary>
 /// One reaction row per support station. <see cref="Id"/> identifies the row's single support; a row
 /// shared by several supports at one station represents no single editable entity and has none.
 /// </summary>
@@ -40,6 +46,8 @@ public sealed class ProjectOverviewState
             analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
         Supports = Array.AsReadOnly(document.Supports.Select(s => new ProjectOverviewItem(s.Id, s.Name,
             SupportTypeName(s), "", Position(s.Position))).ToArray());
+        MomentReleases = Array.AsReadOnly(document.MomentReleases.Select(r => new ProjectOverviewItem(r.Id, r.Name,
+            Strings.MomentRelease, "", Position(r.Position))).ToArray());
         IReadOnlyList<ProjectOverviewItem> PointLoads(PointLoadKind kind) => Array.AsReadOnly(document.Loads
             .Where(l => l.Kind == kind).Select(l => new ProjectOverviewItem(l.Id, l.Name,
                 kind == PointLoadKind.Force ? "F" : "M",
@@ -82,6 +90,20 @@ public sealed class ProjectOverviewState
                     node.ReactionMoment is { } moment ? Reaction(moment.NewtonMeters, QuantityKind.Moment) : "");
             }).ToArray()
             : []);
+        MomentReleaseResults = Array.AsReadOnly(analysis.Result is { } solved
+            ? document.MomentReleases.Select(release =>
+            {
+                var node = solved.Solution.Nodes.Single(n => n.Position == release.Position);
+                var left = solved.Solution.EvaluateAt(release.Position, SpanDraft.Solver.EvaluationSide.Left);
+                var right = solved.Solution.EvaluateAt(release.Position, SpanDraft.Solver.EvaluationSide.Right);
+                string shearLeft = Reaction(left.ShearForce.Newtons, QuantityKind.TransverseForce);
+                string shearRight = Reaction(right.ShearForce.Newtons, QuantityKind.TransverseForce);
+                return new ProjectOverviewReleaseResult(release.Id, release.Name,
+                    Reaction(node.RotationLeftRadians ?? left.RotationRadians, QuantityKind.Rotation),
+                    Reaction(node.RotationRadians, QuantityKind.Rotation),
+                    shearLeft == shearRight ? shearLeft : shearLeft + " / " + shearRight);
+            }).ToArray()
+            : []);
     }
 
     public static ProjectOverviewState From(EditorDocument document, AnalysisPresentationState analysis) => new(document, analysis);
@@ -96,12 +118,22 @@ public sealed class ProjectOverviewState
     public IReadOnlyList<ProjectOverviewItem> Moments { get; }
     public IReadOnlyList<ProjectOverviewItem> DistributedLoads { get; }
     public IReadOnlyList<ProjectOverviewReaction> Reactions { get; }
+    public IReadOnlyList<ProjectOverviewItem> MomentReleases { get; }
+    public IReadOnlyList<ProjectOverviewReleaseResult> MomentReleaseResults { get; }
     public AnalysisPresentationState Analysis { get; }
     public bool HasSupports => Supports.Count > 0;
     public bool HasForces => Forces.Count > 0;
     public bool HasMoments => Moments.Count > 0;
     public bool HasDistributedLoads => DistributedLoads.Count > 0;
     public bool HasReactions => Reactions.Count > 0;
+    public bool HasMomentReleases => MomentReleases.Count > 0;
+    public bool HasMomentReleaseResults => MomentReleaseResults.Count > 0;
+    public string RotationLeftHeader => RotationLeftHeaderText.PlainText;
+    public TechnicalText RotationLeftHeaderText => TechnicalSymbols.Rotation("−") + " [" + Analysis.Options.Profile[QuantityKind.Rotation].Symbol + "]";
+    public string RotationRightHeader => RotationRightHeaderText.PlainText;
+    public TechnicalText RotationRightHeaderText => TechnicalSymbols.Rotation("+") + " [" + Analysis.Options.Profile[QuantityKind.Rotation].Symbol + "]";
+    public string ReleaseShearHeader => ReleaseShearHeaderText.PlainText;
+    public TechnicalText ReleaseShearHeaderText => TechnicalSymbols.Shear + " [" + Analysis.Options.Profile[QuantityKind.TransverseForce].Symbol + "]";
     public string ReactionXHeader => ReactionXHeaderText.PlainText;
     public TechnicalText ReactionXHeaderText => TechnicalSymbols.ReactionX + " [" + Analysis.Options.Profile[QuantityKind.AxialForce].Symbol + "]";
     public string ReactionYHeader => ReactionYHeaderText.PlainText;

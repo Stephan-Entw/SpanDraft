@@ -16,6 +16,7 @@ public partial class ProjectOverviewView : UserControl
         {
             ProjectOverviewItem item => item.Id,
             ProjectOverviewReaction reaction => reaction.Id,
+            ProjectOverviewReleaseResult result => result.Id,
             _ => null
         };
         if (id is not { } entityId) return;
@@ -23,11 +24,13 @@ public partial class ProjectOverviewView : UserControl
         Func<Guid, bool>? edit = editor.Document.Supports.Any(s => s.Id == entityId) ? editor.EditSupport
             : editor.Document.SelfWeight is { Enabled: true } weight && weight.Id == entityId ? editor.EditSelfWeight
             : editor.Document.Loads.Any(l => l.Id == entityId) ? editor.EditLoad
-            : editor.Document.DistributedLoads.Any(l => l.Id == entityId) ? editor.EditDistributedLoad : null;
+            : editor.Document.DistributedLoads.Any(l => l.Id == entityId) ? editor.EditDistributedLoad
+            : editor.Document.MomentReleases.Any(r => r.Id == entityId) ? editor.EditMomentRelease : null;
         if (edit is null) return;
         bool alreadyEditing = editor.IsSupportFlyoutVisible && editor.SupportDraft?.OriginalId == entityId
             || editor.IsLoadFlyoutVisible && editor.LoadDraft?.OriginalId == entityId
             || editor.IsDistributedLoadFlyoutVisible && editor.DistributedLoadDraft?.OriginalId == entityId
+            || editor.IsMomentReleaseFlyoutVisible && editor.MomentReleaseDraft?.OriginalId == entityId
             || editor.IsSelfWeightFlyoutVisible && editor.Document.SelfWeight?.Id == entityId;
         if (!alreadyEditing) editor.CancelEditorInteraction();
         edit(entityId);

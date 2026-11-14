@@ -85,6 +85,10 @@ internal static class ProjectReport
                 several ? SegmentTable(overview, profile) : null,
                 new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.25f, .50f, .25f],
                     overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Type, s.Position }).ToArray(), LeftAlignedColumn: 1),
+                new(Strings.MomentReleases, [Strings.OverviewName, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]",
+                        overview.RotationLeftHeaderText, overview.RotationRightHeaderText, overview.ReleaseShearHeaderText],
+                    [.14f, .18f, .22f, .22f, .24f], overview.MomentReleases.Zip(overview.MomentReleaseResults, (release, result) =>
+                        (IReadOnlyList<string>)new[] { release.Name, release.Position, result.RotationLeft, result.RotationRight, result.Shear }).ToArray()),
                 new(Strings.Forces, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.18f, .47f, .35f],
                     overview.Forces.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
                 new(Strings.Moments, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.18f, .47f, .35f],
@@ -99,6 +103,7 @@ internal static class ProjectReport
                 several ? string.Format(CultureInfo.CurrentUICulture, Strings.ReportSegmentSection, governing + 1) : Strings.Section,
                 several ? string.Format(CultureInfo.CurrentUICulture, Strings.ReportSegmentMaterial, governing + 1) : Strings.ReportMaterial,
                 Strings.ReportSummary, Strings.ReportNotes, [(several ? Strings.ReportSegmentTheory : Strings.ReportTheory) + (state.Document.Supports.Any(s => s.Type == SupportType.Spring) ? " " + Strings.ReportSpringTheory : "")
+                    + (state.Document.MomentReleases.Count > 0 ? " " + Strings.ReportMomentReleaseTheory : "")
                     + " " + RoundingSentence(presentation.Options.SignificantDigits)],
                 Strings.CalculationTitle, Strings.Project, Strings.Reference, Strings.Author));
         var visuals = new ReportVisuals(state, presentation, data);

@@ -23,6 +23,11 @@ public static class TechnicalSymbols
     public static TechnicalText ReactionY { get; } = new(new("R", Role: TechnicalRole.Variable), Index("y", true));
     public static TechnicalText Diameter { get; } = "Ø";
 
+    /// <summary>The rotation θ, optionally with a superscript side mark (− left, + right) as at a moment release.</summary>
+    public static TechnicalText Rotation(string? side = null) => side is null or "" ? Variable("θ")
+        : Variable("θ") + new TechnicalText(new TechnicalRun(side is "−" or "+" ? side
+            : throw new ArgumentOutOfRangeException(nameof(side)), TechnicalPosition.Superscript));
+
     public static TechnicalText Axis(string axis) => axis is "x" or "y" or "z" or "u" or "v"
         ? Variable(axis) : throw new ArgumentOutOfRangeException(nameof(axis));
     public static TechnicalText Function(TechnicalText quantity) => quantity + Variable("(x)");

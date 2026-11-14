@@ -427,4 +427,6 @@ Remove the entry from Recent projects?</value></data>
   <data name="SupportAtMomentRelease" xml:space="preserve"><value>A fixed support and a rotational spring are not possible at a hinge.</value></data>
   <data name="MomentAtMomentRelease" xml:space="preserve"><value>A moment cannot act at a hinge.</value></data>
   <data name="InsufficientSupportWithMomentReleases" xml:space="preserve"><value>Insufficient support or too many hinges</value></data>
+  <data name="MomentReleaseResults" xml:space="preserve"><value>Hinge results</value></data>
+  <data name="ReportMomentReleaseTheory" xml:space="preserve"><value>Hinges transmit shear and axial force; the bending moment is zero there and the rotation jumps (θ− left, θ+ right).</value></data>
 </root>

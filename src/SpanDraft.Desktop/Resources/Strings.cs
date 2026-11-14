@@ -127,6 +127,8 @@ public static class Strings
     public static string OK => Get(nameof(OK));
     public static string Delete => Get(nameof(Delete));
     public static string MomentReleases => Get(nameof(MomentReleases));
+    public static string MomentReleaseResults => Get(nameof(MomentReleaseResults));
+    public static string ReportMomentReleaseTheory => Get(nameof(ReportMomentReleaseTheory));
     public static string MomentReleaseAlreadyExists => Get(nameof(MomentReleaseAlreadyExists));
     public static string MomentReleaseInsideBeam => Get(nameof(MomentReleaseInsideBeam));
     public static string MomentReleaseAtFixedSupport => Get(nameof(MomentReleaseAtFixedSupport));
