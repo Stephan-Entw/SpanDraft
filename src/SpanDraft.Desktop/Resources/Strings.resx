@@ -394,6 +394,16 @@ Remove the entry from Recent projects?</value></data>
   <data name="SelfWeight" xml:space="preserve"><value>Self-weight</value></data>
   <data name="SelfWeightMissingDensitySegment" xml:space="preserve"><value>Self-weight cannot be included. No density is specified for the material of segment {0}.</value></data>
   <data name="LengthExcludesSegments" xml:space="preserve"><value>The length must exceed the last segment boundary.</value></data>
+  <data name="SetupSegments" xml:space="preserve"><value>Segments</value></data>
+  <data name="SegmentNumber" xml:space="preserve"><value>No.</value></data>
+  <data name="SegmentRange" xml:space="preserve"><value>Range</value></data>
+  <data name="SegmentSplitAt" xml:space="preserve"><value>Split at</value></data>
+  <data name="SegmentSplit" xml:space="preserve"><value>Split</value></data>
+  <data name="SegmentRemove" xml:space="preserve"><value>Remove segment</value></data>
+  <data name="SegmentStart" xml:space="preserve"><value>Start of the segment</value></data>
+  <data name="SegmentSplitInvalid" xml:space="preserve"><value>The position must lie inside the beam and off the existing segment boundaries.</value></data>
+  <data name="SegmentStartInvalid" xml:space="preserve"><value>The start must lie between the neighbouring boundaries.</value></data>
+  <data name="SegmentSelected" xml:space="preserve"><value>Segment {0}</value></data>
   <data name="SelfWeightMissingDensity" xml:space="preserve"><value>Self-weight cannot be included. No density is specified for the material.</value></data>
   <data name="SelfWeightNameConflict" xml:space="preserve"><value>Self-weight cannot be included. Rename the existing entity named g or G first.</value></data>
   <data name="ReservedEntityName" xml:space="preserve"><value>The name g is reserved for self-weight.</value></data>

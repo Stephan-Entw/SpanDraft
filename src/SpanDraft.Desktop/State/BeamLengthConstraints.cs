@@ -11,10 +11,13 @@ public static class BeamLengthConstraints
             .Concat(document.Loads.Where(l => l.Position.Meters > length.Meters).Select(l => l.Id))
             .Concat(document.DistributedLoads.Where(l => l.EndPosition.Meters > length.Meters).Select(l => l.Id)).ToArray();
 
-    public static string? Error(EditorDocument document, Length length)
+    public static string? Error(EditorDocument document, Length length) => Error(document, length, document.SegmentBoundaries);
+
+    /// <summary>The length is also bounded by the given, possibly edited, segment boundaries instead of the document's own.</summary>
+    public static string? Error(EditorDocument document, Length length, IReadOnlyList<Length> segmentBoundaries)
     {
         if (!double.IsFinite(length.Meters) || length.Meters <= 0) return Strings.InvalidLength;
-        if (document.SegmentBoundaries.Count > 0 && !(length.Meters > document.SegmentBoundaries[^1].Meters))
+        if (segmentBoundaries.Count > 0 && !(length.Meters > segmentBoundaries[^1].Meters))
             return Strings.LengthExcludesSegments;
         if (document.Loads.Any(l => l.Position.Meters > length.Meters)
             || document.DistributedLoads.Any(l => l.EndPosition.Meters > length.Meters)) return Strings.LengthExcludesEntities;

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Sections.Parametric;
@@ -12,6 +13,23 @@ using SpanDraft.Reporting.Notation;
 namespace SpanDraft.Desktop.ViewModels;
 
 public enum ProjectSetupMode { Create, Edit }
+
+/// <summary>
+/// One row of the segment list: its range in the display unit and the summaries of section, material and axis.
+/// Rows are updated in place so that the list keeps its selection while a segment is edited.
+/// </summary>
+public sealed class SetupSegmentRow(int number) : ObservableObject
+{
+    private string _range = "", _section = "", _material = "", _axis = "";
+    public int Number { get; } = number;
+    public string Range { get => _range; internal set => Set(ref _range, value); }
+    public string Section { get => _section; internal set => Set(ref _section, value); }
+    public string Material { get => _material; internal set => Set(ref _material, value); }
+    public string Axis { get => _axis; internal set => Set(ref _axis, value); }
+}
+
+/// <summary>The properties of one segment in the setup; the selected segment's working copy lives in the view model.</summary>
+internal sealed record SegmentDraft(Material? Material, ISectionDefinition? Section, SectionAxisDesignation Axis, string? Name);
 public enum ProjectSetupPage { Overview, MaterialSelection, SectionDefinition }
 
 public sealed class ProjectSetupViewModel : ObservableObject
@@ -31,6 +49,10 @@ public sealed class ProjectSetupViewModel : ObservableObject
     private bool _definitionBusy;
     private readonly bool _canCancel;
     private ProjectSetupDraft _confirmedDraft;
+    // All segments of an Edit setup. The working fields below hold the selected segment and are authoritative for it.
+    private readonly List<SegmentDraft> _segments = [];
+    private readonly List<Length> _boundaries = [];
+    private int _selectedSegment;
 
     public ProjectSetupViewModel(ProjectSetupMode mode, Section section, Material material,
         Action<ProjectSetupViewModel> apply, Action cancel, ResultPresentationOptions? resultPresentation = null)
@@ -58,7 +80,14 @@ public sealed class ProjectSetupViewModel : ObservableObject
         _canCancel = canCancel;
         _originalDocument = originalDocument;
         _length = recoveredDraft?.Length ?? originalDocument?.Length ?? (mode == ProjectSetupMode.Edit ? Length.FromMillimeters(1000) : null);
-        _sectionDisplayName = recoveredDraft?.SectionDisplayName ?? originalDocument?.SectionDisplayName;
+        _sectionDisplayName = recoveredDraft?.SectionDisplayName ?? originalDocument?.Segments[0].SectionDisplayName;
+        if (originalDocument is not null)
+        {
+            _boundaries.AddRange(originalDocument.SegmentBoundaries);
+            _segments.AddRange(originalDocument.Segments.Select(g => new SegmentDraft(g.Material, g.Section, g.BendingAxis, g.SectionDisplayName)));
+        }
+        else
+            _segments.Add(new(null, null, SectionAxisDesignation.Y, null));
         _originalInfo = originalInfo;
         CalculationTitleInput = new(this, recoveredDraft is not null ? recoveredDraft.CalculationTitle : originalInfo?.CalculationTitle, Strings.CalculationTitleRequired);
         ProjectTitleInput = new(this, recoveredDraft is not null ? recoveredDraft.ProjectTitle : originalInfo?.ProjectTitle);
@@ -79,6 +108,13 @@ public sealed class ProjectSetupViewModel : ObservableObject
         CancelCommand = new(cancel, () => CanCancel && !IsBusy);
         ChangeMaterialCommand = new(ShowMaterials, () => !IsBusy);
         ChangeSectionCommand = new(ShowSections, () => !IsBusy);
+        SplitInput = new(() => null, CommitSplit, () => IsBusy, () => ResultPresentation.Profile[QuantityKind.BeamLength],
+            retainRejectedOnBlur: true, readPresentation: () => ResultPresentation);
+        BoundaryInput = new(() => SelectedSegmentStart, CommitBoundary, () => IsBusy, () => ResultPresentation.Profile[QuantityKind.BeamLength],
+            retainRejectedOnBlur: true, readPresentation: () => ResultPresentation);
+        RemoveSegmentCommand = new(RemoveSegment, () => !IsBusy && _segments.Count > 1);
+        SplitCommand = new(() => { if (!SplitInput.IsEditing) SplitInput.Begin(); SplitInput.Confirm(); }, () => !IsBusy);
+        RefreshRows();
     }
     public event Action<ProjectSetupViewModel>? ConfirmedDraftChanged;
     public ProjectSetupDraft Draft => new(SelectedLength, SelectedMaterial, SelectedSection, BendingAxis, SectionDisplayName,
@@ -122,9 +158,125 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public string? LengthError => LengthInput.HasError ? LengthInput.ErrorText : null;
     public bool HasLengthError => LengthError is not null;
     public bool CanApply => IsOverview && !IsBusy && HasValidInfoInput && HasSection && SelectedMaterial?.StrengthType is not null
-        && MaterialError is null
+        && MaterialError is null && AllSegments().All(g => g.Section is not null && g.Material?.StrengthType is not null
+            && ValidateProjectMaterial(g.Material) is null)
         && LengthInput.TryGetLength(out var length) && !HasLengthError
-        && (_originalDocument is not { } document || BeamLengthConstraints.Error(document, length) is null);
+        && (_originalDocument is not { } document || BeamLengthConstraints.Error(document, length, _boundaries) is null);
+
+    // ---- Segments (Edit setup only; a new project starts with one segment) ----
+    public bool ShowSegments => IsEdit;
+    public bool HasSeveralSegments => _segments.Count > 1;
+    public IReadOnlyList<Length> SegmentBoundaries => Array.AsReadOnly(_boundaries.ToArray());
+    public LengthInputViewModel SplitInput { get; }
+    public LengthInputViewModel BoundaryInput { get; }
+    public ActionCommand RemoveSegmentCommand { get; }
+    public ActionCommand SplitCommand { get; }
+    public string SelectedSegmentTitle => string.Format(CultureInfo.CurrentUICulture, Strings.SegmentSelected, _selectedSegment + 1);
+    public bool CanEditBoundary => _selectedSegment > 0;
+    private Length? SelectedSegmentStart => _selectedSegment > 0 ? _boundaries[_selectedSegment - 1] : null;
+    public int SelectedSegmentIndex
+    {
+        get => _selectedSegment;
+        set
+        {
+            if (IsBusy || value < 0 || value >= _segments.Count || value == _selectedSegment) return;
+            _segments[_selectedSegment] = CurrentDraft();
+            Load(value);
+        }
+    }
+    public System.Collections.ObjectModel.ObservableCollection<SetupSegmentRow> SegmentRows { get; } = [];
+
+    // Brings the rows up to date; only a changed count adds or removes rows, so the selection survives edits.
+    private void RefreshRows()
+    {
+        var all = AllSegments();
+        while (SegmentRows.Count > all.Count) SegmentRows.RemoveAt(SegmentRows.Count - 1);
+        while (SegmentRows.Count < all.Count) SegmentRows.Add(new(SegmentRows.Count + 1));
+        for (int i = 0; i < all.Count; i++)
+        {
+            var g = all[i];
+            var row = SegmentRows[i];
+            row.Range = FormatPosition(i == 0 ? default : _boundaries[i - 1]) + "…"
+                + (i < _boundaries.Count ? FormatPosition(_boundaries[i]) : _length is { } end ? FormatPosition(end) : "");
+            row.Section = g.Section is null ? "" : g.Name ?? SectionDisplay.Name(g.Section, ResultPresentation);
+            row.Material = g.Material is null ? "" : MaterialDisplay.Format(g.Material);
+            row.Axis = new AxisChoice(g.Axis).Label;
+        }
+    }
+
+    private SegmentDraft CurrentDraft() => new(_selectedMaterial, _selectedSection, _bendingAxis, _sectionDisplayName);
+    private List<SegmentDraft> AllSegments()
+    {
+        var all = _segments.ToList();
+        all[_selectedSegment] = CurrentDraft();
+        return all;
+    }
+    private void Load(int index)
+    {
+        var draft = _segments[index];
+        _selectedSegment = index;
+        _selectedMaterial = draft.Material; _selectedSection = draft.Section; _bendingAxis = draft.Axis;
+        _sectionDisplayName = draft.Name;
+        BoundaryInput.Refresh();
+        RefreshSegments();
+        RefreshSection();
+        foreach (var name in new[] { nameof(SelectedMaterial), nameof(HasMaterial), nameof(MaterialName), nameof(MaterialSummary),
+            nameof(MaterialSummaryText), nameof(YoungsModulus), nameof(YieldStrength), nameof(Density), nameof(PoissonRatio),
+            nameof(HasDensity), nameof(HasPoissonRatio), nameof(MaterialError), nameof(HasMaterialError), nameof(SelectedSection) }) Notify(name);
+    }
+    private void RefreshSegments()
+    {
+        RefreshRows();
+        foreach (var name in new[] { nameof(SelectedSegmentIndex), nameof(SelectedSegmentTitle),
+            nameof(HasSeveralSegments), nameof(CanEditBoundary), nameof(CanApply) }) Notify(name);
+        RemoveSegmentCommand?.Refresh(); ApplyCommand?.Refresh();
+    }
+    private string FormatPosition(Length position) => QuantityFormatter.FormatInputNumber(position.Meters,
+        ResultPresentation.Profile[QuantityKind.BeamLength], ResultPresentation);
+
+    /// <summary>The segments of the setup in order, with the working copy of the selected one.</summary>
+    internal IReadOnlyList<EditorSegment> BuildSegments() => Array.AsReadOnly(AllSegments().Select(g => new EditorSegment(
+        g.Material ?? throw new InvalidOperationException("A segment has no material."),
+        g.Section ?? throw new InvalidOperationException("A segment has no section."), g.Axis, g.Name)).ToArray());
+
+    private LengthCommitResult CommitSplit(Length position)
+    {
+        if (IsBusy) return new(false, Strings.ProjectBusy);
+        if (_length is not { } length || !(position.Meters > 0) || !(position.Meters < length.Meters)
+            || _boundaries.Contains(position)) return new(false, Strings.SegmentSplitInvalid);
+        var all = AllSegments();
+        int index = _boundaries.Count(b => b.Meters <= position.Meters);
+        all.Insert(index, all[index]);
+        _boundaries.Insert(index, position);
+        _segments.Clear(); _segments.AddRange(all);
+        // Both halves keep every property of the original; the new right half is selected.
+        Load(index + 1);
+        return LengthCommitResult.Success;
+    }
+
+    private LengthCommitResult CommitBoundary(Length position)
+    {
+        if (IsBusy) return new(false, Strings.ProjectBusy);
+        int k = _selectedSegment - 1;
+        double previous = k > 0 ? _boundaries[k - 1].Meters : 0;
+        double next = k < _boundaries.Count - 1 ? _boundaries[k + 1].Meters : _length?.Meters ?? double.PositiveInfinity;
+        if (k < 0 || !(position.Meters > previous) || !(position.Meters < next)) return new(false, Strings.SegmentStartInvalid);
+        _boundaries[k] = position;
+        RefreshSegments();
+        return LengthCommitResult.Success;
+    }
+
+    private void RemoveSegment()
+    {
+        if (IsBusy || _segments.Count < 2) return;
+        var all = AllSegments();
+        int k = _selectedSegment;
+        // The neighbour to the left absorbs the segment; the first segment is absorbed by the one to its right.
+        all.RemoveAt(k);
+        _boundaries.RemoveAt(k > 0 ? k - 1 : 0);
+        _segments.Clear(); _segments.AddRange(all);
+        Load(Math.Max(0, k - 1));
+    }
     public string? SectionDisplayName => _sectionDisplayName;
     internal string? ValidateProjectMaterial(Material? material) => _originalDocument?.SelfWeight?.Enabled == true
         && material?.Density is null ? Strings.SelfWeightMissingDensity : null;
@@ -157,7 +309,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
             foreach (var name in new[] { nameof(HasMaterial), nameof(MaterialName), nameof(MaterialSummary), nameof(MaterialSummaryText), nameof(YoungsModulus), nameof(YieldStrength),
                 nameof(Density), nameof(PoissonRatio), nameof(HasDensity), nameof(HasPoissonRatio), nameof(CanApply),
                 nameof(MaterialError), nameof(HasMaterialError) }) Notify(name);
-            ApplyCommand.Refresh(); DraftCommitted();
+            RefreshRows(); ApplyCommand.Refresh(); DraftCommitted();
         }
     }
     public bool HasMaterial => SelectedMaterial is not null;
@@ -194,8 +346,10 @@ public sealed class ProjectSetupViewModel : ObservableObject
     private LengthCommitResult CommitLength(Length length)
     {
         if (IsBusy) return new(false, Strings.ProjectBusy);
-        if (_originalDocument is { } document && BeamLengthConstraints.Error(document, length) is { } error) return new(false, error);
+        if (_originalDocument is { } document && BeamLengthConstraints.Error(document, length, _boundaries) is { } error) return new(false, error);
+        if (_boundaries.Count > 0 && !(length.Meters > _boundaries[^1].Meters)) return new(false, Strings.LengthExcludesSegments);
         _length = length; Notify(nameof(SelectedLength)); RefreshLength(); DraftCommitted();
+        RefreshRows();
         return LengthCommitResult.Success;
     }
     private void RefreshLength()
@@ -291,6 +445,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     }
     private void RefreshSection()
     {
+        RefreshRows();
         foreach (var name in new[] { nameof(HasSection), nameof(CanApply), nameof(SectionName), nameof(SectionDisplayName), nameof(BendingAxis), nameof(AxisSummary), nameof(SectionType),
             nameof(Area), nameof(Inertia), nameof(Modulus), nameof(IsAsymmetric), nameof(PositiveModulus), nameof(NegativeModulus) }) Notify(name);
         ApplyCommand.Refresh();

@@ -392,6 +392,21 @@ public sealed partial class EditorViewModel : ObservableObject
         return true;
     }
 
+    /// <summary>Applies the project setup of a beam of one or several segments in one commit.</summary>
+    public bool ApplySetup(Length length, IReadOnlyList<Length> segmentBoundaries, IReadOnlyList<EditorSegment> segments,
+        ProjectInfo? info)
+    {
+        if (IsBusy || !segments.All(segment => CanApplyMaterial(segment.Material))
+            || BeamLengthConstraints.Error(Document, length, segmentBoundaries) is not null) return false;
+        var document = new EditorDocument(length, segmentBoundaries, segments, Document.Supports, Document.Loads,
+            Document.NamingState, Document.DistributedLoads, Document.SelfWeight);
+        Session.Commit(Session.CurrentRevision.State with
+        {
+            Document = document, Presentation = EditorPresentation.RetainEntities(document), Info = info
+        });
+        return true;
+    }
+
     public bool SetAnnotationOffset(Guid id, AnnotationOffset? offset)
     {
         if (IsBusy || !Document.EntityIds.Contains(id)) return false;

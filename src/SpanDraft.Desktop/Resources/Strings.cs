@@ -408,6 +408,16 @@ public static class Strings
     public static string SelfWeight => Get(nameof(SelfWeight));
     public static string SelfWeightMissingDensitySegment => Get(nameof(SelfWeightMissingDensitySegment));
     public static string LengthExcludesSegments => Get(nameof(LengthExcludesSegments));
+    public static string SetupSegments => Get(nameof(SetupSegments));
+    public static string SegmentNumber => Get(nameof(SegmentNumber));
+    public static string SegmentRange => Get(nameof(SegmentRange));
+    public static string SegmentSplitAt => Get(nameof(SegmentSplitAt));
+    public static string SegmentSplit => Get(nameof(SegmentSplit));
+    public static string SegmentRemove => Get(nameof(SegmentRemove));
+    public static string SegmentStart => Get(nameof(SegmentStart));
+    public static string SegmentSplitInvalid => Get(nameof(SegmentSplitInvalid));
+    public static string SegmentStartInvalid => Get(nameof(SegmentStartInvalid));
+    public static string SegmentSelected => Get(nameof(SegmentSelected));
     public static string SelfWeightMissingDensity => Get(nameof(SelfWeightMissingDensity));
     public static string SelfWeightNameConflict => Get(nameof(SelfWeightNameConflict));
     public static string ReservedEntityName => Get(nameof(ReservedEntityName));

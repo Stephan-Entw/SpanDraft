@@ -179,7 +179,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public Task<bool> ReportAsync() => !CanReport ? Task.FromResult(false) : RunOperationAsync(async () =>
     {
         var editor = Editor!;
-        if (editor.Document.Material.StrengthType is null)
+        if (editor.Document.Segments.Any(segment => segment.Material.StrengthType is null))
         {
             if (_dialogs is not null) await _dialogs.ShowErrorAsync(Strings.MaterialStrengthResolve);
             return false;
@@ -300,7 +300,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (!CanSaveProject || Editor is null) return;
         Editor.CancelEditorInteraction();
         _setupReturnMode = MainViewMode.Editor;
-        _setup = new(ProjectSetupMode.Edit, Editor.Document.Section, Editor.Document.BendingAxis, Editor.Document.Material,
+        var first = Editor.Document.Segments[0];
+        _setup = new(ProjectSetupMode.Edit, first.Section, first.BendingAxis, first.Material,
             ApplySetupAsync, CancelSetup, ResultPresentation, this, Editor.Document, originalInfo: Session!.CurrentRevision.State.Info);
         Navigate(MainViewMode.ProjectSetup);
     }
@@ -313,7 +314,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return Task.FromResult(false);
         if (setup.Mode == ProjectSetupMode.Edit)
         {
-            if (Editor?.ApplySetup(length, section, setup.BendingAxis, material, setup.SectionDisplayName, setup.Info) != true)
+            if (Editor?.ApplySetup(length, setup.SegmentBoundaries, setup.BuildSegments(), setup.Info) != true)
                 return Task.FromResult(false);
             Navigate(MainViewMode.Editor);
             return Task.FromResult(true);
@@ -450,7 +451,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task<bool> SaveCurrentAsync(bool saveAs = false, bool recordRecent = true)
     {
         if (Session is not { } session) return false;
-        if (session.CurrentRevision.State.Document.Material.StrengthType is null)
+        if (session.CurrentRevision.State.Document.Segments.Any(segment => segment.Material.StrengthType is null))
         {
             if (_dialogs is not null) await _dialogs.ShowErrorAsync(Strings.MaterialStrengthResolve);
             return false;
