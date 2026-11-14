@@ -65,9 +65,9 @@ public static class ProjectFileCodec
 
     private static ProjectFileV5 ToDto(ProjectState state, bool allowLegacy)
     {
-        if (!allowLegacy && state.Document.Material.StrengthType is null)
-            throw new ProjectFormatException("The material strength type must be confirmed before saving.");
         var d = state.Document;
+        if (!allowLegacy && d.Segments.Any(segment => segment.Material.StrengthType is null))
+            throw new ProjectFormatException("The material strength type must be confirmed before saving.");
         if (d.SelfWeight?.Enabled == true && d.SelfWeightActivationError is { } error)
             throw new ProjectFormatException(error);
         var n = d.NamingState;
@@ -78,9 +78,16 @@ public static class ProjectFileCodec
                 ProjectTitle = info.ProjectTitle, Reference = info.Reference, Author = info.Author } : null,
             Document = new()
             {
-                Length = d.Length.Meters, BendingAxis = AxisToWire(d.BendingAxis), SectionDisplayName = d.SectionDisplayName,
-                Material = MaterialToDto(d.Material),
-                Section = SectionToDto(d.Section),
+                Length = d.Length.Meters, BendingAxis = AxisToWire(d.Segments[0].BendingAxis),
+                SectionDisplayName = d.Segments[0].SectionDisplayName,
+                Material = MaterialToDto(d.Segments[0].Material),
+                Section = SectionToDto(d.Segments[0].Section),
+                FurtherSegments = d.HasSeveralSegments ? d.Segments.Skip(1).Select((segment, i) => new SegmentV5
+                {
+                    Start = d.SegmentBoundaries[i].Meters, Material = MaterialToDto(segment.Material),
+                    Section = SectionToDto(segment.Section), BendingAxis = AxisToWire(segment.BendingAxis),
+                    SectionDisplayName = segment.SectionDisplayName
+                }).ToArray() : null,
                 SelfWeight = d.SelfWeight is { } weight ? new() { Id = weight.Id, Enabled = weight.Enabled } : null,
                 Supports = d.Supports.Select(s => new SupportV5 { Id = s.Id, Name = s.Name,
                     Type = s.Type switch { SupportType.Fixed => "fixed", SupportType.Pinned => "pinned",
@@ -290,10 +297,20 @@ public static class ProjectFileCodec
             if (id == Guid.Empty || !ids.Add(id)) throw new ProjectFormatException("Entity IDs must be non-empty and unique.");
             return id;
         }
-        var section = SectionFromDto(s);
-        var document = new EditorDocument(L(d.Length, "length"),
-            MaterialFromDto(m),
-            section, AxisFromWire(d.BendingAxis),
+        var segments = new List<EditorSegment>
+        {
+            new(MaterialFromDto(m), SectionFromDto(s), AxisFromWire(d.BendingAxis), d.SectionDisplayName)
+        };
+        var boundaries = new List<Length>();
+        foreach (var entry in d.FurtherSegments ?? [])
+        {
+            var x = Required(entry, "segment");
+            boundaries.Add(L(x.Start, "start"));
+            segments.Add(new(MaterialFromDto(Required(x.Material, "segment.material")),
+                SectionFromDto(Required(x.Section, "segment.section")), AxisFromWire(Required(x.BendingAxis, "segment.bendingAxis")),
+                x.SectionDisplayName));
+        }
+        var document = new EditorDocument(L(d.Length, "length"), boundaries, segments,
             Required(d.Supports, "supports").Select(entry =>
             {
                 var x = Required(entry, "support");
@@ -316,7 +333,7 @@ public static class ProjectFileCodec
                 return new EditorDistributedLoad(EntityId(x.Id), L(x.StartPosition, "startPosition"),
                     L(x.EndPosition, "endPosition"), ForcePerLength.FromNewtonsPerMeter(Number(x.StartIntensity, "startIntensity")),
                     ForcePerLength.FromNewtonsPerMeter(Number(x.EndIntensity, "endIntensity")), Name(x.Name));
-            }), d.SectionDisplayName,
+            }),
             d.SelfWeight is { } weight ? new EditorSelfWeight(EntityId(weight.Id), weight.Enabled) : null);
         var errors = BeamModelValidator.Validate(document.ToBeamModel()).Where(e => e.Code != ValidationErrorCode.MissingSupports).ToArray();
         if (errors.Length > 0) throw new ProjectFormatException(errors[0].Message);

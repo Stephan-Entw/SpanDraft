@@ -31,6 +31,23 @@ public sealed record DocumentV5
     public required DistributedLoadV5[] DistributedLoads { get; init; }
     public required NamingV2 NamingState { get; init; }
     public SelfWeightV2? SelfWeight { get; init; }
+
+    /// <summary>
+    /// The segments after the first, in order; absent for a beam of one segment. The first segment is described by
+    /// <c>material</c>, <c>section</c>, <c>bendingAxis</c> and <c>sectionDisplayName</c>, so a file without this field is
+    /// a one-segment project. Each segment ends where the next one starts, the last at <c>length</c>.
+    /// </summary>
+    public SegmentV5[]? FurtherSegments { get; init; }
+}
+
+/// <summary>A beam segment after the first. <c>start</c> (m) lies strictly inside the beam and ascends over the list.</summary>
+public sealed record SegmentV5
+{
+    public required double Start { get; init; }
+    public required MaterialV2 Material { get; init; }
+    public required SectionV2 Section { get; init; }
+    public required string BendingAxis { get; init; }
+    public string? SectionDisplayName { get; init; }
 }
 
 /// <summary>
