@@ -1,0 +1,80 @@
+{
+  "format": "SpanDraft.Project",
+  "formatVersion": 5,
+  "info": {
+    "calculationTitle": "Beam on spring supports",
+    "author": "A. Author"
+  },
+  "document": {
+    "length": 2,
+    "bendingAxis": "y",
+    "material": {
+      "name": "Test steel",
+      "youngsModulus": 210000000000,
+      "yieldStrength": 235000000,
+      "strengthType": "re"
+    },
+    "section": {
+      "type": "rectangle",
+      "width": 0.04,
+      "height": 0.08
+    },
+    "supports": [
+      {
+        "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "name": "A",
+        "type": "pinned",
+        "position": 0
+      },
+      {
+        "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "name": "B",
+        "type": "spring",
+        "position": 0.5,
+        "translationalStiffness": 2500000
+      },
+      {
+        "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+        "name": "C",
+        "type": "spring",
+        "position": 1,
+        "rotationalStiffness": 30000
+      },
+      {
+        "id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+        "name": "D",
+        "type": "spring",
+        "position": 1.5,
+        "translationalStiffness": 1500000,
+        "rotationalStiffness": 8000
+      },
+      {
+        "id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+        "name": "E",
+        "type": "spring",
+        "position": 2,
+        "rotationalStiffness": 45000,
+        "rigidTranslation": true
+      }
+    ],
+    "pointLoads": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "F1",
+        "type": "force",
+        "position": 0.75,
+        "value": -1000
+      }
+    ],
+    "distributedLoads": [],
+    "namingState": {
+      "nextSupportOrdinal": 6,
+      "nextForceNumber": 2,
+      "nextMomentNumber": 1,
+      "nextDistributedLoadNumber": 1
+    }
+  },
+  "presentation": {
+    "annotationOffsets": []
+  }
+}

@@ -1,7 +1,7 @@
 namespace SpanDraft.Desktop.Persistence;
 
-// Current envelope. Material, section, supports, point loads, naming and presentation keep their V2 contracts;
-// distributed loads carry a start and an end intensity.
+// Current envelope. Material, section, point loads, naming and presentation keep their V2 contracts;
+// supports may be springs and distributed loads carry a start and an end intensity.
 public sealed record ProjectFileV5
 {
     public required string Format { get; init; }
@@ -26,11 +26,26 @@ public sealed record DocumentV5
     public string? SectionDisplayName { get; init; }
     public required MaterialV2 Material { get; init; }
     public required SectionV2 Section { get; init; }
-    public required SupportV2[] Supports { get; init; }
+    public required SupportV5[] Supports { get; init; }
     public required PointLoadV2[] PointLoads { get; init; }
     public required DistributedLoadV5[] DistributedLoads { get; init; }
     public required NamingV2 NamingState { get; init; }
     public SelfWeightV2? SelfWeight { get; init; }
+}
+
+/// <summary>
+/// A support. Rigid supports use the V2 fields; <c>spring</c> supports add the optional spring stiffnesses (SI: N/m and
+/// N·m/rad) and <c>rigidTranslation</c> for a partial restraint. Files without these fields remain valid.
+/// </summary>
+public sealed record SupportV5
+{
+    public required Guid Id { get; init; }
+    public required string Name { get; init; }
+    public required string Type { get; init; }
+    public required double Position { get; init; }
+    public double? TranslationalStiffness { get; init; }
+    public double? RotationalStiffness { get; init; }
+    public bool? RigidTranslation { get; init; }
 }
 
 /// <summary>A transverse line load whose intensity varies linearly from the start to the end position (N/m).</summary>

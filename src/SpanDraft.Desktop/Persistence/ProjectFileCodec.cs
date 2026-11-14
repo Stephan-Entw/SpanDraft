@@ -82,10 +82,14 @@ public static class ProjectFileCodec
                 Material = MaterialToDto(d.Material),
                 Section = SectionToDto(d.Section),
                 SelfWeight = d.SelfWeight is { } weight ? new() { Id = weight.Id, Enabled = weight.Enabled } : null,
-                Supports = d.Supports.Select(s => new SupportV2 { Id = s.Id, Name = s.Name,
+                Supports = d.Supports.Select(s => new SupportV5 { Id = s.Id, Name = s.Name,
                     Type = s.Type switch { SupportType.Fixed => "fixed", SupportType.Pinned => "pinned",
-                        SupportType.Roller => "roller", _ => throw new ProjectFormatException("Unknown support type.") },
-                    Position = s.Position.Meters }).ToArray(),
+                        SupportType.Roller => "roller", SupportType.Spring => "spring",
+                        _ => throw new ProjectFormatException("Unknown support type.") },
+                    Position = s.Position.Meters,
+                    TranslationalStiffness = s.Spring?.Translational?.NewtonsPerMeter,
+                    RotationalStiffness = s.Spring?.Rotational?.NewtonMetersPerRadian,
+                    RigidTranslation = s.Spring?.RigidTranslation == true ? true : null }).ToArray(),
                 PointLoads = d.Loads.Select(l => new PointLoadV2 { Id = l.Id, Name = l.Name,
                     Type = l.Kind switch { PointLoadKind.Force => "force", PointLoadKind.Moment => "moment",
                         _ => throw new ProjectFormatException("Unknown point load type.") },
@@ -255,7 +259,15 @@ public static class ProjectFileCodec
     private static DocumentV5 ToV5(DocumentV2 d) => new()
     {
         Length = d.Length, BendingAxis = d.BendingAxis, SectionDisplayName = d.SectionDisplayName,
-        Material = d.Material, Section = d.Section, Supports = d.Supports, PointLoads = d.PointLoads,
+        Material = d.Material, Section = d.Section,
+        Supports = Required(d.Supports, "supports").Select(entry =>
+        {
+            var x = Required(entry, "support");
+            // Spring supports first exist in V5.
+            if (x.Type == "spring") throw new ProjectFormatException("Unknown support type.");
+            return new SupportV5 { Id = x.Id, Name = x.Name, Type = x.Type, Position = x.Position };
+        }).ToArray(),
+        PointLoads = d.PointLoads,
         DistributedLoads = Required(d.DistributedLoads, "distributedLoads").Select(entry =>
         {
             var x = Required(entry, "distributedLoad");
@@ -285,9 +297,10 @@ public static class ProjectFileCodec
             Required(d.Supports, "supports").Select(entry =>
             {
                 var x = Required(entry, "support");
-                return new EditorSupport(EntityId(x.Id), L(x.Position, "position"), x.Type switch
+                var type = x.Type switch
                 { "fixed" => SupportType.Fixed, "pinned" => SupportType.Pinned, "roller" => SupportType.Roller,
-                    _ => throw new ProjectFormatException("Unknown support type.") }, Name(x.Name));
+                    "spring" => SupportType.Spring, _ => throw new ProjectFormatException("Unknown support type.") };
+                return new EditorSupport(EntityId(x.Id), L(x.Position, "position"), type, Name(x.Name), SpringFromDto(type, x));
             }),
             Required(d.PointLoads, "pointLoads").Select(entry =>
             {
@@ -317,6 +330,23 @@ public static class ProjectFileCodec
                 throw new ProjectFormatException("Annotation offsets must reference existing, unique entities.");
         }
         return new(document, new(offsets, p.SelfWeightVisible));
+    }
+
+    /// <summary>Springs exist only on <c>spring</c> supports; their values and combination are checked by Core.</summary>
+    private static SpringData? SpringFromDto(SupportType type, SupportV5 x)
+    {
+        if (type != SupportType.Spring)
+        {
+            if (x.TranslationalStiffness is not null || x.RotationalStiffness is not null || x.RigidTranslation is not null)
+                throw new ProjectFormatException("Only spring supports carry stiffness fields.");
+            return null;
+        }
+        var spring = new SpringData(
+            x.TranslationalStiffness is { } w ? TranslationalStiffness.FromNewtonsPerMeter(Number(w, "translationalStiffness")) : null,
+            x.RotationalStiffness is { } t ? RotationalStiffness.FromNewtonMetersPerRadian(Number(t, "rotationalStiffness")) : null,
+            x.RigidTranslation ?? false);
+        spring.ToCore(L(x.Position, "position"));
+        return spring;
     }
 
     internal static T Required<T>(T? value, string field) where T : class => value
