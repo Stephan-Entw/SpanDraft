@@ -1,5 +1,6 @@
 using SpanDraft.Core.Beams;
 using SpanDraft.Core.Loads;
+using SpanDraft.Core.Releases;
 using SpanDraft.Core.Supports;
 
 namespace SpanDraft.Core.Validation;
@@ -7,7 +8,8 @@ namespace SpanDraft.Core.Validation;
 /// <summary>
 /// Checks cross-object consistency. Beam endpoints are included; duplicate and coincidence comparisons are exact.
 /// A spring support must not share its exact position with any other support. The segments must tile the beam
-/// exactly; a segment boundary may share its position with supports and loads.
+/// exactly; a segment boundary may share its position with supports and loads. A moment release lies strictly
+/// inside the beam and shares its position with no other release, fixed support, rotational spring or point moment.
 /// </summary>
 public static class BeamModelValidator
 {
@@ -69,6 +71,33 @@ public static class BeamModelValidator
             }
         }
 
+        ValidateMomentReleases(beam, errors);
         return errors.AsReadOnly();
+    }
+
+    private static void ValidateMomentReleases(BeamModel beam, List<ValidationError> errors)
+    {
+        var seen = new HashSet<double>();
+        for (int i = 0; i < beam.MomentReleases.Count; i++)
+        {
+            MomentRelease release = beam.MomentReleases[i];
+            double x = release.Position.Meters;
+            // A release at either end would cut a part of length zero.
+            if (!(x > 0 && x < beam.Length.Meters))
+                errors.Add(new(ValidationErrorCode.MomentReleaseNotInsideBeam,
+                    "A moment release must lie strictly inside the beam.", $"MomentReleases[{i}].Position"));
+            if (!seen.Add(x))
+                errors.Add(new(ValidationErrorCode.DuplicateMomentRelease,
+                    "A moment release already exists at this position.", $"MomentReleases[{i}]"));
+            if (beam.Supports.Any(s => s.Type == SupportType.Fixed && s.Position.Meters == x))
+                errors.Add(new(ValidationErrorCode.MomentReleaseAtFixedSupport,
+                    "A moment release cannot share its position with a fixed support.", $"MomentReleases[{i}]"));
+            if (beam.Supports.Any(s => s.RotationalSpring is not null && s.Position.Meters == x))
+                errors.Add(new(ValidationErrorCode.MomentReleaseAtRotationalSpring,
+                    "A moment release cannot share its position with a rotational spring.", $"MomentReleases[{i}]"));
+            if (beam.Loads.Any(l => l is PointMoment moment && moment.Position.Meters == x))
+                errors.Add(new(ValidationErrorCode.MomentReleaseAtPointMoment,
+                    "A moment release cannot share its position with a point moment.", $"MomentReleases[{i}]"));
+        }
     }
 }

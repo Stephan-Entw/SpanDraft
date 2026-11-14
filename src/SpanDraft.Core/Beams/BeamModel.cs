@@ -1,5 +1,6 @@
 using SpanDraft.Core.Loads;
 using SpanDraft.Core.Materials;
+using SpanDraft.Core.Releases;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
@@ -35,15 +36,27 @@ public sealed class BeamModel
     /// </summary>
     public BeamModel(Length length, IEnumerable<BeamSegment> segments,
         IEnumerable<Support> supports, IEnumerable<BeamLoad> loads)
+        : this(length, segments, supports, loads, [])
+    {
+    }
+
+    /// <summary>
+    /// Creates a beam from consecutive segments with internal moment releases. The releases are taken as given;
+    /// the validator reports positions outside the beam interior and conflicts with supports and loads.
+    /// </summary>
+    public BeamModel(Length length, IEnumerable<BeamSegment> segments,
+        IEnumerable<Support> supports, IEnumerable<BeamLoad> loads, IEnumerable<MomentRelease> momentReleases)
     {
         DomainGuard.Positive(length.Meters, nameof(length));
         ArgumentNullException.ThrowIfNull(segments);
         ArgumentNullException.ThrowIfNull(supports);
         ArgumentNullException.ThrowIfNull(loads);
+        ArgumentNullException.ThrowIfNull(momentReleases);
 
         BeamSegment[] segmentArray = segments.ToArray();
         Support[] supportArray = supports.ToArray();
         BeamLoad[] loadArray = loads.ToArray();
+        MomentRelease[] releaseArray = momentReleases.ToArray();
         if (segmentArray.Length == 0)
             throw new ArgumentException("A beam requires at least one segment.", nameof(segments));
         if (segmentArray.Any(segment => segment is null))
@@ -52,17 +65,23 @@ public sealed class BeamModel
             throw new ArgumentException("Supports must not contain null entries.", nameof(supports));
         if (loadArray.Any(load => load is null))
             throw new ArgumentException("Loads must not contain null entries.", nameof(loads));
+        if (releaseArray.Any(release => release is null))
+            throw new ArgumentException("Moment releases must not contain null entries.", nameof(momentReleases));
 
         Length = length;
         Segments = Array.AsReadOnly(segmentArray);
         Supports = Array.AsReadOnly(supportArray);
         Loads = Array.AsReadOnly(loadArray);
+        MomentReleases = Array.AsReadOnly(releaseArray);
     }
 
     public Length Length { get; }
     public IReadOnlyList<BeamSegment> Segments { get; }
     public IReadOnlyList<Support> Supports { get; }
     public IReadOnlyList<BeamLoad> Loads { get; }
+
+    /// <summary>Internal moment releases (hinges); empty for a beam without any.</summary>
+    public IReadOnlyList<MomentRelease> MomentReleases { get; }
 
     /// <summary>The material of a beam with exactly one segment; use <see cref="Segments"/> otherwise.</summary>
     public Material Material => OnlySegment.Material;
