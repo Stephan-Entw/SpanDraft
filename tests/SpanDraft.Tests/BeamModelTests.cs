@@ -130,6 +130,59 @@ public class BeamModelTests
             [new(default, SupportType.Pinned), new(default, SupportType.Roller)])));
     }
 
+    private static Support Spring(double x, double? kw = 1000, double? kt = null, bool rigid = false) =>
+        Support.CreateSpring(Length.FromMeters(x), kw is { } w ? TranslationalStiffness.FromNewtonsPerMeter(w) : null,
+            kt is { } t ? RotationalStiffness.FromNewtonMetersPerRadian(t) : null, rigid);
+
+    [Theory]
+    [InlineData(SupportType.Fixed)]
+    [InlineData(SupportType.Pinned)]
+    [InlineData(SupportType.Roller)]
+    public void SpringAtTheSamePositionAsARigidSupportIsReportedOnTheLaterSupport(SupportType rigid)
+    {
+        var spring = Spring(1);
+        var rigidSupport = new Support(Length.FromMeters(1), rigid);
+        var after = Assert.Single(BeamModelValidator.Validate(Beam([rigidSupport, spring])));
+        var before = Assert.Single(BeamModelValidator.Validate(Beam([spring, rigidSupport])));
+
+        Assert.Equal(ValidationErrorCode.SpringSupportCoincidence, after.Code);
+        Assert.Equal("Supports[1]", after.Path);
+        Assert.Equal(ValidationErrorCode.SpringSupportCoincidence, before.Code);
+        Assert.Equal("Supports[1]", before.Path);
+    }
+
+    [Fact]
+    public void TwoSpringsAtTheSamePositionAreACoincidenceNotADuplicate()
+    {
+        var error = Assert.Single(BeamModelValidator.Validate(Beam([Spring(1), Spring(1, null, 5)])));
+        var identical = Assert.Single(BeamModelValidator.Validate(Beam([Spring(1), Spring(1)])));
+
+        Assert.Equal(ValidationErrorCode.SpringSupportCoincidence, error.Code);
+        Assert.Equal(ValidationErrorCode.SpringSupportCoincidence, identical.Code);
+    }
+
+    [Fact]
+    public void SpringsAtDistinctAdjacentPositionsAreValid()
+    {
+        Assert.Empty(BeamModelValidator.Validate(Beam(
+            [Spring(1), Spring(Math.BitIncrement(1)), new(Length.FromMeters(1.5), SupportType.Pinned)])));
+    }
+
+    [Fact]
+    public void SpringOutsideTheBeamIsReported()
+    {
+        var error = Assert.Single(BeamModelValidator.Validate(Beam([Spring(3)])));
+        Assert.Equal(ValidationErrorCode.SupportOutsideBeam, error.Code);
+    }
+
+    [Fact]
+    public void LoadsAtTheSpringPositionAreAllowed()
+    {
+        Assert.Empty(BeamModelValidator.Validate(Beam([Spring(1)],
+            [new PointForce(Length.FromMeters(1), Force.FromNewtons(-1)),
+             new PointMoment(Length.FromMeters(1), Moment.FromNewtonMeters(1))])));
+    }
+
     [Fact]
     public void ValidationDoesNotAssessStability()
     {

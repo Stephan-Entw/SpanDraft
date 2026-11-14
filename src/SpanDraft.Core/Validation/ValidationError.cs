@@ -8,7 +8,8 @@ public enum ValidationErrorCode
     DuplicateSupport,
     PointForceOutsideBeam,
     PointMomentOutsideBeam,
-    DistributedLoadOutsideBeam
+    DistributedLoadOutsideBeam,
+    SpringSupportCoincidence
 }
 
 /// <summary>A model error with a machine-readable code, explanatory message and property path (zero-based collection indices).</summary>

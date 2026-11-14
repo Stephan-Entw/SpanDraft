@@ -8,5 +8,7 @@ public enum SupportType
     /// <summary>Festlager.</summary>
     Pinned,
     /// <summary>Loslager.</summary>
-    Roller
+    Roller,
+    /// <summary>Federlager: linear-elastic translational and/or rotational spring, axially rigid.</summary>
+    Spring
 }

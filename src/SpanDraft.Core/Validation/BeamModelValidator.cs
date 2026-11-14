@@ -4,7 +4,10 @@ using SpanDraft.Core.Supports;
 
 namespace SpanDraft.Core.Validation;
 
-/// <summary>Checks cross-object consistency. Beam endpoints are included; duplicate support comparisons are exact.</summary>
+/// <summary>
+/// Checks cross-object consistency. Beam endpoints are included; duplicate and coincidence comparisons are exact.
+/// A spring support must not share its exact position with any other support.
+/// </summary>
 public static class BeamModelValidator
 {
     public static IReadOnlyList<ValidationError> Validate(BeamModel beam)
@@ -15,12 +18,24 @@ public static class BeamModelValidator
             errors.Add(new(ValidationErrorCode.MissingSupports, "The beam requires at least one support.", "Supports"));
 
         var seenSupports = new HashSet<(double Position, SupportType Type)>();
+        var positions = new Dictionary<double, bool>();
         for (int i = 0; i < beam.Supports.Count; i++)
         {
             Support support = beam.Supports[i];
             if (support.Position.Meters > beam.Length.Meters)
                 errors.Add(new(ValidationErrorCode.SupportOutsideBeam, "Support position is outside the beam.", $"Supports[{i}].Position"));
-            if (!seenSupports.Add((support.Position.Meters, support.Type)))
+            bool spring = support.Type == SupportType.Spring;
+            if (positions.TryGetValue(support.Position.Meters, out bool springBefore))
+            {
+                if (spring || springBefore)
+                    errors.Add(new(ValidationErrorCode.SpringSupportCoincidence,
+                        "A spring support cannot share its position with another support.", $"Supports[{i}]"));
+                positions[support.Position.Meters] = springBefore || spring;
+            }
+            else
+                positions.Add(support.Position.Meters, spring);
+
+            if (!spring && !seenSupports.Add((support.Position.Meters, support.Type)))
                 errors.Add(new(ValidationErrorCode.DuplicateSupport, "An identical support already exists at this position.", $"Supports[{i}]"));
         }
 
