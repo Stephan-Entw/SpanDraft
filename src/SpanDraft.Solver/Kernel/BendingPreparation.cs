@@ -16,6 +16,12 @@ internal sealed record BendingPreparation(int EL, int EEI, int EF, ImmutableArra
             throw new NumericalRangeException("Length and EI must be positive normal reference scales.");
         foreach (RigidRestraint restraint in input.Restraints)
             CheckInput(restraint.Position);
+        foreach (ElasticRestraint elastic in input.ElasticRestraints)
+        {
+            CheckInput(elastic.Position);
+            CheckInput(elastic.TranslationalStiffness);
+            CheckInput(elastic.RotationalStiffness);
+        }
         foreach (TransversePointForce force in input.PointForces)
         {
             CheckInput(force.Position);
@@ -77,6 +83,29 @@ internal sealed record BendingPreparation(int EL, int EEI, int EF, ImmutableArra
             if (stations.MechanicalStations[i].Position - stations.MechanicalStations[i - 1].Position <= Lambda)
                 throw new NumericalRangeException("The mechanical station distance is outside its range.");
         return preparation;
+    }
+
+    /// <summary>
+    /// The transverse spring stiffness k in the units of the normalized state, k·2^(3·e_L − e_EI): an exact power-of-two
+    /// scaling that must stay normal. It has no rounding, so it enters the matrix without a data error.
+    /// </summary>
+    internal RoundCounted ScaledTranslationalStiffness(double stiffness) =>
+        ScaleTranslationalStiffness(stiffness, EL, EEI);
+
+    internal static RoundCounted ScaleTranslationalStiffness(double stiffness, int lengthExponent, int stiffnessExponent)
+    {
+        int exponent;
+        try
+        {
+            exponent = checked(3 * lengthExponent - stiffnessExponent);
+        }
+        catch (OverflowException)
+        {
+            throw new NumericalRangeException("The spring stiffness exponent exceeds the integer range.");
+        }
+        var scaled = new RoundCounted(ScaleByPowerOfTwo(stiffness, exponent));
+        scaled.RequireNormal();
+        return scaled;
     }
 
     private static void CheckInput(double value)

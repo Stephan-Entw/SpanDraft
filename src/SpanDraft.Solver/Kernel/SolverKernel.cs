@@ -18,8 +18,8 @@ internal static class SolverKernel
             BendingJump jumps = BendingJump.None;
             if (!e.PointForces.IsEmpty) jumps |= BendingJump.PointForce;
             if (!e.PointMoments.IsEmpty) jumps |= BendingJump.PointMoment;
-            if (e.MechanicalStation?.Directions.HasFlag(RestrainedDirections.W) == true) jumps |= BendingJump.ReactionY;
-            if (e.MechanicalStation?.Directions.HasFlag(RestrainedDirections.Theta) == true) jumps |= BendingJump.ReactionMoment;
+            if (e.MechanicalStation?.ConstrainsW == true) jumps |= BendingJump.ReactionY;
+            if (e.MechanicalStation?.ConstrainsTheta == true) jumps |= BendingJump.ReactionMoment;
             return new BendingStation(e.Position, e.Position == 0 ? null : fields.EvaluateAt(e.Position, FieldSide.Left),
                 e.Position == input.Length ? null : fields.EvaluateAt(e.Position, FieldSide.Right), jumps);
         }).ToImmutableArray();
@@ -47,8 +47,8 @@ internal static class SolverKernel
     {
         StationModel stations = StationModel.Create(input);
         RequireStable(stations);
-        if (!input.ElasticRestraints.IsEmpty)
-            throw new NotSupportedException("The bending system does not yet contain spring rows.");
+        if (input.ElasticRestraints.Any(e => e.RotationalStiffness != 0))
+            throw new NotSupportedException("The bending system does not yet contain rotational spring rows.");
 
         BendingPreparation preparation = BendingPreparation.Create(input, stations);
         PreparedBendingLoads loads = PreparedBendingLoads.Create(input, stations, preparation);

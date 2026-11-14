@@ -22,8 +22,8 @@ internal static class BendingSystemBuilder
         for (int i = 0; i < stations.Length; i++)
             for (int q = 0; q < 4; q++)
             {
-                bool prescribed = q == 0 && stations[i].Directions.HasFlag(RestrainedDirections.W) ||
-                    q == 1 && stations[i].Directions.HasFlag(RestrainedDirections.Theta) ||
+                bool prescribed = q == 0 && stations[i].RigidW ||
+                    q == 1 && stations[i].RigidTheta ||
                     i == stations.Length - 1 && q >= 2;
                 if (prescribed)
                     continue;
@@ -49,8 +49,8 @@ internal static class BendingSystemBuilder
                     if (q < 2)
                         transferred[q] /= new Bounded(preparation.NormalizedEI.Value, preparation.NormalizedEI.Bound());
                 }
-            bool rigidW = stations[i].Directions.HasFlag(RestrainedDirections.W);
-            bool rigidTheta = stations[i].Directions.HasFlag(RestrainedDirections.Theta);
+            bool rigidW = stations[i].RigidW;
+            bool rigidTheta = stations[i].RigidTheta;
             if (i > 0)
             {
                 Jump(0, default);
@@ -66,6 +66,9 @@ internal static class BendingSystemBuilder
                 if (row >= n)
                     throw new KernelFailureException(KernelFailureCause.InternalInconsistency, "Too many bending equations.");
                 Put(4 * i + q, new(1));
+                // The transverse spring law enters the shear jump: V+ - V- + k w+ = P.
+                if (q == 3 && stations[i].ElasticW)
+                    Put(4 * i, preparation.ScaledTranslationalStiffness(stations[i].Springs.Translational));
                 if (i > 0)
                 {
                     int previous = 4 * (i - 1);
