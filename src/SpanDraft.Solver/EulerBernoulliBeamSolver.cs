@@ -25,9 +25,10 @@ public sealed class EulerBernoulliBeamSolver
         }
         catch (MechanicalMechanismException mechanism)
         {
-            throw new BeamSolverException(SolverErrorCode.UnstableModel,
-                "Supports leave an axial translation or a transverse rigid-body motion unconstrained.",
-                innerException: mechanism);
+            throw new BeamSolverException(SolverErrorCode.UnstableModel, beam.MomentReleases.Count == 0
+                ? "Supports leave an axial translation or a transverse rigid-body motion unconstrained."
+                : "Supports and moment releases leave an axial translation or a rigid-body motion of a beam part " +
+                    "unconstrained.", innerException: mechanism);
         }
         catch (InvalidMechanicalModelException invalid)
         {
@@ -54,7 +55,7 @@ public sealed class EulerBernoulliBeamSolver
             // The exact mechanism check precedes every range rule, including the adapter's EI product.
             (IEnumerable<RigidRestraint> rigid, IEnumerable<ElasticRestraint> elastic) =
                 BeamModelAdapter.AdaptRestraints(beam);
-            SolverKernel.RequireStable(rigid, elastic);
+            SolverKernel.RequireStable(rigid, elastic, BeamModelAdapter.AdaptReleases(beam), beam.Length.Meters);
             throw;
         }
     }

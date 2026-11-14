@@ -34,10 +34,14 @@ internal static class BeamModelAdapter
 
         (IEnumerable<RigidRestraint> rigid, IEnumerable<ElasticRestraint> elastic) = AdaptRestraints(beam);
         return new MechanicalInput(beam.Length.Meters, StiffnessSections(beam), rigid, pointForces, pointMoments,
-            lineLoads, elastic);
+            lineLoads, elastic, AdaptReleases(beam));
     }
 
-    /// <summary>The restraints alone, for the mechanism check of a beam whose EI is not representable.</summary>
+    /// <summary>The moment releases, in the stored order; positions are never merged or moved.</summary>
+    internal static IEnumerable<InternalMomentRelease> AdaptReleases(BeamModel beam) =>
+        beam.MomentReleases.Select(release => new InternalMomentRelease(release.Position.Meters));
+
+    /// <summary>The restraints alone (see <see cref="AdaptReleases"/> for the releases), for the mechanism check of a beam whose EI is not representable.</summary>
     internal static (IEnumerable<RigidRestraint> Rigid, IEnumerable<ElasticRestraint> Elastic) AdaptRestraints(
         BeamModel beam) =>
         (beam.Supports.Where(s => s.Type != SupportType.Spring).Select(AdaptRigid),

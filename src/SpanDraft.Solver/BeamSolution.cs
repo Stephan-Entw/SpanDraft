@@ -22,11 +22,14 @@ public sealed class BeamSolution
         {
             BendingField field = (station.Position == beam.Length.Meters ? station.Left : station.Right)
                 ?? throw new InvalidOperationException("Kernel station is missing its required inward or right field.");
+            // The rotation left of a moment release differs from the node's own one; it exists nowhere else.
+            double? rotationLeft = station.Jumps.HasFlag(BendingJump.Release) ? station.Left?.Bending[1].Value : null;
             return new BeamNodeResult(index, Length.FromMeters(station.Position), default,
                 Displacement.FromMeters(field.Bending[0].Value), field.Bending[1].Value,
                 reactions.TryGetValue((station.Position, RestrainedDirections.U), out double rx) ? Force.FromNewtons(rx) : null,
                 reactions.TryGetValue((station.Position, RestrainedDirections.W), out double ry) ? Force.FromNewtons(ry) : null,
-                reactions.TryGetValue((station.Position, RestrainedDirections.Theta), out double rm) ? Moment.FromNewtonMeters(rm) : null);
+                reactions.TryGetValue((station.Position, RestrainedDirections.Theta), out double rm) ? Moment.FromNewtonMeters(rm) : null,
+                rotationLeft);
         }).ToArray());
         Extrema = new BeamExtrema(result.Extrema);
         SegmentExtrema = Array.AsReadOnly(result.SectionExtrema.Select(extrema => new BeamExtrema(extrema)).ToArray());
@@ -70,7 +73,7 @@ public sealed class BeamNodeResult
 {
     internal BeamNodeResult(int nodeIndex, Length position, Displacement axialDisplacement,
         Displacement transverseDisplacement, double rotationRadians,
-        Force? reactionX, Force? reactionY, Moment? reactionMoment)
+        Force? reactionX, Force? reactionY, Moment? reactionMoment, double? rotationLeftRadians = null)
     {
         NodeIndex = nodeIndex;
         Position = position;
@@ -80,13 +83,22 @@ public sealed class BeamNodeResult
         ReactionX = reactionX;
         ReactionY = reactionY;
         ReactionMoment = reactionMoment;
+        RotationLeftRadians = rotationLeftRadians;
     }
 
     public int NodeIndex { get; }
     public Length Position { get; }
     public Displacement AxialDisplacement { get; }
     public Displacement TransverseDisplacement { get; }
+    /// <summary>
+    /// The rotation at the node; at a moment release it is the right-hand limit. Everywhere else both sides agree.
+    /// </summary>
     public double RotationRadians { get; }
+
+    /// <summary>
+    /// The left-hand rotation limit at a moment release, where the rotation jumps; null at every other node.
+    /// </summary>
+    public double? RotationLeftRadians { get; }
     public Force? ReactionX { get; }
     public Force? ReactionY { get; }
     public Moment? ReactionMoment { get; }
