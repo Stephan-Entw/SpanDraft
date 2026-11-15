@@ -292,13 +292,18 @@ public sealed record EditorDocument
     /// </summary>
     public string? SelfWeightActivationError
     {
+        get => MissingDensityError ?? (NamedEntities.Any(e => EntityNaming.IsReserved(e.Name)) ? Strings.SelfWeightNameConflict : null);
+    }
+
+    // The part of the activation error that depends on the segments, so that a change of the chain can check it alone.
+    private string? MissingDensityError
+    {
         get
         {
             int missing = Array.FindIndex(_segments, segment => segment.Material.Density is null);
-            if (missing >= 0)
-                return _segments.Length == 1 ? Strings.SelfWeightMissingDensity
-                    : string.Format(CultureInfo.CurrentCulture, Strings.SelfWeightMissingDensitySegment, missing + 1);
-            return NamedEntities.Any(e => EntityNaming.IsReserved(e.Name)) ? Strings.SelfWeightNameConflict : null;
+            if (missing < 0) return null;
+            return _segments.Length == 1 ? Strings.SelfWeightMissingDensity
+                : string.Format(CultureInfo.CurrentCulture, Strings.SelfWeightMissingDensitySegment, missing + 1);
         }
     }
 
@@ -374,7 +379,10 @@ public sealed record EditorDocument
 
         var changed = new EditorDocument(chain, Supports, Loads, NamingState, DistributedLoads, SelfWeight, MomentReleases);
         var broken = changed.PositionRuleConflicts();
-        return broken.Count > 0 ? GeometryChange.Blocked(broken) : GeometryChange.Accepted(changed);
+        if (broken.Count > 0) return GeometryChange.Blocked(broken);
+        // A document with the self-weight on must be able to build its beam model: every segment needs a density.
+        return SelfWeight?.Enabled == true && changed.MissingDensityError is { } densityError
+            ? GeometryChange.SelfWeightBlocked(densityError) : GeometryChange.Accepted(changed);
     }
 
     /// <summary>Inserts a new segment so that it gets this place in the chain; 0 is in front of the first segment.</summary>

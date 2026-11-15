@@ -74,6 +74,30 @@ public sealed class DesktopPositionReferenceTests
     }
 
     [Fact]
+    public void AChainChangeIsRejectedWhenTheSelfWeightWouldLoseTheDensityOfASegment()
+    {
+        var withoutDensity = new Material("Unknown", Pressure.FromPascals(210e9), Pressure.FromPascals(235e6),
+            MaterialStrengthType.Re);
+        EditorSegment s1 = Segment(2), s2 = Segment(3);
+        var enabled = new EditorDocument([s1, s2], [Support("A", 0)], null, null, null, new EditorSelfWeight(Guid.NewGuid(), true));
+        var added = new EditorSegment(withoutDensity, new RectangleSectionGeometry(M(0.1), M(0.2)), SectionAxisDesignation.Y)
+        { Length = M(1) };
+
+        foreach (var change in new[] { enabled.AddSegment(added), enabled.InsertSegment(0, added),
+            enabled.WithSegmentChain([s1, added with { Id = s2.Id, Length = s2.Length }]) })
+        {
+            Assert.False(change.IsAccepted);
+            Assert.Equal(GeometryRejection.SelfWeightDensity, change.Rejection);
+            Assert.False(string.IsNullOrWhiteSpace(change.Message));
+        }
+
+        // Without self-weight, or with every density present, the same chain is fine and builds its beam model.
+        Assert.True(enabled.AddSegment(Segment(1)).IsAccepted);
+        var disabled = enabled with { SelfWeight = new EditorSelfWeight(enabled.SelfWeight!.Id, false) };
+        Assert.True(disabled.AddSegment(added).IsAccepted);
+    }
+
+    [Fact]
     public void TheDocumentDerivesEveryPositionFromItsReferenceAndStoresABeamStartDistanceAsNoReference()
     {
         EditorSegment s1 = Segment(2), s2 = Segment(3);

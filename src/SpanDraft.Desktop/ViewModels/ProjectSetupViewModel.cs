@@ -260,6 +260,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         if (segments.Length == 0) return null;
         var change = document.WithSegmentChain(segments);
         if (change.IsAccepted) return null;
+        if (change.Message is { } message) return message;
         // The established message for a beam that has become too short for elements that are all measured from its start.
         var elements = document.Supports.Cast<object>().Concat(document.Loads).Concat(document.DistributedLoads).Concat(document.MomentReleases);
         if (change.Conflicts.All(c => c.Kind == GeometryConflictKind.RuleViolation) && elements.All(IsFixedFromStart)

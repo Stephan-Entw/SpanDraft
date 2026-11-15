@@ -49,7 +49,7 @@ public enum GeometryConflictKind
 public sealed record GeometryConflict(Guid EntityId, string EntityName, GeometryConflictKind Kind,
     DistributedLoadEndpoint? Role = null);
 
-public enum GeometryRejection { None, LastSegment, UnknownSegment, Conflicts }
+public enum GeometryRejection { None, LastSegment, UnknownSegment, Conflicts, SelfWeightDensity }
 
 /// <summary>
 /// The outcome of a change of the segment chain. It is either the changed document or a rejection; a rejection
@@ -57,11 +57,15 @@ public enum GeometryRejection { None, LastSegment, UnknownSegment, Conflicts }
 /// change valid.
 /// </summary>
 public sealed record GeometryChange(EditorDocument? Document, GeometryRejection Rejection,
-    IReadOnlyList<GeometryConflict> Conflicts)
+    IReadOnlyList<GeometryConflict> Conflicts, string? Message = null)
 {
     public bool IsAccepted => Document is not null;
     public static GeometryChange Accepted(EditorDocument document) => new(document, GeometryRejection.None, []);
     public static GeometryChange Rejected(GeometryRejection rejection) => new(null, rejection, []);
     public static GeometryChange Blocked(IReadOnlyList<GeometryConflict> conflicts) =>
         new(null, GeometryRejection.Conflicts, conflicts);
+
+    /// <summary>The self-weight is on and a segment of the changed chain has a material without density.</summary>
+    public static GeometryChange SelfWeightBlocked(string message) =>
+        new(null, GeometryRejection.SelfWeightDensity, [], message);
 }
