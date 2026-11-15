@@ -375,20 +375,17 @@ public sealed partial class EditorViewModel : ObservableObject
     {
         if (IsBusy) return new(false, Strings.ProjectBusy);
         if (!CanEditLength) return new(false, Strings.LengthFromSegments);
-        if (BeamLengthConstraints.Error(Document, length) is { } error)
-        {
-            UpdateConstraintConflict(length);
-            return new(false, error);
-        }
-        UpdateConstraintConflict(null);
-        Commit(Document with { Length = length });
+        var check = BeamLengthConstraints.Evaluate(Document, length);
+        UpdateConstraintConflict(length, check.BlockingEntityIds);
+        if (check.Document is not { } document) return new(false, check.ErrorText);
+        Commit(document);
         return LengthCommitResult.Success;
     }
 
-    private void UpdateConstraintConflict(Length? requested)
+    private void UpdateConstraintConflict(Length? requested, IReadOnlyList<Guid>? blockingEntities = null)
     {
-        var ids = requested is { } length
-            ? BeamLengthConstraints.BlockingEntities(Document, length) : [];
+        var ids = blockingEntities ?? (requested is { } length
+            ? BeamLengthConstraints.BlockingEntities(Document, length) : []);
         _constraintConflict = requested is { } value && ids.Count > 0 ? new(value, ids) : null;
         Notify(nameof(ConstraintConflict));
         Notify(nameof(ConflictEntityIds));
@@ -408,13 +405,10 @@ public sealed partial class EditorViewModel : ObservableObject
     public bool ApplySetup(Length length, ISectionDefinition section, SectionAxisDesignation bendingAxis,
         Material material, string? sectionDisplayName, ProjectInfo? info)
     {
-        if (IsBusy || !CanApplyMaterial(material) || BeamLengthConstraints.Error(Document, length) is not null) return false;
-        var document = Document.WithSection(section, bendingAxis, sectionDisplayName) with { Length = length, Material = material };
-        Session.Commit(Session.CurrentRevision.State with
-        {
-            Document = document, Presentation = EditorPresentation.RetainEntities(document), Info = info
-        });
-        return true;
+        if (IsBusy || Document.HasSeveralSegments || !(length.Meters > 0)) return false;
+        var segment = Document.Segments[0].WithSection(section, bendingAxis, sectionDisplayName).WithMaterial(material)
+            with { Length = length };
+        return ApplySetup([segment], info);
     }
 
     /// <summary>

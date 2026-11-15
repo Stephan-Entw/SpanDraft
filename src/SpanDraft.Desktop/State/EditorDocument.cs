@@ -421,8 +421,8 @@ public sealed record EditorDocument
 
     /// <summary>
     /// The elements whose resolved positions break a position rule: outside the beam, a line load that no longer
-    /// has a positive extent, and the exact coincidence rules of the Core validator. The self-weight is not a
-    /// position and is left out; a beam without supports is not an error here.
+    /// has a positive extent, coincident desktop supports, and the exact coincidence rules of the Core validator.
+    /// The self-weight is not a position and is left out; a beam without supports is not an error here.
     /// </summary>
     private IReadOnlyList<GeometryConflict> PositionRuleConflicts()
     {
@@ -431,6 +431,12 @@ public sealed record EditorDocument
             if (!(l.StartPosition.Meters < l.EndPosition.Meters))
                 conflicts.Add(new(l.Id, l.Name, GeometryConflictKind.RuleViolation, DistributedLoadEndpoint.End));
         if (conflicts.Count > 0) return conflicts;
+
+        // Desktop projects require distinct support positions, even when Core allows different rigid types together.
+        var supportPositions = new HashSet<Length>();
+        foreach (var support in Supports)
+            if (!supportPositions.Add(support.Position))
+                conflicts.Add(new(support.Id, support.Name, GeometryConflictKind.RuleViolation));
 
         var pointLoads = Loads.Count;
         foreach (var error in BeamModelValidator.Validate(ToBeamModel(includeSelfWeight: false)))
