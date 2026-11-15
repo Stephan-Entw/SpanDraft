@@ -23,6 +23,7 @@
                    Classes.error="{Binding LoadDraft.HasPositionError}" AutomationProperties.Name="{Binding LoadDraft.PositionLabel.PlainText}" />
           <controls:TechnicalTextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding LoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
+        <controls:PositionReferenceRow x:Name="PositionReference" DataContext="{Binding LoadDraft.Reference}" />
         <controls:TechnicalTextBlock Text="{Binding LoadDraft.PositionError}" IsVisible="{Binding LoadDraft.HasPositionError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>

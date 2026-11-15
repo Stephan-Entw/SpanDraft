@@ -84,6 +84,7 @@ public partial class CoordinateAxisPane : UserControl
 
     private void BeginLengthEdit(object? sender, RoutedEventArgs e)
     {
+        if (_editor?.CanEditLength != true) return;
         LengthEditStarting?.Invoke();
         _editor?.DimensionLength.Begin();
         Dispatcher.UIThread.Post(AxisLengthInput.FocusInput, DispatcherPriority.Input);

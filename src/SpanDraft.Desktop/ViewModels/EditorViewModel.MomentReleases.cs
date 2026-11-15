@@ -146,11 +146,11 @@ public sealed partial class EditorViewModel
         {
             int index = Array.FindIndex(releases, r => r.Id == id);
             if (index < 0) { CancelMomentReleaseInteraction(); return false; }
-            releases[index] = releases[index] with { Position = position, Name = draft.NameText };
+            releases[index] = releases[index] with { Position = position, Reference = draft.Reference.Current, Name = draft.NameText };
         }
         else
         {
-            releases = [.. releases, new(Guid.NewGuid(), position, draft.NameText)];
+            releases = [.. releases, new EditorMomentRelease(Guid.NewGuid(), position, draft.NameText) { Reference = draft.Reference.Current }];
             naming = naming.Consume(draft.AutoCandidate!.Value);
         }
         var document = Document.WithMomentReleases(releases, naming);

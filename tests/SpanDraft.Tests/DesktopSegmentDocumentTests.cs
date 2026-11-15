@@ -4,6 +4,7 @@ using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Core.Validation;
+using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
@@ -162,6 +163,24 @@ public sealed class DesktopSegmentDocumentTests
         Assert.Equal("Heavy", changed.Segments[1].SectionDisplayName);
         Assert.Null(changed.Segments[0].SectionDisplayName);
         Assert.Equal("Light", changed.Segments[2].Material.Name);
+    }
+
+    [Fact]
+    public void TheEditorOffersTheLengthForEditingOnlyWhileThereIsOneSegment()
+    {
+        var one = new EditorViewModel(new EditorDocument([Segment() with { Length = M(3) }],
+            [new(Guid.NewGuid(), M(0), SupportType.Fixed, "A")]), () => { });
+        var several = new EditorViewModel(Three(), () => { });
+
+        Assert.True(one.CanEditLength);
+        Assert.Equal(Strings.EditLength, one.LengthTooltip);
+        Assert.False(several.CanEditLength);
+        Assert.Equal(Strings.LengthFromSegments, several.LengthTooltip);
+        several.DimensionLength.Begin();
+        several.DimensionLength.Text = "7000";
+        Assert.False(several.DimensionLength.Confirm());
+        Assert.Equal(Strings.LengthFromSegments, several.DimensionLength.ErrorText);
+        Assert.Equal(M(6), several.Document.Length);
     }
 
     [Fact]

@@ -223,11 +223,11 @@ public sealed partial class EditorViewModel
         {
             int index = Array.FindIndex(loads, l => l.Id == id);
             if (index < 0) { CancelLoadInteraction(); return false; }
-            loads[index] = EditorPointLoad.Create(id, position, draft.Kind, value, draft.NameText);
+            loads[index] = EditorPointLoad.Create(id, position, draft.Kind, value, draft.NameText) with { Reference = draft.Reference.Current };
         }
         else
         {
-            loads = [.. loads, EditorPointLoad.Create(Guid.NewGuid(), position, draft.Kind, value, draft.NameText)];
+            loads = [.. loads, EditorPointLoad.Create(Guid.NewGuid(), position, draft.Kind, value, draft.NameText) with { Reference = draft.Reference.Current }];
             naming = naming.Consume(draft.AutoCandidate!.Value);
         }
         var document = Document.WithLoads(loads, naming);

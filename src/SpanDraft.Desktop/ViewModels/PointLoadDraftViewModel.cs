@@ -45,8 +45,13 @@ public sealed class PointLoadDraftViewModel : ObservableObject
         _referenceValue = value;
         _valueText = _referenceValueText = InputQuantityFormatter.FormatExact(value, _valueUnit);
         _preview = new(position, kind, value);
+        var entity = originalId is null ? null : document.Loads.FirstOrDefault(l => l.Id == originalId);
+        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position);
         Validate();
     }
+
+    /// <summary>What the position is measured from, and whether it is bound to the end of a segment.</summary>
+    public PositionReferenceDraft Reference { get; }
 
     public Guid? OriginalId { get; }
     public bool IsExisting => OriginalId.HasValue;
@@ -122,7 +127,10 @@ public sealed class PointLoadDraftViewModel : ObservableObject
             : Kind == PointLoadKind.Moment && MomentReleaseRules.MomentConflicts(document, position) ? Strings.MomentAtMomentRelease
             : null;
         if (_positionError is null)
+        {
             _inputPosition = PositionText == _referencePositionText ? _referencePosition : position;
+            Reference.PositionChanged(_inputPosition);
+        }
         double value = _referenceValue;
         _valueError = ValueText == _referenceValueText || InputQuantityFormatter.TryParse(ValueText, _valueUnit, out value)
             ? null : Strings.InvalidLoadValue;

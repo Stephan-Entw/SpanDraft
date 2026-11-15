@@ -52,8 +52,16 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         // A constant load stays constant while the end intensity is untouched; any edit of it ends the following.
         _endIntensityFollowsStart = startIntensity == endIntensity;
         _preview = new(start, end, startIntensity, endIntensity);
+        var entity = originalId is null ? null : read().DistributedLoads.FirstOrDefault(l => l.Id == originalId);
+        StartReference = new(read, entity?.EffectiveStartReference, entity?.StartPosition ?? start);
+        EndReference = new(read, entity?.EffectiveEndReference, entity?.EndPosition ?? end);
         Validate();
     }
+
+    /// <summary>What the start is measured from, and whether it is bound to the end of a segment.</summary>
+    public PositionReferenceDraft StartReference { get; }
+    /// <summary>What the end is measured from, and whether it is bound to the end of a segment.</summary>
+    public PositionReferenceDraft EndReference { get; }
 
     public Guid? OriginalId { get; }
     public string PositionUnit => _positionUnit.Symbol;
@@ -140,8 +148,8 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         };
         _startError = TryPosition(StartText, _referenceStartText, _referenceStart, document.Length, out var start) ? null : Strings.PositionInsideBeam;
         _endError = TryPosition(EndText, _referenceEndText, _referenceEnd, document.Length, out var end) ? null : Strings.PositionInsideBeam;
-        if (_startError is null) _inputStart = StartText == _referenceStartText ? _referenceStart : start;
-        if (_endError is null) _inputEnd = EndText == _referenceEndText ? _referenceEnd : end;
+        if (_startError is null) { _inputStart = StartText == _referenceStartText ? _referenceStart : start; StartReference.PositionChanged(_inputStart); }
+        if (_endError is null) { _inputEnd = EndText == _referenceEndText ? _referenceEnd : end; EndReference.PositionChanged(_inputEnd); }
         if (_startError is null && _endError is null && _inputStart.Meters >= _inputEnd.Meters)
             _startError = _endError = Strings.InvalidDistributedRange;
         _startIntensityError = TryIntensity(StartIntensityText, _referenceStartIntensityText, _referenceStartIntensity, out double startIntensity)

@@ -9,7 +9,7 @@
     <Canvas>
       <Grid x:Name="EndValue">
         <Button x:Name="LengthButton" Classes="ghost axisLength" Click="BeginLengthEdit"
-                IsVisible="{Binding DimensionLength.IsDisplay}" ToolTip.Tip="{x:Static resources:Strings.EditLength}"
+                IsVisible="{Binding DimensionLength.IsDisplay}" ToolTip.Tip="{Binding LengthTooltip}"
                 AutomationProperties.Name="{x:Static resources:Strings.BeamLength}" />
         <controls:LengthInput x:Name="AxisLengthInput" DataContext="{Binding DimensionLength}"
                               IsVisible="{Binding IsEditing}" />

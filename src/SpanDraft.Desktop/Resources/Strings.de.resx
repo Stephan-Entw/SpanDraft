@@ -405,6 +405,11 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="SegmentLength" xml:space="preserve"><value>Abschnittslänge</value></data>
   <data name="SegmentsTotalLength" xml:space="preserve"><value>Gesamtlänge {0} {1}</value></data>
   <data name="SegmentChangeBlocked" xml:space="preserve"><value>Die Änderung ist nicht möglich, weil sonst diese Elemente ungültig würden: {0}.</value></data>
+  <data name="LengthFromSegments" xml:space="preserve"><value>Die Balkenlänge ist die Summe der Abschnittslängen. Sie wird in den Projekteigenschaften geändert.</value></data>
+  <data name="PositionFromBeamStart" xml:space="preserve"><value>Balkenanfang</value></data>
+  <data name="HoldAtSegmentEnd" xml:space="preserve"><value>Am Abschnittsende halten</value></data>
+  <data name="HoldAtEndOfSegment" xml:space="preserve"><value>Am Ende von Abschnitt {0} halten</value></data>
+  <data name="PositionReference" xml:space="preserve"><value>Gemessen ab</value></data>
   <data name="SegmentSelected" xml:space="preserve"><value>Abschnitt {0}</value></data>
   <data name="ReportGoverningSegment" xml:space="preserve"><value>Maßgebender Abschnitt</value></data>
   <data name="ReportSegmentSection" xml:space="preserve"><value>Querschnitt, Abschnitt {0}</value></data>

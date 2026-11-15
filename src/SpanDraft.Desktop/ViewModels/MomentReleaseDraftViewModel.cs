@@ -31,8 +31,13 @@ public sealed class MomentReleaseDraftViewModel : ObservableObject
         _referencePosition = position;
         _positionText = _referenceText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
         _preview = new(position);
+        var entity = originalId is null ? null : document.MomentReleases.FirstOrDefault(r => r.Id == originalId);
+        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position);
         Validate();
     }
+
+    /// <summary>What the position is measured from, and whether it is bound to the end of a segment.</summary>
+    public PositionReferenceDraft Reference { get; }
 
     public Guid? OriginalId { get; }
     public bool IsExisting => OriginalId.HasValue;
@@ -92,7 +97,7 @@ public sealed class MomentReleaseDraftViewModel : ObservableObject
             : InputQuantityFormatter.TryParsePosition(PositionText, _positionUnit, document.Length, out position);
         _positionError = !parsed ? Strings.MomentReleaseInsideBeam
             : MomentReleaseRules.Message(MomentReleaseRules.Conflict(document, position, OriginalId));
-        if (parsed) _inputPosition = position;
+        if (parsed) { _inputPosition = position; Reference.PositionChanged(position); }
         // Text is a commit buffer, never a movement control: only pointer interaction moves the preview.
         _preview = _preview with { IsInvalid = !IsValid };
         foreach (string name in new[] { nameof(ErrorText), nameof(HasError), nameof(NameError), nameof(HasNameError),

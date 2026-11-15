@@ -68,8 +68,13 @@ public sealed class SupportDraftViewModel : ObservableObject
         _bufferReferenceText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
         _positionText = _bufferReferenceText;
         _preview = new(position, type, false, null);
+        var entity = originalId is null ? null : document.Supports.FirstOrDefault(s => s.Id == originalId);
+        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position);
         Validate();
     }
+
+    /// <summary>What the position is measured from, and whether it is bound to the end of a segment.</summary>
+    public PositionReferenceDraft Reference { get; }
 
     public static IReadOnlyList<SupportTypeOption> Types { get; } = Array.AsReadOnly(new[]
     {
@@ -214,6 +219,7 @@ public sealed class SupportDraftViewModel : ObservableObject
             else if (MomentReleaseRules.SupportConflicts(document, position, Type, IsSpring && _hasRotational ? PreviewSpring() : null))
                 error = Strings.SupportAtMomentRelease;
             _inputPosition = position;
+            Reference.PositionChanged(position);
         }
         _errorText = error;
         ValidateSpring();

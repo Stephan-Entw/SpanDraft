@@ -23,6 +23,7 @@
                    Classes.error="{Binding DistributedLoadDraft.HasStartError}" AutomationProperties.Name="{Binding DistributedLoadDraft.StartLabel.PlainText}" />
           <controls:TechnicalTextBlock Grid.Column="2" x:Name="StartUnit" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
+        <controls:PositionReferenceRow x:Name="StartReference" DataContext="{Binding DistributedLoadDraft.StartReference}" />
         <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.StartError}" IsVisible="{Binding DistributedLoadDraft.HasStartError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
@@ -33,6 +34,7 @@
                    Classes.error="{Binding DistributedLoadDraft.HasEndError}" AutomationProperties.Name="{Binding DistributedLoadDraft.EndLabel.PlainText}" />
           <controls:TechnicalTextBlock Grid.Column="2" x:Name="EndUnit" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
+        <controls:PositionReferenceRow x:Name="EndReference" DataContext="{Binding DistributedLoadDraft.EndReference}" />
         <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.EndError}" IsVisible="{Binding DistributedLoadDraft.HasEndError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>

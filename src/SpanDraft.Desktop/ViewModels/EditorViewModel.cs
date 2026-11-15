@@ -280,11 +280,11 @@ public sealed partial class EditorViewModel : ObservableObject
         {
             int index = Array.FindIndex(supports, s => s.Id == id);
             if (index < 0) { CancelSupportInteraction(); return false; }
-            supports[index] = supports[index] with { Position = position, Type = draft.Type, Name = draft.NameText, Spring = draft.Spring };
+            supports[index] = supports[index] with { Position = position, Reference = draft.Reference.Current, Type = draft.Type, Name = draft.NameText, Spring = draft.Spring };
         }
         else
         {
-            supports = [.. supports, new(Guid.NewGuid(), position, draft.Type, draft.NameText, draft.Spring)];
+            supports = [.. supports, new(Guid.NewGuid(), position, draft.Type, draft.NameText, draft.Spring) { Reference = draft.Reference.Current }];
             naming = naming.Consume(draft.AutoCandidate!.Value);
         }
         var document = Document.WithSupports(supports, naming);
@@ -364,9 +364,17 @@ public sealed partial class EditorViewModel : ObservableObject
             nameof(HasSupportFeedback), nameof(HasCoordinate), nameof(CoordinateText), nameof(SupportPreviewName) }) Notify(name);
     }
 
+    /// <summary>
+    /// The beam length is edited here only while it is the length of the one segment; with several segments it is the
+    /// sum of their lengths and is changed in the project properties, where it is clear which segment changes.
+    /// </summary>
+    public bool CanEditLength => !Document.HasSeveralSegments;
+    public string LengthTooltip => CanEditLength ? Strings.EditLength : Strings.LengthFromSegments;
+
     private LengthCommitResult ChangeLength(Length length)
     {
         if (IsBusy) return new(false, Strings.ProjectBusy);
+        if (!CanEditLength) return new(false, Strings.LengthFromSegments);
         if (BeamLengthConstraints.Error(Document, length) is { } error)
         {
             UpdateConstraintConflict(length);
@@ -486,6 +494,8 @@ public sealed partial class EditorViewModel : ObservableObject
         {
             Notify(nameof(Document));
             Notify(nameof(Overview));
+            Notify(nameof(CanEditLength));
+            Notify(nameof(LengthTooltip));
         }
         if (presentationChanged) { Notify(nameof(EditorPresentation)); Notify(nameof(RenderPresentation)); }
         if (documentChanged || presentationChanged) NotifySelfWeightState();

@@ -431,6 +431,11 @@ public static class Strings
     public static string SegmentLength => Get(nameof(SegmentLength));
     public static string SegmentsTotalLength => Get(nameof(SegmentsTotalLength));
     public static string SegmentChangeBlocked => Get(nameof(SegmentChangeBlocked));
+    public static string LengthFromSegments => Get(nameof(LengthFromSegments));
+    public static string PositionFromBeamStart => Get(nameof(PositionFromBeamStart));
+    public static string HoldAtSegmentEnd => Get(nameof(HoldAtSegmentEnd));
+    public static string HoldAtEndOfSegment => Get(nameof(HoldAtEndOfSegment));
+    public static string PositionReference => Get(nameof(PositionReference));
     public static string SegmentSelected => Get(nameof(SegmentSelected));
     public static string ReportGoverningSegment => Get(nameof(ReportGoverningSegment));
     public static string ReportSegmentSection => Get(nameof(ReportSegmentSection));

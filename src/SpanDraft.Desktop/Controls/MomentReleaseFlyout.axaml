@@ -25,6 +25,7 @@
                    AutomationProperties.Name="{Binding MomentReleaseDraft.PositionLabel.PlainText}" />
           <controls:TechnicalTextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding MomentReleaseDraft.PositionUnit}" VerticalAlignment="Center" />
         </Grid>
+        <controls:PositionReferenceRow x:Name="PositionReference" DataContext="{Binding MomentReleaseDraft.Reference}" />
         <controls:TechnicalTextBlock Text="{Binding MomentReleaseDraft.ErrorText}" IsVisible="{Binding MomentReleaseDraft.HasError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
         <controls:TechnicalTextBlock Text="{Binding MomentReleaseFeedback}" IsVisible="{Binding HasMomentReleaseFeedback}"

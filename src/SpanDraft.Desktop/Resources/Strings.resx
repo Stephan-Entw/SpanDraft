@@ -405,6 +405,11 @@ Remove the entry from Recent projects?</value></data>
   <data name="SegmentLength" xml:space="preserve"><value>Segment length</value></data>
   <data name="SegmentsTotalLength" xml:space="preserve"><value>Total length {0} {1}</value></data>
   <data name="SegmentChangeBlocked" xml:space="preserve"><value>This change is not possible because it would make these elements invalid: {0}.</value></data>
+  <data name="LengthFromSegments" xml:space="preserve"><value>The beam length is the sum of the segment lengths. Change it in the project properties.</value></data>
+  <data name="PositionFromBeamStart" xml:space="preserve"><value>Beam start</value></data>
+  <data name="HoldAtSegmentEnd" xml:space="preserve"><value>Keep at the segment end</value></data>
+  <data name="HoldAtEndOfSegment" xml:space="preserve"><value>Keep at the end of segment {0}</value></data>
+  <data name="PositionReference" xml:space="preserve"><value>Measured from</value></data>
   <data name="SegmentSelected" xml:space="preserve"><value>Segment {0}</value></data>
   <data name="ReportGoverningSegment" xml:space="preserve"><value>Governing segment</value></data>
   <data name="ReportSegmentSection" xml:space="preserve"><value>Section, segment {0}</value></data>

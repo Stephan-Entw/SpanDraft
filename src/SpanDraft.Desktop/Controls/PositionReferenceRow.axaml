@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Controls.PositionReferenceRow" x:DataType="vm:PositionReferenceDraft">
+  <StackPanel Spacing="{StaticResource Space4}">
+    <Grid x:Name="ReferenceChoice" ColumnDefinitions="88,150" ColumnSpacing="{StaticResource Space8}" IsVisible="{Binding ShowReference}">
+      <TextBlock Text="{x:Static resources:Strings.PositionReference}" Classes="propertyLabel" VerticalAlignment="Center" />
+      <ComboBox x:Name="ReferenceInput" Grid.Column="1" ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedOption, Mode=TwoWay}"
+                HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.PositionReference}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:PositionReferenceOption"><TextBlock Text="{Binding Name}" /></DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+    </Grid>
+    <CheckBox x:Name="HoldEndInput" Content="{Binding HoldEndLabel}" IsChecked="{Binding HoldEnd, Mode=TwoWay}"
+              IsVisible="{Binding CanHoldEnd}" />
+  </StackPanel>
+</UserControl>

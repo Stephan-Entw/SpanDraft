@@ -161,13 +161,15 @@ public sealed partial class EditorViewModel
             int index = Array.FindIndex(loads, l => l.Id == id);
             if (index < 0) { CancelDistributedLoadInteraction(); return false; }
             loads[index] = loads[index] with { StartPosition = start, EndPosition = end,
+                StartReference = draft.StartReference.Current, EndReference = draft.EndReference.Current,
                 StartIntensity = ForcePerLength.FromNewtonsPerMeter(startIntensity),
                 EndIntensity = ForcePerLength.FromNewtonsPerMeter(endIntensity), Name = draft.NameText };
         }
         else
         {
-            loads = [.. loads, new(Guid.NewGuid(), start, end, ForcePerLength.FromNewtonsPerMeter(startIntensity),
-                ForcePerLength.FromNewtonsPerMeter(endIntensity), draft.NameText)];
+            loads = [.. loads, new EditorDistributedLoad(Guid.NewGuid(), start, end, ForcePerLength.FromNewtonsPerMeter(startIntensity),
+                ForcePerLength.FromNewtonsPerMeter(endIntensity), draft.NameText)
+                { StartReference = draft.StartReference.Current, EndReference = draft.EndReference.Current }];
             naming = naming.Consume(draft.AutoCandidate!.Value);
         }
         var document = Document.WithDistributedLoads(loads, naming);
