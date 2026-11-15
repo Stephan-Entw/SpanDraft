@@ -46,8 +46,12 @@ public static class PositionReferences
         var (start, end) = document.SegmentRange(index);
         var segment = document.Segments[index];
         if (position == end) return new(segment.Id, segment.Length);
-        // The offset is chosen so that the start plus the offset is exactly the position, not an ulp beside it.
+        // The offset is chosen so that the start plus the offset is exactly the position, not an ulp beside it. A rounded
+        // value is preferred, because a point placed on a millimetre must not show up as 338.9999999999997 mm.
         double offset = position.Meters - start.Meters;
+        foreach (double rounded in new[] { Math.Round(offset * 1000, 6) / 1000, Math.Round(offset, 9) })
+            if (rounded >= 0 && rounded <= segment.Length.Meters && start.Meters + rounded == position.Meters)
+                return new(segment.Id, Length.FromMeters(rounded));
         for (int i = 0; i < 4 && start.Meters + offset != position.Meters; i++) offset += position.Meters - (start.Meters + offset);
         return new(segment.Id, Length.FromMeters(Math.Clamp(offset, 0, segment.Length.Meters)));
     }

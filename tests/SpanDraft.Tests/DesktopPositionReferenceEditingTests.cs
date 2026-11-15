@@ -267,8 +267,8 @@ public sealed class DesktopPositionReferenceEditingTests
         var draft = editor.SupportDraft!;
         var reference = draft.Reference;
         Assert.True(reference.ShowReference);
-        Assert.Equal([Strings.PositionFromBeamStart, string.Format(Strings.SegmentSelected, 1), string.Format(Strings.SegmentSelected, 2),
-            string.Format(Strings.SegmentSelected, 3)], reference.Options.Select(o => o.Name));
+        // Only references that can describe the point are offered: the beam start and the segment the point lies in.
+        Assert.Equal([Strings.PositionFromBeamStart, string.Format(Strings.SegmentSelected, 2)], reference.Options.Select(o => o.Name));
         Assert.Equal(document.Segments[1].Id, reference.SelectedOption!.Segment);
         // Measured from segment 2 (which starts at 1000 mm) the point is 500 mm away.
         Assert.Equal("500", draft.PositionText);
@@ -284,18 +284,40 @@ public sealed class DesktopPositionReferenceEditingTests
         Assert.Equal(M(1.5), reference.Position);
         Assert.False(reference.ShowPositionInfo);
 
-        reference.SelectedOption = reference.Options[3];
-        Assert.Equal(M(0), reference.Distance);
-        Assert.Equal("0", draft.PositionText);
-        Assert.Equal(M(2), reference.Position);
-
-        reference.SelectedOption = reference.Options[2];
-        Assert.Equal(M(2), reference.Position);
-        Assert.Equal("1000", draft.PositionText);
+        reference.SelectedOption = reference.Options[1];
+        Assert.Equal(M(1.5), reference.Position);
+        Assert.Equal("500", draft.PositionText);
         Assert.True(editor.ConfirmSupport());
         var changed = editor.Document.Supports.Single(s => s.Id == support.Id);
-        Assert.Equal(From(document, 1, 1), changed.Reference);
-        Assert.Equal(M(2), changed.Position);
+        Assert.Equal(From(document, 1, 0.5), changed.Reference);
+        Assert.Equal(M(1.5), changed.Position);
+    }
+
+    [Fact]
+    public void OnAnInnerBoundaryBothNeighboursAreOfferedAndNeitherMovesThePoint()
+    {
+        var document = Document(3);
+        var editor = Editor(document);
+        var support = PlaceSupport(editor, 2);
+        Assert.True(editor.EditSupport(support.Id));
+        var reference = editor.SupportDraft!.Reference;
+
+        Assert.Equal([Strings.PositionFromBeamStart, string.Format(Strings.SegmentSelected, 2), string.Format(Strings.SegmentSelected, 3)],
+            reference.Options.Select(o => o.Name));
+        foreach (var option in reference.Options.Skip(1))
+        {
+            reference.SelectedOption = option;
+            Assert.Equal(M(2), reference.Position);
+        }
+    }
+
+    [Fact]
+    public void ADistanceFromAMillimetrePositionIsAShortNumberAndNotAFloatingPointNeighbour()
+    {
+        var document = Document(3);
+        var reference = new PositionReferenceDraft(() => document, null, M(1.839));
+        Assert.Equal("839", ((PositionRef.FromSegmentStart)reference.Current).Offset.Millimeters.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal(M(1.839), document.ResolvePosition(reference.Current));
     }
 
     [Fact]
@@ -309,7 +331,7 @@ public sealed class DesktopPositionReferenceEditingTests
 
         draft.Reference.SelectedOption = draft.Reference.Options[0];
         Assert.Equal("1500", draft.PositionText);
-        draft.Reference.SelectedOption = draft.Reference.Options[2];
+        draft.Reference.SelectedOption = draft.Reference.Options[1];
 
         Assert.Equal("500", draft.PositionText);
         Assert.Equal(M(1.5), draft.CanvasPosition);
@@ -379,7 +401,7 @@ public sealed class DesktopPositionReferenceEditingTests
         Assert.True(editor.EditSupport(support.Id));
         var draft = editor.SupportDraft!;
 
-        draft.Reference.SelectedOption = draft.Reference.Options[2];
+        draft.Reference.SelectedOption = draft.Reference.Options[1];
         draft.Reference.HoldEnd = true;
 
         Assert.Equal("1000", draft.PositionText);

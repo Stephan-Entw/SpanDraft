@@ -78,8 +78,9 @@ Position zugleich das Ende des einen und der Beginn des nächsten. Das Positions
 vom gewählten Bezug, die globale Position steht daneben. Ein Bezug, der nichts an dem zeigt, was der
 Nutzer sieht, wirkte wirkungslos und war in einer ersten Fassung genau das: Das Feld blieb die globale
 Koordinate, und die Wahl änderte nur, wie gespeichert wird. Ein Wechsel des Bezugs lässt den Punkt
-deshalb, wo er ist, und rechnet den Abstand um; nur ein Abschnitt, der den Punkt nicht enthält,
-setzt den Abstand auf dessen Beginn. Ein getippter Abstand gilt vom gewählten Bezug und ändert ihn nie,
+deshalb, wo er ist, und rechnet den Abstand um. Angeboten werden nur Bezüge, die den Punkt beschreiben
+können: der Balkenanfang und die Abschnitte, die ihn enthalten (auf einer Grenze beide Nachbarn); ein
+Abschnitt ohne den Punkt wäre ein Bezug, der ihn verschieben müsste. Ein getippter Abstand gilt vom gewählten Bezug und ändert ihn nie,
 ein Abstand über den Abschnitt hinaus ist ein Fehler. Das Feld ist jederzeit editierbar; Bezug und
 Bindung sind getrennte, ausdrückliche Eingaben. Die
 Auswahlliste ersetzt ihre Einträge nur, wenn sich deren Inhalt ändert, weil ein Kombinationsfeld beim

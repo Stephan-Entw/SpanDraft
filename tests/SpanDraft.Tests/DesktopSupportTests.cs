@@ -359,6 +359,24 @@ public sealed class DesktopSupportTests
         Assert.Equal(Mm(expected), SupportSnap.AtX(v.Layout.Transform, x));
     }
 
+    [Theory]
+    [InlineData(494, 500)]   // inside the radius of the station at 500 mm
+    [InlineData(508, 500)]
+    [InlineData(520, 520)]   // outside it the millimetre rounding applies
+    public void StationsBetweenTheEndsAttractLikeTheEndpoints(double x, double expected)
+    {
+        var layout = SpanDraft.Desktop.Layout.StationLayout.Compute(1, 0, 1000, [new(0.5, 0, 0)]);
+        Assert.Equal(Mm(expected), SupportSnap.AtX(layout.Transform, layout.Transform.PhysicalToScreen(0.5) + (x - 500)));
+    }
+
+    [Fact]
+    public void ReleasesSnapToInnerStationsButNotToTheEnds()
+    {
+        var layout = SpanDraft.Desktop.Layout.StationLayout.Compute(1, 0, 1000, [new(0.5, 0, 0)]);
+        Assert.Equal(Mm(500), SupportSnap.AtX(layout.Transform, layout.Transform.PhysicalToScreen(0.5) + 6, endpointRadius: 0));
+        Assert.Equal(Mm(6), SupportSnap.AtX(layout.Transform, 6, endpointRadius: 0));
+    }
+
     [Fact]
     public void NoBeamHitOutsideDipBandOrHorizontalRange()
     {

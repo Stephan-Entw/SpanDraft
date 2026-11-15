@@ -18,7 +18,13 @@ public static class SupportSnap
         double.IsFinite(screenY) && Math.Abs(screenY - beamY) <= BeamHitRadius
             ? AtX(transform, screenX, endpointRadius: 0) : null;
 
-    public static Length? AtX(StationTransform transform, double screenX, double endpointRadius = EndpointRadius)
+    /// <summary>
+    /// The position under a screen x. The beam ends and the stations in between (segment boundaries and the positions
+    /// of the other elements) attract within their radius, as they do for the result probe; elsewhere the position is
+    /// rounded to a whole millimetre.
+    /// </summary>
+    public static Length? AtX(StationTransform transform, double screenX, double endpointRadius = EndpointRadius,
+        double stationRadius = EndpointRadius)
     {
         double left = transform.Stations[0].ScreenX, right = transform.Stations[^1].ScreenX;
         double length = transform.Stations[^1].PhysicalX;
@@ -28,6 +34,15 @@ public static class SupportSnap
         if (Math.Min(leftDistance, rightDistance) <= endpointRadius)
             return Length.FromMeters(leftDistance <= rightDistance ? 0 : length);
         if (screenX < left || screenX > right) return null;
+        LayoutStation? nearest = null;
+        double nearestDistance = stationRadius;
+        for (int i = 1; i < transform.Stations.Count - 1; i++)
+        {
+            double distance = Math.Abs(screenX - transform.Stations[i].ScreenX);
+            if (distance <= nearestDistance && (nearest is null || distance < nearestDistance))
+            { nearest = transform.Stations[i]; nearestDistance = distance; }
+        }
+        if (nearest is { } station) return Length.FromMeters(station.PhysicalX);
         double mm = Math.Round(transform.ScreenToPhysical(screenX) * 1000, MidpointRounding.AwayFromZero);
         if (!double.IsFinite(mm)) return null;
         var position = Length.FromMillimeters(mm);

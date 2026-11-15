@@ -67,14 +67,17 @@ public sealed class PositionReferenceDraft : ObservableObject
     public string PositionInfo => string.Format(CultureInfo.CurrentCulture, Strings.GlobalPositionInfo,
         InputQuantityFormatter.FormatExact(_position.Meters, _unit), _unit.Symbol);
 
-    /// <summary>The beam start and every segment; the list only changes when its content does.</summary>
+    /// <summary>
+    /// The beam start and the segments that contain the point, so every choice describes the same point and none moves it;
+    /// on an inner boundary both neighbours are offered. The list only changes when its content does.
+    /// </summary>
     public IReadOnlyList<PositionReferenceOption> Options => _options;
 
     private IReadOnlyList<PositionReferenceOption> BuildOptions()
     {
         var document = _read();
         var options = new List<PositionReferenceOption> { new(null, Strings.PositionFromBeamStart) };
-        for (int index = 0; index < document.Segments.Count; index++)
+        foreach (int index in PositionReferences.SegmentsContaining(document, _position))
             options.Add(new(document.Segments[index].Id, SegmentName(index)));
         return options;
     }
@@ -89,11 +92,8 @@ public sealed class PositionReferenceDraft : ObservableObject
             if (value.Segment is { } id)
             {
                 int index = document.IndexOfSegment(id);
-                var (start, end) = document.SegmentRange(index);
-                // The point stays where it is if the segment contains it; otherwise the distance starts at the segment's beginning.
-                _current = _position.Meters >= start.Meters && _position.Meters <= end.Meters
-                    ? PositionReferences.InSegment(document, index, _position)
-                    : new PositionRef.FromSegmentStart(id, default);
+                if (index < 0 || !PositionReferences.SegmentsContaining(document, _position).Contains(index)) return;
+                _current = PositionReferences.InSegment(document, index, _position);
             }
             else _current = new PositionRef.FromBeamStart(_position);
             _position = document.ResolvePosition(_current);
