@@ -15,6 +15,8 @@ public sealed class SectionAxisBlock : Border
     public static readonly StyledProperty<bool> IsSelectedProperty = AvaloniaProperty.Register<SectionAxisBlock, bool>(nameof(IsSelected));
     public static readonly StyledProperty<bool> IsSelectableProperty = AvaloniaProperty.Register<SectionAxisBlock, bool>(nameof(IsSelectable));
     public static readonly RoutedEvent<RoutedEventArgs> SelectedEvent = RoutedEvent.Register<SectionAxisBlock, RoutedEventArgs>(nameof(Selected), RoutingStrategies.Bubble);
+    // A cursor holds a native handle: one shared instance instead of one per selection change.
+    private static readonly Cursor HandCursor = new(StandardCursorType.Hand);
     private Point? _pressed;
     public bool IsSelected { get => GetValue(IsSelectedProperty); set => SetValue(IsSelectedProperty, value); }
     public bool IsSelectable { get => GetValue(IsSelectableProperty); set => SetValue(IsSelectableProperty, value); }
@@ -49,7 +51,7 @@ public sealed class SectionAxisBlock : Border
         if (change.Property == IsSelectedProperty || change.Property == IsSelectableProperty)
         {
             Focusable = IsSelectable;
-            Cursor = IsSelectable ? new Cursor(StandardCursorType.Hand) : Cursor.Default;
+            Cursor = IsSelectable ? HandCursor : Cursor.Default;
             BorderBrush = IsSelected ? SubtleAccent() : Brushes.Transparent;
             Background = IsSelected ? FindBrush("AccentSubtle", Brushes.Transparent) : Brushes.Transparent;
         }
