@@ -95,7 +95,8 @@ eigenen Zeile zwischen Balken und x-Achse. Sie bleibt von der Achse getrennt, we
 Koordinaten und die Einheit zeigt und die Zeile ausschließlich Namen. Ihre Grenzen sind die Stationen des
 vorhandenen Layouts, in einer schematischen Darstellung ebenso: Ein Label darf die Balkengeometrie nie verändern, also
 fordert die Zeile weder Mindestbreiten noch Verzerrung. Stattdessen wählt jeder Abschnitt die ausführlichste Beschriftung,
-die ohne Umbruch passt (Querschnitt mit Werkstoff, „Abschnitt n“, „n“), und bei einem zu schmalen Abschnitt entfällt sie.
+die ohne Umbruch passt („Abschnitt n · Querschnitt · Werkstoff“, „Abschnitt n“, „n“), und bei einem zu schmalen Abschnitt
+entfällt sie. Die Beschriftung sitzt in der Linie, die links und rechts davon unterbrochen ist; die Endstriche bleiben.
 Die Zeile hat ein festes Band und nimmt dem Balken keinen Platz; bei einem Abschnitt gibt es sie nicht.
 
 Das Balkenmodell der Übersicht zeigt jeden Abschnitt, auch einen einzelnen, als Block aus „Abschnitt n“ und einer

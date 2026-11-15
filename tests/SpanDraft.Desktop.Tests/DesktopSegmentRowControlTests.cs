@@ -120,8 +120,8 @@ public sealed class DesktopSegmentRowControlTests
         // 0.1 m of 10 m is a few pixels wide: not even the number fits and no label is drawn.
         Assert.Null(row.Spans[0].Text);
         // The wide segments have room for the complete description with the material.
-        Assert.Equal(SegmentLabels.Description(editor.Document.Segments[1], editor.ResultPresentation), row.Spans[1].Text);
-        Assert.Equal(SegmentLabels.Description(editor.Document.Segments[2], editor.ResultPresentation), row.Spans[2].Text);
+        Assert.Equal(SegmentLabels.RowLabel(editor.Document.Segments[1], 2, editor.ResultPresentation), row.Spans[1].Text);
+        Assert.Equal(SegmentLabels.RowLabel(editor.Document.Segments[2], 3, editor.ResultPresentation), row.Spans[2].Text);
         Capture(window, "tiny");
         window.Close();
     }

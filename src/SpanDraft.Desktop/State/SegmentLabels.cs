@@ -26,7 +26,11 @@ public static class SegmentLabels
     public static string Description(EditorSegment segment, ResultPresentationOptions? options = null) =>
         Description(SectionName(segment, options), MaterialDisplay.Format(segment.Material));
 
+    /// <summary>The most detailed label of the segment row: the heading first, then the definition.</summary>
+    public static string RowLabel(EditorSegment segment, int number, ResultPresentationOptions? options = null) =>
+        Title(number) + Separator + Description(segment, options);
+
     /// <summary>The candidates of a segment row from the most to the least detailed.</summary>
     public static IReadOnlyList<string> RowCandidates(EditorSegment segment, int number, ResultPresentationOptions? options = null) =>
-        [Description(segment, options), Title(number), number.ToString(CultureInfo.CurrentUICulture)];
+        [RowLabel(segment, number, options), Title(number), number.ToString(CultureInfo.CurrentUICulture)];
 }

@@ -94,7 +94,8 @@ public sealed class DesktopSegmentRowTests
         Assert.Equal(string.Format(CultureInfo.CurrentUICulture, Strings.SegmentSelected, 3), SegmentLabels.Title(3));
         Assert.Equal("My own profile name · " + MaterialDisplay.Format(Steel), SegmentLabels.Description(named));
         Assert.Equal(new string('P', 120) + " · " + MaterialDisplay.Format(Steel), SegmentLabels.Description(longName));
-        Assert.Equal([SegmentLabels.Description(named), SegmentLabels.Title(2), "2"], SegmentLabels.RowCandidates(named, 2));
+        Assert.Equal("Abschnitt 2 · My own profile name · " + MaterialDisplay.Format(Steel), SegmentLabels.RowLabel(named, 2));
+        Assert.Equal([SegmentLabels.RowLabel(named, 2), SegmentLabels.Title(2), "2"], SegmentLabels.RowCandidates(named, 2));
         Assert.Equal(SectionDisplay.Name(Segment(1).Section), SegmentLabels.SectionName(Segment(1)));
     }
 
@@ -109,7 +110,8 @@ public sealed class DesktopSegmentRowTests
         {
             Assert.Equal(SegmentLabels.Title(i + 1), overview.Segments[i].Title);
             Assert.Equal(SegmentLabels.Description(document.Segments[i], ResultPresentationOptions.Default), overview.Segments[i].Description);
-            Assert.Equal(SegmentLabels.RowCandidates(document.Segments[i], i + 1, ResultPresentationOptions.Default)[0], overview.Segments[i].Description);
+            Assert.Equal(SegmentLabels.Title(i + 1) + SegmentLabels.Separator + overview.Segments[i].Description,
+                SegmentLabels.RowCandidates(document.Segments[i], i + 1, ResultPresentationOptions.Default)[0]);
         }
         // A beam of one segment is described the same way: a heading and one description.
         var single = Overview(new EditorDocument([Segment(1, "Only")]));

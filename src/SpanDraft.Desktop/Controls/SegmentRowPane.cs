@@ -9,7 +9,7 @@ namespace SpanDraft.Desktop.Controls;
 
 /// <summary>
 /// The row between the beam drawing and the x axis that assigns the beam's ranges to its segments: a thin line per
-/// segment with short end strokes on the segment boundaries, and the most detailed label that fits. It carries no
+/// segment with short end strokes on the segment boundaries, interrupted around the most detailed label that fits. It carries no
 /// coordinates; those belong to the axis. It has a fixed band of its own and exists only for a beam of several segments.
 /// </summary>
 public sealed class SegmentRowPane : Control
@@ -64,18 +64,25 @@ public sealed class SegmentRowPane : Control
         context.DrawRectangle(Brushes.Transparent, null, new Rect(Bounds.Size));
         if (_spans.Count == 0) return;
         var pen = new Pen(StrokeBrush, 1);
-        double lineY = Math.Round(SchematicMetrics.AxisLabelLineHeight + 6) + .5;
+        double lineY = Math.Round(Bounds.Height / 2) + .5;
         const double stroke = 4;
-        double first = _spans[0].StartX, last = _spans[^1].EndX;
-        context.DrawLine(pen, new(first, lineY), new(last, lineY));
-        context.DrawLine(pen, new(first, lineY - stroke), new(first, lineY + stroke));
+        context.DrawLine(pen, new(_spans[0].StartX, lineY - stroke), new(_spans[0].StartX, lineY + stroke));
         foreach (var span in _spans)
         {
             context.DrawLine(pen, new(span.EndX, lineY - stroke), new(span.EndX, lineY + stroke));
-            if (span.Text is not { } label) continue;
+            if (span.Text is not { } label)
+            {
+                context.DrawLine(pen, new(span.StartX, lineY), new(span.EndX, lineY));
+                continue;
+            }
+            // The label sits in the line: the line stops short of it on both sides.
             var size = SchematicText.Measure(label, AppTypography.Typeface, LabelFontSize);
+            double left = span.StartX + (span.Width - size.Width) / 2;
+            double right = left + size.Width;
+            context.DrawLine(pen, new(span.StartX, lineY), new(left - SegmentRowLayout.LabelGap, lineY));
+            context.DrawLine(pen, new(right + SegmentRowLayout.LabelGap, lineY), new(span.EndX, lineY));
             using var text = SchematicText.Format(label, AppTypography.Typeface, LabelFontSize, StrokeBrush);
-            text.Draw(context, new(span.StartX + (span.Width - size.Width) / 2, Math.Max(0, lineY - stroke - 2 - size.Height)));
+            text.Draw(context, new(left, Math.Max(0, lineY - size.Height / 2)));
         }
     }
 }
