@@ -95,9 +95,19 @@ internal readonly record struct ScaledLineLoad(double Start, double End, double 
             return StartIntensity;
         if (x == End)
             return EndIntensity;
-        Bounded share = RoundCounted.BoundedDistance(x, Start, lengthExponent) /
-            RoundCounted.BoundedDistance(End, Start, lengthExponent);
-        return StartIntensity + Rise * share;
+        return Interpolate(StartIntensity, EndIntensity, Start, End, x, lengthExponent);
+    }
+
+    /// <summary>
+    /// The linear interpolation first + (last - first) · share between the load ends, with the share taken from
+    /// global distances so that it stays exact for short loads far from the origin.
+    /// </summary>
+    internal static Bounded Interpolate(Bounded first, Bounded last, double start, double end, double x,
+        int lengthExponent)
+    {
+        Bounded share = RoundCounted.BoundedDistance(x, start, lengthExponent) /
+            RoundCounted.BoundedDistance(end, start, lengthExponent);
+        return first + (last - first) * share;
     }
 }
 internal readonly record struct StationBendingLoads(Bounded Force, Bounded Moment);
@@ -213,10 +223,7 @@ internal sealed record PreparedBendingLoads(ImmutableArray<SegmentBendingLoads> 
                 return new(first);
             if (position == load.End)
                 return new(last);
-            Bounded share = RoundCounted.BoundedDistance(position, load.Start, lengthExponent) /
-                RoundCounted.BoundedDistance(load.End, load.Start, lengthExponent);
-            Bounded value = new Bounded(first) + (new Bounded(last) - new Bounded(first)) * share;
-            return new(value.Value, value.Error);
+            return ScaledLineLoad.Interpolate(new(first), new(last), load.Start, load.End, position, lengthExponent);
         }
     }
 }

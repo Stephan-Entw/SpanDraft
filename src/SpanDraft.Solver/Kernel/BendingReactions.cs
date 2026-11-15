@@ -61,13 +61,7 @@ internal static class BendingReactions
             foreach (RestrainedDirections direction in new[] { RestrainedDirections.U, RestrainedDirections.W, RestrainedDirections.Theta })
             {
                 MechanicalStation station = system.Stations[i];
-                bool acts = direction switch
-                {
-                    RestrainedDirections.W => station.ConstrainsW,
-                    RestrainedDirections.Theta => station.ConstrainsTheta,
-                    _ => station.Directions.HasFlag(direction)
-                };
-                if (!acts) continue;
+                if (!station.Constrains(direction)) continue;
                 if (state.IsUnloaded || direction == RestrainedDirections.U)
                 {
                     result.Add(new(station.Position, direction, 0, 0));

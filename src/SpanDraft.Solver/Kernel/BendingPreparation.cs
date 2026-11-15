@@ -103,24 +103,20 @@ internal sealed record BendingPreparation(int EL, int EEI, int EF, ImmutableArra
     /// The transverse spring stiffness k in the units of the normalized state, k·2^(3·e_L − e_EI): an exact power-of-two
     /// scaling that must stay normal. It has no rounding, so it enters the matrix without a data error.
     /// </summary>
-    internal RoundCounted ScaledTranslationalStiffness(double stiffness) =>
-        ScaleTranslationalStiffness(stiffness, EL, EEI);
-
-    internal RoundCounted ScaledRotationalStiffness(double stiffness) =>
-        ScaleRotationalStiffness(stiffness, EL, EEI);
-
     internal static RoundCounted ScaleTranslationalStiffness(double stiffness, int lengthExponent, int stiffnessExponent) =>
-        ScaleStiffness(stiffness, () => checked(3 * lengthExponent - stiffnessExponent));
+        ScaleStiffness(stiffness, 3, lengthExponent, stiffnessExponent);
 
+    /// <summary>The rotational spring stiffness k_θ in the units of the normalized state, k_θ·2^(e_L − e_EI).</summary>
     internal static RoundCounted ScaleRotationalStiffness(double stiffness, int lengthExponent, int stiffnessExponent) =>
-        ScaleStiffness(stiffness, () => checked(lengthExponent - stiffnessExponent));
+        ScaleStiffness(stiffness, 1, lengthExponent, stiffnessExponent);
 
-    private static RoundCounted ScaleStiffness(double stiffness, Func<int> exponent)
+    private static RoundCounted ScaleStiffness(double stiffness, int lengthPower, int lengthExponent,
+        int stiffnessExponent)
     {
         int shift;
         try
         {
-            shift = exponent();
+            shift = checked(lengthPower * lengthExponent - stiffnessExponent);
         }
         catch (OverflowException)
         {

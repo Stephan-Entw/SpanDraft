@@ -183,6 +183,14 @@ internal readonly record struct MechanicalStation(double Position, RestrainedDir
 
     /// <summary>True when a rotational restraint, rigid or elastic, acts at the station.</summary>
     internal bool ConstrainsTheta => RigidTheta || ElasticTheta;
+
+    /// <summary>True when a restraint, rigid or elastic, acts in the direction (the axial one is always rigid).</summary>
+    internal bool Constrains(RestrainedDirections direction) => direction switch
+    {
+        RestrainedDirections.W => ConstrainsW,
+        RestrainedDirections.Theta => ConstrainsTheta,
+        _ => Directions.HasFlag(direction)
+    };
 }
 
 internal sealed class InvalidMechanicalModelException(string message) : ArgumentException(message);

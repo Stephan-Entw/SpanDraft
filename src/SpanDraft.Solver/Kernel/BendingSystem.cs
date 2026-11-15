@@ -77,10 +77,12 @@ internal static class BendingSystemBuilder
                 Put(4 * i + q, new(1));
                 // The transverse spring law enters the shear jump: V+ - V- + k w+ = P.
                 if (q == 3 && stations[i].ElasticW)
-                    Put(4 * i, preparation.ScaledTranslationalStiffness(stations[i].Springs.Translational));
+                    Put(4 * i, BendingPreparation.ScaleTranslationalStiffness(stations[i].Springs.Translational,
+                        preparation.EL, preparation.EEI));
                 // The rotational spring law enters the moment jump: M+ - M- - k_theta theta+ = -C.
                 if (q == 2 && stations[i].ElasticTheta)
-                    Put(4 * i + 1, -preparation.ScaledRotationalStiffness(stations[i].Springs.Rotational));
+                    Put(4 * i + 1, -BendingPreparation.ScaleRotationalStiffness(stations[i].Springs.Rotational,
+                        preparation.EL, preparation.EEI));
                 if (i > 0)
                 {
                     int previous = 4 * (i - 1);
