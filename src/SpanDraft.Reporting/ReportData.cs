@@ -28,7 +28,8 @@ internal sealed record ReportTableFragment(int Table, SKRect Bounds, float Headi
     IReadOnlyList<ReportRowSlice> Rows);
 internal enum ReportBlockKind { Summary, Segment, Notes }
 /// <summary>A block of the page flow below the tables; it always lies completely on one page.</summary>
-internal sealed record ReportBlock(ReportBlockKind Kind, int Index, float Top, float Height);
+/// <param name="Embedded">The notes sit in the free room beside the sketch of the last segment block instead of below it.</param>
+internal sealed record ReportBlock(ReportBlockKind Kind, int Index, float Top, float Height, bool Embedded = false);
 /// <param name="UpperBottom">Where the upper two-column region ends; the diagrams of the first graphic page fill down to it.</param>
 internal sealed record ReportPage(float BodyTop, bool HasGraphics, float UpperBottom,
     IReadOnlyList<ReportTableFragment> Tables, IReadOnlyList<(string Label, string Value)> Metadata,

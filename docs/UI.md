@@ -163,7 +163,10 @@ Belastung, maßgebende Kennwerte, Abschnittsdetails, Berechnungsmodell; die Blö
 fließen nach den Tabellen und wandern nur als Ganzes auf die nächste Seite. Die
 Diagramme beginnen mit ihrer kompakten Höhe und teilen nur den Platz, den die rechte
 Spalte darüber hinaus braucht; sie werden nicht erst groß gezeichnet und dann
-verkleinert, damit Folgeinhalte auf Seite 1 passen.
+verkleinert, damit Folgeinhalte auf Seite 1 passen. Überläuft nur das Berechnungsmodell,
+steht es im freien Raum neben der Skizze des letzten Abschnitts, wenn es dort vollständig
+passt und der Bericht dadurch einseitig bleibt; braucht der Bericht ohnehin mehrere
+Seiten, bleibt es ein eigener Block über die volle Breite.
 
 ## Savepoint und Recovery
 

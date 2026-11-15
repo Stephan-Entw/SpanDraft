@@ -135,7 +135,16 @@ public abstract class ProjectReportTestSupport : IDisposable
         {
             foreach (var block in page.Blocks)
                 Assert.True(block.Top + block.Height <= ReportDocument.FooterTop - 14 + .01f);
-            Assert.All(page.Blocks.Zip(page.Blocks.Skip(1)), pair => Assert.True(pair.First.Top + pair.First.Height < pair.Second.Top));
+            // Embedded notes stand beside the sketch inside the last segment block; every other block follows the one before.
+            Assert.All(page.Blocks.Zip(page.Blocks.Skip(1)).Where(pair => !pair.Second.Embedded),
+                pair => Assert.True(pair.First.Top + pair.First.Height < pair.Second.Top));
+            foreach (var embedded in page.Blocks.Where(b => b.Embedded))
+            {
+                var host = page.Blocks.Last(b => b.Kind == ReportBlockKind.Segment);
+                Assert.True(embedded.Top >= host.Top && embedded.Top + embedded.Height <= host.Top + host.Height + .01f);
+                Assert.Equal(ReportBlockKind.Notes, embedded.Kind);
+                Assert.Equal(report.Pages.Count - 1, report.Pages.ToList().IndexOf(page));
+            }
             foreach (var fragment in page.Tables.Where(_ => page.Blocks.Count > 0))
                 Assert.True(fragment.Bounds.Bottom < page.Blocks[0].Top);
         }

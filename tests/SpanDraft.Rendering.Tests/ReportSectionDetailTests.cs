@@ -224,4 +224,77 @@ public sealed class ReportSectionDetailTests : ProjectReportTestSupport
         // The row has its own band: the beam drawing is taller than that of one segment by the row's height.
         Assert.True(visuals.Graphics.BeamHeight > oneVisuals.Graphics.BeamHeight);
     }
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void ASimpleOneSegmentReportStaysOnOnePageByPlacingTheNotesBesideTheSketch(string culture)
+    {
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+        var (main, _) = Open(ReportTestProjects.Create());
+        using var report = ProjectReport.Capture(main.Editor!, Now);
+
+        var page = Assert.Single(report.Pages);
+        AssertBlockFlow(report);
+        var notes = Assert.Single(page.Blocks, b => b.Kind == ReportBlockKind.Notes);
+        var segment = Assert.Single(page.Blocks, b => b.Kind == ReportBlockKind.Segment);
+        Assert.True(notes.Embedded);
+        using var bitmap = report.RenderPage(0, 96);
+        AssertTextContained(report);
+        AssertInformationBlocksSeparated(report, 0);
+
+        // The notes stand right of the sketch and below the values, with their own heading, complete and not shortened.
+        var (sketch, _, material) = report.DetailColumns(segment);
+        var heading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Notes);
+        Assert.True(heading.Bounds.Left > sketch.Right);
+        var lines = report.TextRuns.Where(r => r.Bounds.Top > heading.Bounds.Bottom && r.Bounds.Top < ReportDocument.FooterTop).ToArray();
+        Assert.Equal(string.Concat(report.Data.Labels.Assumptions).Replace(" ", ""), string.Concat(lines.Select(r => r.Text.Replace(" ", ""))));
+        Assert.All(lines, r => { Assert.True(r.Bounds.Left >= heading.Bounds.Left - .01f); Assert.True(r.Bounds.Right <= material.Right + .01f); });
+        // Nothing of the section or material values lies at or below the notes heading.
+        var values = report.TextRuns.Where(r => r.Bounds.Left >= heading.Bounds.Left - .01f && r.Bounds.Top > segment.Top && r.Bounds.Bottom < heading.Bounds.Top).ToArray();
+        Assert.NotEmpty(values);
+        Assert.True(values.Max(r => r.Bounds.Bottom) < heading.Bounds.Top);
+        Assert.True(lines.Max(r => r.Bounds.Bottom) <= segment.Top + segment.Height);
+        Export(report, "einseitig-" + culture);
+    }
+
+    [Fact]
+    public void ReportsThatNeedSeveralPagesKeepTheNotesAsAFullWidthBlockOfTheirOwn()
+    {
+        // Two segments: the details alone fill more than a page, so the notes are the last block over the full width.
+        using var two = Capture(Document(2), out _, out _);
+        Assert.DoesNotContain(two.Pages.SelectMany(p => p.Blocks), b => b.Embedded);
+        Assert.True(two.Pages.Count > 1);
+        // A long name makes the value columns taller than the sketch: no free room, so the notes keep their own block.
+        using var longNames = Capture(Document(1, longNames: true), out _, out _);
+        Assert.DoesNotContain(longNames.Pages.SelectMany(p => p.Blocks), b => b.Embedded);
+        foreach (var report in new[] { two, longNames })
+        {
+            AssertBlockFlow(report);
+            var notes = report.Pages.SelectMany((p, i) => p.Blocks.Select(b => (Page: i, Block: b))).Single(b => b.Block.Kind == ReportBlockKind.Notes);
+            using var bitmap = report.RenderPage(notes.Page, 96);
+            var heading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Notes);
+            Assert.Equal(ReportDocument.Margin, heading.Bounds.Left, 3);
+        }
+    }
+
+    [Fact]
+    public void NotesThatDoNotFitBesideTheSketchMoveToThePageAfterTheSegmentInsteadOfOverlapping()
+    {
+        var source = SyntheticReportData.Create();
+        Func<ReportData, float, ReportDocument> build = (data, beam) => new(data, new(beam, 60, (_, _, _, _) => { }));
+        using var roomy = build(source with { Tables = [] }, 60);
+        var host = Assert.Single(roomy.Pages[0].Blocks, b => b.Kind == ReportBlockKind.Segment);
+        // A beam drawing that leaves less room below the segment block than the notes need: only the notes overflow.
+        float beam = 60 + ReportDocument.FooterTop - 14 - (host.Top + host.Height) - 20;
+        using var fits = build(source with { Tables = [] }, beam);
+        // The notes still fit beside the sketch: a one-page report with the notes embedded.
+        Assert.Single(fits.Pages);
+        Assert.Contains(fits.Pages[0].Blocks, b => b.Embedded);
+        string longNote = string.Join(" ", Enumerable.Repeat("An additional calculation assumption that is long.", 12));
+        using var tooLong = build(source with { Tables = [], Labels = source.Labels with { Assumptions = [source.Labels.Assumptions[0], longNote] } }, beam);
+        AssertBlockFlow(tooLong);
+        Assert.DoesNotContain(tooLong.Pages.SelectMany(p => p.Blocks), b => b.Embedded);
+        using var bitmap = tooLong.RenderPage(tooLong.Pages.Count - 1, 96);
+        AssertTextContained(tooLong);
+    }
 }

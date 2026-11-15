@@ -21,7 +21,7 @@ internal sealed class ReportDocument : IDisposable
     private readonly ReportTechnicalGraphics graphics;
     private readonly List<IDisposable> ownedGraphics = [];
     private readonly SegmentDetail[] details;
-    private readonly float summaryHeight, notesHeight;
+    private readonly float summaryHeight, notesHeight, embeddedNotesHeight;
     private readonly List<(string Text, SKRect Bounds)> textRuns = [];
     private readonly (IReadOnlyList<HeaderLine> Lines, float BodyTop) projectHeader;
     internal ReportData Data { get; }
@@ -29,7 +29,10 @@ internal sealed class ReportDocument : IDisposable
     internal IReadOnlyList<(string Text, SKRect Bounds)> TextRuns => textRuns;
 
     private sealed record SegmentDetail(string[] SectionLines, TechnicalText[] SectionProperties,
-        string[] MaterialLines, TechnicalText[] MaterialProperties, float Height);
+        string[] MaterialLines, TechnicalText[] MaterialProperties, float Content, float Height);
+
+    // The room beside a sketch that can hold the notes of a one-page report: the columns of the detail block after the sketch.
+    private const float EmbeddedNotesWidth = DetailMiddleWidth + DetailGap + DetailRightWidth, EmbeddedNotesGap = 8;
 
     internal ReportDocument(ReportData data, ReportTechnicalGraphics graphics)
     {
@@ -49,6 +52,7 @@ internal sealed class ReportDocument : IDisposable
         projectHeader = CreateProjectHeader();
         summaryHeight = 19 + SummaryRows().Sum(row => row.Max(cell => cell.Label.Length * LineHeight + 4));
         notesHeight = 20 + Data.Labels.Assumptions.Sum(n => Wrap(n, PageWidth - 2 * Margin, 8).Length * LineHeight);
+        embeddedNotesHeight = 20 + Data.Labels.Assumptions.Sum(n => Wrap(n, EmbeddedNotesWidth, 8).Length * LineHeight);
         Pages = Compose();
     }
 
@@ -61,8 +65,9 @@ internal sealed class ReportDocument : IDisposable
         var materialValues = PropertyLines(segment.MaterialProperties, DetailRightWidth);
         float middle = LineHeight + section.Length * LineHeight + 2 + sectionValues.Length * LineHeight;
         float right = LineHeight + material.Length * LineHeight + 2 + materialValues.Length * LineHeight;
-        return new(section, sectionValues, material, materialValues,
-            HeadingHeight + Math.Max(SketchHeight, Math.Max(middle, right)) + 2);
+        float content = Math.Max(middle, right);
+        return new(section, sectionValues, material, materialValues, content,
+            HeadingHeight + Math.Max(SketchHeight, content) + 2);
     }
 
     /// <summary>Protects quantity/unit spaces and complete radius clauses from line breaks.</summary>
@@ -173,8 +178,27 @@ internal sealed class ReportDocument : IDisposable
             current.Blocks.Add(new(kind, index, y, height));
             y += height + BlockGap;
         }
+        EmbedNotesIfItKeepsTheReportOnOnePage(pages);
         return pages.Select(p => new ReportPage(p.BodyTop, p.HasGraphics, p.UpperBottom, p.Tables.ToArray(), p.Metadata,
             p.Blocks.ToArray())).ToArray();
+    }
+
+    /// <summary>
+    /// A report whose only overflow is the notes block stays on one page when the notes fit completely in the free room
+    /// beside the sketch of the last segment, below its values. A report that needs several pages anyway keeps the notes
+    /// as a block of their own over the full width, so this is no second layout mode but one fit rule.
+    /// </summary>
+    private void EmbedNotesIfItKeepsTheReportOnOnePage(List<PageBuilder> pages)
+    {
+        if (pages.Count != 2 || pages[1].HasGraphics || pages[1].Tables.Count > 0 || details.Length == 0) return;
+        if (pages[1].Blocks.Count != 1 || pages[1].Blocks[0].Kind != ReportBlockKind.Notes) return;
+        var last = pages[0].Blocks.LastOrDefault();
+        if (last is not { Kind: ReportBlockKind.Segment } segment) return;
+        // The block keeps its height: the notes use only room that is free beside the sketch anyway.
+        if (details[segment.Index].Content + EmbeddedNotesGap + embeddedNotesHeight > SketchHeight) return;
+        float top = segment.Top + HeadingHeight + details[segment.Index].Content + EmbeddedNotesGap;
+        pages[0].Blocks.Add(new(ReportBlockKind.Notes, 0, top, embeddedNotesHeight, Embedded: true));
+        pages.RemoveAt(1);
     }
 
     private float ContinuationTop => Margin + 42 + Math.Min(2, Wrap(Data.Title, PageWidth - 2 * Margin, 8.5f).Length) * LineHeight;
@@ -406,7 +430,7 @@ internal sealed class ReportDocument : IDisposable
             {
                 case ReportBlockKind.Summary: DrawSummary(canvas, block.Top); break;
                 case ReportBlockKind.Segment: DrawSegment(canvas, block); break;
-                default: DrawNotes(canvas, block.Top); break;
+                default: DrawNotes(canvas, block); break;
             }
         Line(canvas, Margin, FooterTop, PageWidth - Margin, FooterTop, Rule, .6f);
         using var footer = new ReportTextLayout("SpanDraft " + Data.Version + Data.Date
@@ -581,15 +605,17 @@ internal sealed class ReportDocument : IDisposable
         }
     }
 
-    private void DrawNotes(SKCanvas canvas, float top)
+    private void DrawNotes(SKCanvas canvas, ReportBlock block)
     {
-        float width = PageWidth - 2 * Margin;
-        Heading(canvas, Data.Labels.Notes, Margin, top, width);
-        float y = top + 20;
+        // Embedded notes stand in the columns beside the sketch of the last segment.
+        float x = block.Embedded ? Margin + SketchWidth + DetailGap : Margin;
+        float width = block.Embedded ? EmbeddedNotesWidth : PageWidth - 2 * Margin;
+        Heading(canvas, Data.Labels.Notes, x, block.Top, width);
+        float y = block.Top + 20;
         foreach (string assumption in Data.Labels.Assumptions)
         {
             var lines = Wrap(assumption, width, 8);
-            Lines(canvas, lines, Margin, y, 8);
+            Lines(canvas, lines, x, y, 8);
             y += lines.Length * LineHeight;
         }
     }
