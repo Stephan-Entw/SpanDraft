@@ -1090,3 +1090,22 @@ c22a5e106b68b71d71cabd3078de4230d09b67a587220d72df43526b688df33c
 
 Dieser Hash ist die neue CI-Baseline in [ci.yml](../.github/workflows/ci.yml). Die Reports der
 Mehrsegment-, Federlager-, Linearlast- und M4-Abnahme bleiben als historische Evidenz unverändert.
+
+**Abnahme nach den Review-Korrekturen.** Vier Refactorings und Korrekturen an Core und Solver aus
+dem automatisierten Review (gemeinsame Lastinterpolation, einmalige Extremwertkandidaten je Stück,
+eine Extremwertmenge je Segment, vorberechnete Gelenk-Konfliktpositionen) änderten den Quell-Hash.
+Ein frischer `compare` ohne `--actual` erzeugte den Report
+[`acceptance-review-fixes.json`](../validation/results/acceptance-review-fixes.json)
+(2026-11-15T15:30:56Z, macOS ARM64, `entryPoint` `EulerBernoulliBeamSolver`): 40 Fälle,
+5088 externe und 3137 analytische Skalarvergleiche, 228 metamorphe Prüfungen,
+`validated = true`. Die Product-Suite (6005 Tests, einer übersprungen) und die separate
+Validierungs-Suite (469 Tests) bestanden vollständig. Die Abnahme auf Windows steht für die CI aus.
+
+**SolverSourceSha256:**
+
+```text
+a3d403dee40da845700c885a9f189bba8c1b1a27255058752d05941d90bb158b
+```
+
+Dieser Hash ist die neue CI-Baseline in [ci.yml](../.github/workflows/ci.yml). Die Reports der
+Gelenk-, Mehrsegment-, Federlager-, Linearlast- und M4-Abnahme bleiben als historische Evidenz unverändert.

@@ -78,7 +78,8 @@ The acceptance after the linear distributed loads is recorded in
 [acceptance-linear-loads.json](results/acceptance-linear-loads.json); the acceptance after the spring supports in
 [acceptance-spring-supports.json](results/acceptance-spring-supports.json); the acceptance after the multi-segment beams in
 [acceptance-multi-segment.json](results/acceptance-multi-segment.json); the acceptance after the internal hinges in
-[acceptance-moment-releases.json](results/acceptance-moment-releases.json), which carries the current CI baseline hash.
+[acceptance-moment-releases.json](results/acceptance-moment-releases.json); the acceptance after the review fixes in
+[acceptance-review-fixes.json](results/acceptance-review-fixes.json), which carries the current CI baseline hash.
 Neither dated report is overwritten by routine runs or used as the CI baseline.
 CI pins its expected hash separately in `.github/workflows/ci.yml` and compares
 it with `Acceptance.SolverHash()` from a fresh acceptance run. At M4 closure the
