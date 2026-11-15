@@ -16,6 +16,13 @@ public sealed record EditorDistributedLoad(Guid Id, Length StartPosition, Length
     }
 
     public string Name { get => _name; init => _name = EntityNaming.Normalize(value); }
+
+    /// <summary>What <see cref="StartPosition"/> is measured from; null means a fixed distance from the beam start.</summary>
+    public PositionRef? StartReference { get; init; }
+    /// <summary>What <see cref="EndPosition"/> is measured from; null means a fixed distance from the beam start.</summary>
+    public PositionRef? EndReference { get; init; }
+    public PositionRef EffectiveStartReference => StartReference ?? new PositionRef.FromBeamStart(StartPosition);
+    public PositionRef EffectiveEndReference => EndReference ?? new PositionRef.FromBeamStart(EndPosition);
     public bool IsConstant => StartIntensity == EndIntensity;
     public DistributedLoad ToCore() => new(StartPosition, EndPosition, StartIntensity, EndIntensity);
 }

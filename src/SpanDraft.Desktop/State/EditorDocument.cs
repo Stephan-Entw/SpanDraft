@@ -4,6 +4,7 @@ using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
+using SpanDraft.Core.Validation;
 using System.Globalization;
 using SpanDraft.Desktop.Resources;
 
@@ -55,10 +56,11 @@ public sealed record EditorDocument
         ArgumentNullException.ThrowIfNull(segments);
         _segments = NormalizeSegments(segments);
         (_boundaries, _length) = Accumulate(_segments);
-        Supports = Array.AsReadOnly((supports ?? []).ToArray());
-        Loads = Array.AsReadOnly((loads ?? []).ToArray());
-        DistributedLoads = Array.AsReadOnly((distributedLoads ?? []).ToArray());
-        MomentReleases = Array.AsReadOnly((momentReleases ?? []).ToArray());
+        _supports = Array.AsReadOnly((supports ?? []).ToArray());
+        _loads = Array.AsReadOnly((loads ?? []).ToArray());
+        _distributedLoads = Array.AsReadOnly((distributedLoads ?? []).ToArray());
+        _momentReleases = Array.AsReadOnly((momentReleases ?? []).ToArray());
+        SettlePositions();
         NamingState = namingState ?? new();
         SelfWeight = selfWeight;
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -157,6 +159,7 @@ public sealed record EditorDocument
             segments[^1] = segments[^1] with { Length = Length.FromMeters(value.Meters - before) };
             _segments = segments;
             _length = value;
+            SettlePositions();
         }
     }
 
@@ -173,6 +176,76 @@ public sealed record EditorDocument
 
     /// <summary>The order of the segment with this identity, or -1.</summary>
     public int IndexOfSegment(Guid id) => Array.FindIndex(_segments, segment => segment.Id == id);
+
+    /// <summary>
+    /// The global x of a position: the distance itself from the beam start, the segment start plus the distance, or
+    /// the segment end. Throws <see cref="ArgumentException"/> when the segment is missing or the distance exceeds it.
+    /// </summary>
+    public Length ResolvePosition(PositionRef reference) =>
+        TryResolve(reference, out var position, out var conflict) ? position
+            : throw new ArgumentException(conflict == GeometryConflictKind.SegmentMissing
+                ? "The position refers to a segment that is not in the beam."
+                : "The distance from the segment start exceeds the segment.", nameof(reference));
+
+    /// <summary>Resolves a position against this chain of segments; false names the conflict.</summary>
+    public bool TryResolve(PositionRef reference, out Length position, out GeometryConflictKind conflict)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+        conflict = default;
+        position = default;
+        switch (reference)
+        {
+            case PositionRef.FromBeamStart beam:
+                position = beam.Distance;
+                return true;
+            case PositionRef.FromSegmentStart from:
+            {
+                int index = IndexOfSegment(from.Segment);
+                if (index < 0) { conflict = GeometryConflictKind.SegmentMissing; return false; }
+                var (start, _) = SegmentRange(index);
+                if (from.Offset.Meters > _segments[index].Length.Meters) { conflict = GeometryConflictKind.BeyondSegment; return false; }
+                position = Length.FromMeters(start.Meters + from.Offset.Meters);
+                return true;
+            }
+            case PositionRef.AtSegmentEnd end:
+            {
+                int index = IndexOfSegment(end.Segment);
+                if (index < 0) { conflict = GeometryConflictKind.SegmentMissing; return false; }
+                position = SegmentRange(index).End;
+                return true;
+            }
+            default:
+                throw new ArgumentOutOfRangeException(nameof(reference));
+        }
+    }
+
+    // Brings every cached global position in line with its reference. A fixed distance from the beam start is its
+    // own truth and is never touched; a segment reference that cannot be resolved is a programming error here, the
+    // checked operations below report it as a conflict before a document is built.
+    private void SettlePositions()
+    {
+        Length Settle(Length current, PositionRef? reference) => reference switch
+        {
+            null => current,
+            PositionRef.FromBeamStart beam => beam.Distance,
+            _ => ResolvePosition(reference)
+        };
+        _supports = Array.AsReadOnly(_supports.Select(s => s.Reference is null ? s
+            : s with { Position = Settle(s.Position, s.Reference), Reference = Canonical(s.Reference) }).ToArray());
+        _loads = Array.AsReadOnly(_loads.Select(l => l.Reference is null ? l
+            : l with { Position = Settle(l.Position, l.Reference), Reference = Canonical(l.Reference) }).ToArray());
+        _momentReleases = Array.AsReadOnly(_momentReleases.Select(r => r.Reference is null ? r
+            : r with { Position = Settle(r.Position, r.Reference), Reference = Canonical(r.Reference) }).ToArray());
+        _distributedLoads = Array.AsReadOnly(_distributedLoads.Select(l => l.StartReference is null && l.EndReference is null ? l
+            : l with
+            {
+                StartPosition = Settle(l.StartPosition, l.StartReference), StartReference = Canonical(l.StartReference),
+                EndPosition = Settle(l.EndPosition, l.EndReference), EndReference = Canonical(l.EndReference)
+            }).ToArray());
+    }
+
+    // A fixed distance from the beam start is stored as no reference, so equal positions are equal records.
+    private static PositionRef? Canonical(PositionRef? reference) => reference is PositionRef.FromBeamStart ? null : reference;
 
     /// <summary>The index of the segment that contains x; a boundary belongs to the segment that starts there.</summary>
     public int SegmentIndexAt(Length position)
@@ -197,12 +270,18 @@ public sealed record EditorDocument
         get => Only.SectionDisplayName;
         init => _segments = [Only.WithSection(Only.Section, Only.BendingAxis, value)];
     }
-    public IReadOnlyList<EditorSupport> Supports { get; }
-    public IReadOnlyList<EditorPointLoad> Loads { get; }
-    public IReadOnlyList<EditorDistributedLoad> DistributedLoads { get; }
+    private IReadOnlyList<EditorSupport> _supports = [];
+    private IReadOnlyList<EditorPointLoad> _loads = [];
+    private IReadOnlyList<EditorDistributedLoad> _distributedLoads = [];
+    private IReadOnlyList<EditorMomentRelease> _momentReleases = [];
+
+    /// <summary>The supports; every position is the resolved global x, see <see cref="EditorSupport.Reference"/>.</summary>
+    public IReadOnlyList<EditorSupport> Supports => _supports;
+    public IReadOnlyList<EditorPointLoad> Loads => _loads;
+    public IReadOnlyList<EditorDistributedLoad> DistributedLoads => _distributedLoads;
 
     /// <summary>The internal moment releases (hinges), in creation order; empty for a beam without any.</summary>
-    public IReadOnlyList<EditorMomentRelease> MomentReleases { get; }
+    public IReadOnlyList<EditorMomentRelease> MomentReleases => _momentReleases;
     public NamingState NamingState { get; }
     public EditorSelfWeight? SelfWeight { get; init; }
     public IEnumerable<Guid> EntityIds => NamedEntities.Select(e => e.Id)
@@ -311,6 +390,113 @@ public sealed record EditorDocument
         return WithSegments(boundaries, _segments);
     }
 
+    // ---- Checked changes of the segment chain ----
+    // Each returns the changed document or a rejection. The beam really gains or loses geometry: positions that
+    // refer to a later segment move with it, a fixed distance from the beam start stays where it is. Nothing is ever
+    // corrected, limited, re-attached or deleted to make a change valid.
+
+    /// <summary>Replaces the whole chain, with the identities, order and lengths of <paramref name="segments"/>.</summary>
+    public GeometryChange WithSegmentChain(IEnumerable<EditorSegment> segments)
+    {
+        var chain = NormalizeSegments(segments);
+        var probe = new EditorDocument(chain);
+        var conflicts = new List<GeometryConflict>();
+        void Check(Guid id, string name, PositionRef? reference, DistributedLoadEndpoint? role = null)
+        {
+            if (reference is null or PositionRef.FromBeamStart) return;
+            if (!probe.TryResolve(reference, out _, out var kind)) conflicts.Add(new(id, name, kind, role));
+        }
+        foreach (var s in Supports) Check(s.Id, s.Name, s.Reference);
+        foreach (var l in Loads) Check(l.Id, l.Name, l.Reference);
+        foreach (var l in DistributedLoads)
+        {
+            Check(l.Id, l.Name, l.StartReference, DistributedLoadEndpoint.Start);
+            Check(l.Id, l.Name, l.EndReference, DistributedLoadEndpoint.End);
+        }
+        foreach (var r in MomentReleases) Check(r.Id, r.Name, r.Reference);
+        if (conflicts.Count > 0) return GeometryChange.Blocked(conflicts);
+
+        var changed = new EditorDocument(chain, Supports, Loads, NamingState, DistributedLoads, SelfWeight, MomentReleases);
+        var broken = changed.PositionRuleConflicts();
+        return broken.Count > 0 ? GeometryChange.Blocked(broken) : GeometryChange.Accepted(changed);
+    }
+
+    /// <summary>Inserts a new segment so that it gets this place in the chain; 0 is in front of the first segment.</summary>
+    public GeometryChange InsertSegment(int index, EditorSegment segment)
+    {
+        ArgumentNullException.ThrowIfNull(segment);
+        if ((uint)index > (uint)_segments.Length) throw new ArgumentOutOfRangeException(nameof(index));
+        if (!(segment.Length.Meters > 0)) throw new ArgumentException("A new segment needs a length.", nameof(segment));
+        var chain = _segments.ToList();
+        chain.Insert(index, segment.Id == Guid.Empty ? segment with { Id = Guid.NewGuid() } : segment);
+        return WithSegmentChain(chain);
+    }
+
+    /// <summary>Appends a new segment behind the last one.</summary>
+    public GeometryChange AddSegment(EditorSegment segment) => InsertSegment(_segments.Length, segment);
+
+    /// <summary>Inserts the copy of a segment, with a new identity, directly after the original.</summary>
+    public GeometryChange DuplicateSegment(Guid id)
+    {
+        int index = IndexOfSegment(id);
+        return index < 0 ? GeometryChange.Rejected(GeometryRejection.UnknownSegment)
+            : InsertSegment(index + 1, _segments[index] with { Id = Guid.NewGuid() });
+    }
+
+    /// <summary>Removes a segment; the last remaining segment cannot be removed.</summary>
+    public GeometryChange RemoveSegment(Guid id)
+    {
+        int index = IndexOfSegment(id);
+        if (index < 0) return GeometryChange.Rejected(GeometryRejection.UnknownSegment);
+        if (_segments.Length == 1) return GeometryChange.Rejected(GeometryRejection.LastSegment);
+        return WithSegmentChain(_segments.Where((_, i) => i != index));
+    }
+
+    /// <summary>Gives a segment another length; everything behind it moves by the difference.</summary>
+    public GeometryChange ResizeSegment(Guid id, Length length)
+    {
+        int index = IndexOfSegment(id);
+        if (index < 0) return GeometryChange.Rejected(GeometryRejection.UnknownSegment);
+        if (!(length.Meters > 0)) throw new ArgumentException("A segment needs a length.", nameof(length));
+        var chain = _segments.ToArray();
+        chain[index] = chain[index] with { Length = length };
+        return WithSegmentChain(chain);
+    }
+
+    /// <summary>
+    /// The elements whose resolved positions break a position rule: outside the beam, a line load that no longer
+    /// has a positive extent, and the exact coincidence rules of the Core validator. The self-weight is not a
+    /// position and is left out; a beam without supports is not an error here.
+    /// </summary>
+    private IReadOnlyList<GeometryConflict> PositionRuleConflicts()
+    {
+        var conflicts = new List<GeometryConflict>();
+        foreach (var l in DistributedLoads)
+            if (!(l.StartPosition.Meters < l.EndPosition.Meters))
+                conflicts.Add(new(l.Id, l.Name, GeometryConflictKind.RuleViolation, DistributedLoadEndpoint.End));
+        if (conflicts.Count > 0) return conflicts;
+
+        var pointLoads = Loads.Count;
+        foreach (var error in BeamModelValidator.Validate(ToBeamModel(includeSelfWeight: false)))
+        {
+            if (error.Code == ValidationErrorCode.MissingSupports) continue;
+            var match = System.Text.RegularExpressions.Regex.Match(error.Path ?? "", @"^(Supports|Loads|MomentReleases)\[(\d+)\]");
+            if (!match.Success) continue;
+            int i = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+            (Guid Id, string Name)? entity = match.Groups[1].Value switch
+            {
+                "Supports" => (Supports[i].Id, Supports[i].Name),
+                "MomentReleases" => (MomentReleases[i].Id, MomentReleases[i].Name),
+                _ when i < pointLoads => (Loads[i].Id, Loads[i].Name),
+                _ when i - pointLoads < DistributedLoads.Count => (DistributedLoads[i - pointLoads].Id, DistributedLoads[i - pointLoads].Name),
+                _ => null
+            };
+            if (entity is { } e && !conflicts.Any(c => c.EntityId == e.Id))
+                conflicts.Add(new(e.Id, e.Name, GeometryConflictKind.RuleViolation));
+        }
+        return conflicts;
+    }
+
     private NamingState NextNamingState(NamingState? requested)
     {
         var next = requested ?? NamingState;
@@ -319,7 +505,9 @@ public sealed record EditorDocument
         return next;
     }
 
-    public BeamModel ToBeamModel() => new(Length, _segments.Select((segment, index) =>
+    public BeamModel ToBeamModel() => ToBeamModel(includeSelfWeight: true);
+
+    private BeamModel ToBeamModel(bool includeSelfWeight) => new(Length, _segments.Select((segment, index) =>
         {
             var (start, end) = SegmentRange(index);
             return new BeamSegment(start, end, segment.Material, segment.Section, segment.BendingAxis);
@@ -328,5 +516,5 @@ public sealed record EditorDocument
             ? (s.Spring ?? throw new InvalidOperationException("A spring support needs its springs.")).ToCore(s.Position)
             : new Support(s.Position, s.Type)),
         Loads.Select(l => l.ToCore()).Concat(DistributedLoads.Select(l => l.ToCore()))
-            .Concat(SelfWeightLoads), MomentReleases.Select(r => r.ToCore()));
+            .Concat(includeSelfWeight ? SelfWeightLoads : []), MomentReleases.Select(r => r.ToCore()));
 }

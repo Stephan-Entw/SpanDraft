@@ -18,6 +18,13 @@ public sealed record EditorSupport(Guid Id, Length Position, SupportType Type, s
 {
     private string _name = EntityNaming.Normalize(Name);
     public string Name { get => _name; init => _name = EntityNaming.Normalize(value); }
+
+    /// <summary>
+    /// What <see cref="Position"/> is measured from; null means a fixed distance from the beam start. For a
+    /// segment reference <see cref="Position"/> is the global x derived by the document, never a second truth.
+    /// </summary>
+    public PositionRef? Reference { get; init; }
+    public PositionRef EffectiveReference => Reference ?? new PositionRef.FromBeamStart(Position);
 }
 
 public sealed record SupportPreview(Length Position, SupportType Type, bool IsInvalid = false, SpringData? Spring = null);

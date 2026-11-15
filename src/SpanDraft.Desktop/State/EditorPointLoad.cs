@@ -8,6 +8,10 @@ public abstract record EditorPointLoad(Guid Id, Length Position, string Name)
 {
     private string _name = EntityNaming.Normalize(Name);
     public string Name { get => _name; init => _name = EntityNaming.Normalize(value); }
+
+    /// <summary>What <see cref="Position"/> is measured from; null means a fixed distance from the beam start.</summary>
+    public PositionRef? Reference { get; init; }
+    public PositionRef EffectiveReference => Reference ?? new PositionRef.FromBeamStart(Position);
     public abstract PointLoadKind Kind { get; }
     public abstract double Value { get; }
     public abstract BeamLoad ToCore();
