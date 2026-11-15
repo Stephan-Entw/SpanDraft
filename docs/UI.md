@@ -53,16 +53,33 @@ Fläche in der Zeile liegt.
 
 ## Abschnitte in der Projekteinrichtung
 
-Abschnitte werden nur beim Bearbeiten eines Projekts angelegt; ein neues Projekt beginnt mit
-einem Abschnitt, der dem bisherigen Verhalten entspricht, damit die Wiederherstellung der
-Projekteinrichtung unverändert bleibt. Werkstoff, Querschnitt und Achse der Karten gelten für
-den ausgewählten Abschnitt. Teilen kopiert alle Eigenschaften einschließlich eines
-benutzerdefinierten Querschnittsnamens in beide Hälften, weil sonst eine bewusst gesetzte
-Eigenschaft beim Teilen verloren ginge; der Name ist nie ein Merkmal der Grenze. Abschnitte
-haben keine Namen und keine IDs, damit weder Namenskonflikte mit Lasten und Lagern noch
-nichtdeterministische Kennungen aus der Migration entstehen. Grenzen lassen sich nicht im
-Balkenbild ziehen: Die Position ist eine exakte Eingabe, und die Abbildung liefert nur die
-dünnen Querstriche.
+Der Balken wird als Kette von Karten eingerichtet, eine je Abschnitt mit Länge, Querschnitt und
+Werkstoff, beim Anlegen wie beim Bearbeiten. Die Gesamtlänge ist die Summe und nur eine Anzeige. Es
+gibt kein Teilen und keine Grenzeingabe: Beide ließen offen, welche Länge sich dabei ändert und
+was mit den Lasten dahinter geschieht, während eine Karte mit eigener Länge das Ergebnis jeder
+Eingabe eindeutig macht. Ein neuer oder eingefügter Abschnitt ist leer und sperrt die Übernahme, bis
+er vollständig ist; ein Duplikat ist vorausgefüllt, weil es bewusst eine Kopie ist, einschließlich
+eines benutzerdefinierten Querschnittsnamens. Eingefügt wird vor oder nach einer Karte, weil es kein
+Umsortieren gibt: sonst wäre eine Position vor dem ersten Abschnitt nicht erreichbar. Das Menü der
+Karte wird beim Öffnen gebaut, weil ein Flyout nicht im visuellen Baum der Karte steht und seine
+Einträge den Datenkontext nicht erben. Der Begriff bleibt „Abschnitt“, wie in Übersicht und Bericht.
+
+Jede Änderung wird sofort gegen die Elemente des Projekts geprüft. Eine Ablehnung nennt die betroffenen
+Elemente und ändert nichts; der Nutzer löst sie im Editor selbst auf, denn jede stille Korrektur
+wäre eine Annahme über seine Absicht. Wo nur Positionen vom Balkenanfang betroffen sind, bleibt die
+bekannte Meldung über Lager und Lasten außerhalb des Balkens. Die Längenänderung im Editor gibt es nur
+bei einem Abschnitt, wo sie eindeutig ist; mit mehreren ist die Länge dort eine Anzeige mit Hinweis, weil
+unklar wäre, welcher Abschnitt sich ändert.
+
+In den Flyouts erscheint die Wahl des Bezugs nur bei mehreren Abschnitten, weil sie bei einem nichts
+unterscheidet; die Bindung an ein Abschnittsende bleibt dagegen auch bei einem Abschnitt sichtbar und
+nennt bei mehreren den Abschnitt („Am Ende von Abschnitt 2 halten“), denn auf einer Grenze ist die
+Position zugleich das Ende des einen und der Beginn des nächsten. Das Positionsfeld bleibt die globale
+Position und jederzeit editierbar; Bezug und Bindung sind getrennte, ausdrückliche Eingaben. Die
+Auswahlliste ersetzt ihre Einträge nur, wenn sich deren Inhalt ändert, weil ein Kombinationsfeld beim
+Ersetzen der Liste seine Auswahl verwirft und neu anbietet, was als Eingabe des Nutzers missverstanden
+würde und die Bindung zurücknähme. Grenzen lassen sich nicht im Balkenbild ziehen; die Abbildung liefert
+nur die dünnen Querstriche.
 
 ## Streckenlast-Draft
 

@@ -312,15 +312,50 @@ Ende gleich der Balkenlänge. Eine Abschnittsgrenze darf auf einem Lager, einer 
 einem Federlager oder einer Last liegen; die Koinzidenzregel der Federlager betrifft nur
 Lager, nicht Abschnittsgrenzen.
 
-`EditorDocument` hält Länge, die `n − 1` Abschnittsgrenzen (streng aufsteigend im
-Balkeninneren) und `n` `EditorSegment` (Werkstoff, Querschnitt, Achse, Anzeigename). Die
-Überdeckung gilt damit per Konstruktion, und die Länge ändert nur das Ende des letzten
-Abschnitts, nie über die letzte Grenze hinaus. Abschnitte haben keine eigene ID und keinen
-Namen, sondern ihre Reihenfolge. Teilen kopiert alle Eigenschaften in beide Hälften; eine
-Grenze zu entfernen behält den linken oder den rechten Nachbarn. Eigengewicht ist eine
+`EditorDocument` hält die geordnete Kette von `n ≥ 1` `EditorSegment` (ID, Länge, Werkstoff,
+Querschnitt, Achse, Anzeigename). Die Balkenlänge ist die Summe der Längen, die `n − 1` Grenzen
+sind die Teilsummen; die Überdeckung gilt damit per Konstruktion. Ein Abschnitt hat eine stabile
+ID, aber keinen Namen; Positionen verweisen auf die ID, nie auf die Reihenfolge. Es gibt kein
+Umsortieren und kein Tauschen von Abschnitten, und der letzte Abschnitt kann nicht gelöscht
+werden. Die Operationen sind Anhängen, Einfügen vor oder nach einem Abschnitt, Duplizieren (Kopie
+mit neuer ID direkt dahinter), Löschen und Längenänderung. Eigengewicht ist eine
 Systementität `g` mit einer konstanten Last je Abschnitt aus dessen Dichte und Fläche; es
 verlangt die Dichte in jedem Abschnitt. Die Dokument-Properties für einen Abschnitt gelten
 nur bei genau einem.
+
+### Positionsbezüge
+
+Jede Position eines Lagers, einer Punktlast, eines Gelenks und jedes Endes einer Streckenlast
+besteht aus einem Bezug und einem Abstand. Der Bezug ist Teil der Bedeutung der Eingabe und wird
+nie aus der Lage abgeleitet; ein Punkt auf einer Abschnittsgrenze behält den Bezug, den der Nutzer
+ihm gab. Es gibt drei Formen mit je einer Wahrheit: ein fester Abstand vom Balkenanfang
+(`FromBeamStart`), ein fester Abstand vom Beginn eines Abschnitts, höchstens dessen Länge
+(`FromSegmentStart`; Abstand null bleibt am Beginn), und die Bindung an das Ende eines Abschnitts
+(`AtSegmentEnd`, ohne eigenen Abstand, das Ende dieses Abschnitts und nicht das Balkenende). Die globale
+Position ist abgeleitet; `EditorDocument` löst sie an einer Stelle auf, und Core und Solver erhalten
+weiter ausschließlich globale Positionen. Der Bezug liegt deshalb in der Dokumentschicht
+(`SpanDraft.Desktop/State`), nicht in Core.
+
+Eine Änderung der Abschnittskette (Einfügen, Duplizieren, Löschen, Längenänderung) wechselt nie einen
+Bezug. Was sich auf einen späteren Abschnitt bezieht, rückt mit ihm, ein fester Abstand vom
+Balkenanfang bleibt. Sie ist nur zulässig, wenn danach alle Positionen gültig bleiben: Der
+Verweis findet seinen Abschnitt, der Abstand liegt im Abschnitt, und alle Positionsregeln des Core
+gelten auf den aufgelösten Positionen (im Balken, Gelenk streng im Inneren, keine Koinzidenzen, jede
+Streckenlast hat Länge). Andernfalls wird die Änderung abgelehnt, der Zustand bleibt unverändert, und
+die Ablehnung nennt die betroffenen Elemente. Keine Position wird dabei korrigiert, begrenzt,
+umgehängt oder gelöscht; ein Element, das sich auf den zu löschenden Abschnitt bezieht, verhindert
+das Löschen. Eine Bindung an ein Abschnittsende ist kein Konflikt, solange die Position gültig bleibt.
+
+Der Bezug ändert sich nur durch eine direkte Handlung am Element. Eine frisch gesetzte Position
+bekommt bei einem Abschnitt einen festen Abstand vom Balkenanfang, bei mehreren den Abschnitt unter dem Punkt
+(auf einer inneren Grenze den, der dort beginnt, am Balkenende den letzten). Beim Verschieben bleibt der
+Bezug, solange die Position im eigenen Abschnitt liegt, dessen Beginn und Ende eingeschlossen; erst im
+Inneren eines anderen Abschnitts folgt er diesem, und auf einer fremden Grenze bleibt er auf der
+Seite, von der die Position kam. Ein fester Abstand vom Balkenanfang bleibt beim Verschieben einer.
+Eine Position, die sich nicht bewegt, behält Bezug und Bindung. Eine Bindung an ein Abschnittsende
+setzt der Nutzer ausdrücklich, und nur dort, wo die Position genau das Ende eines Abschnitts ist; sie
+entsteht nie von selbst, auch nicht am Balkenanfang, am Balkenende oder auf einer Grenze, und eine
+verschobene gebundene Position wird zu einem festen Abstand.
 
 ## Lager und Federlager
 

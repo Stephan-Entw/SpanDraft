@@ -97,17 +97,32 @@ geschrieben). Mindestens eine Feder ist verpflichtend; `rigidTranslation` verlan
 Drehfeder ohne Wegfeder. Diese Felder sind nur bei `spring` zulässig und lassen
 Dateien ohne sie unverändert gültig. Positionen eines Federlagers dürfen nicht mit
 denen anderer Lager zusammenfallen.
-Ein Balken aus mehreren Abschnitten speichert den ersten Abschnitt in den Dokumentfeldern
-`material`, `section`, `bendingAxis` und `sectionDisplayName` und alle weiteren in der
-optionalen Liste `furtherSegments`. Jeder Eintrag hat `start` (m, streng aufsteigend und
-im Balkeninneren), `material`, `section`, `bendingAxis` und optional `sectionDisplayName` mit
-den Verträgen des Dokuments. Das Ende eines Abschnitts ist der Beginn des nächsten, das des
-letzten die Länge; Lücken und Überlappungen sind damit nicht darstellbar. Ohne `furtherSegments`
-(ein Abschnitt) wird nichts geschrieben, sodass sich bestehende Dateien beim Öffnen und
-Speichern nicht verändern. Eigengewicht bleibt ein Eintrag `selfWeight`; seine Last je
-Abschnitt wird abgeleitet und verlangt die Dichte jedes Werkstoffs.
+Ein Balken ist die geordnete Kette seiner Abschnitte. Der erste Abschnitt steht in den
+Dokumentfeldern `material`, `section`, `bendingAxis`, `sectionDisplayName`, `segmentId` (optional)
+und `length`; `length` ist die Länge dieses ersten Abschnitts, bei einem Abschnitt also die
+Balkenlänge. Alle weiteren stehen in der optionalen Liste `furtherSegments`; jeder Eintrag hat
+`length` (m, größer null), `id` (optional), `material`, `section`, `bendingAxis` und optional
+`sectionDisplayName` mit den Verträgen des Dokuments. Die Balkenlänge ist die Summe der
+Abschnittslängen und wird nicht noch einmal gespeichert; Lücken und Überlappungen sind damit nicht
+darstellbar. Eine Abschnitts-ID ist nicht leer und eindeutig; fehlt sie, vergibt der Leser eine,
+sodass nichts auf einen solchen Abschnitt verweisen kann. Entwürfe dieser Formatversion beschrieben
+jeden weiteren Abschnitt durch `start` (m, streng aufsteigend und im Balkeninneren) statt durch
+`length`; sie werden weiter gelesen, die Längen folgen aus den Beginnen und der Balkenlänge in
+`length`, und beim Schreiben entsteht die Form mit Längen. Ein Eintrag hat entweder `length` oder
+`start`, nie beides. Ohne `furtherSegments` (ein Abschnitt) wird die Liste nicht geschrieben.
+Eigengewicht bleibt ein Eintrag `selfWeight`; seine Last je Abschnitt wird abgeleitet und verlangt
+die Dichte jedes Werkstoffs.
+Jede Position eines Lagers, einer Punktlast, eines Gelenks und jedes Endes einer Streckenlast steht
+in genau einer von zwei Formen, nie in beiden: als `position` (m), ein fester Abstand vom
+Balkenanfang (so schreiben und lesen alle Versionen), oder als `positionRef` mit `segment` (ID eines
+Abschnitts) und genau einem von `offset` (m, höchstens die Länge dieses Abschnitts, vom
+Abschnittsbeginn gemessen) oder `atEnd: true` (Bindung an das Ende dieses Abschnitts, ohne eigenen
+Abstand). Bei Streckenlasten gilt das für `startPosition`/`startPositionRef` und
+`endPosition`/`endPositionRef` getrennt. Ein Verweis auf einen unbekannten Abschnitt oder ein
+Abstand über den Abschnitt hinaus macht die Datei ungültig. Die globale Position wird beim Lesen
+aus Bezug und Abschnittslängen berechnet und nicht gespeichert.
 Innere Gelenke (Momentenfreigaben) stehen in der optionalen Liste `momentReleases` des
-Dokuments. Jeder Eintrag hat `id`, `name` und `position` (m, streng im Balkeninneren). Ohne Gelenk
+Dokuments. Jeder Eintrag hat `id`, `name` und `position` (m, streng im Balkeninneren) oder `positionRef`. Ohne Gelenk
 wird die Liste nicht geschrieben, sodass sich bestehende Dateien beim Öffnen und Speichern nicht
 verändern; eine Datei ohne das Feld hat keine Gelenke. Die Core-Regeln (kein Gelenk an einem
 Balkenende, kein zweites an gleicher Position, keines an einer Einspannung, einem Drehfederlager
@@ -190,7 +205,7 @@ V3 und V4 verwenden weiterhin die Dokument-/Presentation-Struktur aus V2.
 V5 ersetzt das Streckenlastfeld `intensity` durch `startIntensity`
 und `endIntensity` und erweitert Lager additiv um den Typ `spring` mit seinen optionalen
 Feldern (V1–V4 kennen ihn nicht und lehnen ihn ab) sowie das Dokument um die optionalen Listen
-`furtherSegments` und `momentReleases` und den optionalen Naming-Zähler der Gelenke; beim Lesen von V1–V4 wird die einzelne Intensität zu beiden
+`furtherSegments` (mit Längen und IDs), `momentReleases`, die Positionsbezüge `positionRef` und den optionalen Naming-Zähler der Gelenke; beim Lesen von V1–V4 wird die einzelne Intensität zu beiden
 Enden. V5 ist eine reine Erweiterung des Dokumentformats, ältere Programmstände
 lehnen V5-Dateien als nicht unterstützt ab, auch wenn alle Lasten konstant sind.
 V1 wird beim Laden unmittelbar ins aktuelle In-Memory-Modell migriert:
