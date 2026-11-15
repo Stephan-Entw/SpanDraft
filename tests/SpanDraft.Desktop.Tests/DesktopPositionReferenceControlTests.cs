@@ -63,6 +63,17 @@ public sealed class DesktopPositionReferenceControlTests
         Assert.True(Origin(combo, flyout).Y > Origin(position, flyout).Y);
         Assert.True(Origin(combo, flyout).Y + combo.Bounds.Height <= flyout.Bounds.Height + 0.5);
         Assert.False(row.FindControl<CheckBox>("HoldEndInput")!.IsEffectivelyVisible);
+        // The point is measured from segment 2: the field shows 500 and the global position stands next to it.
+        Assert.Equal("500", position.Text);
+        Assert.True(row.FindControl<Grid>("PositionInfoRow")!.IsEffectivelyVisible);
+        Assert.Contains("1500", row.FindControl<TextBlock>("PositionInfo")!.Text);
+
+        // Choosing the beam start re-expresses the same point: the field follows and the info is not needed any more.
+        var model = Assert.IsType<PositionReferenceDraft>(row.DataContext);
+        model.SelectedOption = model.Options[0];
+        Arrange(window);
+        Assert.Equal("1500", position.Text);
+        Assert.False(row.FindControl<Grid>("PositionInfoRow")!.IsEffectivelyVisible);
         window.Close();
     }
 

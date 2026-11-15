@@ -205,7 +205,8 @@ public sealed class DesktopPositionReferenceEditingTests
         Assert.IsType<PositionRef.AtSegmentEnd>(editor.Document.Supports.Single(s => s.Id == support.Id).Reference);
 
         Assert.True(editor.EditSupport(support.Id));
-        editor.SupportDraft!.PositionText = "2500";
+        // The distance is measured from the segment the position is bound to; typing over it releases the binding.
+        editor.SupportDraft!.PositionText = "500";
         Assert.False(editor.SupportDraft.Reference.HoldEnd);
         Assert.True(editor.ConfirmSupport());
         Assert.Equal(From(document, 2, 0.5), editor.Document.Supports.Single(s => s.Id == support.Id).Reference);
@@ -256,29 +257,138 @@ public sealed class DesktopPositionReferenceEditingTests
     }
 
     [Fact]
-    public void TheReferenceIsChosenInTheFlyoutAndOnlyOffersWhatContainsThePosition()
+    public void TheFlyoutShowsTheDistanceFromTheChosenReferenceAndChoosingKeepsThePoint()
     {
         var document = Document(3);
         var editor = Editor(document);
         var support = PlaceSupport(editor, 1.5);
-        var boundary = PlaceSupport(editor, 2, SupportType.Roller);
 
         Assert.True(editor.EditSupport(support.Id));
-        var reference = editor.SupportDraft!.Reference;
+        var draft = editor.SupportDraft!;
+        var reference = draft.Reference;
         Assert.True(reference.ShowReference);
-        Assert.Equal([Strings.PositionFromBeamStart, string.Format(Strings.SegmentSelected, 2)], reference.Options.Select(o => o.Name));
+        Assert.Equal([Strings.PositionFromBeamStart, string.Format(Strings.SegmentSelected, 1), string.Format(Strings.SegmentSelected, 2),
+            string.Format(Strings.SegmentSelected, 3)], reference.Options.Select(o => o.Name));
         Assert.Equal(document.Segments[1].Id, reference.SelectedOption!.Segment);
+        // Measured from segment 2 (which starts at 1000 mm) the point is 500 mm away.
+        Assert.Equal("500", draft.PositionText);
+        // The label says what the field holds: a distance, not the position x.
+        Assert.Equal(Strings.PositionDistance, draft.PositionLabel.PlainText);
+        Assert.True(reference.ShowPositionInfo);
+        Assert.Contains("1500", reference.PositionInfo);
+
         reference.SelectedOption = reference.Options[0];
+        Assert.Equal("1500", draft.PositionText);
+        Assert.NotEqual(Strings.PositionDistance, draft.PositionLabel.PlainText);
         Assert.Equal(new PositionRef.FromBeamStart(M(1.5)), reference.Current);
+        Assert.Equal(M(1.5), reference.Position);
+        Assert.False(reference.ShowPositionInfo);
+
+        reference.SelectedOption = reference.Options[3];
+        Assert.Equal(M(0), reference.Distance);
+        Assert.Equal("0", draft.PositionText);
+        Assert.Equal(M(2), reference.Position);
+
+        reference.SelectedOption = reference.Options[2];
+        Assert.Equal(M(2), reference.Position);
+        Assert.Equal("1000", draft.PositionText);
         Assert.True(editor.ConfirmSupport());
         var changed = editor.Document.Supports.Single(s => s.Id == support.Id);
-        Assert.Null(changed.Reference);
-        Assert.Equal(M(1.5), changed.Position);
+        Assert.Equal(From(document, 1, 1), changed.Reference);
+        Assert.Equal(M(2), changed.Position);
+    }
 
-        Assert.True(editor.EditSupport(boundary.Id));
-        Assert.Equal([Strings.PositionFromBeamStart, string.Format(Strings.SegmentSelected, 2), string.Format(Strings.SegmentSelected, 3)],
-            editor.SupportDraft!.Reference.Options.Select(o => o.Name));
-        editor.CancelSupportInteraction();
+    [Fact]
+    public void ChoosingASegmentThatContainsThePointKeepsItAndTheFlyoutDistanceFollows()
+    {
+        var document = Document(3);
+        var editor = Editor(document);
+        var support = PlaceSupport(editor, 1.5);
+        Assert.True(editor.EditSupport(support.Id));
+        var draft = editor.SupportDraft!;
+
+        draft.Reference.SelectedOption = draft.Reference.Options[0];
+        Assert.Equal("1500", draft.PositionText);
+        draft.Reference.SelectedOption = draft.Reference.Options[2];
+
+        Assert.Equal("500", draft.PositionText);
+        Assert.Equal(M(1.5), draft.CanvasPosition);
+        Assert.True(draft.IsValid);
+        Assert.True(editor.ConfirmSupport());
+        Assert.Equal(M(1.5), editor.Document.Supports.Single(s => s.Id == support.Id).Position);
+    }
+
+    [Fact]
+    public void ATypedDistanceIsMeasuredFromTheReferenceAndNeverChangesIt()
+    {
+        var document = Document(3);
+        var editor = Editor(document);
+        var support = PlaceSupport(editor, 1.5);
+        Assert.True(editor.EditSupport(support.Id));
+        var draft = editor.SupportDraft!;
+
+        draft.PositionText = "750";
+        Assert.True(draft.IsValid);
+        Assert.Equal(M(1.75), draft.Reference.Position);
+        Assert.Equal(document.Segments[1].Id, draft.Reference.SelectedOption!.Segment);
+
+        // Beyond its segment a distance is an error, and the reference stays.
+        draft.PositionText = "1500";
+        Assert.False(draft.IsValid);
+        Assert.Equal(Strings.DistanceBeyondSegment, draft.ErrorText);
+        Assert.Equal(document.Segments[1].Id, draft.Reference.SelectedOption!.Segment);
+
+        draft.PositionText = "1000";
+        Assert.True(draft.IsValid);
+        Assert.Equal(M(2), draft.Reference.Position);
+        Assert.False(draft.Reference.HoldEnd);
+        Assert.True(editor.ConfirmSupport());
+        Assert.Equal(From(document, 1, 1), editor.Document.Supports.Single(s => s.Id == support.Id).Reference);
+    }
+
+    [Fact]
+    public void ADistanceFromTheBeamStartKeepsTheOldMeaningOfThePositionField()
+    {
+        var document = Document(3);
+        var editor = Editor(document);
+        var support = PlaceSupport(editor, 1.5);
+        Assert.True(editor.EditSupport(support.Id));
+        var draft = editor.SupportDraft!;
+        draft.Reference.SelectedOption = draft.Reference.Options[0];
+
+        draft.PositionText = "2750";
+
+        Assert.True(draft.IsValid);
+        Assert.Equal(M(2.75), draft.Reference.Position);
+        draft.PositionText = "3500";
+        Assert.False(draft.IsValid);
+        Assert.Equal(Strings.PositionInsideBeam, draft.ErrorText);
+        draft.PositionText = "2750";
+        Assert.True(editor.ConfirmSupport());
+        var moved = editor.Document.Supports.Single(s => s.Id == support.Id);
+        Assert.Null(moved.Reference);
+        Assert.Equal(M(2.75), moved.Position);
+    }
+
+    [Fact]
+    public void ABoundPositionShowsTheSegmentLengthAndATypedValueReleasesTheBinding()
+    {
+        var document = Document(3);
+        var editor = Editor(document);
+        var support = PlaceSupport(editor, 2, SupportType.Roller);
+        Assert.True(editor.EditSupport(support.Id));
+        var draft = editor.SupportDraft!;
+
+        draft.Reference.SelectedOption = draft.Reference.Options[2];
+        draft.Reference.HoldEnd = true;
+
+        Assert.Equal("1000", draft.PositionText);
+        Assert.True(draft.Reference.HoldEnd);
+        draft.PositionText = "800";
+        Assert.False(draft.Reference.HoldEnd);
+        Assert.Equal(M(1.8), draft.Reference.Position);
+        Assert.True(editor.ConfirmSupport());
+        Assert.Equal(From(document, 1, 0.8), editor.Document.Supports.Single(s => s.Id == support.Id).Reference);
     }
 
     [Fact]
@@ -352,7 +462,7 @@ public sealed class DesktopPositionReferenceEditingTests
         Assert.Equal(From(document, 0, 0.5), draft.StartReference.Current);
         Assert.Equal(From(document, 2, 0.5), draft.EndReference.Current);
         draft.StartReference.SelectedOption = draft.StartReference.Options[0];
-        draft.EndText = "3000";
+        draft.EndText = "1000";
         Assert.True(draft.EndReference.CanHoldEnd);
         draft.EndReference.HoldEnd = true;
         Assert.True(editor.ConfirmDistributedLoad());

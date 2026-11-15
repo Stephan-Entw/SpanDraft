@@ -74,8 +74,14 @@ unklar wäre, welcher Abschnitt sich ändert.
 In den Flyouts erscheint die Wahl des Bezugs nur bei mehreren Abschnitten, weil sie bei einem nichts
 unterscheidet; die Bindung an ein Abschnittsende bleibt dagegen auch bei einem Abschnitt sichtbar und
 nennt bei mehreren den Abschnitt („Am Ende von Abschnitt 2 halten“), denn auf einer Grenze ist die
-Position zugleich das Ende des einen und der Beginn des nächsten. Das Positionsfeld bleibt die globale
-Position und jederzeit editierbar; Bezug und Bindung sind getrennte, ausdrückliche Eingaben. Die
+Position zugleich das Ende des einen und der Beginn des nächsten. Das Positionsfeld zeigt den Abstand
+vom gewählten Bezug, die globale Position steht daneben. Ein Bezug, der nichts an dem zeigt, was der
+Nutzer sieht, wirkte wirkungslos und war in einer ersten Fassung genau das: Das Feld blieb die globale
+Koordinate, und die Wahl änderte nur, wie gespeichert wird. Ein Wechsel des Bezugs lässt den Punkt
+deshalb, wo er ist, und rechnet den Abstand um; nur ein Abschnitt, der den Punkt nicht enthält,
+setzt den Abstand auf dessen Beginn. Ein getippter Abstand gilt vom gewählten Bezug und ändert ihn nie,
+ein Abstand über den Abschnitt hinaus ist ein Fehler. Das Feld ist jederzeit editierbar; Bezug und
+Bindung sind getrennte, ausdrückliche Eingaben. Die
 Auswahlliste ersetzt ihre Einträge nur, wenn sich deren Inhalt ändert, weil ein Kombinationsfeld beim
 Ersetzen der Liste seine Auswahl verwirft und neu anbietet, was als Eingabe des Nutzers missverstanden
 würde und die Bindung zurücknähme. Grenzen lassen sich nicht im Balkenbild ziehen; die Abbildung liefert

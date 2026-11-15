@@ -28,11 +28,24 @@ public sealed class MomentReleaseDraftViewModel : ObservableObject
         var document = read();
         AutoCandidate = originalId is null ? EntityNaming.Peek(document, AutoNameKind.MomentRelease) : null;
         _nameText = AutoCandidate?.Name ?? document.MomentReleases.First(r => r.Id == originalId).Name;
-        _referencePosition = position;
-        _positionText = _referenceText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
         _preview = new(position);
         var entity = originalId is null ? null : document.MomentReleases.FirstOrDefault(r => r.Id == originalId);
-        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position);
+        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position, _positionUnit);
+        // A move that happened before the draft opened (a drag of an existing release) is applied to the reference first.
+        Reference.PositionChanged(position);
+        _referencePosition = Reference.Distance;
+        _positionText = _referenceText = InputQuantityFormatter.FormatExact(Reference.Distance.Meters, _positionUnit);
+        Reference.DistanceChanged += ShowReferenceDistance;
+        Validate();
+    }
+
+    // The distance shown follows a choice of the reference and a pointer move, never what the user is typing.
+    private void ShowReferenceDistance()
+    {
+        _referencePosition = Reference.Distance;
+        _referenceText = InputQuantityFormatter.FormatExact(Reference.Distance.Meters, _positionUnit);
+        Set(ref _positionText, _referenceText, nameof(PositionText));
+        Notify(nameof(PositionLabel));
         Validate();
     }
 
@@ -50,7 +63,9 @@ public sealed class MomentReleaseDraftViewModel : ObservableObject
     public string? NameError => _nameError;
     public bool HasNameError => _nameError is not null;
     public string PositionUnit => _positionUnit.Symbol;
-    public TechnicalText PositionLabel => Strings.Position + " " + TechnicalSymbols.Axis("x");
+    /// <summary>The label names what the field holds: the position, or the distance once it is measured from a segment.</summary>
+    public TechnicalText PositionLabel => Reference.IsSegmentBased ? (TechnicalText)Strings.PositionDistance
+        : Strings.Position + " " + TechnicalSymbols.Axis("x");
     public string PositionText
     {
         get => _positionText;
@@ -71,10 +86,8 @@ public sealed class MomentReleaseDraftViewModel : ObservableObject
 
     internal void ApplyDragPosition(Length position)
     {
-        _referencePosition = position;
-        _referenceText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
         _preview = _preview with { Position = position };
-        Set(ref _positionText, _referenceText, nameof(PositionText));
+        Reference.PositionChanged(position);
         Validate();
         Notify(nameof(CanvasPosition));
     }
@@ -90,14 +103,18 @@ public sealed class MomentReleaseDraftViewModel : ObservableObject
             NameValidationError.Reserved => Strings.ReservedEntityName,
             _ => null
         };
-        // Preserve the exact SI coordinate while the displayed text is untouched (or restored).
-        Length position;
+        // Preserve the exact SI distance while the displayed text is untouched (or restored).
+        Length distance = _referencePosition, position = default;
         bool parsed = PositionText == _referenceText
-            ? (position = _referencePosition).Meters >= 0 && position.Meters <= document.Length.Meters
-            : InputQuantityFormatter.TryParsePosition(PositionText, _positionUnit, document.Length, out position);
-        _positionError = !parsed ? Strings.MomentReleaseInsideBeam
+            ? distance.Meters <= Reference.MaxDistance.Meters : Reference.TryParseDistance(PositionText, out distance);
+        if (parsed)
+        {
+            Reference.TrySetDistance(distance);
+            position = Reference.Position;
+        }
+        _positionError = !parsed ? Reference.IsSegmentBased ? Strings.DistanceBeyondSegment : Strings.MomentReleaseInsideBeam
             : MomentReleaseRules.Message(MomentReleaseRules.Conflict(document, position, OriginalId));
-        if (parsed) { _inputPosition = position; Reference.PositionChanged(position); }
+        if (parsed) _inputPosition = position;
         // Text is a commit buffer, never a movement control: only pointer interaction moves the preview.
         _preview = _preview with { IsInvalid = !IsValid };
         foreach (string name in new[] { nameof(ErrorText), nameof(HasError), nameof(NameError), nameof(HasNameError),

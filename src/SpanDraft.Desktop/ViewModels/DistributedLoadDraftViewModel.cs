@@ -41,10 +41,6 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         OriginalId = originalId;
         AutoCandidate = originalId is null ? EntityNaming.Peek(read(), AutoNameKind.DistributedLoad) : null;
         _nameText = AutoCandidate?.Name ?? read().DistributedLoads.First(l => l.Id == originalId).Name;
-        _referenceStart = start;
-        _referenceEnd = end;
-        _startText = _referenceStartText = InputQuantityFormatter.FormatExact(start.Meters, _positionUnit);
-        _endText = _referenceEndText = InputQuantityFormatter.FormatExact(end.Meters, _positionUnit);
         _referenceStartIntensity = startIntensity;
         _referenceEndIntensity = endIntensity;
         _startIntensityText = _referenceStartIntensityText = InputQuantityFormatter.FormatExact(startIntensity, _intensityUnit);
@@ -53,8 +49,37 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         _endIntensityFollowsStart = startIntensity == endIntensity;
         _preview = new(start, end, startIntensity, endIntensity);
         var entity = originalId is null ? null : read().DistributedLoads.FirstOrDefault(l => l.Id == originalId);
-        StartReference = new(read, entity?.EffectiveStartReference, entity?.StartPosition ?? start);
-        EndReference = new(read, entity?.EffectiveEndReference, entity?.EndPosition ?? end);
+        StartReference = new(read, entity?.EffectiveStartReference, entity?.StartPosition ?? start, _positionUnit);
+        EndReference = new(read, entity?.EffectiveEndReference, entity?.EndPosition ?? end, _positionUnit);
+        // A move that happened before the draft opened (a drag of an endpoint) is applied to the references first.
+        StartReference.PositionChanged(start);
+        EndReference.PositionChanged(end);
+        _referenceStart = StartReference.Distance;
+        _referenceEnd = EndReference.Distance;
+        _startText = _referenceStartText = InputQuantityFormatter.FormatExact(_referenceStart.Meters, _positionUnit);
+        _endText = _referenceEndText = InputQuantityFormatter.FormatExact(_referenceEnd.Meters, _positionUnit);
+        StartReference.DistanceChanged += () => ShowReferenceDistance(DistributedLoadEndpoint.Start);
+        EndReference.DistanceChanged += () => ShowReferenceDistance(DistributedLoadEndpoint.End);
+        Validate();
+    }
+
+    // The distances shown follow a choice of a reference and a pointer move, never what the user is typing.
+    private void ShowReferenceDistance(DistributedLoadEndpoint endpoint)
+    {
+        if (endpoint == DistributedLoadEndpoint.Start)
+        {
+            _referenceStart = StartReference.Distance;
+            _referenceStartText = InputQuantityFormatter.FormatExact(_referenceStart.Meters, _positionUnit);
+            Set(ref _startText, _referenceStartText, nameof(StartText));
+            Notify(nameof(StartLabel));
+        }
+        else
+        {
+            _referenceEnd = EndReference.Distance;
+            _referenceEndText = InputQuantityFormatter.FormatExact(_referenceEnd.Meters, _positionUnit);
+            Set(ref _endText, _referenceEndText, nameof(EndText));
+            Notify(nameof(EndLabel));
+        }
         Validate();
     }
 
@@ -65,8 +90,11 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
 
     public Guid? OriginalId { get; }
     public string PositionUnit => _positionUnit.Symbol;
-    public TechnicalText StartLabel => Strings.DistributedStartLabel + " " + TechnicalSymbols.Axis("x");
-    public TechnicalText EndLabel => Strings.DistributedEndLabel + " " + TechnicalSymbols.Axis("x");
+    /// <summary>The labels name what the fields hold: the position, or the distance once an end is measured from a segment.</summary>
+    public TechnicalText StartLabel => StartReference.IsSegmentBased ? (TechnicalText)Strings.DistributedStartDistance
+        : Strings.DistributedStartLabel + " " + TechnicalSymbols.Axis("x");
+    public TechnicalText EndLabel => EndReference.IsSegmentBased ? (TechnicalText)Strings.DistributedEndDistance
+        : Strings.DistributedEndLabel + " " + TechnicalSymbols.Axis("x");
     public string IntensityUnit => _intensityUnit.Symbol;
     public bool IsExisting => OriginalId.HasValue;
     public AutoNameCandidate? AutoCandidate { get; }
@@ -120,17 +148,13 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
     {
         if (endpoint == DistributedLoadEndpoint.Start)
         {
-            _referenceStart = position;
-            _referenceStartText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
             _preview = _preview with { StartPosition = position };
-            Set(ref _startText, _referenceStartText, nameof(StartText));
+            StartReference.PositionChanged(position);
         }
         else
         {
-            _referenceEnd = position;
-            _referenceEndText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
             _preview = _preview with { EndPosition = position };
-            Set(ref _endText, _referenceEndText, nameof(EndText));
+            EndReference.PositionChanged(position);
         }
         Validate();
     }
@@ -146,10 +170,12 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
             NameValidationError.Reserved => Strings.ReservedEntityName,
             _ => null
         };
-        _startError = TryPosition(StartText, _referenceStartText, _referenceStart, document.Length, out var start) ? null : Strings.PositionInsideBeam;
-        _endError = TryPosition(EndText, _referenceEndText, _referenceEnd, document.Length, out var end) ? null : Strings.PositionInsideBeam;
-        if (_startError is null) { _inputStart = StartText == _referenceStartText ? _referenceStart : start; StartReference.PositionChanged(_inputStart); }
-        if (_endError is null) { _inputEnd = EndText == _referenceEndText ? _referenceEnd : end; EndReference.PositionChanged(_inputEnd); }
+        _startError = TryDistance(StartText, _referenceStartText, _referenceStart, StartReference, out var start) ? null
+            : StartReference.IsSegmentBased ? Strings.DistanceBeyondSegment : Strings.PositionInsideBeam;
+        _endError = TryDistance(EndText, _referenceEndText, _referenceEnd, EndReference, out var end) ? null
+            : EndReference.IsSegmentBased ? Strings.DistanceBeyondSegment : Strings.PositionInsideBeam;
+        if (_startError is null) { StartReference.TrySetDistance(start); _inputStart = StartReference.Position; }
+        if (_endError is null) { EndReference.TrySetDistance(end); _inputEnd = EndReference.Position; }
         if (_startError is null && _endError is null && _inputStart.Meters >= _inputEnd.Meters)
             _startError = _endError = Strings.InvalidDistributedRange;
         _startIntensityError = TryIntensity(StartIntensityText, _referenceStartIntensityText, _referenceStartIntensity, out double startIntensity)
@@ -185,13 +211,14 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         return InputQuantityFormatter.TryParse(text, _intensityUnit, out intensity);
     }
 
-    private bool TryPosition(string text, string referenceText, Length reference, Length beamLength, out Length position)
+    // Preserve the exact SI distance when the displayed text is untouched (or restored).
+    private static bool TryDistance(string text, string referenceText, Length reference, PositionReferenceDraft draft, out Length distance)
     {
         if (text == referenceText)
         {
-            position = reference;
-            return position.Meters >= 0 && position.Meters <= beamLength.Meters;
+            distance = reference;
+            return distance.Meters <= draft.MaxDistance.Meters;
         }
-        return InputQuantityFormatter.TryParsePosition(text, _positionUnit, beamLength, out position);
+        return draft.TryParseDistance(text, out distance);
     }
 }

@@ -40,13 +40,26 @@ public sealed class PointLoadDraftViewModel : ObservableObject
         AutoCandidate = originalId is null ? EntityNaming.Peek(document,
             kind == PointLoadKind.Force ? AutoNameKind.Force : AutoNameKind.Moment) : null;
         _nameText = AutoCandidate?.Name ?? document.Loads.First(l => l.Id == originalId).Name;
-        _referencePosition = position;
-        _positionText = _referencePositionText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
         _referenceValue = value;
         _valueText = _referenceValueText = InputQuantityFormatter.FormatExact(value, _valueUnit);
         _preview = new(position, kind, value);
         var entity = originalId is null ? null : document.Loads.FirstOrDefault(l => l.Id == originalId);
-        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position);
+        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position, _positionUnit);
+        // A move that happened before the draft opened (a drag of an existing load) is applied to the reference first.
+        Reference.PositionChanged(position);
+        _referencePosition = Reference.Distance;
+        _positionText = _referencePositionText = InputQuantityFormatter.FormatExact(Reference.Distance.Meters, _positionUnit);
+        Reference.DistanceChanged += ShowReferenceDistance;
+        Validate();
+    }
+
+    // The distance shown follows a choice of the reference and a pointer move, never what the user is typing.
+    private void ShowReferenceDistance()
+    {
+        _referencePosition = Reference.Distance;
+        _referencePositionText = InputQuantityFormatter.FormatExact(Reference.Distance.Meters, _positionUnit);
+        Set(ref _positionText, _referencePositionText, nameof(PositionText));
+        Notify(nameof(PositionLabel));
         Validate();
     }
 
@@ -67,7 +80,9 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     public string ValueLabel => Kind == PointLoadKind.Force ? Strings.ForceValueLabel : Strings.MomentValueLabel;
     public string Unit => _valueUnit.Symbol;
     public string PositionUnit => _positionUnit.Symbol;
-    public TechnicalText PositionLabel => Strings.Position + " " + TechnicalSymbols.Axis("x");
+    /// <summary>The label names what the field holds: the position, or the distance once it is measured from a segment.</summary>
+    public TechnicalText PositionLabel => Reference.IsSegmentBased ? (TechnicalText)Strings.PositionDistance
+        : Strings.Position + " " + TechnicalSymbols.Axis("x");
     public string PositionText
     {
         get => _positionText;
@@ -96,10 +111,8 @@ public sealed class PointLoadDraftViewModel : ObservableObject
 
     internal void ApplyDragPosition(Length position)
     {
-        _referencePosition = position;
-        _referencePositionText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
         _preview = _preview with { Position = position };
-        Set(ref _positionText, _referencePositionText, nameof(PositionText));
+        Reference.PositionChanged(position);
         Validate();
         Notify(nameof(CanvasPosition));
     }
@@ -115,22 +128,19 @@ public sealed class PointLoadDraftViewModel : ObservableObject
             NameValidationError.Reserved => Strings.ReservedEntityName,
             _ => null
         };
-        bool positionValid;
-        Length position;
-        if (PositionText == _referencePositionText)
+        // Preserve the exact SI distance when the displayed text is untouched (or restored).
+        Length distance = _referencePosition, position = default;
+        bool positionValid = PositionText == _referencePositionText
+            ? distance.Meters <= Reference.MaxDistance.Meters : Reference.TryParseDistance(PositionText, out distance);
+        if (positionValid)
         {
-            position = _referencePosition;
-            positionValid = position.Meters >= 0 && position.Meters <= document.Length.Meters;
+            Reference.TrySetDistance(distance);
+            position = Reference.Position;
         }
-        else positionValid = InputQuantityFormatter.TryParsePosition(PositionText, _positionUnit, document.Length, out position);
-        _positionError = !positionValid ? Strings.PositionInsideBeam
+        _positionError = !positionValid ? Reference.IsSegmentBased ? Strings.DistanceBeyondSegment : Strings.PositionInsideBeam
             : Kind == PointLoadKind.Moment && MomentReleaseRules.MomentConflicts(document, position) ? Strings.MomentAtMomentRelease
             : null;
-        if (_positionError is null)
-        {
-            _inputPosition = PositionText == _referencePositionText ? _referencePosition : position;
-            Reference.PositionChanged(_inputPosition);
-        }
+        if (_positionError is null) _inputPosition = position;
         double value = _referenceValue;
         _valueError = ValueText == _referenceValueText || InputQuantityFormatter.TryParse(ValueText, _valueUnit, out value)
             ? null : Strings.InvalidLoadValue;

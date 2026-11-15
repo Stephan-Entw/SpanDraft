@@ -13,6 +13,9 @@
         </ComboBox.ItemTemplate>
       </ComboBox>
     </Grid>
+    <Grid x:Name="PositionInfoRow" ColumnDefinitions="88,*" ColumnSpacing="{StaticResource Space8}" IsVisible="{Binding ShowPositionInfo}">
+      <TextBlock x:Name="PositionInfo" Grid.Column="1" Text="{Binding PositionInfo}" Classes="propertyLabel" />
+    </Grid>
     <CheckBox x:Name="HoldEndInput" Content="{Binding HoldEndLabel}" IsChecked="{Binding HoldEnd, Mode=TwoWay}"
               IsVisible="{Binding CanHoldEnd}" />
   </StackPanel>

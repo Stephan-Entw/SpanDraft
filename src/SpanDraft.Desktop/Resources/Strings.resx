@@ -410,6 +410,11 @@ Remove the entry from Recent projects?</value></data>
   <data name="HoldAtSegmentEnd" xml:space="preserve"><value>Keep at the segment end</value></data>
   <data name="HoldAtEndOfSegment" xml:space="preserve"><value>Keep at the end of segment {0}</value></data>
   <data name="PositionReference" xml:space="preserve"><value>Measured from</value></data>
+  <data name="GlobalPositionInfo" xml:space="preserve"><value>x = {0} {1}</value></data>
+  <data name="DistanceBeyondSegment" xml:space="preserve"><value>The distance cannot exceed the length of the segment.</value></data>
+  <data name="PositionDistance" xml:space="preserve"><value>Distance</value></data>
+  <data name="DistributedStartDistance" xml:space="preserve"><value>Start distance</value></data>
+  <data name="DistributedEndDistance" xml:space="preserve"><value>End distance</value></data>
   <data name="SegmentSelected" xml:space="preserve"><value>Segment {0}</value></data>
   <data name="ReportGoverningSegment" xml:space="preserve"><value>Governing segment</value></data>
   <data name="ReportSegmentSection" xml:space="preserve"><value>Section, segment {0}</value></data>

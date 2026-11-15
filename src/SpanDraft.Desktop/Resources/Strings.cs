@@ -436,6 +436,11 @@ public static class Strings
     public static string HoldAtSegmentEnd => Get(nameof(HoldAtSegmentEnd));
     public static string HoldAtEndOfSegment => Get(nameof(HoldAtEndOfSegment));
     public static string PositionReference => Get(nameof(PositionReference));
+    public static string GlobalPositionInfo => Get(nameof(GlobalPositionInfo));
+    public static string DistanceBeyondSegment => Get(nameof(DistanceBeyondSegment));
+    public static string PositionDistance => Get(nameof(PositionDistance));
+    public static string DistributedStartDistance => Get(nameof(DistributedStartDistance));
+    public static string DistributedEndDistance => Get(nameof(DistributedEndDistance));
     public static string SegmentSelected => Get(nameof(SegmentSelected));
     public static string ReportGoverningSegment => Get(nameof(ReportGoverningSegment));
     public static string ReportSegmentSection => Get(nameof(ReportSegmentSection));

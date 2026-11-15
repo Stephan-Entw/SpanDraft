@@ -1,5 +1,6 @@
 using System.Globalization;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 
@@ -9,45 +10,71 @@ namespace SpanDraft.Desktop.ViewModels;
 public sealed record PositionReferenceOption(Guid? Segment, string Name);
 
 /// <summary>
-/// What the flyout of a position decides besides its value: what it is measured from, and whether it is bound to the
-/// end of a segment. Moving the position follows the rules of <see cref="PositionReferences"/>; the user changes
-/// the reference or the binding only through this draft, and the document is not touched until the flyout is confirmed.
+/// What the flyout of a position decides besides its value: what the position is measured from, how far from it, and
+/// whether it is bound to the end of a segment. The distance the flyout shows is the distance from this reference;
+/// the global x is only shown next to it. Changing the reference keeps the point where it is and re-expresses its
+/// distance; typing a distance never changes the reference. Moving the position with the pointer follows the rules of
+/// <see cref="PositionReferences"/>. The document is not touched until the flyout is confirmed.
 /// </summary>
 public sealed class PositionReferenceDraft : ObservableObject
 {
     private readonly Func<EditorDocument> _read;
+    private readonly UnitDefinition _unit;
     private PositionRef _current;
     private Length _position;
+    private IReadOnlyList<PositionReferenceOption> _options;
 
     /// <param name="reference">The reference the position has now; null for a position that is set freshly.</param>
     /// <param name="position">The position that reference belongs to.</param>
-    public PositionReferenceDraft(Func<EditorDocument> read, PositionRef? reference, Length position)
+    public PositionReferenceDraft(Func<EditorDocument> read, PositionRef? reference, Length position, UnitDefinition? unit = null)
     {
         _read = read;
+        _unit = unit ?? UnitCatalog.Millimeter;
         _position = position;
         _current = reference ?? PositionReferences.ForNewPosition(read(), position);
         _options = BuildOptions();
     }
 
-    private IReadOnlyList<PositionReferenceOption> _options;
+    /// <summary>Raised when the reference or the point changed by a choice or a pointer move, so the shown distance must follow.</summary>
+    public event Action? DistanceChanged;
 
     /// <summary>The reference that would be stored for the current position.</summary>
     public PositionRef Current => _current;
 
+    /// <summary>The global position of the point.</summary>
+    public Length Position => _position;
+
+    /// <summary>The distance of the point from its reference: from the beam start, the segment start, or the length of the segment when bound to its end.</summary>
+    public Length Distance => _current switch
+    {
+        PositionRef.FromBeamStart beam => beam.Distance,
+        PositionRef.FromSegmentStart fromStart => fromStart.Offset,
+        PositionRef.AtSegmentEnd end => SegmentOf(end.Segment)?.Length ?? default,
+        _ => default
+    };
+
+    /// <summary>The largest distance from the current reference that still lies in the beam or its segment.</summary>
+    public Length MaxDistance => _current.SegmentId is { } id && SegmentOf(id) is { } segment ? segment.Length : _read().Length;
+
+    public bool IsSegmentBased => _current.SegmentId is not null;
+
     /// <summary>The choice of reference only matters, and is only shown, with several segments.</summary>
     public bool ShowReference => _read().HasSeveralSegments;
 
-    /// <summary>The beam start and the segments that contain the position; the list only changes when its content does.</summary>
+    /// <summary>The global position next to the distance, which is only a different number once the reference is a segment.</summary>
+    public bool ShowPositionInfo => ShowReference && _current is not PositionRef.FromBeamStart;
+
+    public string PositionInfo => string.Format(CultureInfo.CurrentCulture, Strings.GlobalPositionInfo,
+        InputQuantityFormatter.FormatExact(_position.Meters, _unit), _unit.Symbol);
+
+    /// <summary>The beam start and every segment; the list only changes when its content does.</summary>
     public IReadOnlyList<PositionReferenceOption> Options => _options;
 
     private IReadOnlyList<PositionReferenceOption> BuildOptions()
     {
         var document = _read();
         var options = new List<PositionReferenceOption> { new(null, Strings.PositionFromBeamStart) };
-        var containing = PositionReferences.SegmentsContaining(document, _position).ToList();
-        if (_current.SegmentId is { } current && document.IndexOfSegment(current) is var own and >= 0 && !containing.Contains(own))
-            containing.Add(own);
-        foreach (int index in containing.Order())
+        for (int index = 0; index < document.Segments.Count; index++)
             options.Add(new(document.Segments[index].Id, SegmentName(index)));
         return options;
     }
@@ -59,9 +86,19 @@ public sealed class PositionReferenceDraft : ObservableObject
         {
             if (value is null || value.Segment == _current.SegmentId) return;
             var document = _read();
-            _current = value.Segment is { } id ? PositionReferences.InSegment(document, document.IndexOfSegment(id), _position)
-                : new PositionRef.FromBeamStart(_position);
+            if (value.Segment is { } id)
+            {
+                int index = document.IndexOfSegment(id);
+                var (start, end) = document.SegmentRange(index);
+                // The point stays where it is if the segment contains it; otherwise the distance starts at the segment's beginning.
+                _current = _position.Meters >= start.Meters && _position.Meters <= end.Meters
+                    ? PositionReferences.InSegment(document, index, _position)
+                    : new PositionRef.FromSegmentStart(id, default);
+            }
+            else _current = new PositionRef.FromBeamStart(_position);
+            _position = document.ResolvePosition(_current);
             NotifyAll();
+            DistanceChanged?.Invoke();
         }
     }
 
@@ -80,6 +117,7 @@ public sealed class PositionReferenceDraft : ObservableObject
                 _current = PositionReferences.InSegment(document, document.IndexOfSegment(end.Segment), _position);
             else return;
             NotifyAll();
+            DistanceChanged?.Invoke();
         }
     }
 
@@ -96,13 +134,51 @@ public sealed class PositionReferenceDraft : ObservableObject
         }
     }
 
-    /// <summary>Called when the user has moved the position, by the pointer or by the text.</summary>
+    /// <summary>Reads a typed distance from the current reference; false when it is not a length or lies beyond the beam or segment.</summary>
+    public bool TryParseDistance(string text, out Length distance) =>
+        InputQuantityFormatter.TryParsePosition(text, _unit, MaxDistance, out distance);
+
+    /// <summary>
+    /// Applies a typed distance from the current reference; the reference stays. A bound end that is typed over becomes a
+    /// distance from the segment start. False, and nothing changes, when the distance lies beyond the beam or segment.
+    /// </summary>
+    public bool TrySetDistance(Length distance)
+    {
+        if (distance.Meters > MaxDistance.Meters) return false;
+        var document = _read();
+        switch (_current)
+        {
+            case PositionRef.FromBeamStart:
+                _current = new PositionRef.FromBeamStart(distance);
+                break;
+            case PositionRef.FromSegmentStart fromStart:
+                _current = fromStart with { Offset = distance };
+                break;
+            case PositionRef.AtSegmentEnd end:
+                if (distance == Distance) return true;
+                _current = new PositionRef.FromSegmentStart(end.Segment, distance);
+                break;
+        }
+        _position = document.ResolvePosition(_current);
+        NotifyAll();
+        return true;
+    }
+
+    /// <summary>Called when the user has moved the point with the pointer.</summary>
     internal void PositionChanged(Length position)
     {
         if (position == _position) return;
         _current = PositionReferences.AfterMove(_read(), _current, _position, position);
         _position = position;
         NotifyAll();
+        DistanceChanged?.Invoke();
+    }
+
+    private EditorSegment? SegmentOf(Guid id)
+    {
+        var document = _read();
+        int index = document.IndexOfSegment(id);
+        return index >= 0 ? document.Segments[index] : null;
     }
 
     private string SegmentName(int index) => string.Format(CultureInfo.CurrentCulture, Strings.SegmentSelected, index + 1);
@@ -114,7 +190,8 @@ public sealed class PositionReferenceDraft : ObservableObject
         var options = BuildOptions();
         bool optionsChanged = !options.SequenceEqual(_options);
         if (optionsChanged) _options = options;
-        foreach (string name in new[] { nameof(Current), nameof(ShowReference), nameof(SelectedOption),
+        foreach (string name in new[] { nameof(Current), nameof(Position), nameof(Distance), nameof(MaxDistance), nameof(IsSegmentBased),
+            nameof(ShowReference), nameof(ShowPositionInfo), nameof(PositionInfo), nameof(SelectedOption),
             nameof(CanHoldEnd), nameof(HoldEnd), nameof(HoldEndLabel) }) Notify(name);
         if (optionsChanged) Notify(nameof(Options));
     }

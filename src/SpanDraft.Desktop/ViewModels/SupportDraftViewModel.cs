@@ -64,12 +64,25 @@ public sealed class SupportDraftViewModel : ObservableObject
         AutoCandidate = originalId is null ? EntityNaming.Peek(document, AutoNameKind.Support) : null;
         _nameText = AutoCandidate?.Name ?? document.Supports.First(s => s.Id == originalId).Name;
         _type = type;
-        _bufferReferencePosition = position;
-        _bufferReferenceText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
-        _positionText = _bufferReferenceText;
         _preview = new(position, type, false, null);
         var entity = originalId is null ? null : document.Supports.FirstOrDefault(s => s.Id == originalId);
-        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position);
+        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position, _positionUnit);
+        // A move that happened before the draft opened (a drag of an existing support) is applied to the reference first.
+        Reference.PositionChanged(position);
+        _bufferReferencePosition = Reference.Distance;
+        _bufferReferenceText = InputQuantityFormatter.FormatExact(Reference.Distance.Meters, _positionUnit);
+        _positionText = _bufferReferenceText;
+        Reference.DistanceChanged += ShowReferenceDistance;
+        Validate();
+    }
+
+    // The distance shown follows a choice of the reference and a pointer move, never what the user is typing.
+    private void ShowReferenceDistance()
+    {
+        _bufferReferencePosition = Reference.Distance;
+        _bufferReferenceText = InputQuantityFormatter.FormatExact(Reference.Distance.Meters, _positionUnit);
+        Set(ref _positionText, _bufferReferenceText, nameof(PositionText));
+        Notify(nameof(PositionLabel));
         Validate();
     }
 
@@ -82,7 +95,9 @@ public sealed class SupportDraftViewModel : ObservableObject
     });
     public Guid? OriginalId { get; }
     public string PositionUnit => _positionUnit.Symbol;
-    public TechnicalText PositionLabel => Strings.Position + " " + TechnicalSymbols.Axis("x");
+    /// <summary>The label names what the field holds: the position, or the distance once it is measured from a segment.</summary>
+    public TechnicalText PositionLabel => Reference.IsSegmentBased ? (TechnicalText)Strings.PositionDistance
+        : Strings.Position + " " + TechnicalSymbols.Axis("x");
     public bool IsExisting => OriginalId.HasValue;
     public AutoNameCandidate? AutoCandidate { get; }
     public string NameText
@@ -92,6 +107,7 @@ public sealed class SupportDraftViewModel : ObservableObject
     }
     public string? NameError => _nameError;
     public bool HasNameError => NameError is not null;
+    /// <summary>The distance from the reference the flyout shows: the position itself while it is measured from the beam start.</summary>
     public string PositionText
     {
         get => _positionText;
@@ -187,10 +203,8 @@ public sealed class SupportDraftViewModel : ObservableObject
 
     internal void ApplyDragPosition(Length position)
     {
-        _bufferReferencePosition = position;
-        _bufferReferenceText = InputQuantityFormatter.FormatExact(position.Meters, _positionUnit);
         _preview = _preview with { Position = position };
-        Set(ref _positionText, _bufferReferenceText, nameof(PositionText));
+        Reference.PositionChanged(position);
         Validate();
         Notify(nameof(CanvasPosition));
     }
@@ -208,18 +222,17 @@ public sealed class SupportDraftViewModel : ObservableObject
         };
         string? error = null;
         if (!Enum.IsDefined(Type)) error = Strings.InvalidSupportType;
-        else if (!TryPosition(document.Length, out var position))
-            error = Strings.PositionInsideBeam;
+        else if (!TryDistance(out var distance))
+            error = Reference.IsSegmentBased ? Strings.DistanceBeyondSegment : Strings.PositionInsideBeam;
         else
         {
-            // Preserve exact SI coordinates when the displayed text is untouched (or restored).
-            if (PositionText == _bufferReferenceText) position = _bufferReferencePosition;
+            Reference.TrySetDistance(distance);
+            var position = Reference.Position;
             if (document.Supports.Any(s => s.Id != OriginalId && s.Position == position))
                 error = Strings.SupportAlreadyExists;
             else if (MomentReleaseRules.SupportConflicts(document, position, Type, IsSpring && _hasRotational ? PreviewSpring() : null))
                 error = Strings.SupportAtMomentRelease;
             _inputPosition = position;
-            Reference.PositionChanged(position);
         }
         _errorText = error;
         ValidateSpring();
@@ -271,13 +284,14 @@ public sealed class SupportDraftViewModel : ObservableObject
         return InputQuantityFormatter.TryParse(text, unit, out value) && value > 0;
     }
 
-    private bool TryPosition(Length beamLength, out Length position)
+    // Preserve the exact SI distance when the displayed text is untouched (or restored).
+    private bool TryDistance(out Length distance)
     {
         if (PositionText == _bufferReferenceText)
         {
-            position = _bufferReferencePosition;
-            return position.Meters >= 0 && position.Meters <= beamLength.Meters;
+            distance = _bufferReferencePosition;
+            return distance.Meters <= Reference.MaxDistance.Meters;
         }
-        return InputQuantityFormatter.TryParsePosition(PositionText, _positionUnit, beamLength, out position);
+        return Reference.TryParseDistance(PositionText, out distance);
     }
 }
