@@ -10,11 +10,9 @@
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:SetupSegmentCard">
           <Border x:Name="BeamCardSurface" Classes="beamSetupCard" VerticalAlignment="Top">
-            <Grid x:Name="BeamAreas" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,5*,Auto,3*">
-              <TextBlock x:Name="SegmentTitle" Text="{Binding Title}" Classes="bodyStrong" IsVisible="{Binding HasSeveralSegments}"
-                  MinWidth="88" Margin="8,0,0,0" VerticalAlignment="Center" />
-              <Border Grid.Column="2" Classes="setupDivider" />
-              <Border x:Name="LengthSurface" Grid.Column="3" Padding="8,0">
+            <Grid x:Name="BeamAreas" RowDefinitions="Auto,*" ColumnDefinitions="Auto,Auto,5*,Auto,3*">
+              <!-- The areas share one grid: the title line stands level with the labels of the areas, the length with their content. -->
+              <Border x:Name="LengthSurface" Grid.Row="1" Margin="8,6,0,8" VerticalAlignment="Center">
                 <Grid x:Name="SetupLengthRow" ColumnDefinitions="Auto,112,Auto" ColumnSpacing="8" VerticalAlignment="Center">
                   <TextBlock x:Name="SetupLengthLabel" Text="{x:Static resources:Strings.SetupLength}" Classes="bodyStrong" VerticalAlignment="Center" />
                   <TextBox x:Name="SetupLengthInput" Grid.Column="1" Text="{Binding LengthInput.Text, Mode=TwoWay}" Classes="inlineDimension inlineValidation"
@@ -25,8 +23,8 @@
                   <controls:TechnicalTextBlock x:Name="SetupLengthUnit" Grid.Column="2" Text="{Binding LengthInput.Unit}" VerticalAlignment="Center" Classes="propertyLabel" />
                 </Grid>
               </Border>
-              <Border Grid.Column="4" Classes="setupDivider" />
-              <Button x:Name="SectionCardButton" Grid.Column="5" Classes="beamSetupSurface" Command="{Binding ChangeSectionCommand}"
+              <Border Grid.Column="1" Grid.RowSpan="2" Classes="setupDivider" />
+              <Button x:Name="SectionCardButton" Grid.Column="2" Grid.RowSpan="2" Classes="beamSetupSurface" Command="{Binding ChangeSectionCommand}"
                   AutomationProperties.Name="{x:Static resources:Strings.SectionSelection}">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                   <StackPanel IsVisible="{Binding HasSection}" Spacing="6" VerticalAlignment="Center">
@@ -44,8 +42,8 @@
                   <PathIcon Grid.Column="1" Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronRight}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" IsVisible="{Binding !HasSection}" />
                 </Grid>
               </Button>
-              <Border Grid.Column="6" Classes="setupDivider" />
-              <Button x:Name="MaterialCardButton" Grid.Column="7" Classes="beamSetupSurface" Command="{Binding ChangeMaterialCommand}"
+              <Border Grid.Column="3" Grid.RowSpan="2" Classes="setupDivider" />
+              <Button x:Name="MaterialCardButton" Grid.Column="4" Grid.RowSpan="2" Classes="beamSetupSurface" Command="{Binding ChangeMaterialCommand}"
                   AutomationProperties.Name="{x:Static resources:Strings.MaterialSelection}" AutomationProperties.HelpText="{Binding MaterialName}">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                   <StackPanel IsVisible="{Binding HasMaterial}" Spacing="6" VerticalAlignment="Center">
@@ -60,12 +58,15 @@
                   <PathIcon Grid.Column="1" Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronRight}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" IsVisible="{Binding !HasMaterial}" />
                 </Grid>
               </Button>
-              <!-- Declared last, so the keyboard reaches the length and the areas first; shown beside the title. -->
-              <Button x:Name="SegmentMenuButton" Grid.Column="1" Classes="ghost" VerticalAlignment="Center"
-                  Width="{DynamicResource StandardControl}" Height="{DynamicResource StandardControl}" Click="MenuClicked"
-                  AutomationProperties.Name="{x:Static resources:Strings.SegmentMenu}" ToolTip.Tip="{x:Static resources:Strings.SegmentMenu}">
-                <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.MoreHorizontal}" />
-              </Button>
+              <!-- Declared last, so the keyboard reaches the length and the areas first. The menu button is taller than the
+                   line, so its margin keeps it from making the title line taller than the labels beside it. -->
+              <StackPanel x:Name="SegmentHeader" Orientation="Horizontal" Spacing="4" Margin="8,8,0,0" VerticalAlignment="Top">
+                <TextBlock x:Name="SegmentTitle" Text="{Binding Title}" Classes="bodyStrong" MinWidth="88" VerticalAlignment="Center" />
+                <Button x:Name="SegmentMenuButton" Classes="ghost" VerticalAlignment="Center" Margin="0,-8" Width="28" Height="28" Click="MenuClicked"
+                    AutomationProperties.Name="{x:Static resources:Strings.SegmentMenu}" ToolTip.Tip="{x:Static resources:Strings.SegmentMenu}">
+                  <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.MoreHorizontal}" />
+                </Button>
+              </StackPanel>
             </Grid>
           </Border>
         </DataTemplate>

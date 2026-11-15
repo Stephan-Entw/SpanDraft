@@ -106,7 +106,7 @@ public sealed class DesktopSegmentSetupControlTests
     }
 
     [Fact]
-    public void AddingASegmentShowsAnEmptyCardAndTheTitlesAppearOnlyWithSeveralSegments()
+    public void AddingASegmentShowsAnEmptyCardAndTheTitlesAppearWithOneSegmentAlready()
     {
         using var environment = new DesktopControlEnvironment();
         var setup = Setup(1);
@@ -116,7 +116,7 @@ public sealed class DesktopSegmentSetupControlTests
         Arrange(window, 1100, 650);
 
         var only = view.FirstCard();
-        Assert.False(only.Part<TextBlock>("SegmentTitle").IsEffectivelyVisible);
+        Assert.True(only.Part<TextBlock>("SegmentTitle").IsEffectivelyVisible);
         Assert.True(only.Part<Button>("SegmentMenuButton").IsEffectivelyVisible);
 
         view.Part<Button>("AddSegmentButton").Command!.Execute(null);

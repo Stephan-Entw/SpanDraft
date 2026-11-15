@@ -302,8 +302,8 @@ public sealed class DesktopProjectSetupControlTests
         Assert.True(surface.Bounds.Height <= 130);
         Assert.True(double.IsNaN(surface.Height));
         var areas = surface.Part<Grid>("BeamAreas");
-        // The row is title with its menu, a divider, the length, a divider, the section area, a divider and the narrower material area.
-        Assert.Equal(new[] { 5d, 3 }, new[] { areas.ColumnDefinitions[5].Width.Value, areas.ColumnDefinitions[7].Width.Value });
+        // The row is the title block with the length, a divider, the section area, a divider and the narrower material area.
+        Assert.Equal(new[] { 5d, 3 }, new[] { areas.ColumnDefinitions[2].Width.Value, areas.ColumnDefinitions[4].Width.Value });
         var lengthArea = areas.Children.OfType<Border>().Single(b => b.Name == "LengthSurface");
         Assert.False(lengthArea.Focusable); Assert.Equal(default, lengthArea.BorderThickness);
         var section = areas.Children.OfType<Button>().Single(b => b.Name == "SectionCardButton");
@@ -323,8 +323,10 @@ public sealed class DesktopProjectSetupControlTests
         Assert.True(label.Bounds.Right < length.Bounds.Left); Assert.True(length.Bounds.Right < unit.Bounds.Left);
         Assert.InRange(Math.Abs(label.Bounds.Center.Y - length.Bounds.Center.Y), 0, 1);
         Assert.InRange(Math.Abs(unit.Bounds.Center.Y - length.Bounds.Center.Y), 0, 1);
-        var lengthCenter = length.TranslatePoint(new Point(0, length.Bounds.Height / 2), surface)!.Value.Y;
-        Assert.InRange(Math.Abs(lengthCenter - surface.Bounds.Height / 2), 0, 1);
+        // The length stands below the title line, which is level with the labels of the two areas.
+        var title = card.Part<TextBlock>("SegmentTitle")!;
+        Assert.True(title.IsEffectivelyVisible);
+        Assert.True(title.TranslatePoint(default, surface)!.Value.Y + title.Bounds.Height <= length.TranslatePoint(default, surface)!.Value.Y + 0.5);
         Assert.Equal("1000", length.Text); Assert.Equal("mm", unit.Text); Assert.True(length.Bounds.Width >= 60);
         foreach (var name in new[] { "SectionDescription", "MaterialDescription", "SectionAxisDescription" })
         {
