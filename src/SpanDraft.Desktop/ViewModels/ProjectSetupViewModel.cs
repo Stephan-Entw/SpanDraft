@@ -163,7 +163,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public bool ShowTotalLength => HasSeveralSegments && TotalLength is not null;
     public string TotalLengthText => TotalLength is { } total
         ? string.Format(CultureInfo.CurrentCulture, Strings.SegmentsTotalLength,
-            QuantityFormatter.FormatInput(total.Meters, ResultPresentation.Profile[QuantityKind.BeamLength], ResultPresentation),
+            QuantityFormatter.FormatInputNumber(total.Meters, ResultPresentation.Profile[QuantityKind.BeamLength], ResultPresentation),
             ResultPresentation.Profile[QuantityKind.BeamLength].Symbol) : "";
     public string SelectedSegmentTitle => string.Format(CultureInfo.CurrentUICulture, Strings.SegmentSelected, _selectedSegment + 1);
     public System.Collections.ObjectModel.ObservableCollection<SetupSegmentCard> Cards { get; } = [];

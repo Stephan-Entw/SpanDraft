@@ -77,6 +77,11 @@ public sealed class DesktopSegmentSetupTests
         Assert.Equal(0, three.SelectedSegmentIndex);
         Assert.Single(create.Cards);
         Assert.Equal(M(3), three.TotalLength);
+        // The total names its unit once.
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(three.TotalLengthText, "mm"));
+        Assert.EndsWith("mm", three.TotalLengthText);
+        Assert.True(three.ShowTotalLength);
+        Assert.False(one.ShowTotalLength);
     }
 
     [Fact]
