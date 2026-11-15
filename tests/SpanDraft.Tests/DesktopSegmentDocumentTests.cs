@@ -92,7 +92,9 @@ public sealed class DesktopSegmentDocumentTests
 
         Assert.Equal([M(2), M(3), M(4.5)], split.SegmentBoundaries);
         Assert.Equal(4, split.Segments.Count);
-        Assert.Same(split.Segments[1], split.Segments[2]);
+        // Both halves carry every property of the split segment; only the right half is a new segment.
+        Assert.Equal(split.Segments[1], split.Segments[2] with { Id = split.Segments[1].Id, Length = split.Segments[1].Length });
+        Assert.NotEqual(split.Segments[1].Id, split.Segments[2].Id);
         Assert.Equal("Thick", split.Segments[1].SectionDisplayName);
         Assert.Equal("Thick", split.Segments[2].SectionDisplayName);
         Assert.Equal((M(2), M(3)), split.SegmentRange(1));

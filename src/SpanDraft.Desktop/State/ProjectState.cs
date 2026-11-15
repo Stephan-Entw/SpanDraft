@@ -12,7 +12,7 @@ public sealed record ProjectState(EditorDocument Document, EditorPresentationSta
 
     public static bool DocumentContentEquals(EditorDocument a, EditorDocument b) => a.Length == b.Length
         && a.SegmentBoundaries.SequenceEqual(b.SegmentBoundaries) && a.Segments.Count == b.Segments.Count
-        && a.Segments.Zip(b.Segments).All(pair => pair.First.BendingAxis == pair.Second.BendingAxis
+        && a.Segments.Zip(b.Segments).All(pair => pair.First.Id == pair.Second.Id && pair.First.BendingAxis == pair.Second.BendingAxis
             && pair.First.SectionDisplayName == pair.Second.SectionDisplayName
             && MaterialContentEquals(pair.First.Material, pair.Second.Material)
             && SectionContentEquals(pair.First.Section, pair.Second.Section))

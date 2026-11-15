@@ -30,13 +30,45 @@ public sealed record EditorDocument
     }
 
     /// <summary>
-    /// A beam of several segments. <paramref name="segmentBoundaries"/> are the positions between consecutive segments:
-    /// strictly ascending and strictly inside the beam, so the segments tile it by construction.
+    /// A beam of several segments given by their boundaries (the legacy shape). <paramref name="segmentBoundaries"/> are
+    /// the positions between consecutive segments: strictly ascending and strictly inside the beam, so the segments
+    /// tile it by construction. The segments' lengths follow from the boundaries.
     /// </summary>
     public EditorDocument(Length length, IEnumerable<Length> segmentBoundaries, IEnumerable<EditorSegment> segments,
         IEnumerable<EditorSupport>? supports = null, IEnumerable<EditorPointLoad>? loads = null, NamingState? namingState = null,
         IEnumerable<EditorDistributedLoad>? distributedLoads = null, EditorSelfWeight? selfWeight = null,
         IEnumerable<EditorMomentRelease>? momentReleases = null)
+        : this(SegmentsFromBoundaries(length, segmentBoundaries, segments), supports, loads, namingState, distributedLoads,
+            selfWeight, momentReleases)
+    {
+    }
+
+    /// <summary>
+    /// A beam as the ordered chain of its segments. Every segment has a positive length; the beam length is their
+    /// sum and the boundaries are the running sums. Segments without an identity get one.
+    /// </summary>
+    public EditorDocument(IEnumerable<EditorSegment> segments,
+        IEnumerable<EditorSupport>? supports = null, IEnumerable<EditorPointLoad>? loads = null, NamingState? namingState = null,
+        IEnumerable<EditorDistributedLoad>? distributedLoads = null, EditorSelfWeight? selfWeight = null,
+        IEnumerable<EditorMomentRelease>? momentReleases = null)
+    {
+        ArgumentNullException.ThrowIfNull(segments);
+        _segments = NormalizeSegments(segments);
+        (_boundaries, _length) = Accumulate(_segments);
+        Supports = Array.AsReadOnly((supports ?? []).ToArray());
+        Loads = Array.AsReadOnly((loads ?? []).ToArray());
+        DistributedLoads = Array.AsReadOnly((distributedLoads ?? []).ToArray());
+        MomentReleases = Array.AsReadOnly((momentReleases ?? []).ToArray());
+        NamingState = namingState ?? new();
+        SelfWeight = selfWeight;
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entity in NamedEntities)
+            if (!names.Add(EntityNaming.Normalize(entity.Name)))
+                throw new ArgumentException("Entity names must be unique across the project.", nameof(supports));
+    }
+
+    private static EditorSegment[] SegmentsFromBoundaries(Length length, IEnumerable<Length> segmentBoundaries,
+        IEnumerable<EditorSegment> segments)
     {
         ArgumentNullException.ThrowIfNull(segmentBoundaries);
         ArgumentNullException.ThrowIfNull(segments);
@@ -51,33 +83,79 @@ public sealed record EditorDocument
                 throw new ArgumentException("Segment boundaries must ascend strictly inside the beam.", nameof(segmentBoundaries));
             previous = boundary.Meters;
         }
-        _boundaries = boundaryArray;
-        _segments = segmentArray;
-        Length = length;
-        Supports = Array.AsReadOnly((supports ?? []).ToArray());
-        Loads = Array.AsReadOnly((loads ?? []).ToArray());
-        DistributedLoads = Array.AsReadOnly((distributedLoads ?? []).ToArray());
-        MomentReleases = Array.AsReadOnly((momentReleases ?? []).ToArray());
-        NamingState = namingState ?? new();
-        SelfWeight = selfWeight;
-        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var entity in NamedEntities)
-            if (!names.Add(EntityNaming.Normalize(entity.Name)))
-                throw new ArgumentException("Entity names must be unique across the project.", nameof(supports));
+        double start = 0;
+        var seen = new HashSet<Guid>();
+        for (int i = 0; i < segmentArray.Length; i++)
+        {
+            double end = i < boundaryArray.Length ? boundaryArray[i].Meters : length.Meters;
+            // The legacy shape may use one segment object for several segments; later copies become new segments.
+            var id = segmentArray[i].Id != Guid.Empty && seen.Add(segmentArray[i].Id) ? segmentArray[i].Id : Guid.Empty;
+            segmentArray[i] = segmentArray[i] with { Id = id, Length = Length.FromMeters(end - start) };
+            start = end;
+        }
+        return segmentArray;
+    }
+
+    private static EditorSegment[] NormalizeSegments(IEnumerable<EditorSegment> segments)
+    {
+        var array = segments.ToArray();
+        if (array.Length == 0 || array.Any(segment => segment is null))
+            throw new ArgumentException("A beam has at least one segment.", nameof(segments));
+        for (int i = 0; i < array.Length; i++)
+        {
+            // A lone segment may still have no extent (such a beam is rejected by the length checks of the editor,
+            // as before); the segments of a chain must all have one.
+            if (array.Length > 1 && !(array[i].Length.Meters > 0))
+                throw new ArgumentException("Segment lengths must be positive.", nameof(segments));
+        }
+        var used = array.Where(segment => segment.Id != Guid.Empty).Select(segment => segment.Id).ToList();
+        if (used.Distinct().Count() != used.Count)
+            throw new ArgumentException("Segment identities must be unique.", nameof(segments));
+        // Segments built without an identity get the next free deterministic one, so equal documents stay equal.
+        int next = 1;
+        for (int i = 0; i < array.Length; i++)
+        {
+            if (array[i].Id != Guid.Empty) continue;
+            Guid id;
+            do id = new Guid(next++, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0); while (used.Contains(id));
+            used.Add(id);
+            array[i] = array[i] with { Id = id };
+        }
+        return array;
+    }
+
+    // The running sums of the lengths: the boundaries between consecutive segments and the beam length.
+    private static (Length[] Boundaries, Length Length) Accumulate(EditorSegment[] segments)
+    {
+        var boundaries = new Length[segments.Length - 1];
+        double end = 0;
+        for (int i = 0; i < segments.Length; i++)
+        {
+            end += segments[i].Length.Meters;
+            if (i < boundaries.Length) boundaries[i] = Length.FromMeters(end);
+        }
+        return (boundaries, Length.FromMeters(end));
     }
 
     private readonly Length[] _boundaries;
     private readonly EditorSegment[] _segments;
     private readonly Length _length;
 
-    /// <summary>The beam length; the last segment extends or shortens with it, but never past the last boundary.</summary>
+    /// <summary>
+    /// The beam length, the sum of the segment lengths. Setting it resizes the last segment, but never to
+    /// nothing; the length of a beam of several segments is otherwise changed through its segments.
+    /// </summary>
     public Length Length
     {
         get => _length;
         init
         {
-            if (_boundaries is { Length: > 0 } boundaries && !(value.Meters > boundaries[^1].Meters))
+            double before = _segments.Take(_segments.Length - 1).Sum(segment => segment.Length.Meters);
+            if (!(value.Meters > before))
                 throw new ArgumentException("The beam must extend beyond its last segment boundary.", nameof(Length));
+            var segments = _segments.ToArray();
+            segments[^1] = segments[^1] with { Length = Length.FromMeters(value.Meters - before) };
+            _segments = segments;
             _length = value;
         }
     }
@@ -93,6 +171,9 @@ public sealed record EditorDocument
         return (index == 0 ? default : _boundaries[index - 1], index == _segments.Length - 1 ? Length : _boundaries[index]);
     }
 
+    /// <summary>The order of the segment with this identity, or -1.</summary>
+    public int IndexOfSegment(Guid id) => Array.FindIndex(_segments, segment => segment.Id == id);
+
     /// <summary>The index of the segment that contains x; a boundary belongs to the segment that starts there.</summary>
     public int SegmentIndexAt(Length position)
     {
@@ -106,7 +187,7 @@ public sealed record EditorDocument
     private EditorSegment Only => _segments.Length == 1 ? _segments[0]
         : throw new InvalidOperationException("The document has several segments; read them from Segments.");
 
-    public Material Material { get => Only.Material; init => _segments = [new EditorSegment(value, Only.Section, Only.BendingAxis, Only.SectionDisplayName)]; }
+    public Material Material { get => Only.Material; init => _segments = [Only.WithMaterial(value)]; }
     public ISectionDefinition Section => Only.Section;
     public SectionAxisDesignation BendingAxis => Only.BendingAxis;
 
@@ -114,7 +195,7 @@ public sealed record EditorDocument
     public string? SectionDisplayName
     {
         get => Only.SectionDisplayName;
-        init => _segments = [new EditorSegment(Only.Material, Only.Section, Only.BendingAxis, value)];
+        init => _segments = [Only.WithSection(Only.Section, Only.BendingAxis, value)];
     }
     public IReadOnlyList<EditorSupport> Supports { get; }
     public IReadOnlyList<EditorPointLoad> Loads { get; }
@@ -166,22 +247,22 @@ public sealed record EditorDocument
             .Concat(DistributedLoads.Select(l => (l.Id, l.Name))).Concat(MomentReleases.Select(r => (r.Id, r.Name)));
 
     public EditorDocument WithSupports(IEnumerable<EditorSupport> supports, NamingState? namingState = null) =>
-        new(Length, _boundaries, _segments, supports, Loads, NextNamingState(namingState), DistributedLoads, SelfWeight, MomentReleases);
+        new(_segments, supports, Loads, NextNamingState(namingState), DistributedLoads, SelfWeight, MomentReleases);
 
     public EditorDocument WithLoads(IEnumerable<EditorPointLoad> loads, NamingState? namingState = null) =>
-        new(Length, _boundaries, _segments, Supports, loads, NextNamingState(namingState), DistributedLoads, SelfWeight, MomentReleases);
+        new(_segments, Supports, loads, NextNamingState(namingState), DistributedLoads, SelfWeight, MomentReleases);
 
     public EditorDocument WithDistributedLoads(IEnumerable<EditorDistributedLoad> loads, NamingState? namingState = null) =>
-        new(Length, _boundaries, _segments, Supports, Loads, NextNamingState(namingState), loads, SelfWeight, MomentReleases);
+        new(_segments, Supports, Loads, NextNamingState(namingState), loads, SelfWeight, MomentReleases);
 
     public EditorDocument WithMomentReleases(IEnumerable<EditorMomentRelease> releases, NamingState? namingState = null) =>
-        new(Length, _boundaries, _segments, Supports, Loads, NextNamingState(namingState), DistributedLoads, SelfWeight, releases);
+        new(_segments, Supports, Loads, NextNamingState(namingState), DistributedLoads, SelfWeight, releases);
 
     public EditorDocument WithSection(ISectionDefinition section, SectionAxisDesignation bendingAxis) =>
         WithSection(section, bendingAxis, SectionDisplayName);
 
     public EditorDocument WithSection(ISectionDefinition section, SectionAxisDesignation bendingAxis, string? sectionDisplayName) =>
-        new(Length, _boundaries, [new EditorSegment(Only.Material, section, bendingAxis, sectionDisplayName)],
+        new([Only.WithSection(section, bendingAxis, sectionDisplayName)],
             Supports, Loads, NamingState, DistributedLoads, SelfWeight, MomentReleases);
 
     public EditorDocument WithBendingAxis(SectionAxisDesignation bendingAxis) => WithSection(Section, bendingAxis);
@@ -195,7 +276,7 @@ public sealed record EditorDocument
     {
         if ((uint)index >= (uint)_segments.Length) throw new ArgumentOutOfRangeException(nameof(index));
         var segments = _segments.ToArray();
-        segments[index] = segment;
+        segments[index] = segment.Id == Guid.Empty ? segment with { Id = _segments[index].Id } : segment;
         return WithSegments(_boundaries, segments);
     }
 
@@ -208,8 +289,9 @@ public sealed record EditorDocument
         if (!(position.Meters > 0) || !(position.Meters < Length.Meters) || _boundaries.Any(b => b == position))
             throw new ArgumentException("A new boundary must lie strictly inside the beam and off the existing ones.", nameof(position));
         int index = SegmentIndexAt(position);
+        // The left half keeps the identity of the split segment, the right half is a new segment.
         return WithSegments(_boundaries.Take(index).Append(position).Concat(_boundaries.Skip(index)),
-            _segments.Take(index + 1).Concat(_segments.Skip(index)));
+            _segments.Take(index + 1).Append(_segments[index] with { Id = Guid.NewGuid() }).Concat(_segments.Skip(index + 1)));
     }
 
     /// <summary>Removes one boundary; the merged segment keeps the left or the right neighbour's properties.</summary>
