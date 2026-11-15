@@ -9,7 +9,8 @@
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:SetupSegmentCard">
-          <Border x:Name="BeamCardSurface" Classes="beamSetupCard" VerticalAlignment="Top">
+          <Border x:Name="BeamCardSurface" Classes="beamSetupCard" VerticalAlignment="Top"
+                  ContextFlyout="{Binding #SegmentMenuButton.Flyout}">
             <Grid x:Name="BeamAreas" RowDefinitions="Auto,*" ColumnDefinitions="Auto,Auto,5*,Auto,3*">
               <!-- The areas share one grid: the title line stands level with the labels of the areas, the length with their content. -->
               <Border x:Name="LengthSurface" Grid.Row="1" Margin="8,6,0,8" VerticalAlignment="Center">
@@ -60,11 +61,20 @@
               </Button>
               <!-- Declared last, so the keyboard reaches the length and the areas first. The menu button is taller than the
                    line, so its margin keeps it from making the title line taller than the labels beside it. -->
-              <StackPanel x:Name="SegmentHeader" Orientation="Horizontal" Spacing="4" Margin="8,8,0,0" VerticalAlignment="Top">
-                <TextBlock x:Name="SegmentTitle" Text="{Binding Title}" Classes="bodyStrong" MinWidth="88" VerticalAlignment="Center" />
-                <Button x:Name="SegmentMenuButton" Classes="ghost" VerticalAlignment="Center" Margin="0,-8" Width="28" Height="28" Click="MenuClicked"
+              <StackPanel x:Name="SegmentHeader" Orientation="Horizontal" Margin="8,8,0,0" VerticalAlignment="Top">
+                <TextBlock x:Name="SegmentTitle" Text="{Binding Title}" Classes="bodyStrong" VerticalAlignment="Center" />
+                <Button x:Name="SegmentMenuButton" Classes="ghost" VerticalAlignment="Center" Margin="4,-8,0,-8" Width="28" Height="28"
                     AutomationProperties.Name="{x:Static resources:Strings.SegmentMenu}" ToolTip.Tip="{x:Static resources:Strings.SegmentMenu}">
                   <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.MoreHorizontal}" />
+                  <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                      <MenuItem Header="{x:Static resources:Strings.SegmentInsertBefore}" Command="{Binding InsertBeforeCommand}" />
+                      <MenuItem Header="{x:Static resources:Strings.SegmentInsertAfter}" Command="{Binding InsertAfterCommand}" />
+                      <MenuItem Header="{x:Static resources:Strings.SegmentDuplicate}" Command="{Binding DuplicateCommand}" />
+                      <Separator />
+                      <MenuItem Header="{x:Static resources:Strings.SegmentRemove}" Command="{Binding RemoveCommand}" />
+                    </MenuFlyout>
+                  </Button.Flyout>
                 </Button>
               </StackPanel>
             </Grid>

@@ -401,7 +401,7 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="SegmentInsertAfter" xml:space="preserve"><value>Abschnitt danach einfügen</value></data>
   <data name="SegmentDuplicate" xml:space="preserve"><value>Duplizieren</value></data>
   <data name="SegmentRemove" xml:space="preserve"><value>Löschen</value></data>
-  <data name="SegmentMenu" xml:space="preserve"><value>Abschnittsaktionen</value></data>
+  <data name="SegmentMenu" xml:space="preserve"><value>Weitere Optionen</value></data>
   <data name="SegmentLength" xml:space="preserve"><value>Abschnittslänge</value></data>
   <data name="SegmentChangeBlocked" xml:space="preserve"><value>Die Änderung ist nicht möglich, weil sonst diese Elemente ungültig würden: {0}.</value></data>
   <data name="LengthFromSegments" xml:space="preserve"><value>Die Balkenlänge ist die Summe der Abschnittslängen. Sie wird in den Projekteigenschaften geändert.</value></data>

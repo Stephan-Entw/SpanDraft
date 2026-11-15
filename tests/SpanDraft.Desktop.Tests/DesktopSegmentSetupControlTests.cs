@@ -1,5 +1,8 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Threading;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using SpanDraft.Core.Materials;
@@ -102,6 +105,47 @@ public sealed class DesktopSegmentSetupControlTests
             bitmap.Render(window);
             bitmap.Save(Path.Combine(directory, $"segments-{width}x{height}.png"));
         }
+        window.Close();
+    }
+
+    [Fact]
+    public void TheMenuIsAFlyoutOfTheButtonBesideTheTitleAlignedToItsLeftEdgeAndAlsoOpensFromTheCard()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var setup = Setup(3);
+        var view = new ProjectSetupView { DataContext = setup };
+        var window = new Window { Content = view, Width = 1100, Height = 650 };
+        window.Show();
+        Arrange(window, 1100, 650);
+
+        var card = view.Cards()[1];
+        var model = (SetupSegmentCard)card.DataContext!;
+        var title = card.Part<TextBlock>("SegmentTitle");
+        var button = card.Part<Button>("SegmentMenuButton");
+        // The button follows its title closely: the gap is a few pixels, not a fixed-width column.
+        double gap = button.TranslatePoint(default, window)!.Value.X - (title.TranslatePoint(default, window)!.Value.X + title.Bounds.Width);
+        Assert.InRange(gap, 0, 8);
+        Assert.Equal(Strings.SegmentMenu, AutomationProperties.GetName(button));
+        Assert.Equal(Strings.SegmentMenu, ToolTip.GetTip(button));
+
+        // One menu serves the button and, by right click or Shift+F10, the whole card.
+        var flyout = Assert.IsType<MenuFlyout>(button.Flyout);
+        Assert.Equal(PlacementMode.BottomEdgeAlignedLeft, flyout.Placement);
+        Assert.Same(flyout, card.ContextFlyout);
+
+        flyout.ShowAt(button);
+        Dispatcher.UIThread.RunJobs();
+        var items = flyout.Items.OfType<MenuItem>().ToArray();
+        Assert.Equal([Strings.SegmentInsertBefore, Strings.SegmentInsertAfter, Strings.SegmentDuplicate, Strings.SegmentRemove],
+            items.Select(item => item.Header));
+        Assert.Same(model.InsertBeforeCommand, items[0].Command);
+        Assert.Same(model.InsertAfterCommand, items[1].Command);
+        Assert.Same(model.DuplicateCommand, items[2].Command);
+        Assert.Same(model.RemoveCommand, items[3].Command);
+        // Deleting is the last entry, set apart by a separator.
+        Assert.IsType<Separator>(flyout.Items[3]);
+        Assert.Same(items[3], flyout.Items[4]);
+        flyout.Hide();
         window.Close();
     }
 

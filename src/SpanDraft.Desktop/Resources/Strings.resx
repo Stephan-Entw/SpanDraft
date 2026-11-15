@@ -401,7 +401,7 @@ Remove the entry from Recent projects?</value></data>
   <data name="SegmentInsertAfter" xml:space="preserve"><value>Insert segment after</value></data>
   <data name="SegmentDuplicate" xml:space="preserve"><value>Duplicate</value></data>
   <data name="SegmentRemove" xml:space="preserve"><value>Delete</value></data>
-  <data name="SegmentMenu" xml:space="preserve"><value>Segment actions</value></data>
+  <data name="SegmentMenu" xml:space="preserve"><value>More options</value></data>
   <data name="SegmentLength" xml:space="preserve"><value>Segment length</value></data>
   <data name="SegmentChangeBlocked" xml:space="preserve"><value>This change is not possible because it would make these elements invalid: {0}.</value></data>
   <data name="LengthFromSegments" xml:space="preserve"><value>The beam length is the sum of the segment lengths. Change it in the project properties.</value></data>
