@@ -77,6 +77,13 @@ public static class BeamModelValidator
 
     private static void ValidateMomentReleases(BeamModel beam, List<ValidationError> errors)
     {
+        if (beam.MomentReleases.Count == 0)
+            return;
+        var fixedSupports = beam.Supports.Where(s => s.Type == SupportType.Fixed)
+            .Select(s => s.Position.Meters).ToHashSet();
+        var rotationalSprings = beam.Supports.Where(s => s.RotationalSpring is not null)
+            .Select(s => s.Position.Meters).ToHashSet();
+        var pointMoments = beam.Loads.OfType<PointMoment>().Select(m => m.Position.Meters).ToHashSet();
         var seen = new HashSet<double>();
         for (int i = 0; i < beam.MomentReleases.Count; i++)
         {
@@ -89,13 +96,13 @@ public static class BeamModelValidator
             if (!seen.Add(x))
                 errors.Add(new(ValidationErrorCode.DuplicateMomentRelease,
                     "A moment release already exists at this position.", $"MomentReleases[{i}]"));
-            if (beam.Supports.Any(s => s.Type == SupportType.Fixed && s.Position.Meters == x))
+            if (fixedSupports.Contains(x))
                 errors.Add(new(ValidationErrorCode.MomentReleaseAtFixedSupport,
                     "A moment release cannot share its position with a fixed support.", $"MomentReleases[{i}]"));
-            if (beam.Supports.Any(s => s.RotationalSpring is not null && s.Position.Meters == x))
+            if (rotationalSprings.Contains(x))
                 errors.Add(new(ValidationErrorCode.MomentReleaseAtRotationalSpring,
                     "A moment release cannot share its position with a rotational spring.", $"MomentReleases[{i}]"));
-            if (beam.Loads.Any(l => l is PointMoment moment && moment.Position.Meters == x))
+            if (pointMoments.Contains(x))
                 errors.Add(new(ValidationErrorCode.MomentReleaseAtPointMoment,
                     "A moment release cannot share its position with a point moment.", $"MomentReleases[{i}]"));
         }
