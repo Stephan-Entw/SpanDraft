@@ -28,6 +28,7 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+!/src/SpanDraft.Core/Releases/
 
 [Dd]ebug/x64/
 [Dd]ebugPublic/x64/
