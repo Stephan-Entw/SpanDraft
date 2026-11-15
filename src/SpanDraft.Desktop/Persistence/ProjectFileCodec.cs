@@ -143,11 +143,15 @@ public static class ProjectFileCodec
             throw new ProjectFormatException($"A position is given either as {field} or as a segment reference, not both.");
         if (reference is null) return (L(position, field), null);
         if (reference.Segment == Guid.Empty) throw new ProjectFormatException("A position reference needs a segment ID.");
-        if ((reference.Offset is null) == (reference.AtEnd != true))
+        // atEnd is written only as true; an explicit false is a second spelling of "not at the end" next to an offset.
+        if (reference.AtEnd == false || (reference.Offset is null) == (reference.AtEnd is null))
             throw new ProjectFormatException("A position reference has either an offset or atEnd, not both and not neither.");
-        return (default, reference.Offset is { } offset
-            ? new PositionRef.FromSegmentStart(reference.Segment, L(offset, "offset"))
-            : new PositionRef.AtSegmentEnd(reference.Segment));
+        if (reference.Offset is not { } offset)
+            return (default, new PositionRef.AtSegmentEnd(reference.Segment));
+        // A negative distance would resolve into the previous segment while still naming this one.
+        if (Number(offset, "offset") < 0)
+            throw new ProjectFormatException("A position reference offset must not be negative.");
+        return (default, new PositionRef.FromSegmentStart(reference.Segment, L(offset, "offset")));
     }
 
     internal static MaterialV2 MaterialToDto(Material material) => new()

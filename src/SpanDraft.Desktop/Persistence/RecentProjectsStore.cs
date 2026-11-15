@@ -21,20 +21,27 @@ public sealed class RecentProjectsStore(IProjectFileStore files, string path,
     public async Task LoadAsync()
     {
         await _gate.WaitAsync();
-        try { await LoadLockedAsync(); }
+        try { _ = await LoadLockedAsync(); }
         finally { _gate.Release(); }
     }
 
-    private async Task LoadLockedAsync()
+    // False when the file could not be read (a transient I/O failure): the list on disk is then unknown, so it must not be
+    // overwritten from memory, and the next call tries to read it again. A damaged file counts as an empty list.
+    private async Task<bool> LoadLockedAsync()
     {
-        if (_loaded) return;
+        if (_loaded) return true;
         try
         {
             var bytes = await files.ReadAsync(FilePath);
-            Entries = bytes is null || bytes.Length == 0 ? [] : RecentProjectsCodec.Deserialize(bytes);
+            var stored = bytes is null || bytes.Length == 0 ? [] : RecentProjectsCodec.Deserialize(bytes);
+            // Entries recorded in memory while the file was unreadable stay at the front.
+            Entries = Entries.Count == 0 ? stored : RecentProjectsCodec.Normalize(Entries.Concat(stored));
         }
-        catch (Exception e) when (IsLocalStateError(e)) { Entries = []; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        { return false; }
+        catch (Exception e) when (IsLocalStateError(e)) { }
         _loaded = true;
+        return true;
     }
 
     public async Task RecordUseAsync(string projectPath, string? replacedPath = null)
@@ -42,14 +49,15 @@ public sealed class RecentProjectsStore(IProjectFileStore files, string path,
         await _gate.WaitAsync();
         try
         {
-            await LoadLockedAsync();
+            bool loaded = await LoadLockedAsync();
             string fullPath = Path.GetFullPath(projectPath);
             string? previous = replacedPath is null ? null : Path.GetFullPath(replacedPath);
             var entry = new RecentProjectEntry(fullPath, (utcNow?.Invoke() ?? DateTimeOffset.UtcNow).ToUniversalTime());
             Entries = RecentProjectsCodec.Normalize(new[] { entry }.Concat(Entries.Where(e =>
                 !RecentProjectsCodec.PathComparer.Equals(e.Path, fullPath)
                 && !RecentProjectsCodec.PathComparer.Equals(e.Path, previous))));
-            // Comfort state is published in memory before its best-effort disk write.
+            // Comfort state is published in memory before its best-effort disk write; an unreadable file is not replaced.
+            if (!loaded) return;
             ensureDirectory?.Invoke();
             await files.WriteAtomicAsync(FilePath, RecentProjectsCodec.Serialize(Entries));
         }
@@ -62,10 +70,11 @@ public sealed class RecentProjectsStore(IProjectFileStore files, string path,
         await _gate.WaitAsync();
         try
         {
-            await LoadLockedAsync();
+            bool loaded = await LoadLockedAsync();
             string fullPath = Path.GetFullPath(projectPath);
             Entries = Entries.Where(e => !RecentProjectsCodec.PathComparer.Equals(e.Path, fullPath)).ToArray();
-            // Comfort state is published in memory before its best-effort disk write.
+            // Comfort state is published in memory before its best-effort disk write; an unreadable file is not replaced.
+            if (!loaded) return;
             ensureDirectory?.Invoke();
             await files.WriteAtomicAsync(FilePath, RecentProjectsCodec.Serialize(Entries));
         }

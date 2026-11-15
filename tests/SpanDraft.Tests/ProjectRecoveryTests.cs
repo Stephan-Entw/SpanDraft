@@ -358,4 +358,26 @@ public sealed class ProjectRecoveryTests
         Assert.True(state.ContentEquals(main.Session.CurrentRevision.State));
         Assert.Equal("Local author", main.Settings.LastAuthor);
     }
+
+    [Fact]
+    public async Task ALaterScheduleNeitherCancelsNorSkipsARunningFlush()
+    {
+        var files = new Files { HonorWriteCancellation = true }; var delay = new Delay();
+        var recovery = new ProjectRecovery(files, App.Slot, delay.Wait, () => Now);
+        var session = ProjectSession.Create(State());
+        var flushed = State() with { Document = State().Document with { Length = M(2) } };
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        files.BeforeWrite = async (_, _, _) => { entered.TrySetResult(); await WaitFor(release.Task); };
+        var flush = recovery.FlushAsync(flushed, TestPath("flushed.spandraft"));
+        try
+        {
+            await WaitForCheckpoint(entered.Task, flush);
+            recovery.Schedule(session);
+        }
+        finally { release.TrySetResult(); }
+        await WaitFor(flush);
+        Assert.Equal(TestPath("flushed.spandraft"), (await recovery.ReadAsync())!.OriginalFilePath);
+        delay.ReleaseAll(); await WaitFor(recovery.DrainAsync());
+    }
 }

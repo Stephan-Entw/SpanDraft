@@ -203,4 +203,22 @@ public sealed class RecentProjectsTests
 
     private static JsonObject JsonSerializerEntry(string path, DateTimeOffset time) => new()
     { ["path"] = path, ["lastUsedUtc"] = time.ToString("O") };
+
+    [Fact]
+    public async Task AnUnreadableFileIsNeverOverwrittenAndItsListSurvivesALaterRead()
+    {
+        string stored = TestPath("stored.spandraft"), fresh = TestPath("fresh.spandraft");
+        var files = new Files();
+        files.Data[Slot] = RecentProjectsCodec.Serialize([new RecentProjectEntry(stored, Now)]);
+        files.BeforeRead = _ => throw new IOException("Locked");
+        var store = new RecentProjectsStore(files, Slot);
+        await store.RecordUseAsync(fresh);
+        Assert.Equal(new[] { fresh }, store.Entries.Select(e => e.Path)); Assert.Empty(files.Writes);
+
+        files.BeforeRead = null;
+        await store.RecordUseAsync(fresh);
+        Assert.Equal(new[] { fresh, stored }.Order(), store.Entries.Select(e => e.Path).Order());
+        Assert.Single(files.Writes);
+        Assert.Equal(2, RecentProjectsCodec.Deserialize(files.Data[Slot]).Count);
+    }
 }

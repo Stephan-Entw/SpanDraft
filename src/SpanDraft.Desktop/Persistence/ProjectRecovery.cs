@@ -75,12 +75,13 @@ public sealed class ProjectRecovery
         await WriteGenerationAsync(snapshot, generation, token);
     }
 
-    private async Task WriteGenerationAsync(RecoverySnapshot snapshot, long generation, CancellationToken token)
+    private async Task WriteGenerationAsync(RecoverySnapshot snapshot, long generation, CancellationToken token,
+        bool supersedable = true)
     {
         await _gate.WaitAsync(token);
         try
         {
-            if (generation != _generation) return;
+            if (supersedable && generation != _generation) return;
             token.ThrowIfCancellationRequested();
             _ensureDirectory?.Invoke();
             await _files.WriteAtomicAsync(SlotPath, Encode(snapshot), token);
@@ -97,9 +98,11 @@ public sealed class ProjectRecovery
 
     public async Task FlushAsync(ProjectState state, string? originalFilePath)
     {
-        var (generation, token) = Invalidate();
-        // Gate acquisition also drains any write which was already publishing.
-        await WriteGenerationAsync(new(state, originalFilePath, _utcNow()), generation, token);
+        var (generation, _) = Invalidate();
+        // Gate acquisition also drains any write which was already publishing. A flush is an explicit request to publish
+        // this snapshot now, so a later Schedule or Delete neither cancels it nor turns it into a no-op; the writes of
+        // later generations follow it through the gate.
+        await WriteGenerationAsync(new(state, originalFilePath, _utcNow()), generation, CancellationToken.None, supersedable: false);
     }
 
     public async Task DeleteAsync()

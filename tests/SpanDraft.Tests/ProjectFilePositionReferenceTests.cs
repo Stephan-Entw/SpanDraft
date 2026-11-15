@@ -246,4 +246,21 @@ public sealed class ProjectFilePositionReferenceTests
         root["document"]!["furtherSegments"]![0]!.AsObject().Remove("id");
         Assert.Throws<ProjectFormatException>(() => Load(root));
     }
+
+    [Fact]
+    public void ANegativeOffsetOrAnExplicitFalseEndNextToAnOffsetIsRejected()
+    {
+        // 0.4 m from the start of the second segment becomes -0.4 m: the global x would lie in the first segment.
+        var negative = Root();
+        negative["document"]!["pointLoads"]![0]!["positionRef"]!["offset"] = -0.4;
+        Assert.Throws<ProjectFormatException>(() => Load(negative));
+
+        var offsetAndEndFalse = Root();
+        offsetAndEndFalse["document"]!["pointLoads"]![0]!["positionRef"]!["atEnd"] = false;
+        Assert.Throws<ProjectFormatException>(() => Load(offsetAndEndFalse));
+
+        var zero = Root();
+        zero["document"]!["pointLoads"]![0]!["positionRef"]!["offset"] = 0.0;
+        Assert.Equal(M(1.2), Load(zero).Document.Loads[0].Position);
+    }
 }

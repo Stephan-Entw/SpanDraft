@@ -471,5 +471,20 @@ public sealed class DesktopSettingsTests
         Assert.Same(UserSettings.Default, await new LocalSettingsStore(files, "settings").LoadAsync());
     }
 
-
+    [Fact]
+    public async Task OverlappingSavesArePublishedInTheOrderOfTheCalls()
+    {
+        var files = new Files(); var store = new LocalSettingsStore(files, "settings");
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        bool first = true;
+        // The first write is held back; a store that does not queue would let the second one overtake it.
+        files.BeforeWrite = async (_, _, _) => { if (first) { first = false; await release.Task; } };
+        var older = UserSettings.Default;
+        var newer = new UserSettings { SignificantDigits = 5 };
+        var one = store.SaveAsync(older); var two = store.SaveAsync(newer);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+        release.SetResult();
+        await Task.WhenAll(one, two);
+        Assert.Equal(5, (await store.LoadAsync()).SignificantDigits);
+    }
 }

@@ -6,6 +6,8 @@ namespace SpanDraft.Desktop.Persistence;
 
 public sealed class LocalSettingsStore(IProjectFileStore files, string path, Action? ensureDirectory = null)
 {
+    private readonly object _queueLock = new();
+    private Task _queue = Task.CompletedTask;
     public string FilePath { get; } = path;
 
     public static LocalSettingsStore Local(IProjectFileStore files)
@@ -29,7 +31,16 @@ public sealed class LocalSettingsStore(IProjectFileStore files, string path, Act
     {
         byte[] bytes = SettingsCodec.Serialize(settings);
         ensureDirectory?.Invoke();
-        return files.WriteAtomicAsync(FilePath, bytes);
+        // Writes are published in the order of the calls, so an older snapshot can never replace a newer one.
+        lock (_queueLock) return _queue = WriteAfterAsync(_queue, bytes);
+    }
+
+    private async Task WriteAfterAsync(Task previous, byte[] bytes)
+    {
+        // The failure of an earlier save belongs to its own caller.
+        try { await previous; }
+        catch (Exception) { }
+        await files.WriteAtomicAsync(FilePath, bytes);
     }
 }
 
