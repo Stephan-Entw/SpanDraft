@@ -10,10 +10,11 @@
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:SetupSegmentCard">
           <Border x:Name="BeamCardSurface" Classes="beamSetupCard" VerticalAlignment="Top">
-            <Grid x:Name="BeamAreas" ColumnDefinitions="Auto,Auto,Auto,5*,Auto,3*,Auto">
+            <Grid x:Name="BeamAreas" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,5*,Auto,3*">
               <TextBlock x:Name="SegmentTitle" Text="{Binding Title}" Classes="bodyStrong" IsVisible="{Binding HasSeveralSegments}"
-                  MinWidth="96" Margin="8,0,12,0" VerticalAlignment="Center" />
-              <Border x:Name="LengthSurface" Grid.Column="1" Padding="8,0">
+                  MinWidth="88" Margin="8,0,0,0" VerticalAlignment="Center" />
+              <Border Grid.Column="2" Classes="setupDivider" />
+              <Border x:Name="LengthSurface" Grid.Column="3" Padding="8,0">
                 <Grid x:Name="SetupLengthRow" ColumnDefinitions="Auto,112,Auto" ColumnSpacing="8" VerticalAlignment="Center">
                   <TextBlock x:Name="SetupLengthLabel" Text="{x:Static resources:Strings.SetupLength}" Classes="bodyStrong" VerticalAlignment="Center" />
                   <TextBox x:Name="SetupLengthInput" Grid.Column="1" Text="{Binding LengthInput.Text, Mode=TwoWay}" Classes="inlineDimension inlineValidation"
@@ -24,38 +25,43 @@
                   <controls:TechnicalTextBlock x:Name="SetupLengthUnit" Grid.Column="2" Text="{Binding LengthInput.Unit}" VerticalAlignment="Center" Classes="propertyLabel" />
                 </Grid>
               </Border>
-              <Border Grid.Column="2" Classes="setupDivider" />
-              <Button x:Name="SectionCardButton" Grid.Column="3" Classes="beamSetupSurface" Command="{Binding ChangeSectionCommand}"
-                  AutomationProperties.Name="{x:Static resources:Strings.SectionSelection}">
-                <Grid RowDefinitions="Auto,*" RowSpacing="6" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                  <TextBlock Text="{x:Static resources:Strings.Section}" Classes="bodyStrong" IsVisible="{Binding HasSection}" />
-                  <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.ChangeLink}" Classes="changeLink" IsVisible="{Binding HasSection}" />
-                  <TextBlock Text="{x:Static resources:Strings.SectionSelection}" Classes="bodyStrong" IsVisible="{Binding !HasSection}" VerticalAlignment="Center" Grid.RowSpan="2" />
-                  <Grid Grid.Row="1" Grid.ColumnSpan="2" IsVisible="{Binding HasSection}" ColumnDefinitions="32,*" ColumnSpacing="12" VerticalAlignment="Center">
-                    <controls:SectionShapeIcon Type="{Binding SectionType}" Width="32" Height="32" VerticalAlignment="Center" />
-                    <StackPanel Grid.Column="1" Spacing="4">
-                      <controls:TechnicalTextBlock x:Name="SectionDescription" Text="{Binding SectionName}" Classes="bodyStrong" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SectionName}" />
-                      <controls:TechnicalTextBlock x:Name="SectionAxisDescription" Text="{Binding AxisSummary}" Classes="propertyLabel" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding AxisSummary}" />
-                    </StackPanel>
-                  </Grid>
-                  <PathIcon Grid.Column="1" Grid.RowSpan="2" Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronRight}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" IsVisible="{Binding !HasSection}" />
-                </Grid>
-              </Button>
               <Border Grid.Column="4" Classes="setupDivider" />
-              <Button x:Name="MaterialCardButton" Grid.Column="5" Classes="beamSetupSurface" Command="{Binding ChangeMaterialCommand}"
-                  AutomationProperties.Name="{x:Static resources:Strings.MaterialSelection}" AutomationProperties.HelpText="{Binding MaterialName}">
-                <Grid RowDefinitions="Auto,*" RowSpacing="6" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                  <TextBlock Text="{x:Static resources:Strings.Material}" Classes="bodyStrong" IsVisible="{Binding HasMaterial}" />
-                  <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.ChangeLink}" Classes="changeLink" IsVisible="{Binding HasMaterial}" />
-                  <TextBlock Text="{x:Static resources:Strings.SelectMaterialRequired}" Classes="bodyStrong" IsVisible="{Binding !HasMaterial}" VerticalAlignment="Center" Grid.RowSpan="2" />
-                  <StackPanel Grid.Row="1" Grid.ColumnSpan="2" IsVisible="{Binding HasMaterial}" Spacing="4" VerticalAlignment="Center">
-                    <controls:TechnicalTextBlock x:Name="MaterialDescription" Text="{Binding MaterialName}" Classes="bodyStrong" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialName}" />
-                    <TextBlock controls:TechnicalTextPresenter.Content="{Binding MaterialSummaryText}" Classes="propertyLabel" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialSummary}" />
+              <Button x:Name="SectionCardButton" Grid.Column="5" Classes="beamSetupSurface" Command="{Binding ChangeSectionCommand}"
+                  AutomationProperties.Name="{x:Static resources:Strings.SectionSelection}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                  <StackPanel IsVisible="{Binding HasSection}" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock Text="{x:Static resources:Strings.Section}" Classes="bodyStrong" />
+                    <Grid ColumnDefinitions="32,*" ColumnSpacing="12">
+                      <controls:SectionShapeIcon Type="{Binding SectionType}" Width="32" Height="32" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="4">
+                        <controls:TechnicalTextBlock x:Name="SectionDescription" Text="{Binding SectionName}" Classes="bodyStrong" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SectionName}" />
+                        <controls:TechnicalTextBlock x:Name="SectionAxisDescription" Text="{Binding AxisSummary}" Classes="propertyLabel" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding AxisSummary}" />
+                      </StackPanel>
+                    </Grid>
                   </StackPanel>
-                  <PathIcon Grid.Column="1" Grid.RowSpan="2" Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronRight}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" IsVisible="{Binding !HasMaterial}" />
+                  <TextBlock Text="{x:Static resources:Strings.SectionSelection}" Classes="bodyStrong" IsVisible="{Binding !HasSection}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.ChangeLink}" Classes="changeLink" IsVisible="{Binding HasSection}" VerticalAlignment="Center" />
+                  <PathIcon Grid.Column="1" Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronRight}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" IsVisible="{Binding !HasSection}" />
                 </Grid>
               </Button>
-              <Button x:Name="SegmentMenuButton" Grid.Column="6" Classes="ghost" VerticalAlignment="Center" Margin="8,0,0,0"
+              <Border Grid.Column="6" Classes="setupDivider" />
+              <Button x:Name="MaterialCardButton" Grid.Column="7" Classes="beamSetupSurface" Command="{Binding ChangeMaterialCommand}"
+                  AutomationProperties.Name="{x:Static resources:Strings.MaterialSelection}" AutomationProperties.HelpText="{Binding MaterialName}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                  <StackPanel IsVisible="{Binding HasMaterial}" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock Text="{x:Static resources:Strings.Material}" Classes="bodyStrong" />
+                    <StackPanel Spacing="4">
+                      <controls:TechnicalTextBlock x:Name="MaterialDescription" Text="{Binding MaterialName}" Classes="bodyStrong" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialName}" />
+                      <TextBlock controls:TechnicalTextPresenter.Content="{Binding MaterialSummaryText}" Classes="propertyLabel" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MaterialSummary}" />
+                    </StackPanel>
+                  </StackPanel>
+                  <TextBlock Text="{x:Static resources:Strings.SelectMaterialRequired}" Classes="bodyStrong" IsVisible="{Binding !HasMaterial}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.ChangeLink}" Classes="changeLink" IsVisible="{Binding HasMaterial}" VerticalAlignment="Center" />
+                  <PathIcon Grid.Column="1" Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronRight}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" IsVisible="{Binding !HasMaterial}" />
+                </Grid>
+              </Button>
+              <!-- Declared last, so the keyboard reaches the length and the areas first; shown beside the title. -->
+              <Button x:Name="SegmentMenuButton" Grid.Column="1" Classes="ghost" VerticalAlignment="Center"
                   Width="{DynamicResource StandardControl}" Height="{DynamicResource StandardControl}" Click="MenuClicked"
                   AutomationProperties.Name="{x:Static resources:Strings.SegmentMenu}" ToolTip.Tip="{x:Static resources:Strings.SegmentMenu}">
                 <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.MoreHorizontal}" />

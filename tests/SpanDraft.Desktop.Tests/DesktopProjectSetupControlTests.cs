@@ -302,9 +302,8 @@ public sealed class DesktopProjectSetupControlTests
         Assert.True(surface.Bounds.Height <= 130);
         Assert.True(double.IsNaN(surface.Height));
         var areas = surface.Part<Grid>("BeamAreas");
-        // The row is title and length, a divider, the section area, a divider, the narrower material area and the menu.
-        Assert.Equal(new[] { 5d, 3 }, new[] { areas.ColumnDefinitions[3].Width.Value, areas.ColumnDefinitions[5].Width.Value });
-        Assert.True(areas.ColumnDefinitions[6].Width.IsAuto);
+        // The row is title with its menu, a divider, the length, a divider, the section area, a divider and the narrower material area.
+        Assert.Equal(new[] { 5d, 3 }, new[] { areas.ColumnDefinitions[5].Width.Value, areas.ColumnDefinitions[7].Width.Value });
         var lengthArea = areas.Children.OfType<Border>().Single(b => b.Name == "LengthSurface");
         Assert.False(lengthArea.Focusable); Assert.Equal(default, lengthArea.BorderThickness);
         var section = areas.Children.OfType<Button>().Single(b => b.Name == "SectionCardButton");
