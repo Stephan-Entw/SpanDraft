@@ -59,6 +59,30 @@ public sealed class ResultDiagramControlTests : DesktopResultDiagramControlTestS
         }
     }
 
+    [Fact]
+    public void ADividerSeparatesBeamAndResultsAndTheLastDiagramHasAsMuchRoomBelowAsBetweenDiagrams()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var view = new EditorView { DataContext = new EditorViewModel(Document(), () => { }) };
+        var window = new Window { Content = view };
+        Arrange(window, 1250, 1600);
+        var upper = view.FindControl<ScrollViewer>("EditorScroll")!;
+        var lower = view.FindControl<ScrollViewer>("DiagramScroll")!;
+        var divider = view.FindControl<Border>("ResultsDivider")!;
+        var diagrams = Diagrams(view).ToList();
+
+        // The hairline lies between the two viewports, spans their width and does not overlap either.
+        Assert.Equal(upper.Bounds.Bottom, divider.Bounds.Top, 0.5);
+        Assert.Equal(divider.Bounds.Bottom, lower.Bounds.Top, 0.5);
+        Assert.Equal(upper.Bounds.Width, divider.Bounds.Width, 0.5);
+
+        double between = diagrams[1].TranslatePoint(default, view)!.Value.Y - diagrams[0].TranslatePoint(default, view)!.Value.Y - diagrams[0].Bounds.Height;
+        var stack = view.FindControl<StackPanel>("ResultDiagrams")!;
+        double below = stack.Margin.Bottom;
+        Assert.True(between > 0);
+        Assert.Equal(between, below, 0.5);
+    }
+
     [Theory]
     [InlineData(1100, 618)]
     [InlineData(1250, 768)]

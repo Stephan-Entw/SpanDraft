@@ -133,14 +133,17 @@
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="320" />
       </Grid.ColumnDefinitions>
-      <Grid x:Name="EditorContent" RowDefinitions="Auto,*" SizeChanged="WorkspaceSizeChanged"
+      <Grid x:Name="EditorContent" RowDefinitions="Auto,Auto,*" SizeChanged="WorkspaceSizeChanged"
             Background="{DynamicResource CanvasBackground}">
         <!-- Reserve matching gutters only while at least one viewport overflows. -->
         <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
           <controls:BeamEditorSurface x:Name="BeamSurface" VerticalAlignment="Top" />
         </ScrollViewer>
-        <ScrollViewer Grid.Row="1" x:Name="DiagramScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
-          <StackPanel x:Name="ResultDiagrams" Spacing="{StaticResource Space16}">
+        <!-- The same hairline as the other dividers, between the beam and the results. -->
+        <Border x:Name="ResultsDivider" Grid.Row="1" Height="1" Background="{DynamicResource Border}" />
+        <ScrollViewer Grid.Row="2" x:Name="DiagramScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
+          <!-- The bottom margin gives the last diagram the same room below it as between the diagrams. -->
+          <StackPanel x:Name="ResultDiagrams" Spacing="{StaticResource Space16}" Margin="0,0,0,16">
             <controls:ResultDiagram Kind="TransverseDisplacement" Presentation="{Binding Presentation}"
                                     StationLayout="{Binding #BeamSurface.StationLayout}" />
             <controls:ResultDiagram Kind="ShearForce" Presentation="{Binding Presentation}"

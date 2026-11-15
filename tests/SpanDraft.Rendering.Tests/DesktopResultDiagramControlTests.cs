@@ -85,7 +85,9 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
         Assert.Equal(0, VerticalBar(upper).Opacity);
         Assert.False(VerticalBar(upper).IsHitTestVisible);
         Assert.Equal(0, upper.Offset.Y);
-        Assert.Equal(upper.Bounds.Bottom, lower.Bounds.Top);
+        var divider = view.FindControl<Border>("ResultsDivider")!;
+        Assert.Equal(upper.Bounds.Bottom, divider.Bounds.Top);
+        Assert.Equal(divider.Bounds.Bottom, lower.Bounds.Top);
         Assert.Equal(upper.Viewport.Width, lower.Viewport.Width);
         Assert.Same(canvas.Scene!.Frame.Layout, surface.StationLayout);
         Assert.Same(surface.StationLayout, axis.StationLayout);

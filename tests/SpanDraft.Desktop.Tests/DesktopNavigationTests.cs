@@ -478,7 +478,9 @@ public sealed class DesktopNavigationTests
         var scroll = view.FindControl<ScrollViewer>("EditorScroll")!;
         Assert.Equal(0, surface.Bounds.Top);
         Assert.Equal(pane.Bounds.Bottom, axis.Bounds.Top);
-        Assert.Equal(scroll.Bounds.Bottom, diagrams.Bounds.Top);
+        var divider = view.FindControl<Border>("ResultsDivider")!;
+        Assert.Equal(scroll.Bounds.Bottom, divider.Bounds.Top);
+        Assert.Equal(divider.Bounds.Bottom, diagrams.Bounds.Top);
         Assert.True(pane.Bounds.Height >= SchematicMetrics.MinimumBeamPaneHeight);
         Assert.Equal(canvas.Scene!.MinimumPaneHeight, pane.Bounds.Height);
         Assert.True(canvas.Scene!.Frame.Viewport.BeamY > 0);
