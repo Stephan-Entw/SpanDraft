@@ -24,6 +24,7 @@ public partial class BeamEditorSurface : UserControl
     private readonly BeamLayoutState _layout = new();
     private BeamRenderState? _scene;
     private bool _synchronizing;
+    private bool _synchronizePending;
     private BeamLayoutFrame? Frame => _layout.Current;
     private SupportDraftViewModel? _shownDraft;
     private int _popupFocusVersion;
@@ -205,9 +206,24 @@ public partial class BeamEditorSurface : UserControl
             or nameof(EditorViewModel.HoveredMomentReleaseId) or nameof(EditorViewModel.HasMomentReleaseFeedback)) SynchronizeVisuals();
     }
 
+    private const int MaximumSynchronizePasses = 4;
+
     private void SynchronizeVisuals()
     {
-        if (_synchronizing) return;
+        // Closing a popup inside a pass can cancel the editor interaction and notify. Such a
+        // notification must not be lost: it requests another pass instead of being dropped.
+        if (_synchronizing) { _synchronizePending = true; return; }
+        for (int pass = 0; pass < MaximumSynchronizePasses; pass++)
+        {
+            _synchronizePending = false;
+            SynchronizeVisualsPass();
+            if (!_synchronizePending) break;
+        }
+        _synchronizePending = false;
+    }
+
+    private void SynchronizeVisualsPass()
+    {
         if (_editor is null)
         {
             ProbeMarker.IsVisible = ProbePoint.IsVisible = ProbeBox.IsVisible = false;
@@ -379,9 +395,10 @@ public partial class BeamEditorSurface : UserControl
             e.Handled = true;
             return;
         }
-        if (_editor.IsEditorNeutral && _scene?.HitTestLabels(point.X, point.Y).Count > 1)
+        // Several labels of one entity (self-weight per segment) are one candidate, not a choice.
+        if (_editor.IsEditorNeutral && _scene?.HitTestLabelEntities(point.X, point.Y) is { Count: > 1 } labelEntities)
         {
-            ShowEntitySelection(_scene.HitTestEntities(point.X, point.Y), point);
+            ShowEntitySelection(labelEntities, point);
             e.Handled = true;
             return;
         }

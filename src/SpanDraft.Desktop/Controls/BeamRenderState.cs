@@ -175,11 +175,15 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
     public IReadOnlyList<EntityAnnotation> HitTestLabels(double x, double y) =>
         Annotations.Where(a => a.Id is not null && a.Bounds.Contains(new Point(x, y))).ToArray();
 
+    /// <summary>The distinct entities with a label under the point; several labels of one entity count once.</summary>
+    public IReadOnlyList<Guid> HitTestLabelEntities(double x, double y) =>
+        HitTestLabels(x, y).Select(a => a.Id!.Value).Distinct().ToArray();
+
     /// <summary>Local scene hits only. Labels take precedence; all different symbol entities are equal candidates.</summary>
     public IReadOnlyList<Guid> HitTestEntities(double x, double y)
     {
-        var labels = HitTestLabels(x, y);
-        if (labels.Count > 0) return labels.Select(a => a.Id!.Value).Distinct().ToArray();
+        var labels = HitTestLabelEntities(x, y);
+        if (labels.Count > 0) return labels;
         // The ring is tiny and usually sits on a support symbol: a hit on the ring itself is a hit on the hinge alone.
         var rings = MomentReleases.Where(r => r.Id is not null
             && MomentReleaseSymbol.Contains(r, Frame.Viewport.BeamY, x, y, padding: 0)).Select(r => r.Id!.Value).ToArray();
