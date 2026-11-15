@@ -50,7 +50,7 @@ public sealed class DesktopSegmentRowControlTests
         Directory.CreateDirectory(directory);
         using var bitmap = new Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize(1250, 900), new Vector(96, 96));
         bitmap.Render(window);
-        bitmap.Save(Path.Combine(directory, $"segment-row-{name}.png"));
+        bitmap.Save(Path.Combine(directory, $"segment-row-{name}.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
     }
 
     private static double Top(Control control, Control relativeTo) => control.TranslatePoint(default, relativeTo)!.Value.Y;

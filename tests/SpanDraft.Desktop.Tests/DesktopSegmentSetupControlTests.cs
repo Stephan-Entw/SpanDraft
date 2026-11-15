@@ -103,7 +103,7 @@ public sealed class DesktopSegmentSetupControlTests
             Directory.CreateDirectory(directory);
             using var bitmap = new Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize((int)width, (int)height), new Vector(96, 96));
             bitmap.Render(window);
-            bitmap.Save(Path.Combine(directory, $"segments-{width}x{height}.png"));
+            bitmap.Save(Path.Combine(directory, $"segments-{width}x{height}.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
         }
         window.Close();
     }

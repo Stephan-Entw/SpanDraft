@@ -137,7 +137,7 @@ public sealed class ReportSectionDetailTests : ProjectReportTestSupport
         var table = report.Data.Tables[0];
         Assert.Equal(SpanDraft.Desktop.Resources.Strings.SetupSegments, table.Title);
         Assert.Empty(table.Headers);
-        Assert.Equal(1, table.Widths.Count);
+        Assert.Single(table.Widths);
         Assert.Equal(editor.Overview.Segments.Select(s => s.Title + "\n" + s.Description), table.Rows.Select(r => r[0]));
         using var bitmap = report.RenderPage(0, 96);
         var heading = Assert.Single(report.TextRuns, r => r.Text == editor.Overview.Segments[0].Title && r.Bounds.Left > ReportDocument.Margin + ReportDocument.LeftWidth);
