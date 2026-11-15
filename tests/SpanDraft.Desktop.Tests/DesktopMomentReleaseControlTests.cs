@@ -4,6 +4,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop;
 using SpanDraft.Desktop.Controls;
@@ -133,6 +134,38 @@ public sealed class DesktopMomentReleaseControlTests
         Assert.True(flyout.FindControl<Button>("DeleteAction")!.IsVisible);
         flyout.FindControl<Button>("DeleteAction")!.Command!.Execute(null);
         Assert.Empty(editor.Document.MomentReleases);
+        window.Close();
+    }
+
+    [Theory]
+    [InlineData("de-DE", -50)]
+    [InlineData("en-US", -50)]
+    [InlineData("de-DE", -10000)]
+    public void TheHingeQuantitiesKeepEveryRotationOnOneLineInsideItsColumnInTheFixedPanelWidth(string culture, double load)
+    {
+        using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
+        var document = new EditorDocument(Length.FromMeters(8), ProjectTemplates.Material, ProjectTemplates.Section,
+            new EditorSupport[] { new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Pinned, "A"),
+                new(Guid.NewGuid(), Length.FromMeters(4), SupportType.Roller, "B"), new(Guid.NewGuid(), Length.FromMeters(8), SupportType.Roller, "C") },
+            [new EditorPointForce(Guid.NewGuid(), Length.FromMeters(7), Force.FromNewtons(load), "F1")])
+            .WithMomentReleases([new(Guid.NewGuid(), Length.FromMeters(6), "G1")]);
+        var editor = new EditorViewModel(document, () => { });
+        var result = Assert.Single(editor.Overview.MomentReleaseResults);
+        if (load == -50) Assert.True(SpanDraft.Reporting.Notation.TechnicalText.HasExponents(result.RotationLeft), result.RotationLeft);
+        var view = new ProjectOverviewView { DataContext = editor, Width = 320 };
+        var window = new Window { Content = view, Width = 320, Height = 800 };
+        window.Show(); Layout(window, 320, 800);
+        var table = view.FindControl<ItemsControl>("MomentReleaseResultTable")!;
+        var row = Assert.Single(table.GetVisualDescendants().OfType<Grid>(), g => g.ColumnDefinitions.Count == 4);
+        var header = view.FindControl<TextBlock>("RotationLeftHeader")!.GetVisualAncestors().OfType<Grid>().First();
+        // Both rotation columns are as wide in the header as in the row, so every value sits under its caption.
+        Assert.Equal(header.ColumnDefinitions.Select(c => c.Width.Value), row.ColumnDefinitions.Select(c => c.Width.Value));
+        foreach (var (grid, column) in new[] { (header, 1), (header, 2), (row, 1), (row, 2) })
+        {
+            var cell = grid.Children.OfType<TextBlock>().Single(t => Grid.GetColumn(t) == column);
+            Assert.Single(cell.TextLayout.TextLines);
+            Assert.True(cell.DesiredSize.Width <= cell.Bounds.Width + 0.01, $"'{cell.Text ?? cell.Inlines?.Text}' needs {cell.DesiredSize.Width} of {cell.Bounds.Width}.");
+        }
         window.Close();
     }
 }

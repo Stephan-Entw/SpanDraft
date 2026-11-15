@@ -52,14 +52,14 @@
       </Grid>
     </DataTemplate>
     <DataTemplate x:Key="MomentReleaseResultRowTemplate" x:DataType="state:ProjectOverviewReleaseResult">
-      <Grid Classes="overviewRow" ColumnDefinitions="64,*,*,1.3*">
+      <Grid Classes="overviewRow" ColumnDefinitions="64,1.3*,1.3*,0.8*">
         <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
           <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
         </Button>
-        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding RotationLeft}" Classes="number" />
-        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding RotationRight}" Classes="number" />
+        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding RotationLeft}" Classes="number" TextWrapping="NoWrap" />
+        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding RotationRight}" Classes="number" TextWrapping="NoWrap" />
         <controls:TechnicalTextBlock Grid.Column="3" Text="{Binding Shear}" Classes="number" />
       </Grid>
     </DataTemplate>
@@ -219,10 +219,10 @@
         <StackPanel x:Name="MomentReleaseResultsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.HasMomentReleaseResults}">
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.MomentReleaseResults}" Classes="sectionTitle" />
-          <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,*,*,1.3*">
+          <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,1.3*,1.3*,0.8*">
             <TextBlock Text="{x:Static resources:Strings.MomentRelease}" Classes="centered" />
-            <TextBlock x:Name="RotationLeftHeader" Grid.Column="1" controls:TechnicalTextPresenter.Content="{Binding Overview.RotationLeftHeaderText}" Classes="number" />
-            <TextBlock x:Name="RotationRightHeader" Grid.Column="2" controls:TechnicalTextPresenter.Content="{Binding Overview.RotationRightHeaderText}" Classes="number" />
+            <TextBlock x:Name="RotationLeftHeader" Grid.Column="1" controls:TechnicalTextPresenter.Content="{Binding Overview.RotationLeftHeaderText}" Classes="number" TextWrapping="NoWrap" />
+            <TextBlock x:Name="RotationRightHeader" Grid.Column="2" controls:TechnicalTextPresenter.Content="{Binding Overview.RotationRightHeaderText}" Classes="number" TextWrapping="NoWrap" />
             <TextBlock x:Name="ReleaseShearHeader" Grid.Column="3" controls:TechnicalTextPresenter.Content="{Binding Overview.ReleaseShearHeaderText}" Classes="number" />
           </Grid>
           <ItemsControl x:Name="MomentReleaseResultTable" ItemsSource="{Binding Overview.MomentReleaseResults}" ItemTemplate="{StaticResource MomentReleaseResultRowTemplate}" />
