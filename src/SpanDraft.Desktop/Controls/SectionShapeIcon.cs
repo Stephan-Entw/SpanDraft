@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -10,6 +11,8 @@ namespace SpanDraft.Desktop.Controls;
 public sealed class SectionShapeIcon : Control
 {
     public static readonly StyledProperty<SectionEditorType> TypeProperty = AvaloniaProperty.Register<SectionShapeIcon, SectionEditorType>(nameof(Type));
+    // The neutral silhouette depends on the type only, so it is resolved once instead of on every render.
+    private static readonly ConcurrentDictionary<SectionEditorType, SectionPreviewGeometry> Silhouettes = new();
     static SectionShapeIcon() => AffectsRender<SectionShapeIcon>(TypeProperty);
     public SectionEditorType Type { get => GetValue(TypeProperty); set => SetValue(TypeProperty,value); }
     public override void Render(DrawingContext context)
@@ -21,12 +24,13 @@ public sealed class SectionShapeIcon : Control
             context.DrawLine(new Pen(manualBrush, 1.5), new Point(9, Bounds.Height / 2), new Point(Bounds.Width - 9, Bounds.Height / 2));
             return;
         }
-        var dimensions = new Dictionary<string, double>
+        // Collapsed or still unarranged: there is no room for the silhouette, and the scale would be non-positive.
+        if (Bounds.Width <= 4 || Bounds.Height <= 4) return;
+        var geometry = Silhouettes.GetOrAdd(Type, type => SectionPreviewGeometryResolver.Resolve(type, new Dictionary<string, double>
         {
-            ["h"] = .1, ["b"] = Type == SectionEditorType.Rectangle ? .06 : .1,
+            ["h"] = .1, ["b"] = type == SectionEditorType.Rectangle ? .06 : .1,
             ["d"] = .1, ["D"] = .1, ["t"] = .01, ["tw"] = .01, ["tf"] = .01, ["r"] = 0
-        };
-        var geometry = SectionPreviewGeometryResolver.Resolve(Type, dimensions);
+        }));
         double scale = Math.Min((Bounds.Width-4)/geometry.Width,(Bounds.Height-4)/geometry.Height);
         Point Project(Point p) => new((Bounds.Width-geometry.Width*scale)/2+p.X*scale,(Bounds.Height+geometry.Height*scale)/2-p.Y*scale);
         var path = new StreamGeometry();
@@ -35,6 +39,7 @@ public sealed class SectionShapeIcon : Control
             drawing.SetFillRule(FillRule.EvenOdd);
             foreach (var contour in geometry.Contours)
             {
+                if (contour.Count == 0) continue;
                 drawing.BeginFigure(Project(contour[0].Start),true);
                 foreach (var segment in contour)
                 {
