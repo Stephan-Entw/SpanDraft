@@ -35,7 +35,7 @@ public sealed class SectionShapeIconTests
         using var bitmap = new RenderTargetBitmap(new PixelSize(100, 100));
         bitmap.Render(control);
         using var stream = new MemoryStream();
-        bitmap.Save(stream);
+        bitmap.Save(stream, PngBitmapEncoderOptions.Default);
         return stream.ToArray();
     }
 }
