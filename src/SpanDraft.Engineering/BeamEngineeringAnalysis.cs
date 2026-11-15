@@ -9,8 +9,8 @@ public static class BeamEngineeringAnalysis
 {
     /// <summary>
     /// Uses only analytical extrema and the section and material of each segment. The governing segment has the
-    /// smallest safety factor; a tie goes to the smaller index, which has the smaller position of its
-    /// critical moment. Stress and safety factor of the result are those of that segment. Notch effects and local stresses
+    /// smallest safety factor; a tie goes to the smaller index, whose critical moment lies at a position that is
+    /// not larger. Stress and safety factor of the result are those of that segment. Notch effects and local stresses
     /// at a change of section are not assessed.
     /// </summary>
     public static BeamEngineeringResult Analyze(BeamSolution solution)
@@ -53,23 +53,24 @@ public static class BeamEngineeringAnalysis
     private static bool SmallerSafety(BeamSegmentAssessment candidate, BeamSegmentAssessment current)
     {
         double a = candidate.SafetyFactor, b = current.SafetyFactor;
-        bool tied = a == b || double.IsFinite(a) && double.IsFinite(b) &&
-            Math.Abs(a - b) <= 64 * 2.2204460492503131e-16 * Math.Max(a, b);
-        // Segments are visited in order and later ones lie further right, so on a tie the earlier segment, which
-        // also has the smaller critical position, is kept.
-        return !tied && a < b;
+        // Segments are visited in order and later ones lie further right, so on a tie the earlier segment, whose
+        // critical position is not larger, is kept.
+        return !IsTied(a, b) && a < b;
     }
+
+    // Same relative roundoff order as the frozen solver, without an absolute SI floor.
+    // double.Epsilon is not the relative precision of double.
+    private const double RelativeRoundoff = 64 * 2.2204460492503131e-16;
+
+    private static bool IsTied(double a, double b) =>
+        a == b || double.IsFinite(a) && double.IsFinite(b) &&
+            Math.Abs(a - b) <= RelativeRoundoff * Math.Max(Math.Abs(a), Math.Abs(b));
 
     internal static BeamExtremum<T> SelectMaximumAbsolute<T>(BeamExtremum<T> minimum,
         BeamExtremum<T> maximum, Func<T, double> scalar)
     {
         double a = Math.Abs(scalar(minimum.Value)), b = Math.Abs(scalar(maximum.Value));
-        double scale = Math.Max(a, b);
-        // Same relative roundoff order as the frozen solver, without an absolute SI floor.
-        // double.Epsilon is not the relative precision of double.
-        const double roundoff = 64 * 2.2204460492503131e-16;
-        bool tied = scale == 0 || Math.Abs(a / scale - b / scale) <= roundoff;
-        if (!tied) return a > b ? minimum : maximum;
+        if (!IsTied(a, b)) return a > b ? minimum : maximum;
 
         bool maximumPrecedes = maximum.Position.Meters < minimum.Position.Meters ||
             (maximum.Position == minimum.Position &&

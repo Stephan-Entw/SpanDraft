@@ -152,4 +152,17 @@ public sealed class EngineeringSegmentTests
         Assert.True(double.IsPositiveInfinity(result.SegmentAssessments[1].SafetyFactor));
         Assert.Equal(0, result.GoverningSegmentIndex);
     }
+
+    [Fact]
+    public void TheSegmentAssessmentsCannotBeChangedThroughTheResult()
+    {
+        BeamEngineeringResult result = Analyze(Cantilever([Segment(0, 0.8, 0.002, 235e6), Segment(0.8, 2, 0.0005, 355e6)]));
+        BeamSegmentAssessment governing = result.GoverningSegment;
+
+        Assert.IsNotType<BeamSegmentAssessment[]>(result.SegmentAssessments);
+        var list = Assert.IsAssignableFrom<IList<BeamSegmentAssessment>>(result.SegmentAssessments);
+        Assert.True(list.IsReadOnly);
+        Assert.Throws<NotSupportedException>(() => list[0] = governing);
+        Assert.Same(governing, result.GoverningSegment);
+    }
 }

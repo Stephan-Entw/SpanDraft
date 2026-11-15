@@ -13,7 +13,8 @@ public sealed class BeamEngineeringResult
         TransverseDisplacementMagnitude = Displacement.FromMeters(Math.Abs(displacement.Value.Meters));
         CriticalBendingMoment = moment;
         BendingMomentMagnitude = Moment.FromNewtonMeters(Math.Abs(moment.Value.NewtonMeters));
-        SegmentAssessments = segments;
+        // A copy behind a read-only wrapper: neither the caller's array nor a cast of this list can change the result.
+        SegmentAssessments = Array.AsReadOnly(segments.ToArray());
         GoverningSegmentIndex = governingSegmentIndex;
     }
 
