@@ -27,7 +27,9 @@
       <Setter Property="IsVisible" Value="False" />
     </Style>
     <Style Selector="Border#EditorToolbar controls|AdaptiveToolStrip:compact ToggleButton.captioned">
-      <Setter Property="Padding" Value="3,4" />
+      <Setter Property="Width" Value="{DynamicResource ToolbarButton}" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="2,0" />
     </Style>
     <Style Selector="controls|BeamEditorSurface#BeamSurface, StackPanel#ResultDiagrams">
       <Setter Property="MaxWidth" Value="1280" />
