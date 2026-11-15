@@ -7,7 +7,7 @@
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding WindowTitle}"
         Icon="avares://SpanDraft.Desktop/Assets/AppIcon/SpanDraft.ico"
-        Width="1250" Height="800" MinWidth="1100" MinHeight="650">
+        Width="1300" Height="800" MinWidth="1100" MinHeight="650">
   <Window.DataTemplates>
     <DataTemplate DataType="{x:Type vm:StartPageViewModel}">
       <views:StartPageView />

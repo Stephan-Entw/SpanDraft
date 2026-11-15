@@ -83,6 +83,22 @@ public sealed class DesktopAdaptiveToolbarTests
     [Theory]
     [InlineData("de-DE")]
     [InlineData("en-US")]
+    public void TheDefaultWindowWidthKeepsTheCaptionsWithRoomToSpare(string culture)
+    {
+        using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
+        int defaultWidth = (int)new MainWindow().Width;
+        var (window, view, tools) = Open(defaultWidth);
+        var grid = Assert.IsType<Grid>(view.FindControl<Border>("EditorToolbar")!.Child);
+        Assert.False(tools.IsCompact);
+        // The gap to the right group exceeds the bare column spacing, so the captions do not sit at the switching edge.
+        var gap = grid.Children[1].Bounds.Left - (tools.Bounds.Left + tools.DesiredSize.Width);
+        Assert.True(gap > grid.ColumnSpacing + 0.01, $"Only {gap} px between the tools and the right group at {defaultWidth}.");
+        window.Close();
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("en-US")]
     public void TheToolbarSwitchesOnceAndAtTheSamePointWhileGrowingAndNeverClipsOrChangesItsHeight(string culture)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
