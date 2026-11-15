@@ -1,4 +1,6 @@
 using System.Text.Json;
+using SpanDraft.Core.Materials;
+using SpanDraft.Core.Sections;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.State;
 
@@ -41,24 +43,18 @@ public sealed record SetupRecoverySnapshot(ProjectSetupDraft Draft, DateTimeOffs
 /// <summary>An independent Create-draft slot, using the same publication ordering as ProjectRecovery.</summary>
 public sealed class ProjectSetupRecovery
 {
+    private readonly DebouncedSlot<SetupRecoverySnapshot> _slot;
     private readonly IProjectFileStore _files;
-    private readonly Func<TimeSpan, CancellationToken, Task> _delay;
     private readonly Func<DateTimeOffset> _utcNow;
-    private readonly Action? _ensureDirectory;
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    private CancellationTokenSource? _cancellation;
-    private long _generation;
-    private Task _pending = Task.CompletedTask;
 
     public ProjectSetupRecovery(IProjectFileStore files, string slotPath,
         Func<TimeSpan, CancellationToken, Task>? delay = null, Func<DateTimeOffset>? utcNow = null,
         Action? ensureDirectory = null)
     {
         _files = files;
-        SlotPath = slotPath;
-        _delay = delay ?? Task.Delay;
         _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
-        _ensureDirectory = ensureDirectory;
+        _slot = new(files, slotPath, Encode, delay, ensureDirectory);
+        _slot.Failed += e => Failed?.Invoke(e);
     }
 
     public static ProjectSetupRecovery Local(IProjectFileStore files)
@@ -67,54 +63,14 @@ public sealed class ProjectSetupRecovery
         return new(files, Path.Combine(directory, "setup-recovery.json"), ensureDirectory: () => Directory.CreateDirectory(directory));
     }
 
-    public string SlotPath { get; }
+    public string SlotPath => _slot.SlotPath;
     public event Action<Exception>? Failed;
 
-    public void Schedule(ProjectSetupDraft draft)
-    {
-        var (generation, token) = Invalidate();
-        _pending = ObserveAsync(DebounceAsync(new(draft, _utcNow()), generation, token));
-    }
+    public void Schedule(ProjectSetupDraft draft) => _slot.Schedule(new(draft, _utcNow()));
 
-    private (long, CancellationToken) Invalidate()
-    {
-        _cancellation?.Cancel();
-        _cancellation?.Dispose();
-        _cancellation = new();
-        return (++_generation, _cancellation.Token);
-    }
+    public Task DeleteAsync() => _slot.DeleteAsync();
 
-    private async Task ObserveAsync(Task task)
-    {
-        try { await task; }
-        catch (OperationCanceledException) { }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ProjectFormatException or JsonException)
-        { Failed?.Invoke(e); }
-    }
-
-    private async Task DebounceAsync(SetupRecoverySnapshot snapshot, long generation, CancellationToken token)
-    {
-        await _delay(TimeSpan.FromSeconds(1), token);
-        await _gate.WaitAsync(token);
-        try
-        {
-            if (generation != _generation) return;
-            token.ThrowIfCancellationRequested();
-            _ensureDirectory?.Invoke();
-            await _files.WriteAtomicAsync(SlotPath, Encode(snapshot), token);
-        }
-        finally { _gate.Release(); }
-    }
-
-    public async Task DeleteAsync()
-    {
-        var (generation, _) = Invalidate();
-        await _gate.WaitAsync();
-        try { if (generation == _generation) await _files.DeleteAsync(SlotPath); }
-        finally { _gate.Release(); }
-    }
-
-    public Task DrainAsync() => _pending;
+    public Task DrainAsync() => _slot.DrainAsync();
 
     public async Task<SetupRecoverySnapshot?> ReadAsync()
     {
@@ -127,29 +83,13 @@ public sealed class ProjectSetupRecovery
             if (envelope.RecoveryVersion is not (1 or 2) || envelope.WrittenAtUtc == default || envelope.WrittenAtUtc.Offset != TimeSpan.Zero)
                 throw new ProjectFormatException("Invalid setup recovery version or UTC timestamp.");
             var d = ProjectFileCodec.Required(envelope.Draft, "draft");
-            var length = d.Length is { } meters ? Length.FromMeters(ProjectFileCodec.Number(meters, "length")) : (Length?)null;
-            if (length is { Meters: <= 0 }) throw new ProjectFormatException("Setup length must be positive.");
-            var material = d.Material is { } m ? ProjectFileCodec.MaterialFromDto(m) : null;
-            var section = d.Section is { } s ? ProjectFileCodec.SectionFromDto(s) : null;
-            var axis = ProjectFileCodec.AxisFromWire(d.BendingAxis);
-            if (section is not null && !section.Axes.Any(a => a.AxisDesignation == axis))
-                throw new ProjectFormatException("The section does not provide the selected bending axis.");
-            if (d.SectionDisplayName is { } name && (section is null || string.IsNullOrWhiteSpace(name) || name != name.Trim()))
-                throw new ProjectFormatException("Invalid setup section display name.");
+            var (length, material, section, axis) = ReadSegment(d.Length, d.Material, d.Section, d.BendingAxis, d.SectionDisplayName);
             var further = (d.FurtherSegments ?? []).Select(entry =>
             {
                 var x = ProjectFileCodec.Required(entry, "segment");
-                var segmentLength = x.Length is { } m ? Length.FromMeters(ProjectFileCodec.Number(m, "length")) : (Length?)null;
-                if (segmentLength is { Meters: <= 0 }) throw new ProjectFormatException("Setup length must be positive.");
-                var segmentSection = x.Section is { } ss ? ProjectFileCodec.SectionFromDto(ss) : null;
-                var segmentAxis = ProjectFileCodec.AxisFromWire(x.BendingAxis);
-                if (segmentSection is not null && !segmentSection.Axes.Any(a => a.AxisDesignation == segmentAxis))
-                    throw new ProjectFormatException("The section does not provide the selected bending axis.");
-                if (x.SectionDisplayName is { } segmentName && (segmentSection is null || string.IsNullOrWhiteSpace(segmentName)
-                    || segmentName != segmentName.Trim()))
-                    throw new ProjectFormatException("Invalid setup section display name.");
-                return new SetupSegmentDraft(segmentLength, x.Material is { } mm ? ProjectFileCodec.MaterialFromDto(mm) : null,
-                    segmentSection, segmentAxis, x.SectionDisplayName);
+                var (segmentLength, segmentMaterial, segmentSection, segmentAxis) =
+                    ReadSegment(x.Length, x.Material, x.Section, x.BendingAxis, x.SectionDisplayName);
+                return new SetupSegmentDraft(segmentLength, segmentMaterial, segmentSection, segmentAxis, x.SectionDisplayName);
             }).ToArray();
             return new(new(length, material, section, axis, d.SectionDisplayName,
                 envelope.RecoveryVersion >= 2 ? ProjectInfo.Optional(d.CalculationTitle) : null,
@@ -159,6 +99,23 @@ public sealed class ProjectSetupRecovery
         }
         catch (Exception e) when (e is JsonException or ArgumentException or OverflowException)
         { throw new ProjectFormatException("Invalid setup recovery data: " + e.Message, e); }
+    }
+
+    // The checks every segment of a draft passes, the first one and the further ones alike. Fields may be absent while
+    // the user is still typing, but what is present must be valid.
+    private static (Length? Length, Material? Material, ISectionDefinition? Section, SectionAxisDesignation Axis) ReadSegment(
+        double? lengthMeters, MaterialV2? materialDto, SectionV2? sectionDto, string axisWire, string? displayName)
+    {
+        var length = lengthMeters is { } meters ? Length.FromMeters(ProjectFileCodec.Number(meters, "length")) : (Length?)null;
+        if (length is { Meters: <= 0 }) throw new ProjectFormatException("Setup length must be positive.");
+        var material = materialDto is { } m ? ProjectFileCodec.MaterialFromDto(m) : null;
+        var section = sectionDto is { } s ? ProjectFileCodec.SectionFromDto(s) : null;
+        var axis = SectionAxisWire.Read(axisWire);
+        if (section is not null && !section.Axes.Any(a => a.AxisDesignation == axis))
+            throw new ProjectFormatException("The section does not provide the selected bending axis.");
+        if (displayName is { } name && (section is null || string.IsNullOrWhiteSpace(name) || name != name.Trim()))
+            throw new ProjectFormatException("Invalid setup section display name.");
+        return (length, material, section, axis);
     }
 
     public static byte[] Encode(SetupRecoverySnapshot snapshot) => JsonSerializer.SerializeToUtf8Bytes(new SetupRecoveryEnvelope
@@ -171,14 +128,14 @@ public sealed class ProjectSetupRecovery
             Length = snapshot.Draft.Length?.Meters,
             Material = snapshot.Draft.Material is { } m ? ProjectFileCodec.MaterialToDto(m) : null,
             Section = snapshot.Draft.Section is { } s ? ProjectFileCodec.SectionToDto(s) : null,
-            BendingAxis = ProjectFileCodec.AxisToWire(snapshot.Draft.BendingAxis),
+            BendingAxis = SectionAxisWire.Write(snapshot.Draft.BendingAxis),
             SectionDisplayName = snapshot.Draft.SectionDisplayName,
             FurtherSegments = snapshot.Draft.FurtherSegments is { Count: > 0 } further ? further.Select(g => new SetupSegmentData
             {
                 Length = g.Length?.Meters,
                 Material = g.Material is { } material ? ProjectFileCodec.MaterialToDto(material) : null,
                 Section = g.Section is { } section ? ProjectFileCodec.SectionToDto(section) : null,
-                BendingAxis = ProjectFileCodec.AxisToWire(g.BendingAxis), SectionDisplayName = g.SectionDisplayName
+                BendingAxis = SectionAxisWire.Write(g.BendingAxis), SectionDisplayName = g.SectionDisplayName
             }).ToArray() : null
         }
     }, ProjectFileCodec.JsonOptions);

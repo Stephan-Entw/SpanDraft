@@ -57,7 +57,7 @@ public static class SectionLibraryCodec
             ManualSectionDefinition s => new ManualSectionLibraryV1
             {
                 Area = s.Area.SquareMeters,
-                Axes = s.Axes.Select(a => new LibraryManualAxisV1 { Designation = AxisToWire(a.AxisDesignation),
+                Axes = s.Axes.Select(a => new LibraryManualAxisV1 { Designation = SectionAxisWire.Write(a.AxisDesignation),
                     SecondMomentOfArea = a.SecondMomentOfArea.MetersToTheFourth,
                     SectionModulus = a.PositiveSectionModulus.CubicMeters }).ToArray()
             },
@@ -85,24 +85,10 @@ public static class SectionLibraryCodec
         ManualSectionAxis Map(LibraryManualAxisV1 entry)
         {
             var a = Required(entry, "axis");
-            return new(AxisFromWire(a.Designation),
+            return new(SectionAxisWire.Read(a.Designation),
                 SecondMomentOfArea.FromMetersToTheFourth(Number(a.SecondMomentOfArea, "secondMomentOfArea")),
                 SectionModulus.FromCubicMeters(Number(a.SectionModulus, "sectionModulus")));
         }
         return new(Area.FromSquareMeters(Number(section.Area, "area")), Map(axes[0]), axes.Length == 2 ? Map(axes[1]) : null);
     }
-
-    private static string AxisToWire(SectionAxisDesignation axis) => axis switch
-    {
-        SectionAxisDesignation.Y => "y", SectionAxisDesignation.Z => "z",
-        SectionAxisDesignation.U => "u", SectionAxisDesignation.V => "v",
-        _ => throw new LibraryFormatException("Unknown section axis.")
-    };
-
-    private static SectionAxisDesignation AxisFromWire(string value) => value switch
-    {
-        "y" => SectionAxisDesignation.Y, "z" => SectionAxisDesignation.Z,
-        "u" => SectionAxisDesignation.U, "v" => SectionAxisDesignation.V,
-        _ => throw new LibraryFormatException("Unknown section axis.")
-    };
 }

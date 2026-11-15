@@ -63,6 +63,10 @@ public static class ProjectFileCodec
     internal static byte[] SerializeRecovery(ProjectState state) =>
         JsonSerializer.SerializeToUtf8Bytes(ToDto(state, allowLegacy: true), JsonOptions);
 
+    // Embedded in the recovery envelope as it is, without a detour through bytes.
+    internal static JsonElement RecoveryElement(ProjectState state) =>
+        JsonSerializer.SerializeToElement(ToDto(state, allowLegacy: true), JsonOptions);
+
     private static ProjectFileV5 ToDto(ProjectState state, bool allowLegacy)
     {
         var d = state.Document;
@@ -79,14 +83,14 @@ public static class ProjectFileCodec
             Document = new()
             {
                 Length = d.Segments[0].Length.Meters, SegmentId = d.Segments[0].Id,
-                BendingAxis = AxisToWire(d.Segments[0].BendingAxis),
+                BendingAxis = SectionAxisWire.Write(d.Segments[0].BendingAxis),
                 SectionDisplayName = d.Segments[0].SectionDisplayName,
                 Material = MaterialToDto(d.Segments[0].Material),
                 Section = SectionToDto(d.Segments[0].Section),
-                FurtherSegments = d.HasSeveralSegments ? d.Segments.Skip(1).Select((segment, i) => new SegmentV5
+                FurtherSegments = d.HasSeveralSegments ? d.Segments.Skip(1).Select(segment => new SegmentV5
                 {
                     Id = segment.Id, Length = segment.Length.Meters, Material = MaterialToDto(segment.Material),
-                    Section = SectionToDto(segment.Section), BendingAxis = AxisToWire(segment.BendingAxis),
+                    Section = SectionToDto(segment.Section), BendingAxis = SectionAxisWire.Write(segment.BendingAxis),
                     SectionDisplayName = segment.SectionDisplayName
                 }).ToArray() : null,
                 SelfWeight = d.SelfWeight is { } weight ? new() { Id = weight.Id, Enabled = weight.Enabled } : null,
@@ -197,7 +201,7 @@ public static class ProjectFileCodec
             ManualSectionDefinition s => new ManualSectionV2
             {
                 Area = s.Area.SquareMeters,
-                Axes = s.Axes.Select(a => new ManualAxisV2 { Designation = AxisToWire(a.AxisDesignation),
+                Axes = s.Axes.Select(a => new ManualAxisV2 { Designation = SectionAxisWire.Write(a.AxisDesignation),
                     SecondMomentOfArea = a.SecondMomentOfArea.MetersToTheFourth,
                     SectionModulus = a.PositiveSectionModulus.CubicMeters }).ToArray()
             },
@@ -225,26 +229,12 @@ public static class ProjectFileCodec
         ManualSectionAxis Map(ManualAxisV2 entry)
         {
             var a = Required(entry, "axis");
-            return new(AxisFromWire(a.Designation),
+            return new(SectionAxisWire.Read(a.Designation),
                 SecondMomentOfArea.FromMetersToTheFourth(Number(a.SecondMomentOfArea, "secondMomentOfArea")),
                 SectionModulus.FromCubicMeters(Number(a.SectionModulus, "sectionModulus")));
         }
         return new(Area.FromSquareMeters(Number(section.Area, "area")), Map(axes[0]), axes.Length == 2 ? Map(axes[1]) : null);
     }
-
-    internal static string AxisToWire(SectionAxisDesignation axis) => axis switch
-    {
-        SectionAxisDesignation.Y => "y", SectionAxisDesignation.Z => "z",
-        SectionAxisDesignation.U => "u", SectionAxisDesignation.V => "v",
-        _ => throw new ProjectFormatException("Unknown section axis.")
-    };
-
-    internal static SectionAxisDesignation AxisFromWire(string value) => value switch
-    {
-        "y" => SectionAxisDesignation.Y, "z" => SectionAxisDesignation.Z,
-        "u" => SectionAxisDesignation.U, "v" => SectionAxisDesignation.V,
-        _ => throw new ProjectFormatException("Unknown section axis.")
-    };
 
     public static ProjectState FromDto(ProjectFileV2 file)
     {
@@ -437,14 +427,14 @@ public static class ProjectFileCodec
 
         var segments = new List<EditorSegment>
         {
-            new EditorSegment(MaterialFromDto(material), SectionFromDto(section), AxisFromWire(d.BendingAxis), d.SectionDisplayName)
+            new EditorSegment(MaterialFromDto(material), SectionFromDto(section), SectionAxisWire.Read(d.BendingAxis), d.SectionDisplayName)
                 { Id = Id(d.SegmentId), Length = lengths[0] }
         };
         for (int i = 0; i < further.Length; i++)
         {
             var x = further[i];
             segments.Add(new EditorSegment(MaterialFromDto(Required(x.Material, "segment.material")),
-                SectionFromDto(Required(x.Section, "segment.section")), AxisFromWire(Required(x.BendingAxis, "segment.bendingAxis")),
+                SectionFromDto(Required(x.Section, "segment.section")), SectionAxisWire.Read(Required(x.BendingAxis, "segment.bendingAxis")),
                 x.SectionDisplayName) { Id = Id(x.Id), Length = lengths[i + 1] });
         }
         return [.. segments];

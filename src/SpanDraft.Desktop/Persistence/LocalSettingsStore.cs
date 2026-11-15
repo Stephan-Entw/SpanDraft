@@ -76,7 +76,9 @@ public static class SettingsCodec
 
     public static UserSettings Deserialize(byte[] bytes)
     {
-        var dto = JsonSerializer.Deserialize<SettingsData>(bytes, Options) ?? throw new JsonException("Missing settings.");
+        // One parse serves both the typed data and the check which author field the file really contains.
+        using var json = JsonDocument.Parse(bytes);
+        var dto = json.RootElement.Deserialize<SettingsData>(Options) ?? throw new JsonException("Missing settings.");
         if (dto.Version is not (1 or 2 or 3 or 4) || !Enum.IsDefined(dto.SelectedProfile)
             || dto.LastStandardProfile == UnitProfileKind.Custom || !Enum.IsDefined(dto.LastStandardProfile)
             || dto.HasCustomProfile != (dto.CustomUnits is not null)
@@ -117,7 +119,6 @@ public static class SettingsCodec
         string? lastAuthor = null;
         if (dto.Version >= 3)
         {
-            using var json = JsonDocument.Parse(bytes);
             lastAuthor = json.RootElement.TryGetProperty("lastAuthor", out _) ? dto.LastAuthor
                 : json.RootElement.TryGetProperty("defaultAuthor", out var legacy) ? legacy.GetString() : null;
         }

@@ -13,27 +13,21 @@ public sealed record RecoveryEnvelopeV1
 
 public sealed record RecoverySnapshot(ProjectState State, string? OriginalFilePath, DateTimeOffset WrittenAtUtc);
 
-/// <summary>A single private slot. Generations invalidate stale work; the gate orders publication and deletion.</summary>
+/// <summary>The private recovery slot of the open project; see <see cref="DebouncedSlot{TSnapshot}"/> for the ordering rules.</summary>
 public sealed class ProjectRecovery
 {
+    private readonly DebouncedSlot<RecoverySnapshot> _slot;
     private readonly IProjectFileStore _files;
-    private readonly Func<TimeSpan, CancellationToken, Task> _delay;
     private readonly Func<DateTimeOffset> _utcNow;
-    private readonly Action? _ensureDirectory;
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    private CancellationTokenSource? _cancellation;
-    private long _generation;
-    private Task _pending = Task.CompletedTask;
 
     public ProjectRecovery(IProjectFileStore files, string slotPath,
         Func<TimeSpan, CancellationToken, Task>? delay = null, Func<DateTimeOffset>? utcNow = null,
         Action? ensureDirectory = null)
     {
         _files = files;
-        SlotPath = slotPath;
-        _delay = delay ?? Task.Delay;
         _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
-        _ensureDirectory = ensureDirectory;
+        _slot = new(files, slotPath, Encode, delay, ensureDirectory);
+        _slot.Failed += e => Failed?.Invoke(e);
     }
 
     public static ProjectRecovery Local(IProjectFileStore files)
@@ -42,76 +36,21 @@ public sealed class ProjectRecovery
         return new(files, Path.Combine(directory, "recovery.json"), ensureDirectory: () => Directory.CreateDirectory(directory));
     }
 
-    public string SlotPath { get; }
+    public string SlotPath => _slot.SlotPath;
     public event Action<Exception>? Failed;
 
     public void Schedule(ProjectSession session)
     {
-        var (generation, token) = Invalidate();
-        _pending = ObserveAsync(session.IsDirty
-            ? DebounceAsync(new(session.CurrentRevision.State, session.FilePath, _utcNow()), generation, token)
-            : DeleteGenerationAsync(generation));
+        if (session.IsDirty) _slot.Schedule(new(session.CurrentRevision.State, session.FilePath, _utcNow()));
+        else _slot.ScheduleDelete();
     }
 
-    private (long, CancellationToken) Invalidate()
-    {
-        _cancellation?.Cancel();
-        _cancellation?.Dispose();
-        _cancellation = new();
-        return (++_generation, _cancellation.Token);
-    }
+    public Task FlushAsync(ProjectState state, string? originalFilePath) =>
+        _slot.FlushAsync(new(state, originalFilePath, _utcNow()));
 
-    private async Task ObserveAsync(Task task)
-    {
-        try { await task; }
-        catch (OperationCanceledException) { }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ProjectFormatException or JsonException)
-        { Failed?.Invoke(e); }
-    }
+    public Task DeleteAsync() => _slot.DeleteAsync();
 
-    private async Task DebounceAsync(RecoverySnapshot snapshot, long generation, CancellationToken token)
-    {
-        await _delay(TimeSpan.FromSeconds(1), token);
-        await WriteGenerationAsync(snapshot, generation, token);
-    }
-
-    private async Task WriteGenerationAsync(RecoverySnapshot snapshot, long generation, CancellationToken token,
-        bool supersedable = true)
-    {
-        await _gate.WaitAsync(token);
-        try
-        {
-            if (supersedable && generation != _generation) return;
-            token.ThrowIfCancellationRequested();
-            _ensureDirectory?.Invoke();
-            await _files.WriteAtomicAsync(SlotPath, Encode(snapshot), token);
-        }
-        finally { _gate.Release(); }
-    }
-
-    private async Task DeleteGenerationAsync(long generation)
-    {
-        await _gate.WaitAsync();
-        try { if (generation == _generation) await _files.DeleteAsync(SlotPath); }
-        finally { _gate.Release(); }
-    }
-
-    public async Task FlushAsync(ProjectState state, string? originalFilePath)
-    {
-        var (generation, _) = Invalidate();
-        // Gate acquisition also drains any write which was already publishing. A flush is an explicit request to publish
-        // this snapshot now, so a later Schedule or Delete neither cancels it nor turns it into a no-op; the writes of
-        // later generations follow it through the gate.
-        await WriteGenerationAsync(new(state, originalFilePath, _utcNow()), generation, CancellationToken.None, supersedable: false);
-    }
-
-    public async Task DeleteAsync()
-    {
-        var (generation, _) = Invalidate();
-        await DeleteGenerationAsync(generation);
-    }
-
-    public Task DrainAsync() => _pending;
+    public Task DrainAsync() => _slot.DrainAsync();
 
     public async Task<RecoverySnapshot?> ReadAsync()
     {
@@ -134,6 +73,6 @@ public sealed class ProjectRecovery
     public static byte[] Encode(RecoverySnapshot snapshot) => JsonSerializer.SerializeToUtf8Bytes(new RecoveryEnvelopeV1
     {
         RecoveryVersion = 1, OriginalFilePath = snapshot.OriginalFilePath,
-        WrittenAtUtc = snapshot.WrittenAtUtc, Project = JsonElement.Parse(ProjectFileCodec.SerializeRecovery(snapshot.State))
+        WrittenAtUtc = snapshot.WrittenAtUtc, Project = ProjectFileCodec.RecoveryElement(snapshot.State)
     }, ProjectFileCodec.JsonOptions);
 }
