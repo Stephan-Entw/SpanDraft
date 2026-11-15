@@ -82,15 +82,18 @@ public sealed class ReportPreviewResourceTests : ProjectReportTestSupport
     {
         var (main, files) = Open(ReportTestProjects.Create(true)); using var original = ProjectReport.Capture(main.Editor!, Now);
         int draws = 0;
-        var report = new ReportDocument(original.Data, new(130, (_, _, _) => draws++));
+        var report = new ReportDocument(original.Data, new(130, 60, (_, _, _, _) => draws++));
         using var preview = new ReportPreviewViewModel(report, main.Session!.FilePath, files, () => { });
         var view = new ReportPreviewView { DataContext = preview };
         var window = new Window { Content = view, Width = 1100, Height = 650 };
         window.Show(); Dispatcher.UIThread.RunJobs();
         var control = view.FindControl<ReportPageControl>("PageView")!;
-        var first = Assert.IsType<ReportPagePicture>(control.Page); int recordedDraws = draws;
+        var first = Assert.IsType<ReportPagePicture>(control.Page); int recordedDraws = draws; System.Console.Error.WriteLine("DBG pages=" + report.Pages.Count + " blocks0=" + string.Join(',', report.Pages[0].Blocks.Select(b => b.Kind)) + " areas=" + report.TechnicalAreas(0).Count + " draws=" + draws);
         preview.ShowPage(1); var second = Assert.IsType<ReportPagePicture>(control.Page);
-        Assert.NotSame(first, second); Assert.Equal(report.TechnicalAreas(0).Count, recordedDraws);
+        Assert.NotSame(first, second); Assert.Equal(report.TechnicalAreas(0).Count + report.Pages[0].Blocks.Count(b => b.Kind == ReportBlockKind.Segment), recordedDraws);
+        // The second page records its own graphics once, the section sketches of its detail blocks.
+        int visitedDraws = draws;
+        Assert.Equal(recordedDraws + report.Pages[1].Blocks.Count(b => b.Kind == ReportBlockKind.Segment), visitedDraws);
         var delayed = new ReportPageControl.PageDrawOperation(first, new Rect(control.Bounds.Size));
         for (int i = 0; i < 20; i++)
         {
@@ -99,7 +102,7 @@ public sealed class ReportPreviewResourceTests : ProjectReportTestSupport
             preview.ShowPage(1); Assert.Same(second, control.Page);
             Dispatcher.UIThread.RunJobs();
         }
-        Assert.Equal(recordedDraws, draws);
+        Assert.Equal(visitedDraws, draws);
         preview.ShowPage(-1); preview.ShowPage(report.Pages.Count); Assert.Same(second, control.Page);
         preview.Dispose(); window.Close(); Assert.Null(control.Page);
         preview.ShowPage(0); Assert.Null(control.Page);
@@ -134,13 +137,13 @@ public sealed class ReportPreviewResourceTests : ProjectReportTestSupport
         var report = new ReportDocument(original.Data with
         {
             Metadata = Enumerable.Range(0, 10).Select(i => ($"Field {i}", "Value")).ToArray()
-        }, new(130, (_, _, _) => { attempts++; if (fail) throw new InvalidOperationException("Recording failed"); }));
+        }, new(130, 60, (_, _, _, _) => { attempts++; if (fail) throw new InvalidOperationException("Recording failed"); }));
         using var preview = new ReportPreviewViewModel(report, main.Session!.FilePath, files, () => { });
         var first = Assert.IsType<ReportPagePicture>(preview.Picture);
         int graphicsPage = report.Pages.Select((p, i) => (p, i)).First(p => p.p.HasGraphics).i;
         Assert.Throws<InvalidOperationException>(() => preview.ShowPage(graphicsPage));
         Assert.Same(first, preview.Picture); Assert.Equal(1, attempts);
         fail = false; preview.ShowPage(graphicsPage);
-        Assert.NotSame(first, preview.Picture); Assert.Equal(1 + report.TechnicalAreas(graphicsPage).Count, attempts);
+        Assert.NotSame(first, preview.Picture); Assert.Equal(1 + report.TechnicalAreas(graphicsPage).Count + report.Pages[graphicsPage].Blocks.Count(b => b.Kind == ReportBlockKind.Segment), attempts);
     }
 }

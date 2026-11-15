@@ -84,13 +84,14 @@ public sealed class ReportPreviewTests : ProjectReportTestSupport
     [Fact]
     public void SinglePagePreviewDisablesBothNavigationCommands()
     {
-        var (main, _) = Open(ReportTestProjects.Create());
-        Assert.True(main.ReportAsync().GetAwaiter().GetResult());
-        var preview = main.ReportPreview!;
+        var (main, files) = Open(ReportTestProjects.Create());
+        // A compact calculation: the details and the notes follow the results on the first page, so no second page exists.
+        using var original = ProjectReport.Capture(main.Editor!, Now);
+        var report = new ReportDocument(original.Data with { Tables = original.Data.Tables.Take(2).ToArray() }, new(130, 60, (_, _, _, _) => { }));
+        using var preview = new ReportPreviewViewModel(report, main.Session!.FilePath, files, () => { });
         Assert.Single(preview.Report.Pages);
         Assert.False(preview.PreviousCommand.CanExecute(null)); Assert.False(preview.NextCommand.CanExecute(null));
         preview.PreviousCommand.Execute(null); preview.NextCommand.Execute(null); Assert.Equal(0, preview.PageIndex);
-        main.CloseReport();
     }
 
     [Fact]

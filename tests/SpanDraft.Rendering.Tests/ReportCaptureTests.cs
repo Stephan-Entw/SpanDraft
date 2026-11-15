@@ -36,8 +36,8 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         using var cleanReport = ProjectReport.Capture(cleanMain.Editor!, Now);
 
         // Note text is never rendered, while material name and properties stay intact.
-        Assert.Equal(cleanReport.Data.Material, report.Data.Material);
-        Assert.Equal(cleanReport.Data.MaterialProperties.Select(p => p.PlainText), report.Data.MaterialProperties.Select(p => p.PlainText));
+        Assert.Equal(cleanReport.Data.Segments[0].Material, report.Data.Segments[0].Material);
+        Assert.Equal(cleanReport.Data.Segments[0].MaterialProperties.Select(p => p.PlainText), report.Data.Segments[0].MaterialProperties.Select(p => p.PlainText));
         var visible = MaterialNoteDisplay.Resolve(note, CultureInfo.CurrentUICulture)!.Split('\n');
         for (int page = 0; page < report.Pages.Count; page++)
         {
@@ -45,7 +45,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
             Assert.DoesNotContain(report.TextRuns, r => r.Text.Contains(Strings.MaterialNote + ":", StringComparison.Ordinal)
                 || visible.Any(line => r.Text.Contains(line, StringComparison.Ordinal)));
             if (page == 0)
-                Assert.All(report.Data.MaterialProperties, p => Assert.Contains(report.TextRuns, r => r.Text.Contains(p.PlainText, StringComparison.Ordinal)));
+                Assert.All(report.Data.Segments[0].MaterialProperties, p => Assert.Contains(report.TextRuns, r => r.Text.Contains(p.PlainText, StringComparison.Ordinal)));
             AssertTextContained(report);
         }
 
@@ -69,7 +69,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         var editor = main.Editor!;
         var analysis = editor.Presentation;
         using var original = ProjectReport.Capture(editor, Now);
-        Assert.Equal("S235JR (1.0038)", original.Data.Material);
+        Assert.Equal("S235JR (1.0038)", original.Data.Segments[0].Material);
         var updated = new SpanDraft.Core.Materials.Material("Project steel", originalMaterial.YoungsModulus,
             originalMaterial.YieldStrength, originalMaterial.StrengthType!.Value, originalMaterial.Density,
             originalMaterial.PoissonRatio, originalMaterial.Category, "9.8765", ["Standard B", "Standard A"]);
@@ -77,19 +77,19 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         AssertCurrent("Project steel (9.8765) · Standard B · Standard A");
         Assert.True(editor.Undo()); AssertCurrent("S235JR (1.0038)");
         Assert.True(editor.Redo()); AssertCurrent("Project steel (9.8765) · Standard B · Standard A");
-        Assert.Equal("S235JR (1.0038)", original.Data.Material);
+        Assert.Equal("S235JR (1.0038)", original.Data.Segments[0].Material);
         Assert.Equal(1, analyses); Assert.Empty(files.Writes);
 
         void AssertCurrent(string expected)
         {
             using var report = ProjectReport.Capture(editor, Now);
-            Assert.Equal(expected, report.Data.Material);
+            Assert.Equal(expected, report.Data.Segments[0].Material);
             Assert.Equal(expected, editor.Overview.Material);
             Assert.Same(analysis, editor.Presentation);
             Assert.Equal(original.Data.Indicators.Select(i => (i.Label.PlainText, i.Value, i.Position)),
                 report.Data.Indicators.Select(i => (i.Label.PlainText, i.Value, i.Position)));
-            using var bitmap = report.RenderPage(0, 96);
-            Assert.Equal(expected, string.Join(" · ", MaterialDesignationRuns(report).Select(r => r.Text)));
+            using var bitmap = report.RenderPage(SegmentBlock(report, 0).Page, 96);
+            Assert.Equal(expected.Replace(" ", ""), string.Concat(MaterialDesignationRuns(report).Select(r => r.Text.Replace(" ", ""))));
             AssertTextContained(report);
         }
     }
@@ -112,11 +112,11 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         using var report = ProjectReport.Capture(editor, Now);
         var material = state.Document.Material;
         // Material values and load positions are given: the same precision and notation apply, marked when rounded.
-        Assert.Contains(report.Data.MaterialProperties, p => p.PlainText.EndsWith(
+        Assert.Contains(report.Data.Segments[0].MaterialProperties, p => p.PlainText.EndsWith(
             QuantityFormatter.FormatInput(material.YoungsModulus.Pascals, options.Profile[QuantityKind.YoungsModulus], options), StringComparison.Ordinal));
-        Assert.Contains(report.Data.MaterialProperties, p => p.PlainText.EndsWith(
+        Assert.Contains(report.Data.Segments[0].MaterialProperties, p => p.PlainText.EndsWith(
             QuantityFormatter.FormatInput(material.YieldStrength.Pascals, options.Profile[QuantityKind.MaterialStrength], options), StringComparison.Ordinal));
-        Assert.DoesNotContain(report.Data.MaterialProperties, p => p.PlainText.Contains("= ≈", StringComparison.Ordinal));
+        Assert.DoesNotContain(report.Data.Segments[0].MaterialProperties, p => p.PlainText.Contains("= ≈", StringComparison.Ordinal));
         var forces = report.Data.Tables.Single(t => t.Title == Strings.Forces);
         Assert.Equal(editor.Overview.Forces[0].Value, forces.Rows[0][1]);
         Assert.Equal(editor.Overview.Forces[0].Position, forces.Rows[0][2]);
@@ -146,16 +146,20 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         using var report = ProjectReport.Capture(main.Editor!, Now);
         // One paragraph: the rounding sentence is appended to the theory text, not a second note.
         Assert.Equal(new[] { expected }, report.Data.Labels.Assumptions);
-        int summaryPage = report.Pages.Select((p, i) => (p, i)).Single(p => p.p.SummaryTop is not null).i;
-        using var bitmap = report.RenderPage(summaryPage, 96);
-        var page = report.TextRuns.Where(r => r.Bounds.Top < ReportDocument.FooterTop).ToArray();
-        float notes = page.Single(r => r.Text == Strings.ReportNotes).Bounds.Bottom;
-        var paragraph = page.Where(r => r.Bounds.Top > notes).OrderBy(r => r.Bounds.Top).ToArray();
-        Assert.Equal(expected, string.Join(" ", paragraph.Select(r => r.Text)));
-        // Nothing is drawn between the governing results and the calculation-model heading.
-        float summary = page.Single(r => r.Text == Strings.ReportSummary).Bounds.Bottom;
-        float model = page.Single(r => r.Text == Strings.ReportNotes).Bounds.Top;
-        Assert.All(page.Where(r => r.Bounds.Top > summary && r.Bounds.Bottom < model),
+        var notesBlock = report.Pages.SelectMany((p, i) => p.Blocks.Select(b => (Page: i, Block: b))).Single(b => b.Block.Kind == ReportBlockKind.Notes);
+        using (var notesBitmap = report.RenderPage(notesBlock.Page, 96))
+        {
+            var page = report.TextRuns.Where(r => r.Bounds.Top < ReportDocument.FooterTop).ToArray();
+            float notes = page.Single(r => r.Text == Strings.ReportNotes).Bounds.Bottom;
+            var paragraph = page.Where(r => r.Bounds.Top > notes).OrderBy(r => r.Bounds.Top).ToArray();
+            Assert.Equal(expected, string.Join(" ", paragraph.Select(r => r.Text)));
+        }
+        // Nothing but the governing results is drawn inside the key-figure block.
+        var summaryBlock = report.Pages.SelectMany((p, i) => p.Blocks.Select(b => (Page: i, Block: b))).Single(b => b.Block.Kind == ReportBlockKind.Summary);
+        using var bitmap = report.RenderPage(summaryBlock.Page, 96);
+        var summaryPageRuns = report.TextRuns.Where(r => r.Bounds.Top < ReportDocument.FooterTop).ToArray();
+        float summary = summaryPageRuns.Single(r => r.Text == Strings.ReportSummary).Bounds.Bottom;
+        Assert.All(summaryPageRuns.Where(r => r.Bounds.Top > summary && r.Bounds.Bottom < summaryBlock.Block.Top + summaryBlock.Block.Height),
             r => Assert.Contains(report.Data.Indicators, i => i.Value == r.Text || i.Label.PlainText.Contains(r.Text, StringComparison.Ordinal)
                 || i.Position == r.Text));
         Assert.DoesNotContain(report.TextRuns, r => r.Text.Contains("≈ kennzeichnet", StringComparison.Ordinal) || r.Text.Contains("≈ marks", StringComparison.Ordinal));
@@ -189,7 +193,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
             significantDigits: 5, notation: EngineeringNotation.Off);
         var table = new ReportTable("Grouped numbers", ["Name", "Value"], [.8f, .2f],
             [new[] { "Group", number }]);
-        using var report = new ReportDocument(captured.Data with { Tables = [table] }, new(80, (_, _, _) => { }));
+        using var report = new ReportDocument(captured.Data with { Tables = [table] }, new(80, 60, (_, _, _, _) => { }));
         using var bitmap = report.RenderPage(0);
         var run = Assert.Single(report.TextRuns, r => r.Text == number);
         var fragment = Assert.Single(report.Pages[0].Tables);
@@ -267,7 +271,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         state = state with { Document = document, Presentation = state.Presentation.RetainEntities(document) };
         var (main, _) = Open(state);
         using var report = ProjectReport.Capture(main.Editor!, Now);
-        var expected = new List<string> { Strings.Supports };
+        var expected = new List<string> { Strings.SetupSegments, Strings.Supports };
         if (group is 1 or 4) expected.Add(Strings.Forces);
         if (group is 2 or 4) expected.Add(Strings.Moments);
         if (group is 3 or 4) expected.Add(Strings.DistributedLoads);
@@ -293,8 +297,8 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
 
         using var report = ProjectReport.Capture(editor, Now);
 
-        Assert.Equal(expected, report.Data.Section);
-        Assert.Equal(editor.Overview.Section, report.Data.Section);
+        Assert.Equal(expected, report.Data.Segments[0].Section);
+        Assert.Equal(editor.Overview.Section, report.Data.Segments[0].Section);
         Assert.Equal(displayName, editor.Document.SectionDisplayName);
     }
 
@@ -313,14 +317,14 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         {
             var state = fixture with { Document = fixture.Document.WithSection(section, axis.AxisDesignation) };
             var (main, _) = Open(state); using var report = ProjectReport.Capture(main.Editor!, Now);
-            Assert.Equal(main.Editor!.Overview.Section, report.Data.Section);
-            Assert.DoesNotMatch(@" · [yzuv]-[yzuv]$", report.Data.Section);
-            Assert.Contains(report.Data.SectionProperties, p => p.PlainText.StartsWith("I" + axis.AxisDesignation.ToString().ToLowerInvariant() + " = "));
+            Assert.Equal(main.Editor!.Overview.Section, report.Data.Segments[0].Section);
+            Assert.DoesNotMatch(@" · [yzuv]-[yzuv]$", report.Data.Segments[0].Section);
+            Assert.Contains(report.Data.Segments[0].SectionProperties, p => p.PlainText.StartsWith("I" + axis.AxisDesignation.ToString().ToLowerInvariant() + " = "));
             bool sameDisplay = SectionDisplay.Property(section, axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus,
                 main.Editor!.ResultPresentation) ==
                 SectionDisplay.Property(section, axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus,
                 main.Editor.ResultPresentation);
-            Assert.Equal(sameDisplay ? 2 : 3, report.Data.SectionProperties.Count);
+            Assert.Equal(sameDisplay ? 2 : 3, report.Data.Segments[0].SectionProperties.Count);
             using var bitmap = report.RenderPage(0, 96); AssertTextContained(report);
         }
     }
@@ -364,7 +368,7 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         var (main, _) = Open(state); using var report = ProjectReport.Capture(main.Editor!, Now);
         Assert.Empty(report.Data.Metadata); Assert.Empty(report.Data.Author);
         Assert.Contains("∞", report.Data.Indicators[3].Value);
-        Assert.Equal(new[] { Strings.Supports, Strings.Reactions }, report.Data.Tables.Select(t => t.Title));
+        Assert.Equal(new[] { Strings.SetupSegments, Strings.Supports, Strings.Reactions }, report.Data.Tables.Select(t => t.Title));
         using var bitmap = report.RenderPage(0, 96); AssertTextContained(report);
         Assert.DoesNotContain(report.TextRuns, r => r.Text == report.Data.Labels.Author);
         string[] labels = [report.Data.Labels.Project, report.Data.Labels.Reference];

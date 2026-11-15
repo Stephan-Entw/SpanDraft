@@ -22,8 +22,8 @@ internal static class ProjectReport
         var presentation = editor.Presentation;
         var overview = ProjectOverviewState.From(state.Document, presentation);
         var analysis = presentation.Result!;
-        // The section and material blocks and the stress indicators describe the governing segment, which is the only one for
-        // a beam of one segment. Several segments are listed in their own table.
+        // The stress indicators describe the governing segment, which is the only one for a beam of one segment.
+        // Every segment, the governing one included, gets the same detail block.
         bool several = state.Document.HasSeveralSegments;
         int governing = analysis.Engineering.GoverningSegmentIndex;
         var governingSegment = state.Document.Segments[governing];
@@ -33,10 +33,6 @@ internal static class ProjectReport
         // from geometry and the calculated positions of the critical values.
         TechnicalText Given(TechnicalText label, double si, QuantityKind kind) =>
             label + QuantityFormatter.FormatInputEquation("", si, profile[kind], presentation.Options);
-        bool givenSection = SectionDefinitionCompatibility.Normalize(governingSegment.Section) is SpanDraft.Core.Sections.ManualSectionDefinition;
-        string SectionProperty(double si, QuantityKind kind) => SectionDisplay.Property(givenSection, si, kind, presentation.Options);
-        TechnicalText SectionValue(TechnicalText label, double si, QuantityKind kind) =>
-            givenSection ? Given(label, si, kind) : label + " = " + SectionProperty(si, kind);
         string Position(double meters) => QuantityFormatter.FormatResultNumber(meters, QuantityKind.BeamLength, presentation.Options);
         string Location(double meters, SpanDraft.Solver.EvaluationSide? side) =>
             string.Format(CultureInfo.CurrentUICulture, Strings.ReportPosition, Position(meters),
@@ -49,18 +45,30 @@ internal static class ProjectReport
             if (info.Reference is { } reference) metadata.Add((Strings.Reference, reference));
             if (info.Author is { } author) metadata.Add((Strings.Author, author));
         }
-        var axis = analysis.Beam.Segments[governing].BendingAxisProperties;
-        string axisName = governingSegment.BendingAxis.ToString().ToLowerInvariant();
-        var sectionProperties = new List<TechnicalText>
-        { SectionValue(TechnicalSymbols.Inertia(axisName), axis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea) };
-        if (SectionProperty(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus)
-            == SectionProperty(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus))
-            sectionProperties.Add(SectionValue(TechnicalSymbols.Modulus(axisName), axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
-        else
+        var segments = state.Document.Segments.Select((segment, index) =>
         {
-            sectionProperties.Add(SectionValue(TechnicalSymbols.Modulus(axisName, 1), axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
-            sectionProperties.Add(SectionValue(TechnicalSymbols.Modulus(axisName, -1), axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus));
-        }
+            // The values of the bending axis the segment is calculated with; unsymmetrical sections show both moduli.
+            var axis = analysis.Beam.Segments[index].BendingAxisProperties;
+            string axisName = segment.BendingAxis.ToString().ToLowerInvariant();
+            bool givenSection = SectionDefinitionCompatibility.Normalize(segment.Section) is SpanDraft.Core.Sections.ManualSectionDefinition;
+            string SectionProperty(double si, QuantityKind kind) => SectionDisplay.Property(givenSection, si, kind, presentation.Options);
+            TechnicalText SectionValue(TechnicalText label, double si, QuantityKind kind) =>
+                givenSection ? Given(label, si, kind) : label + " = " + SectionProperty(si, kind);
+            var sectionProperties = new List<TechnicalText>
+            { SectionValue(TechnicalSymbols.Inertia(axisName), axis.SecondMomentOfArea.MetersToTheFourth, QuantityKind.SecondMomentOfArea) };
+            if (SectionProperty(axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus)
+                == SectionProperty(axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus))
+                sectionProperties.Add(SectionValue(TechnicalSymbols.Modulus(axisName), axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
+            else
+            {
+                sectionProperties.Add(SectionValue(TechnicalSymbols.Modulus(axisName, 1), axis.PositiveSectionModulus.CubicMeters, QuantityKind.SectionModulus));
+                sectionProperties.Add(SectionValue(TechnicalSymbols.Modulus(axisName, -1), axis.NegativeSectionModulus.CubicMeters, QuantityKind.SectionModulus));
+            }
+            return new ReportSegment(overview.Segments[index].Title, overview.Segments[index].Section, sectionProperties,
+                overview.Segments[index].Material,
+                [Given(Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus, segment.Material.YoungsModulus.Pascals, QuantityKind.YoungsModulus),
+                 Given(MaterialStrengthDisplay.LabelText(segment.Material.StrengthType), segment.Material.YieldStrength.Pascals, QuantityKind.MaterialStrength)]);
+        }).ToArray();
         var engineering = analysis.Engineering;
         var indicators = new List<ReportIndicator>
         {
@@ -77,12 +85,10 @@ internal static class ProjectReport
         var timestamp = createdAt ?? DateTimeOffset.Now;
         var data = new ReportData(state.Info?.CalculationTitle ?? Strings.ReportHeading, state.Info?.Author ?? "",
             ApplicationMetadata.Version, timestamp, timestamp.ToLocalTime().ToString("d", CultureInfo.CurrentCulture), metadata,
-            overview.Segments[governing].Section, sectionProperties, overview.Segments[governing].Material,
-            [Given(Strings.MaterialYoungsModulus + " " + TechnicalSymbols.YoungsModulus, governingSegment.Material.YoungsModulus.Pascals, QuantityKind.YoungsModulus),
-             Given(MaterialStrengthDisplay.LabelText(governingSegment.Material.StrengthType), governingSegment.Material.YieldStrength.Pascals, QuantityKind.MaterialStrength)],
+            segments,
             new ReportTable?[]
             {
-                several ? SegmentTable(overview, profile) : null,
+                SegmentOverview(overview),
                 new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.25f, .50f, .25f],
                     overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Type, s.Position }).ToArray(), LeftAlignedColumn: 1),
                 new(Strings.MomentReleases, [Strings.OverviewName, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]",
@@ -100,8 +106,7 @@ internal static class ProjectReport
                     { r.Name, Missing(r.Rx), Missing(r.Ry), Missing(r.Moment) }).ToArray())
             }.Where(t => t is { Rows.Count: > 0 }).Select(t => t!).ToArray(),
             indicators.ToArray(), new(Strings.ReportHeading.ToUpperInvariant(), Strings.ReportContinuation, Strings.ReportPage,
-                several ? string.Format(CultureInfo.CurrentUICulture, Strings.ReportSegmentSection, governing + 1) : Strings.Section,
-                several ? string.Format(CultureInfo.CurrentUICulture, Strings.ReportSegmentMaterial, governing + 1) : Strings.ReportMaterial,
+                Strings.Section, Strings.ReportMaterial,
                 Strings.ReportSummary, Strings.ReportNotes, [(several ? Strings.ReportSegmentTheory : Strings.ReportTheory) + (state.Document.Supports.Any(s => s.Type == SupportType.Spring) ? " " + Strings.ReportSpringTheory : "")
                     + (state.Document.MomentReleases.Count > 0 ? " " + Strings.ReportMomentReleaseTheory : "")
                     + " " + RoundingSentence(presentation.Options.SignificantDigits)],
@@ -112,14 +117,11 @@ internal static class ProjectReport
         catch { report.Dispose(); throw; }
     }
 
-    // One row per segment: number, range, section and material. The table sits in the narrow column beside the drawings,
-    // so the second moment of area and the section modulus stay with the governing segment's block.
-    private static ReportTable SegmentTable(ProjectOverviewState overview, UnitProfile profile) => new(Strings.SetupSegments,
-        [Strings.SegmentNumber, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]",
-            Strings.Section, Strings.Material],
-        [.12f, .31f, .27f, .30f], overview.Segments.Select(segment => (IReadOnlyList<string>)new[]
-            { segment.Number.ToString(CultureInfo.CurrentUICulture), segment.Range, segment.Section, segment.Material }).ToArray(),
-        LeftAlignedColumn: 2);
+    // The overview of the beam model as in the project overview: every segment, also a single one, with its heading and the
+    // complete description, wrapping instead of shortening. No positions; those belong to the beam drawing.
+    private static ReportTable SegmentOverview(ProjectOverviewState overview) => new(Strings.SetupSegments, [], [1f],
+        overview.Segments.Select(segment => (IReadOnlyList<string>)new[] { segment.Title + "\n" + segment.Description }).ToArray(),
+        LeftAlignedColumn: 0, StrongFirstLine: true);
 
     private static string Missing(string value) => value.Length == 0 ? "-" : value;
 

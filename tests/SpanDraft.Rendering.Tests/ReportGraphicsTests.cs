@@ -39,9 +39,9 @@ public sealed class ReportGraphicsTests : ProjectReportTestSupport
         var (main, _) = Open(state);
         using var report = ProjectReport.Capture(main.Editor!, Now);
         AssertCompleteTablesAndFinalSummary(report);
-        var area = report.TechnicalAreas(0).Single(a => a.Kind == ReportGraphic.Section).Bounds;
-        Assert.Equal(ReportDocument.RightWidth, area.Width, 4);
-        Assert.Equal(area.Width, area.Height, 4); // SKRect subtracts single-precision page coordinates.
+        var (sketchPage, _, area) = Assert.Single(report.SketchAreas());
+        Assert.Equal(ReportDocument.RightWidth, area.Width, 4); // SKRect subtracts single-precision page coordinates.
+        Assert.True(area.Height > 0);
         var section = Assert.IsAssignableFrom<IParametricSectionDefinition>(state.Document.Section);
         var geometry = SectionPreviewGeometryResolver.FromSection(SectionEditorType.ISection,
             SectionDefinitionViewModel.PresetValues(section), section);
@@ -70,8 +70,8 @@ public sealed class ReportGraphicsTests : ProjectReportTestSupport
         Assert.DoesNotMatch(@"/Subtype\s*/Image\b", Encoding.Latin1.GetString(pdf.ToArray()));
         File.WriteAllBytes(Path.Combine(directory, name + ".pdf"), pdf.ToArray());
         using (var png = File.Create(Path.Combine(directory, name + ".png"))) report.WritePng(png, 0);
-        using var bitmap = report.RenderPage(0);
-        AssertTextContained(report); AssertInformationBlocksSeparated(report, 0);
+        using var bitmap = report.RenderPage(sketchPage);
+        AssertTextContained(report); AssertInformationBlocksSeparated(report, sketchPage);
         using var detail = new SKBitmap();
         const float scale = 300f / 72;
         Assert.True(bitmap.ExtractSubset(detail, new SKRectI((int)Math.Floor(area.Left * scale),
@@ -93,9 +93,9 @@ public sealed class ReportGraphicsTests : ProjectReportTestSupport
         var state = fixture with { Document = document };
         var (main, _) = Open(state);
         using var report = ProjectReport.Capture(main.Editor!, Now);
-        Assert.Contains(report.Data.SectionProperties, text => text.Runs.Any(r => r.Position == TechnicalPosition.Superscript && r.Text == "+"));
-        Assert.Contains(report.Data.SectionProperties, text => text.Runs.Any(r => r.Position == TechnicalPosition.Superscript && r.Text == "−"));
-        Assert.Contains(report.Data.MaterialProperties, text => text.Runs.Any(r => r.Position == TechnicalPosition.Subscript && r.Text == "p0,2"));
+        Assert.Contains(report.Data.Segments[0].SectionProperties, text => text.Runs.Any(r => r.Position == TechnicalPosition.Superscript && r.Text == "+"));
+        Assert.Contains(report.Data.Segments[0].SectionProperties, text => text.Runs.Any(r => r.Position == TechnicalPosition.Superscript && r.Text == "−"));
+        Assert.Contains(report.Data.Segments[0].MaterialProperties, text => text.Runs.Any(r => r.Position == TechnicalPosition.Subscript && r.Text == "p0,2"));
         Assert.Equal(TechnicalSymbols.MaximumStress.Runs, report.Data.Indicators[2].Label.Runs.TakeLast(2));
         string directory = Path.Combine(RepositoryRoot(), "output", "pdf", "production"); Directory.CreateDirectory(directory);
         string name = "technical-notation-" + culture;
@@ -107,7 +107,7 @@ public sealed class ReportGraphicsTests : ProjectReportTestSupport
 
         var longLabel = string.Concat(Enumerable.Repeat("Long localized description ", 8)) + TechnicalSymbols.MaximumStress;
         using var wrapped = new ReportDocument(report.Data with
-            { Indicators = [new(longLabel, "150 MPa", null)] }, new(80, (_, _, _) => { }));
+            { Indicators = [new(longLabel, "150 MPa", null)] }, new(80, 60, (_, _, _, _) => { }));
         int summaryPage = wrapped.Pages.Select((page, index) => (page, index)).Single(p => p.page.SummaryTop.HasValue).index;
         using var bitmap = wrapped.RenderPage(summaryPage);
         AssertTextContained(wrapped);
@@ -131,7 +131,7 @@ public sealed class ReportGraphicsTests : ProjectReportTestSupport
         Assert.True(main.OpenAsync(projectPath).GetAwaiter().GetResult());
         var bytes = File.ReadAllBytes(projectPath); var revision = main.Session!.CurrentRevision;
         using var report = ProjectReport.Capture(main.Editor!, Now);
-        Assert.Equal(overflow ? 2 : 1, report.Pages.Count);
+        Assert.InRange(report.Pages.Count, overflow ? 2 : 1, 3);
         using (var pdf = File.Create(Path.Combine(directory, name + ".pdf"))) report.WritePdf(pdf);
         string pdfText = Encoding.Latin1.GetString(File.ReadAllBytes(Path.Combine(directory, name + ".pdf")));
         Assert.DoesNotMatch(@"/Subtype\s*/Image\b", pdfText);
@@ -148,11 +148,9 @@ public sealed class ReportGraphicsTests : ProjectReportTestSupport
             Assert.Equal(Enumerable.Range(0, report.Data.Tables[table].Rows.Count), report.Pages.SelectMany(p => p.Tables)
                 .Where(f => f.Table == table).SelectMany(f => f.Rows).Select(r => r.Row));
         var areas = report.TechnicalAreas(0);
-        Assert.Equal(Enum.GetValues<ReportGraphic>(), areas.Select(a => a.Kind));
-        Assert.All(areas.Take(4), a => Assert.Equal(128 * ReportDocument.Mm, a.Bounds.Width, 3));
-        Assert.Equal(50 * ReportDocument.Mm, areas[^1].Bounds.Width, 3);
-        Assert.Equal(areas[^1].Bounds.Width, areas[^1].Bounds.Height, 4);
-        Assert.All(areas.Take(4).Zip(areas.Skip(1).Take(3)), pair => Assert.True(pair.First.Bounds.Bottom <= pair.Second.Bounds.Top));
+        Assert.Equal(new[] { ReportGraphic.Beam, ReportGraphic.Displacement, ReportGraphic.Shear, ReportGraphic.Moment }, areas.Select(a => a.Kind));
+        Assert.All(areas, a => Assert.Equal(128 * ReportDocument.Mm, a.Bounds.Width, 3));
+        Assert.All(areas.Zip(areas.Skip(1)), pair => Assert.True(pair.First.Bounds.Bottom <= pair.Second.Bounds.Top));
         Assert.True(areas[3].Bounds.Bottom < (report.Pages[0].SummaryTop ?? ReportDocument.FooterTop));
         for (int page = 0; page < report.Pages.Count; page++)
         {
@@ -272,7 +270,8 @@ public sealed class ReportGraphicsTests : ProjectReportTestSupport
         var visuals = new ReportVisuals(state, main.Editor!.Presentation, captured.Data);
         using var report = new ReportDocument(captured.Data, visuals.Graphics);
         if (frozen) visuals.Freeze(report);
-        foreach (var area in report.TechnicalAreas(0))
+        foreach (var area in report.TechnicalAreas(0).Select(a => (Kind: a.Kind, Index: 0, Bounds: a.Bounds))
+            .Concat(report.SketchAreas().Select(a => (Kind: ReportGraphic.Section, Index: a.Segment, Bounds: a.Bounds))))
         {
             using var surface = SKSurface.Create(new SKImageInfo(2200, 1800));
             var canvas = surface.Canvas;
@@ -280,7 +279,7 @@ public sealed class ReportGraphicsTests : ProjectReportTestSupport
             canvas.ClipRect(new SKRect(10, 15, 300, 190));
             var matrix = canvas.TotalMatrix; var clip = canvas.DeviceClipBounds; int saves = canvas.SaveCount;
             var bounds = SKRect.Create(40, 50, area.Bounds.Width, area.Bounds.Height);
-            visuals.Graphics.Draw(canvas, area.Kind, bounds);
+            visuals.Graphics.Draw(canvas, area.Kind, area.Index, bounds);
             Assert.Equal(matrix, canvas.TotalMatrix); Assert.Equal(clip, canvas.DeviceClipBounds); Assert.Equal(saves, canvas.SaveCount);
             using var bitmap = new SKBitmap(2200, 1800);
             Assert.True(surface.ReadPixels(bitmap.Info, bitmap.GetPixels(), bitmap.RowBytes, 0, 0));

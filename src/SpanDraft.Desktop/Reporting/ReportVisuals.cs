@@ -24,6 +24,8 @@ internal sealed class ReportVisuals
 {
     internal const double VisualScale = .8;
     internal const double MinimumBeamPaneHeight = 100;
+    // The room a result diagram keeps above (title) and below its plot, in device-independent pixels; see ResultDiagram.
+    private const double DiagramChrome = 48;
     private const double SupportSymbolScale = .75;
     private const double LoadSymbolScale = .85;
     internal const double PointsPerDip = 72d / 96 * VisualScale;
@@ -37,23 +39,25 @@ internal sealed class ReportVisuals
     internal ReportTechnicalGraphics Graphics { get; private set; } = null!;
     internal int MeasurementPasses { get; private set; }
 
-    private readonly SectionPreviewControl? section;
-    private readonly Dictionary<ReportGraphic, SKPicture> pictures = [];
+    private readonly SectionPreviewControl?[] sections;
+    private readonly Dictionary<(ReportGraphic, int), SKPicture> pictures = [];
+    internal SegmentRowPane SegmentRow { get; }
 
     internal ReportVisuals(ProjectState state, AnalysisPresentationState presentation, ReportData data)
     {
         var inputs = new Inputs(state.Document, presentation, state.Presentation, data);
-        // The section drawing shows the governing segment, the only one for a beam of one segment.
-        var governing = state.Document.Segments[presentation.Result!.Engineering.GoverningSegmentIndex];
-        if (SectionDefinitionCompatibility.Normalize(governing.Section) is IParametricSectionDefinition parametric)
+        // One section sketch per segment; the governing segment has no special place.
+        sections = state.Document.Segments.Select(segment =>
         {
+            if (SectionDefinitionCompatibility.Normalize(segment.Section) is not IParametricSectionDefinition parametric) return null;
             var type = SectionDefinitionViewModel.FormOf(parametric);
-            section = new SectionPreviewControl { Geometry = SectionPreviewGeometryResolver.FromSection(type,
-                SectionDefinitionViewModel.PresetValues(parametric), parametric), SelectedAxis = governing.BendingAxis,
+            var control = new SectionPreviewControl { Geometry = SectionPreviewGeometryResolver.FromSection(type,
+                SectionDefinitionViewModel.PresetValues(parametric), parametric), SelectedAxis = segment.BendingAxis,
                 Presentation = presentation.Options, IsHitTestVisible = false, Compact = true };
             foreach (string key in new[] { "CanvasBackground", "AppBackground", "SurfacePressed", "TextSecondary", "TextPrimary", "Accent" })
-                section.Resources.Add(key, Brush(key));
-        }
+                control.Resources.Add(key, Brush(key));
+            return control;
+        }).ToArray();
         double width = ReportDocument.LeftWidth / PointsPerDip;
         Beam = new()
         {
@@ -67,8 +71,10 @@ internal sealed class ReportVisuals
             Width = width, LabelFontSize = AnnotationFontSize,
             AxisBrush = Brush("AxisStroke"), IsStandalone = true, IsHitTestVisible = false
         };
+        // The segment row of the editor sits between the beam and the axis, only for several segments.
+        SegmentRow = new() { Width = width, IsHitTestVisible = false, StrokeBrush = Brush("AxisStroke"), LabelFontSize = AnnotationFontSize };
         beamRoot = new() { Background = Brush("CanvasBackground"), UseLayoutRounding = false, IsHitTestVisible = false, Width = width,
-            Children = { Beam, Axis } };
+            Children = { Beam, SegmentRow, Axis } };
         Diagrams = new[] { ResultDiagramKind.TransverseDisplacement, ResultDiagramKind.ShearForce, ResultDiagramKind.BendingMoment }
             .Select(kind =>
             {
@@ -104,14 +110,26 @@ internal sealed class ReportVisuals
             Axis.AxisLayout = CoordinateAxisLayout.Create(frame.Layout, width, Measure, unit: profile[QuantityKind.BeamLength],
                 presentation: inputs.Presentation.Options);
             Axis.Height = Axis.AxisLayout.PaneHeight;
-            Canvas.SetTop(Axis, Beam.Height);
-            Arrange(beamRoot, new(width, Beam.Height + Axis.Height));
-            Graphics = new((float)(beamRoot.Height * drawingScale), Draw);
+            double rowHeight = 0;
+            SegmentRow.Width = width;
+            if (inputs.Document.HasSeveralSegments)
+            {
+                SegmentRow.Update(frame.Layout, inputs.Document, inputs.Presentation.Options);
+                Arrange(SegmentRow, new(width, SchematicMetrics.SegmentRowHeight));
+                Canvas.SetTop(SegmentRow, Beam.Height);
+                rowHeight = SchematicMetrics.SegmentRowHeight;
+            }
+            else SegmentRow.Hide();
+            Canvas.SetTop(Axis, Beam.Height + rowHeight);
+            Arrange(beamRoot, new(width, Beam.Height + rowHeight + Axis.Height));
+            // A result diagram at its normal compact height has a plot of 25 mm; the chrome around the plot scales with the drawing.
+            Graphics = new((float)(beamRoot.Height * drawingScale), (float)(25 * ReportDocument.Mm + DiagramChrome * drawingScale), Draw);
 
             // Use the real page composition: plot height can change the required tick-label width.
             using var report = new ReportDocument(inputs.Data, Graphics);
             int graphicPage = report.Pages.Select((p, i) => (p, i)).First(p => p.p.HasGraphics).i;
-            double maximumBeamHeight = ReportDocument.FooterTop - 14 - report.Pages[graphicPage].BodyTop - 188;
+            double maximumBeamHeight = ReportDocument.FooterTop - 14 - report.Pages[graphicPage].BodyTop - 8
+                - 3 * Graphics.MinimumDiagramHeight;
             if (Graphics.BeamHeight > maximumBeamHeight)
             {
                 // Dense models still use the same controls and shared stations; fit them uniformly to paper.
@@ -149,33 +167,38 @@ internal sealed class ReportVisuals
 
     internal void Freeze(ReportDocument report)
     {
-        foreach (var area in report.TechnicalAreas(report.Pages.Select((p, i) => (p, i)).First(p => p.p.HasGraphics).i))
-        {
-            using var recorder = new SKPictureRecorder();
-            var bounds = new SKRect(0, 0, area.Bounds.Width, area.Bounds.Height);
-            var canvas = recorder.BeginRecording(bounds);
-            DrawLive(canvas, area.Kind, bounds);
-            var picture = recorder.EndRecording();
-            report.Own(picture);
-            pictures.Add(area.Kind, picture);
-        }
+        int graphicPage = report.Pages.Select((p, i) => (p, i)).First(p => p.p.HasGraphics).i;
+        foreach (var area in report.TechnicalAreas(graphicPage)) Record(report, area.Kind, 0, area.Bounds);
+        // Every segment's sketch has the same size; each is frozen with its own geometry and bending axis.
+        foreach (var sketch in report.SketchAreas()) Record(report, ReportGraphic.Section, sketch.Segment, sketch.Bounds);
+    }
+
+    private void Record(ReportDocument report, ReportGraphic kind, int index, SKRect area)
+    {
+        using var recorder = new SKPictureRecorder();
+        var bounds = new SKRect(0, 0, area.Width, area.Height);
+        var canvas = recorder.BeginRecording(bounds);
+        DrawLive(canvas, kind, index, bounds);
+        var picture = recorder.EndRecording();
+        report.Own(picture);
+        pictures.Add((kind, index), picture);
     }
 
     private static Size Measure(string text) => SchematicText.Measure(text, AppTypography.Typeface, AnnotationFontSize);
 
-    private void Draw(SKCanvas canvas, ReportGraphic kind, SKRect bounds)
+    private void Draw(SKCanvas canvas, ReportGraphic kind, int index, SKRect bounds)
     {
-        if (!pictures.TryGetValue(kind, out var picture)) { DrawLive(canvas, kind, bounds); return; }
+        if (!pictures.TryGetValue((kind, index), out var picture)) { DrawLive(canvas, kind, index, bounds); return; }
         using var restore = new SKAutoCanvasRestore(canvas);
         canvas.Translate(bounds.Left, bounds.Top);
         canvas.DrawPicture(picture);
     }
 
-    private void DrawLive(SKCanvas canvas, ReportGraphic kind, SKRect bounds)
+    private void DrawLive(SKCanvas canvas, ReportGraphic kind, int index, SKRect bounds)
     {
         Dispatcher.UIThread.VerifyAccess();
         Control visual = kind == ReportGraphic.Section
-            ? section ?? (Control)new TextBlock { Text = Strings.ReportManualSection, TextWrapping = TextWrapping.Wrap,
+            ? sections[index] ?? (Control)new TextBlock { Text = Strings.ReportManualSection, TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("TextSecondary"), FontFamily = AppTypography.Family, FontSize = AppTypography.Size("SecondarySize") }
             : kind == ReportGraphic.Beam ? beamRoot : Diagrams[(int)kind - 1];
         double scale = kind == ReportGraphic.Section ? PointsPerDip : drawingScale;

@@ -37,26 +37,32 @@ public sealed class SegmentReportTests : ProjectReportTestSupport
     [Theory]
     [InlineData("de-DE")]
     [InlineData("en-US")]
-    public void ReportListsEverySegmentAndDescribesTheGoverningOne(string culture)
+    public void ReportDescribesEverySegmentInTheOverviewAndInItsOwnDetailBlock(string culture)
     {
         using var scope = new UiCultureScope(culture);
         using var report = Capture(Document(selfWeight: true), out var editor);
         var engineering = editor.Presentation.Result!.Engineering;
 
+        // The overview is the one of the project overview: heading and complete description, no positions.
         var table = Assert.Single(report.Data.Tables, t => t.Title == Strings.SetupSegments);
-        Assert.Equal(3, table.Rows.Count);
-        Assert.Equal(["1", "2", "3"], table.Rows.Select(r => r[0]));
-        Assert.Equal(table.Headers.Count, table.Widths.Count);
-        Assert.Equal(1f, table.Widths.Sum(), 1e-5);
-        Assert.All(table.Rows, r => Assert.Equal(table.Headers.Count, r.Count));
-        Assert.Equal(editor.Overview.Segments.Select(s => s.Range), table.Rows.Select(r => r[1]));
-        Assert.Equal(editor.Overview.Segments.Select(s => s.Material), table.Rows.Select(r => r[3]));
+        Assert.Equal(0, report.Data.Tables.ToList().IndexOf(table));
+        Assert.True(table.StrongFirstLine);
+        Assert.Empty(table.Headers);
+        Assert.Equal(editor.Overview.Segments.Select(s => s.Title + "\n" + s.Description), table.Rows.Select(r => r[0]));
+        Assert.DoesNotContain(report.Data.Tables.SelectMany(t => t.Headers), h => h.PlainText == Strings.SegmentNumber);
+
+        // Every segment, the governing one included, has a detail block with its own section and material.
+        Assert.Equal(editor.Overview.Segments.Select(s => (s.Title, s.Section, s.Material)),
+            report.Data.Segments.Select(s => (s.Title, s.Section, s.Material)));
+        Assert.All(report.Data.Segments, s =>
+        {
+            Assert.NotEmpty(s.SectionProperties);
+            Assert.Equal(2, s.MaterialProperties.Count);
+        });
+        Assert.Equal(Strings.Section, report.Data.Labels.Section);
+        Assert.Equal(Strings.ReportMaterial, report.Data.Labels.Material);
 
         int governing = engineering.GoverningSegmentIndex;
-        Assert.Equal(editor.Overview.Segments[governing].Section, report.Data.Section);
-        Assert.Equal(editor.Overview.Segments[governing].Material, report.Data.Material);
-        Assert.Equal(string.Format(Strings.ReportSegmentSection, governing + 1), report.Data.Labels.Section);
-        Assert.Equal(string.Format(Strings.ReportSegmentMaterial, governing + 1), report.Data.Labels.Material);
         Assert.Equal((governing + 1).ToString(), report.Data.Indicators.Single(i => i.Label.PlainText == Strings.ReportGoverningSegment).Value);
         Assert.Equal(editor.Presentation.Stress, report.Data.Indicators.Single(i => i.Label.PlainText.StartsWith(Strings.ReportStress)).Value);
         Assert.NotNull(report.Data.Indicators.Single(i => i.Label.PlainText.StartsWith(Strings.ReportStress)).Position);
@@ -68,7 +74,7 @@ public sealed class SegmentReportTests : ProjectReportTestSupport
     }
 
     [Fact]
-    public void ASingleSegmentReportHasNoSegmentTableNoGoverningIndicatorAndTheOriginalLabels()
+    public void ASingleSegmentReportHasTheSameStructureWithoutAGoverningIndicator()
     {
         using var scope = new UiCultureScope("en-US");
         var single = new EditorDocument(M(2), ProjectTemplates.Material, ProjectTemplates.Section,
@@ -76,26 +82,31 @@ public sealed class SegmentReportTests : ProjectReportTestSupport
             [new EditorPointForce(Guid.NewGuid(), M(1), Force.FromNewtons(-1000), "F1")]);
         using var report = Capture(single, out _);
 
-        Assert.DoesNotContain(report.Data.Tables, t => t.Title == Strings.SetupSegments);
+        // No special case: the overview and the detail block exist for one segment as for several.
+        var table = Assert.Single(report.Data.Tables, t => t.Title == Strings.SetupSegments);
+        Assert.Single(table.Rows);
+        var segment = Assert.Single(report.Data.Segments);
+        Assert.Equal(SegmentLabels.Title(1), segment.Title);
         Assert.Equal(4, report.Data.Indicators.Count);
-        Assert.Equal(Strings.Section, report.Data.Labels.Section);
-        Assert.Equal(Strings.ReportMaterial, report.Data.Labels.Material);
         Assert.Contains(report.Data.Labels.Assumptions, a => a.StartsWith(Strings.ReportTheory));
         Assert.Null(report.Data.Indicators.Single(i => i.Label.PlainText.StartsWith(Strings.ReportStress)).Position);
+        // Details and notes follow the key figures in the normal page flow; nothing forces a second page.
+        AssertBlockFlow(report);
+        Assert.Single(report.SketchAreas());
     }
 
     [Fact]
-    public void EveryPageKeepsItsTablesInsideTheBodyAndTheSegmentTableFollowsItsHeading()
+    public void EveryPageKeepsItsTablesInsideTheBodyAndTheBlocksFollowTheTables()
     {
         using var report = Capture(Document(selfWeight: true), out _);
 
         AssertCompleteTablesAndFinalSummary(report);
-        var segments = Array.FindIndex(report.Data.Tables.ToArray(), t => t.Title == Strings.SetupSegments);
-        Assert.Contains(report.Pages.SelectMany(p => p.Tables), f => f.Table == segments && f.Rows.Count > 0);
+        Assert.Equal(3, report.SketchAreas().Count);
         for (int i = 0; i < report.Pages.Count; i++)
         {
             using var bitmap = report.RenderPage(i, 96);
-            Assert.True(bitmap.Width > 0);
+            AssertTextContained(report);
+            AssertInformationBlocksSeparated(report, i);
         }
     }
 }

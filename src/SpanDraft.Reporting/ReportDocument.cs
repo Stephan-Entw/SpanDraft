@@ -12,102 +12,96 @@ internal sealed class ReportDocument : IDisposable
     internal const float PageWidth = 210 * Mm, PageHeight = 297 * Mm;
     internal const float Margin = 14 * Mm, Gutter = 4 * Mm, LeftWidth = 128 * Mm, RightWidth = 50 * Mm;
     internal const float RowHeight = 15, FooterTop = PageHeight - 58;
-    private const float BlockGap = 12, LineHeight = 12, HeadingHeight = 18, SectionDrawingHeight = RightWidth;
-    private const float SectionTopOffset = -6;
+    private const float BlockGap = 12, LineHeight = 12, HeadingHeight = 18;
+    // A segment's detail block: sketch, section values and material values side by side.
+    internal const float SketchWidth = 50 * Mm, SketchHeight = 42 * Mm, DetailGap = 6 * Mm,
+        DetailMiddleWidth = 60 * Mm, DetailRightWidth = PageWidth - 2 * Margin - SketchWidth - DetailMiddleWidth - 2 * DetailGap;
     private static readonly SKColor Ink = SKColor.Parse("#202631"), Secondary = SKColor.Parse("#5E6878"),
         Rule = SKColor.Parse("#C5CDD8");
     private readonly ReportTechnicalGraphics graphics;
     private readonly List<IDisposable> ownedGraphics = [];
-    private readonly string[] sectionLines, materialLines;
-    private readonly TechnicalText[] sectionProperties, materialProperties;
-    private readonly float sectionDrawingTop, materialTop, firstTableTop, summaryHeight;
+    private readonly SegmentDetail[] details;
+    private readonly float summaryHeight, notesHeight;
     private readonly List<(string Text, SKRect Bounds)> textRuns = [];
     private readonly (IReadOnlyList<HeaderLine> Lines, float BodyTop) projectHeader;
     internal ReportData Data { get; }
     internal IReadOnlyList<ReportPage> Pages { get; }
     internal IReadOnlyList<(string Text, SKRect Bounds)> TextRuns => textRuns;
 
+    private sealed record SegmentDetail(string[] SectionLines, TechnicalText[] SectionProperties,
+        string[] MaterialLines, TechnicalText[] MaterialProperties, float Height);
+
     internal ReportDocument(ReportData data, ReportTechnicalGraphics graphics)
     {
         // Copy collection boundaries: a report cannot change after it has been composed.
         Data = data with
         {
-            Metadata = data.Metadata.ToArray(), SectionProperties = data.SectionProperties.ToArray(),
-            MaterialProperties = data.MaterialProperties.ToArray(), Indicators = data.Indicators.ToArray(),
+            Metadata = data.Metadata.ToArray(),
+            Segments = data.Segments.Select(s => s with { SectionProperties = s.SectionProperties.ToArray(),
+                MaterialProperties = s.MaterialProperties.ToArray() }).ToArray(),
+            Indicators = data.Indicators.ToArray(),
             Labels = data.Labels with { Assumptions = data.Labels.Assumptions.ToArray() },
             Tables = data.Tables.Select(t => t with { Headers = t.Headers.ToArray(), Widths = t.Widths.ToArray(),
                 Rows = t.Rows.Select(r => (IReadOnlyList<string>)r.ToArray()).ToArray() }).ToArray()
         };
         this.graphics = graphics;
-        var metadata = Data.Metadata.ToList();
-        sectionLines = CompactSectionName(Data.Section, metadata);
-        sectionProperties = PropertyLines(Data.SectionProperties);
-        materialLines = CompactMaterialName(Data.Material, metadata);
-        Data = Data with { Metadata = metadata.ToArray() };
-        materialProperties = PropertyLines(Data.MaterialProperties);
-        sectionDrawingTop = SectionTopOffset + HeadingHeight + sectionLines.Length * LineHeight;
-        materialTop = sectionDrawingTop + SectionDrawingHeight
-            + sectionProperties.Length * LineHeight + BlockGap;
-        firstTableTop = materialTop + HeadingHeight + materialLines.Length * LineHeight + 2
-            + materialProperties.Length * LineHeight + BlockGap;
+        details = Data.Segments.Select(Detail).ToArray();
         projectHeader = CreateProjectHeader();
-        summaryHeight = MeasureSummary();
+        summaryHeight = 19 + SummaryRows().Sum(row => row.Max(cell => cell.Label.Length * LineHeight + 4));
+        notesHeight = 20 + Data.Labels.Assumptions.Sum(n => Wrap(n, PageWidth - 2 * Margin, 8).Length * LineHeight);
         Pages = Compose();
     }
 
-    internal void Own(IDisposable graphic) => ownedGraphics.Add(graphic);
-
-    private string[] CompactSectionName(string value, List<(string Label, string Value)> metadata)
+    private SegmentDetail Detail(ReportSegment segment)
     {
-        // Protect quantity/unit spaces and complete radius clauses without changing
-        // the displayed text or the full original designation retained in metadata.
-        var protectedSpaces = Regex.Matches(value,
+        // Names are never shortened: they wrap inside their column and the block grows with them.
+        var section = Wrap(segment.Section, DetailMiddleWidth, 8.5f, protectedSpaces: ProtectedSpaces(segment.Section));
+        var sectionValues = PropertyLines(segment.SectionProperties, DetailMiddleWidth);
+        var material = Wrap(segment.Material, DetailRightWidth, 8.5f, true);
+        var materialValues = PropertyLines(segment.MaterialProperties, DetailRightWidth);
+        float middle = LineHeight + section.Length * LineHeight + 2 + sectionValues.Length * LineHeight;
+        float right = LineHeight + material.Length * LineHeight + 2 + materialValues.Length * LineHeight;
+        return new(section, sectionValues, material, materialValues,
+            HeadingHeight + Math.Max(SketchHeight, Math.Max(middle, right)) + 2);
+    }
+
+    /// <summary>Protects quantity/unit spaces and complete radius clauses from line breaks.</summary>
+    private static HashSet<int> ProtectedSpaces(string value) => Regex.Matches(value,
             @"\([ \t]*r[ \t]*=[^()\r\n]+\)|(?<=\d)[ \t]+(?=(?:mm|cm|dm|m|µm|μm|in|ft)\b)",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
-            .SelectMany(match => Enumerable.Range(match.Index, match.Length).Where(i => value[i] == ' ')).ToHashSet();
-        return CompactLines(value, Data.Labels.Section, Wrap(value, RightWidth, 8.5f, protectedSpaces: protectedSpaces), metadata);
-    }
+        .SelectMany(match => Enumerable.Range(match.Index, match.Length).Where(i => value[i] == ' ')).ToHashSet();
 
-    private string[] CompactMaterialName(string value, List<(string Label, string Value)> metadata)
-    {
-        const string separator = " · ";
-        int split = value.IndexOf(separator, StringComparison.Ordinal);
-        if (split < 0 || Width(value, 8.5f, true) <= RightWidth)
-            return CompactName(value, Data.Labels.Material, true, metadata);
-        var lines = Wrap(value[..split], RightWidth, 8.5f, true)
-            .Concat(Wrap(value[(split + separator.Length)..], RightWidth, 8.5f, true)).ToArray();
-        return CompactLines(value, Data.Labels.Material, lines, metadata);
-    }
+    internal void Own(IDisposable graphic) => ownedGraphics.Add(graphic);
 
-    private string[] CompactName(string value, string label, bool strong, List<(string Label, string Value)> metadata) =>
-        CompactLines(value, label, Wrap(value, RightWidth, 8.5f, strong), metadata);
-
-    private static string[] CompactLines(string value, string label, string[] lines, List<(string Label, string Value)> metadata)
-    {
-        if (lines.Length <= 3) return lines;
-        // Keep the complete name in the header pages instead of displacing the technical drawing.
-        metadata.Add((label, value));
-        return [.. lines.Take(2), "…"];
-    }
-
-    private TechnicalText[] PropertyLines(IReadOnlyList<TechnicalText> properties)
+    private TechnicalText[] PropertyLines(IReadOnlyList<TechnicalText> properties, float width)
     {
         var joined = TechnicalText.Join("    ", properties);
-        return Width(joined, 8.5f) <= RightWidth ? [joined]
-            : properties.SelectMany(p => Wrap(p, RightWidth, 8.5f)).ToArray();
+        return Width(joined, 8.5f) <= width ? [joined]
+            : properties.SelectMany(p => Wrap(p, width, 8.5f)).ToArray();
+    }
+
+    private sealed class PageBuilder(float bodyTop, bool hasGraphics)
+    {
+        internal float BodyTop { get; } = bodyTop;
+        internal bool HasGraphics { get; } = hasGraphics;
+        internal float UpperBottom { get; set; }
+        internal List<ReportTableFragment> Tables { get; set; } = [];
+        internal IReadOnlyList<(string Label, string Value)> Metadata { get; set; } = [];
+        internal List<ReportBlock> Blocks { get; } = [];
     }
 
     private IReadOnlyList<ReportPage> Compose()
     {
-        var pages = new List<ReportPage>();
+        var pages = new List<PageBuilder>();
         var metadata = Data.Metadata.SelectMany(m => Wrap(m.Value, PageWidth - 2 * Margin - 64, 8.5f,
             m.Label == Data.Metadata.FirstOrDefault().Label).Select((line, i) => (i == 0 ? m.Label : "", line))).ToArray();
+        // The left column at its normal compact height: the beam and three diagrams with their minimum plot.
+        float leftMinimum = graphics.BeamHeight + 4 + 3 * graphics.MinimumDiagramHeight;
         // Very long metadata has its own pages; it must not squeeze the technical diagrams out of existence.
-        bool separateMetadata = metadata.Length > 8
-            || projectHeader.BodyTop + graphics.BeamHeight + 4 + 3 * 60 > FooterTop - 14;
+        bool separateMetadata = metadata.Length > 8 || projectHeader.BodyTop + leftMinimum > FooterTop - 14;
         if (separateMetadata)
             foreach (var chunk in metadata.Chunk(48))
-                pages.Add(new(Margin + 44 + chunk.Length * LineHeight, false, null, [], chunk));
+                pages.Add(new(Margin + 44 + chunk.Length * LineHeight, false) { Metadata = chunk });
         var firstMetadata = separateMetadata ? [] : metadata;
         float bodyTop = separateMetadata ? ContinuationTop : projectHeader.BodyTop;
         const float bottom = FooterTop - 14;
@@ -116,14 +110,15 @@ internal sealed class ReportDocument : IDisposable
         var freshRegion = new SKRect(Margin, ContinuationTop, Margin + columnWidth, bottom);
         var cursor = new TableCursor();
         bool firstPage = true;
+        PageBuilder current;
+        float flowTop;
         while (true)
         {
             var before = cursor;
             var fragments = new List<ReportTableFragment>();
             if (firstPage)
             {
-                var region = new SKRect(Margin + LeftWidth + Gutter, bodyTop + firstTableTop,
-                    PageWidth - Margin, bottom);
+                var region = new SKRect(Margin + LeftWidth + Gutter, bodyTop, PageWidth - Margin, bottom);
                 var filled = FillRegion(region, cursor, freshRegion);
                 fragments.AddRange(filled.Fragments);
                 cursor = filled.Cursor;
@@ -140,28 +135,46 @@ internal sealed class ReportDocument : IDisposable
                 }
             }
 
-            if (!firstPage && cursor.TableIndex == Data.Tables.Count)
+            bool complete = cursor.TableIndex == Data.Tables.Count;
+            if (!firstPage && complete)
                 fragments = BalanceContinuationColumns(before, freshRegion, columnGap, fragments);
-
-            float? summary = null;
-            if (cursor.TableIndex == Data.Tables.Count)
-            {
-                float top = fragments.Count == 0 ? bodyTop : fragments.Max(f => f.Bounds.Bottom) + (firstPage ? 16 : 20);
-                if (firstPage)
-                    top = Math.Max(top, bodyTop + Math.Max(firstTableTop,
-                        graphics.BeamHeight + 4 + 3 * 60) + 16);
-                if (top + summaryHeight <= (firstPage ? FooterTop - 4 : bottom)) summary = top;
-                else if (!firstPage && fragments.Count == 0)
-                    throw new InvalidOperationException("The report summary cannot fit on a continuation page.");
-            }
-            else if (!firstPage && cursor == before)
+            if (!complete && !firstPage && cursor == before)
                 throw new InvalidOperationException("A report table cannot fit on a continuation page.");
 
-            pages.Add(new(bodyTop, firstPage, summary, fragments.ToArray(), firstPage ? firstMetadata : []));
-            if (summary.HasValue) break;
+            float tablesBottom = fragments.Count == 0 ? bodyTop : fragments.Max(f => f.Bounds.Bottom);
+            current = new(bodyTop, firstPage) { Tables = fragments, Metadata = firstPage ? firstMetadata : [] };
+            // The diagrams start at their compact height; only the room the right column needs beyond it is shared out.
+            if (firstPage) current.UpperBottom = Math.Max(tablesBottom, bodyTop + leftMinimum);
+            pages.Add(current);
+            if (complete)
+            {
+                flowTop = firstPage ? current.UpperBottom + 16 : fragments.Count == 0 ? bodyTop : tablesBottom + 20;
+                break;
+            }
             firstPage = false;
         }
-        return pages.AsReadOnly();
+
+        // The page flow below the tables: the key figures, every segment's details, then the notes. A block that does
+        // not fit completely moves to the next page; no block depends on a page number or on a number of segments.
+        var flow = new List<(ReportBlockKind Kind, int Index, float Height)> { (ReportBlockKind.Summary, 0, summaryHeight) };
+        flow.AddRange(details.Select((d, i) => (ReportBlockKind.Segment, i, d.Height)));
+        flow.Add((ReportBlockKind.Notes, 0, notesHeight));
+        float y = flowTop;
+        foreach (var (kind, index, height) in flow)
+        {
+            if (y + height > bottom)
+            {
+                current = new(ContinuationTop, false);
+                pages.Add(current);
+                y = ContinuationTop;
+                if (y + height > bottom)
+                    throw new InvalidOperationException("A report block cannot fit on a continuation page.");
+            }
+            current.Blocks.Add(new(kind, index, y, height));
+            y += height + BlockGap;
+        }
+        return pages.Select(p => new ReportPage(p.BodyTop, p.HasGraphics, p.UpperBottom, p.Tables.ToArray(), p.Metadata,
+            p.Blocks.ToArray())).ToArray();
     }
 
     private float ContinuationTop => Margin + 42 + Math.Min(2, Wrap(Data.Title, PageWidth - 2 * Margin, 8.5f).Length) * LineHeight;
@@ -269,7 +282,8 @@ internal sealed class ReportDocument : IDisposable
 
     private string[][] WrapRow(ReportTable table, int row, float width) =>
         table.Rows[row].Select((value, column) =>
-            Wrap(value, table.Widths[column] * width - 4, 8.5f, column == 0)).ToArray();
+            Wrap(value, table.Widths[column] * width - 4, 8.5f, column == 0,
+                table.StrongFirstLine ? ProtectedSpaces(value) : null)).ToArray();
 
     private string[] TableTitle(ReportTable table, float width, bool continued) =>
         Wrap(table.Title + (continued ? " · " + Data.Labels.Continuation : ""), width, 10, true);
@@ -277,7 +291,7 @@ internal sealed class ReportDocument : IDisposable
     private float TableHeading(ReportTable table, float width, bool continued)
     {
         float title = TableTitle(table, width, continued).Length * LineHeight + 6;
-        int lines = table.Headers.Select((h, i) => Wrap(h, table.Widths[i] * width, 7.5f, i == 0).Length).Max();
+        int lines = table.Headers.Select((h, i) => Wrap(h, table.Widths[i] * width, 7.5f, i == 0).Length).DefaultIfEmpty(0).Max();
         return title + lines * LineHeight + 2;
     }
 
@@ -286,9 +300,8 @@ internal sealed class ReportDocument : IDisposable
         var page = Pages[pageIndex];
         if (!page.HasGraphics) return [];
         float top = page.BodyTop;
-        float bottom = page.SummaryTop.HasValue ? page.SummaryTop.Value - 16 : FooterTop - 14;
-        float height = (bottom - top - graphics.BeamHeight - 4) / 3;
-        if (height < 60) throw new InvalidOperationException("Insufficient space for the report diagrams.");
+        float height = (page.UpperBottom - top - graphics.BeamHeight - 4) / 3;
+        if (height < graphics.MinimumDiagramHeight - .01f) throw new InvalidOperationException("Insufficient space for the report diagrams.");
         var areas = new List<(ReportGraphic, SKRect)>
         {
             (ReportGraphic.Beam, new(Margin, top, Margin + LeftWidth, top + graphics.BeamHeight))
@@ -296,11 +309,23 @@ internal sealed class ReportDocument : IDisposable
         top += graphics.BeamHeight + 4;
         foreach (var kind in new[] { ReportGraphic.Displacement, ReportGraphic.Shear, ReportGraphic.Moment })
         { areas.Add((kind, new(Margin, top, Margin + LeftWidth, top + height))); top += height; }
-        float x = Margin + LeftWidth + Gutter;
-        top = page.BodyTop + sectionDrawingTop;
-        areas.Add((ReportGraphic.Section, new(x, top, x + RightWidth, top + SectionDrawingHeight)));
         return areas;
     }
+
+    /// <summary>The three columns of a segment's detail block: sketch, section values and material values.</summary>
+    internal (SKRect Sketch, SKRect Section, SKRect Material) DetailColumns(ReportBlock block)
+    {
+        float top = block.Top + HeadingHeight, bottom = block.Top + block.Height;
+        float section = Margin + SketchWidth + DetailGap, material = section + DetailMiddleWidth + DetailGap;
+        return (new(Margin, top, Margin + SketchWidth, top + SketchHeight), new(section, top, section + DetailMiddleWidth, bottom),
+            new(material, top, material + DetailRightWidth, bottom));
+    }
+
+    /// <summary>The section sketch of every segment, with the page its detail block lies on.</summary>
+    internal IReadOnlyList<(int Page, int Segment, SKRect Bounds)> SketchAreas() =>
+        Pages.SelectMany((page, index) => page.Blocks.Where(b => b.Kind == ReportBlockKind.Segment)
+            .Select(b => (index, b.Index, new SKRect(Margin, b.Top + HeadingHeight, Margin + SketchWidth,
+                b.Top + HeadingHeight + SketchHeight)))).ToArray();
 
     internal void WritePdf(Stream output)
     {
@@ -374,19 +399,15 @@ internal sealed class ReportDocument : IDisposable
         }
         Line(canvas, Margin, headerBottom, PageWidth - Margin, headerBottom, Rule, .6f);
         if (page.HasGraphics)
-        {
-            foreach (var area in TechnicalAreas(index)) graphics.Draw(canvas, area.Kind, area.Bounds);
-            float x = Margin + LeftWidth + Gutter;
-            Heading(canvas, Data.Labels.Section, x, page.BodyTop + SectionTopOffset, RightWidth);
-            Lines(canvas, sectionLines, x, page.BodyTop + SectionTopOffset + HeadingHeight);
-            Lines(canvas, sectionProperties, x, page.BodyTop + sectionDrawingTop + SectionDrawingHeight);
-            float top = page.BodyTop + materialTop;
-            Heading(canvas, Data.Labels.Material, x, top, RightWidth);
-            Lines(canvas, materialLines, x, top + HeadingHeight, strong: true);
-            Lines(canvas, materialProperties, x, top + HeadingHeight + materialLines.Length * LineHeight + 2);
-        }
+            foreach (var area in TechnicalAreas(index)) graphics.Draw(canvas, area.Kind, 0, area.Bounds);
         foreach (var fragment in page.Tables) DrawTable(canvas, fragment);
-        if (page.SummaryTop is { } summary) DrawSummary(canvas, summary);
+        foreach (var block in page.Blocks)
+            switch (block.Kind)
+            {
+                case ReportBlockKind.Summary: DrawSummary(canvas, block.Top); break;
+                case ReportBlockKind.Segment: DrawSegment(canvas, block); break;
+                default: DrawNotes(canvas, block.Top); break;
+            }
         Line(canvas, Margin, FooterTop, PageWidth - Margin, FooterTop, Rule, .6f);
         using var footer = new ReportTextLayout("SpanDraft " + Data.Version + Data.Date
             + string.Format(CultureInfo.InvariantCulture, Data.Labels.PageFormat, index + 1, Pages.Count), 7.5f);
@@ -483,8 +504,9 @@ internal sealed class ReportDocument : IDisposable
                 i == 0, leftAligned ? SKTextAlign.Left : SKTextAlign.Right, Secondary);
             x += cellWidth;
         }
-        Line(canvas, bounds.Left, bounds.Top + fragment.HeadingHeight - 3,
-            bounds.Right, bounds.Top + fragment.HeadingHeight - 3, Rule, .4f);
+        if (table.Headers.Count > 0)
+            Line(canvas, bounds.Left, bounds.Top + fragment.HeadingHeight - 3,
+                bounds.Right, bounds.Top + fragment.HeadingHeight - 3, Rule, .4f);
         float y = bounds.Top + fragment.HeadingHeight + 2;
         foreach (var row in fragment.Rows)
         {
@@ -497,18 +519,19 @@ internal sealed class ReportDocument : IDisposable
                 float measured = lines.Select(line => Width(line, 8.5f, i == 0)).DefaultIfEmpty(0).Max();
                 // Keep an indivisible number inside its cell even at high selected precision.
                 float size = measured > cellWidth - 4 ? 8.5f * (cellWidth - 4) / measured : 8.5f;
-                Lines(canvas, lines, leftAligned ? x : x + cellWidth,
-                    y, size, i == 0, leftAligned ? SKTextAlign.Left : SKTextAlign.Right);
+                if (table.StrongFirstLine)
+                {
+                    // The heading line of a row is strong; its description is not.
+                    for (int line = 0; line < lines.Length; line++)
+                        Text(canvas, lines[line], x, y + line * LineHeight, size, strong: row.FirstLine + line == 0);
+                }
+                else
+                    Lines(canvas, lines, leftAligned ? x : x + cellWidth,
+                        y, size, i == 0, leftAligned ? SKTextAlign.Left : SKTextAlign.Right);
                 x += cellWidth;
             }
             y += Math.Max(RowHeight, row.LineCount * LineHeight + 3);
         }
-    }
-
-    private float MeasureSummary()
-    {
-        float height = 19 + SummaryRows().Sum(row => row.Max(cell => cell.Label.Length * LineHeight + 4));
-        return height + 17 + Data.Labels.Assumptions.Sum(n => Wrap(n, PageWidth - 2 * Margin, 8).Length * LineHeight);
     }
 
     private sealed record SummaryCell(ReportIndicator Indicator, float Left, float Right,
@@ -556,14 +579,38 @@ internal sealed class ReportDocument : IDisposable
             }
             y += row.Max(cell => cell.Label.Length * LineHeight + 4);
         }
-        Heading(canvas, Data.Labels.Notes, Margin, y + 2, width);
-        y += 20;
+    }
+
+    private void DrawNotes(SKCanvas canvas, float top)
+    {
+        float width = PageWidth - 2 * Margin;
+        Heading(canvas, Data.Labels.Notes, Margin, top, width);
+        float y = top + 20;
         foreach (string assumption in Data.Labels.Assumptions)
         {
             var lines = Wrap(assumption, width, 8);
             Lines(canvas, lines, Margin, y, 8);
             y += lines.Length * LineHeight;
         }
+    }
+
+    private void DrawSegment(SKCanvas canvas, ReportBlock block)
+    {
+        var segment = Data.Segments[block.Index];
+        var detail = details[block.Index];
+        Heading(canvas, segment.Title, Margin, block.Top, PageWidth - 2 * Margin);
+        float top = block.Top + HeadingHeight;
+        graphics.Draw(canvas, ReportGraphic.Section, block.Index, new(Margin, top, Margin + SketchWidth, top + SketchHeight));
+        float x = Margin + SketchWidth + DetailGap;
+        Text(canvas, Data.Labels.Section, x, top, 7.5f, color: Secondary);
+        float y = top + LineHeight;
+        Lines(canvas, detail.SectionLines, x, y); y += detail.SectionLines.Length * LineHeight + 2;
+        Lines(canvas, detail.SectionProperties, x, y);
+        x += DetailMiddleWidth + DetailGap;
+        Text(canvas, Data.Labels.Material, x, top, 7.5f, color: Secondary);
+        y = top + LineHeight;
+        Lines(canvas, detail.MaterialLines, x, y, strong: true); y += detail.MaterialLines.Length * LineHeight + 2;
+        Lines(canvas, detail.MaterialProperties, x, y);
     }
 
     private void Lines(SKCanvas canvas, IEnumerable<string> lines, float x, float y, float size = 8.5f,

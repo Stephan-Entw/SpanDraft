@@ -72,13 +72,15 @@ public sealed class MaterialStrengthReportTests : MaterialStrengthTestSupport
         var main = new MainWindowViewModel(files: files);
         Assert.True(await main.OpenAsync(path));
         using var report = ProjectReport.Capture(main.Editor!);
-        Assert.Contains(report.Data.MaterialProperties, p => p.PlainText.StartsWith(MaterialStrengthDisplay.Label(type) + " = ", StringComparison.Ordinal));
+        Assert.Contains(report.Data.Segments[0].MaterialProperties, p => p.PlainText.StartsWith(MaterialStrengthDisplay.Label(type) + " = ", StringComparison.Ordinal));
         Assert.Equal(Strings.ReportSafety + " S = " + symbol + " / σb,max", report.Data.Indicators[3].Label.PlainText);
         Assert.StartsWith(Strings.ReportTheory + " ", Assert.Single(report.Data.Labels.Assumptions), StringComparison.Ordinal);
         using var pdf = new MemoryStream(); report.WritePdf(pdf);
-        Assert.Contains(report.TextRuns, r => r.Text.Contains(symbol, StringComparison.Ordinal));
-        Assert.DoesNotContain(report.TextRuns, r => r.Text.Contains("fy", StringComparison.Ordinal));
-        Assert.All(report.TextRuns, run =>
+        // The text runs of a page exist while it is drawn: collect them over every page.
+        var runs = Enumerable.Range(0, report.Pages.Count).SelectMany(i => { using var bitmap = report.RenderPage(i, 96); return report.TextRuns.ToArray(); }).ToArray();
+        Assert.Contains(runs, r => r.Text.Contains(symbol, StringComparison.Ordinal));
+        Assert.DoesNotContain(runs, r => r.Text.Contains("fy", StringComparison.Ordinal));
+        Assert.All(runs, run =>
         {
             Assert.True(run.Bounds.Left >= ReportDocument.Margin - .1f, run.Text);
             Assert.True(run.Bounds.Right <= ReportDocument.PageWidth - ReportDocument.Margin + .1f, run.Text);

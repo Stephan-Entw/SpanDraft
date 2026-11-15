@@ -156,6 +156,15 @@ damit Vorschau, PDF und Windows-Druck auch nach Einstellungsänderungen
 übereinstimmen. Offene Eingaben bleiben beim Editor und werden durch die
 Ausgabe weder übernommen noch verworfen.
 
+Der Bericht kennt keinen Sonderabschnitt: Seite 1 trägt die Abschnittsübersicht wie
+die Seitenleiste, die Details (Skizze, Querschnittswerte, Werkstoff) stehen für jeden
+Abschnitt gleichberechtigt in einem eigenen Block. Die Reihenfolge ist Modell und
+Belastung, maßgebende Kennwerte, Abschnittsdetails, Berechnungsmodell; die Blöcke
+fließen nach den Tabellen und wandern nur als Ganzes auf die nächste Seite. Die
+Diagramme beginnen mit ihrer kompakten Höhe und teilen nur den Platz, den die rechte
+Spalte darüber hinaus braucht; sie werden nicht erst groß gezeichnet und dann
+verkleinert, damit Folgeinhalte auf Seite 1 passen.
+
 ## Savepoint und Recovery
 
 Der Savepoint bezeichnet eine gespeicherte Revision. Undo kann genau zu ihr

@@ -57,8 +57,7 @@ public abstract class ProjectReportTestSupport : IDisposable
         Assert.Equal(ordered.OrderBy(r => r.Table).ThenBy(r => r.Row), ordered);
         Assert.Equal(report.Data.Tables.SelectMany((t, table) => Enumerable.Range(0, t.Rows.Count).Select(row => (table, row))),
             ordered.Distinct());
-        int summaryPage = Assert.Single(report.Pages.Select((p, i) => (Page: p, Index: i)), p => p.Page.SummaryTop.HasValue).Index;
-        Assert.Equal(report.Pages.Count - 1, summaryPage);
+        AssertBlockFlow(report);
         for (int table = 0; table < report.Data.Tables.Count; table++)
         {
             var slices = report.Pages.SelectMany(p => p.Tables).Where(f => f.Table == table).SelectMany(f => f.Rows).ToArray();
@@ -74,7 +73,7 @@ public abstract class ProjectReportTestSupport : IDisposable
         foreach (var fragment in page.Tables)
         {
             Assert.NotEmpty(fragment.Rows);
-            Assert.True(fragment.Bounds.Bottom <= (page.SummaryTop - 16 ?? ReportDocument.FooterTop - 14));
+            Assert.True(fragment.Bounds.Bottom <= (page.Blocks.Count > 0 ? page.Blocks[0].Top - 16 : ReportDocument.FooterTop - 14));
         }
     }
 
@@ -117,64 +116,94 @@ public abstract class ProjectReportTestSupport : IDisposable
         public override void Render(DrawingContext context) => context.Custom(operation);
     }
 
-    private protected static (string Text, SKRect Bounds)[] SectionDesignationRuns(ReportDocument report, int page)
+    /// <summary>
+    /// The page flow below the tables: the key figures once, then every segment once and in order, then the notes.
+    /// Every block lies completely inside the body of its page and no two blocks of a page overlap.
+    /// </summary>
+    private protected static void AssertBlockFlow(ReportDocument report)
     {
-        var area = report.TechnicalAreas(page).Single(a => a.Kind == ReportGraphic.Section).Bounds;
-        var heading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Section
-            && r.Bounds.Left == area.Left && r.Bounds.Top < area.Top).Bounds;
-        var lines = report.TextRuns.Where(r => r.Bounds.Left >= area.Left && r.Bounds.Top > heading.Bottom
-            && r.Bounds.Bottom <= area.Top).ToArray();
+        var blocks = report.Pages.SelectMany((page, index) => page.Blocks.Select(block => (Page: index, Block: block))).ToArray();
+        Assert.Equal(ReportBlockKind.Summary, blocks[0].Block.Kind);
+        Assert.Equal(ReportBlockKind.Notes, blocks[^1].Block.Kind);
+        Assert.Equal(report.Pages.Count - 1, blocks[^1].Page);
+        Assert.Equal(Enumerable.Range(0, report.Data.Segments.Count),
+            blocks.Where(b => b.Block.Kind == ReportBlockKind.Segment).Select(b => b.Block.Index));
+        Assert.Single(blocks, b => b.Block.Kind == ReportBlockKind.Summary);
+        Assert.Single(blocks, b => b.Block.Kind == ReportBlockKind.Notes);
+        Assert.Equal(blocks.OrderBy(b => b.Page).ThenBy(b => b.Block.Top), blocks);
+        foreach (var page in report.Pages)
+        {
+            foreach (var block in page.Blocks)
+                Assert.True(block.Top + block.Height <= ReportDocument.FooterTop - 14 + .01f);
+            Assert.All(page.Blocks.Zip(page.Blocks.Skip(1)), pair => Assert.True(pair.First.Top + pair.First.Height < pair.Second.Top));
+            foreach (var fragment in page.Tables.Where(_ => page.Blocks.Count > 0))
+                Assert.True(fragment.Bounds.Bottom < page.Blocks[0].Top);
+        }
+    }
+
+    private protected static (int Page, ReportBlock Block) SegmentBlock(ReportDocument report, int segment) =>
+        report.Pages.SelectMany((page, index) => page.Blocks.Select(block => (index, block)))
+            .Single(b => b.block.Kind == ReportBlockKind.Segment && b.block.Index == segment);
+
+    /// <summary>The text lines of the section name of a segment's block, drawn in its middle column.</summary>
+    private protected static (string Text, SKRect Bounds)[] SectionDesignationRuns(ReportDocument report, int segment = 0)
+    {
+        var block = SegmentBlock(report, segment).Block;
+        var (_, column, _) = report.DetailColumns(block);
+        var caption = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Section
+            && r.Bounds.Left == column.Left && r.Bounds.Top >= block.Top && r.Bounds.Bottom <= block.Top + block.Height).Bounds;
+        var firstProperty = report.Data.Segments[segment].SectionProperties[0].PlainText;
+        var properties = report.TextRuns.First(r => r.Bounds.Left == column.Left && r.Bounds.Top > caption.Bottom
+            && r.Bounds.Top >= block.Top && firstProperty.StartsWith(r.Text.Split(' ')[0], StringComparison.Ordinal)
+            && r.Bounds.Top > caption.Bottom + 12).Bounds;
+        var lines = report.TextRuns.Where(r => r.Bounds.Left >= column.Left && r.Bounds.Right <= column.Right + .01f
+            && r.Bounds.Top > caption.Bottom - .01f && r.Bounds.Bottom < properties.Top + .01f
+            && r.Bounds.Top < properties.Top && r.Text != report.Data.Labels.Section).ToArray();
         Assert.NotEmpty(lines);
-        Assert.All(lines, r => Assert.True(r.Bounds.Right <= area.Right + .01f, r.Text));
         return lines;
     }
 
-    private protected static (string Text, SKRect Bounds)[] MaterialDesignationRuns(ReportDocument report)
+    /// <summary>The text lines of the material name of a segment's block, drawn in its right column.</summary>
+    private protected static (string Text, SKRect Bounds)[] MaterialDesignationRuns(ReportDocument report, int segment = 0)
     {
-        var heading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Material).Bounds;
-        var properties = Assert.Single(report.TextRuns, r => r.Text.Contains(report.Data.MaterialProperties[0].PlainText)).Bounds;
-        var lines = report.TextRuns.Where(r => r.Bounds.Left >= heading.Left && r.Bounds.Top > heading.Bottom
-            && r.Bounds.Bottom < properties.Top).ToArray();
+        var block = SegmentBlock(report, segment).Block;
+        var (_, _, column) = report.DetailColumns(block);
+        var caption = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Material
+            && r.Bounds.Left == column.Left && r.Bounds.Top >= block.Top && r.Bounds.Bottom <= block.Top + block.Height).Bounds;
+        var properties = Assert.Single(report.TextRuns, r => r.Bounds.Left == column.Left
+            && r.Bounds.Top >= block.Top && r.Bounds.Top < block.Top + block.Height
+            && r.Text.Contains(report.Data.Segments[segment].MaterialProperties[0].PlainText)).Bounds;
+        var lines = report.TextRuns.Where(r => r.Bounds.Left >= column.Left && r.Bounds.Top > caption.Bottom - .01f
+            && r.Bounds.Bottom < properties.Top && r.Bounds.Top >= block.Top).ToArray();
         Assert.NotEmpty(lines);
-        Assert.All(lines, r => Assert.True(r.Bounds.Right <= heading.Left + ReportDocument.RightWidth + .01f, r.Text));
+        Assert.All(lines, r => Assert.True(r.Bounds.Right <= column.Right + .01f, r.Text));
         return lines;
     }
 
+    /// <summary>Every segment block keeps sketch, section values and material values in their own columns inside the block.</summary>
     private protected static void AssertInformationBlocksSeparated(ReportDocument report, int page)
     {
         AssertTableHeadersAndBounds(report, page);
-        if (!report.Pages[page].HasGraphics) return;
-        var sectionArea = report.TechnicalAreas(page).Single(a => a.Kind == ReportGraphic.Section).Bounds;
-        var sectionHeading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Section
-            && r.Bounds.Left == sectionArea.Left && r.Bounds.Top < sectionArea.Top);
-        Assert.All(report.TextRuns.Where(r => r.Bounds.Top < report.Pages[page].BodyTop - 12),
-            r => Assert.True(r.Bounds.Bottom < sectionHeading.Bounds.Top, r.Text));
-        var designation = SectionDesignationRuns(report, page);
-        var materialHeading = Assert.Single(report.TextRuns, r => r.Text == report.Data.Labels.Material);
-        Assert.Equal(materialHeading.Bounds.Left, sectionHeading.Bounds.Left);
-        Assert.True(sectionHeading.Bounds.Bottom < designation[0].Bounds.Top);
-        Assert.True(designation[^1].Bounds.Bottom <= sectionArea.Top);
-        var sectionProperties = report.TextRuns.Where(r => r.Bounds.Left >= sectionArea.Left
-            && r.Bounds.Right <= sectionArea.Right + .01f && r.Bounds.Top >= sectionArea.Bottom
-            && r.Bounds.Bottom < materialHeading.Bounds.Top).ToArray();
-        Assert.NotEmpty(sectionProperties);
-        var materialProperties = Assert.Single(report.TextRuns, r => r.Text.Contains(report.Data.MaterialProperties[0].PlainText));
-        Assert.All(report.Data.SectionProperties, p => Assert.Contains(p.PlainText, string.Join(" ", sectionProperties.Select(r => r.Text))));
-        var tables = report.Pages[page].Tables;
-        var materialPropertyRuns = report.TextRuns.Where(r => r.Bounds.Left >= sectionArea.Left
-            && r.Bounds.Right <= sectionArea.Right + .01f && r.Bounds.Top >= materialProperties.Bounds.Top
-            && (tables.Count == 0 || r.Bounds.Top < tables[0].Bounds.Top)
-            && report.Data.MaterialProperties.Any(p => r.Text.Contains(p.PlainText, StringComparison.Ordinal) || p.PlainText.Contains(r.Text, StringComparison.Ordinal))).ToArray();
-        string materialText = string.Join(" ", materialPropertyRuns.Select(r => r.Text));
-        Assert.All(report.Data.MaterialProperties, p => Assert.Contains(p.PlainText, materialText));
-        Assert.All(sectionProperties, run => Assert.True(sectionArea.Bottom <= run.Bounds.Top && run.Bounds.Bottom < materialHeading.Bounds.Top));
-        Assert.True(materialHeading.Bounds.Bottom < materialProperties.Bounds.Top);
-        foreach (var run in sectionProperties.Concat(new[] { materialHeading, materialProperties }))
+        foreach (var block in report.Pages[page].Blocks.Where(b => b.Kind == ReportBlockKind.Segment))
         {
-            Assert.True(run.Bounds.Left >= sectionArea.Left);
-            Assert.True(run.Bounds.Right <= sectionArea.Right + .01f);
+            var segment = report.Data.Segments[block.Index];
+            var (sketch, section, material) = report.DetailColumns(block);
+            var runs = report.TextRuns.Where(r => r.Bounds.Top >= block.Top - .01f && r.Bounds.Bottom <= block.Top + block.Height + .01f).ToArray();
+            Assert.Contains(runs, r => r.Text == segment.Title && r.Bounds.Left == ReportDocument.Margin);
+            Assert.True(sketch.Right < section.Left && section.Right < material.Left);
+            Assert.True(material.Right <= ReportDocument.PageWidth - ReportDocument.Margin + .01f);
+            // Section text stays in its column, material text in its column; neither enters the sketch.
+            string sectionText = string.Join(" ", runs.Where(r => r.Bounds.Left >= section.Left - .01f && r.Bounds.Right <= section.Right + .01f).Select(r => r.Text));
+            string materialText = string.Join(" ", runs.Where(r => r.Bounds.Left >= material.Left - .01f && r.Bounds.Right <= material.Right + .01f).Select(r => r.Text));
+            Assert.All(segment.SectionProperties, p => Assert.Contains(p.PlainText, sectionText));
+            Assert.All(segment.MaterialProperties, p => Assert.Contains(p.PlainText, materialText));
+            Assert.DoesNotContain(runs, r => r.Bounds.Left < section.Left - .01f && r.Text != segment.Title
+                && r.Bounds.Top > block.Top + 14);
+            Assert.True(string.Concat(SectionDesignationRuns(report, block.Index).Select(r => r.Text.Replace(" ", "")))
+                == segment.Section.Replace(" ", "").Replace("\n", ""));
+            Assert.Equal(segment.Material.Replace(" ", ""),
+                string.Concat(MaterialDesignationRuns(report, block.Index).Select(r => r.Text.Replace(" ", ""))));
         }
-        if (tables.Count > 0) Assert.All(materialPropertyRuns, run => Assert.True(run.Bounds.Bottom < tables[0].Bounds.Top));
     }
 
     private protected static void AssertTableHeadersAndBounds(ReportDocument report, int page)
@@ -185,7 +214,7 @@ public abstract class ProjectReportTestSupport : IDisposable
             Assert.NotEmpty(fragment.Rows);
             Assert.True(fragment.HeadingHeight > 0 && fragment.Bounds.Height > fragment.HeadingHeight);
             Assert.True(fragment.Bounds.Top >= report.Pages[page].BodyTop);
-            Assert.True(fragment.Bounds.Bottom < (report.Pages[page].SummaryTop ?? ReportDocument.FooterTop));
+            Assert.True(fragment.Bounds.Bottom < (report.Pages[page].Blocks.Count > 0 ? report.Pages[page].Blocks[0].Top : ReportDocument.FooterTop));
             Assert.True(fragment.Bounds.Left >= ReportDocument.Margin);
             Assert.True(fragment.Bounds.Right <= ReportDocument.PageWidth - ReportDocument.Margin + .01f);
             var headings = report.TextRuns.Where(r => r.Bounds.Left >= fragment.Bounds.Left - .01f
@@ -206,7 +235,7 @@ public abstract class ProjectReportTestSupport : IDisposable
         using var surface = SKSurface.Create(new SKImageInfo((int)Math.Ceiling(ReportDocument.LeftWidth * scale),
             (int)Math.Ceiling(visuals.Graphics.BeamHeight * scale)));
         surface.Canvas.Clear(SKColors.White); surface.Canvas.Scale(scale);
-        visuals.Graphics.Draw(surface.Canvas, ReportGraphic.Beam, SKRect.Create(ReportDocument.LeftWidth, visuals.Graphics.BeamHeight));
+        visuals.Graphics.Draw(surface.Canvas, ReportGraphic.Beam, 0, SKRect.Create(ReportDocument.LeftWidth, visuals.Graphics.BeamHeight));
         var bitmap = new SKBitmap(surface.Canvas.DeviceClipBounds.Width, surface.Canvas.DeviceClipBounds.Height);
         Assert.True(surface.ReadPixels(bitmap.Info, bitmap.GetPixels(), bitmap.RowBytes, 0, 0));
         return bitmap;

@@ -23,7 +23,7 @@ public sealed class ReportLayoutTests : ProjectReportTestSupport
         var indicators = captured.Data.Indicators.Select((indicator, index) => index < 2
             ? indicator with { Position = $"x = 1234567{CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator}890123 mm (x−)" }
             : indicator).ToArray();
-        using var report = new ReportDocument(captured.Data with { Indicators = indicators }, new(80, (_, _, _) => { }));
+        using var report = new ReportDocument(captured.Data with { Indicators = indicators }, new(80, 60, (_, _, _, _) => { }));
         int page = report.Pages.Select((value, index) => (value, index)).Single(p => p.value.SummaryTop.HasValue).index;
         using var bitmap = report.RenderPage(page);
         float top = report.Pages[page].SummaryTop!.Value + 19;
@@ -67,8 +67,8 @@ public sealed class ReportLayoutTests : ProjectReportTestSupport
         using var original = ProjectReport.Capture(main.Editor!, Now);
         static float Measure(string text) { using var layout = new ReportTextLayout(text, 8.5f); return layout.Width; }
         static string Prefix(string partialGroup, string completeGroup) => Enumerable.Range(1, 30)
-            .Select(n => new string('W', n) + " ").First(prefix => Measure(prefix + partialGroup) <= ReportDocument.RightWidth
-                && Measure(prefix + completeGroup) > ReportDocument.RightWidth);
+            .Select(n => new string('W', n) + " ").First(prefix => Measure(prefix + partialGroup) <= ReportDocument.DetailMiddleWidth
+                && Measure(prefix + completeGroup) > ReportDocument.DetailMiddleWidth);
         (string Name, string[] Groups)[] cases =
         [
             (Prefix("10", "10 mm") + "10 mm · y-y", ["10 mm"]),
@@ -81,84 +81,61 @@ public sealed class ReportLayoutTests : ProjectReportTestSupport
         ];
         foreach (var (name, groups) in cases)
         {
-            using var report = new ReportDocument(original.Data with { Section = name }, new(130, (_, _, _) => { }));
-            using var bitmap = report.RenderPage(0, 96);
+            using var report = WithSegment(original.Data, segment => segment with { Section = name });
+            int page = SegmentBlock(report, 0).Page;
+            using var bitmap = report.RenderPage(page, 96);
             var lines = SectionDesignationRuns(report, 0);
             Assert.True(lines.Length > 1, name);
             Assert.Equal(name.Replace('\n', ' '), string.Join(" ", lines.Select(r => r.Text)));
-            Assert.Equal(name, report.Data.Section);
-            Assert.DoesNotContain(report.Data.Metadata, m => m.Label == report.Data.Labels.Section);
+            Assert.Equal(name, report.Data.Segments[0].Section);
             foreach (var group in groups) Assert.Contains(lines, line => line.Text.Contains(group, StringComparison.Ordinal));
-            AssertInformationBlocksSeparated(report, 0); AssertTextContained(report);
+            AssertInformationBlocksSeparated(report, page); AssertTextContained(report);
         }
     }
 
+    private static ReportDocument WithSegment(ReportData data, Func<ReportSegment, ReportSegment> change) =>
+        new(data with { Segments = [change(data.Segments[0])] }, new(130, 60, (_, _, _, _) => { }));
+
     [Theory]
-    [InlineData("S235JR (1.0038) · A36", new[] { "S235JR (1.0038) · A36" })]
-    [InlineData("S235JR · A36 · SS400", new[] { "S235JR · A36 · SS400" })]
-    [InlineData("X5CrNi18-10 (1.4301) · AISI 304 · UNS S30400", new[] { "X5CrNi18-10 (1.4301)", "AISI 304 · UNS S30400" })]
-    [InlineData("X5CrNi18-10 (1.4301)", new[] { "X5CrNi18-10 (1.4301)" })]
-    public void MaterialDesignationKeepsStandardsTogetherWhenWrapping(string designation, string[] expectedLines)
+    [InlineData("S235JR (1.0038) · A36")]
+    [InlineData("S235JR · A36 · SS400")]
+    [InlineData("X5CrNi18-10 (1.4301) · AISI 304 · UNS S30400 · another long standard designation")]
+    [InlineData("X5CrNi18-10 (1.4301)")]
+    public void MaterialDesignationIsCompleteInItsColumnWhenWrapping(string designation)
     {
         var (main, _) = Open(ReportTestProjects.Create());
         using var original = ProjectReport.Capture(main.Editor!, Now);
-        using var report = new ReportDocument(original.Data with { Material = designation }, new(130, (_, _, _) => { }));
-        using var bitmap = report.RenderPage(0, 96);
+        using var report = WithSegment(original.Data, segment => segment with { Material = designation });
+        int page = SegmentBlock(report, 0).Page;
+        using var bitmap = report.RenderPage(page, 96);
         var lines = MaterialDesignationRuns(report);
-        Assert.Equal(expectedLines, lines.Select(r => r.Text));
-        Assert.Equal(designation, report.Data.Material);
-        Assert.DoesNotContain(report.Data.Metadata, m => m.Label == report.Data.Labels.Material);
+        Assert.Equal(designation.Replace(" ", ""), string.Concat(lines.Select(r => r.Text.Replace(" ", ""))));
+        Assert.DoesNotContain(lines, r => r.Text.EndsWith("…", StringComparison.Ordinal));
         Assert.All(lines.Zip(lines.Skip(1)), pair =>
         {
             Assert.Equal(pair.First.Bounds.Left, pair.Second.Bounds.Left);
             Assert.True(pair.First.Bounds.Bottom < pair.Second.Bounds.Top);
         });
-        AssertTextContained(report); AssertInformationBlocksSeparated(report, 0);
-    }
-
-    [Theory]
-    [InlineData(true)] [InlineData(false)]
-    public void MaterialDesignationWrapsOnlyTheOversizedBlock(bool wideName)
-    {
-        string wide = new('W', 24);
-        string designation = wideName ? wide + " · AISI 304" : "S235JR · " + wide;
-        var (main, _) = Open(ReportTestProjects.Create());
-        using var original = ProjectReport.Capture(main.Editor!, Now);
-        using var report = new ReportDocument(original.Data with { Material = designation }, new(130, (_, _, _) => { }));
-        using var bitmap = report.RenderPage(0, 96);
-        var lines = MaterialDesignationRuns(report);
-        Assert.Equal(3, lines.Length);
-        if (wideName)
-        {
-            Assert.Equal(wide, string.Concat(lines.Take(2).Select(r => r.Text)));
-            Assert.Equal("AISI 304", lines[^1].Text);
-        }
-        else
-        {
-            Assert.Equal("S235JR", lines[0].Text);
-            Assert.Equal(wide, string.Concat(lines.Skip(1).Select(r => r.Text)));
-        }
-        Assert.DoesNotContain(report.Data.Metadata, m => m.Label == report.Data.Labels.Material);
-        AssertTextContained(report); AssertInformationBlocksSeparated(report, 0);
+        AssertTextContained(report); AssertInformationBlocksSeparated(report, page);
     }
 
     [Fact]
-    public void MaterialDesignationWithoutStandardsStillUsesNormalWrapping()
+    public void MaterialDesignationWithoutSpacesStillWrapsInsideItsColumn()
     {
-        string designation = new('W', 24);
+        string designation = new('W', 40);
         var (main, _) = Open(ReportTestProjects.Create());
         using var original = ProjectReport.Capture(main.Editor!, Now);
-        using var report = new ReportDocument(original.Data with { Material = designation }, new(130, (_, _, _) => { }));
-        using var bitmap = report.RenderPage(0, 96);
+        using var report = WithSegment(original.Data, segment => segment with { Material = designation });
+        int page = SegmentBlock(report, 0).Page;
+        using var bitmap = report.RenderPage(page, 96);
         var lines = MaterialDesignationRuns(report);
-        Assert.Equal(2, lines.Length);
+        Assert.True(lines.Length > 1);
         Assert.Equal(designation, string.Concat(lines.Select(r => r.Text)));
-        Assert.DoesNotContain(report.Data.Metadata, m => m.Label == report.Data.Labels.Material);
-        AssertTextContained(report); AssertInformationBlocksSeparated(report, 0);
+        AssertTextContained(report); AssertInformationBlocksSeparated(report, page);
     }
 
     [Fact]
-    public void LongMaterialDesignationPreservesEveryStandardInReportMetadata()
+    public void LongMaterialDesignationKeepsEveryStandardInTheDetailBlock()
     {
         var state = ReportTestProjects.Create();
         var standards = Enumerable.Range(0, 30).Select(i => $"Long standard designation {i}").ToArray();
@@ -166,18 +143,13 @@ public sealed class ReportLayoutTests : ProjectReportTestSupport
         var (main, _) = Open(state with { Document = state.Document with { Material = material } });
         using var report = ProjectReport.Capture(main.Editor!, Now);
         string expected = "S235JR (1.0038) · " + string.Join(" · ", standards);
-        Assert.Equal(expected, report.Data.Material);
-        Assert.Contains(report.Data.Metadata, m => m.Label == report.Data.Labels.Material && m.Value == expected);
-        for (int page = 0; page < report.Pages.Count; page++)
-        {
-            using var bitmap = report.RenderPage(page, 96); AssertTextContained(report);
-            if (!report.Pages[page].HasGraphics) continue;
-            var lines = MaterialDesignationRuns(report);
-            Assert.Equal(3, lines.Length);
-            Assert.Equal("S235JR (1.0038)", lines[0].Text);
-            Assert.Equal("…", lines[^1].Text);
-            AssertInformationBlocksSeparated(report, page);
-        }
+        Assert.Equal(expected, report.Data.Segments[0].Material);
+        // No metadata detour and no shortening: the block grows with the name.
+        Assert.DoesNotContain(report.Data.Metadata, m => m.Label == report.Data.Labels.Material);
+        int page = SegmentBlock(report, 0).Page;
+        using var bitmap = report.RenderPage(page, 96); AssertTextContained(report);
+        Assert.Equal(expected.Replace(" ", ""), string.Concat(MaterialDesignationRuns(report).Select(r => r.Text.Replace(" ", ""))));
+        AssertInformationBlocksSeparated(report, page);
     }
 
     [Theory]
@@ -321,7 +293,7 @@ public sealed class ReportLayoutTests : ProjectReportTestSupport
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
         var (main, _) = Open(ReportTestProjects.Create());
         using var full = ProjectReport.Capture(main.Editor!, Now);
-        using var missing = new ReportDocument(full.Data with { Metadata = [] }, new(80, (_, _, _) => { }));
+        using var missing = new ReportDocument(full.Data with { Metadata = [] }, new(80, 60, (_, _, _, _) => { }));
         using var fullBitmap = full.RenderPage(0, 96);
         using var missingBitmap = missing.RenderPage(0, 96);
         foreach (string text in new[] { full.Data.Title, full.Data.Labels.Project, full.Data.Labels.Reference, full.Data.Labels.Author })
@@ -349,7 +321,7 @@ public sealed class ReportLayoutTests : ProjectReportTestSupport
         using var report = new ReportDocument(captured.Data with
         {
             Metadata = [(captured.Data.Labels.Title, captured.Data.Title), (captured.Data.Labels.Reference, new string('r', 1100))]
-        }, new(260, (_, _, _) => { }));
+        }, new(260, 60, (_, _, _, _) => { }));
         Assert.False(report.Pages[0].HasGraphics);
         Assert.Contains(report.Pages, p => p.HasGraphics);
         for (int page = 0; page < report.Pages.Count; page++)
@@ -363,12 +335,13 @@ public sealed class ReportLayoutTests : ProjectReportTestSupport
     public void LongMaterialAndSectionNamesStayCompleteWithoutOverlappingOtherBlocks()
     {
         var (main, _) = Open(ReportTestProjects.Create()); using var original = ProjectReport.Capture(main.Editor!, Now);
-        string name = string.Join(" ", Enumerable.Repeat("Very long custom library name", 150));
-        using var report = new ReportDocument(original.Data with { Section = name, Material = name }, new(130, (_, _, _) => { }));
-        Assert.Contains(report.Data.Metadata, m => m.Label == report.Data.Labels.Section && m.Value == name);
-        Assert.Contains(report.Data.Metadata, m => m.Label == report.Data.Labels.Material && m.Value == name);
-        Assert.True(report.Pages.Count > 1);
+        string name = string.Join(" ", Enumerable.Repeat("Very long custom library name", 40));
+        using var report = WithSegment(original.Data, segment => segment with { Section = name, Material = name });
+        AssertBlockFlow(report);
         for (int page = 0; page < report.Pages.Count; page++)
-        { using var bitmap = report.RenderPage(page, 96); AssertTextContained(report); }
+        {
+            using var bitmap = report.RenderPage(page, 96); AssertTextContained(report);
+            AssertInformationBlocksSeparated(report, page);
+        }
     }
 }
