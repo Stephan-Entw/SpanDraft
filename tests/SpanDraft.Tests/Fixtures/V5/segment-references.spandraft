@@ -1,0 +1,130 @@
+{
+  "format": "SpanDraft.Project",
+  "formatVersion": 5,
+  "info": {
+    "calculationTitle": "Stepped beam with segment references"
+  },
+  "document": {
+    "length": 1.2,
+    "segmentId": "5e5e5e5e-0000-4000-8000-000000000001",
+    "bendingAxis": "y",
+    "material": {
+      "name": "Test steel",
+      "youngsModulus": 210000000000,
+      "yieldStrength": 235000000,
+      "strengthType": "re",
+      "density": 7850
+    },
+    "section": {
+      "type": "rectangle",
+      "width": 0.04,
+      "height": 0.08
+    },
+    "supports": [
+      {
+        "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "name": "A",
+        "type": "pinned",
+        "position": 0
+      },
+      {
+        "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "name": "B",
+        "type": "roller",
+        "positionRef": {
+          "segment": "5e5e5e5e-0000-4000-8000-000000000001",
+          "atEnd": true
+        }
+      },
+      {
+        "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+        "name": "C",
+        "type": "roller",
+        "positionRef": {
+          "segment": "5e5e5e5e-0000-4000-8000-000000000003",
+          "atEnd": true
+        }
+      }
+    ],
+    "pointLoads": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "F1",
+        "type": "force",
+        "positionRef": {
+          "segment": "5e5e5e5e-0000-4000-8000-000000000002",
+          "offset": 0.4
+        },
+        "value": -2000
+      }
+    ],
+    "distributedLoads": [
+      {
+        "id": "33333333-3333-3333-3333-333333333333",
+        "name": "q1",
+        "startPositionRef": {
+          "segment": "5e5e5e5e-0000-4000-8000-000000000001",
+          "offset": 0.5
+        },
+        "endPosition": 2.8,
+        "startIntensity": -1000,
+        "endIntensity": -1000
+      }
+    ],
+    "namingState": {
+      "nextSupportOrdinal": 4,
+      "nextForceNumber": 2,
+      "nextMomentNumber": 1,
+      "nextDistributedLoadNumber": 2,
+      "nextMomentReleaseNumber": 2
+    },
+    "furtherSegments": [
+      {
+        "id": "5e5e5e5e-0000-4000-8000-000000000002",
+        "length": 0.8,
+        "material": {
+          "name": "Light alloy",
+          "youngsModulus": 70000000000,
+          "yieldStrength": 160000000,
+          "strengthType": "re",
+          "density": 2700
+        },
+        "section": {
+          "type": "circle",
+          "diameter": 0.06
+        },
+        "bendingAxis": "y"
+      },
+      {
+        "id": "5e5e5e5e-0000-4000-8000-000000000003",
+        "length": 1,
+        "material": {
+          "name": "Test steel",
+          "youngsModulus": 210000000000,
+          "yieldStrength": 235000000,
+          "strengthType": "re",
+          "density": 7850
+        },
+        "section": {
+          "type": "rectangle",
+          "width": 0.04,
+          "height": 0.08
+        },
+        "bendingAxis": "z"
+      }
+    ],
+    "momentReleases": [
+      {
+        "id": "44444444-4444-4444-4444-444444444444",
+        "name": "G1",
+        "positionRef": {
+          "segment": "5e5e5e5e-0000-4000-8000-000000000002",
+          "atEnd": true
+        }
+      }
+    ]
+  },
+  "presentation": {
+    "annotationOffsets": []
+  }
+}

@@ -9,7 +9,7 @@ using static SpanDraft.Tests.ProjectTestSupport;
 
 namespace SpanDraft.Tests;
 
-/// <summary>Beam segments extend format V5 additively with the optional list of further segments.</summary>
+/// <summary>Beam segments extend format V5 with the optional list of further segments, each with a length and an identity.</summary>
 public sealed class ProjectFileSegmentTests
 {
     private static byte[] Fixture(string version, string name) => File.ReadAllBytes(
@@ -47,8 +47,11 @@ public sealed class ProjectFileSegmentTests
 
         Assert.Equal(5, JsonNode.Parse(bytes)!["formatVersion"]!.GetValue<int>());
         var further = root["furtherSegments"]!.AsArray();
-        Assert.Equal(["start", "material", "section", "bendingAxis"], further[0]!.AsObject().Select(p => p.Key));
-        Assert.Equal(["start", "material", "section", "bendingAxis", "sectionDisplayName"], further[1]!.AsObject().Select(p => p.Key));
+        // The draft form with starts is rewritten with the segment lengths and identities.
+        Assert.Equal(["id", "length", "material", "section", "bendingAxis"], further[0]!.AsObject().Select(p => p.Key));
+        Assert.Equal(["id", "length", "material", "section", "bendingAxis", "sectionDisplayName"], further[1]!.AsObject().Select(p => p.Key));
+        Assert.Equal([1.2, 0.8, 1.0], new[] { root["length"]!.GetValue<double>(),
+            further[0]!["length"]!.GetValue<double>(), further[1]!["length"]!.GetValue<double>() });
         Assert.Equal("Shaft 40 x 80", root["sectionDisplayName"]!.GetValue<string>());
         Assert.Equal(bytes, ProjectFileCodec.Serialize(ProjectFileCodec.Deserialize(bytes)));
     }

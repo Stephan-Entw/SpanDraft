@@ -78,13 +78,14 @@ public static class ProjectFileCodec
                 ProjectTitle = info.ProjectTitle, Reference = info.Reference, Author = info.Author } : null,
             Document = new()
             {
-                Length = d.Length.Meters, BendingAxis = AxisToWire(d.Segments[0].BendingAxis),
+                Length = d.Segments[0].Length.Meters, SegmentId = d.Segments[0].Id,
+                BendingAxis = AxisToWire(d.Segments[0].BendingAxis),
                 SectionDisplayName = d.Segments[0].SectionDisplayName,
                 Material = MaterialToDto(d.Segments[0].Material),
                 Section = SectionToDto(d.Segments[0].Section),
                 FurtherSegments = d.HasSeveralSegments ? d.Segments.Skip(1).Select((segment, i) => new SegmentV5
                 {
-                    Start = d.SegmentBoundaries[i].Meters, Material = MaterialToDto(segment.Material),
+                    Id = segment.Id, Length = segment.Length.Meters, Material = MaterialToDto(segment.Material),
                     Section = SectionToDto(segment.Section), BendingAxis = AxisToWire(segment.BendingAxis),
                     SectionDisplayName = segment.SectionDisplayName
                 }).ToArray() : null,
@@ -93,19 +94,24 @@ public static class ProjectFileCodec
                     Type = s.Type switch { SupportType.Fixed => "fixed", SupportType.Pinned => "pinned",
                         SupportType.Roller => "roller", SupportType.Spring => "spring",
                         _ => throw new ProjectFormatException("Unknown support type.") },
-                    Position = s.Position.Meters,
+                    Position = PositionToWire(s.Position, s.Reference), PositionRef = ReferenceToWire(s.Reference),
                     TranslationalStiffness = s.Spring?.Translational?.NewtonsPerMeter,
                     RotationalStiffness = s.Spring?.Rotational?.NewtonMetersPerRadian,
                     RigidTranslation = s.Spring?.RigidTranslation == true ? true : null }).ToArray(),
-                PointLoads = d.Loads.Select(l => new PointLoadV2 { Id = l.Id, Name = l.Name,
+                PointLoads = d.Loads.Select(l => new PointLoadV5 { Id = l.Id, Name = l.Name,
                     Type = l.Kind switch { PointLoadKind.Force => "force", PointLoadKind.Moment => "moment",
                         _ => throw new ProjectFormatException("Unknown point load type.") },
-                    Position = l.Position.Meters, Value = l.Value }).ToArray(),
+                    Position = PositionToWire(l.Position, l.Reference), PositionRef = ReferenceToWire(l.Reference),
+                    Value = l.Value }).ToArray(),
                 DistributedLoads = d.DistributedLoads.Select(l => new DistributedLoadV5 { Id = l.Id, Name = l.Name,
-                    StartPosition = l.StartPosition.Meters, EndPosition = l.EndPosition.Meters,
+                    StartPosition = PositionToWire(l.StartPosition, l.StartReference),
+                    StartPositionRef = ReferenceToWire(l.StartReference),
+                    EndPosition = PositionToWire(l.EndPosition, l.EndReference),
+                    EndPositionRef = ReferenceToWire(l.EndReference),
                     StartIntensity = l.StartIntensity.NewtonsPerMeter, EndIntensity = l.EndIntensity.NewtonsPerMeter }).ToArray(),
                 MomentReleases = d.MomentReleases.Count == 0 ? null : d.MomentReleases.Select(r => new MomentReleaseV5
-                    { Id = r.Id, Name = r.Name, Position = r.Position.Meters }).ToArray(),
+                    { Id = r.Id, Name = r.Name, Position = PositionToWire(r.Position, r.Reference),
+                        PositionRef = ReferenceToWire(r.Reference) }).ToArray(),
                 NamingState = new() { NextSupportOrdinal = n.NextSupportOrdinal, NextForceNumber = n.NextForceNumber,
                     NextMomentNumber = n.NextMomentNumber, NextDistributedLoadNumber = n.NextDistributedLoadNumber,
                     NextMomentReleaseNumber = n.NextMomentReleaseNumber > 1 ? n.NextMomentReleaseNumber : null }
@@ -114,6 +120,34 @@ public static class ProjectFileCodec
                 AnnotationOffsets = state.Presentation.AnnotationOffsets.Select(o =>
                 new OffsetV2 { EntityId = o.Key, Dx = o.Value.Dx, Dy = o.Value.Dy }).ToArray() }
         };
+    }
+
+    // A position is written in exactly one form: the distance from the beam start, or the segment reference. A
+    // referenced position stores no global x, which is derived and would be a second truth.
+    private static double? PositionToWire(Length position, PositionRef? reference) =>
+        reference is null ? position.Meters : null;
+
+    private static PositionRefV5? ReferenceToWire(PositionRef? reference) => reference switch
+    {
+        null => null,
+        PositionRef.FromSegmentStart from => new() { Segment = from.Segment, Offset = from.Offset.Meters },
+        PositionRef.AtSegmentEnd end => new() { Segment = end.Segment, AtEnd = true },
+        _ => throw new ProjectFormatException("Unknown position reference.")
+    };
+
+    // Exactly one of the plain distance and the segment reference. A referenced position gets its global x from the
+    // document, so the placeholder it carries here is never read.
+    private static (Length Position, PositionRef? Reference) PositionFromWire(double? position, PositionRefV5? reference, string field)
+    {
+        if (position is not null && reference is not null)
+            throw new ProjectFormatException($"A position is given either as {field} or as a segment reference, not both.");
+        if (reference is null) return (L(position, field), null);
+        if (reference.Segment == Guid.Empty) throw new ProjectFormatException("A position reference needs a segment ID.");
+        if ((reference.Offset is null) == (reference.AtEnd != true))
+            throw new ProjectFormatException("A position reference has either an offset or atEnd, not both and not neither.");
+        return (default, reference.Offset is { } offset
+            ? new PositionRef.FromSegmentStart(reference.Segment, L(offset, "offset"))
+            : new PositionRef.AtSegmentEnd(reference.Segment));
     }
 
     internal static MaterialV2 MaterialToDto(Material material) => new()
@@ -277,7 +311,11 @@ public static class ProjectFileCodec
             if (x.Type == "spring") throw new ProjectFormatException("Unknown support type.");
             return new SupportV5 { Id = x.Id, Name = x.Name, Type = x.Type, Position = x.Position };
         }).ToArray(),
-        PointLoads = d.PointLoads,
+        PointLoads = Required(d.PointLoads, "pointLoads").Select(entry =>
+        {
+            var x = Required(entry, "pointLoad");
+            return new PointLoadV5 { Id = x.Id, Name = x.Name, Type = x.Type, Position = x.Position, Value = x.Value };
+        }).ToArray(),
         DistributedLoads = Required(d.DistributedLoads, "distributedLoads").Select(entry =>
         {
             var x = Required(entry, "distributedLoad");
@@ -302,49 +340,43 @@ public static class ProjectFileCodec
             if (id == Guid.Empty || !ids.Add(id)) throw new ProjectFormatException("Entity IDs must be non-empty and unique.");
             return id;
         }
-        var segments = new List<EditorSegment>
-        {
-            new(MaterialFromDto(m), SectionFromDto(s), AxisFromWire(d.BendingAxis), d.SectionDisplayName)
-        };
-        var boundaries = new List<Length>();
-        foreach (var entry in d.FurtherSegments ?? [])
-        {
-            var x = Required(entry, "segment");
-            boundaries.Add(L(x.Start, "start"));
-            segments.Add(new(MaterialFromDto(Required(x.Material, "segment.material")),
-                SectionFromDto(Required(x.Section, "segment.section")), AxisFromWire(Required(x.BendingAxis, "segment.bendingAxis")),
-                x.SectionDisplayName));
-        }
-        var document = new EditorDocument(L(d.Length, "length"), boundaries, segments,
+        var document = new EditorDocument(SegmentsFromDto(d, m, s),
             Required(d.Supports, "supports").Select(entry =>
             {
                 var x = Required(entry, "support");
                 var type = x.Type switch
                 { "fixed" => SupportType.Fixed, "pinned" => SupportType.Pinned, "roller" => SupportType.Roller,
                     "spring" => SupportType.Spring, _ => throw new ProjectFormatException("Unknown support type.") };
-                return new EditorSupport(EntityId(x.Id), L(x.Position, "position"), type, Name(x.Name), SpringFromDto(type, x));
+                var (position, reference) = PositionFromWire(x.Position, x.PositionRef, "position");
+                return new EditorSupport(EntityId(x.Id), position, type, Name(x.Name), SpringFromDto(type, x)) { Reference = reference };
             }),
             Required(d.PointLoads, "pointLoads").Select(entry =>
             {
                 var x = Required(entry, "pointLoad");
-                return EditorPointLoad.Create(EntityId(x.Id), L(x.Position, "position"), x.Type switch
+                var (position, reference) = PositionFromWire(x.Position, x.PositionRef, "position");
+                return EditorPointLoad.Create(EntityId(x.Id), position, x.Type switch
                 { "force" => PointLoadKind.Force, "moment" => PointLoadKind.Moment,
-                    _ => throw new ProjectFormatException("Unknown point load type.") }, Number(x.Value, "value"), Name(x.Name));
+                    _ => throw new ProjectFormatException("Unknown point load type.") }, Number(x.Value, "value"), Name(x.Name))
+                    with { Reference = reference };
             }),
             new NamingState(n.NextSupportOrdinal, n.NextForceNumber, n.NextMomentNumber, n.NextDistributedLoadNumber,
                 n.NextMomentReleaseNumber ?? 1),
             Required(d.DistributedLoads, "distributedLoads").Select(entry =>
             {
                 var x = Required(entry, "distributedLoad");
-                return new EditorDistributedLoad(EntityId(x.Id), L(x.StartPosition, "startPosition"),
-                    L(x.EndPosition, "endPosition"), ForcePerLength.FromNewtonsPerMeter(Number(x.StartIntensity, "startIntensity")),
-                    ForcePerLength.FromNewtonsPerMeter(Number(x.EndIntensity, "endIntensity")), Name(x.Name));
+                var (start, startReference) = PositionFromWire(x.StartPosition, x.StartPositionRef, "startPosition");
+                var (end, endReference) = PositionFromWire(x.EndPosition, x.EndPositionRef, "endPosition");
+                return new EditorDistributedLoad(EntityId(x.Id), start, end,
+                    ForcePerLength.FromNewtonsPerMeter(Number(x.StartIntensity, "startIntensity")),
+                    ForcePerLength.FromNewtonsPerMeter(Number(x.EndIntensity, "endIntensity")), Name(x.Name))
+                    { StartReference = startReference, EndReference = endReference };
             }),
             d.SelfWeight is { } weight ? new EditorSelfWeight(EntityId(weight.Id), weight.Enabled) : null,
             (d.MomentReleases ?? []).Select(entry =>
             {
                 var x = Required(entry, "momentRelease");
-                return new EditorMomentRelease(EntityId(x.Id), L(x.Position, "position"), Name(x.Name));
+                var (position, reference) = PositionFromWire(x.Position, x.PositionRef, "position");
+                return new EditorMomentRelease(EntityId(x.Id), position, Name(x.Name)) { Reference = reference };
             }));
         var errors = BeamModelValidator.Validate(document.ToBeamModel()).Where(e => e.Code != ValidationErrorCode.MissingSupports).ToArray();
         if (errors.Length > 0) throw new ProjectFormatException(errors[0].Message);
@@ -360,6 +392,60 @@ public static class ProjectFileCodec
         return new(document, new(offsets, p.SelfWeightVisible));
     }
 
+    /// <summary>
+    /// The chain of segments: the first one from the document fields, the others from <c>furtherSegments</c>. A file
+    /// states each further segment by its length; drafts of this format stated its start instead, and the lengths
+    /// follow from the starts and the beam length.
+    /// </summary>
+    private static EditorSegment[] SegmentsFromDto(DocumentV5 d, MaterialV2 material, SectionV2 section)
+    {
+        var further = d.FurtherSegments ?? [];
+        foreach (var entry in further) Required(entry, "segment");
+        bool starts = further.Any(x => x.Start is not null);
+        if (starts && further.Any(x => x.Start is null || x.Length is not null))
+            throw new ProjectFormatException("A segment has either a length or a start, never both, and not both kinds in one project.");
+        if (!starts && further.Any(x => x.Length is null))
+            throw new ProjectFormatException("Missing or non-finite number: length");
+        Guid Id(Guid? id) => id is { } value
+            ? value != Guid.Empty ? value : throw new ProjectFormatException("Segment IDs must be non-empty.")
+            : Guid.Empty;
+
+        var lengths = new List<Length>();
+        if (starts)
+        {
+            // The draft shape: the first length is the beam length and the segments end where the next one starts.
+            double beam = Number(d.Length, "length"), previous = 0;
+            foreach (var x in further)
+            {
+                double start = Number(x.Start, "start");
+                if (!(start > previous) || !(start < beam))
+                    throw new ProjectFormatException("Segment boundaries must ascend strictly inside the beam.");
+                lengths.Add(Length.FromMeters(start - previous));
+                previous = start;
+            }
+            lengths.Add(Length.FromMeters(beam - previous));
+        }
+        else
+        {
+            lengths.Add(L(d.Length, "length"));
+            lengths.AddRange(further.Select(x => L(x.Length, "length")));
+        }
+
+        var segments = new List<EditorSegment>
+        {
+            new EditorSegment(MaterialFromDto(material), SectionFromDto(section), AxisFromWire(d.BendingAxis), d.SectionDisplayName)
+                { Id = Id(d.SegmentId), Length = lengths[0] }
+        };
+        for (int i = 0; i < further.Length; i++)
+        {
+            var x = further[i];
+            segments.Add(new EditorSegment(MaterialFromDto(Required(x.Material, "segment.material")),
+                SectionFromDto(Required(x.Section, "segment.section")), AxisFromWire(Required(x.BendingAxis, "segment.bendingAxis")),
+                x.SectionDisplayName) { Id = Id(x.Id), Length = lengths[i + 1] });
+        }
+        return [.. segments];
+    }
+
     /// <summary>Springs exist only on <c>spring</c> supports; their values and combination are checked by Core.</summary>
     private static SpringData? SpringFromDto(SupportType type, SupportV5 x)
     {
@@ -373,7 +459,8 @@ public static class ProjectFileCodec
             x.TranslationalStiffness is { } w ? TranslationalStiffness.FromNewtonsPerMeter(Number(w, "translationalStiffness")) : null,
             x.RotationalStiffness is { } t ? RotationalStiffness.FromNewtonMetersPerRadian(Number(t, "rotationalStiffness")) : null,
             x.RigidTranslation ?? false);
-        spring.ToCore(L(x.Position, "position"));
+        // The spring combination does not depend on where the support stands.
+        spring.ToCore(default);
         return spring;
     }
 
