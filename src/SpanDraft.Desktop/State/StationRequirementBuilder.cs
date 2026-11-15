@@ -67,12 +67,18 @@ public static class StationRequirementBuilder
             .Concat(document.SelfWeightLoads.Select(weight => new SpanRequirement(weight.StartPosition.Meters,
                 weight.EndPosition.Meters, SchematicMetrics.DistributedMinimumWidth))).ToArray());
 
-    private static (double Left, double Right) Extents(EditorSupport support) => support.Type switch
+    private static (double Left, double Right) Extents(EditorSupport support)
     {
-        SupportType.Pinned => (new HingedSupportGeometry(false).LeftExtent, new HingedSupportGeometry(false).RightExtent),
-        SupportType.Roller => (new HingedSupportGeometry(true).LeftExtent, new HingedSupportGeometry(true).RightExtent),
-        SupportType.Spring when support.Spring is { } spring =>
-            (SupportSymbol.SpringGeometry(spring).LeftExtent, SupportSymbol.SpringGeometry(spring).RightExtent),
-        _ => throw new ArgumentOutOfRangeException(nameof(support))
-    };
+        switch (support.Type)
+        {
+            case SupportType.Pinned or SupportType.Roller:
+                var hinged = new HingedSupportGeometry(support.Type == SupportType.Roller);
+                return (hinged.LeftExtent, hinged.RightExtent);
+            case SupportType.Spring when support.Spring is { } spring:
+                var geometry = SupportSymbol.SpringGeometry(spring);
+                return (geometry.LeftExtent, geometry.RightExtent);
+            default:
+                throw new ArgumentOutOfRangeException(nameof(support));
+        }
+    }
 }

@@ -69,6 +69,13 @@ public sealed record EditorDocument
                 throw new ArgumentException("Entity names must be unique across the project.", nameof(supports));
     }
 
+    // The synthesized record equality would compare the segment and entity arrays by reference.
+    public bool Equals(EditorDocument? other) => other is not null && (ReferenceEquals(this, other)
+        || ProjectState.DocumentContentEquals(this, other));
+
+    public override int GetHashCode() => HashCode.Combine(Length, _segments.Length, _supports.Count, _loads.Count,
+        _distributedLoads.Count, _momentReleases.Count);
+
     private static EditorSegment[] SegmentsFromBoundaries(Length length, IEnumerable<Length> segmentBoundaries,
         IEnumerable<EditorSegment> segments)
     {
@@ -204,7 +211,10 @@ public sealed record EditorDocument
                 if (index < 0) { conflict = GeometryConflictKind.SegmentMissing; return false; }
                 var (start, _) = SegmentRange(index);
                 if (from.Offset.Meters > _segments[index].Length.Meters) { conflict = GeometryConflictKind.BeyondSegment; return false; }
-                position = Length.FromMeters(start.Meters + from.Offset.Meters);
+                // The full length of the segment is its end itself; start + length can be an ulp beside it where the
+                // beam length was set directly.
+                position = from.Offset.Meters == _segments[index].Length.Meters
+                    ? SegmentRange(index).End : Length.FromMeters(start.Meters + from.Offset.Meters);
                 return true;
             }
             case PositionRef.AtSegmentEnd end:
@@ -342,14 +352,18 @@ public sealed record EditorDocument
     public EditorDocument WithMomentReleases(IEnumerable<EditorMomentRelease> releases, NamingState? namingState = null) =>
         new(_segments, Supports, Loads, NextNamingState(namingState), DistributedLoads, SelfWeight, releases);
 
+    /// <summary>
+    /// The display name belongs to the section it was given for: it is kept for the same section and dropped for another
+    /// one, which then gets a generated name.
+    /// </summary>
     public EditorDocument WithSection(ISectionDefinition section, SectionAxisDesignation bendingAxis) =>
-        WithSection(section, bendingAxis, SectionDisplayName);
+        WithSection(section, bendingAxis, ProjectState.SectionContentEquals(Section, section) ? SectionDisplayName : null);
 
     public EditorDocument WithSection(ISectionDefinition section, SectionAxisDesignation bendingAxis, string? sectionDisplayName) =>
         new([Only.WithSection(section, bendingAxis, sectionDisplayName)],
             Supports, Loads, NamingState, DistributedLoads, SelfWeight, MomentReleases);
 
-    public EditorDocument WithBendingAxis(SectionAxisDesignation bendingAxis) => WithSection(Section, bendingAxis);
+    public EditorDocument WithBendingAxis(SectionAxisDesignation bendingAxis) => WithSection(Section, bendingAxis, SectionDisplayName);
 
     // ---- Checked changes of the segment chain ----
     // Each returns the changed document or a rejection. The beam really gains or loses geometry: positions that

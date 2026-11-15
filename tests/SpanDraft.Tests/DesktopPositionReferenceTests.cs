@@ -27,8 +27,8 @@ public sealed class DesktopPositionReferenceTests
     private static PositionRef.AtSegmentEnd End(EditorSegment segment) => new(segment.Id);
 
     private static EditorSupport Support(string name, double x, PositionRef? reference = null,
-        SupportType type = SupportType.Pinned) =>
-        new(Guid.NewGuid(), M(x), type, name) { Reference = reference };
+        SupportType type = SupportType.Pinned, Guid? id = null) =>
+        new(id ?? Guid.NewGuid(), M(x), type, name) { Reference = reference };
 
     private static EditorPointForce Force(string name, double x, PositionRef? reference = null) =>
         new(Guid.NewGuid(), M(x), SpanDraft.Core.Units.Force.FromNewtons(1000), name) { Reference = reference };
@@ -71,6 +71,52 @@ public sealed class DesktopPositionReferenceTests
         Assert.False(document.TryResolve(End(Segment(1)), out _, out var missing));
         Assert.Equal(GeometryConflictKind.SegmentMissing, missing);
         Assert.Throws<ArgumentException>(() => document.ResolvePosition(From(s1, 2.5)));
+    }
+
+    [Fact]
+    public void TheFullLengthOfTheLastSegmentResolvesToTheBeamEndEvenWhenTheLengthWasSetDirectly()
+    {
+        // 0.2 + (0.9 - 0.2) is not 0.9 in floating point; the end of the beam must not depend on that sum.
+        var document = Chain([Segment(0.2), Segment(0.5)]) with { Length = M(0.9) };
+        var last = document.Segments[^1];
+
+        Assert.NotEqual(document.Length.Meters, document.SegmentRange(1).Start.Meters + last.Length.Meters);
+        Assert.Equal(document.Length, document.ResolvePosition(From(last, last.Length.Meters)));
+        Assert.Equal(document.Length, document.ResolvePosition(End(last)));
+    }
+
+    [Fact]
+    public void DocumentsWithTheSameContentAreEqualAndDifferentOnesAreNot()
+    {
+        EditorSegment s1 = Segment(2), s2 = Segment(3);
+        EditorDocument Build(double supportX) => Chain([s1, s2], [Support("A", 0, id: Guid.Parse("00000000-0000-0000-0000-0000000000a1")),
+            Support("B", supportX, id: Guid.Parse("00000000-0000-0000-0000-0000000000b2"))]);
+
+        Assert.Equal(Build(5), Build(5));
+        Assert.Equal(Build(5).GetHashCode(), Build(5).GetHashCode());
+        Assert.NotEqual(Build(5), Build(4));
+    }
+
+    [Fact]
+    public void ASectionChangeDropsTheDisplayNameOfTheOldSectionButAnAxisChangeKeepsIt()
+    {
+        var rectangle = new RectangleSectionGeometry(M(0.1), M(0.2));
+        var document = new EditorDocument(M(2), Steel, rectangle, SectionAxisDesignation.Y, sectionDisplayName: "Own profile");
+
+        Assert.Null(document.WithSection(new RectangleSectionGeometry(M(0.2), M(0.2)), SectionAxisDesignation.Y).SectionDisplayName);
+        Assert.Equal("Own profile", document.WithSection(new RectangleSectionGeometry(M(0.1), M(0.2)), SectionAxisDesignation.Y).SectionDisplayName);
+        Assert.Equal("Own profile", document.WithBendingAxis(SectionAxisDesignation.Z).SectionDisplayName);
+        Assert.Equal("Other", document.WithSection(rectangle, SectionAxisDesignation.Y, "Other").SectionDisplayName);
+    }
+
+    [Fact]
+    public void ASelfWeightNeverHasAnEmptyIdentity()
+    {
+        var weight = new EditorSelfWeight(Guid.NewGuid(), true);
+
+        Assert.Throws<ArgumentException>(() => new EditorSelfWeight(Guid.Empty, true));
+        Assert.Throws<ArgumentException>(() => weight with { Id = Guid.Empty });
+        Assert.False((weight with { Enabled = false }).Enabled);
     }
 
     [Fact]

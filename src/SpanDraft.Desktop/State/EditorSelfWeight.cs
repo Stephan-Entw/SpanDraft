@@ -4,5 +4,10 @@ namespace SpanDraft.Desktop.State;
 public sealed record EditorSelfWeight(Guid Id, bool Enabled)
 {
     public const string Symbol = "g";
-    public Guid Id { get; init; } = Id != Guid.Empty ? Id : throw new ArgumentException("An entity ID is required.", nameof(Id));
+    private Guid _id = Check(Id);
+
+    /// <summary>The entity identity; an empty one is rejected by the constructor and by <c>with</c> alike.</summary>
+    public Guid Id { get => _id; init => _id = Check(value); }
+
+    private static Guid Check(Guid id) => id != Guid.Empty ? id : throw new ArgumentException("An entity ID is required.", nameof(Id));
 }
