@@ -85,65 +85,83 @@ public sealed class DesktopSegmentDocumentTests
         Assert.Equal("Light", (single with { Material = Steel(name: "Light") }).Segments[0].Material.Name);
     }
 
-    [Fact]
-    public void SplittingCopiesEveryPropertyIncludingTheNameIntoBothHalves()
+    private static EditorDocument Accepted(GeometryChange change)
     {
-        EditorDocument split = Three().WithBoundaryAt(M(3));
-
-        Assert.Equal([M(2), M(3), M(4.5)], split.SegmentBoundaries);
-        Assert.Equal(4, split.Segments.Count);
-        // Both halves carry every property of the split segment; only the right half is a new segment.
-        Assert.Equal(split.Segments[1], split.Segments[2] with { Id = split.Segments[1].Id, Length = split.Segments[1].Length });
-        Assert.NotEqual(split.Segments[1].Id, split.Segments[2].Id);
-        Assert.Equal("Thick", split.Segments[1].SectionDisplayName);
-        Assert.Equal("Thick", split.Segments[2].SectionDisplayName);
-        Assert.Equal((M(2), M(3)), split.SegmentRange(1));
-        Assert.Equal((M(3), M(4.5)), split.SegmentRange(2));
-        Assert.Equal(1, split.Supports.Count - 1);
+        Assert.True(change.IsAccepted);
+        return change.Document!;
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(6)]
-    [InlineData(2)]
-    [InlineData(7)]
-    public void ABoundaryNeedsAFreePositionStrictlyInsideTheBeam(double position) =>
-        Assert.Throws<ArgumentException>(() => Three().WithBoundaryAt(M(position)));
+    // The same segment with other properties, keeping its identity and length.
+    private static EditorDocument Replace(EditorDocument document, int index, EditorSegment segment) =>
+        Accepted(document.WithSegmentChain(document.Segments.Select((s, i) => i == index
+            ? segment with { Id = s.Id, Length = s.Length } : s)));
 
     [Fact]
-    public void RemovingABoundaryKeepsTheLeftNeighbourByDefaultOrTheRightOne()
+    public void DuplicatingCopiesEveryPropertyIncludingTheNameIntoTheNewSegment()
     {
-        EditorDocument left = Three().WithoutBoundary(0);
-        EditorDocument right = Three().WithoutBoundary(0, keepLeft: false);
+        EditorDocument document = Three();
+        EditorDocument duplicated = Accepted(document.DuplicateSegment(document.Segments[1].Id));
 
-        Assert.Equal([M(4.5)], left.SegmentBoundaries);
-        Assert.Equal(["Steel", "Light"], left.Segments.Select(s => s.Material.Name));
-        Assert.Null(left.Segments[0].SectionDisplayName);
-        Assert.Equal("Thick", right.Segments[0].SectionDisplayName);
-        Assert.Throws<ArgumentOutOfRangeException>(() => Three().WithoutBoundary(2));
+        Assert.Equal([M(2), M(4.5), M(7)], duplicated.SegmentBoundaries);
+        Assert.Equal(4, duplicated.Segments.Count);
+        // The copy carries every property of the original; only its identity differs.
+        Assert.Equal(duplicated.Segments[1], duplicated.Segments[2] with { Id = duplicated.Segments[1].Id });
+        Assert.NotEqual(duplicated.Segments[1].Id, duplicated.Segments[2].Id);
+        Assert.Equal("Thick", duplicated.Segments[1].SectionDisplayName);
+        Assert.Equal("Thick", duplicated.Segments[2].SectionDisplayName);
+        Assert.Equal((M(2), M(4.5)), duplicated.SegmentRange(1));
+        Assert.Equal((M(4.5), M(7)), duplicated.SegmentRange(2));
+        Assert.Equal(document.Supports.Count, duplicated.Supports.Count);
     }
 
     [Fact]
-    public void MovingABoundaryCannotPassItsNeighbours()
+    public void AnInsertedSegmentNeedsALengthAndAPlaceInTheChain()
     {
         EditorDocument document = Three();
 
-        Assert.Equal(M(1), document.WithBoundary(0, M(1)).SegmentBoundaries[0]);
-        Assert.Throws<ArgumentException>(() => document.WithBoundary(0, M(4.5)));
-        Assert.Throws<ArgumentException>(() => document.WithBoundary(1, M(2)));
-        Assert.Throws<ArgumentException>(() => document.WithBoundary(1, M(6)));
+        Assert.Throws<ArgumentException>(() => document.InsertSegment(1, Segment()));
+        Assert.Throws<ArgumentOutOfRangeException>(() => document.InsertSegment(4, Segment() with { Length = M(1) }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => document.InsertSegment(-1, Segment() with { Length = M(1) }));
+        Assert.Throws<ArgumentException>(() => document.ResizeSegment(document.Segments[0].Id, M(0)));
+    }
+
+    [Fact]
+    public void RemovingASegmentKeepsTheOthersWithTheirOwnProperties()
+    {
+        EditorDocument document = Three();
+
+        EditorDocument first = Accepted(document.RemoveSegment(document.Segments[0].Id));
+        EditorDocument middle = Accepted(document.RemoveSegment(document.Segments[1].Id));
+
+        Assert.Equal([M(2.5)], first.SegmentBoundaries);
+        Assert.Equal("Thick", first.Segments[0].SectionDisplayName);
+        Assert.Equal([M(2)], middle.SegmentBoundaries);
+        Assert.Equal(["Steel", "Light"], middle.Segments.Select(s => s.Material.Name));
+        Assert.Null(middle.Segments[0].SectionDisplayName);
+        Assert.Equal(GeometryRejection.UnknownSegment, document.RemoveSegment(Guid.NewGuid()).Rejection);
+    }
+
+    [Fact]
+    public void ResizingASegmentMovesTheBoundariesBehindItAndKeepsTheOthers()
+    {
+        EditorDocument document = Three();
+
+        EditorDocument longer = Accepted(document.ResizeSegment(document.Segments[0].Id, M(3)));
+
+        Assert.Equal([M(3), M(5.5)], longer.SegmentBoundaries);
+        Assert.Equal(M(7), longer.Length);
+        Assert.Equal(document.Segments.Select(s => s.Id), longer.Segments.Select(s => s.Id));
     }
 
     [Fact]
     public void ReplacingASegmentLeavesTheOthersAndTheBoundaries()
     {
-        EditorDocument changed = Three().WithSegment(1, Segment(0.2, 0.4, name: "Heavy"));
+        EditorDocument changed = Replace(Three(), 1, Segment(0.2, 0.4, name: "Heavy"));
 
         Assert.Equal([M(2), M(4.5)], changed.SegmentBoundaries);
         Assert.Equal("Heavy", changed.Segments[1].SectionDisplayName);
         Assert.Null(changed.Segments[0].SectionDisplayName);
         Assert.Equal("Light", changed.Segments[2].Material.Name);
-        Assert.Throws<ArgumentOutOfRangeException>(() => Three().WithSegment(3, Segment()));
     }
 
     [Fact]
@@ -212,15 +230,16 @@ public sealed class DesktopSegmentDocumentTests
         ProjectState state = new(Three(), new EditorPresentationState());
         EditorChangeKind Classify(EditorDocument next) => EditorChangeClassifier.Classify(state, state with { Document = next });
 
-        Assert.Equal(EditorChangeKind.None, Classify(state.Document.WithSegments(state.Document.SegmentBoundaries,
-            state.Document.Segments.ToArray())));
-        Assert.Equal(EditorChangeKind.MetadataOnly, Classify(state.Document.WithSegment(0, Segment(name: "Renamed"))));
-        Assert.Equal(EditorChangeKind.Mechanical, Classify(state.Document.WithSegment(0, Segment(0.1, 0.25))));
-        Assert.Equal(EditorChangeKind.Mechanical, Classify(state.Document.WithSegment(0, Segment(re: 355e6))));
-        Assert.Equal(EditorChangeKind.Mechanical, Classify(state.Document.WithSegment(2, Segment(axis: SectionAxisDesignation.Z))));
-        Assert.Equal(EditorChangeKind.Mechanical, Classify(state.Document.WithBoundary(0, M(1.5))));
-        Assert.Equal(EditorChangeKind.Mechanical, Classify(state.Document.WithBoundaryAt(M(3))));
-        Assert.Equal(EditorChangeKind.Mechanical, Classify(state.Document.WithoutBoundary(1)));
+        EditorDocument Same(EditorDocument document) => Replace(document, 0, document.Segments[0]);
+        var ids = state.Document.Segments.Select(g => g.Id).ToArray();
+        Assert.Equal(EditorChangeKind.None, Classify(Same(state.Document)));
+        Assert.Equal(EditorChangeKind.MetadataOnly, Classify(Replace(state.Document, 0, Segment(name: "Renamed"))));
+        Assert.Equal(EditorChangeKind.Mechanical, Classify(Replace(state.Document, 0, Segment(0.1, 0.25))));
+        Assert.Equal(EditorChangeKind.Mechanical, Classify(Replace(state.Document, 0, Segment(re: 355e6))));
+        Assert.Equal(EditorChangeKind.Mechanical, Classify(Replace(state.Document, 2, Segment(axis: SectionAxisDesignation.Z))));
+        Assert.Equal(EditorChangeKind.Mechanical, Classify(Accepted(state.Document.ResizeSegment(ids[0], M(2.5)))));
+        Assert.Equal(EditorChangeKind.Mechanical, Classify(Accepted(state.Document.DuplicateSegment(ids[2]))));
+        Assert.Equal(EditorChangeKind.Mechanical, Classify(Accepted(state.Document.RemoveSegment(ids[1]))));
     }
 
     [Fact]

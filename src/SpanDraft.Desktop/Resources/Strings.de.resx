@@ -396,13 +396,15 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="LengthExcludesSegments" xml:space="preserve"><value>Die Länge muss größer als die letzte Abschnittsgrenze sein.</value></data>
   <data name="SetupSegments" xml:space="preserve"><value>Abschnitte</value></data>
   <data name="SegmentNumber" xml:space="preserve"><value>Nr.</value></data>
-  <data name="SegmentRange" xml:space="preserve"><value>Bereich</value></data>
-  <data name="SegmentSplitAt" xml:space="preserve"><value>Teilen bei</value></data>
-  <data name="SegmentSplit" xml:space="preserve"><value>Teilen</value></data>
-  <data name="SegmentRemove" xml:space="preserve"><value>Abschnitt entfernen</value></data>
-  <data name="SegmentStart" xml:space="preserve"><value>Beginn des Abschnitts</value></data>
-  <data name="SegmentSplitInvalid" xml:space="preserve"><value>Die Position muss im Balken und abseits der vorhandenen Abschnittsgrenzen liegen.</value></data>
-  <data name="SegmentStartInvalid" xml:space="preserve"><value>Der Beginn muss zwischen den benachbarten Grenzen liegen.</value></data>
+  <data name="SegmentAdd" xml:space="preserve"><value>Abschnitt hinzufügen</value></data>
+  <data name="SegmentInsertBefore" xml:space="preserve"><value>Abschnitt davor einfügen</value></data>
+  <data name="SegmentInsertAfter" xml:space="preserve"><value>Abschnitt danach einfügen</value></data>
+  <data name="SegmentDuplicate" xml:space="preserve"><value>Duplizieren</value></data>
+  <data name="SegmentRemove" xml:space="preserve"><value>Löschen</value></data>
+  <data name="SegmentMenu" xml:space="preserve"><value>Abschnittsaktionen</value></data>
+  <data name="SegmentLength" xml:space="preserve"><value>Abschnittslänge</value></data>
+  <data name="SegmentsTotalLength" xml:space="preserve"><value>Gesamtlänge {0} {1}</value></data>
+  <data name="SegmentChangeBlocked" xml:space="preserve"><value>Die Änderung ist nicht möglich, weil sonst diese Elemente ungültig würden: {0}.</value></data>
   <data name="SegmentSelected" xml:space="preserve"><value>Abschnitt {0}</value></data>
   <data name="ReportGoverningSegment" xml:space="preserve"><value>Maßgebender Abschnitt</value></data>
   <data name="ReportSegmentSection" xml:space="preserve"><value>Querschnitt, Abschnitt {0}</value></data>

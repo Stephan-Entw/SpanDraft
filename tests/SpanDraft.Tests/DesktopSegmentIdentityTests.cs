@@ -106,19 +106,6 @@ public sealed class DesktopSegmentIdentityTests
     }
 
     [Fact]
-    public void SplittingKeepsTheLeftIdentityAndGivesTheRightHalfANewOne()
-    {
-        var document = new EditorDocument([Segment(4)]);
-        var original = document.Segments[0].Id;
-
-        var split = document.WithBoundaryAt(M(1));
-
-        Assert.Equal(original, split.Segments[0].Id);
-        Assert.NotEqual(original, split.Segments[1].Id);
-        Assert.Equal([M(1), M(3)], split.Segments.Select(segment => segment.Length));
-    }
-
-    [Fact]
     public void ADifferentSegmentIdentityIsAContentChange()
     {
         var first = new EditorDocument([Segment(1, Guid.NewGuid())]);

@@ -346,50 +346,6 @@ public sealed record EditorDocument
 
     public EditorDocument WithBendingAxis(SectionAxisDesignation bendingAxis) => WithSection(Section, bendingAxis);
 
-    /// <summary>Replaces the segment boundaries and the segments together; everything else is kept.</summary>
-    public EditorDocument WithSegments(IEnumerable<Length> segmentBoundaries, IEnumerable<EditorSegment> segments) =>
-        new(Length, segmentBoundaries, segments, Supports, Loads, NamingState, DistributedLoads, SelfWeight, MomentReleases);
-
-    /// <summary>Replaces one segment; boundaries and all other segments are kept.</summary>
-    public EditorDocument WithSegment(int index, EditorSegment segment)
-    {
-        if ((uint)index >= (uint)_segments.Length) throw new ArgumentOutOfRangeException(nameof(index));
-        var segments = _segments.ToArray();
-        segments[index] = segment.Id == Guid.Empty ? segment with { Id = _segments[index].Id } : segment;
-        return WithSegments(_boundaries, segments);
-    }
-
-    /// <summary>
-    /// Splits the segment that contains <paramref name="position"/> there; both halves keep every property of the
-    /// original, including its display name. A position on an existing boundary or an end is rejected.
-    /// </summary>
-    public EditorDocument WithBoundaryAt(Length position)
-    {
-        if (!(position.Meters > 0) || !(position.Meters < Length.Meters) || _boundaries.Any(b => b == position))
-            throw new ArgumentException("A new boundary must lie strictly inside the beam and off the existing ones.", nameof(position));
-        int index = SegmentIndexAt(position);
-        // The left half keeps the identity of the split segment, the right half is a new segment.
-        return WithSegments(_boundaries.Take(index).Append(position).Concat(_boundaries.Skip(index)),
-            _segments.Take(index + 1).Append(_segments[index] with { Id = Guid.NewGuid() }).Concat(_segments.Skip(index + 1)));
-    }
-
-    /// <summary>Removes one boundary; the merged segment keeps the left or the right neighbour's properties.</summary>
-    public EditorDocument WithoutBoundary(int boundaryIndex, bool keepLeft = true)
-    {
-        if ((uint)boundaryIndex >= (uint)_boundaries.Length) throw new ArgumentOutOfRangeException(nameof(boundaryIndex));
-        return WithSegments(_boundaries.Where((_, i) => i != boundaryIndex),
-            _segments.Where((_, i) => i != (keepLeft ? boundaryIndex + 1 : boundaryIndex)));
-    }
-
-    /// <summary>Moves one boundary without passing its neighbours.</summary>
-    public EditorDocument WithBoundary(int boundaryIndex, Length position)
-    {
-        if ((uint)boundaryIndex >= (uint)_boundaries.Length) throw new ArgumentOutOfRangeException(nameof(boundaryIndex));
-        var boundaries = _boundaries.ToArray();
-        boundaries[boundaryIndex] = position;
-        return WithSegments(boundaries, _segments);
-    }
-
     // ---- Checked changes of the segment chain ----
     // Each returns the changed document or a rejection. The beam really gains or loses geometry: positions that
     // refer to a later segment move with it, a fixed distance from the beam start stays where it is. Nothing is ever

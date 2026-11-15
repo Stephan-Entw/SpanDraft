@@ -309,18 +309,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private Task<bool> ApplySetupAsync(ProjectSetupViewModel setup)
     {
         if (Mode != MainViewMode.ProjectSetup || !ReferenceEquals(setup, Setup)
-            || IsWorkspaceBusy || !setup.CanApply || setup.SelectedMaterial is not { } material
-            || setup.SelectedLength is not { Meters: > 0 } length || setup.SelectedSection is not { } section)
+            || IsWorkspaceBusy || !setup.CanApply)
             return Task.FromResult(false);
         if (setup.Mode == ProjectSetupMode.Edit)
         {
-            if (Editor?.ApplySetup(length, setup.SegmentBoundaries, setup.BuildSegments(), setup.Info) != true)
+            if (Editor?.ApplySetup(setup.BuildSegments(), setup.Info) != true)
                 return Task.FromResult(false);
             Navigate(MainViewMode.Editor);
             return Task.FromResult(true);
         }
-        var document = new EditorDocument(length, material, section, setup.BendingAxis,
-            sectionDisplayName: setup.SectionDisplayName);
+        var document = new EditorDocument(setup.BuildSegments());
         return RunOperationAsync(async () =>
         {
             if (!await CanLeaveAsync()) return false;

@@ -396,13 +396,15 @@ Remove the entry from Recent projects?</value></data>
   <data name="LengthExcludesSegments" xml:space="preserve"><value>The length must exceed the last segment boundary.</value></data>
   <data name="SetupSegments" xml:space="preserve"><value>Segments</value></data>
   <data name="SegmentNumber" xml:space="preserve"><value>No.</value></data>
-  <data name="SegmentRange" xml:space="preserve"><value>Range</value></data>
-  <data name="SegmentSplitAt" xml:space="preserve"><value>Split at</value></data>
-  <data name="SegmentSplit" xml:space="preserve"><value>Split</value></data>
-  <data name="SegmentRemove" xml:space="preserve"><value>Remove segment</value></data>
-  <data name="SegmentStart" xml:space="preserve"><value>Start of the segment</value></data>
-  <data name="SegmentSplitInvalid" xml:space="preserve"><value>The position must lie inside the beam and off the existing segment boundaries.</value></data>
-  <data name="SegmentStartInvalid" xml:space="preserve"><value>The start must lie between the neighbouring boundaries.</value></data>
+  <data name="SegmentAdd" xml:space="preserve"><value>Add segment</value></data>
+  <data name="SegmentInsertBefore" xml:space="preserve"><value>Insert segment before</value></data>
+  <data name="SegmentInsertAfter" xml:space="preserve"><value>Insert segment after</value></data>
+  <data name="SegmentDuplicate" xml:space="preserve"><value>Duplicate</value></data>
+  <data name="SegmentRemove" xml:space="preserve"><value>Delete</value></data>
+  <data name="SegmentMenu" xml:space="preserve"><value>Segment actions</value></data>
+  <data name="SegmentLength" xml:space="preserve"><value>Segment length</value></data>
+  <data name="SegmentsTotalLength" xml:space="preserve"><value>Total length {0} {1}</value></data>
+  <data name="SegmentChangeBlocked" xml:space="preserve"><value>This change is not possible because it would make these elements invalid: {0}.</value></data>
   <data name="SegmentSelected" xml:space="preserve"><value>Segment {0}</value></data>
   <data name="ReportGoverningSegment" xml:space="preserve"><value>Governing segment</value></data>
   <data name="ReportSegmentSection" xml:space="preserve"><value>Section, segment {0}</value></data>

@@ -325,8 +325,8 @@ public sealed class DesktopMomentReleaseEditTests
         var editor = Editor(releases: new EditorMomentRelease(id, Mm(1000), "G1"));
         Assert.True(editor.SetAnnotationOffset(id, new(5, -9)));
         Assert.Equal(new AnnotationOffset(5, -9), editor.EditorPresentation.AnnotationOffsets[id]);
-        Assert.True(editor.ApplySetup(Mm(4500), [], [new(ProjectTemplates.Material, ProjectTemplates.Section, SpanDraft.Core.Sections.SectionAxisDesignation.Y)],
-            editor.Session.CurrentRevision.State.Info));
+        Assert.True(editor.ApplySetup([new EditorSegment(ProjectTemplates.Material, ProjectTemplates.Section, SpanDraft.Core.Sections.SectionAxisDesignation.Y)
+            { Length = Mm(4500) }], editor.Session.CurrentRevision.State.Info));
         Assert.Equal(Mm(1000), Assert.Single(editor.Document.MomentReleases).Position);
         Assert.True(editor.EditorPresentation.AnnotationOffsets.ContainsKey(id));
         editor.Undo();

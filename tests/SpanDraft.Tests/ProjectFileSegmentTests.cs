@@ -155,8 +155,9 @@ public sealed class ProjectFileSegmentTests
     public void ChangingASegmentOrABoundaryChangesTheContent()
     {
         var state = ProjectFileCodec.Deserialize(Fixture("V5", "segments"));
-        Assert.False(state.ContentEquals(state with { Document = state.Document.WithBoundary(0, M(1.1)) }));
-        Assert.False(state.ContentEquals(state with { Document = state.Document.WithoutBoundary(0) }));
-        Assert.False(state.ContentEquals(state with { Document = state.Document.WithBoundary(1, M(2.1)) }));
+        var ids = state.Document.Segments.Select(g => g.Id).ToArray();
+        Assert.False(state.ContentEquals(state with { Document = state.Document.ResizeSegment(ids[0], M(1.3)).Document! }));
+        Assert.False(state.ContentEquals(state with { Document = state.Document.DuplicateSegment(ids[1]).Document! }));
+        Assert.False(state.ContentEquals(state with { Document = state.Document.ResizeSegment(ids[1], M(0.9)).Document! }));
     }
 }

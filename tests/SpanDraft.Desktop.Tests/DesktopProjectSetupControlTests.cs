@@ -46,18 +46,18 @@ public sealed class DesktopProjectSetupControlTests
         Assert.False(main.Setup.CalculationTitleInput.Confirm()); Assert.True(main.Setup.AuthorInput.Confirm());
         Capture("create-info-invalid");
         main.Setup.CalculationTitleInput.Cancel(); main.Setup.AuthorInput.Cancel();
-        var emptyCard = Assert.Single(window.GetVisualDescendants().OfType<BeamSetupCard>());
-        Assert.Empty(emptyCard.FindControl<TextBox>("SetupLengthInput")!.Text!);
-        Assert.Null(emptyCard.FindControl<TextBox>("SetupLengthInput")!.InnerRightContent);
-        var sectionButton = emptyCard.FindControl<Button>("SectionCardButton")!;
+        var emptyCard = Assert.Single(window.Cards());
+        Assert.Empty(emptyCard.Part<TextBox>("SetupLengthInput")!.Text!);
+        Assert.Null(emptyCard.Part<TextBox>("SetupLengthInput")!.InnerRightContent);
+        var sectionButton = emptyCard.Part<Button>("SectionCardButton")!;
         Assert.Equal(new[] { Strings.SectionSelection }, sectionButton.GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.IsEffectivelyVisible).Select(t => t.Text));
         Assert.DoesNotContain(sectionButton.GetVisualDescendants().OfType<SpanDraft.Desktop.Controls.SectionShapeIcon>(), i => i.IsEffectivelyVisible);
-        var materialButton = emptyCard.FindControl<Button>("MaterialCardButton")!;
+        var materialButton = emptyCard.Part<Button>("MaterialCardButton")!;
         Assert.Equal(new[] { Strings.SelectMaterialRequired }, materialButton.GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.IsEffectivelyVisible).Select(t => t.Text));
         double emptyHeight = emptyCard.Bounds.Height;
-        Assert.Equal(emptyCard.FindControl<Border>("LengthSurface")!.Bounds.Height, sectionButton.Bounds.Height);
+        Assert.Equal(emptyCard.Part<Border>("LengthSurface")!.Bounds.Height, sectionButton.Bounds.Height);
         Assert.Equal(sectionButton.Bounds.Height, materialButton.Bounds.Height);
         main.Setup.LengthInput.Begin(); main.Setup.LengthInput.Text = "0";
         Assert.False(main.Setup.LengthInput.Confirm()); Capture("create-length-invalid");
@@ -65,7 +65,7 @@ public sealed class DesktopProjectSetupControlTests
         main.Setup.LengthInput.Cancel(); Capture("create-empty-restored");
         main.Setup.SelectedMaterial = builtin; Arrange(window, width, height); Capture("create-material-selected");
         Assert.True(emptyCard.Bounds.Height > emptyHeight);
-        Assert.True(emptyCard.FindControl<TextBlock>("MaterialDescription")!.IsEffectivelyVisible);
+        Assert.True(emptyCard.Part<TextBlock>("MaterialDescription")!.IsEffectivelyVisible);
         AssertMaterialDisplay("X5CrNi18-10 (1.4301) · AISI 304");
         main.Setup.SelectedMaterial = LibraryTestSupport.WithMetadata(builtin, builtin.Category, "9.8765", ["Other standard", "Second standard"]);
         Arrange(window, width, height);
@@ -75,13 +75,13 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Equal(emptyHeight, emptyCard.Bounds.Height);
         main.Setup.SelectedSection = new CircleSectionGeometry(M(.1)); Arrange(window, width, height); Capture("create-section-selected");
         Assert.True(emptyCard.Bounds.Height > emptyHeight);
-        Assert.True(emptyCard.FindControl<TextBlock>("SectionDescription")!.IsEffectivelyVisible);
+        Assert.True(emptyCard.Part<TextBlock>("SectionDescription")!.IsEffectivelyVisible);
         Assert.False(Assert.Single(window.GetVisualDescendants().OfType<ProjectSetupView>()).FindControl<Button>("ApplySetupButton")!.IsEffectivelyEnabled);
         CompleteSetup(main);
         main.Setup.CalculationTitleInput.Text = culture == "de-DE" ? "Träger 1" : "Beam 1";
         main.Setup.CalculationTitleInput.Confirm(); main.Setup.AuthorInput.Text = culture == "de-DE" ? "Alex Beispiel" : "Alex Example"; main.Setup.AuthorInput.Confirm();
         Arrange(window, width, height); Capture("create-complete");
-        Assert.Single(window.GetVisualDescendants().OfType<BeamSetupCard>());
+        Assert.Single(window.Cards());
         var setupView = Assert.Single(window.GetVisualDescendants().OfType<ProjectSetupView>());
         Assert.Equal(Strings.BendingAxis + " y-y · " + Strings.SectionDefinitionEquivalent, main.Setup.AxisSummary);
         Assert.Equal(SectionAxisDesignation.Y, main.Setup.BendingAxis);
@@ -147,7 +147,7 @@ public sealed class DesktopProjectSetupControlTests
 
         void AssertMaterialDisplay(string expected)
         {
-            var description = emptyCard.FindControl<TextBlock>("MaterialDescription")!;
+            var description = emptyCard.Part<TextBlock>("MaterialDescription")!;
             Assert.Equal(expected, main.Setup.MaterialName);
             Assert.Equal(expected, description.Text);
             Assert.Equal(expected, ToolTip.GetTip(description));
@@ -240,10 +240,10 @@ public sealed class DesktopProjectSetupControlTests
         using var environment = new DesktopControlEnvironment();
         var main = new MainWindowViewModel(); main.NewCommand.Execute(null); var view = new ProjectSetupView { DataContext = main.Setup };
         var window = new Window { Content = view }; window.Show(); Arrange(window, 1100, 650);
-        var card = view.FindControl<BeamSetupCard>("BeamCard")!;
-        var length = card.FindControl<TextBox>("SetupLengthInput")!;
-        var section = card.FindControl<Button>("SectionCardButton")!;
-        var material = card.FindControl<Button>("MaterialCardButton")!;
+        var card = view.FirstCard();
+        var length = card.Part<TextBox>("SetupLengthInput")!;
+        var section = card.Part<Button>("SectionCardButton")!;
+        var material = card.Part<Button>("MaterialCardButton")!;
         length.Focus(); length.Text = "1500"; Press(length, Key.Enter);
         Assert.Null(main.Session); Assert.Equal(1500, main.Setup.SelectedLength!.Value.Millimeters);
         length.Text = "1750"; Press(length, Key.Enter);
@@ -266,11 +266,11 @@ public sealed class DesktopProjectSetupControlTests
         main.Setup.Definition!.SelectForm(SectionEditorType.Rectangle); Fill(main.Setup.Definition);
         main.Setup.Definition.BeginNameEdit(); main.Setup.Definition.PendingName = new string('W', 250);
         main.Setup.Definition.CommitName(); Assert.True(await main.Setup.Definition.ConfirmAsync()); Arrange(window, 1100, 650);
-        var description = card.FindControl<TextBlock>("SectionDescription")!;
+        var description = card.Part<TextBlock>("SectionDescription")!;
         Assert.Equal(description.Text, ToolTip.GetTip(description)); Assert.Equal(Avalonia.Media.TextTrimming.CharacterEllipsis, description.TextTrimming);
-        Assert.Equal(card.FindControl<Border>("LengthSurface")!.Bounds.Height, section.Bounds.Height);
+        Assert.Equal(card.Part<Border>("LengthSurface")!.Bounds.Height, section.Bounds.Height);
         Assert.Equal(section.Bounds.Height, material.Bounds.Height);
-        Assert.True(card.FindControl<Border>("BeamCardSurface")!.Bounds.Height <= 130);
+        Assert.True(card.Bounds.Height <= 130);
         foreach (var button in new[] { section, material })
             Assert.All(button.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible), text => Assert.True(text.Bounds.Height >= text.TextLayout.Height));
         var normal = section.Background;
@@ -298,20 +298,21 @@ public sealed class DesktopProjectSetupControlTests
         setup.SelectedMaterial = new(new string('M', 250), ProjectTemplates.Material.YoungsModulus, ProjectTemplates.Material.YieldStrength, SpanDraft.Core.Materials.MaterialStrengthType.Re);
         var view = new ProjectSetupView { DataContext = setup };
         var window = new Window { Content = view, Width = width, Height = height }; window.Show(); Arrange(window, width, height);
-        var card = view.FindControl<BeamSetupCard>("BeamCard")!;
-        var surface = Assert.IsType<Border>(card.Content);
-        Assert.Same(surface, card.FindControl<Border>("BeamCardSurface"));
+        var card = view.FirstCard();
+        var surface = card;
         Assert.Equal(new Thickness(1), surface.BorderThickness);
         Assert.True(surface.Bounds.Height <= 130);
         Assert.True(double.IsNaN(surface.Height));
-        var areas = Assert.IsType<Grid>(surface.Child);
-        Assert.Equal(new[] { 2d, 4.3, 3.7 }, areas.ColumnDefinitions.Select(c => c.Width.Value));
-        Assert.Equal(3, areas.Children.Count);
+        var areas = surface.Part<Grid>("BeamAreas");
+        // The three areas keep their proportions; the menu takes the fourth, automatic column.
+        Assert.Equal(new[] { 2d, 4.3, 3.7 }, areas.ColumnDefinitions.Take(3).Select(c => c.Width.Value));
+        Assert.True(areas.ColumnDefinitions[3].Width.IsAuto);
+        Assert.Equal(4, areas.Children.Count);
         var lengthArea = Assert.IsType<Border>(areas.Children[0]);
         Assert.False(lengthArea.Focusable); Assert.Equal(default, lengthArea.BorderThickness);
         var section = Assert.IsType<Button>(areas.Children[1]); var material = Assert.IsType<Button>(areas.Children[2]);
         Assert.True(section.Focusable); Assert.True(material.Focusable);
-        Assert.Same(setup.ChangeSectionCommand, section.Command); Assert.Same(setup.ChangeMaterialCommand, material.Command);
+        var model = Assert.IsType<SetupSegmentCard>(card.DataContext); Assert.Same(model.ChangeSectionCommand, section.Command); Assert.Same(model.ChangeMaterialCommand, material.Command);
         Assert.Equal(lengthArea.Bounds.Height, section.Bounds.Height); Assert.Equal(section.Bounds.Height, material.Bounds.Height);
         foreach (var button in new[] { section, material })
         {
@@ -319,8 +320,8 @@ public sealed class DesktopProjectSetupControlTests
             Assert.All(button.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible), text => Assert.True(text.Bounds.Height >= text.TextLayout.Height));
         }
         Assert.True(lengthArea.Bounds.Right < section.Bounds.Left); Assert.True(section.Bounds.Right < material.Bounds.Left);
-        var length = card.FindControl<TextBox>("SetupLengthInput")!;
-        var label = card.FindControl<TextBlock>("SetupLengthLabel")!; var unit = card.FindControl<TextBlock>("SetupLengthUnit")!;
+        var length = card.Part<TextBox>("SetupLengthInput")!;
+        var label = card.Part<TextBlock>("SetupLengthLabel")!; var unit = card.Part<TextBlock>("SetupLengthUnit")!;
         Assert.True(label.Bounds.Right < length.Bounds.Left); Assert.True(length.Bounds.Right < unit.Bounds.Left);
         Assert.InRange(Math.Abs(label.Bounds.Center.Y - length.Bounds.Center.Y), 0, 1);
         Assert.InRange(Math.Abs(unit.Bounds.Center.Y - length.Bounds.Center.Y), 0, 1);
@@ -329,7 +330,7 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Equal("1000", length.Text); Assert.Equal("mm", unit.Text); Assert.True(length.Bounds.Width >= 60);
         foreach (var name in new[] { "SectionDescription", "MaterialDescription", "SectionAxisDescription" })
         {
-            var text = card.FindControl<TextBlock>(name)!;
+            var text = card.Part<TextBlock>(name)!;
             Assert.Equal(TextTrimming.CharacterEllipsis, text.TextTrimming); Assert.Equal(text.Text, ToolTip.GetTip(text));
             var button = text.FindAncestorOfType<Button>()!;
             var position = text.TranslatePoint(default, button)!.Value;
@@ -337,7 +338,7 @@ public sealed class DesktopProjectSetupControlTests
             Assert.True(text.Bounds.Height >= text.TextLayout.Height);
         }
         Assert.Equal(Strings.BendingAxis + " z-z · " + Strings.SectionDefinitionEquivalent,
-            card.FindControl<TextBlock>("SectionAxisDescription")!.Text);
+            card.Part<TextBlock>("SectionAxisDescription")!.Text);
         Assert.Equal(SectionAxisDesignation.Z, setup.BendingAxis);
         length.Focus(); length.Text = "0";
         Assert.True(DesktopControlEnvironment.MoveFocus(window, length, NavigationDirection.Next));
@@ -360,12 +361,12 @@ public sealed class DesktopProjectSetupControlTests
         var main = new MainWindowViewModel(); Assert.True(await main.NewAsync()); var setup = main.Setup;
         var view = new ProjectSetupView { DataContext = setup };
         var window = new Window { Content = view }; window.Show(); Arrange(window, width, height);
-        var card = view.FindControl<BeamSetupCard>("BeamCard")!;
-        var length = card.FindControl<TextBox>("SetupLengthInput")!;
+        var card = view.FirstCard();
+        var length = card.Part<TextBox>("SetupLengthInput")!;
         var before = card.Bounds; var inputBounds = length.Bounds; var padding = length.Padding;
         Assert.True(view.GetVisualDescendants().OfType<TextBox>().Single(t => t.Name == "CalculationTitleInput").IsFocused);
         length.Focus(); Assert.Null(length.InnerRightContent);
-        card.FindControl<Button>("SectionCardButton")!.Focus(); Arrange(window, width, height);
+        card.Part<Button>("SectionCardButton")!.Focus(); Arrange(window, width, height);
         Assert.False(setup.HasLengthError); Assert.Null(length.InnerRightContent); Assert.False(setup.CanApply);
         Assert.Null(setup.SelectedLength); Assert.Empty(length.Text!);
         length.Focus(); Press(length, Key.Enter); Assert.False(setup.HasLengthError); Assert.True(setup.LengthInput.IsEditing);
@@ -430,10 +431,10 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Equal(0, surface.TranslatePoint(default, view)!.Value.X);
         var card = Assert.Single(view.GetVisualDescendants().OfType<ProjectInfoSetupCard>());
         Assert.DoesNotContain(card.GetVisualDescendants().OfType<Border>(), b => b.Classes.Contains("beamSetupCard"));
-        var title = card.FindControl<TextBox>("CalculationTitleInput")!;
-        var author = card.FindControl<TextBox>("AuthorInput")!;
-        var project = card.FindControl<TextBox>("ProjectTitleInput")!;
-        var reference = card.FindControl<TextBox>("ReferenceInput")!;
+        var title = card.Part<TextBox>("CalculationTitleInput")!;
+        var author = card.Part<TextBox>("AuthorInput")!;
+        var project = card.Part<TextBox>("ProjectTitleInput")!;
+        var reference = card.Part<TextBox>("ReferenceInput")!;
         Assert.True(title.IsFocused);
         var inputs = new[] { title, author, project, reference };
         Point Position(Control c) => c.TranslatePoint(default, card)!.Value;
@@ -460,7 +461,7 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Equal(culture == "de-DE" ? "Erstellt von" : "Created by", AutomationProperties.GetName(author));
         foreach (var pair in new[] { ("TitleLabel", title), ("AuthorLabel", author), ("ProjectLabel", project), ("ReferenceLabel", reference) })
         {
-            var label = card.FindControl<TextBlock>(pair.Item1)!;
+            var label = card.Part<TextBlock>(pair.Item1)!;
             Assert.True(Position(label).X + label.Bounds.Width < Position(pair.Item2).X);
             var group = label.Parent is StackPanel ? (Control)label.Parent : label;
             Assert.InRange(Math.Abs(Position(group).Y + group.Bounds.Height / 2 - Position(pair.Item2).Y - pair.Item2.Bounds.Height / 2), 0, 1 / window.RenderScaling);
@@ -473,14 +474,14 @@ public sealed class DesktopProjectSetupControlTests
             Assert.Contains("caption", label.Classes);
             Assert.True(label.FontSize < title.FontSize);
             Assert.Equal(Application.Current!.FindResource("TextSecondary"), label.Foreground);
-            var input = ReferenceEquals(label.Parent, card.FindControl<TextBlock>("AuthorLabel")!.Parent) ? author
-                : ReferenceEquals(label.Parent, card.FindControl<TextBlock>("ProjectLabel")!.Parent) ? project : reference;
+            var input = ReferenceEquals(label.Parent, card.Part<TextBlock>("AuthorLabel")!.Parent) ? author
+                : ReferenceEquals(label.Parent, card.Part<TextBlock>("ProjectLabel")!.Parent) ? project : reference;
             var group = (Control)label.Parent!;
             Assert.InRange(Math.Abs(Position(group).Y + group.Bounds.Height / 2 - Position(input).Y - input.Bounds.Height / 2), 0, 1 / window.RenderScaling);
             Assert.True(label.Bounds.Bottom <= group.Bounds.Height);
         });
         Assert.All(inputs, input => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(input))));
-        var beam = view.FindControl<BeamSetupCard>("BeamCard")!;
+        var beam = view.FirstCard();
         Assert.True(Position(card).Y + card.Bounds.Height < beam.TranslatePoint(default, card)!.Value.Y);
         title.Text = " Beam "; Assert.Null(setup.Draft.CalculationTitle);
         Press(title, Key.Enter); Assert.Equal("Beam", setup.Draft.CalculationTitle); Assert.Null(main.Session);
@@ -490,12 +491,12 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Equal("Author", setup.Draft.Author);
         Assert.True(DesktopControlEnvironment.MoveFocus(window, project, NavigationDirection.Next)); Assert.True(reference.IsFocused);
         Assert.True(DesktopControlEnvironment.MoveFocus(window, reference, NavigationDirection.Next));
-        var lengthInput = beam.FindControl<TextBox>("SetupLengthInput")!;
+        var lengthInput = beam.Part<TextBox>("SetupLengthInput")!;
         Assert.True(lengthInput.IsFocused);
         Assert.True(DesktopControlEnvironment.MoveFocus(window, lengthInput, NavigationDirection.Next));
-        var sectionButton = beam.FindControl<Button>("SectionCardButton")!; Assert.True(sectionButton.IsFocused);
+        var sectionButton = beam.Part<Button>("SectionCardButton")!; Assert.True(sectionButton.IsFocused);
         Assert.True(DesktopControlEnvironment.MoveFocus(window, sectionButton, NavigationDirection.Next));
-        Assert.True(beam.FindControl<Button>("MaterialCardButton")!.IsFocused);
+        Assert.True(beam.Part<Button>("MaterialCardButton")!.IsFocused);
         title.Focus(); title.Text = " "; var bounds = card.Bounds; var surfaceBounds = surface.Bounds;
         Press(title, Key.Enter); Arrange(window, width, height);
         Assert.True(setup.CalculationTitleInput.HasError); Assert.False(setup.CanApply); Assert.Equal(bounds, card.Bounds);

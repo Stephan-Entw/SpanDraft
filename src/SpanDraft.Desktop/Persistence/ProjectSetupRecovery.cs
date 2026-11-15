@@ -22,6 +22,18 @@ public sealed record SetupDraftData
     public SectionV2? Section { get; init; }
     public required string BendingAxis { get; init; }
     public string? SectionDisplayName { get; init; }
+
+    /// <summary>The segments after the first; absent for a beam of one segment.</summary>
+    public SetupSegmentData[]? FurtherSegments { get; init; }
+}
+
+public sealed record SetupSegmentData
+{
+    public double? Length { get; init; }
+    public MaterialV2? Material { get; init; }
+    public SectionV2? Section { get; init; }
+    public required string BendingAxis { get; init; }
+    public string? SectionDisplayName { get; init; }
 }
 
 public sealed record SetupRecoverySnapshot(ProjectSetupDraft Draft, DateTimeOffset WrittenAtUtc);
@@ -124,11 +136,26 @@ public sealed class ProjectSetupRecovery
                 throw new ProjectFormatException("The section does not provide the selected bending axis.");
             if (d.SectionDisplayName is { } name && (section is null || string.IsNullOrWhiteSpace(name) || name != name.Trim()))
                 throw new ProjectFormatException("Invalid setup section display name.");
+            var further = (d.FurtherSegments ?? []).Select(entry =>
+            {
+                var x = ProjectFileCodec.Required(entry, "segment");
+                var segmentLength = x.Length is { } m ? Length.FromMeters(ProjectFileCodec.Number(m, "length")) : (Length?)null;
+                if (segmentLength is { Meters: <= 0 }) throw new ProjectFormatException("Setup length must be positive.");
+                var segmentSection = x.Section is { } ss ? ProjectFileCodec.SectionFromDto(ss) : null;
+                var segmentAxis = ProjectFileCodec.AxisFromWire(x.BendingAxis);
+                if (segmentSection is not null && !segmentSection.Axes.Any(a => a.AxisDesignation == segmentAxis))
+                    throw new ProjectFormatException("The section does not provide the selected bending axis.");
+                if (x.SectionDisplayName is { } segmentName && (segmentSection is null || string.IsNullOrWhiteSpace(segmentName)
+                    || segmentName != segmentName.Trim()))
+                    throw new ProjectFormatException("Invalid setup section display name.");
+                return new SetupSegmentDraft(segmentLength, x.Material is { } mm ? ProjectFileCodec.MaterialFromDto(mm) : null,
+                    segmentSection, segmentAxis, x.SectionDisplayName);
+            }).ToArray();
             return new(new(length, material, section, axis, d.SectionDisplayName,
                 envelope.RecoveryVersion >= 2 ? ProjectInfo.Optional(d.CalculationTitle) : null,
                 envelope.RecoveryVersion >= 2 ? ProjectInfo.Optional(d.ProjectTitle) : null,
                 envelope.RecoveryVersion >= 2 ? ProjectInfo.Optional(d.Reference) : null,
-                envelope.RecoveryVersion >= 2 ? ProjectInfo.Optional(d.Author) : null), envelope.WrittenAtUtc);
+                envelope.RecoveryVersion >= 2 ? ProjectInfo.Optional(d.Author) : null, further), envelope.WrittenAtUtc);
         }
         catch (Exception e) when (e is JsonException or ArgumentException or OverflowException)
         { throw new ProjectFormatException("Invalid setup recovery data: " + e.Message, e); }
@@ -145,7 +172,14 @@ public sealed class ProjectSetupRecovery
             Material = snapshot.Draft.Material is { } m ? ProjectFileCodec.MaterialToDto(m) : null,
             Section = snapshot.Draft.Section is { } s ? ProjectFileCodec.SectionToDto(s) : null,
             BendingAxis = ProjectFileCodec.AxisToWire(snapshot.Draft.BendingAxis),
-            SectionDisplayName = snapshot.Draft.SectionDisplayName
+            SectionDisplayName = snapshot.Draft.SectionDisplayName,
+            FurtherSegments = snapshot.Draft.FurtherSegments is { Count: > 0 } further ? further.Select(g => new SetupSegmentData
+            {
+                Length = g.Length?.Meters,
+                Material = g.Material is { } material ? ProjectFileCodec.MaterialToDto(material) : null,
+                Section = g.Section is { } section ? ProjectFileCodec.SectionToDto(section) : null,
+                BendingAxis = ProjectFileCodec.AxisToWire(g.BendingAxis), SectionDisplayName = g.SectionDisplayName
+            }).ToArray() : null
         }
     }, ProjectFileCodec.JsonOptions);
 }

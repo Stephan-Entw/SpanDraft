@@ -47,7 +47,7 @@ public sealed class DesktopSegmentSetupControlTests
     [Theory]
     [InlineData(1100, 650)]
     [InlineData(1250, 800)]
-    public void SegmentRowsAlignWithTheirHeaderStayInsideTheCardAndOfferTheirActions(double width, double height)
+    public void SegmentCardsShareTheirThreeAreasStayInsideTheViewAndOfferTheirActions(double width, double height)
     {
         using var environment = new DesktopControlEnvironment();
         var setup = Setup(3);
@@ -56,65 +56,43 @@ public sealed class DesktopSegmentSetupControlTests
         window.Show();
         Arrange(window, width, height);
 
-        var card = view.FindControl<SegmentSetupCard>("SegmentCard")!;
-        Assert.True(card.IsEffectivelyVisible);
-        var surface = card.FindControl<Border>("SegmentCardSurface")!;
-        var header = card.FindControl<Grid>("SegmentHeader")!;
-        var list = card.FindControl<ListBox>("SegmentList")!;
-        Assert.Equal(3, list.ItemCount);
-
-        // Containment: nothing leaves the card horizontally and the card stays inside the page.
+        var cards = view.Cards();
+        Assert.Equal(3, cards.Count);
         Rect Bounds(Control control) => control.TranslatePoint(default, window) is { } origin
             ? new Rect(origin, control.Bounds.Size) : default;
-        Assert.True(Bounds(surface).Right <= window.Bounds.Width + 0.5);
-        foreach (var control in card.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible && c is TextBlock or TextBox or Button))
-            Assert.True(Bounds(control).Right <= Bounds(surface).Right + 0.5, control.GetType().Name);
 
-        // Alignment: every row cell starts where its header cell starts.
-        var headerCells = header.Children.OfType<TextBlock>().OrderBy(c => Grid.GetColumn(c)).ToArray();
-        foreach (var row in list.GetVisualDescendants().OfType<Grid>().Where(g => g.DataContext is SetupSegmentRow))
+        // Containment: nothing leaves its card horizontally and every card stays inside the window.
+        foreach (var card in cards)
         {
-            var cells = row.Children.OfType<Control>().OrderBy(c => Grid.GetColumn(c)).ToArray();
-            Assert.Equal(headerCells.Length, cells.Length);
-            for (int i = 0; i < cells.Length; i++)
-                Assert.Equal(Bounds(headerCells[i]).X, Bounds(cells[i]).X, 1.5);
+            Assert.True(Bounds(card).Right <= window.Bounds.Width + 0.5);
+            foreach (var control in card.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible && c is TextBlock or TextBox or Button))
+                Assert.True(Bounds(control).Right <= Bounds(card).Right + 0.5, control.GetType().Name);
         }
 
-        // Equal sizes: the split and remove buttons have the standard height of the other setup controls.
-        var split = card.FindControl<Button>("SplitButton")!;
-        var remove = card.FindControl<Button>("RemoveSegmentButton")!;
-        Assert.Equal(split.Bounds.Height, remove.Bounds.Height);
-        Assert.True(split.IsEffectivelyEnabled && remove.IsEffectivelyEnabled);
-        Assert.False(card.FindControl<TextBox>("SegmentStartInput")!.IsEffectivelyVisible);
+        // Alignment and equal sizes: the areas of every card start and end at the same x, and each card's areas are
+        // as high as its length area.
+        foreach (string name in new[] { "SectionCardButton", "MaterialCardButton", "SegmentMenuButton" })
+        {
+            var parts = cards.Select(card => Bounds(card.Part<Button>(name))).ToArray();
+            Assert.All(parts, bounds => Assert.Equal(parts[0].X, bounds.X, 1.5));
+            Assert.All(parts, bounds => Assert.Equal(parts[0].Width, bounds.Width, 1.5));
+        }
+        Assert.All(cards, card => Assert.Equal(card.Part<Border>("LengthSurface").Bounds.Height, card.Part<Button>("SectionCardButton").Bounds.Height));
+        Assert.All(cards, card => Assert.True(card.Part<TextBlock>("SegmentTitle").IsEffectivelyVisible));
+        Assert.Equal([1, 2, 3], cards.Select(card => ((SetupSegmentCard)card.DataContext!).Number));
+
+        // The cards are stacked in order and the add button follows the last one, aligned with the cards.
+        Assert.True(Bounds(cards[1]).Y >= Bounds(cards[0]).Bottom - 0.5 && Bounds(cards[2]).Y >= Bounds(cards[1]).Bottom - 0.5);
+        var add = view.Part<Button>("AddSegmentButton");
+        Assert.True(add.IsEffectivelyVisible && add.IsEffectivelyEnabled);
+        Assert.True(Bounds(add).Y >= Bounds(cards[2]).Bottom - 0.5);
+        Assert.Equal(Bounds(cards[0]).X, Bounds(add).X, 1.5);
+        Assert.Equal(setup.Cards[0].Id, ((SetupSegmentCard)cards[0].DataContext!).Id);
         window.Close();
     }
 
     [Fact]
-    public void SelectingARowShowsItsStartInputAndTheBeamCardFollowsTheSelectedSegment()
-    {
-        using var environment = new DesktopControlEnvironment();
-        var setup = Setup(3);
-        var view = new ProjectSetupView { DataContext = setup };
-        var window = new Window { Content = view, Width = 1100, Height = 650 };
-        window.Show();
-        Arrange(window, 1100, 650);
-        var card = view.FindControl<SegmentSetupCard>("SegmentCard")!;
-        var list = card.FindControl<ListBox>("SegmentList")!;
-        var beamCard = view.FindControl<BeamSetupCard>("BeamCard")!;
-        string first = beamCard.FindControl<TextBlock>("MaterialDescription")!.Text!;
-
-        list.SelectedIndex = 1;
-        Arrange(window, 1100, 650);
-
-        Assert.Equal(1, setup.SelectedSegmentIndex);
-        Assert.True(card.FindControl<TextBox>("SegmentStartInput")!.IsEffectivelyVisible);
-        Assert.NotEqual(first, beamCard.FindControl<TextBlock>("MaterialDescription")!.Text);
-        Assert.Contains("Aluminium", beamCard.FindControl<TextBlock>("MaterialDescription")!.Text);
-        window.Close();
-    }
-
-    [Fact]
-    public void ASingleSegmentSetupStillOffersSplittingButNoRemoval()
+    public void AddingASegmentShowsAnEmptyCardAndTheTitlesAppearOnlyWithSeveralSegments()
     {
         using var environment = new DesktopControlEnvironment();
         var setup = Setup(1);
@@ -122,23 +100,23 @@ public sealed class DesktopSegmentSetupControlTests
         var window = new Window { Content = view, Width = 1100, Height = 650 };
         window.Show();
         Arrange(window, 1100, 650);
-        var card = view.FindControl<SegmentSetupCard>("SegmentCard")!;
 
-        Assert.True(card.FindControl<Button>("SplitButton")!.IsEffectivelyEnabled);
-        Assert.False(card.FindControl<Button>("RemoveSegmentButton")!.IsEffectivelyEnabled);
-        Assert.Equal(1, card.FindControl<ListBox>("SegmentList")!.ItemCount);
+        var only = view.FirstCard();
+        Assert.False(only.Part<TextBlock>("SegmentTitle").IsEffectivelyVisible);
+        Assert.True(only.Part<Button>("SegmentMenuButton").IsEffectivelyVisible);
 
-        setup.SplitInput.Begin();
-        setup.SplitInput.Text = "1200";
-        card.FindControl<Button>("SplitButton")!.Command!.Execute(null);
+        view.Part<Button>("AddSegmentButton").Command!.Execute(null);
         Arrange(window, 1100, 650);
-        Assert.Equal(2, card.FindControl<ListBox>("SegmentList")!.ItemCount);
-        Assert.True(card.FindControl<Button>("RemoveSegmentButton")!.IsEffectivelyEnabled);
+
+        var cards = view.Cards();
+        Assert.Equal(2, cards.Count);
+        Assert.All(cards, card => Assert.True(card.Part<TextBlock>("SegmentTitle").IsEffectivelyVisible));
+        Assert.Empty(cards[1].Part<TextBox>("SetupLengthInput").Text!);
         window.Close();
     }
 
     [Fact]
-    public void ACreateSetupHasNoSegmentList()
+    public void ACreateSetupAlsoOffersTheCardsAndTheAddButton()
     {
         using var environment = new DesktopControlEnvironment();
         var main = new MainWindowViewModel();
@@ -147,7 +125,8 @@ public sealed class DesktopSegmentSetupControlTests
         var window = new Window { Content = view, Width = 1100, Height = 650 };
         window.Show();
         Arrange(window, 1100, 650);
-        Assert.False(view.FindControl<SegmentSetupCard>("SegmentCard")!.IsEffectivelyVisible);
+        Assert.Single(view.Cards());
+        Assert.True(view.Part<Button>("AddSegmentButton").IsEffectivelyVisible);
         window.Close();
     }
 
@@ -158,7 +137,7 @@ public sealed class DesktopSegmentSetupControlTests
     {
         using var environment = new DesktopControlEnvironment();
         var setup = Setup(segments);
-        var document = new EditorDocument(setup.SelectedLength ?? M(3), setup.SegmentBoundaries, setup.BuildSegments(),
+        var document = new EditorDocument(setup.BuildSegments(),
             [new(Guid.NewGuid(), M(0), SupportType.Fixed, "A")], [new EditorPointForce(Guid.NewGuid(), M(3), Force.FromNewtons(-1000), "F1")]);
         var editor = new EditorViewModel(document, () => { });
         var view = new EditorView { DataContext = editor };

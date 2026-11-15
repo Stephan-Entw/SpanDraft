@@ -43,7 +43,9 @@ public partial class ProjectSetupView : UserControl
         {
             if (model is null || model != _model || page != model.Page) return;
             var controls = this.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible && c.IsEffectivelyEnabled).ToArray();
-            var control = controls.FirstOrDefault(c => preferred is not null && c.Name == preferred)
+            // After a step the focus returns to the card of the segment that was edited.
+            var control = controls.FirstOrDefault(c => preferred is not null && c.Name == preferred && c.DataContext is SetupSegmentCard { IsSelected: true })
+                ?? controls.FirstOrDefault(c => preferred is not null && c.Name == preferred)
                 ?? controls.FirstOrDefault(c => c is TextBox) ?? controls.FirstOrDefault(c => c.Focusable);
             control?.Focus(NavigationMethod.Tab);
         });

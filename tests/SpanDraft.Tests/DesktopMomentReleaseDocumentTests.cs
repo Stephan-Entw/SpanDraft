@@ -41,8 +41,8 @@ public sealed class DesktopMomentReleaseDocumentTests
         [
             document.WithSupports(document.Supports), document.WithLoads([]), document.WithDistributedLoads([]),
             document.WithSection(new RectangleSection(M(.1), M(.3)), SectionAxisDesignation.Y),
-            document.WithBoundaryAt(M(2)), document.WithBoundaryAt(M(2)).WithBoundary(0, M(2.5)),
-            document.WithBoundaryAt(M(2)).WithoutBoundary(0), document with { Length = M(8) }
+            document.DuplicateSegment(document.Segments[0].Id).Document!,
+            document.ResizeSegment(document.Segments[0].Id, M(7)).Document!, document with { Length = M(8) }
         ];
         Assert.All(derived, d => Assert.Equal(document.MomentReleases, d.MomentReleases));
         Assert.Empty(document.WithMomentReleases([]).MomentReleases);
