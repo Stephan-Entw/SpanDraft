@@ -256,6 +256,38 @@ public sealed class DesktopSegmentSetupTests
     }
 
     [Fact]
+    public void AMaterialWithoutDensityDoesNotBlockLengthEditsDuplicatingOrRemovingSegments()
+    {
+        var setup = Setup(Document(selfWeight: true, segments: 3));
+        setup.SelectedSegmentIndex = 1;
+        setup.SelectedMaterial = Steel("No density", density: null);
+        Assert.NotNull(setup.MaterialError);
+
+        // The material is reported by MaterialError and blocks Apply; the chain operations are not its business.
+        Assert.True(SetLength(setup, 2, "1500"));
+        Assert.Null(setup.SegmentError);
+        Assert.False(setup.Cards[2].LengthInput.HasError);
+        setup.Cards[2].DuplicateCommand.Execute(null);
+        Assert.Equal(4, setup.Cards.Count);
+        Assert.Null(setup.SegmentError);
+        setup.Cards[3].RemoveCommand.Execute(null);
+        Assert.Equal(3, setup.Cards.Count);
+        Assert.Null(setup.SegmentError);
+        Assert.False(setup.CanApply);
+    }
+
+    [Fact]
+    public void ARemovedSegmentsLengthInputCanStillBeRead()
+    {
+        var setup = Setup(Document(segments: 3));
+        var removed = setup.Cards[2];
+        setup.Cards[2].RemoveCommand.Execute(null);
+
+        Assert.Equal(2, setup.Cards.Count);
+        Assert.Equal("", removed.LengthInput.DisplayText);
+    }
+
+    [Fact]
     public void ACreateSetupWithSeveralSegmentsKeepsThemInItsDraft()
     {
         var setup = Setup(Document(), ProjectSetupMode.Create);

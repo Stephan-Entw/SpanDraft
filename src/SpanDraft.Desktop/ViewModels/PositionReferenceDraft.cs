@@ -146,20 +146,25 @@ public sealed class PositionReferenceDraft : ObservableObject
     {
         if (distance.Meters > MaxDistance.Meters) return false;
         var document = _read();
+        var next = _current;
         switch (_current)
         {
             case PositionRef.FromBeamStart:
-                _current = new PositionRef.FromBeamStart(distance);
+                next = new PositionRef.FromBeamStart(distance);
                 break;
             case PositionRef.FromSegmentStart fromStart:
-                _current = fromStart with { Offset = distance };
+                next = fromStart with { Offset = distance };
                 break;
             case PositionRef.AtSegmentEnd end:
                 if (distance == Distance) return true;
-                _current = new PositionRef.FromSegmentStart(end.Segment, distance);
+                next = new PositionRef.FromSegmentStart(end.Segment, distance);
                 break;
         }
-        _position = document.ResolvePosition(_current);
+        var position = document.ResolvePosition(next);
+        // Every validation of the flyout passes through here; nothing is announced while nothing changed.
+        if (next == _current && position == _position) return true;
+        _current = next;
+        _position = position;
         NotifyAll();
         return true;
     }

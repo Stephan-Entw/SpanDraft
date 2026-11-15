@@ -229,7 +229,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
 
     private SetupSegmentCard NewCard(Guid id)
     {
-        var card = new SetupSegmentCard(this, id, new LengthInputViewModel(() => _segments.First(g => g.Id == id).Length,
+        var card = new SetupSegmentCard(this, id, new LengthInputViewModel(() => _segments.FirstOrDefault(g => g.Id == id)?.Length,
             length => CommitSegmentLength(id, length), () => IsBusy || Libraries?.PreserveSetupInputs == true,
             () => ResultPresentation.Profile[QuantityKind.BeamLength], retainRejectedOnBlur: true,
             readPresentation: () => ResultPresentation));
@@ -260,7 +260,9 @@ public sealed class ProjectSetupViewModel : ObservableObject
         if (segments.Length == 0) return null;
         var change = document.WithSegmentChain(segments);
         if (change.IsAccepted) return null;
-        if (change.Message is { } message) return message;
+        // A segment without density is reported by its own material (ValidateProjectMaterial) and blocks Apply there;
+        // it is no reason to reject a length, a copy or a removal of some other segment.
+        if (change.Rejection == GeometryRejection.SelfWeightDensity) return null;
         // The established message for a beam that has become too short for elements that are all measured from its start.
         var elements = document.Supports.Cast<object>().Concat(document.Loads).Concat(document.DistributedLoads).Concat(document.MomentReleases);
         if (change.Conflicts.All(c => c.Kind == GeometryConflictKind.RuleViolation) && elements.All(IsFixedFromStart)

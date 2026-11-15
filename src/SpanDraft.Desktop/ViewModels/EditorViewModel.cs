@@ -146,7 +146,17 @@ public sealed partial class EditorViewModel : ObservableObject
     public bool IsSupportFlyoutVisible => _draft is not null && Interaction is SupportInteraction.NewDraft or SupportInteraction.EditDraft;
     public SupportPreview? Preview => _preview;
     public string SupportPreviewName => _draft?.NameText ?? _dragSupport?.Name
-        ?? (PlacementTool is not null ? EntityNaming.Peek(Document, AutoNameKind.Support).Name : "");
+        ?? (PlacementTool is not null ? AutoName(AutoNameKind.Support) : "");
+
+    // The next automatic name only changes with the document, but the preview names are read on every pointer move.
+    private EditorDocument? _autoNameDocument;
+    private readonly Dictionary<AutoNameKind, string> _autoNames = [];
+    private string AutoName(AutoNameKind kind)
+    {
+        if (!ReferenceEquals(_autoNameDocument, Document)) { _autoNames.Clear(); _autoNameDocument = Document; }
+        if (!_autoNames.TryGetValue(kind, out var name)) _autoNames[kind] = name = EntityNaming.Peek(Document, kind).Name;
+        return name;
+    }
     public Guid? HoveredSupportId => _hoveredSupportId;
     public Guid? HiddenSupportId => _draft?.OriginalId ?? _dragSupport?.Id;
     public string? SupportFeedback => _supportFeedback;
@@ -395,7 +405,9 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public void ApplySetup(ISectionDefinition section, SectionAxisDesignation bendingAxis, Material material)
     {
-        if (!IsBusy && CanApplyMaterial(material)) Commit(Document.WithSection(section, bendingAxis) with { Material = material });
+        // The single-segment shortcut; a beam of several segments is set up through the segment chain.
+        if (!IsBusy && !Document.HasSeveralSegments && CanApplyMaterial(material))
+            Commit(Document.WithSection(section, bendingAxis) with { Material = material });
     }
 
     public bool ApplySetup(Length length, ISectionDefinition section, SectionAxisDesignation bendingAxis,

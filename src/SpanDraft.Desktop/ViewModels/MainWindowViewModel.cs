@@ -336,7 +336,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         });
     }
 
-    private async void CancelSetup() => await CancelSetupAsync();
+    // An async void handler has no caller to catch for it: whatever fails is shown instead of ending the application.
+    private async void CancelSetup()
+    {
+        try { await CancelSetupAsync(); }
+        catch (Exception e) { await ShowErrorAsync(Strings.ProjectFileError, e); }
+    }
 
     public Task<bool> CancelSetupAsync() => Mode != MainViewMode.ProjectSetup ? Task.FromResult(false) : RunOperationAsync(async () =>
     {
@@ -619,7 +624,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async void RecoveryFailed(Exception error)
     {
         if (IsBusy) { _pendingRecoveryError = error; return; }
-        await ReportRecoveryErrorAsync(error);
+        try { await ReportRecoveryErrorAsync(error); }
+        catch (Exception e) { await ShowErrorAsync(Strings.RecoveryError, e); }
     }
 
     private Task<bool> ReportRecoveryErrorAsync(Exception error) => RunOperationAsync(async () =>

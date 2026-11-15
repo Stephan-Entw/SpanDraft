@@ -163,13 +163,7 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
     {
         var document = _read();
         EntityNaming.TryNormalize(document, NameText, OriginalId, out _, out var nameError);
-        _nameError = nameError switch
-        {
-            NameValidationError.Empty => Strings.EmptyEntityName,
-            NameValidationError.Duplicate => Strings.DuplicateEntityName,
-            NameValidationError.Reserved => Strings.ReservedEntityName,
-            _ => null
-        };
+        _nameError = EntityNaming.Message(nameError);
         _startError = TryDistance(StartText, _referenceStartText, _referenceStart, StartReference, out var start) ? null
             : StartReference.IsSegmentBased ? Strings.DistanceBeyondSegment : Strings.PositionInsideBeam;
         _endError = TryDistance(EndText, _referenceEndText, _referenceEnd, EndReference, out var end) ? null

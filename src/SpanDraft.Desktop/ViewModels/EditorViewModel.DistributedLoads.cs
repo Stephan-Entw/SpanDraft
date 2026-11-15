@@ -31,7 +31,7 @@ public sealed partial class EditorViewModel
     public Guid? HoveredDistributedLoadId => _hoveredDistributedLoadId;
     public Guid? HiddenDistributedLoadId => _distributedLoadDraft?.OriginalId;
     public string DistributedLoadPreviewName => _distributedLoadDraft?.NameText
-        ?? (_distributedLoadTool ? EntityNaming.Peek(Document, AutoNameKind.DistributedLoad).Name : "");
+        ?? (_distributedLoadTool ? AutoName(AutoNameKind.DistributedLoad) : "");
     public bool IsDistributedLoadFlyoutVisible => _distributedLoadDraft is not null
         && DistributedLoadState is DistributedLoadInteraction.NewDraft or DistributedLoadInteraction.EditDraft;
     public string? DistributedLoadFeedback => _distributedLoadFeedback;

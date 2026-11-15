@@ -121,13 +121,7 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     {
         var document = _read();
         EntityNaming.TryNormalize(document, NameText, OriginalId, out _, out var nameError);
-        _nameError = nameError switch
-        {
-            NameValidationError.Empty => Strings.EmptyEntityName,
-            NameValidationError.Duplicate => Strings.DuplicateEntityName,
-            NameValidationError.Reserved => Strings.ReservedEntityName,
-            _ => null
-        };
+        _nameError = EntityNaming.Message(nameError);
         // Preserve the exact SI distance when the displayed text is untouched (or restored).
         Length distance = _referencePosition, position = default;
         bool positionValid = PositionText == _referencePositionText

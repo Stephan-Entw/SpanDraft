@@ -24,7 +24,7 @@ public sealed partial class EditorViewModel
     public MomentReleaseDraftViewModel? MomentReleaseDraft => _releaseDraft;
     public MomentReleasePreview? MomentReleasePreview => _releasePreview;
     public string MomentReleasePreviewName => _releaseDraft?.NameText ?? _dragRelease?.Name
-        ?? (IsMomentReleaseTool ? EntityNaming.Peek(Document, AutoNameKind.MomentRelease).Name : "");
+        ?? (IsMomentReleaseTool ? AutoName(AutoNameKind.MomentRelease) : "");
     public Guid? HoveredMomentReleaseId => _hoveredReleaseId;
     public Guid? HiddenMomentReleaseId => _releaseDraft?.OriginalId ?? _dragRelease?.Id;
     public bool IsMomentReleaseFlyoutVisible => _releaseDraft is not null

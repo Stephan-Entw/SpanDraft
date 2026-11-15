@@ -213,13 +213,7 @@ public sealed class SupportDraftViewModel : ObservableObject
     {
         var document = _read();
         EntityNaming.TryNormalize(document, NameText, OriginalId, out _, out var nameError);
-        _nameError = nameError switch
-        {
-            NameValidationError.Empty => Strings.EmptyEntityName,
-            NameValidationError.Duplicate => Strings.DuplicateEntityName,
-            NameValidationError.Reserved => Strings.ReservedEntityName,
-            _ => null
-        };
+        _nameError = EntityNaming.Message(nameError);
         string? error = null;
         if (!Enum.IsDefined(Type)) error = Strings.InvalidSupportType;
         else if (!TryDistance(out var distance))

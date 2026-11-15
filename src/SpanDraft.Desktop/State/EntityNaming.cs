@@ -1,4 +1,5 @@
 using System.Globalization;
+using SpanDraft.Desktop.Resources;
 
 namespace SpanDraft.Desktop.State;
 
@@ -108,6 +109,15 @@ public static class EntityNaming
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
     }
+
+    /// <summary>The message of a rejected name; null for an accepted one.</summary>
+    public static string? Message(NameValidationError error) => error switch
+    {
+        NameValidationError.Empty => Strings.EmptyEntityName,
+        NameValidationError.Duplicate => Strings.DuplicateEntityName,
+        NameValidationError.Reserved => Strings.ReservedEntityName,
+        _ => null
+    };
 
     public static bool TryNormalize(EditorDocument document, string? name, Guid? exclude,
         out string normalized, out NameValidationError error)

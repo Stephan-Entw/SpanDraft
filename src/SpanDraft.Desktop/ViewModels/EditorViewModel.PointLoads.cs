@@ -28,8 +28,7 @@ public sealed partial class EditorViewModel
     public PointLoadDraftViewModel? LoadDraft => _loadDraft;
     public PointLoadPreview? LoadPreview => _loadPreview;
     public string LoadPreviewName => _loadDraft?.NameText ?? _dragLoad?.Name
-        ?? (LoadTool is { } kind ? EntityNaming.Peek(Document,
-            kind == PointLoadKind.Force ? AutoNameKind.Force : AutoNameKind.Moment).Name : "");
+        ?? (LoadTool is { } kind ? AutoName(kind == PointLoadKind.Force ? AutoNameKind.Force : AutoNameKind.Moment) : "");
     public Guid? HoveredLoadId => _hoveredLoadId;
     public Guid? HiddenLoadId => _loadDraft?.OriginalId ?? _dragLoad?.Id;
     public bool IsLoadFlyoutVisible => _loadDraft is not null && LoadState is LoadInteraction.NewDraft or LoadInteraction.EditDraft;
