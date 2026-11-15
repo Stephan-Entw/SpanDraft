@@ -154,6 +154,25 @@ public sealed class EngineeringSegmentTests
     }
 
     [Fact]
+    public void ABendingStressBeyondTheDoubleRangeIsRejectedAndNeverPublishedAsInfinite()
+    {
+        // 2000 Nm / 1e-306 m³ exceeds the largest double; Pressure refuses a non-finite value.
+        BeamSolution solution = Solve(Cantilever([Segment(0, 2, 1e-306, 250e6)]));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => BeamEngineeringAnalysis.Analyze(solution));
+    }
+
+    [Fact]
+    public void EverySegmentHasExactlyOneExtremaSetInSegmentOrder()
+    {
+        BeamSolution solution = Solve(Cantilever([Segment(0, 0.8, 0.002, 235e6), Segment(0.8, 2, 0.0005, 355e6)]));
+
+        Assert.Equal(solution.Beam.Segments.Count, solution.SegmentExtrema.Count);
+        Assert.Equal(M(0), solution.SegmentExtrema[0].MinimumBendingMoment.Position);
+        Assert.Equal(M(0.8), solution.SegmentExtrema[1].MinimumBendingMoment.Position);
+    }
+
+    [Fact]
     public void TheSegmentAssessmentsCannotBeChangedThroughTheResult()
     {
         BeamEngineeringResult result = Analyze(Cantilever([Segment(0, 0.8, 0.002, 235e6), Segment(0.8, 2, 0.0005, 355e6)]));

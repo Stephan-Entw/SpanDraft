@@ -32,6 +32,9 @@ public sealed class BeamSolution
                 rotationLeft);
         }).ToArray());
         Extrema = new BeamExtrema(result.Extrema);
+        // Consumers pair SegmentExtrema[i] with Beam.Segments[i] by index, so the kernel must emit exactly one per segment.
+        if (result.SectionExtrema.Length != beam.Segments.Count)
+            throw new InvalidOperationException("The kernel must report one extrema set per beam segment.");
         SegmentExtrema = Array.AsReadOnly(result.SectionExtrema.Select(extrema => new BeamExtrema(extrema)).ToArray());
     }
 
@@ -40,7 +43,7 @@ public sealed class BeamSolution
     public BeamExtrema Extrema { get; }
 
     /// <summary>
-    /// The extrema within each beam segment, in segment order. They are found on the polynomial pieces of the
+    /// The extrema within each beam segment, in segment order; exactly one entry per <see cref="BeamModel.Segments"/> item. They are found on the polynomial pieces of the
     /// segment alone: at a segment boundary the inner side is used, so a boundary extremum belongs to both
     /// neighbours with the value of its own side.
     /// </summary>
