@@ -12,11 +12,13 @@ internal static class SolverKernel
         ImmutableArray<NormalizedReaction> normalized = BendingReactions.Calculate(state, context);
         BendingQuality quality = BendingOutputQuality.Evaluate(state, fields, system.EventStations, normalized, context);
         ImmutableArray<BendingPiece> pieces = quality.Pieces.Select(p => BendingPiece.Create(fields, p)).ToImmutableArray();
-        BendingExtrema extrema = BendingExtrema.Find(fields, pieces);
+        // Each piece is evaluated once; the global and the per-section searches offer the same candidates in order.
+        ImmutableArray<PieceExtremumCandidates> candidates =
+            pieces.Select(piece => BendingExtrema.Candidates(fields, piece)).ToImmutableArray();
+        BendingExtrema extrema = BendingExtrema.Find(candidates);
         // Boundaries are event stations, so every piece lies inside exactly one section; the comparison is exact.
-        ImmutableArray<BendingExtrema> sectionExtrema = input.Sections.Select(section => BendingExtrema.Find(fields,
-            pieces.Where(piece => piece.Start >= section.Start && piece.End <= section.End).ToImmutableArray()))
-            .ToImmutableArray();
+        ImmutableArray<BendingExtrema> sectionExtrema = input.Sections.Select(section => BendingExtrema.Find(
+            candidates.Where(c => c.Piece.Start >= section.Start && c.Piece.End <= section.End))).ToImmutableArray();
         ImmutableArray<BendingStation> stations = system.EventStations.Select(e =>
         {
             BendingJump jumps = BendingJump.None;

@@ -64,35 +64,43 @@ internal sealed record BendingPiece(double Start, double End, ImmutableArray<dou
 }
 
 internal readonly record struct BendingExtremum(double Position, FieldSide Side, VerifiedOutput Output);
+internal sealed record PieceExtremumCandidates(BendingPiece Piece, ImmutableArray<BendingExtremum> W,
+    ImmutableArray<BendingExtremum> V, ImmutableArray<BendingExtremum> M);
 internal sealed record BendingExtremumRange(BendingExtremum Minimum, BendingExtremum Maximum);
 internal sealed record BendingExtrema(BendingExtremumRange W, BendingExtremumRange V, BendingExtremumRange M)
 {
-    internal static BendingExtrema Find(BendingFields fields, ImmutableArray<BendingPiece> pieces)
+    internal static BendingExtrema Find(BendingFields fields, ImmutableArray<BendingPiece> pieces) =>
+        Find(pieces.Select(piece => Candidates(fields, piece)));
+
+    /// <summary>
+    /// Evaluates the extremum candidates of one piece: both endpoints and the interior roots of each component, in the
+    /// order they are offered to a range. The evaluation is the costly part and is shared by every search over the piece.
+    /// </summary>
+    internal static PieceExtremumCandidates Candidates(BendingFields fields, BendingPiece piece)
     {
-        var w = new Range();
-        var v = new Range();
-        var m = new Range();
-        foreach (BendingPiece piece in pieces)
+        var w = ImmutableArray.CreateBuilder<BendingExtremum>();
+        var v = ImmutableArray.CreateBuilder<BendingExtremum>();
+        var m = ImmutableArray.CreateBuilder<BendingExtremum>();
+        AddEndpoint(piece.Start, FieldSide.Right);
+        AddEndpoint(piece.End, FieldSide.Left);
+        if (!fields.IsUnloaded)
         {
-            AddEndpoint(piece.Start, FieldSide.Right);
-            AddEndpoint(piece.End, FieldSide.Left);
-            if (fields.IsUnloaded) continue;
             AddRoots(w, BendingComponent.W);
             AddRoots(v, BendingComponent.V);
             AddRoots(m, BendingComponent.M);
+        }
+        return new(piece, w.ToImmutable(), v.ToImmutable(), m.ToImmutable());
 
-            void AddRoots(Range range, BendingComponent component)
+        void AddRoots(ImmutableArray<BendingExtremum>.Builder candidates, BendingComponent component)
+        {
+            foreach (double t in piece.Candidates(component))
             {
-                foreach (double t in piece.Candidates(component))
-                {
-                    if (!(t > 0 && t < 1)) continue;
-                    var (x, side) = piece.CandidatePosition(t);
-                    BendingField field = fields.EvaluateAt(x, side);
-                    range.Add(new(x, side, field.Bending[(int)component]));
-                }
+                if (!(t > 0 && t < 1)) continue;
+                var (x, side) = piece.CandidatePosition(t);
+                BendingField field = fields.EvaluateAt(x, side);
+                candidates.Add(new(x, side, field.Bending[(int)component]));
             }
         }
-        return new(w.Result, v.Result, m.Result);
 
         void AddEndpoint(double x, FieldSide side)
         {
@@ -101,6 +109,24 @@ internal sealed record BendingExtrema(BendingExtremumRange W, BendingExtremumRan
             v.Add(new(x, side, field.Bending[3]));
             m.Add(new(x, side, field.Bending[2]));
         }
+    }
+
+    /// <summary>
+    /// The extrema over the given pieces, offered to each range in the given order. Ties are decided with a tolerance,
+    /// which is not transitive, so the order of the candidates is part of the result.
+    /// </summary>
+    internal static BendingExtrema Find(IEnumerable<PieceExtremumCandidates> pieces)
+    {
+        var w = new Range();
+        var v = new Range();
+        var m = new Range();
+        foreach (PieceExtremumCandidates piece in pieces)
+        {
+            foreach (BendingExtremum candidate in piece.W) w.Add(candidate);
+            foreach (BendingExtremum candidate in piece.V) v.Add(candidate);
+            foreach (BendingExtremum candidate in piece.M) m.Add(candidate);
+        }
+        return new(w.Result, v.Result, m.Result);
     }
 
     internal static bool Better(BendingExtremum candidate, BendingExtremum current, bool minimize)
