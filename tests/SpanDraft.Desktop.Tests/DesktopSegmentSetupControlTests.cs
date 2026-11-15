@@ -191,7 +191,7 @@ public sealed class DesktopSegmentSetupControlTests
     [Theory]
     [InlineData(3)]
     [InlineData(1)]
-    public void TheOverviewListsSegmentsAndNamesTheGoverningOneOnlyForSeveral(int segments)
+    public void TheOverviewListsEverySegmentAsABlockAndNamesTheGoverningOneOnlyForSeveral(int segments)
     {
         using var environment = new DesktopControlEnvironment();
         var setup = Setup(segments);
@@ -207,17 +207,22 @@ public sealed class DesktopSegmentSetupControlTests
         var block = overview.FindControl<Grid>("ProjectBlock")!;
         var row = overview.FindControl<Grid>("GoverningSegmentRow")!;
 
-        Assert.Equal(segments > 1, table.IsEffectivelyVisible);
+        // Every segment is a block, a single one included; only the governing indicator belongs to several.
+        Assert.True(table.IsEffectivelyVisible);
         Assert.Equal(segments > 1, row.IsEffectivelyVisible);
         Assert.Equal(segments, editor.Overview.Segments.Count);
+        var blocks = table.GetVisualDescendants().OfType<StackPanel>().Where(p => p.DataContext is ProjectOverviewSegment).ToArray();
+        Assert.Equal(segments, blocks.Length);
+        Assert.Equal(editor.Overview.Segments.Select(s => s.Title),
+            blocks.Select(b => b.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "SegmentBlockTitle").Text));
+        Assert.Equal(editor.Overview.Segments.Select(s => s.Description),
+            blocks.Select(b => b.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "SegmentBlockDescription").Text));
+        // Blocks stack without overlap and stay inside the overview block.
+        for (int i = 1; i < blocks.Length; i++)
+            Assert.True(blocks[i].TranslatePoint(default, window)!.Value.Y >= blocks[i - 1].TranslatePoint(default, window)!.Value.Y + blocks[i - 1].Bounds.Height - 0.5);
+        Assert.All(blocks, b => Assert.True(b.Bounds.Right <= block.Bounds.Width + 0.5));
         if (segments > 1)
         {
-            Assert.Equal(segments, table.GetVisualDescendants().OfType<Grid>().Count(g => g.DataContext is ProjectOverviewSegment));
-            var rows = table.GetVisualDescendants().OfType<Grid>().Where(g => g.DataContext is ProjectOverviewSegment).ToArray();
-            // Rows stack without overlap and stay inside the overview block.
-            for (int i = 1; i < rows.Length; i++)
-                Assert.True(rows[i].TranslatePoint(default, window)!.Value.Y >= rows[i - 1].TranslatePoint(default, window)!.Value.Y + rows[i - 1].Bounds.Height - 0.5);
-            Assert.All(rows, r => Assert.True(r.Bounds.Right <= block.Bounds.Width + 0.5));
             Assert.Equal((editor.Presentation.Result!.Engineering.GoverningSegmentIndex + 1).ToString(),
                 row.GetVisualDescendants().OfType<TextBlock>().Last().Text);
         }

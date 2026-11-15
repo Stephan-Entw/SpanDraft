@@ -374,6 +374,10 @@
   <Style Selector="controls|CoordinateAxisCanvas">
     <Setter Property="AxisBrush" Value="{DynamicResource AxisStroke}" />
   </Style>
+  <Style Selector="controls|SegmentRowPane">
+    <Setter Property="StrokeBrush" Value="{DynamicResource AxisStroke}" />
+    <Setter Property="LabelFontSize" Value="{DynamicResource BodySize}" />
+  </Style>
   <Style Selector="Menu">
     <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Border}" />

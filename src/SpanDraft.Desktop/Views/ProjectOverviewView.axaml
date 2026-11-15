@@ -64,14 +64,11 @@
       </Grid>
     </DataTemplate>
     <DataTemplate x:Key="SegmentRowTemplate" x:DataType="state:ProjectOverviewSegment">
-      <Grid Classes="overviewRow" ColumnDefinitions="20,*,Auto" RowDefinitions="Auto,Auto">
-        <controls:TechnicalTextBlock Text="{Binding Number}" Classes="bodyStrong" Grid.RowSpan="2" VerticalAlignment="Top" />
-        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Section}" Classes="bodyStrong"
-                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Section}" />
-        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Range}" Classes="number" />
-        <controls:TechnicalTextBlock Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Material}" Classes="secondary"
-                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Material}" />
-      </Grid>
+      <!-- A block per segment: its heading and one description that wraps like text and is never shortened. -->
+      <StackPanel x:Name="SegmentBlock" Spacing="2" Margin="0,4">
+        <controls:TechnicalTextBlock x:Name="SegmentBlockTitle" Text="{Binding Title}" Classes="bodyStrong" />
+        <controls:TechnicalTextBlock x:Name="SegmentBlockDescription" Text="{Binding Description}" Classes="secondary" TextWrapping="Wrap" />
+      </StackPanel>
     </DataTemplate>
     <DataTemplate x:Key="ReactionRowTemplate" x:DataType="state:ProjectOverviewReaction">
       <Grid Classes="overviewRow" ColumnDefinitions="64,*,*,*">
@@ -145,14 +142,8 @@
       <StackPanel Margin="{DynamicResource Padding16}" Spacing="{StaticResource Space4}">
         <Grid x:Name="ProjectBlock" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space4}">
           <TextBlock Text="{x:Static resources:Strings.BeamModel}" Classes="sectionTitle" />
-          <ItemsControl x:Name="SegmentTable" Grid.Row="1" Margin="0,4" ItemsSource="{Binding Overview.Segments}"
-                        ItemTemplate="{StaticResource SegmentRowTemplate}" IsVisible="{Binding Overview.HasSeveralSegments}" />
-          <StackPanel Grid.Row="1" Spacing="{StaticResource Space4}" Margin="0,4" IsVisible="{Binding !Overview.HasSeveralSegments}">
-            <controls:TechnicalTextBlock Text="{Binding Overview.Section}" Classes="bodyStrong" />
-            <controls:TechnicalTextBlock x:Name="MaterialDescription" Classes="secondary" Text="{Binding Overview.Material}"
-                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Overview.Material}"
-                       AutomationProperties.Name="{Binding Overview.Material}" />
-          </StackPanel>
+          <ItemsControl x:Name="SegmentTable" Grid.Row="1" ItemsSource="{Binding Overview.Segments}"
+                        ItemTemplate="{StaticResource SegmentRowTemplate}" />
         </Grid>
         <StackPanel x:Name="SupportsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.HasSupports}">
           <Border Classes="overviewSeparator" />

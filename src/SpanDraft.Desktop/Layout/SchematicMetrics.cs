@@ -56,6 +56,8 @@ public static class SchematicMetrics
     public const double AxisLabelPadding = 8;
     public const double AxisBaseHeight = 24;
     public const double AxisLabelLineHeight = 16;
+    // The fixed band of the segment row: one label line and the line with its end strokes. It is independent of the labels.
+    public const double SegmentRowHeight = AxisLabelLineHeight + 12;
     public const double AxisVerticalPadding = 8;
 
     /// <summary>Total neutral fill opacity for the number of UDLs covering a screen interval.</summary>

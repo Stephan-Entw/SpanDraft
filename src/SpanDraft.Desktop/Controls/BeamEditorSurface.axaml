@@ -8,7 +8,7 @@
              PointerMoved="SurfacePointerMoved" PointerPressed="SurfacePointerPressed"
              PointerReleased="SurfacePointerReleased" PointerExited="SurfacePointerExited"
              PointerCaptureLost="SurfaceCaptureLost" KeyDown="SurfaceKeyDown">
-  <Grid RowDefinitions="*,Auto" Background="{DynamicResource CanvasBackground}">
+  <Grid RowDefinitions="*,Auto,Auto" Background="{DynamicResource CanvasBackground}">
     <Grid x:Name="BeamPane" SizeChanged="SurfaceSizeChanged">
       <controls:BeamCanvas x:Name="TechnicalCanvas"
                            HighlightedLoadId="{Binding HoveredLoadId}" HighlightedSupportId="{Binding HoveredSupportId}" HighlightedMomentReleaseId="{Binding HoveredMomentReleaseId}"
@@ -37,7 +37,9 @@
                    Background="{DynamicResource CanvasBackground}" />
       </Canvas>
     </Grid>
-    <controls:CoordinateAxisPane x:Name="CoordinateAxis" Grid.Row="1" />
+    <!-- A fixed band of its own between the beam and the axis, only for several segments: it never takes room from the beam. -->
+    <controls:SegmentRowPane x:Name="SegmentRow" Grid.Row="1" IsVisible="False" />
+    <controls:CoordinateAxisPane x:Name="CoordinateAxis" Grid.Row="2" />
     <Popup x:Name="SupportPopup" PlacementTarget="{Binding #SupportAnchor}" Placement="Bottom"
            IsLightDismissEnabled="False"
            ShouldUseOverlayLayer="True" Closed="SupportPopupClosed">

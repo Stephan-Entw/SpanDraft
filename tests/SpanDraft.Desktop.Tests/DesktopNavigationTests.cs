@@ -412,30 +412,27 @@ public sealed class DesktopNavigationTests
         Assert.True(overview.FindControl<StackPanel>("IndicatorsPanel")!.IsVisible);
         Assert.False(overview.FindControl<TextBlock>("AnalysisStatus")!.IsVisible);
         AssertTables(overview);
-        Assert.True(overview.FindControl<Grid>("ProjectBlock")!.Bounds.Height < 100);
         var projectText = overview.FindControl<Grid>("ProjectBlock")!.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text);
         Assert.Contains(culture == "de-DE" ? "Balkenmodell" : "Beam model", projectText);
-        var materialDescription = overview.FindControl<TextBlock>("MaterialDescription")!;
+        // The one segment is a block of its own: its heading and one description that wraps like text and is never shortened.
+        var title = overview.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "SegmentBlockTitle");
+        var materialDescription = overview.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "SegmentBlockDescription");
+        Assert.Equal(Strings.SegmentSelected.Replace("{0}", "1"), title.Text);
         Assert.Equal(material.Name + " (1.4567) · UNS Example · AISI Shop", model.Editor.Overview.Material);
-        Assert.Equal(model.Editor.Overview.Material, materialDescription.Text);
-        Assert.Equal(materialDescription.Text, ToolTip.GetTip(materialDescription));
-        Assert.Equal(materialDescription.Text, AutomationProperties.GetName(materialDescription));
-        Assert.Single(materialDescription.TextLayout.TextLines);
-        Assert.Equal(TextTrimming.CharacterEllipsis, materialDescription.TextTrimming);
-        Assert.True(materialDescription.TextLayout.TextLines[0].HasCollapsed);
+        Assert.Equal(model.Editor.Overview.Segments[0].Section + " · " + model.Editor.Overview.Material, materialDescription.Text);
+        Assert.Equal(TextWrapping.Wrap, materialDescription.TextWrapping);
+        Assert.Equal(TextTrimming.None, materialDescription.TextTrimming);
+        Assert.True(materialDescription.TextLayout.TextLines.Count > 1);
+        Assert.All(materialDescription.TextLayout.TextLines, line => Assert.False(line.HasCollapsed));
+        Assert.True(materialDescription.Bounds.Height >= materialDescription.TextLayout.Height);
         Assert.True(overviewScroll.Extent.Width <= overviewScroll.Viewport.Width);
         var materialBounds = new Rect(materialDescription.TranslatePoint(default, overview)!.Value, materialDescription.Bounds.Size);
         Assert.True(new Rect(overview.Bounds.Size).Contains(materialBounds));
         var projectBlock = overview.FindControl<Grid>("ProjectBlock")!;
         Assert.Empty(projectBlock.GetVisualDescendants().OfType<Button>());
         Assert.Empty(projectBlock.ColumnDefinitions);
-        var projectDetails = Assert.Single(projectBlock.Children.OfType<StackPanel>());
-        Assert.Equal(projectBlock.Bounds.Width, projectDetails.Bounds.Width);
-        Assert.All(projectDetails.Children, text =>
-        {
-            Assert.Equal(0, text.Bounds.Left);
-            Assert.Equal(projectDetails.Bounds.Width, text.Bounds.Width);
-        });
+        // The block uses the full width of the side bar: there is no position column.
+        Assert.True(materialDescription.TranslatePoint(new Point(materialDescription.Bounds.Width, 0), projectBlock)!.Value.X >= projectBlock.Bounds.Width - 1);
         Assert.DoesNotContain(overview.GetVisualDescendants().OfType<TextBlock>(),
             t => t.Text == Strings.Section || t.Text == Strings.Material);
         // Dense annotations increase the model's existing minimum height and overflow vertically.

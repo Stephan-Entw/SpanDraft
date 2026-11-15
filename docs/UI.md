@@ -88,6 +88,20 @@ Ersetzen der Liste seine Auswahl verwirft und neu anbietet, was als Eingabe des 
 würde und die Bindung zurücknähme. Grenzen lassen sich nicht im Balkenbild ziehen; die Abbildung liefert
 nur die dünnen Querstriche.
 
+## Abschnittszeile und Balkenmodell
+
+Die Balkengrafik trägt keine Abschnittsbeschriftung; die Zuordnung der Bereiche zu den Abschnitten steht in einer
+eigenen Zeile zwischen Balken und x-Achse. Sie bleibt von der Achse getrennt, weil die Achse ausschließlich globale
+Koordinaten und die Einheit zeigt und die Zeile ausschließlich Namen. Ihre Grenzen sind die Stationen des
+vorhandenen Layouts, in einer schematischen Darstellung ebenso: Ein Label darf die Balkengeometrie nie verändern, also
+fordert die Zeile weder Mindestbreiten noch Verzerrung. Stattdessen wählt jeder Abschnitt die ausführlichste Beschriftung,
+die ohne Umbruch passt (Querschnitt mit Werkstoff, „Abschnitt n“, „n“), und bei einem zu schmalen Abschnitt entfällt sie.
+Die Zeile hat ein festes Band und nimmt dem Balken keinen Platz; bei einem Abschnitt gibt es sie nicht.
+
+Das Balkenmodell der Übersicht zeigt jeden Abschnitt, auch einen einzelnen, als Block aus „Abschnitt n“ und einer
+Beschreibung, die umbricht, statt zu kürzen: Wer das Modell prüft, muss die vollständige technische Angabe sehen.
+Beide Orte beziehen ihre Namen aus derselben Quelle, damit „Abschnitt 2“ im Bild und in der Leiste dasselbe meint.
+
 ## Streckenlast-Draft
 
 Eine Streckenlast hat zwei Randintensitäten, meistens aber ist sie konstant. Der

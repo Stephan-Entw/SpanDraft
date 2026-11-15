@@ -8,7 +8,14 @@ using SpanDraft.Reporting.Notation;
 namespace SpanDraft.Desktop.State;
 
 /// <summary>One beam segment of the overview: its range in the display length unit, section, material and bending axis.</summary>
-public sealed record ProjectOverviewSegment(int Number, string Range, string Section, string Material, string Axis);
+public sealed record ProjectOverviewSegment(int Number, string Range, string Section, string Material, string Axis)
+{
+    /// <summary>"Abschnitt n", the heading of the segment's block.</summary>
+    public string Title => SegmentLabels.Title(Number);
+
+    /// <summary>The section and material as one description that may wrap but is never shortened.</summary>
+    public string Description => SegmentLabels.Description(Section, Material);
+}
 
 public sealed record ProjectOverviewItem(Guid Id, string Name, string Type, string Value, string Position);
 /// <summary>
@@ -36,7 +43,7 @@ public sealed class ProjectOverviewState
         {
             var (start, end) = document.SegmentRange(index);
             return new ProjectOverviewSegment(index + 1, Position(start) + "…" + Position(end),
-                segment.SectionDisplayName ?? SectionDisplay.Name(segment.Section, analysis.Options),
+                SegmentLabels.SectionName(segment, analysis.Options),
                 MaterialDisplay.Format(segment.Material), segment.BendingAxis.ToString().ToLowerInvariant());
         }).ToArray());
         // The single-segment summary; a beam of several segments is described by Segments only.

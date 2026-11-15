@@ -211,6 +211,7 @@ public partial class BeamEditorSurface : UserControl
         if (_editor is null)
         {
             ProbeMarker.IsVisible = ProbePoint.IsVisible = ProbeBox.IsVisible = false;
+            SegmentRow.Hide();
             SetAndRaise(StationLayoutProperty, ref _stationLayout, null);
             return;
         }
@@ -227,6 +228,7 @@ public partial class BeamEditorSurface : UserControl
             if (frame is null)
             {
                 ProbeMarker.IsVisible = ProbePoint.IsVisible = ProbeBox.IsVisible = false;
+                SegmentRow.Hide();
                 SetAndRaise(StationLayoutProperty, ref _stationLayout, null);
                 return;
             }
@@ -257,6 +259,7 @@ public partial class BeamEditorSurface : UserControl
                 releaseName: _editor.MomentReleasePreviewName);
             TechnicalCanvas.Scene = _scene;
             CoordinateAxis.SetStationLayout(frame.Layout, frame.Viewport.Width);
+            SegmentRow.Update(frame.Layout, _editor.Document, _editor.ResultPresentation);
             SetAndRaise(StationLayoutProperty, ref _stationLayout, frame.Layout);
             double x = (_editor.Preview?.Position ?? _editor.LoadPreview?.Position
                 ?? _editor.DistributedPointerPosition ?? _editor.DistributedLoadPreview?.EndPosition
@@ -309,7 +312,8 @@ public partial class BeamEditorSurface : UserControl
 
     private void SurfaceSizeChanged(object? sender, SizeChangedEventArgs e) => SynchronizeVisuals();
     private bool OverOverlay(object? source) => source is Control control
-        && (control == CoordinateAxis || control.GetVisualAncestors().Contains(CoordinateAxis));
+        && (control == CoordinateAxis || control.GetVisualAncestors().Contains(CoordinateAxis)
+            || control == SegmentRow);
     private Length? SnapPlacement(Point point) => Frame is { } frame
         ? SupportSnap.Placement(frame.Layout.Transform, frame.Viewport.BeamY, point.X, point.Y) : null;
 
