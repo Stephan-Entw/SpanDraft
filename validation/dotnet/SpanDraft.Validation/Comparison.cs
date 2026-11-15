@@ -184,10 +184,10 @@ public static class Comparison
         reference.InputSha256 == "7c0512a80cc6e2122db82f774e3fb59b87ebcc667a8e3579bdf31aaf02e46d48" &&
         ext.LocationStatus == "notComparable" && ext.LocationNote == V14LocationNote;
 
-    private static string PythonLockHash() => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(
-        File.ReadAllBytes(Path.Combine(Catalog.Root,"validation","python","requirements.txt"))));
-
-    private static string PythonSourcesHash()
+    // The Python lock and adapter sources are fixed for the process; hashing them once serves every comparison.
+    private static readonly Lazy<string> PythonLock = new(() => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(
+        File.ReadAllBytes(Path.Combine(Catalog.Root,"validation","python","requirements.txt")))), LazyThreadSafetyMode.PublicationOnly);
+    private static readonly Lazy<string> PythonSources = new(() =>
     {
         using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
         foreach (string path in Directory.GetFiles(Path.Combine(Catalog.Root,"validation","python"),"*.py").Order(StringComparer.Ordinal))
@@ -196,7 +196,9 @@ public static class Comparison
             hash.AppendData(File.ReadAllBytes(path));
         }
         return Convert.ToHexStringLower(hash.GetHashAndReset());
-    }
+    }, LazyThreadSafetyMode.PublicationOnly);
+    private static string PythonLockHash() => PythonLock.Value;
+    private static string PythonSourcesHash() => PythonSources.Value;
 
     private static void CheckConvergence(ReferenceData reference, CheckReport report)
     {

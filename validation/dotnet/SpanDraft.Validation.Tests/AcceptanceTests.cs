@@ -10,7 +10,7 @@ public class AcceptanceTests
         Catalog.ExternalSolversFor(id).Concat(Catalog.AnalyticalIds.Contains(id) ? new[] { "analytical" } : [])
             .Select(s => new object[] {id,s}));
     public static IEnumerable<object[]> Transformations => Catalog.CaseIds.SelectMany(id =>
-        new[] { "load2", "load-1", "E2", "I2", "zeroNode" }.Select(op => new object[] {id,op}));
+        Physics.MetamorphicOperations.Select(op => new object[] {id,op}));
     public static IEnumerable<object[]> Superpositions => Physics.SuperpositionIds.Select(id => new object[] {id});
     private static void Pass(CheckReport report) => Assert.True(report.Status == "PASS", System.Text.Json.JsonSerializer.Serialize(report.Failures,Catalog.Json));
 
@@ -60,6 +60,19 @@ public class AcceptanceTests
 
     [Theory, MemberData(nameof(Superpositions))]
     public void IndependentLoadGroupsSuperpose(string id) => Pass(Physics.Superposition(Catalog.Load(id)));
+
+    [Theory, MemberData(nameof(Superpositions))]
+    public void SuperpositionGroupsDoNotShareLoads(string id)
+    {
+        var input = Catalog.Load(id);
+        var (a, b) = Physics.SplitLoads(input);
+        if (id is "V04" or "V09" or "V13" || Catalog.LinearLoadIds.Contains(id)) return; // groups defined explicitly per case
+        // Every other case separates the point loads and moments from the distributed loads, each load exactly once.
+        Assert.Equal(input.PointForces.Length + input.PointMoments.Length, a.PointForces.Length + a.PointMoments.Length + b.PointForces.Length + b.PointMoments.Length);
+        Assert.Equal(input.Udls.Length + input.LineLoads.Length, a.Udls.Length + a.LineLoads.Length + b.Udls.Length + b.LineLoads.Length);
+        Assert.Empty(a.Udls); Assert.Empty(a.LineLoads);
+        Assert.Empty(b.PointForces); Assert.Empty(b.PointMoments);
+    }
 
     [Fact]
     public void CatalogAndReferenceInventoryIsComplete()
@@ -255,6 +268,49 @@ public class AcceptanceTests
         }
         Assert.False(Acceptance.IsCurrentExport(exported));
         Assert.Throws<InvalidDataException>(() => Acceptance.Run(exported: exported));
+    }
+
+    [Fact]
+    public void ImportedExportIsCheckedForEquilibriumOnItsOwnReactions()
+    {
+        var input = Catalog.Load("V01");
+        var solution = ValidationCase.Solve(input);
+        var exported = Results.Export(input, solution);
+        Pass(Acceptance.Equilibrium(input, solution, exported));
+        exported.Reactions[0].Values["Ry"] += 1;
+        var report = Acceptance.Equilibrium(input, solution, exported);
+        Assert.Equal("FAIL", report.Status);
+        Assert.Contains(report.Failures, f => f.Quantity == "sumFy");
+        Pass(Acceptance.Equilibrium(input, solution, null));
+    }
+
+    [Theory]
+    [InlineData("/work/validation/references/V01.pycba.json", "/work/validation/references", true)]
+    [InlineData("/work/validation/references/sub/x.json", "/work/validation/references/", true)]
+    [InlineData("/work/validation/References/V01.pycba.json", "/work/validation/references", true)]
+    [InlineData("/work/validation/references/../results/run.json", "/work/validation/references", false)]
+    [InlineData("/work/validation/references-x/run.json", "/work/validation/references", false)]
+    [InlineData("/work/validation/references", "/work/validation/references", false)]
+    public void GoldenReferenceDirectoryIsProtectedFromGeneratedFiles(string path, string directory, bool inside) =>
+        Assert.Equal(inside, PathGuard.IsInside(path, directory));
+
+    [Fact]
+    public void ReferenceEquilibriumToleratesMissingAvailabilityEntries()
+    {
+        var input = Catalog.Load("V01");
+        var reference = Catalog.ReadReference("V01","pycba");
+        reference.Availability.Remove("Rx");
+        Pass(Physics.ReferenceEquilibrium(input,reference));
+    }
+
+    [Fact]
+    public void ChangedReactionRestraintFailsInsteadOfThrowing()
+    {
+        var input = Catalog.Load("V01");
+        var clamped = input with { Supports = [new(0,"Fixed"), input.Supports[1]] };
+        var report = Physics.CompareSolutions(input, ValidationCase.Solve(clamped), [(ValidationCase.Solve(input),1.0)], _ => 1, "restraint");
+        Assert.Equal("FAIL", report.Status);
+        Assert.Contains(report.Failures, f => f.Reason == "Reaction restraint changed");
     }
 
     [Fact]

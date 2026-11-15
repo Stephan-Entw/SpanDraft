@@ -2,5 +2,6 @@
   <ItemGroup>
     <ProjectReference Include="../../../src/SpanDraft.Core/SpanDraft.Core.csproj" />
     <ProjectReference Include="../../../src/SpanDraft.Solver/SpanDraft.Solver.csproj" />
+    <InternalsVisibleTo Include="SpanDraft.Validation.Tests" />
   </ItemGroup>
 </Project>

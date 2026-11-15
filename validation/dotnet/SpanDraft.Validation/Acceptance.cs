@@ -1,3 +1,5 @@
+using SpanDraft.Solver;
+
 namespace SpanDraft.Validation;
 
 public sealed record CaseAcceptance(string CaseId, string Status, CheckReport[] References,
@@ -45,8 +47,11 @@ public static class Acceptance
                 try
                 {
                     var reference = Catalog.ReadReference(id, provider, references);
-                    referenceChecks.Add(Comparison.Compare(input, actual, reference, provider));
-                    referenceEquilibria.Add(Physics.ReferenceEquilibrium(input, reference));
+                    // Build both before adding either: a failure of the second must not leave the first behind.
+                    var comparison = Comparison.Compare(input, actual, reference, provider);
+                    var referenceEquilibrium = Physics.ReferenceEquilibrium(input, reference);
+                    referenceChecks.Add(comparison);
+                    referenceEquilibria.Add(referenceEquilibrium);
                 }
                 catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or InvalidOperationException or KeyNotFoundException)
                 {
@@ -55,11 +60,11 @@ public static class Acceptance
                     referenceChecks.Add(failed);
                 }
             }
-            var equilibrium = Physics.Equilibrium(input, solution);
+            var equilibrium = Equilibrium(input, solution, exported is null ? null : actual);
             var fields = Physics.Fields(input, solution);
-            var metamorphic = new[] { "load2", "load-1", "E2", "I2", "zeroNode" }.Select(op => Physics.Metamorphic(input,op)).ToList();
-            if (Physics.RigidLimitIds.Contains(id)) metamorphic.Add(Physics.Metamorphic(input, "rigidLimit"));
-            if (Physics.SuperpositionIds.Contains(id)) metamorphic.Add(Physics.Superposition(input));
+            var metamorphic = Physics.MetamorphicOperations.Select(op => Physics.Metamorphic(input,op,solution)).ToList();
+            if (Physics.RigidLimitIds.Contains(id)) metamorphic.Add(Physics.Metamorphic(input, "rigidLimit", solution));
+            if (Physics.SuperpositionIds.Contains(id)) metamorphic.Add(Physics.Superposition(input, solution));
             var all = referenceChecks.Concat(referenceEquilibria).Concat(metamorphic).Append(equilibrium).Append(fields).ToArray();
             string status = all.Any(r => r.Status == "FAIL") ? "FAIL" : all.Any(r => r.Status == "PARTIAL") ? "PARTIAL" : "PASS";
             results.Add(new(id,status,referenceChecks.ToArray(),equilibrium,fields,metamorphic.ToArray(),referenceEquilibria.ToArray()));
@@ -74,6 +79,14 @@ public static class Acceptance
             results.Sum(c => c.References.Sum(r => r.NotApplicable.Count)),
             results.All(c => c.Status == "PASS"), results.ToArray());
     }
+
+    /// <summary>
+    /// Global equilibrium of the SpanDraft result. An imported export is checked on its own published reactions;
+    /// fields and metamorphic relations stay on the current solver, which <see cref="IsCurrentExport"/> ties to the
+    /// export through the solver source hash.
+    /// </summary>
+    public static CheckReport Equilibrium(ValidationCase input, BeamSolution solution, ReferenceData? imported) =>
+        imported is null ? Physics.Equilibrium(input, solution) : Physics.ReferenceEquilibrium(input, imported, strict: true);
 
     public static string SolverHash()
     {

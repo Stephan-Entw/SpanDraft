@@ -11,10 +11,18 @@ try
         if (index+1 >= args.Length) throw new ArgumentException("Missing value for " + name);
         return Path.GetFullPath(args[index+1]);
     }
+    // Neither an export nor a report may land in the golden references, default or custom.
+    void RejectGoldenTarget(string path)
+    {
+        string[] golden = [Path.Combine(Catalog.Root,"validation","references"), ..(Option("--references") is { } custom ? new[] { custom } : [])];
+        if (golden.Any(directory => PathGuard.IsInside(path,directory)))
+            throw new ArgumentException("Reports must not overwrite golden references");
+    }
     switch (command)
     {
         case "export":
             string exportPath = Option("--output") ?? Path.Combine(Catalog.Root,"validation","results","spandraft.json");
+            RejectGoldenTarget(exportPath);
             Directory.CreateDirectory(Path.GetDirectoryName(exportPath)!);
             string solverHash = Acceptance.SolverHash();
             File.WriteAllText(exportPath,JsonSerializer.Serialize(Catalog.CaseIds.Select(id => Results.Export(Catalog.Load(id), solverHash: solverHash)).ToArray(),Catalog.Json)+"\n");
@@ -24,10 +32,9 @@ try
             string? actualPath = Option("--actual");
             var actual = actualPath is null ? null : JsonSerializer.Deserialize<ReferenceData[]>(File.ReadAllText(actualPath),Catalog.Json)
                 ?? throw new InvalidDataException("Stale/incomplete SpanDraft export");
-            var report = Acceptance.Run(Option("--references"),actual);
             string reportPath = Option("--report") ?? Path.Combine(Catalog.Root,"validation","results","run-report.json");
-            if (reportPath.StartsWith(Path.Combine(Catalog.Root,"validation","references")+Path.DirectorySeparatorChar,StringComparison.Ordinal))
-                throw new ArgumentException("Reports must not overwrite golden references");
+            RejectGoldenTarget(reportPath);
+            var report = Acceptance.Run(Option("--references"),actual);
             Directory.CreateDirectory(Path.GetDirectoryName(reportPath)!);
             File.WriteAllText(reportPath,JsonSerializer.Serialize(report,Catalog.Json)+"\n");
             foreach (var c in report.Results) Console.WriteLine($"{c.CaseId}: {c.Status}; "+string.Join(", ",c.References.Select(r => $"{r.ReferenceSolver}={r.Status}")));

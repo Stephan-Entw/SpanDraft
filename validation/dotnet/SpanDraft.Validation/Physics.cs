@@ -25,8 +25,10 @@ public static class Physics
         return report;
     }
 
-    public static CheckReport ReferenceEquilibrium(ValidationCase input, ReferenceData reference)
+    /// <summary>Global equilibrium of the published reactions; strict applies the SpanDraft tolerances instead of the external ones.</summary>
+    public static CheckReport ReferenceEquilibrium(ValidationCase input, ReferenceData reference, bool strict = false)
     {
+        Tolerance forceTol = strict ? Strict("Ry") : Comparison.Force, momentTol = strict ? Strict("Rm") : Comparison.Moment;
         var report = new CheckReport(input.CaseId, reference.Solver+" equilibrium");
         double horizontal = 0, vertical = 0, moment = 0;
         foreach (var node in reference.Reactions)
@@ -37,9 +39,9 @@ public static class Physics
             moment += ry*node.Position + node.Values.GetValueOrDefault("Rm");
         }
         AddLoads(input, ref vertical, ref moment);
-        if (reference.Availability["Rx"] == "supported") report.Number("sumFx", horizontal, 0, Comparison.Force);
-        report.Number("sumFy", vertical, 0, Comparison.Force);
-        report.Number("sumMoment0", moment, 0, Comparison.Moment);
+        if (reference.Availability.GetValueOrDefault("Rx") == "supported") report.Number("sumFx", horizontal, 0, forceTol);
+        report.Number("sumFy", vertical, 0, forceTol);
+        report.Number("sumMoment0", moment, 0, momentTol);
         return report;
     }
 
@@ -76,7 +78,9 @@ public static class Physics
         {
             var before = solution.EvaluateAt(M(x), EvaluationSide.Left);
             var after = solution.EvaluateAt(M(x), EvaluationSide.Right);
-            var node = solution.Nodes.Single(n => n.Position.Meters == x);
+            var node = solution.Nodes.SingleOrDefault(n => n.Position.Meters == x);
+            report.Require(node is not null, $"No node at the event position {x}");
+            if (node is null) continue;
             double force = input.PointForces.Where(p => p.Position == x).Sum(p => p.Value) + (node.ReactionY?.Newtons ?? 0);
             double couple = input.PointMoments.Where(p => p.Position == x).Sum(p => p.Value) + (node.ReactionMoment?.NewtonMeters ?? 0);
             report.Number("V jump", after.ShearForce.Newtons-before.ShearForce.Newtons, force, Strict("V"), x, "Right-Left");
@@ -138,9 +142,10 @@ public static class Physics
         return report;
     }
 
-    public static CheckReport Metamorphic(ValidationCase input, string operation)
+    /// <param name="original">The solution of <paramref name="input"/> when the caller already has it.</param>
+    public static CheckReport Metamorphic(ValidationCase input, string operation, BeamSolution? original = null)
     {
-        var original = Solve(input);
+        original ??= Solve(input);
         ValidationCase transformed;
         Func<string, double> scale;
         switch (operation)
@@ -176,43 +181,40 @@ public static class Physics
         return report;
     }
 
+    /// <summary>The transformations applied to every case; "rigidLimit" is added for <see cref="RigidLimitIds"/>.</summary>
+    public static readonly string[] MetamorphicOperations = ["load2", "load-1", "E2", "I2", "zeroNode"];
     public static readonly string[] SuperpositionIds = ["V04", "V08", "V09", "V11", "V13", "V15", "V16", "V17", "V18", "V19",
         "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27", "V28", "V30", "V31", "V32", "V33", "V34", "V35", "V36", "V37"];
     public static readonly string[] RigidLimitIds = ["V24"];
-    public static CheckReport Superposition(ValidationCase input)
+    /// <summary>
+    /// Two load groups whose union is the combined load. Most cases split the point loads and moments from the
+    /// distributed loads; V04 and V09 add a load of the other kind to the original, V13 separates its two UDLs and a
+    /// linear load is its constant part plus the triangle of its rise.
+    /// </summary>
+    public static (ValidationCase A, ValidationCase B) SplitLoads(ValidationCase input)
     {
-        ValidationCase a, b;
         if (input.CaseId == "V13")
-        {
-            a = input with { Udls = [input.Udls[0]] };
-            b = input with { Udls = [input.Udls[1]] };
-        }
-        else if (Catalog.LinearLoadIds.Contains(input.CaseId))
-        {
+            return (input with { Udls = [input.Udls[0]] }, input with { Udls = [input.Udls[1]] });
+        if (Catalog.LinearLoadIds.Contains(input.CaseId))
             // A linear load is its constant part at the start intensity plus the triangle of the rise.
-            a = input with { LineLoads = [], Udls = [..input.Udls, ..input.LineLoads.Select(q => new UdlInput(q.Start, q.End, q.StartValue))] };
-            b = input with { PointForces = [], PointMoments = [], Udls = [],
-                LineLoads = input.LineLoads.Select(q => q with { StartValue = 0, EndValue = q.EndValue-q.StartValue }).ToArray() };
-        }
-        else if (input.CaseId == "V04")
-        {
-            a = input;
-            b = input with { Udls = [], PointForces = [new(0.41*input.Length,-150)] };
-        }
-        else if (input.CaseId == "V09")
-        {
-            a = input;
-            b = input with { PointForces = [], Udls = [new(0,3,-100)] };
-        }
-        else
-        {
-            a = input with { Udls = [] };
-            b = input with { PointForces = [], PointMoments = [] };
-        }
+            return (input with { LineLoads = [], Udls = [..input.Udls, ..input.LineLoads.Select(q => new UdlInput(q.Start, q.End, q.StartValue))] },
+                input with { PointForces = [], PointMoments = [], Udls = [],
+                    LineLoads = input.LineLoads.Select(q => q with { StartValue = 0, EndValue = q.EndValue-q.StartValue }).ToArray() });
+        if (input.CaseId == "V04")
+            return (input, input with { Udls = [], PointForces = [new(0.41*input.Length,-150)] });
+        if (input.CaseId == "V09")
+            return (input, input with { PointForces = [], Udls = [new(0,3,-100)] });
+        return (input with { Udls = [], LineLoads = [] }, input with { PointForces = [], PointMoments = [] });
+    }
+
+    /// <param name="original">The solution of <paramref name="input"/> when the caller already has it.</param>
+    public static CheckReport Superposition(ValidationCase input, BeamSolution? original = null)
+    {
+        var (a, b) = SplitLoads(input);
         var combined = input with { PointForces = [..a.PointForces,..b.PointForces],
             PointMoments = [..a.PointMoments,..b.PointMoments], Udls = [..a.Udls,..b.Udls],
             LineLoads = [..a.LineLoads,..b.LineLoads] };
-        return CompareSolutions(input, Solve(combined), [(Solve(a),1.0),(Solve(b),1.0)], _ => 1, "superposition");
+        return CompareSolutions(input, Solve(combined), [(ReferenceEquals(a,input) ? original ?? Solve(a) : Solve(a),1.0),(ReferenceEquals(b,input) ? original ?? Solve(b) : Solve(b),1.0)], _ => 1, "superposition");
     }
 
     /// <summary>Twice the 10⁻⁸ output contract against the largest value of each quantity, plus the strict relative part.</summary>
@@ -232,7 +234,7 @@ public static class Physics
         return q => new Tolerance(Math.Max(Strict(q).AbsTol, 2e-8 * largest.GetValueOrDefault(q)), 1e-9);
     }
 
-    private static CheckReport CompareSolutions(ValidationCase input, BeamSolution actual,
+    internal static CheckReport CompareSolutions(ValidationCase input, BeamSolution actual,
         (BeamSolution Solution, double Weight)[] expected, Func<string,double> scale, string operation,
         Func<string, Tolerance>? tolerance = null)
     {
@@ -240,13 +242,17 @@ public static class Physics
         var report = new CheckReport(input.CaseId, operation);
         foreach (SupportInput support in input.Supports)
         {
-            var observed = actual.Nodes.Single(n => n.Position.Meters == support.Position);
+            var observed = actual.Nodes.SingleOrDefault(n => n.Position.Meters == support.Position);
+            var expectedNodes = expected.Select(e => e.Solution.Nodes.SingleOrDefault(n => n.Position.Meters == support.Position)).ToArray();
+            report.Require(observed is not null && expectedNodes.All(n => n is not null), $"No node at the support position {support.Position}");
+            if (observed is null || expectedNodes.Any(n => n is null)) continue;
             foreach (string q in new[] { "Rx", "Ry", "Rm" })
             {
                 double? value = Reaction(observed,q);
-                double?[] components = expected.Select(e => Reaction(e.Solution.Nodes.Single(n => n.Position.Meters == support.Position),q)).ToArray();
-                report.Require(components.All(v => v.HasValue == value.HasValue), "Reaction restraint changed");
-                if (value.HasValue) report.Number(q, value.Value, components.Select((v,i) => v!.Value*expected[i].Weight).Sum()*scale(q), tolerance(q), support.Position);
+                double?[] components = expectedNodes.Select(n => Reaction(n!,q)).ToArray();
+                bool same = components.All(v => v.HasValue == value.HasValue);
+                report.Require(same, "Reaction restraint changed");
+                if (same && value.HasValue) report.Number(q, value.Value, components.Select((v,i) => v!.Value*expected[i].Weight).Sum()*scale(q), tolerance(q), support.Position);
             }
         }
         foreach (var evaluation in input.Evaluations)

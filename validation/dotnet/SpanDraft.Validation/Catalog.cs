@@ -149,7 +149,9 @@ public static class Catalog
         _ => ExternalSolvers
     };
     public static readonly string[] Quantities = ["Rx", "Ry", "Rm", "u", "w", "theta", "N", "V", "M"];
-    public static string Root => FindRoot();
+    // The checkout does not move during a run; PublicationOnly does not cache a failed lookup.
+    private static readonly Lazy<string> RootDirectory = new(FindRoot, LazyThreadSafetyMode.PublicationOnly);
+    public static string Root => RootDirectory.Value;
 
     private static string FindRoot()
     {
@@ -160,7 +162,9 @@ public static class Catalog
     }
 
     public static string CasePath(string id) => Path.Combine(Root, "validation", "cases", id + ".json");
-    public static string Hash(string id) => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(CasePath(id))));
+    // Case files are committed inputs and do not change during a run.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> Hashes = new();
+    public static string Hash(string id) => Hashes.GetOrAdd(id, key => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(CasePath(key)))));
     public static ValidationCase Load(string id)
     {
         ValidationCase input = JsonSerializer.Deserialize<ValidationCase>(File.ReadAllText(CasePath(id)), Json)
