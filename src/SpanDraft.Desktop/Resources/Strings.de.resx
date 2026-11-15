@@ -232,7 +232,7 @@
   <data name="DeleteSectionQuestion" xml:space="preserve"><value>„{0}“ aus Ihrer Querschnittsbibliothek löschen? Bestehende Projekte bleiben unverändert.</value></data>
   <data name="SectionDefinitionDeleteLibrary" xml:space="preserve"><value>Aus Bibliothek löschen</value></data>
   <data name="SectionDefinitionTitle" xml:space="preserve"><value>Querschnittdefinition</value></data>
-  <data name="SetupBeam" xml:space="preserve"><value>Balken</value></data>
+  <data name="ChangeLink" xml:space="preserve"><value>Ändern ›</value></data>
   <data name="SetupLength" xml:space="preserve"><value>Länge</value></data>
   <data name="SectionDefinitionEditName" xml:space="preserve"><value>Querschnittnamen bearbeiten</value></data>
   <data name="SectionDefinitionSaveLibrary" xml:space="preserve"><value>In meiner Querschnittsbibliothek speichern</value></data>
@@ -403,7 +403,6 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="SegmentRemove" xml:space="preserve"><value>Löschen</value></data>
   <data name="SegmentMenu" xml:space="preserve"><value>Abschnittsaktionen</value></data>
   <data name="SegmentLength" xml:space="preserve"><value>Abschnittslänge</value></data>
-  <data name="SegmentsTotalLength" xml:space="preserve"><value>Gesamtlänge {0} {1}</value></data>
   <data name="SegmentChangeBlocked" xml:space="preserve"><value>Die Änderung ist nicht möglich, weil sonst diese Elemente ungültig würden: {0}.</value></data>
   <data name="LengthFromSegments" xml:space="preserve"><value>Die Balkenlänge ist die Summe der Abschnittslängen. Sie wird in den Projekteigenschaften geändert.</value></data>
   <data name="PositionFromBeamStart" xml:space="preserve"><value>Balkenanfang</value></data>

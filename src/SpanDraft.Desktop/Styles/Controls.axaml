@@ -275,14 +275,14 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusM}" />
     <Setter Property="Padding" Value="12" />
   </Style>
+  <!-- A flat, clickable area of a segment row: no frame of its own, the hover shows where it ends. -->
   <Style Selector="Button.beamSetupSurface">
     <Setter Property="Height" Value="NaN" />
     <Setter Property="MinHeight" Value="0" />
-    <Setter Property="Padding" Value="16,12" />
-    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
-    <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusM}" />
-    <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
+    <Setter Property="Background" Value="Transparent" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -290,7 +290,14 @@
   </Style>
   <Style Selector="Button.beamSetupSurface:pointerover:not(:disabled)">
     <Setter Property="Background" Value="{DynamicResource SurfaceHover}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+  </Style>
+  <Style Selector="Border.setupDivider">
+    <Setter Property="Width" Value="1" />
+    <Setter Property="Margin" Value="8,4" />
+    <Setter Property="Background" Value="{DynamicResource Border}" />
+  </Style>
+  <Style Selector="TextBlock.changeLink">
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
   </Style>
   <!-- Keep Fluent artwork on its original artboard instead of stretching its ink bounds. -->
   <Style Selector="PathIcon.fluentIcon">

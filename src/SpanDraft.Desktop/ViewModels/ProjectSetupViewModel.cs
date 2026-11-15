@@ -160,11 +160,6 @@ public sealed class ProjectSetupViewModel : ObservableObject
 
     // ---- Segments: the beam is a chain of segments, each with its own card (Create and Edit) ----
     public bool HasSeveralSegments => _segments.Count > 1;
-    public bool ShowTotalLength => HasSeveralSegments && TotalLength is not null;
-    public string TotalLengthText => TotalLength is { } total
-        ? string.Format(CultureInfo.CurrentCulture, Strings.SegmentsTotalLength,
-            QuantityFormatter.FormatInputNumber(total.Meters, ResultPresentation.Profile[QuantityKind.BeamLength], ResultPresentation),
-            ResultPresentation.Profile[QuantityKind.BeamLength].Symbol) : "";
     public string SelectedSegmentTitle => string.Format(CultureInfo.CurrentUICulture, Strings.SegmentSelected, _selectedSegment + 1);
     public System.Collections.ObjectModel.ObservableCollection<SetupSegmentCard> Cards { get; } = [];
     public ActionCommand AddSegmentCommand => _addSegment ??= new(() => InsertSegment(_segments.Count), () => !IsBusy);
@@ -214,7 +209,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     {
         RefreshCards();
         foreach (var name in new[] { nameof(SelectedSegmentIndex), nameof(SelectedSegmentTitle), nameof(HasSeveralSegments),
-            nameof(TotalLength), nameof(TotalLengthText), nameof(ShowTotalLength), nameof(SelectedLength), nameof(CanApply) }) Notify(name);
+            nameof(TotalLength), nameof(SelectedLength), nameof(CanApply) }) Notify(name);
         RefreshLength();
     }
 
@@ -509,7 +504,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     {
         if (!Set(ref _resultPresentation, options, nameof(ResultPresentation))) return;
         foreach (var card in Cards) card.LengthInput.Refresh(preserveError: card.LengthInput.IsEditing);
-        RefreshLength(); RefreshSection(); Notify(nameof(TotalLengthText));
+        RefreshLength(); RefreshSection();
         Definition?.ApplyResultPresentation(options);
         foreach (var name in new[] { nameof(MaterialSummary), nameof(MaterialSummaryText), nameof(YoungsModulus), nameof(YieldStrength), nameof(Density), nameof(PoissonRatio) }) Notify(name);
         if (CurrentStep is MaterialSelectionViewModel materials) materials.Refresh();

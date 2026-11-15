@@ -232,7 +232,7 @@
   <data name="DeleteSectionQuestion" xml:space="preserve"><value>Delete “{0}” from your cross-section library? Existing projects will remain unchanged.</value></data>
   <data name="SectionDefinitionDeleteLibrary" xml:space="preserve"><value>Remove from library</value></data>
   <data name="SectionDefinitionTitle" xml:space="preserve"><value>Section definition</value></data>
-  <data name="SetupBeam" xml:space="preserve"><value>Beam</value></data>
+  <data name="ChangeLink" xml:space="preserve"><value>Change ›</value></data>
   <data name="SetupLength" xml:space="preserve"><value>Length</value></data>
   <data name="SectionDefinitionEditName" xml:space="preserve"><value>Edit section name</value></data>
   <data name="SectionDefinitionSaveLibrary" xml:space="preserve"><value>Save in my section library</value></data>
@@ -403,7 +403,6 @@ Remove the entry from Recent projects?</value></data>
   <data name="SegmentRemove" xml:space="preserve"><value>Delete</value></data>
   <data name="SegmentMenu" xml:space="preserve"><value>Segment actions</value></data>
   <data name="SegmentLength" xml:space="preserve"><value>Segment length</value></data>
-  <data name="SegmentsTotalLength" xml:space="preserve"><value>Total length {0} {1}</value></data>
   <data name="SegmentChangeBlocked" xml:space="preserve"><value>This change is not possible because it would make these elements invalid: {0}.</value></data>
   <data name="LengthFromSegments" xml:space="preserve"><value>The beam length is the sum of the segment lengths. Change it in the project properties.</value></data>
   <data name="PositionFromBeamStart" xml:space="preserve"><value>Beam start</value></data>

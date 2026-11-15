@@ -57,7 +57,6 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Equal(new[] { Strings.SelectMaterialRequired }, materialButton.GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.IsEffectivelyVisible).Select(t => t.Text));
         double emptyHeight = emptyCard.Bounds.Height;
-        Assert.Equal(emptyCard.Part<Border>("LengthSurface")!.Bounds.Height, sectionButton.Bounds.Height);
         Assert.Equal(sectionButton.Bounds.Height, materialButton.Bounds.Height);
         main.Setup.LengthInput.Begin(); main.Setup.LengthInput.Text = "0";
         Assert.False(main.Setup.LengthInput.Confirm()); Capture("create-length-invalid");
@@ -268,7 +267,6 @@ public sealed class DesktopProjectSetupControlTests
         main.Setup.Definition.CommitName(); Assert.True(await main.Setup.Definition.ConfirmAsync()); Arrange(window, 1100, 650);
         var description = card.Part<TextBlock>("SectionDescription")!;
         Assert.Equal(description.Text, ToolTip.GetTip(description)); Assert.Equal(Avalonia.Media.TextTrimming.CharacterEllipsis, description.TextTrimming);
-        Assert.Equal(card.Part<Border>("LengthSurface")!.Bounds.Height, section.Bounds.Height);
         Assert.Equal(section.Bounds.Height, material.Bounds.Height);
         Assert.True(card.Bounds.Height <= 130);
         foreach (var button in new[] { section, material })
@@ -304,29 +302,30 @@ public sealed class DesktopProjectSetupControlTests
         Assert.True(surface.Bounds.Height <= 130);
         Assert.True(double.IsNaN(surface.Height));
         var areas = surface.Part<Grid>("BeamAreas");
-        // The three areas keep their proportions; the menu takes the fourth, automatic column.
-        Assert.Equal(new[] { 2d, 4.3, 3.7 }, areas.ColumnDefinitions.Take(3).Select(c => c.Width.Value));
-        Assert.True(areas.ColumnDefinitions[3].Width.IsAuto);
-        Assert.Equal(4, areas.Children.Count);
-        var lengthArea = Assert.IsType<Border>(areas.Children[0]);
+        // The row is title and length, a divider, the section area, a divider, the narrower material area and the menu.
+        Assert.Equal(new[] { 5d, 3 }, new[] { areas.ColumnDefinitions[3].Width.Value, areas.ColumnDefinitions[5].Width.Value });
+        Assert.True(areas.ColumnDefinitions[6].Width.IsAuto);
+        var lengthArea = areas.Children.OfType<Border>().Single(b => b.Name == "LengthSurface");
         Assert.False(lengthArea.Focusable); Assert.Equal(default, lengthArea.BorderThickness);
-        var section = Assert.IsType<Button>(areas.Children[1]); var material = Assert.IsType<Button>(areas.Children[2]);
+        var section = areas.Children.OfType<Button>().Single(b => b.Name == "SectionCardButton");
+        var material = areas.Children.OfType<Button>().Single(b => b.Name == "MaterialCardButton");
         Assert.True(section.Focusable); Assert.True(material.Focusable);
         var model = Assert.IsType<SetupSegmentCard>(card.DataContext); Assert.Same(model.ChangeSectionCommand, section.Command); Assert.Same(model.ChangeMaterialCommand, material.Command);
-        Assert.Equal(lengthArea.Bounds.Height, section.Bounds.Height); Assert.Equal(section.Bounds.Height, material.Bounds.Height);
+        Assert.Equal(section.Bounds.Height, material.Bounds.Height);
         foreach (var button in new[] { section, material })
         {
-            Assert.True(double.IsNaN(button.Height)); Assert.Equal(new Thickness(16, 12), button.Padding);
+            Assert.True(double.IsNaN(button.Height)); Assert.Equal(default, button.BorderThickness);
             Assert.All(button.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible), text => Assert.True(text.Bounds.Height >= text.TextLayout.Height));
         }
         Assert.True(lengthArea.Bounds.Right < section.Bounds.Left); Assert.True(section.Bounds.Right < material.Bounds.Left);
+        Assert.True(section.Bounds.Width > material.Bounds.Width);
         var length = card.Part<TextBox>("SetupLengthInput")!;
         var label = card.Part<TextBlock>("SetupLengthLabel")!; var unit = card.Part<TextBlock>("SetupLengthUnit")!;
         Assert.True(label.Bounds.Right < length.Bounds.Left); Assert.True(length.Bounds.Right < unit.Bounds.Left);
         Assert.InRange(Math.Abs(label.Bounds.Center.Y - length.Bounds.Center.Y), 0, 1);
         Assert.InRange(Math.Abs(unit.Bounds.Center.Y - length.Bounds.Center.Y), 0, 1);
-        var lengthCenter = length.TranslatePoint(new Point(0, length.Bounds.Height / 2), lengthArea)!.Value.Y;
-        Assert.InRange(Math.Abs(lengthCenter - lengthArea.Bounds.Height / 2), 0, 1);
+        var lengthCenter = length.TranslatePoint(new Point(0, length.Bounds.Height / 2), surface)!.Value.Y;
+        Assert.InRange(Math.Abs(lengthCenter - surface.Bounds.Height / 2), 0, 1);
         Assert.Equal("1000", length.Text); Assert.Equal("mm", unit.Text); Assert.True(length.Bounds.Width >= 60);
         foreach (var name in new[] { "SectionDescription", "MaterialDescription", "SectionAxisDescription" })
         {

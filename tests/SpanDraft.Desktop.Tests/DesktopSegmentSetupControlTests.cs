@@ -8,6 +8,7 @@ using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
@@ -69,25 +70,38 @@ public sealed class DesktopSegmentSetupControlTests
                 Assert.True(Bounds(control).Right <= Bounds(card).Right + 0.5, control.GetType().Name);
         }
 
-        // Alignment and equal sizes: the areas of every card start and end at the same x, and each card's areas are
-        // as high as its length area.
+        // Alignment and equal sizes: the areas of every card start and end at the same x; the areas carry no frame of their own.
         foreach (string name in new[] { "SectionCardButton", "MaterialCardButton", "SegmentMenuButton" })
         {
             var parts = cards.Select(card => Bounds(card.Part<Button>(name))).ToArray();
             Assert.All(parts, bounds => Assert.Equal(parts[0].X, bounds.X, 1.5));
             Assert.All(parts, bounds => Assert.Equal(parts[0].Width, bounds.Width, 1.5));
         }
-        Assert.All(cards, card => Assert.Equal(card.Part<Border>("LengthSurface").Bounds.Height, card.Part<Button>("SectionCardButton").Bounds.Height));
+        Assert.All(cards, card => Assert.Equal(default, card.Part<Button>("SectionCardButton").BorderThickness));
+        Assert.All(cards, card => Assert.Equal(default, card.Part<Button>("MaterialCardButton").BorderThickness));
+        // The section area is wider than the material area.
+        Assert.All(cards, card => Assert.True(card.Part<Button>("SectionCardButton").Bounds.Width > card.Part<Button>("MaterialCardButton").Bounds.Width));
         Assert.All(cards, card => Assert.True(card.Part<TextBlock>("SegmentTitle").IsEffectivelyVisible));
         Assert.Equal([1, 2, 3], cards.Select(card => ((SetupSegmentCard)card.DataContext!).Number));
 
-        // The cards are stacked in order and the add button follows the last one, aligned with the cards.
+        // The cards are stacked in order; the add button stands right-aligned on the line of the heading above the first one.
         Assert.True(Bounds(cards[1]).Y >= Bounds(cards[0]).Bottom - 0.5 && Bounds(cards[2]).Y >= Bounds(cards[1]).Bottom - 0.5);
         var add = view.Part<Button>("AddSegmentButton");
         Assert.True(add.IsEffectivelyVisible && add.IsEffectivelyEnabled);
-        Assert.True(Bounds(add).Y >= Bounds(cards[2]).Bottom - 0.5);
-        Assert.Equal(Bounds(cards[0]).X, Bounds(add).X, 1.5);
+        Assert.True(Bounds(add).Bottom <= Bounds(cards[0]).Y + 0.5);
+        Assert.Equal(Bounds(cards[0]).Right, Bounds(add).Right, 1.5);
+        var heading = view.Part<TextBlock>("SegmentsTitle");
+        Assert.Equal(Strings.SetupSegments, heading.Text);
+        Assert.True(Bounds(heading).Right <= Bounds(add).X);
+        Assert.InRange(Math.Abs(Bounds(heading).Center.Y - Bounds(add).Center.Y), 0, 1.5);
         Assert.Equal(setup.Cards[0].Id, ((SetupSegmentCard)cards[0].DataContext!).Id);
+        if (Environment.GetEnvironmentVariable("SPANDRAFT_VISUAL_TEST_OUTPUT") is { Length: > 0 } directory)
+        {
+            Directory.CreateDirectory(directory);
+            using var bitmap = new Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize((int)width, (int)height), new Vector(96, 96));
+            bitmap.Render(window);
+            bitmap.Save(Path.Combine(directory, $"segments-{width}x{height}.png"));
+        }
         window.Close();
     }
 

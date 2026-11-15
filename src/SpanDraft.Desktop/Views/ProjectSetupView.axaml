@@ -30,7 +30,6 @@
             </StackPanel>
           </Border>
           <StackPanel Margin="{DynamicResource Padding24}" Spacing="{StaticResource Space16}">
-            <TextBlock Text="{x:Static resources:Strings.SetupBeam}" Classes="sectionTitle" />
             <views:SegmentCardsView x:Name="SegmentCards" />
             <controls:TechnicalTextBlock Text="{Binding MaterialError}" IsVisible="{Binding HasMaterialError}" Classes="validationMessage" TextWrapping="Wrap" />
           </StackPanel>
