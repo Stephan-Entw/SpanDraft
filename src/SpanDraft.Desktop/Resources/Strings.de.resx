@@ -29,6 +29,8 @@
   <data name="ToolbarFixedSupport" xml:space="preserve"><value>Einspannung</value></data>
   <data name="ToolbarPinnedSupport" xml:space="preserve"><value>Festlager</value></data>
   <data name="ToolbarRollerSupport" xml:space="preserve"><value>Loslager</value></data>
+  <data name="ToolbarSpringSupport" xml:space="preserve"><value>Federlager</value></data>
+  <data name="ToolbarSupportsAndHinges" xml:space="preserve"><value>Lager &amp; Gelenke</value></data>
   <data name="BeamModel" xml:space="preserve"><value>Balkenmodell</value></data>
   <data name="OverviewLength" xml:space="preserve"><value>Länge {0} {1}</value></data>
   <data name="OverviewPosition" xml:space="preserve"><value>Position [{0}]</value></data>

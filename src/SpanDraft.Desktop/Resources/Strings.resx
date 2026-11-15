@@ -29,6 +29,8 @@
   <data name="ToolbarFixedSupport" xml:space="preserve"><value>Fixed</value></data>
   <data name="ToolbarPinnedSupport" xml:space="preserve"><value>Pinned</value></data>
   <data name="ToolbarRollerSupport" xml:space="preserve"><value>Roller</value></data>
+  <data name="ToolbarSpringSupport" xml:space="preserve"><value>Spring</value></data>
+  <data name="ToolbarSupportsAndHinges" xml:space="preserve"><value>Supports &amp; Hinges</value></data>
   <data name="BeamModel" xml:space="preserve"><value>Beam model</value></data>
   <data name="OverviewLength" xml:space="preserve"><value>Length {0} {1}</value></data>
   <data name="OverviewPosition" xml:space="preserve"><value>Position [{0}]</value></data>

@@ -10,6 +10,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SpanDraft.Desktop;
+using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.ViewModels;
@@ -43,11 +44,12 @@ public sealed class DesktopReportToolbarTests
         Assert.True(button.IsEffectivelyEnabled);
         Assert.Equal(language == "de-DE" ? "Bericht" : "Report", Assert.Single(button.GetVisualDescendants().OfType<TextBlock>()).Text);
         var layout = Assert.IsType<Grid>(bar.Child);
-        var tools = Assert.IsType<StackPanel>(layout.Children[0]);
+        var tools = Assert.IsAssignableFrom<StackPanel>(layout.Children[0]);
         var group = Assert.IsType<StackPanel>(layout.Children[1]);
         var properties = view.FindControl<Button>("ProjectPropertiesToolbarButton")!;
-        var roller = tools.Children.OfType<ToggleButton>().Single(b => b.Command == main.Editor!.RollerToolCommand);
-        Assert.Same(main.Editor!.RollerToolCommand, roller.Command);
+        // The result probe keeps its caption in both toolbar modes and so serves as the reference for the report button.
+        var roller = tools.Children.OfType<ToggleButton>().Single(b => b.Command == main.Editor!.ResultProbeToolCommand);
+        Assert.Same(main.Editor!.ResultProbeToolCommand, roller.Command);
         Assert.Equal(new Control[] { button, properties }, group.Children);
         Assert.Equal(roller.Bounds.Height, button.Bounds.Height);
         Assert.Equal(roller.TranslatePoint(default, bar)!.Value.Y, button.TranslatePoint(default, bar)!.Value.Y);
@@ -94,7 +96,7 @@ public sealed class DesktopReportToolbarTests
             var view = Assert.Single(window.GetVisualDescendants().OfType<EditorView>());
             var bar = view.FindControl<Border>("EditorToolbar")!;
             var layout = Assert.IsType<Grid>(bar.Child);
-            var left = Assert.IsType<StackPanel>(layout.Children[0]);
+            var left = Assert.IsAssignableFrom<StackPanel>(layout.Children[0]);
             var right = Assert.IsType<StackPanel>(layout.Children[1]);
             var report = view.FindControl<Button>("ReportToolbarButton")!;
             var button = view.FindControl<Button>("ProjectPropertiesToolbarButton")!;
@@ -108,8 +110,8 @@ public sealed class DesktopReportToolbarTests
                 main.Editor.RollerToolCommand, main.Editor.SpringToolCommand, main.Editor.MomentReleaseToolCommand,
                 main.Editor.ResultProbeToolCommand }, left.Children.OfType<Button>().Select(b => b.Command));
             Assert.Equal(new Control[] { report, button }, right.Children);
-            var originalLeftBounds = left.Children.Select(c => c.Bounds).ToArray();
-            double previousGap = 0;
+            var leftBoundsByMode = new Dictionary<bool, Rect[]>();
+            var previousGapByMode = new Dictionary<bool, double>();
             foreach (int width in new[] { 1100, 1250, 1600, 2400 })
             {
                 window.Width = width;
@@ -123,10 +125,16 @@ public sealed class DesktopReportToolbarTests
                 Assert.Equal(right.Spacing, bounds.Left - reportBounds.Right);
                 var lastTool = left.Children[^1];
                 double gap = reportBounds.Left - lastTool.TranslatePoint(new(lastTool.Bounds.Width, 0), layout)!.Value.X;
-                Assert.True(gap > previousGap, $"Tool/report gap {gap} did not increase from {previousGap} at width {width}.");
+                bool mode = Assert.IsType<AdaptiveToolStrip>(left).IsCompact;
+                // Within one mode a wider window only adds room between the tools and the report button.
+                Assert.True(gap > previousGapByMode.GetValueOrDefault(mode), $"Tool/report gap {gap} did not increase at width {width}.");
                 Assert.True(gap >= layout.ColumnSpacing, $"Tool/report gap {gap} is less than {layout.ColumnSpacing} at width {width}.");
-                previousGap = gap;
-                Assert.Equal(originalLeftBounds, left.Children.Select(c => c.Bounds));
+                previousGapByMode[mode] = gap;
+                // The tools keep their place for as long as the toolbar stays in the same mode.
+                bool compact = Assert.IsType<AdaptiveToolStrip>(left).IsCompact;
+                var current = left.Children.Select(c => c.Bounds).ToArray();
+                if (leftBoundsByMode.TryGetValue(compact, out var reference)) Assert.Equal(reference, current);
+                else leftBoundsByMode[compact] = current;
             }
             var icon = Assert.Single(button.GetVisualDescendants().OfType<PathIcon>());
             Assert.Same(Application.Current.FindResource("FluentIcon.DocumentSettings"), icon.Data);

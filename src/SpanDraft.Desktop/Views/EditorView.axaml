@@ -7,10 +7,27 @@
              x:Class="SpanDraft.Desktop.Views.EditorView"
              x:DataType="vm:EditorViewModel" KeyDown="EditorKeyDown">
   <UserControl.Styles>
-    <!-- Keep the complete toolbar readable at the minimum window width; the spring support and hinge tools have no caption. -->
     <Style Selector="Border#EditorToolbar :is(Button).toolbar">
-      <Setter Property="Padding" Value="2,4" />
+      <Setter Property="Padding" Value="2,4,8,4" />
       <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
+    </Style>
+    <!-- When the captions no longer fit, the load and support tools keep only their icons
+         and a short label in front of each group names what the icons are. -->
+    <Style Selector="TextBlock.toolbarGroupLabel">
+      <Setter Property="IsVisible" Value="False" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="4,0" />
+      <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    </Style>
+    <Style Selector="controls|AdaptiveToolStrip:compact TextBlock.toolbarGroupLabel">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="controls|AdaptiveToolStrip:compact TextBlock.toolbarCaption">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="Border#EditorToolbar controls|AdaptiveToolStrip:compact ToggleButton.captioned">
+      <Setter Property="Padding" Value="3,4" />
     </Style>
     <Style Selector="controls|BeamEditorSurface#BeamSurface, StackPanel#ResultDiagrams">
       <Setter Property="MaxWidth" Value="1280" />
@@ -26,65 +43,73 @@
     <Border x:Name="EditorToolbar" BorderThickness="{DynamicResource BottomBorder}" BorderBrush="{DynamicResource Border}"
             Background="{DynamicResource Surface}" Padding="{DynamicResource ToolbarPadding}">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space8}">
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-          <ToggleButton Classes="toolbar" IsChecked="{Binding IsForceTool, Mode=OneWay}" Command="{Binding ForceToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PointForce}">
+        <controls:AdaptiveToolStrip Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Classes="toolbarGroupLabel" Text="{x:Static resources:Strings.Loads}" />
+          <ToggleButton Classes="toolbar captioned" IsChecked="{Binding IsForceTool, Mode=OneWay}" Command="{Binding ForceToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PointForce}"
+                        ToolTip.Tip="{x:Static resources:Strings.PointForce}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.PointLoad}" Stretch="Uniform" />
-              <TextBlock Text="{x:Static resources:Strings.PointForce}" VerticalAlignment="Center" />
+              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.PointForce}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton Classes="toolbar" IsChecked="{Binding IsMomentTool, Mode=OneWay}" Command="{Binding MomentToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.Moment}">
+          <ToggleButton Classes="toolbar captioned" IsChecked="{Binding IsMomentTool, Mode=OneWay}" Command="{Binding MomentToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.Moment}"
+                        ToolTip.Tip="{x:Static resources:Strings.Moment}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.PointMoment}" Stretch="Uniform" />
-              <TextBlock Text="{x:Static resources:Strings.Moment}" VerticalAlignment="Center" />
+              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.Moment}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton Classes="toolbar" IsChecked="{Binding IsDistributedLoadTool, Mode=OneWay}" Command="{Binding DistributedLoadToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.DistributedLoad}">
+          <ToggleButton Classes="toolbar captioned" IsChecked="{Binding IsDistributedLoadTool, Mode=OneWay}" Command="{Binding DistributedLoadToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.DistributedLoad}"
+                        ToolTip.Tip="{x:Static resources:Strings.DistributedLoad}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.DistributedLoad}" Stretch="Uniform" />
-              <TextBlock Text="{x:Static resources:Strings.DistributedLoad}" VerticalAlignment="Center" />
+              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.DistributedLoad}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton x:Name="SelfWeightButton" Classes="toolbar" IsChecked="{Binding IsSelfWeightEnabled, Mode=OneWay}"
-                        Command="{Binding ToggleSelfWeightCommand}" AutomationProperties.Name="{x:Static resources:Strings.SelfWeight}">
+          <ToggleButton x:Name="SelfWeightButton" Classes="toolbar captioned" IsChecked="{Binding IsSelfWeightEnabled, Mode=OneWay}"
+                        Command="{Binding ToggleSelfWeightCommand}" AutomationProperties.Name="{x:Static resources:Strings.SelfWeight}"
+                        ToolTip.Tip="{x:Static resources:Strings.SelfWeight}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.SelfWeight}" Stretch="Uniform" />
-              <TextBlock Text="{x:Static resources:Strings.SelfWeight}" VerticalAlignment="Center" />
+              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.SelfWeight}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
           <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
-          <ToggleButton Classes="toolbar" IsChecked="{Binding IsFixedTool, Mode=OneWay}" Command="{Binding FixedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.FixedSupport}"
+          <TextBlock Classes="toolbarGroupLabel" Text="{x:Static resources:Strings.ToolbarSupportsAndHinges}" />
+          <ToggleButton Classes="toolbar captioned" IsChecked="{Binding IsFixedTool, Mode=OneWay}" Command="{Binding FixedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.FixedSupport}"
                         ToolTip.Tip="{x:Static resources:Strings.FixedSupport}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.FixedSupport}" Stretch="Uniform" />
-              <TextBlock Text="{x:Static resources:Strings.ToolbarFixedSupport}" VerticalAlignment="Center" />
+              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.ToolbarFixedSupport}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton Classes="toolbar" IsChecked="{Binding IsPinnedTool, Mode=OneWay}" Command="{Binding PinnedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PinnedSupport}"
+          <ToggleButton Classes="toolbar captioned" IsChecked="{Binding IsPinnedTool, Mode=OneWay}" Command="{Binding PinnedToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.PinnedSupport}"
                         ToolTip.Tip="{x:Static resources:Strings.PinnedSupport}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.PinnedSupport}" Stretch="Uniform" />
-              <TextBlock Text="{x:Static resources:Strings.ToolbarPinnedSupport}" VerticalAlignment="Center" />
+              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.ToolbarPinnedSupport}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton Classes="toolbar" IsChecked="{Binding IsRollerTool, Mode=OneWay}" Command="{Binding RollerToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.RollerSupport}"
+          <ToggleButton Classes="toolbar captioned" IsChecked="{Binding IsRollerTool, Mode=OneWay}" Command="{Binding RollerToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.RollerSupport}"
                         ToolTip.Tip="{x:Static resources:Strings.RollerSupport}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.RollerSupport}" Stretch="Uniform" />
-              <TextBlock Text="{x:Static resources:Strings.ToolbarRollerSupport}" VerticalAlignment="Center" />
+              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.ToolbarRollerSupport}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton Classes="toolbar" IsChecked="{Binding IsSpringTool, Mode=OneWay}" Command="{Binding SpringToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.SpringSupport}"
+          <ToggleButton Classes="toolbar captioned" IsChecked="{Binding IsSpringTool, Mode=OneWay}" Command="{Binding SpringToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.SpringSupport}"
                         ToolTip.Tip="{x:Static resources:Strings.SpringSupport}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.SpringSupport}" Stretch="Uniform" />
+              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.ToolbarSpringSupport}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton x:Name="MomentReleaseToolButton" Classes="toolbar" IsChecked="{Binding IsMomentReleaseTool, Mode=OneWay}"
+          <ToggleButton x:Name="MomentReleaseToolButton" Classes="toolbar captioned" IsChecked="{Binding IsMomentReleaseTool, Mode=OneWay}"
                         Command="{Binding MomentReleaseToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.MomentRelease}"
                         ToolTip.Tip="{x:Static resources:Strings.MomentRelease}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
               <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.MomentRelease}" Stretch="Uniform" />
+              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.MomentRelease}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
           <Rectangle Width="1" Fill="{DynamicResource Border}" Margin="{DynamicResource SeparatorMargin}" />
@@ -96,7 +121,7 @@
               <TextBlock Text="{x:Static resources:Strings.ResultProbe}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-        </StackPanel>
+        </controls:AdaptiveToolStrip>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space4}"
                     HorizontalAlignment="Right" VerticalAlignment="Center">
           <Button x:Name="ReportToolbarButton" Classes="toolbar"

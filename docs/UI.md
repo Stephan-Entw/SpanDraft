@@ -30,9 +30,7 @@ Ein neu gesetztes Federlager startet mit einer Wegfeder ohne Wert: Der Anwender 
 die Steifigkeit selbst eingeben, weil jeder Vorgabewert eine falsche Lagernachgiebigkeit
 unbemerkt in die Berechnung tragen würde. Die Kombinationsregeln (mindestens eine Feder,
 „starr in w“ nur mit Drehfeder und ohne Wegfeder) sind im Draft erzwungen, damit nie ein
-nicht bestehendes Core-Objekt entsteht. Das Werkzeug der Federlager ist in der Werkzeugleiste
-bewusst ohne Beschriftung: Bei der schmalsten Fensterbreite wäre sonst die deutsche Leiste
-überlaufen.
+nicht bestehendes Core-Objekt entsteht.
 
 ## Gelenk-Draft und Werkzeugleiste
 
@@ -45,11 +43,14 @@ einem Lagersymbol; ein Treffer auf den Ring selbst gehört deshalb dem Gelenk al
 über einem Lager nie ohne Auswahlmenü greifbar. Ein Gelenk rastet nicht an den Balkenenden ein, die es
 nicht tragen dürfen.
 
-Die deutsche Werkzeugleiste hat bei der Mindestbreite des Fensters kaum Reserve. Das beschriftungslose
-Gelenkwerkzeug passte erst, nachdem Innenabstand der Werkzeugschaltflächen und Leistenrand knapper wurden;
-die Mindestbreite blieb bewusst unverändert, weil sie jedes Layout des Editors betrifft. Ein Test hält fest,
-dass die Leiste in beiden Sprachen bei der Mindestbreite nichts abschneidet, nicht nur, dass ihre zugeteilte
-Fläche in der Zeile liegt.
+Die Werkzeugleiste hat zwei Darstellungen: Solange Icons mit Beschriftung in die verfügbare Breite passen,
+zeigt sie diese, sonst nur die Icons der Last- und Lagerwerkzeuge mit je einer kurzen Gruppenbezeichnung davor.
+Die Umschaltung richtet sich nach der Breite, die die beschriftete Leiste braucht, nicht nach einer festen
+Fensterbreite, weil die Texte je Sprache verschieden lang sind und neue Werkzeuge hinzukommen. Einzelne
+Werkzeuge ohne Beschriftung in der breiten Darstellung wären inkonsistent und schwer zu erkennen; ein
+Überlaufmenü hätte häufig benutzte Werkzeuge versteckt. Die Mindestbreite des Fensters blieb bewusst
+unverändert, weil sie jedes Layout des Editors betrifft. Tests halten fest, dass die Leiste in beiden Sprachen
+und bei jeder Breite nichts abschneidet, nur einmal umschaltet und ihre Höhe nicht ändert.
 
 ## Abschnitte in der Projekteinrichtung
 

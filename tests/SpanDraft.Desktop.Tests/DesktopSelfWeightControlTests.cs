@@ -236,7 +236,7 @@ public sealed class DesktopSelfWeightControlTests
         var view = Assert.Single(window.GetVisualDescendants().OfType<EditorView>());
         var toolbar = view.FindControl<Border>("EditorToolbar")!;
         var grid = Assert.IsType<Grid>(toolbar.Child);
-        var tools = Assert.IsType<StackPanel>(grid.Children[0]);
+        var tools = Assert.IsAssignableFrom<StackPanel>(grid.Children[0]);
         var buttons = tools.Children.OfType<ToggleButton>().ToArray();
         var weight = view.FindControl<ToggleButton>("SelfWeightButton")!;
         Assert.Same(main.Editor!.ToggleSelfWeightCommand, weight.Command);

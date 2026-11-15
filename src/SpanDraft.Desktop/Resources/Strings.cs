@@ -203,6 +203,8 @@ public static class Strings
     public static string ToolbarFixedSupport => Get(nameof(ToolbarFixedSupport));
     public static string ToolbarPinnedSupport => Get(nameof(ToolbarPinnedSupport));
     public static string ToolbarRollerSupport => Get(nameof(ToolbarRollerSupport));
+    public static string ToolbarSpringSupport => Get(nameof(ToolbarSpringSupport));
+    public static string ToolbarSupportsAndHinges => Get(nameof(ToolbarSupportsAndHinges));
     public static string BeamModel => Get(nameof(BeamModel));
     public static string OverviewLength => Get(nameof(OverviewLength));
     public static string OverviewPosition => Get(nameof(OverviewPosition));

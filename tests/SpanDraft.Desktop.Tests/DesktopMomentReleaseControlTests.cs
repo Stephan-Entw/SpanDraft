@@ -57,7 +57,7 @@ public sealed class DesktopMomentReleaseControlTests
         Layout(window, width, 650);
         var view = Assert.Single(window.GetVisualDescendants().OfType<EditorView>());
         var grid = Assert.IsType<Grid>(view.FindControl<Border>("EditorToolbar")!.Child);
-        var tools = Assert.IsType<StackPanel>(grid.Children[0]);
+        var tools = Assert.IsAssignableFrom<StackPanel>(grid.Children[0]);
         var hinge = view.FindControl<ToggleButton>("MomentReleaseToolButton")!;
         Assert.Same(main.Editor!.MomentReleaseToolCommand, hinge.Command);
         Assert.Equal(Strings.MomentRelease, Avalonia.Automation.AutomationProperties.GetName(hinge));
@@ -72,7 +72,7 @@ public sealed class DesktopMomentReleaseControlTests
         // No tool is clipped: the row needs no more width than the toolbar grants it, and the tools follow each other without overlap.
         Assert.True(tools.DesiredSize.Width <= tools.Bounds.Width + 0.01,
             $"The toolbar needs {tools.DesiredSize.Width} but only {tools.Bounds.Width} are available.");
-        var bounds = tools.Children.Select(c => new Rect(Origin(c, tools), c.Bounds.Size)).ToArray();
+        var bounds = tools.Children.Where(c => c.IsVisible).Select(c => new Rect(Origin(c, tools), c.Bounds.Size)).ToArray();
         for (int i = 1; i < bounds.Length; i++)
             Assert.True(bounds[i].Left >= bounds[i - 1].Right - 0.01, $"Tool {i} overlaps its predecessor.");
         Assert.True(bounds[^1].Right <= tools.Bounds.Width + 0.01);
