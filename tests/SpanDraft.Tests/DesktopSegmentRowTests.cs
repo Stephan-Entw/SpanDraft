@@ -94,7 +94,7 @@ public sealed class DesktopSegmentRowTests
         Assert.Equal(string.Format(CultureInfo.CurrentUICulture, Strings.SegmentSelected, 3), SegmentLabels.Title(3));
         Assert.Equal("My own profile name · " + MaterialDisplay.Format(Steel), SegmentLabels.Description(named));
         Assert.Equal(new string('P', 120) + " · " + MaterialDisplay.Format(Steel), SegmentLabels.Description(longName));
-        Assert.Equal("Abschnitt 2 · My own profile name · " + MaterialDisplay.Format(Steel), SegmentLabels.RowLabel(named, 2));
+        Assert.Equal(SegmentLabels.Title(2) + " · My own profile name · " + MaterialDisplay.Format(Steel), SegmentLabels.RowLabel(named, 2));
         Assert.Equal([SegmentLabels.RowLabel(named, 2), SegmentLabels.Title(2), "2"], SegmentLabels.RowCandidates(named, 2));
         Assert.Equal(SectionDisplay.Name(Segment(1).Section), SegmentLabels.SectionName(Segment(1)));
     }
