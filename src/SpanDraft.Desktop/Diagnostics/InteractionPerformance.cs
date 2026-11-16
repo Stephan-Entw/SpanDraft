@@ -31,6 +31,9 @@ public sealed class InteractionPerformance(IInteractionFrameProbe frames, TimePr
     /// <summary>Raised after a completed entry joined the history; may run on any thread, so listeners must marshal.</summary>
     public event Action? EntryRecorded;
 
+    /// <summary>One terminal notification per committed measurement, including discarded frames.</summary>
+    internal event Action<InteractionPerformanceEntry?>? MeasurementFinished;
+
     public IReadOnlyList<InteractionPerformanceEntry> GetEntries()
     {
         lock (_gate)
@@ -100,33 +103,35 @@ public sealed class InteractionPerformance(IInteractionFrameProbe frames, TimePr
 
     private async Task FinishAsync(Measurement measurement)
     {
-        bool recorded = false;
+        InteractionPerformanceEntry? entry = null;
         try
         {
             var end = await frames.ObserveNextFrameAsync(_clock, measurement.Cancellation!.Token).ConfigureAwait(false);
             lock (_gate)
             {
                 if (!_pending.Remove(measurement) || end is null) return;
-                recorded = true;
                 // Convert cumulative boundaries once so the phases add up exactly to Total.
                 TimeSpan Elapsed(long timestamp) => _clock.GetElapsedTime(measurement.Start, timestamp);
                 var preparation = Elapsed(measurement.AnalysisStart!.Value);
                 var analyzed = Elapsed(measurement.AnalysisEnd!.Value);
                 var presented = Elapsed(measurement.UIStart);
                 var total = Elapsed(end.Value);
-                _entries[_next] = new(measurement.Utc, measurement.Action, preparation, analyzed - preparation,
+                entry = new(measurement.Utc, measurement.Action, preparation, analyzed - preparation,
                     presented - analyzed, total - presented, total);
+                _entries[_next] = entry;
                 _next = (_next + 1) % Capacity;
                 _count = Math.Min(_count + 1, Capacity);
             }
             // Outside the lock, so a listener may read the entries; the new entry is already visible there.
-            if (recorded) EntryRecorded?.Invoke();
+            EntryRecorded?.Invoke();
         }
         catch (Exception) { /* Diagnostics must never fail a product command or the dispatcher. */ }
         finally
         {
             lock (_gate) _pending.Remove(measurement);
             measurement.Cancellation!.Dispose();
+            try { MeasurementFinished?.Invoke(entry); }
+            catch (Exception) { /* Observation must not interfere with the product. */ }
         }
     }
 

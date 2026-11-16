@@ -29,6 +29,18 @@ public partial class MainWindow : Window
     /// <summary>Completes after the initial libraries, recovery, recents and shell request have been processed.</summary>
     public Task Initialization => _initialization.Task;
 
+    internal event Action<InteractionPerformanceEntry?> MeasurementFinished
+    {
+        add => _performance!.MeasurementFinished += value;
+        remove => _performance!.MeasurementFinished -= value;
+    }
+
+    internal async Task<bool> WaitForRenderedFrameAsync(CancellationToken cancellationToken)
+    {
+        if (_frameProbe is null) return false;
+        return await _frameProbe.ObserveNextFrameAsync(TimeProvider.System, cancellationToken) is not null;
+    }
+
     public MainWindow() : this(null) { }
 
     public MainWindow(DesktopStartupContext? startup, string[]? args = null)

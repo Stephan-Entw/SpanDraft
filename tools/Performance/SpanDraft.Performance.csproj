@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <ApplicationIcon>../../src/SpanDraft.Desktop/Assets/AppIcon/SpanDraft.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="SpanDraft.Tooling.Tests" />
+    <ProjectReference Include="../../src/SpanDraft.Desktop/SpanDraft.Desktop.csproj" />
+  </ItemGroup>
+  <Target Name="RecordPerformanceBuildSource" BeforeTargets="GetAssemblyAttributes">
+    <Exec Command="git rev-parse HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true"
+          IgnoreExitCode="true" StandardOutputImportance="Low" StandardErrorImportance="Low">
+      <Output TaskParameter="ExitCode" PropertyName="_PerformanceRevisionExit" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_PerformanceRevision" />
+    </Exec>
+    <Exec Command="git status --porcelain --untracked-files=normal" WorkingDirectory="$(MSBuildProjectDirectory)"
+          ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low" StandardErrorImportance="Low">
+      <Output TaskParameter="ExitCode" PropertyName="_PerformanceDirtyExit" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_PerformanceChanges" />
+    </Exec>
+    <PropertyGroup>
+      <_PerformanceDirty Condition="'$(_PerformanceDirtyExit)' == '0'">false</_PerformanceDirty>
+      <_PerformanceDirty Condition="'$(_PerformanceDirtyExit)' == '0' and '@(_PerformanceChanges->Count())' != '0'">true</_PerformanceDirty>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyMetadata Include="PerformanceSourceRevision" Value="@(_PerformanceRevision)" Condition="'$(_PerformanceRevisionExit)' == '0'" />
+      <AssemblyMetadata Include="PerformanceSourceDirty" Value="$(_PerformanceDirty)" Condition="'$(_PerformanceDirtyExit)' == '0'" />
+    </ItemGroup>
+  </Target>
+</Project>

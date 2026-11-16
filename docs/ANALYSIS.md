@@ -108,3 +108,8 @@ Erfasst werden ausschließlich UTC-Startzeit, technischer Aktionstyp und Dauern 
 einem begrenzten Verlauf im Arbeitsspeicher des Fensters. Projektinhalte,
 Persistenz, Telemetrie und Netzwerkzugriffe sind ausgeschlossen. Messkontexte
 sind transient und gehören weder zu Revisionen noch zum Projektformat.
+
+Der eigenständige [Performance-Runner](../tools/Performance/README.md) verwendet
+denselben Messvertrag für feste Referenzaktionen. Nur dieser explizit gestartete
+Tooling-Lauf schreibt technische Rohsamples und Statistiken in eine lokale
+Messdatei; die normale Anwendung persistiert den Diagnoseverlauf weiterhin nicht.

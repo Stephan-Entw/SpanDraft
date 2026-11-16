@@ -8,6 +8,7 @@
     <ProjectReference Include="../../src/SpanDraft.Desktop/SpanDraft.Desktop.csproj" />
     <ProjectReference Include="../../tools/MicrosoftStore/SpanDraft.MicrosoftStore.csproj" />
     <ProjectReference Include="../../tools/Screenshots/SpanDraft.Screenshots.csproj" />
+    <ProjectReference Include="../../tools/Performance/SpanDraft.Performance.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.1" />
