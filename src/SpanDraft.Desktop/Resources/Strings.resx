@@ -443,10 +443,10 @@ Remove the entry from Recent projects?</value></data>
   <data name="Diagnostics" xml:space="preserve"><value>Diagnostics</value></data>
   <data name="DiagnosticsOperatingSystem" xml:space="preserve"><value>Operating system</value></data>
   <data name="DiagnosticsArchitecture" xml:space="preserve"><value>Architecture</value></data>
-  <data name="DiagnosticsRuntime" xml:space="preserve"><value>.NET</value></data>
+  <data name="DiagnosticsRuntime" xml:space="preserve"><value>Runtime</value></data>
   <data name="DiagnosticsLocalNote" xml:space="preserve"><value>Diagnostic values are kept in memory on this computer only and are never transmitted automatically.</value></data>
-  <data name="DiagnosticsAdvanced" xml:space="preserve"><value>Show recent interactions</value></data>
-  <data name="DiagnosticsEmpty" xml:space="preserve"><value>No interactions recorded yet.</value></data>
+  <data name="DiagnosticsAdvanced" xml:space="preserve"><value>Advanced view</value></data>
+  <data name="DiagnosticsEmpty" xml:space="preserve"><value>No interactions recorded yet. Edit the project and they appear here.</value></data>
   <data name="DiagnosticsFrameNote" xml:space="preserve"><value>UI ends at the rendered application frame. This is not a confirmed physical display output.</value></data>
   <data name="DiagnosticsTime" xml:space="preserve"><value>Time</value></data>
   <data name="DiagnosticsAction" xml:space="preserve"><value>Action</value></data>
@@ -455,7 +455,6 @@ Remove the entry from Recent projects?</value></data>
   <data name="DiagnosticsPresentation" xml:space="preserve"><value>Presentation</value></data>
   <data name="DiagnosticsUi" xml:space="preserve"><value>UI</value></data>
   <data name="DiagnosticsTotal" xml:space="preserve"><value>Total</value></data>
-  <data name="DiagnosticsMilliseconds" xml:space="preserve"><value>{0} ms</value></data>
   <data name="DiagnosticsActionPointForce" xml:space="preserve"><value>Point force</value></data>
   <data name="DiagnosticsActionPointMoment" xml:space="preserve"><value>Point moment</value></data>
   <data name="DiagnosticsActionDistributedLoad" xml:space="preserve"><value>Distributed load</value></data>
@@ -469,4 +468,10 @@ Remove the entry from Recent projects?</value></data>
   <data name="DiagnosticsActionSelfWeightVisibility" xml:space="preserve"><value>Self-weight display</value></data>
   <data name="DiagnosticsActionUndo" xml:space="preserve"><value>Undo</value></data>
   <data name="DiagnosticsActionRedo" xml:space="preserve"><value>Redo</value></data>
+  <data name="DiagnosticsHistoryCaption" xml:space="preserve"><value>Latest interactions, times in ms</value></data>
+  <data name="DiagnosticsPreparationHint" xml:space="preserve"><value>Input and validation of the confirmation</value></data>
+  <data name="DiagnosticsAnalysisHint" xml:space="preserve"><value>Calculation of the new state; 0 for changes that do not affect the mechanics</value></data>
+  <data name="DiagnosticsPresentationHint" xml:space="preserve"><value>Synchronous processing of the new state</value></data>
+  <data name="DiagnosticsUiHint" xml:space="preserve"><value>Until the rendered application frame</value></data>
+  <data name="DiagnosticsTotalHint" xml:space="preserve"><value>Sum of all phases</value></data>
 </root>

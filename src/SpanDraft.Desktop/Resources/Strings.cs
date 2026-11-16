@@ -468,7 +468,6 @@ public static class Strings
     public static string DiagnosticsPresentation => Get(nameof(DiagnosticsPresentation));
     public static string DiagnosticsUi => Get(nameof(DiagnosticsUi));
     public static string DiagnosticsTotal => Get(nameof(DiagnosticsTotal));
-    public static string DiagnosticsMilliseconds => Get(nameof(DiagnosticsMilliseconds));
     public static string DiagnosticsActionPointForce => Get(nameof(DiagnosticsActionPointForce));
     public static string DiagnosticsActionPointMoment => Get(nameof(DiagnosticsActionPointMoment));
     public static string DiagnosticsActionDistributedLoad => Get(nameof(DiagnosticsActionDistributedLoad));
@@ -482,4 +481,10 @@ public static class Strings
     public static string DiagnosticsActionSelfWeightVisibility => Get(nameof(DiagnosticsActionSelfWeightVisibility));
     public static string DiagnosticsActionUndo => Get(nameof(DiagnosticsActionUndo));
     public static string DiagnosticsActionRedo => Get(nameof(DiagnosticsActionRedo));
+    public static string DiagnosticsHistoryCaption => Get(nameof(DiagnosticsHistoryCaption));
+    public static string DiagnosticsPreparationHint => Get(nameof(DiagnosticsPreparationHint));
+    public static string DiagnosticsAnalysisHint => Get(nameof(DiagnosticsAnalysisHint));
+    public static string DiagnosticsPresentationHint => Get(nameof(DiagnosticsPresentationHint));
+    public static string DiagnosticsUiHint => Get(nameof(DiagnosticsUiHint));
+    public static string DiagnosticsTotalHint => Get(nameof(DiagnosticsTotalHint));
 }

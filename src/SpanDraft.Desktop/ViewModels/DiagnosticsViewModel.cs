@@ -109,9 +109,9 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
         return rows;
     }
 
+    // The unit is stated once by the table caption.
     private static string Milliseconds(TimeSpan duration) =>
-        string.Format(CultureInfo.CurrentCulture, Strings.DiagnosticsMilliseconds,
-            duration.TotalMilliseconds.ToString("0.0", CultureInfo.CurrentCulture));
+        duration.TotalMilliseconds.ToString("0.0", CultureInfo.CurrentCulture);
 
     public void Dispose()
     {

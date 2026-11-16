@@ -443,19 +443,18 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="Diagnostics" xml:space="preserve"><value>Diagnose</value></data>
   <data name="DiagnosticsOperatingSystem" xml:space="preserve"><value>Betriebssystem</value></data>
   <data name="DiagnosticsArchitecture" xml:space="preserve"><value>Architektur</value></data>
-  <data name="DiagnosticsRuntime" xml:space="preserve"><value>.NET</value></data>
+  <data name="DiagnosticsRuntime" xml:space="preserve"><value>Laufzeit</value></data>
   <data name="DiagnosticsLocalNote" xml:space="preserve"><value>Diagnosewerte werden ausschließlich lokal im Arbeitsspeicher dieses Computers gehalten und nicht automatisch übertragen.</value></data>
-  <data name="DiagnosticsAdvanced" xml:space="preserve"><value>Letzte Interaktionen anzeigen</value></data>
-  <data name="DiagnosticsEmpty" xml:space="preserve"><value>Noch keine Interaktionen aufgezeichnet.</value></data>
+  <data name="DiagnosticsAdvanced" xml:space="preserve"><value>Erweiterte Ansicht</value></data>
+  <data name="DiagnosticsEmpty" xml:space="preserve"><value>Noch keine Interaktionen aufgezeichnet. Bearbeite das Projekt, dann erscheinen sie hier.</value></data>
   <data name="DiagnosticsFrameNote" xml:space="preserve"><value>UI endet am gerenderten Anwendungs-Frame. Das ist keine bestätigte physische Display-Ausgabe.</value></data>
   <data name="DiagnosticsTime" xml:space="preserve"><value>Uhrzeit</value></data>
   <data name="DiagnosticsAction" xml:space="preserve"><value>Aktion</value></data>
   <data name="DiagnosticsPreparation" xml:space="preserve"><value>Vorbereitung</value></data>
-  <data name="DiagnosticsAnalysis" xml:space="preserve"><value>Berechnung</value></data>
-  <data name="DiagnosticsPresentation" xml:space="preserve"><value>Darstellung</value></data>
+  <data name="DiagnosticsAnalysis" xml:space="preserve"><value>Analyse</value></data>
+  <data name="DiagnosticsPresentation" xml:space="preserve"><value>Präsentation</value></data>
   <data name="DiagnosticsUi" xml:space="preserve"><value>UI</value></data>
   <data name="DiagnosticsTotal" xml:space="preserve"><value>Gesamt</value></data>
-  <data name="DiagnosticsMilliseconds" xml:space="preserve"><value>{0} ms</value></data>
   <data name="DiagnosticsActionPointForce" xml:space="preserve"><value>Punktkraft</value></data>
   <data name="DiagnosticsActionPointMoment" xml:space="preserve"><value>Punktmoment</value></data>
   <data name="DiagnosticsActionDistributedLoad" xml:space="preserve"><value>Streckenlast</value></data>
@@ -469,4 +468,10 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="DiagnosticsActionSelfWeightVisibility" xml:space="preserve"><value>Eigengewicht-Anzeige</value></data>
   <data name="DiagnosticsActionUndo" xml:space="preserve"><value>Rückgängig</value></data>
   <data name="DiagnosticsActionRedo" xml:space="preserve"><value>Wiederholen</value></data>
+  <data name="DiagnosticsHistoryCaption" xml:space="preserve"><value>Letzte Interaktionen, Zeiten in ms</value></data>
+  <data name="DiagnosticsPreparationHint" xml:space="preserve"><value>Eingabe und Validierung der Bestätigung</value></data>
+  <data name="DiagnosticsAnalysisHint" xml:space="preserve"><value>Berechnung des neuen Zustands; 0 bei Änderungen ohne Einfluss auf die Mechanik</value></data>
+  <data name="DiagnosticsPresentationHint" xml:space="preserve"><value>Synchrone Verarbeitung des neuen Zustands</value></data>
+  <data name="DiagnosticsUiHint" xml:space="preserve"><value>Bis zum gerenderten Anwendungs-Frame</value></data>
+  <data name="DiagnosticsTotalHint" xml:space="preserve"><value>Summe aller Phasen</value></data>
 </root>

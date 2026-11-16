@@ -115,7 +115,7 @@ public sealed class DesktopDiagnosticsControlTests
         WaitForRows(main, view, 1);
         var row = Assert.Single(view.Rows);
         Assert.Equal(Strings.DiagnosticsActionAnnotationOffset, row.Action);
-        Assert.Equal("0.0 ms", row.Analysis); // Non-mechanical: no analysis phase.
+        Assert.Equal("0.0", row.Analysis); // Non-mechanical: no analysis phase.
 
         diagnostics.Close(); Dispatcher.UIThread.RunJobs();
         Assert.Empty(main.OwnedWindows);
@@ -184,7 +184,7 @@ public sealed class DesktopDiagnosticsControlTests
 
         // Relative invariants: every row shares the header's column edges, text stays inside its column and the window.
         Rect Box(Control c) => new(c.TranslatePoint(default, window)!.Value, c.Bounds.Size);
-        double windowWidth = ((Control)window.Content!).Bounds.Width;
+        double rightEdge = window.Width - 24; // The content margin.
         foreach (var row in rows)
             for (int i = 0; i < 7; i++)
             {
@@ -193,7 +193,7 @@ public sealed class DesktopDiagnosticsControlTests
                 Assert.True(cell.TextLayout.Width <= cell.Bounds.Width + 0.01, $"clipped: {cell.Text}");
                 if (i >= 2) Assert.Equal(headBox.Right, cellBox.Right, 0.5); else Assert.Equal(headBox.Left, cellBox.Left, 0.5);
                 if (i < 6) Assert.True(cellBox.Right <= Box((Control)row.Children[i + 1]).Left + 0.5, "Cells overlap.");
-                Assert.InRange(cellBox.Right, 0, windowWidth + 0.5);
+                Assert.InRange(cellBox.Right, 0, rightEdge + 0.5);
             }
         window.Close();
         Assert.Null(window.DataContext);

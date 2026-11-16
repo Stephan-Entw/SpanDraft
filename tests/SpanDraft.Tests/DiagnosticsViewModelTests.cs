@@ -109,7 +109,7 @@ public sealed class DiagnosticsViewModelTests
         // The first frame stays pending; only the completed entry is shown.
         using var model = new DiagnosticsViewModel(recorder, Environment, Plus2, new Ui().Post);
         var row = Assert.Single(model.Rows);
-        Assert.Equal(new DiagnosticsRow(LocalTime(Start.AddSeconds(90)), "Distributed load", "3.0 ms", "5.0 ms", "7.0 ms", "11.0 ms", "26.0 ms"), row);
+        Assert.Equal(new DiagnosticsRow(LocalTime(Start.AddSeconds(90)), "Distributed load", "3.0", "5.0", "7.0", "11.0", "26.0"), row);
         frames.Requests[0].SetResult(Ms(40).Ticks);
         using var later = new DiagnosticsViewModel(recorder, Environment, Plus2, new Ui().Post);
         // Newest first means last recorded first: the first interaction finished its frame last.
@@ -118,8 +118,8 @@ public sealed class DiagnosticsViewModelTests
     }
 
     [Theory]
-    [InlineData("en-US", "0.0 ms", "26.0 ms")]
-    [InlineData("de-DE", "0,0 ms", "26,0 ms")]
+    [InlineData("en-US", "0.0", "26.0")]
+    [InlineData("de-DE", "0,0", "26,0")]
     public void NonMechanicalActionsShowAnalysisAsZeroAndPhasesAddUp(string language, string zero, string total)
     {
         using var culture = new UiCultureScope(language);
