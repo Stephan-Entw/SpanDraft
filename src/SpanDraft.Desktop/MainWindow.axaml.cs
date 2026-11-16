@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private bool _closing;
     private bool _closeApproved;
     private AboutWindow? _aboutWindow;
+    private DiagnosticsWindow? _diagnosticsWindow;
     private SettingsWindow? _settingsWindow;
     private bool _initializing = true;
     private readonly TaskCompletionSource _initialization = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -140,6 +141,17 @@ public partial class MainWindow : Window
             // Leave the protection in place through activation and deferred focus events.
             Dispatcher.UIThread.Post(() => _model.SetSettingsDialogOpen(false), DispatcherPriority.Background);
         }
+    }
+
+    // Modeless, so interactions made while it is open appear live. Opening it is not a measured interaction.
+    private void ShowDiagnostics(object? sender, RoutedEventArgs e)
+    {
+        if (_initializing || _closing || _performance is null) return;
+        if (_diagnosticsWindow is not null) { _diagnosticsWindow.Activate(); return; }
+        var window = new DiagnosticsWindow(new(_performance)) { Icon = Icon };
+        _diagnosticsWindow = window;
+        window.Closed += (_, _) => _diagnosticsWindow = null;
+        window.Show(this);
     }
 
     private async void ShowAbout(object? sender, RoutedEventArgs e)

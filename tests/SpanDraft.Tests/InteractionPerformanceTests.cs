@@ -396,4 +396,58 @@ public sealed class InteractionPerformanceTests
             InteractionAction.SelfWeight, InteractionAction.ProjectSetup }, recorder.GetEntries().Select(e => e.Action));
         Assert.Equal(TimeSpan.Zero, recorder.GetEntries()[1].Analysis);
     }
+
+    [Fact]
+    public void EntryRecordedIsRaisedOnlyOnceTheCompletedEntryIsInTheHistory()
+    {
+        var clock = new Clock(); var frames = new Frames(); var recorder = new InteractionPerformance(frames, clock);
+        var counts = new List<int>();
+        recorder.EntryRecorded += () => counts.Add(recorder.GetEntries().Count);
+        using (recorder.Begin(InteractionAction.PointForce))
+        {
+            recorder.AnalysisStarting(); recorder.AnalysisFinished(); recorder.Committed();
+            Assert.Empty(counts);
+        }
+        Assert.Empty(counts); // The frame is still pending: no intermediate notification.
+        clock.Timestamp = 4; Assert.Single(frames.Requests).SetResult(clock.Timestamp);
+        Assert.Equal(new[] { 1 }, counts);
+    }
+
+    [Fact]
+    public void EntryRecordedIsNotRaisedForDiscardedMeasurements()
+    {
+        var clock = new Clock(); var frames = new Frames(); var recorder = new InteractionPerformance(frames, clock);
+        int raised = 0; recorder.EntryRecorded += () => raised++;
+        using (recorder.Begin(InteractionAction.PointForce)) { recorder.PresentationStarting(); } // Never committed.
+        using (recorder.Begin(InteractionAction.PointForce)) { recorder.Committed(); } // No analysis boundary.
+        Assert.Empty(frames.Requests);
+        using (recorder.Begin(InteractionAction.PointForce)) { recorder.PresentationStarting(); recorder.Committed(); }
+        using (recorder.Begin(InteractionAction.PointForce)) { recorder.PresentationStarting(); recorder.Committed(); }
+        using (recorder.Begin(InteractionAction.PointForce)) { recorder.PresentationStarting(); recorder.Committed(); }
+        Assert.Equal(3, frames.Requests.Count);
+        clock.Timers[0].Fire(); // Timeout.
+        recorder.CancelPending(); // Cancellation of the remaining ones.
+        foreach (var request in frames.Requests) request.TrySetResult(clock.Timestamp);
+        var unavailable = new InteractionPerformance(new ImmediateFrames(available: false));
+        unavailable.EntryRecorded += () => raised++;
+        using (unavailable.Begin(InteractionAction.Undo)) { unavailable.PresentationStarting(); unavailable.Committed(); }
+        Assert.Equal(0, raised);
+        Assert.Empty(recorder.GetEntries());
+    }
+
+    [Fact]
+    public void RemovedEntryRecordedListenersAreNotCalledAndFailingOnesDoNotLoseTheEntry()
+    {
+        var recorder = new InteractionPerformance(new ImmediateFrames());
+        int raised = 0;
+        Action counter = () => raised++;
+        recorder.EntryRecorded += counter;
+        using (recorder.Begin(InteractionAction.Redo)) { recorder.PresentationStarting(); recorder.Committed(); }
+        recorder.EntryRecorded -= counter;
+        using (recorder.Begin(InteractionAction.Redo)) { recorder.PresentationStarting(); recorder.Committed(); }
+        Assert.Equal(1, raised);
+        recorder.EntryRecorded += () => throw new InvalidOperationException("Listener failure.");
+        using (recorder.Begin(InteractionAction.Redo)) { recorder.PresentationStarting(); recorder.Committed(); }
+        Assert.Equal(3, recorder.GetEntries().Count);
+    }
 }

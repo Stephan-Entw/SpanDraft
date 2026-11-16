@@ -28,6 +28,9 @@ public sealed class InteractionPerformance(IInteractionFrameProbe frames, TimePr
     private int _next, _count;
     private Measurement? _current;
 
+    /// <summary>Raised after a completed entry joined the history; may run on any thread, so listeners must marshal.</summary>
+    public event Action? EntryRecorded;
+
     public IReadOnlyList<InteractionPerformanceEntry> GetEntries()
     {
         lock (_gate)
@@ -97,12 +100,14 @@ public sealed class InteractionPerformance(IInteractionFrameProbe frames, TimePr
 
     private async Task FinishAsync(Measurement measurement)
     {
+        bool recorded = false;
         try
         {
             var end = await frames.ObserveNextFrameAsync(_clock, measurement.Cancellation!.Token).ConfigureAwait(false);
             lock (_gate)
             {
                 if (!_pending.Remove(measurement) || end is null) return;
+                recorded = true;
                 // Convert cumulative boundaries once so the phases add up exactly to Total.
                 TimeSpan Elapsed(long timestamp) => _clock.GetElapsedTime(measurement.Start, timestamp);
                 var preparation = Elapsed(measurement.AnalysisStart!.Value);
@@ -114,6 +119,8 @@ public sealed class InteractionPerformance(IInteractionFrameProbe frames, TimePr
                 _next = (_next + 1) % Capacity;
                 _count = Math.Min(_count + 1, Capacity);
             }
+            // Outside the lock, so a listener may read the entries; the new entry is already visible there.
+            if (recorded) EntryRecorded?.Invoke();
         }
         catch (Exception) { /* Diagnostics must never fail a product command or the dispatcher. */ }
         finally

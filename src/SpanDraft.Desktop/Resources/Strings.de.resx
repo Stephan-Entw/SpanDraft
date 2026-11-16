@@ -440,4 +440,33 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="InsufficientSupportWithMomentReleases" xml:space="preserve"><value>Lagerung nicht ausreichend oder zu viele Gelenke</value></data>
   <data name="MomentReleaseResults" xml:space="preserve"><value>Gelenkgrößen</value></data>
   <data name="ReportMomentReleaseTheory" xml:space="preserve"><value>Gelenke übertragen Quer- und Normalkraft; das Biegemoment ist dort null, die Rotation springt (θ− links, θ+ rechts).</value></data>
+  <data name="Diagnostics" xml:space="preserve"><value>Diagnose</value></data>
+  <data name="DiagnosticsOperatingSystem" xml:space="preserve"><value>Betriebssystem</value></data>
+  <data name="DiagnosticsArchitecture" xml:space="preserve"><value>Architektur</value></data>
+  <data name="DiagnosticsRuntime" xml:space="preserve"><value>.NET</value></data>
+  <data name="DiagnosticsLocalNote" xml:space="preserve"><value>Diagnosewerte werden ausschließlich lokal im Arbeitsspeicher dieses Computers gehalten und nicht automatisch übertragen.</value></data>
+  <data name="DiagnosticsAdvanced" xml:space="preserve"><value>Letzte Interaktionen anzeigen</value></data>
+  <data name="DiagnosticsEmpty" xml:space="preserve"><value>Noch keine Interaktionen aufgezeichnet.</value></data>
+  <data name="DiagnosticsFrameNote" xml:space="preserve"><value>UI endet am gerenderten Anwendungs-Frame. Das ist keine bestätigte physische Display-Ausgabe.</value></data>
+  <data name="DiagnosticsTime" xml:space="preserve"><value>Uhrzeit</value></data>
+  <data name="DiagnosticsAction" xml:space="preserve"><value>Aktion</value></data>
+  <data name="DiagnosticsPreparation" xml:space="preserve"><value>Vorbereitung</value></data>
+  <data name="DiagnosticsAnalysis" xml:space="preserve"><value>Berechnung</value></data>
+  <data name="DiagnosticsPresentation" xml:space="preserve"><value>Darstellung</value></data>
+  <data name="DiagnosticsUi" xml:space="preserve"><value>UI</value></data>
+  <data name="DiagnosticsTotal" xml:space="preserve"><value>Gesamt</value></data>
+  <data name="DiagnosticsMilliseconds" xml:space="preserve"><value>{0} ms</value></data>
+  <data name="DiagnosticsActionPointForce" xml:space="preserve"><value>Punktkraft</value></data>
+  <data name="DiagnosticsActionPointMoment" xml:space="preserve"><value>Punktmoment</value></data>
+  <data name="DiagnosticsActionDistributedLoad" xml:space="preserve"><value>Streckenlast</value></data>
+  <data name="DiagnosticsActionSupport" xml:space="preserve"><value>Lager</value></data>
+  <data name="DiagnosticsActionSpringSupport" xml:space="preserve"><value>Federlager</value></data>
+  <data name="DiagnosticsActionMomentRelease" xml:space="preserve"><value>Gelenk</value></data>
+  <data name="DiagnosticsActionSelfWeight" xml:space="preserve"><value>Eigengewicht</value></data>
+  <data name="DiagnosticsActionBeamGeometry" xml:space="preserve"><value>Balkengeometrie</value></data>
+  <data name="DiagnosticsActionProjectSetup" xml:space="preserve"><value>Projekteigenschaften</value></data>
+  <data name="DiagnosticsActionAnnotationOffset" xml:space="preserve"><value>Beschriftungsposition</value></data>
+  <data name="DiagnosticsActionSelfWeightVisibility" xml:space="preserve"><value>Eigengewicht-Anzeige</value></data>
+  <data name="DiagnosticsActionUndo" xml:space="preserve"><value>Rückgängig</value></data>
+  <data name="DiagnosticsActionRedo" xml:space="preserve"><value>Wiederholen</value></data>
 </root>
