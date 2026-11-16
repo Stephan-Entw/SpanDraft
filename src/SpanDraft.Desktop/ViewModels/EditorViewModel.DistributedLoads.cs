@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Diagnostics;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 
@@ -150,6 +151,7 @@ public sealed partial class EditorViewModel
 
     public bool ConfirmDistributedLoad()
     {
+        using var measurement = _performance?.Begin(InteractionAction.DistributedLoad);
         if (IsBusy) return false;
         var draft = DistributedLoadDraft;
         if (!IsDistributedLoadFlyoutVisible || draft is null || !draft.TryGetValues(out var start, out var end, out double startIntensity, out double endIntensity)
@@ -175,16 +177,19 @@ public sealed partial class EditorViewModel
         var document = Document.WithDistributedLoads(loads, naming);
         CancelDistributedLoadInteraction();
         Commit(document);
+        measurement?.Complete();
         return true;
     }
 
     public void DeleteDistributedLoad()
     {
+        using var measurement = _performance?.Begin(InteractionAction.DistributedLoad);
         if (IsBusy || DistributedLoadState != DistributedLoadInteraction.EditDraft || DistributedLoadDraft?.OriginalId is not { } id
             || !Document.DistributedLoads.Any(l => l.Id == id)) return;
         var document = Document.WithDistributedLoads(Document.DistributedLoads.Where(l => l.Id != id));
         CancelDistributedLoadInteraction();
         Commit(document);
+        measurement?.Complete();
     }
 
     public void CancelDistributedLoadInteraction()

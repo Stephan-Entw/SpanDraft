@@ -4,6 +4,7 @@ using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Diagnostics;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.Sections;
@@ -22,6 +23,7 @@ public enum ProjectSetupPage { Overview, MaterialSelection, SectionDefinition }
 public sealed class ProjectSetupViewModel : ObservableObject
 {
     private readonly Func<ProjectSetupViewModel, Task<bool>> _apply;
+    private readonly InteractionPerformance? _performance;
     private readonly EditorDocument? _originalDocument;
     private readonly ProjectInfo? _originalInfo;
     private ISectionDefinition? _selectedSection;
@@ -54,7 +56,8 @@ public sealed class ProjectSetupViewModel : ObservableObject
         Material? material, Func<ProjectSetupViewModel, Task<bool>> apply, Action cancel,
         ResultPresentationOptions? resultPresentation = null, MainWindowViewModel? libraries = null,
         EditorDocument? originalDocument = null, bool canCancel = false, ProjectSetupDraft? recoveredDraft = null,
-        ProjectInfo? originalInfo = null, string? suggestedAuthor = null)
+        ProjectInfo? originalInfo = null, string? suggestedAuthor = null,
+        InteractionPerformance? performance = null)
     {
         if (mode == ProjectSetupMode.Edit)
         {
@@ -64,6 +67,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         section?.GetAxis(bendingAxis);
         Mode = mode; _selectedSection = section; _bendingAxis = bendingAxis; _selectedMaterial = material;
         _canCancel = canCancel;
+        _performance = performance;
         _originalDocument = originalDocument;
         _sectionDisplayName = recoveredDraft?.SectionDisplayName ?? originalDocument?.Segments[0].SectionDisplayName;
         if (originalDocument is not null)
@@ -480,12 +484,21 @@ public sealed class ProjectSetupViewModel : ObservableObject
     {
         if (CurrentStep is MaterialSelectionViewModel { Editor: { } material }) return await material.ConfirmAsync();
         if (Definition is { } definition) return await definition.ConfirmAsync();
-        if (!IsOverview || IsBusy) return false;
+        return await ConfirmOverviewAsync();
+    }
+
+    private Task<bool> ConfirmOverviewAsync()
+    {
+        if (!IsOverview || IsBusy) return Task.FromResult(false);
+        // The context ends with synchronous confirmation, before any asynchronous setup work can yield.
+        using var measurement = IsEdit ? _performance?.Begin(InteractionAction.ProjectSetup) : null;
         bool infoAccepted = true;
         foreach (var input in InfoInputs) infoAccepted &= input.Confirm();
         foreach (var card in Cards) infoAccepted &= card.LengthInput.Confirm();
-        if (!infoAccepted || !CanApply) return false;
-        return await _apply(this);
+        if (!infoAccepted || !CanApply) return Task.FromResult(false);
+        var result = _apply(this);
+        measurement?.Complete();
+        return result;
     }
     private void Navigate(ProjectSetupPage page, object? step)
     {

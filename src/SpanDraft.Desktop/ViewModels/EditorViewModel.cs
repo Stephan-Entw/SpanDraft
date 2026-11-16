@@ -6,6 +6,7 @@ using SpanDraft.Core.Materials;
 using SpanDraft.Core.Sections;
 using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Diagnostics;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
@@ -15,6 +16,7 @@ namespace SpanDraft.Desktop.ViewModels;
 public sealed partial class EditorViewModel : ObservableObject
 {
     private readonly Func<BeamModel, BeamAnalysisOutcome> _analyze;
+    private readonly InteractionPerformance? _performance;
     private AnalysisPresentationState _presentation;
     private ProjectOverviewState _overview;
     private KeyValuePair<Guid, AnnotationOffset>? _annotationPreview;
@@ -29,23 +31,27 @@ public sealed partial class EditorViewModel : ObservableObject
     private ConstraintConflictState? _constraintConflict;
 
     public EditorViewModel(EditorDocument document, Action changeProject,
-        Func<BeamModel, BeamAnalysisOutcome>? analyze = null, ResultPresentationOptions? resultPresentation = null)
-        : this(changeProject, ProjectSession.Create(new(document, new())), analyze, resultPresentation) { }
+        Func<BeamModel, BeamAnalysisOutcome>? analyze = null, ResultPresentationOptions? resultPresentation = null,
+        InteractionPerformance? performance = null)
+        : this(changeProject, ProjectSession.Create(new(document, new())), analyze, resultPresentation, performance) { }
 
     public static EditorViewModel ForSession(ProjectSession session, Action changeProject,
-        Func<BeamModel, BeamAnalysisOutcome>? analyze = null, ResultPresentationOptions? resultPresentation = null) =>
-        new(changeProject, session, analyze, resultPresentation);
+        Func<BeamModel, BeamAnalysisOutcome>? analyze = null, ResultPresentationOptions? resultPresentation = null,
+        InteractionPerformance? performance = null) =>
+        new(changeProject, session, analyze, resultPresentation, performance);
 
     private EditorViewModel(Action changeProject, ProjectSession session,
-        Func<BeamModel, BeamAnalysisOutcome>? analyze, ResultPresentationOptions? resultPresentation)
+        Func<BeamModel, BeamAnalysisOutcome>? analyze, ResultPresentationOptions? resultPresentation,
+        InteractionPerformance? performance)
     {
         Session = session;
+        _performance = performance;
         _analyze = analyze ?? BeamAnalysis.Analyze;
         _presentation = AnalysisPresentationState.FromOutcome(_analyze(Document.ToBeamModel()), resultPresentation,
             Document.MomentReleases.Count > 0);
         _overview = ProjectOverviewState.From(Document, _presentation);
         DimensionLength = new(() => Document.Length, ChangeLength, () => PreserveDrafts,
-            () => ResultPresentation.Profile[QuantityKind.BeamLength], readPresentation: () => ResultPresentation);
+            () => ResultPresentation.Profile[QuantityKind.BeamLength], readPresentation: () => ResultPresentation, performance: _performance);
         Session.StateApplied += ApplyState;
         Session.Changed += () => { Notify(nameof(IsBusy)); RefreshResultProbeAvailability(); };
         DimensionLength.BufferChanged += text =>
@@ -281,6 +287,8 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public bool ConfirmSupport()
     {
+        using var measurement = _performance?.Begin(_draft?.Type == SupportType.Spring
+            ? InteractionAction.SpringSupport : InteractionAction.Support);
         if (IsBusy) return false;
         var draft = _draft;
         if (!IsSupportFlyoutVisible || draft is null || !draft.TryGetValue(out var position)) return false;
@@ -300,16 +308,20 @@ public sealed partial class EditorViewModel : ObservableObject
         var document = Document.WithSupports(supports, naming);
         CancelSupportInteraction();
         Commit(document);
+        measurement?.Complete();
         return true;
     }
 
     public void DeleteSupport()
     {
+        using var measurement = _performance?.Begin(_draft?.Type == SupportType.Spring
+            ? InteractionAction.SpringSupport : InteractionAction.Support);
         if (IsBusy || Interaction != SupportInteraction.EditDraft || _draft?.OriginalId is not { } id
             || !Document.Supports.Any(s => s.Id == id)) return;
         var document = Document.WithSupports(Document.Supports.Where(s => s.Id != id));
         CancelSupportInteraction();
         Commit(document);
+        measurement?.Complete();
     }
 
     public void CancelSupportInteraction()
@@ -405,9 +417,11 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public void ApplySetup(ISectionDefinition section, SectionAxisDesignation bendingAxis, Material material)
     {
+        using var measurement = _performance?.Begin(InteractionAction.ProjectSetup);
         // The single-segment shortcut; a beam of several segments is set up through the segment chain.
         if (!IsBusy && !Document.HasSeveralSegments && CanApplyMaterial(material))
             Commit(Document.WithSection(section, bendingAxis) with { Material = material });
+        measurement?.Complete();
     }
 
     public bool ApplySetup(Length length, ISectionDefinition section, SectionAxisDesignation bendingAxis,
@@ -417,10 +431,13 @@ public sealed partial class EditorViewModel : ObservableObject
     public bool ApplySetup(Length length, ISectionDefinition section, SectionAxisDesignation bendingAxis,
         Material material, string? sectionDisplayName, ProjectInfo? info)
     {
+        using var measurement = _performance?.Begin(InteractionAction.ProjectSetup);
         if (IsBusy || Document.HasSeveralSegments || !(length.Meters > 0)) return false;
         var segment = Document.Segments[0].WithSection(section, bendingAxis, sectionDisplayName).WithMaterial(material)
             with { Length = length };
-        return ApplySetup([segment], info);
+        bool accepted = ApplySetup([segment], info);
+        measurement?.Complete();
+        return accepted;
     }
 
     /// <summary>
@@ -429,20 +446,24 @@ public sealed partial class EditorViewModel : ObservableObject
     /// </summary>
     public bool ApplySetup(IReadOnlyList<EditorSegment> segments, ProjectInfo? info)
     {
+        using var measurement = _performance?.Begin(InteractionAction.ProjectSetup);
         if (IsBusy || !segments.All(segment => CanApplyMaterial(segment.Material))) return false;
         var change = Document.WithSegmentChain(segments);
         if (change.Document is not { } document) return false;
-        Session.Commit(Session.CurrentRevision.State with
+        Commit(Session.CurrentRevision.State with
         {
             Document = document, Presentation = EditorPresentation.RetainEntities(document), Info = info
         });
+        measurement?.Complete();
         return true;
     }
 
     public bool SetAnnotationOffset(Guid id, AnnotationOffset? offset)
     {
+        using var measurement = _performance?.Begin(InteractionAction.AnnotationOffset);
         if (IsBusy || !Document.EntityIds.Contains(id)) return false;
         Commit(Document, EditorPresentation.WithOffset(id, offset));
+        measurement?.Complete();
         return true;
     }
 
@@ -462,21 +483,34 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public bool Undo()
     {
+        using var measurement = _performance?.Begin(InteractionAction.Undo);
         if (IsBusy) return false;
         CancelEditorInteraction();
-        return Session.Undo();
+        bool changed = Session.Undo();
+        if (changed) _performance?.Committed();
+        measurement?.Complete();
+        return changed;
     }
 
     public bool Redo()
     {
+        using var measurement = _performance?.Begin(InteractionAction.Redo);
         if (IsBusy) return false;
         CancelEditorInteraction();
-        return Session.Redo();
+        bool changed = Session.Redo();
+        if (changed) _performance?.Committed();
+        measurement?.Complete();
+        return changed;
     }
 
     private void Commit(EditorDocument document, EditorPresentationState? presentation = null) =>
-        Session.Commit(Session.CurrentRevision.State with
+        Commit(Session.CurrentRevision.State with
         { Document = document, Presentation = (presentation ?? EditorPresentation).RetainEntities(document) });
+
+    private void Commit(ProjectState next)
+    {
+        if (Session.Commit(next)) _performance?.Committed();
+    }
 
     private void ApplyState(ProjectState previous, ProjectState next, EditorChangeKind change)
     {
@@ -486,10 +520,14 @@ public sealed partial class EditorViewModel : ObservableObject
         {
             CancelResultProbe();
             if (ConstraintConflict is { } conflict) UpdateConstraintConflict(conflict.RequestedLength);
-            _presentation = AnalysisPresentationState.FromOutcome(_analyze(next.Document.ToBeamModel()), ResultPresentation,
+            _performance?.AnalysisStarting();
+            var outcome = _analyze(next.Document.ToBeamModel());
+            _performance?.AnalysisFinished();
+            _presentation = AnalysisPresentationState.FromOutcome(outcome, ResultPresentation,
                 next.Document.MomentReleases.Count > 0);
             DimensionLength.Refresh(preserveError: ConstraintConflict is not null);
         }
+        else _performance?.PresentationStarting();
         if (documentChanged) _overview = ProjectOverviewState.From(next.Document, _presentation);
         if (change == EditorChangeKind.Mechanical)
         {

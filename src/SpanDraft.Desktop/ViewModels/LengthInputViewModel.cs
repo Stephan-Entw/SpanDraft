@@ -1,4 +1,5 @@
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Diagnostics;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.Presentation;
 
@@ -12,7 +13,8 @@ public readonly record struct LengthCommitResult(bool Accepted, string? ErrorTex
 /// <summary>Transient input session for the single inline dimension editor.</summary>
 public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, LengthCommitResult> commit,
     Func<bool>? preserveBuffer = null, Func<UnitDefinition>? readUnit = null,
-    bool retainRejectedOnBlur = false, Func<ResultPresentationOptions>? readPresentation = null) : ObservableObject
+    bool retainRejectedOnBlur = false, Func<ResultPresentationOptions>? readPresentation = null,
+    InteractionPerformance? performance = null) : ObservableObject
 {
     private string _text = Format(read(), readUnit?.Invoke() ?? UnitCatalog.Millimeter);
     private UnitDefinition _editUnit = UnitCatalog.Millimeter;
@@ -67,6 +69,7 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
     public bool Confirm()
     {
         if (!IsEditing || _isConfirming) return true;
+        using var measurement = performance?.Begin(InteractionAction.BeamGeometry);
         if (read() is null && string.IsNullOrWhiteSpace(Text))
         {
             ClearError();
@@ -92,6 +95,7 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
             }
             IsEditing = false;
             Refresh();
+            measurement?.Complete();
             return true;
         }
         finally { _isConfirming = false; }

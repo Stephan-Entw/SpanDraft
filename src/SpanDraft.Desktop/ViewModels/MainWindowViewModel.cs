@@ -2,6 +2,7 @@ using System.Text.Json;
 using SpanDraft.Analysis;
 using SpanDraft.Core.Beams;
 using SpanDraft.Core.Units;
+using SpanDraft.Desktop.Diagnostics;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
@@ -16,6 +17,7 @@ public enum MainWorkspaceKind { ProjectSetup, MaterialSelection, SectionDefiniti
 public sealed partial class MainWindowViewModel : ObservableObject
 {
     private readonly Func<BeamModel, BeamAnalysisOutcome>? _analyze;
+    private readonly InteractionPerformance? _performance;
     private readonly IProjectFileStore _files;
     private readonly IProjectDialogs? _dialogs;
     private readonly ProjectRecovery? _recovery;
@@ -42,9 +44,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MaterialLibraryStore? materialStore = null, SectionLibraryStore? sectionStore = null,
         Func<SpanDraft.Desktop.Libraries.BuiltInMaterialCatalog>? catalogLoader = null,
         RecentProjectsStore? recentStore = null, Func<Task>? openUserManual = null,
-        ProjectSetupRecovery? setupRecovery = null, Func<string?>? userNameProvider = null)
+        ProjectSetupRecovery? setupRecovery = null, Func<string?>? userNameProvider = null,
+        InteractionPerformance? performance = null)
     {
         _analyze = analyze;
+        _performance = performance;
         _files = files ?? new ProjectFileStore();
         _dialogs = dialogs;
         _recovery = recovery;
@@ -302,7 +306,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _setupReturnMode = MainViewMode.Editor;
         var first = Editor.Document.Segments[0];
         _setup = new(ProjectSetupMode.Edit, first.Section, first.BendingAxis, first.Material,
-            ApplySetupAsync, CancelSetup, ResultPresentation, this, Editor.Document, originalInfo: Session!.CurrentRevision.State.Info);
+            ApplySetupAsync, CancelSetup, ResultPresentation, this, Editor.Document, originalInfo: Session!.CurrentRevision.State.Info, performance: _performance);
         Navigate(MainViewMode.ProjectSetup);
     }
 
@@ -354,7 +358,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void Activate(ProjectSession session)
     {
         DetachSession();
-        _editor = EditorViewModel.ForSession(session, EditProject, _analyze, ResultPresentation);
+        _editor = EditorViewModel.ForSession(session, EditProject, _analyze, ResultPresentation, _performance);
         _editor.IsMainMenuOpen = _mainMenuOpen;
         _editor.PropertyChanged += EditorReportStateChanged;
         session.SetBusy(IsBusy);
@@ -366,6 +370,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void DetachSession()
     {
+        _performance?.CancelPending();
         if (Session is not { } session) return;
         session.Changed -= SessionChanged;
         session.StateApplied -= CommittedStateChanged;
@@ -636,6 +641,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void Navigate(MainViewMode mode)
     {
+        if (_mode != mode) _performance?.CancelPending();
         // Protect hidden editor buffers before changing the visible workspace.
         if (Editor is { } editor)
         {

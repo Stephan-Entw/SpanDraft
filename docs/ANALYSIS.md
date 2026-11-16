@@ -86,3 +86,28 @@ Core, Solver und Engineering bleiben unabhängig von Desktop.
 
 Analysis gehört zur normalen Solution und den Produkttests, nicht zur separaten
 unabhängigen Validation-Solution.
+
+## Lokale Interaktionsmessung im Desktop
+
+Bestätigte Änderungen am committed Projektzustand können im Desktop bis zum
+zugehörigen gerenderten Avalonia-Frame gemessen werden. Das gilt auch für reine
+Metadaten-/Präsentationsänderungen und Undo/Redo; initiale Projektanlage und
+Analyse beim Öffnen sind ausgenommen. Eingabedrafts und Previews werden nicht gemessen.
+
+Preparation beginnt vor Parsing und Validierung der Bestätigung und endet vor
+`ToBeamModel()`. Analysis umfasst diese Konvertierung und `BeamAnalysis.Analyze()`
+bis zum `BeamAnalysisOutcome`. Bei nichtmechanischen Änderungen ist Analysis
+`TimeSpan.Zero`. Presentation umfasst die anschließende synchrone Verarbeitung
+einschließlich ViewModel-Benachrichtigungen. UI endet an `CompositionBatch.Rendered`
+nach dem Animation-Callback; dies bestätigt keine physische Bildschirmausgabe.
+Total und Phasen stammen aus derselben monotonen Zeitlinie.
+
+Die Diagnose wartet nicht im Benutzerkommando, invalidiert keine Visuals und
+verändert den Visual Tree nicht. Nicht verfügbare oder abgebrochene Frames
+verwerfen die offene Messung ohne Einfluss auf die Produktaktion. Das Anfordern
+eines Composition-Batches kann Messoverhead verursachen.
+
+Erfasst werden ausschließlich UTC-Startzeit, technischer Aktionstyp und Dauern.
+Die letzten 50 abgeschlossenen Einträge bleiben im Arbeitsspeicher des Fensters;
+Projektinhalte, Persistenz, Telemetrie und Netzwerkzugriffe sind ausgeschlossen.
+Messkontexte bleiben transient und gehören weder zu Revisionen noch zum Projektformat.

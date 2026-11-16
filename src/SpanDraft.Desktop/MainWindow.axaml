@@ -47,6 +47,6 @@
         <MenuItem Header="{x:Static resources:Strings.About}" IsEnabled="{Binding !IsWorkspaceBusy}" Click="ShowAbout" />
       </MenuItem>
     </Menu>
-    <ContentControl Grid.Row="1" Content="{Binding CurrentViewModel}" IsEnabled="{Binding !IsWorkspaceBusy}" />
+    <ContentControl x:Name="WorkspaceContent" Grid.Row="1" Content="{Binding CurrentViewModel}" IsEnabled="{Binding !IsWorkspaceBusy}" />
   </Grid>
 </Window>

@@ -1,4 +1,5 @@
 using SpanDraft.Core.Materials;
+using SpanDraft.Desktop.Diagnostics;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
@@ -34,6 +35,7 @@ public sealed partial class EditorViewModel
 
     public bool ToggleSelfWeight()
     {
+        using var measurement = _performance?.Begin(InteractionAction.SelfWeight);
         if (IsBusy) return false;
         bool enable = !IsSelfWeightEnabled;
         CancelEditorInteraction();
@@ -46,6 +48,7 @@ public sealed partial class EditorViewModel
         var weight = Document.SelfWeight is { } existing ? existing with { Enabled = enable } : new(Guid.NewGuid(), true);
         Commit(Document with { SelfWeight = weight }, Document.SelfWeight is null
             ? EditorPresentation.WithSelfWeightVisibility(true) : EditorPresentation);
+        measurement?.Complete();
         return true;
     }
 
@@ -61,8 +64,10 @@ public sealed partial class EditorViewModel
 
     public void ToggleSelfWeightVisibility()
     {
+        using var measurement = _performance?.Begin(InteractionAction.SelfWeightVisibility);
         if (IsBusy || !IsSelfWeightEnabled) return;
         Commit(Document, EditorPresentation.WithSelfWeightVisibility(!IsSelfWeightVisible));
+        measurement?.Complete();
     }
 
     public void DisableSelfWeight()

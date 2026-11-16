@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using SpanDraft.Desktop.Diagnostics;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.ViewModels;
@@ -13,6 +14,8 @@ namespace SpanDraft.Desktop;
 public partial class MainWindow : Window
 {
     private MainWindowViewModel _model = null!;
+    private InteractionPerformance? _performance;
+    private AvaloniaInteractionFrameProbe? _frameProbe;
     private readonly KeyModifiers _primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
     private ProjectDialogs _dialogs = null!;
     private bool _closing;
@@ -80,8 +83,10 @@ public partial class MainWindow : Window
             try
             {
                 _dialogs = new ProjectDialogs(this);
+                _frameProbe = new(this, WorkspaceContent);
+                _performance = new(_frameProbe);
                 var stores = startup?.StateStores ?? DesktopStateStores.Local(files);
-                _model = new(files: files, dialogs: _dialogs, recovery: stores.Recovery,
+                _model = new(performance: _performance, files: files, dialogs: _dialogs, recovery: stores.Recovery,
                     setupRecovery: stores.SetupRecovery,
                     settingsStore: settingsStore, settings: settings,
                     materialStore: stores.Materials, sectionStore: stores.Sections,
@@ -114,7 +119,12 @@ public partial class MainWindow : Window
             }
         };
         Closing += WindowClosing;
-        Closed += (_, _) => _model?.ReleaseReport();
+        Closed += (_, _) =>
+        {
+            _performance?.CancelPending();
+            _frameProbe?.Dispose();
+            _model?.ReleaseReport();
+        };
     }
 
     private async void ShowSettings(object? sender, RoutedEventArgs e)
