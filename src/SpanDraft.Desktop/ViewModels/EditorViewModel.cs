@@ -287,7 +287,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public bool ConfirmSupport()
     {
-        using var measurement = _performance?.Begin(_draft?.Type == SupportType.Spring
+        using var measurement = InteractionPerformance.Measure(_performance, _draft?.Type == SupportType.Spring
             ? InteractionAction.SpringSupport : InteractionAction.Support);
         if (IsBusy) return false;
         var draft = _draft;
@@ -308,20 +308,18 @@ public sealed partial class EditorViewModel : ObservableObject
         var document = Document.WithSupports(supports, naming);
         CancelSupportInteraction();
         Commit(document);
-        measurement?.Complete();
         return true;
     }
 
     public void DeleteSupport()
     {
-        using var measurement = _performance?.Begin(_draft?.Type == SupportType.Spring
+        using var measurement = InteractionPerformance.Measure(_performance, _draft?.Type == SupportType.Spring
             ? InteractionAction.SpringSupport : InteractionAction.Support);
         if (IsBusy || Interaction != SupportInteraction.EditDraft || _draft?.OriginalId is not { } id
             || !Document.Supports.Any(s => s.Id == id)) return;
         var document = Document.WithSupports(Document.Supports.Where(s => s.Id != id));
         CancelSupportInteraction();
         Commit(document);
-        measurement?.Complete();
     }
 
     public void CancelSupportInteraction()
@@ -417,11 +415,10 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public void ApplySetup(ISectionDefinition section, SectionAxisDesignation bendingAxis, Material material)
     {
-        using var measurement = _performance?.Begin(InteractionAction.ProjectSetup);
+        using var measurement = InteractionPerformance.Measure(_performance, InteractionAction.ProjectSetup);
         // The single-segment shortcut; a beam of several segments is set up through the segment chain.
         if (!IsBusy && !Document.HasSeveralSegments && CanApplyMaterial(material))
             Commit(Document.WithSection(section, bendingAxis) with { Material = material });
-        measurement?.Complete();
     }
 
     public bool ApplySetup(Length length, ISectionDefinition section, SectionAxisDesignation bendingAxis,
@@ -431,13 +428,11 @@ public sealed partial class EditorViewModel : ObservableObject
     public bool ApplySetup(Length length, ISectionDefinition section, SectionAxisDesignation bendingAxis,
         Material material, string? sectionDisplayName, ProjectInfo? info)
     {
-        using var measurement = _performance?.Begin(InteractionAction.ProjectSetup);
+        using var measurement = InteractionPerformance.Measure(_performance, InteractionAction.ProjectSetup);
         if (IsBusy || Document.HasSeveralSegments || !(length.Meters > 0)) return false;
         var segment = Document.Segments[0].WithSection(section, bendingAxis, sectionDisplayName).WithMaterial(material)
             with { Length = length };
-        bool accepted = ApplySetup([segment], info);
-        measurement?.Complete();
-        return accepted;
+        return ApplySetup([segment], info);
     }
 
     /// <summary>
@@ -446,7 +441,7 @@ public sealed partial class EditorViewModel : ObservableObject
     /// </summary>
     public bool ApplySetup(IReadOnlyList<EditorSegment> segments, ProjectInfo? info)
     {
-        using var measurement = _performance?.Begin(InteractionAction.ProjectSetup);
+        using var measurement = InteractionPerformance.Measure(_performance, InteractionAction.ProjectSetup);
         if (IsBusy || !segments.All(segment => CanApplyMaterial(segment.Material))) return false;
         var change = Document.WithSegmentChain(segments);
         if (change.Document is not { } document) return false;
@@ -454,16 +449,14 @@ public sealed partial class EditorViewModel : ObservableObject
         {
             Document = document, Presentation = EditorPresentation.RetainEntities(document), Info = info
         });
-        measurement?.Complete();
         return true;
     }
 
     public bool SetAnnotationOffset(Guid id, AnnotationOffset? offset)
     {
-        using var measurement = _performance?.Begin(InteractionAction.AnnotationOffset);
+        using var measurement = InteractionPerformance.Measure(_performance, InteractionAction.AnnotationOffset);
         if (IsBusy || !Document.EntityIds.Contains(id)) return false;
         Commit(Document, EditorPresentation.WithOffset(id, offset));
-        measurement?.Complete();
         return true;
     }
 
@@ -483,23 +476,21 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public bool Undo()
     {
-        using var measurement = _performance?.Begin(InteractionAction.Undo);
+        using var measurement = InteractionPerformance.Measure(_performance, InteractionAction.Undo);
         if (IsBusy) return false;
         CancelEditorInteraction();
         bool changed = Session.Undo();
         if (changed) _performance?.Committed();
-        measurement?.Complete();
         return changed;
     }
 
     public bool Redo()
     {
-        using var measurement = _performance?.Begin(InteractionAction.Redo);
+        using var measurement = InteractionPerformance.Measure(_performance, InteractionAction.Redo);
         if (IsBusy) return false;
         CancelEditorInteraction();
         bool changed = Session.Redo();
         if (changed) _performance?.Committed();
-        measurement?.Complete();
         return changed;
     }
 

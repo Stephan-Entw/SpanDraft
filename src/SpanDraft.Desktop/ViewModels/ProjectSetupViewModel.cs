@@ -491,14 +491,12 @@ public sealed class ProjectSetupViewModel : ObservableObject
     {
         if (!IsOverview || IsBusy) return Task.FromResult(false);
         // The context ends with synchronous confirmation, before any asynchronous setup work can yield.
-        using var measurement = IsEdit ? _performance?.Begin(InteractionAction.ProjectSetup) : null;
+        using var measurement = IsEdit ? InteractionPerformance.Measure(_performance, InteractionAction.ProjectSetup) : default;
         bool infoAccepted = true;
         foreach (var input in InfoInputs) infoAccepted &= input.Confirm();
         foreach (var card in Cards) infoAccepted &= card.LengthInput.Confirm();
         if (!infoAccepted || !CanApply) return Task.FromResult(false);
-        var result = _apply(this);
-        measurement?.Complete();
-        return result;
+        return _apply(this);
     }
     private void Navigate(ProjectSetupPage page, object? step)
     {

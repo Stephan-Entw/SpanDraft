@@ -213,7 +213,7 @@ public sealed partial class EditorViewModel
 
     public bool ConfirmLoad()
     {
-        using var measurement = _performance?.Begin(LoadDraft?.Kind == PointLoadKind.Moment ? InteractionAction.PointMoment : InteractionAction.PointForce);
+        using var measurement = InteractionPerformance.Measure(_performance, LoadDraft?.Kind == PointLoadKind.Moment ? InteractionAction.PointMoment : InteractionAction.PointForce);
         if (IsBusy) return false;
         var draft = LoadDraft;
         if (!IsLoadFlyoutVisible || draft is null || !draft.TryGetValues(out var position, out double value)
@@ -234,19 +234,17 @@ public sealed partial class EditorViewModel
         var document = Document.WithLoads(loads, naming);
         CancelLoadInteraction();
         Commit(document);
-        measurement?.Complete();
         return true;
     }
 
     public void DeleteLoad()
     {
-        using var measurement = _performance?.Begin(LoadDraft?.Kind == PointLoadKind.Moment ? InteractionAction.PointMoment : InteractionAction.PointForce);
+        using var measurement = InteractionPerformance.Measure(_performance, LoadDraft?.Kind == PointLoadKind.Moment ? InteractionAction.PointMoment : InteractionAction.PointForce);
         if (IsBusy || LoadState != LoadInteraction.EditDraft || LoadDraft?.OriginalId is not { } id
             || !Document.Loads.Any(l => l.Id == id)) return;
         var document = Document.WithLoads(Document.Loads.Where(l => l.Id != id));
         CancelLoadInteraction();
         Commit(document);
-        measurement?.Complete();
     }
 
     public void CancelLoadInteraction()

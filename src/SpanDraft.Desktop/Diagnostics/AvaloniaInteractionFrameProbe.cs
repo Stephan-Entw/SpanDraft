@@ -17,7 +17,6 @@ internal sealed class AvaloniaInteractionFrameProbe : IInteractionFrameProbe, ID
         _window = window;
         _visual = visual;
         _window.Closed += Closed;
-        if (_window is Window desktopWindow) desktopWindow.Closing += Closing;
         _window.PropertyChanged += WindowChanged;
         _visual.PropertyChanged += VisualChanged;
         _visual.DetachedFromVisualTree += Detached;
@@ -40,7 +39,6 @@ internal sealed class AvaloniaInteractionFrameProbe : IInteractionFrameProbe, ID
         && TopLevel.GetTopLevel(visual) == window;
 
     private void Closed(object? sender, EventArgs e) => Dispose();
-    private void Closing(object? sender, WindowClosingEventArgs e) => CancelObservations();
     private void Detached(object? sender, VisualTreeAttachmentEventArgs e) => CancelObservations();
     private void VisualChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
@@ -66,7 +64,6 @@ internal sealed class AvaloniaInteractionFrameProbe : IInteractionFrameProbe, ID
         if (_disposed) return;
         _disposed = true;
         _window.Closed -= Closed;
-        if (_window is Window desktopWindow) desktopWindow.Closing -= Closing;
         _window.PropertyChanged -= WindowChanged;
         _visual.PropertyChanged -= VisualChanged;
         _visual.DetachedFromVisualTree -= Detached;
@@ -77,8 +74,8 @@ internal sealed class AvaloniaInteractionFrameProbe : IInteractionFrameProbe, ID
     private sealed class Observation
     {
         private readonly object _gate = new();
-        // The recorder consumes this without a UI context; finish before a later view change can cancel it.
-        private readonly TaskCompletionSource<long?> _completion = new();
+        // Completed outside the lock and never inline, so consumers run on their own thread without any lock held.
+        private readonly TaskCompletionSource<long?> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private TopLevel? _window;
         private Visual? _visual;
         private Compositor? _compositor;
@@ -118,18 +115,21 @@ internal sealed class AvaloniaInteractionFrameProbe : IInteractionFrameProbe, ID
 
         private void Finish(bool rendered)
         {
-            lock (_gate)
+            long? timestamp = null;
+            try
             {
-                if (_window is null) return;
-                long? timestamp = null;
-                try { if (rendered) timestamp = _clock!.GetTimestamp(); }
-                finally
+                lock (_gate)
                 {
-                    _window = null; _visual = null; _compositor = null; _clock = null;
-                    _completion.TrySetResult(timestamp);
-                    Unregister();
+                    if (_window is null) return;
+                    try { if (rendered) timestamp = _clock!.GetTimestamp(); }
+                    finally
+                    {
+                        _window = null; _visual = null; _compositor = null; _clock = null;
+                        Unregister();
+                    }
                 }
             }
+            finally { _completion.TrySetResult(timestamp); }
         }
 
         private void Unregister()

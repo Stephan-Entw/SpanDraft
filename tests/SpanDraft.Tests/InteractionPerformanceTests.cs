@@ -18,6 +18,24 @@ public sealed class InteractionPerformanceTests
         public override long TimestampFrequency => frequency;
         public override long GetTimestamp() => Timestamp;
         public override DateTimeOffset GetUtcNow() => Utc;
+        public readonly List<ManualTimer> Timers = [];
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            var timer = new ManualTimer(callback, state, dueTime);
+            Timers.Add(timer);
+            return timer;
+        }
+    }
+
+    // The frame timeout is driven by hand instead of waiting for wall-clock time.
+    private sealed class ManualTimer(TimerCallback callback, object? state, TimeSpan due) : ITimer
+    {
+        public TimeSpan DueTime = due;
+        public bool Disposed;
+        public bool Change(TimeSpan dueTime, TimeSpan period) { DueTime = dueTime; return true; }
+        public void Fire() => callback(state);
+        public void Dispose() => Disposed = true;
+        public ValueTask DisposeAsync() { Disposed = true; return ValueTask.CompletedTask; }
     }
 
     private sealed class Frames : IInteractionFrameProbe
@@ -46,11 +64,11 @@ public sealed class InteractionPerformanceTests
     public void PhasesUseTheSameMonotonicTimelineAndOnlyFinishAtTheFrame()
     {
         var clock = new Clock(); var frames = new Frames(); var recorder = new InteractionPerformance(frames, clock);
-        using (var measurement = recorder.Begin(InteractionAction.PointForce))
+        using (recorder.Begin(InteractionAction.PointForce))
         {
             clock.Timestamp = 3; recorder.AnalysisStarting();
             clock.Timestamp = 8; recorder.AnalysisFinished();
-            clock.Timestamp = 15; recorder.Committed(); measurement.Complete();
+            clock.Timestamp = 15; recorder.Committed();
         }
         Assert.Empty(recorder.GetEntries());
         clock.Utc = Now.AddDays(-1); // Wall-clock corrections must not affect durations.
@@ -66,11 +84,11 @@ public sealed class InteractionPerformanceTests
     public void RoundingCumulativeBoundariesKeepsThePhaseSumEqualToTotal()
     {
         var clock = new Clock(3); var recorder = new InteractionPerformance(new ImmediateFrames(), clock);
-        using (var measurement = recorder.Begin(InteractionAction.BeamGeometry))
+        using (recorder.Begin(InteractionAction.BeamGeometry))
         {
             clock.Timestamp = 1; recorder.AnalysisStarting();
             clock.Timestamp = 2; recorder.AnalysisFinished();
-            clock.Timestamp = 4; recorder.Committed(); measurement.Complete();
+            clock.Timestamp = 4; recorder.Committed();
         }
         var entry = Assert.Single(recorder.GetEntries());
         Assert.Equal(TimeSpan.FromTicks(13_333_333), entry.Total);
@@ -85,8 +103,8 @@ public sealed class InteractionPerformanceTests
         for (int i = 0; i < 105; i++)
         {
             clock.Utc = Now.AddSeconds(i);
-            using (var measurement = recorder.Begin(InteractionAction.AnnotationOffset))
-            { recorder.PresentationStarting(); recorder.Committed(); measurement.Complete(); }
+            using (recorder.Begin(InteractionAction.AnnotationOffset))
+            { recorder.PresentationStarting(); recorder.Committed(); }
             Assert.Equal(Math.Min(i + 1, 50), recorder.GetEntries().Count);
             if (i == 49) snapshot = recorder.GetEntries();
             if (i == 50) Assert.Equal(Now.AddSeconds(1), recorder.GetEntries()[0].StartedAtUtc);
@@ -103,7 +121,7 @@ public sealed class InteractionPerformanceTests
         {
             clock.Utc = Now.AddSeconds(i);
             using var measurement = recorder.Begin(InteractionAction.AnnotationOffset);
-            recorder.PresentationStarting(); recorder.Committed(); measurement.Complete();
+            recorder.PresentationStarting(); recorder.Committed();
         }
         await Task.WhenAll(frames.Requests.Select((request, i) => Task.Run(() =>
         {
@@ -114,6 +132,38 @@ public sealed class InteractionPerformanceTests
         Assert.Equal(50, entries.Count);
         Assert.Equal(50, entries.Select(entry => entry.StartedAtUtc).Distinct().Count());
         Assert.All(entries, entry => Assert.True(entry.Total > TimeSpan.Zero));
+    }
+
+    [Fact]
+    public void FrameThatNeverRendersIsDiscardedAtTheTimeoutAndCannotCompleteLater()
+    {
+        var clock = new Clock(); var frames = new Frames(); var recorder = new InteractionPerformance(frames, clock);
+        using (recorder.Begin(InteractionAction.AnnotationOffset))
+        { recorder.PresentationStarting(); recorder.Committed(); }
+        var timer = Assert.Single(clock.Timers);
+        Assert.Equal(InteractionPerformance.FrameTimeout, timer.DueTime);
+        Assert.False(timer.Disposed);
+        timer.Fire();
+        Assert.True(timer.Disposed);
+        clock.Timestamp = 1_000_000_000; // A frame arriving long afterwards must not become a huge UI time.
+        Assert.Single(frames.Requests).SetResult(clock.Timestamp);
+        Assert.Empty(recorder.GetEntries());
+        using (recorder.Begin(InteractionAction.AnnotationOffset))
+        { recorder.PresentationStarting(); recorder.Committed(); }
+        frames.Requests[1].SetResult(clock.Timestamp);
+        Assert.Single(recorder.GetEntries());
+    }
+
+    [Fact]
+    public void FrameBeforeTheTimeoutIsRecordedAndReleasesItsTimer()
+    {
+        var clock = new Clock(); var frames = new Frames(); var recorder = new InteractionPerformance(frames, clock);
+        using (recorder.Begin(InteractionAction.AnnotationOffset))
+        { recorder.PresentationStarting(); recorder.Committed(); }
+        var timer = Assert.Single(clock.Timers);
+        clock.Timestamp = 5; Assert.Single(frames.Requests).SetResult(clock.Timestamp);
+        Assert.Single(recorder.GetEntries());
+        Assert.True(timer.Disposed);
     }
 
     [Fact]

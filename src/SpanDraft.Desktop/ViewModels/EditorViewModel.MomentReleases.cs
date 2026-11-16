@@ -138,7 +138,7 @@ public sealed partial class EditorViewModel
 
     public bool ConfirmMomentRelease()
     {
-        using var measurement = _performance?.Begin(InteractionAction.MomentRelease);
+        using var measurement = InteractionPerformance.Measure(_performance, InteractionAction.MomentRelease);
         if (IsBusy) return false;
         var draft = _releaseDraft;
         if (!IsMomentReleaseFlyoutVisible || draft is null || !draft.TryGetValue(out var position)) return false;
@@ -158,19 +158,17 @@ public sealed partial class EditorViewModel
         var document = Document.WithMomentReleases(releases, naming);
         CancelMomentReleaseInteraction();
         Commit(document);
-        measurement?.Complete();
         return true;
     }
 
     public void DeleteMomentRelease()
     {
-        using var measurement = _performance?.Begin(InteractionAction.MomentRelease);
+        using var measurement = InteractionPerformance.Measure(_performance, InteractionAction.MomentRelease);
         if (IsBusy || MomentReleaseState != MomentReleaseInteraction.EditDraft || _releaseDraft?.OriginalId is not { } id
             || !Document.MomentReleases.Any(r => r.Id == id)) return;
         var document = Document.WithMomentReleases(Document.MomentReleases.Where(r => r.Id != id));
         CancelMomentReleaseInteraction();
         Commit(document);
-        measurement?.Complete();
     }
 
     public void CancelMomentReleaseInteraction()

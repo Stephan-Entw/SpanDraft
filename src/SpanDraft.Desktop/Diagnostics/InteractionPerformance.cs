@@ -19,6 +19,8 @@ public interface IInteractionFrameProbe
 public sealed class InteractionPerformance(IInteractionFrameProbe frames, TimeProvider? clock = null)
 {
     public const int Capacity = 50;
+    // A frame that has not rendered by now no longer belongs to the interaction (occluded or stalled window).
+    internal static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(2);
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
     private readonly object _gate = new();
     private readonly InteractionPerformanceEntry?[] _entries = new InteractionPerformanceEntry[Capacity];
@@ -36,6 +38,10 @@ public sealed class InteractionPerformance(IInteractionFrameProbe frames, TimePr
             return result;
         }
     }
+
+    /// <summary>Begins a measurement on an optional recorder; without one the returned scope does nothing.</summary>
+    public static Scope Measure(InteractionPerformance? owner, InteractionAction action) =>
+        owner is null ? default : owner.Begin(action);
 
     public Scope Begin(InteractionAction action)
     {
@@ -82,9 +88,9 @@ public sealed class InteractionPerformance(IInteractionFrameProbe frames, TimePr
     {
         if (!ReferenceEquals(_current, measurement)) return;
         _current = null;
-        if (!measurement.Succeeded || !measurement.Committed || measurement.AnalysisEnd is null) return;
+        if (!measurement.Committed || measurement.AnalysisEnd is null) return;
         measurement.UIStart = _clock.GetTimestamp();
-        measurement.Cancellation = new();
+        measurement.Cancellation = new(FrameTimeout, _clock);
         lock (_gate) _pending.Add(measurement);
         _ = FinishAsync(measurement);
     }
@@ -124,7 +130,7 @@ public sealed class InteractionPerformance(IInteractionFrameProbe frames, TimePr
         public readonly DateTimeOffset Utc = utc;
         public long? AnalysisStart, AnalysisEnd;
         public long UIStart;
-        public bool Committed, Succeeded;
+        public bool Committed;
         public CancellationTokenSource? Cancellation;
     }
 
@@ -133,7 +139,6 @@ public sealed class InteractionPerformance(IInteractionFrameProbe frames, TimePr
         private readonly InteractionPerformance? _owner;
         private readonly Measurement? _measurement;
         internal Scope(InteractionPerformance owner, Measurement measurement) => (_owner, _measurement) = (owner, measurement);
-        public void Complete() { if (_measurement is not null) _measurement.Succeeded = true; }
         public void Dispose() { if (_measurement is not null) _owner!.End(_measurement); }
     }
 }

@@ -69,7 +69,7 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
     public bool Confirm()
     {
         if (!IsEditing || _isConfirming) return true;
-        using var measurement = performance?.Begin(InteractionAction.BeamGeometry);
+        using var measurement = InteractionPerformance.Measure(performance, InteractionAction.BeamGeometry);
         if (read() is null && string.IsNullOrWhiteSpace(Text))
         {
             ClearError();
@@ -95,7 +95,6 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
             }
             IsEditing = false;
             Refresh();
-            measurement?.Complete();
             return true;
         }
         finally { _isConfirming = false; }

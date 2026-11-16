@@ -39,8 +39,8 @@ public sealed class InteractionFrameProbeTests
         using var probe = new AvaloniaInteractionFrameProbe(window, visual);
         var clock = new Clock { Timestamp = 10 };
         var recorder = new InteractionPerformance(probe, clock);
-        using (var measurement = recorder.Begin(InteractionAction.AnnotationOffset))
-        { recorder.PresentationStarting(); recorder.Committed(); measurement.Complete(); }
+        using (recorder.Begin(InteractionAction.AnnotationOffset))
+        { recorder.PresentationStarting(); recorder.Committed(); }
         var observation = probe.ObserveNextFrameAsync(clock, CancellationToken.None);
         var secondObservation = probe.ObserveNextFrameAsync(clock, CancellationToken.None);
         Assert.False(observation.IsCompleted);
@@ -61,8 +61,31 @@ public sealed class InteractionFrameProbeTests
         clock.Timestamp = 999;
         Assert.Equal(25, await observation);
         Assert.Equal(25, await secondObservation);
-        recorder.CancelPending();
+        // The recorder continues on its own thread once the frame completes.
+        for (int i = 0; i < 500 && recorder.GetEntries().Count == 0; i++) await Task.Delay(10, TestContext.Current.CancellationToken);
         Assert.Single(recorder.GetEntries());
+        window.Close();
+    }
+
+    [Fact]
+    public async Task VetoedWindowCloseKeepsTheObservationAndTheFrameStillCompletes()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var visual = new Border(); var window = new Window { Content = visual };
+        window.Show(); DesktopControlEnvironment.ArrangeSection(window);
+        CompleteStartupFrame(visual);
+        using var probe = new AvaloniaInteractionFrameProbe(window, visual);
+        var clock = new Clock { Timestamp = 3 };
+        var observation = probe.ObserveNextFrameAsync(clock, CancellationToken.None);
+        bool veto = true;
+        window.Closing += (_, e) => e.Cancel = veto;
+        window.Close();
+        Assert.True(window.IsVisible);
+        Assert.False(observation.IsCompleted);
+        Dispatcher.UIThread.RunJobs();
+        Render(ElementComposition.GetElementVisual(visual)!.Compositor);
+        Assert.Equal(3, await observation.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        veto = false;
         window.Close();
     }
 
