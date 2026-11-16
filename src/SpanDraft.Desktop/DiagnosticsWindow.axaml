@@ -4,11 +4,10 @@
         xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
         x:Class="SpanDraft.Desktop.DiagnosticsWindow" x:DataType="vm:DiagnosticsViewModel"
         Title="{x:Static resources:Strings.Diagnostics}"
-        Width="720" SizeToContent="Height" Focusable="True"
-        CanResize="False" ShowInTaskbar="False"
-        WindowStartupLocation="CenterOwner">
+        Width="660" Height="444" MinWidth="660" MinHeight="444" Focusable="True"
+        ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
   <Window.Styles>
-    <!-- One table: header and rows share their column widths, numbers are right-aligned and tabular. -->
+    <!-- One table: header and rows share the widths of their fixed columns, the action column takes the rest. -->
     <Style Selector="Grid.historyRow">
       <Setter Property="ColumnSpacing" Value="{DynamicResource Space12}" />
       <Setter Property="MinHeight" Value="{DynamicResource CompactControl}" />
@@ -22,6 +21,8 @@
     </Style>
     <Style Selector="Border.historyHeader">
       <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
       <Setter Property="Padding" Value="12,0" />
     </Style>
     <Style Selector="Border.historyEntry">
@@ -30,97 +31,86 @@
       <Setter Property="Padding" Value="12,0" />
     </Style>
   </Window.Styles>
-  <StackPanel Margin="{DynamicResource Padding24}" Spacing="{DynamicResource Space16}">
-    <Grid x:Name="EnvironmentInfo" ColumnDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="32">
-      <StackPanel Spacing="2">
-        <TextBlock Classes="caption" Text="{x:Static resources:Strings.VersionLabel}" />
-        <SelectableTextBlock Classes="body" Text="{Binding Environment.Version}" />
-      </StackPanel>
-      <StackPanel Grid.Column="1" Spacing="2">
-        <TextBlock Classes="caption" Text="{x:Static resources:Strings.DiagnosticsOperatingSystem}" />
-        <SelectableTextBlock Classes="body" Text="{Binding Environment.OperatingSystem}" TextWrapping="Wrap" />
-      </StackPanel>
-      <StackPanel Grid.Column="2" Spacing="2">
-        <TextBlock Classes="caption" Text="{x:Static resources:Strings.DiagnosticsArchitecture}" />
-        <SelectableTextBlock Classes="body" Text="{Binding Environment.Architecture}" />
-      </StackPanel>
-      <StackPanel Grid.Column="3" Spacing="2">
-        <TextBlock Classes="caption" Text="{x:Static resources:Strings.DiagnosticsRuntime}" />
-        <SelectableTextBlock Classes="body" Text="{Binding Environment.Runtime}" />
-      </StackPanel>
-    </Grid>
-    <Border Height="1" Background="{DynamicResource Border}" />
-    <Grid ColumnDefinitions="*,Auto">
-      <CheckBox x:Name="AdvancedOption" IsChecked="{Binding IsAdvanced, Mode=TwoWay}"
-                Content="{x:Static resources:Strings.DiagnosticsAdvanced}" />
-      <TextBlock x:Name="HistoryCaption" Grid.Column="1" Classes="caption" VerticalAlignment="Center"
-                 Text="{x:Static resources:Strings.DiagnosticsHistoryCaption}" IsVisible="{Binding IsAdvanced}" />
-    </Grid>
-    <StackPanel x:Name="AdvancedPanel" IsVisible="{Binding IsAdvanced}" Spacing="{DynamicResource Space8}">
-      <Border BorderBrush="{DynamicResource Border}" BorderThickness="{DynamicResource BorderWidth}"
-              CornerRadius="{DynamicResource RadiusXS}" Background="{DynamicResource Surface}" ClipToBounds="True">
-        <StackPanel Grid.IsSharedSizeScope="True">
-          <Border Classes="historyHeader" IsVisible="{Binding HasEntries}">
-            <Grid x:Name="HistoryHeader" Classes="historyRow">
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" MinWidth="56" SharedSizeGroup="DiagnosticsTime" />
-                <ColumnDefinition Width="Auto" MinWidth="140" SharedSizeGroup="DiagnosticsAction" />
-                <ColumnDefinition Width="Auto" MinWidth="72" SharedSizeGroup="DiagnosticsPreparation" />
-                <ColumnDefinition Width="Auto" MinWidth="72" SharedSizeGroup="DiagnosticsAnalysis" />
-                <ColumnDefinition Width="Auto" MinWidth="72" SharedSizeGroup="DiagnosticsPresentation" />
-                <ColumnDefinition Width="Auto" MinWidth="72" SharedSizeGroup="DiagnosticsUi" />
-                <ColumnDefinition Width="Auto" MinWidth="72" SharedSizeGroup="DiagnosticsTotal" />
-              </Grid.ColumnDefinitions>
-              <TextBlock Classes="caption" Text="{x:Static resources:Strings.DiagnosticsTime}" />
-              <TextBlock Grid.Column="1" Classes="caption" Text="{x:Static resources:Strings.DiagnosticsAction}" />
-              <TextBlock Grid.Column="2" Classes="caption number" Text="{x:Static resources:Strings.DiagnosticsPreparation}"
-                         ToolTip.Tip="{x:Static resources:Strings.DiagnosticsPreparationHint}" />
-              <TextBlock Grid.Column="3" Classes="caption number" Text="{x:Static resources:Strings.DiagnosticsAnalysis}"
-                         ToolTip.Tip="{x:Static resources:Strings.DiagnosticsAnalysisHint}" />
-              <TextBlock Grid.Column="4" Classes="caption number" Text="{x:Static resources:Strings.DiagnosticsPresentation}"
-                         ToolTip.Tip="{x:Static resources:Strings.DiagnosticsPresentationHint}" />
-              <TextBlock Grid.Column="5" Classes="caption number" Text="{x:Static resources:Strings.DiagnosticsUi}"
-                         ToolTip.Tip="{x:Static resources:Strings.DiagnosticsUiHint}" />
-              <TextBlock Grid.Column="6" Classes="caption number" Text="{x:Static resources:Strings.DiagnosticsTotal}"
-                         ToolTip.Tip="{x:Static resources:Strings.DiagnosticsTotalHint}" />
-            </Grid>
-          </Border>
-          <ScrollViewer MaxHeight="308" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                        IsVisible="{Binding HasEntries}">
-            <ItemsControl x:Name="HistoryRows" ItemsSource="{Binding VisibleRows}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:DiagnosticsRow">
-                  <Border Classes="historyEntry">
-                    <Grid Classes="historyRow">
-                      <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" MinWidth="56" SharedSizeGroup="DiagnosticsTime" />
-                        <ColumnDefinition Width="Auto" MinWidth="140" SharedSizeGroup="DiagnosticsAction" />
-                        <ColumnDefinition Width="Auto" MinWidth="72" SharedSizeGroup="DiagnosticsPreparation" />
-                        <ColumnDefinition Width="Auto" MinWidth="72" SharedSizeGroup="DiagnosticsAnalysis" />
-                        <ColumnDefinition Width="Auto" MinWidth="72" SharedSizeGroup="DiagnosticsPresentation" />
-                        <ColumnDefinition Width="Auto" MinWidth="72" SharedSizeGroup="DiagnosticsUi" />
-                        <ColumnDefinition Width="Auto" MinWidth="72" SharedSizeGroup="DiagnosticsTotal" />
-                      </Grid.ColumnDefinitions>
-                      <TextBlock Classes="body" Foreground="{DynamicResource TextSecondary}" Text="{Binding Time}" />
-                      <TextBlock Grid.Column="1" Classes="body" Text="{Binding Action}" />
-                      <TextBlock Grid.Column="2" Classes="body number" Text="{Binding Preparation}" />
-                      <TextBlock Grid.Column="3" Classes="body number" Text="{Binding Analysis}" />
-                      <TextBlock Grid.Column="4" Classes="body number" Text="{Binding Presentation}" />
-                      <TextBlock Grid.Column="5" Classes="body number" Text="{Binding UI}" />
-                      <TextBlock Grid.Column="6" Classes="bodyStrong number" Text="{Binding Total}" />
-                    </Grid>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
-          <TextBlock x:Name="EmptyHistory" Text="{x:Static resources:Strings.DiagnosticsEmpty}" Classes="body"
-                     Foreground="{DynamicResource TextSecondary}" TextAlignment="Center" Margin="0,24"
-                     IsVisible="{Binding IsEmpty}" />
-        </StackPanel>
-      </Border>
-      <TextBlock x:Name="FrameNote" Text="{x:Static resources:Strings.DiagnosticsFrameNote}" Classes="caption" TextWrapping="Wrap" />
+  <Grid Margin="{DynamicResource Padding24}" RowDefinitions="Auto,*,Auto" RowSpacing="{DynamicResource Space16}">
+    <StackPanel Spacing="{DynamicResource Space4}">
+      <TextBlock x:Name="Headline" Classes="sectionTitle" Text="{Binding Headline}" />
+      <SelectableTextBlock x:Name="SystemLine" Classes="body" Foreground="{DynamicResource TextSecondary}"
+                           Text="{Binding Environment.Summary}" TextWrapping="Wrap" />
     </StackPanel>
-    <TextBlock x:Name="LocalNote" Text="{x:Static resources:Strings.DiagnosticsLocalNote}" Classes="caption" TextWrapping="Wrap" />
-  </StackPanel>
+    <Border Grid.Row="1" BorderBrush="{DynamicResource Border}" BorderThickness="{DynamicResource BorderWidth}"
+            CornerRadius="{DynamicResource RadiusXS}" Background="{DynamicResource Surface}" ClipToBounds="True">
+      <Grid RowDefinitions="Auto,*" Grid.IsSharedSizeScope="True">
+        <Border x:Name="HeaderFrame" Classes="historyHeader">
+          <Grid x:Name="HistoryHeader" Classes="historyRow">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="24" />
+              <RowDefinition Height="Auto" MinHeight="{DynamicResource CompactControl}" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" MinWidth="60" SharedSizeGroup="DiagnosticsTime" />
+              <ColumnDefinition Width="*" MinWidth="152" />
+              <ColumnDefinition Width="Auto" MinWidth="48" SharedSizeGroup="DiagnosticsPreparation" />
+              <ColumnDefinition Width="Auto" MinWidth="48" SharedSizeGroup="DiagnosticsAnalysis" />
+              <ColumnDefinition Width="Auto" MinWidth="48" SharedSizeGroup="DiagnosticsPresentation" />
+              <ColumnDefinition Width="Auto" MinWidth="48" SharedSizeGroup="DiagnosticsUi" />
+              <ColumnDefinition Width="Auto" MinWidth="52" SharedSizeGroup="DiagnosticsTotal" />
+            </Grid.ColumnDefinitions>
+            <!-- The unit is stated once above the five duration columns; the two other headings span both header rows. -->
+            <Border x:Name="DurationSpan" Grid.Column="2" Grid.ColumnSpan="5" BorderBrush="{DynamicResource Border}"
+                    BorderThickness="0,0,0,1" VerticalAlignment="Bottom" Padding="0,0,0,2">
+              <TextBlock x:Name="DurationCaption" Classes="caption" HorizontalAlignment="Center"
+                         Text="{x:Static resources:Strings.DiagnosticsDuration}" />
+            </Border>
+            <TextBlock Grid.RowSpan="2" Classes="caption" Text="{x:Static resources:Strings.DiagnosticsTime}" />
+            <TextBlock Grid.RowSpan="2" Grid.Column="1" Classes="caption" Margin="12,0,0,0"
+                       Text="{x:Static resources:Strings.DiagnosticsAction}" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Classes="caption number" Text="{x:Static resources:Strings.DiagnosticsPreparation}"
+                       ToolTip.Tip="{x:Static resources:Strings.DiagnosticsPreparationHint}" />
+            <TextBlock Grid.Row="1" Grid.Column="3" Classes="caption number" Text="{x:Static resources:Strings.DiagnosticsAnalysis}"
+                       ToolTip.Tip="{x:Static resources:Strings.DiagnosticsAnalysisHint}" />
+            <TextBlock Grid.Row="1" Grid.Column="4" Classes="caption number" Text="{x:Static resources:Strings.DiagnosticsPresentation}"
+                       ToolTip.Tip="{x:Static resources:Strings.DiagnosticsPresentationHint}" />
+            <TextBlock Grid.Row="1" Grid.Column="5" Classes="caption number" Text="{x:Static resources:Strings.DiagnosticsUi}"
+                       ToolTip.Tip="{x:Static resources:Strings.DiagnosticsUiHint}" />
+            <TextBlock Grid.Row="1" Grid.Column="6" Classes="caption number" Text="{x:Static resources:Strings.DiagnosticsTotal}"
+                       ToolTip.Tip="{x:Static resources:Strings.DiagnosticsTotalHint}" />
+          </Grid>
+        </Border>
+        <ScrollViewer x:Name="HistoryScroller" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      IsVisible="{Binding HasEntries}">
+          <ItemsControl x:Name="HistoryRows" ItemsSource="{Binding Rows}" Margin="0,-1,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:DiagnosticsRow">
+                <Border Classes="historyEntry">
+                  <Grid Classes="historyRow">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto" MinWidth="60" SharedSizeGroup="DiagnosticsTime" />
+                      <ColumnDefinition Width="*" MinWidth="152" />
+                      <ColumnDefinition Width="Auto" MinWidth="48" SharedSizeGroup="DiagnosticsPreparation" />
+                      <ColumnDefinition Width="Auto" MinWidth="48" SharedSizeGroup="DiagnosticsAnalysis" />
+                      <ColumnDefinition Width="Auto" MinWidth="48" SharedSizeGroup="DiagnosticsPresentation" />
+                      <ColumnDefinition Width="Auto" MinWidth="48" SharedSizeGroup="DiagnosticsUi" />
+                      <ColumnDefinition Width="Auto" MinWidth="52" SharedSizeGroup="DiagnosticsTotal" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Classes="body" Foreground="{DynamicResource TextSecondary}" Text="{Binding Time}" />
+                    <TextBlock Grid.Column="1" Classes="body" Margin="12,0,0,0" Text="{Binding Action}" />
+                    <TextBlock Grid.Column="2" Classes="body number" Text="{Binding Preparation}" />
+                    <TextBlock Grid.Column="3" Classes="body number" Text="{Binding Analysis}" />
+                    <TextBlock Grid.Column="4" Classes="body number" Text="{Binding Presentation}" />
+                    <TextBlock Grid.Column="5" Classes="body number" Text="{Binding UI}" />
+                    <TextBlock Grid.Column="6" Classes="bodyStrong number" Text="{Binding Total}" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+        <TextBlock x:Name="EmptyHistory" Grid.Row="1" Text="{x:Static resources:Strings.DiagnosticsEmpty}" Classes="body"
+                   Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   IsVisible="{Binding IsEmpty}" />
+      </Grid>
+    </Border>
+    <Button x:Name="CopyButton" Grid.Row="2" Classes="ghost" HorizontalAlignment="Right"
+            Content="{x:Static resources:Strings.DiagnosticsCopy}" Click="CopyValues" />
+  </Grid>
 </Window>

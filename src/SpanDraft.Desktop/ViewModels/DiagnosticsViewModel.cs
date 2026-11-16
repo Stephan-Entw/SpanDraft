@@ -8,6 +8,9 @@ namespace SpanDraft.Desktop.ViewModels;
 
 public sealed record DiagnosticsEnvironment(string Version, string OperatingSystem, string Architecture, string Runtime)
 {
+    /// <summary>The system in one line that reads and copies as it is.</summary>
+    public string Summary => $"{OperatingSystem} · {Architecture} · {Runtime}";
+
     public static DiagnosticsEnvironment Current() => new(ApplicationMetadata.Version,
         RuntimeInformation.OSDescription, RuntimeInformation.ProcessArchitecture.ToString(),
         RuntimeInformation.FrameworkDescription);
@@ -24,8 +27,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
     private readonly TimeZoneInfo _zone;
     private readonly Action<Action> _post;
     private int _pending, _disposed;
-    private bool _advanced;
-    // The formatted rows are only built once something shows them; refreshes in the normal view just keep the snapshot.
+    // The formatted rows are built when the view reads them, not on every refresh.
     private IReadOnlyList<InteractionPerformanceEntry> _entries = [];
     private IReadOnlyList<DiagnosticsRow>? _rows;
 
@@ -45,20 +47,12 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
     }
 
     public DiagnosticsEnvironment Environment { get; }
+    public string Headline => $"{ApplicationMetadata.Product} {Environment.Version}";
     public bool HasEntries => _entries.Count > 0;
     public bool IsEmpty => _entries.Count == 0;
 
     /// <summary>Newest first.</summary>
     public IReadOnlyList<DiagnosticsRow> Rows => _rows ??= Build(_entries);
-
-    /// <summary>The recorded entries are only formatted and handed to the view while the extended mode is on.</summary>
-    public IReadOnlyList<DiagnosticsRow>? VisibleRows => _advanced ? Rows : null;
-
-    public bool IsAdvanced
-    {
-        get => _advanced;
-        set { if (Set(ref _advanced, value)) Notify(nameof(VisibleRows)); }
-    }
 
     public static string ActionName(InteractionAction action) => action switch
     {
@@ -93,7 +87,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
         Interlocked.Exchange(ref _pending, 0);
         if (Volatile.Read(ref _disposed) != 0) return;
         _entries = _performance!.GetEntries(); _rows = null;
-        Notify(nameof(Rows)); Notify(nameof(VisibleRows)); Notify(nameof(HasEntries)); Notify(nameof(IsEmpty));
+        Notify(nameof(Rows)); Notify(nameof(HasEntries)); Notify(nameof(IsEmpty));
     }
 
     private IReadOnlyList<DiagnosticsRow> Build(IReadOnlyList<InteractionPerformanceEntry> entries)
@@ -102,7 +96,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
         for (int i = 0; i < rows.Length; i++)
         {
             var entry = entries[entries.Count - 1 - i];
-            rows[i] = new(TimeZoneInfo.ConvertTime(entry.StartedAtUtc, _zone).ToString("T", CultureInfo.CurrentCulture),
+            rows[i] = new(TimeZoneInfo.ConvertTime(entry.StartedAtUtc, _zone).ToString("HH:mm:ss", CultureInfo.InvariantCulture),
                 ActionName(entry.Action), Milliseconds(entry.Preparation), Milliseconds(entry.Analysis),
                 Milliseconds(entry.Presentation), Milliseconds(entry.UI), Milliseconds(entry.Total));
         }
@@ -112,6 +106,22 @@ public sealed class DiagnosticsViewModel : ObservableObject, IDisposable
     // The unit is stated once by the table caption.
     private static string Milliseconds(TimeSpan duration) =>
         duration.TotalMilliseconds.ToString("0.0", CultureInfo.CurrentCulture);
+
+    /// <summary>
+    /// What the window shows as tab-separated text for a spreadsheet or a message: the technical values only,
+    /// formatted exactly as in the table and with the unit in the column headings.
+    /// </summary>
+    public string ClipboardText()
+    {
+        var text = new System.Text.StringBuilder();
+        text.Append(Headline).Append('\n').Append(Environment.Summary).Append("\n\n");
+        text.AppendJoin('\t', Strings.DiagnosticsTime, Strings.DiagnosticsAction,
+            Strings.DiagnosticsPreparation + " [ms]", Strings.DiagnosticsAnalysis + " [ms]",
+            Strings.DiagnosticsPresentation + " [ms]", Strings.DiagnosticsUi + " [ms]", Strings.DiagnosticsTotal + " [ms]").Append('\n');
+        foreach (var row in Rows)
+            text.AppendJoin('\t', row.Time, row.Action, row.Preparation, row.Analysis, row.Presentation, row.UI, row.Total).Append('\n');
+        return text.ToString();
+    }
 
     public void Dispose()
     {

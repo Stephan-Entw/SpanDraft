@@ -454,13 +454,10 @@ public static class Strings
     public static string ShowSelfWeight => Get(nameof(ShowSelfWeight));
     public static string DisableSelfWeight => Get(nameof(DisableSelfWeight));
     public static string Diagnostics => Get(nameof(Diagnostics));
-    public static string DiagnosticsOperatingSystem => Get(nameof(DiagnosticsOperatingSystem));
-    public static string DiagnosticsArchitecture => Get(nameof(DiagnosticsArchitecture));
-    public static string DiagnosticsRuntime => Get(nameof(DiagnosticsRuntime));
-    public static string DiagnosticsLocalNote => Get(nameof(DiagnosticsLocalNote));
-    public static string DiagnosticsAdvanced => Get(nameof(DiagnosticsAdvanced));
+    public static string DiagnosticsCopy => Get(nameof(DiagnosticsCopy));
+    public static string DiagnosticsCopied => Get(nameof(DiagnosticsCopied));
+    public static string DiagnosticsDuration => Get(nameof(DiagnosticsDuration));
     public static string DiagnosticsEmpty => Get(nameof(DiagnosticsEmpty));
-    public static string DiagnosticsFrameNote => Get(nameof(DiagnosticsFrameNote));
     public static string DiagnosticsTime => Get(nameof(DiagnosticsTime));
     public static string DiagnosticsAction => Get(nameof(DiagnosticsAction));
     public static string DiagnosticsPreparation => Get(nameof(DiagnosticsPreparation));
@@ -481,7 +478,6 @@ public static class Strings
     public static string DiagnosticsActionSelfWeightVisibility => Get(nameof(DiagnosticsActionSelfWeightVisibility));
     public static string DiagnosticsActionUndo => Get(nameof(DiagnosticsActionUndo));
     public static string DiagnosticsActionRedo => Get(nameof(DiagnosticsActionRedo));
-    public static string DiagnosticsHistoryCaption => Get(nameof(DiagnosticsHistoryCaption));
     public static string DiagnosticsPreparationHint => Get(nameof(DiagnosticsPreparationHint));
     public static string DiagnosticsAnalysisHint => Get(nameof(DiagnosticsAnalysisHint));
     public static string DiagnosticsPresentationHint => Get(nameof(DiagnosticsPresentationHint));

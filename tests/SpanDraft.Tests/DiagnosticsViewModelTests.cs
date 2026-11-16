@@ -43,9 +43,9 @@ public sealed class DiagnosticsViewModelTests
         public void Drain() { while (Queue.TryDequeue(out var action)) action(); }
     }
 
-    // The culture's own time format (ICU uses a narrow no-break space before AM/PM) at UTC+2.
+    // Local time at UTC+2 as a 24-hour clock in every culture, so the column keeps one width.
     private static string LocalTime(DateTimeOffset utc) =>
-        utc.ToOffset(TimeSpan.FromHours(2)).DateTime.ToString("T", System.Globalization.CultureInfo.CurrentCulture);
+        utc.ToOffset(TimeSpan.FromHours(2)).DateTime.ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
 
     private static TimeSpan Ms(double value) => TimeSpan.FromMilliseconds(value);
 
@@ -77,22 +77,22 @@ public sealed class DiagnosticsViewModelTests
         Assert.Equal(RuntimeInformation.ProcessArchitecture.ToString(), current.Architecture);
         Assert.Equal(RuntimeInformation.FrameworkDescription, current.Runtime);
         Assert.Equal(DiagnosticsEnvironment.Current(), new DiagnosticsViewModel(null).Environment);
+        // One label-free line that reads and copies as it is, below a headline with product and version.
+        Assert.Equal("TestOS 1 · Arm64 · .NET 10.0.0", Environment.Summary);
+        Assert.Equal($"{ApplicationMetadata.Product} 1.2.3", new DiagnosticsViewModel(null, Environment).Headline);
         Assert.Equal(new[] { "Action", "Analysis", "Preparation", "Presentation", "Time", "Total", "UI" },
             typeof(DiagnosticsRow).GetProperties().Select(p => p.Name).Order());
         Assert.All(typeof(DiagnosticsRow).GetProperties(), p => Assert.Equal(typeof(string), p.PropertyType));
     }
 
     [Fact]
-    public void EmptyHistoryAndMissingRecorderShowNoRowsAndStayNormalByDefault()
+    public void EmptyHistoryAndMissingRecorderShowNoRows()
     {
         var ui = new Ui();
         foreach (var recorder in new InteractionPerformance?[] { new(new Frames()), null })
         {
             using var model = new DiagnosticsViewModel(recorder, Environment, Plus2, ui.Post);
             Assert.Empty(model.Rows); Assert.True(model.IsEmpty); Assert.False(model.HasEntries);
-            Assert.False(model.IsAdvanced); Assert.Null(model.VisibleRows);
-            model.IsAdvanced = true;
-            Assert.Empty(Assert.IsAssignableFrom<IReadOnlyList<DiagnosticsRow>>(model.VisibleRows));
         }
         Assert.Equal(0, ui.Posted);
     }
@@ -115,6 +115,36 @@ public sealed class DiagnosticsViewModelTests
         // Newest first means last recorded first: the first interaction finished its frame last.
         Assert.Equal(new[] { "Point force", "Distributed load" }, later.Rows.Select(r => r.Action));
         Assert.Equal(new[] { LocalTime(Start), LocalTime(Start.AddSeconds(90)) }, later.Rows.Select(r => r.Time));
+    }
+
+    [Theory]
+    [InlineData("en-US")] [InlineData("de-DE")]
+    public void TimeIsAlwaysA24HourClockWithFixedWidth(string language)
+    {
+        using var culture = new UiCultureScope(language);
+        var clock = new Clock(); var frames = new Frames(); var recorder = new InteractionPerformance(frames, clock);
+        foreach (var hour in new[] { 3, 15 })
+        {
+            clock.Utc = new DateTimeOffset(2026, 3, 4, hour - 2, 5, 9, TimeSpan.Zero); // 03:05:09 and 15:05:09 at UTC+2.
+            Record(recorder, clock, frames, InteractionAction.Support, 1, 2, 3, 4);
+        }
+        using var model = new DiagnosticsViewModel(recorder, Environment, Plus2, new Ui().Post);
+        Assert.Equal(new[] { "15:05:09", "03:05:09" }, model.Rows.Select(r => r.Time));
+    }
+
+    [Fact]
+    public void ClipboardTextHoldsTheShownValuesAsTabSeparatedTextWithTheUnitInTheHeadings()
+    {
+        using var culture = new UiCultureScope("de-DE");
+        var clock = new Clock(); var frames = new Frames(); var recorder = new InteractionPerformance(frames, clock);
+        clock.Utc = Start;
+        Record(recorder, clock, frames, InteractionAction.DistributedLoad, 3, 8, 15, 26);
+        using var model = new DiagnosticsViewModel(recorder, Environment, Plus2, new Ui().Post);
+        string head = $"{ApplicationMetadata.Product} 1.2.3\nTestOS 1 · Arm64 · .NET 10.0.0\n\n" +
+            "Uhrzeit\tAktion\tVorbereitung [ms]\tAnalyse [ms]\tDarstellung [ms]\tUI [ms]\tGesamt [ms]\n";
+        // Exactly the table's own texts: nothing but the version, the system and the recorded actions and durations.
+        Assert.Equal(head + $"{LocalTime(Start)}\tStreckenlast\t3,0\t5,0\t7,0\t11,0\t26,0\n", model.ClipboardText());
+        Assert.Equal(head, new DiagnosticsViewModel(null, Environment).ClipboardText()); // Still useful without entries.
     }
 
     [Theory]
@@ -150,22 +180,6 @@ public sealed class DiagnosticsViewModelTests
         Assert.Equal(pointForce, DiagnosticsViewModel.ActionName(InteractionAction.PointForce));
         Assert.Equal(undo, DiagnosticsViewModel.ActionName(InteractionAction.Undo));
         Assert.Throws<ArgumentOutOfRangeException>(() => DiagnosticsViewModel.ActionName((InteractionAction)999));
-    }
-
-    [Fact]
-    public void ExtendedModeOnlyHandsTheRowsToTheViewWhileItIsOn()
-    {
-        using var culture = new UiCultureScope("en-US");
-        var clock = new Clock(); var frames = new Frames(); var recorder = new InteractionPerformance(frames, clock);
-        Record(recorder, clock, frames, InteractionAction.Support);
-        using var model = new DiagnosticsViewModel(recorder, Environment, Plus2, new Ui().Post);
-        var changed = new List<string?>(); model.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
-        Assert.Null(model.VisibleRows);
-        model.IsAdvanced = true;
-        Assert.Same(model.Rows, model.VisibleRows);
-        model.IsAdvanced = false;
-        Assert.Null(model.VisibleRows);
-        Assert.Contains(nameof(DiagnosticsViewModel.VisibleRows), changed);
     }
 
     [Fact]

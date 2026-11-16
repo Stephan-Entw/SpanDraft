@@ -95,7 +95,7 @@ Präsentationsänderungen sowie Undo/Redo. Initiale Projektanlage, Analyse beim
 Öffnen, Eingabedrafts und Previews werden nicht gemessen.
 
 Die Dauer gliedert sich in Vorbereitung (Eingabe und Validierung der Bestätigung),
-Analyse, Präsentation (synchrone Verarbeitung des neuen Zustands) und UI (bis zum
+Analyse, Darstellung (synchrone Verarbeitung des neuen Zustands) und UI (bis zum
 gerenderten Frame; dies bestätigt keine physische Bildschirmausgabe). Total und
 Phasen stammen aus derselben monotonen Zeitlinie. Bei nichtmechanischen
 Änderungen entfällt die Analyse.
