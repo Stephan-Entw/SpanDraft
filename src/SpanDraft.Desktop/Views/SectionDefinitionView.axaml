@@ -194,7 +194,11 @@
         </Border>
         <Grid x:Name="PreviewColumn" Grid.Column="0" IsVisible="{Binding ShowPreview}" Background="{DynamicResource CanvasBackground}" RowDefinitions="Auto,*">
           <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="24,16">
-            <TextBlock Text="{x:Static resources:Strings.SectionDefinitionSketch}" FontSize="{DynamicResource SubtitleSize}" FontWeight="SemiBold" />
+            <StackPanel Spacing="4">
+              <TextBlock Text="{x:Static resources:Strings.SectionDefinitionSketch}" FontSize="{DynamicResource SubtitleSize}" FontWeight="SemiBold" />
+              <TextBlock x:Name="LastValidPreviewHint" Text="{x:Static resources:Strings.SectionDefinitionLastValidPreview}"
+                  IsVisible="{Binding PreviewIsStale}" Classes="caption" TextWrapping="Wrap" />
+            </StackPanel>
           </Border>
           <Border Grid.RowSpan="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0" IsHitTestVisible="False" />
           <controls:SectionPreviewControl x:Name="SectionPreview" Grid.Row="1" Margin="16" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"

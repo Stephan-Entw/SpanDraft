@@ -49,13 +49,15 @@ public sealed class SectionDefinitionPrototypeTests : SectionDefinitionPrototype
         Assert.Same(section,vm.Section);
     }
     [Fact]
-    public void TypingInvalidCommitsAndGeometryConflictsNeverReplaceTheLastValidPreview()
+    public void ValidTypingUpdatesPreviewButInvalidCommitsAndGeometryConflictsKeepLastValidPreview()
     {
         var vm=new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.ISection);
-        var original=vm.Preview;
-        Input(vm,"h").PendingText="3"; Assert.Same(original,vm.Preview);
-        Input(vm,"h").PendingText="30"; Assert.Same(original,vm.Preview);
-        Input(vm,"h").PendingText="300"; Assert.Same(original,vm.Preview);
+        foreach (var (text, height) in new[] { ("3", .003), ("30", .03), ("300", .3) })
+        {
+            Input(vm,"h").PendingText=text; Assert.Equal(height,vm.Preview!.Height);
+            Assert.Null(Input(vm,"h").ConfirmedValue); Assert.Null(vm.Section);
+            Assert.True(vm.Preview.Dimensions["h"].IsPending); Assert.False(vm.Preview.Dimensions["h"].IsConfirmed);
+        }
         Assert.True(Input(vm,"h").Commit());
         Assert.Equal(.3,vm.Preview!.Height); Assert.True(vm.Preview.Dimensions["h"].IsConfirmed);
         Assert.Equal("",Input(vm,"b").PendingText); Assert.Null(Input(vm,"b").ConfirmedValue);
@@ -319,7 +321,9 @@ public sealed class SectionDefinitionPrototypeTests : SectionDefinitionPrototype
         var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.Rectangle); Fill(vm);
         vm.SelectedAxis = SectionAxisDesignation.Z;
         var preview = vm.Preview; Input(vm, "h").PendingText = "200.0";
-        Assert.Equal(SectionAxisDesignation.Z, vm.SelectedAxis); Assert.Same(preview, vm.Preview); Assert.False(vm.CanConfirm);
+        Assert.Equal(SectionAxisDesignation.Z, vm.SelectedAxis);
+        Assert.Equal(preview!.Width, vm.Preview!.Width); Assert.Equal(preview.Height, vm.Preview.Height);
+        Assert.True(vm.Preview.Dimensions["h"].IsPending); Assert.False(vm.CanConfirm);
         Input(vm, "h").Commit(); Assert.Equal(SectionAxisDesignation.Z, vm.SelectedAxis); Assert.True(vm.CanConfirm);
         vm.BeginNameEdit(); vm.PendingName = "Named"; vm.CommitName(); Assert.Equal(SectionAxisDesignation.Z, vm.SelectedAxis);
         Commit(vm, "h", "240"); Assert.Null(vm.SelectedAxis); Assert.False(vm.CanConfirm);

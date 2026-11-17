@@ -35,6 +35,8 @@ public sealed class SectionDefinitionInput : ObservableObject
     public bool HasParseError => _parseError;
     public string? Error => _error;
     public bool HasError => Error is not null;
+    internal bool TryParsePendingValue(out double value) => InputQuantityFormatter.TryParse(PendingText, Unit, out value)
+        && (_nonnegative ? value >= 0 : value > 0);
     internal Snapshot Capture() => new(ConfirmedValue, HasInteracted);
     internal void Restore(Snapshot snapshot)
     {
@@ -62,7 +64,7 @@ public sealed class SectionDefinitionInput : ObservableObject
         if (HasInteracted && !IsPending) return !HasError;
         LastCommitChangedValue = false;
         var previousValue = ConfirmedValue;
-        bool invalid = !InputQuantityFormatter.TryParse(PendingText, Unit, out var value) || (_nonnegative ? value < 0 : value <= 0);
+        bool invalid = !TryParsePendingValue(out var value);
         if (!invalid && ConfirmedValue != value) BeforeCommittedValueChange?.Invoke();
         HasInteracted = true;
         _committedText = PendingText;

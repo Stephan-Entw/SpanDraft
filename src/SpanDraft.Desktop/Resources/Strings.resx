@@ -242,6 +242,7 @@
   <data name="SectionDefinitionChangeForm" xml:space="preserve"><value>Change shape</value></data>
   <data name="SectionDefinitionInputs" xml:space="preserve"><value>Inputs</value></data>
   <data name="SectionDefinitionSketch" xml:space="preserve"><value>Section view</value></data>
+  <data name="SectionDefinitionLastValidPreview" xml:space="preserve"><value>Last valid preview · current input is incomplete or invalid</value></data>
   <data name="SectionDefinitionProperties" xml:space="preserve"><value>Calculated section properties</value></data>
   <data name="SectionDefinitionAxisConfiguration" xml:space="preserve"><value>Axis configuration</value></data>
   <data name="SectionDefinitionCompleteHint" xml:space="preserve"><value>Enter and confirm all required dimensions to calculate section properties.</value></data>

@@ -21,6 +21,107 @@ namespace SpanDraft.Tests;
 public sealed class SectionDefinitionControlTests : SectionDefinitionPrototypeTestSupport
 {
     [Fact]
+    public void ManualPendingPropertiesRevealAxesWithoutReplacingFocusedInputs()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.Manual);
+        vm.Configuration = vm.Configurations.Single(c => c.Value == ManualAxisConfiguration.YZ); Fill(vm, false);
+        var view = new SectionDefinitionView { DataContext = vm }; var window = new Window { Content = view };
+        window.Show(); ArrangeSection(window);
+        var list = view.FindControl<ItemsControl>("ManualInputList")!;
+        var blocks = list.GetVisualDescendants().OfType<SectionAxisBlock>().ToArray();
+        var box = list.GetVisualDescendants().OfType<TextBox>().Single(t => t.DataContext == Input(vm, "WZ"));
+        box.Focus(); box.Text = "100000"; box.CaretIndex = 3; ArrangeSection(window);
+        Assert.True(box.IsFocused); Assert.True(Input(vm, "WZ").IsPending); Assert.Equal(3, box.CaretIndex);
+        Assert.Equal(blocks, list.GetVisualDescendants().OfType<SectionAxisBlock>().ToArray());
+        Assert.All(blocks, b => Assert.True(b.IsSelectable)); Assert.True(vm.RequiresAxisSelection);
+        box.Text = "-"; ArrangeSection(window);
+        Assert.True(box.IsFocused); Assert.Equal(blocks, list.GetVisualDescendants().OfType<SectionAxisBlock>().ToArray());
+        Assert.All(blocks, b => Assert.False(b.IsSelectable)); Assert.False(Input(vm, "WZ").HasError);
+        box.Text = "100000"; ArrangeSection(window);
+        blocks.Last().Select(); Assert.False(Input(vm, "WZ").IsPending); Assert.True(vm.CanConfirm);
+        Assert.Equal(SectionAxisDesignation.Z, vm.SelectedAxis); Assert.True(box.IsFocused);
+        Assert.Same(box, list.GetVisualDescendants().OfType<TextBox>().Single(t => t.DataContext == Input(vm, "WZ")));
+        window.Close();
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void PendingSquareTubeBecomesSelectableRectangleAndAppliesOnFirstAxisClick(bool loseFocusBeforeClick)
+    {
+        using var environment = new DesktopControlEnvironment(); using var culture = new UiCultureScope("en-US");
+        var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.RectangularHollow);
+        Commit(vm, "b", "50"); Commit(vm, "h", "50"); Commit(vm, "t", "10"); Commit(vm, "r", "0");
+        var committed = vm.Section; var committedPreview = vm.Preview;
+        var view = new SectionDefinitionView { DataContext = vm };
+        var window = new Window { Content = view }; window.Show(); ArrangeSection(window);
+        var box = view.GetVisualDescendants().OfType<TextBox>().Single(t => t.DataContext == Input(vm, "b"));
+        box.Focus(); box.Text = "60"; ArrangeSection(window);
+        Assert.Equal(.06, vm.Preview!.Width);
+        box.Text = "50"; ArrangeSection(window);
+        Assert.True(box.IsFocused); Assert.False(Input(vm, "b").IsPending);
+        Assert.Same(committedPreview, vm.Preview); Assert.Equal(.05, vm.Preview!.Width);
+        Assert.Contains("50 × 50", vm.HeaderTitle); Assert.True(vm.AxesEquivalent);
+        Assert.Single(vm.AxisValues); Assert.False(vm.AxisValues[0].IsSelectable);
+        Assert.True(view.FindControl<Button>("ConfirmButton")!.IsEffectivelyEnabled);
+        box.Text = "60"; ArrangeSection(window);
+        Assert.True(box.IsFocused); Assert.True(Input(vm, "b").IsPending); Assert.Equal(.05, Input(vm, "b").ConfirmedValue);
+        Assert.Same(committed, vm.Section); Assert.True(vm.RequiresAxisSelection); Assert.False(vm.AxesEquivalent);
+        Assert.Equal(.06, view.FindControl<SectionPreviewControl>("SectionPreview")!.Geometry!.Width);
+        Assert.Contains("60", vm.HeaderTitle);
+        var button = view.FindControl<Button>("ConfirmButton")!; Assert.False(button.IsEffectivelyEnabled);
+        var blocks = view.FindControl<ItemsControl>("AxisValueList")!.GetVisualDescendants().OfType<SectionAxisBlock>().ToArray();
+        Assert.Equal(2, blocks.Length); Assert.All(blocks, block => Assert.True(block.IsSelectable));
+        var target = blocks.Single(b => ((SectionDefinitionAxisValue)b.DataContext!).Axis == SectionAxisDesignation.Z);
+        if (loseFocusBeforeClick) { target.Focus(); Dispatcher.UIThread.RunJobs(); }
+        var point = target.TranslatePoint(new Point(target.Bounds.Width / 2, target.Bounds.Height / 2), window)!.Value;
+        var pointer = new Pointer(73, PointerType.Mouse, true);
+        target.RaiseEvent(new PointerPressedEventArgs(target, pointer, window, point, 0,
+            new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed), KeyModifiers.None, 1));
+        target.RaiseEvent(new PointerReleasedEventArgs(target, pointer, window, point, 1,
+            new PointerPointProperties(RawInputModifiers.None, PointerUpdateKind.LeftButtonReleased), KeyModifiers.None, MouseButton.Left));
+        pointer.Capture(null); Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(SectionAxisDesignation.Z, vm.SelectedAxis); Assert.False(Input(vm, "b").IsPending);
+        Assert.Equal(.06, Input(vm, "b").ConfirmedValue); Assert.True(vm.CanConfirm); Assert.True(button.IsEffectivelyEnabled);
+        Assert.Equal(blocks, view.FindControl<ItemsControl>("AxisValueList")!.GetVisualDescendants().OfType<SectionAxisBlock>().ToArray());
+        SpanDraft.Desktop.Sections.SectionDefinitionResult? result = null; vm.CloseRequested += value => result = value;
+        button.Command!.Execute(button.CommandParameter);
+        Assert.NotNull(result); Assert.Equal(SectionAxisDesignation.Z, result.BendingAxis);
+        Assert.Equal(.06, Assert.IsType<RectangularHollowSectionGeometry>(result.Section).Width.Meters);
+        window.Close();
+    }
+
+    [Fact]
+    public void RealApplyCommandAcceptsPendingDiameterWithoutLosingInputFocus()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.Circle);
+        var view = new SectionDefinitionView { DataContext = vm };
+        var window = new Window { Content = view }; window.Show(); ArrangeSection(window);
+        var box = Assert.Single(view.FindControl<ItemsControl>("GeometryInputList")!.GetVisualDescendants().OfType<TextBox>());
+        var input = Assert.IsType<SectionDefinitionInput>(box.DataContext);
+        SpanDraft.Desktop.Sections.SectionDefinitionResult? result = null;
+        int accepted = 0, lostFocus = 0;
+        vm.CloseRequested += value => { result = value; accepted++; };
+        box.LostFocus += (_, _) => lostFocus++;
+        box.Focus(); box.Text = "80"; Dispatcher.UIThread.RunJobs();
+        Assert.True(box.IsFocused); Assert.True(input.IsPending); Assert.Null(input.ConfirmedValue);
+        Assert.False(vm.CanConfirm);
+        var button = view.FindControl<Button>("ConfirmButton")!;
+        Assert.True(button.IsEffectivelyEnabled);
+        Assert.True(button.Command!.CanExecute(button.CommandParameter));
+        Assert.True(box.IsFocused); Assert.True(input.IsPending); Assert.Equal(0, lostFocus);
+
+        button.Command.Execute(button.CommandParameter);
+
+        Assert.Equal(1, accepted); Assert.NotNull(result);
+        Assert.Equal(.08, Assert.IsType<CircleSectionGeometry>(result.Section).Diameter.Meters);
+        Assert.Equal(.08, input.ConfirmedValue); Assert.False(input.IsPending); Assert.True(vm.CanConfirm);
+        Assert.True(box.IsFocused); Assert.Equal(0, lostFocus);
+        window.Close();
+    }
+    [Fact]
     public void RealFormButtonsAxesAndInlineNameKeyboardWorkWithoutClosingTheHost()
     {
         using var environment=new DesktopControlEnvironment();
@@ -86,7 +187,13 @@ public sealed class SectionDefinitionControlTests : SectionDefinitionPrototypeTe
             // The one-pixel caret is snapped and inset by Avalonia. Compare to
             // the actual glyph position with room for that raster alignment.
             Assert.InRange(Math.Abs(top.X - presenter.TextLayout.HitTestTextPosition(box.CaretIndex).X), 0, 2);
-            Assert.Same(preview, vm.Preview); Assert.Null(input.ConfirmedValue);
+            if (type == SectionEditorType.Manual) Assert.Same(preview, vm.Preview);
+            else
+            {
+                Assert.True(vm.Preview!.Dimensions[input.Key].IsPending);
+                Assert.Equal(input.PendingText, box.Text); Assert.True(box.IsFocused);
+            }
+            Assert.Null(input.ConfirmedValue);
         }
         box.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Left });
         Type("7"); Assert.Equal("4576", input.PendingText); Assert.Equal(3, box.CaretIndex);

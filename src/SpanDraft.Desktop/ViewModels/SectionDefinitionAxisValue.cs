@@ -3,7 +3,7 @@ using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
-/// <summary>Stable blocks preserve editing focus while committed properties and selection change.</summary>
+/// <summary>Stable blocks preserve editing focus while draft properties and selection change.</summary>
 public sealed class SectionDefinitionAxisValue(SectionAxisDesignation axis, IReadOnlyList<SectionDefinitionInput> inputs) : ObservableObject
 {
     private string _label = "";

@@ -242,6 +242,7 @@
   <data name="SectionDefinitionChangeForm" xml:space="preserve"><value>Form ändern</value></data>
   <data name="SectionDefinitionInputs" xml:space="preserve"><value>Eingaben</value></data>
   <data name="SectionDefinitionSketch" xml:space="preserve"><value>Querschnittsansicht</value></data>
+  <data name="SectionDefinitionLastValidPreview" xml:space="preserve"><value>Letzte gültige Vorschau · aktuelle Eingabe unvollständig oder ungültig</value></data>
   <data name="SectionDefinitionProperties" xml:space="preserve"><value>Berechnete Querschnittswerte</value></data>
   <data name="SectionDefinitionAxisConfiguration" xml:space="preserve"><value>Achsenkonfiguration</value></data>
   <data name="SectionDefinitionCompleteHint" xml:space="preserve"><value>Alle erforderlichen Maße gültig eingeben und bestätigen, um Kennwerte zu berechnen.</value></data>

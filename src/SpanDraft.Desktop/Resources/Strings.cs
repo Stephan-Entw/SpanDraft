@@ -86,6 +86,7 @@ public static class Strings
     public static string SectionDefinitionChangeForm => Get(nameof(SectionDefinitionChangeForm));
     public static string SectionDefinitionInputs => Get(nameof(SectionDefinitionInputs));
     public static string SectionDefinitionSketch => Get(nameof(SectionDefinitionSketch));
+    public static string SectionDefinitionLastValidPreview => Get(nameof(SectionDefinitionLastValidPreview));
     public static string SectionDefinitionProperties => Get(nameof(SectionDefinitionProperties));
     public static string SectionDefinitionAxisConfiguration => Get(nameof(SectionDefinitionAxisConfiguration));
     public static string SectionDefinitionCompleteHint => Get(nameof(SectionDefinitionCompleteHint));

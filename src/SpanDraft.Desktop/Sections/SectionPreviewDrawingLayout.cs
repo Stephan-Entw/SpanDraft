@@ -61,14 +61,14 @@ public sealed class SectionPreviewDrawingLayout
     {
         presentation ??= ResultPresentationOptions.Default;
         TechnicalText Label(PreviewDimension dimension) => (dimension.Key is "d" or "D" ? TechnicalSymbols.Diameter : TechnicalSymbols.SectionInput(dimension.Key))
-            + (dimension.IsConfirmed ? QuantityFormatter.FormatInputEquation("", dimension.Value, unit, presentation) : "");
+            + (dimension.IsConfirmed || dimension.IsPending ? QuantityFormatter.FormatInputEquation("", dimension.Value, unit, presentation) : "");
         var labels = geometry.Dimensions.Values.ToDictionary(d => d.Key, Label);
         var textSizes = labels.ToDictionary(p => p.Key, p => measure(p.Value));
         bool nestedFlange = compact && geometry.Dimensions.ContainsKey("tf");
         double heightOffset = nestedFlange
             ? CompactMetrics.FlangeOffset + textSizes["h"].Height + CompactMetrics.FlangeCaptionGap + 2 * CompactMetrics.Clearance : 22;
         // Preserve the physical drawing envelope when changing the radius caption.
-        double detailWidth = geometry.Dimensions.Values.Where(IsDetail).Select(d => d.Key == "r" && d.IsConfirmed
+        double detailWidth = geometry.Dimensions.Values.Where(IsDetail).Select(d => d.Key == "r" && (d.IsConfirmed || d.IsPending)
             ? measure("R" + QuantityFormatter.FormatInput(d.Value, unit, presentation)).Width : textSizes[d.Key].Width).DefaultIfEmpty(48).Max();
         double left = compact ? CompactMetrics.Left : geometry.Dimensions.ContainsKey("h") ? Math.Max(58, textSizes["h"].Width + 34) : 58;
         double right = compact ? Math.Max(CompactMetrics.Right, detailWidth + CompactMetrics.DetailGap) : Math.Max(100, detailWidth + 52);

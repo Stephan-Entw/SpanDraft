@@ -8,7 +8,10 @@ namespace SpanDraft.Desktop.Sections;
 
 // Drawing coordinates use y right, z up, in metres. These types carry no section properties.
 public sealed record PreviewSegment(Point Start, Point End, Point? Center = null, double Sweep = 0);
-public sealed record PreviewDimension(string Key, double Value, bool IsConfirmed, Point Anchor, Point Start, Point End, Point? RadiusCenter = null);
+public sealed record PreviewDimension(string Key, double Value, bool IsConfirmed, Point Anchor, Point Start, Point End, Point? RadiusCenter = null)
+{
+    public bool IsPending { get; init; }
+}
 public sealed record SectionPreviewGeometry(SectionEditorType Type, double Width, double Height,
     IReadOnlyList<IReadOnlyList<PreviewSegment>> Contours, IReadOnlyDictionary<string, PreviewDimension> Dimensions,
     Point? Centroid = null, double? PrincipalAngle = null);

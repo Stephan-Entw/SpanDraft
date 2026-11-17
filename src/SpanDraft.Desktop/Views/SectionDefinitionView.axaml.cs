@@ -103,7 +103,7 @@ public partial class SectionDefinitionView : UserControl
     private void AxisBlockSelected(object? sender, RoutedEventArgs e)
     {
         if (sender is SectionAxisBlock { DataContext: SectionDefinitionAxisValue block } && block.IsSelectable && _model is not null)
-            _model.SelectedAxis = block.Axis;
+            _model.SelectAxis(block.Axis);
     }
     private void SelectForm(object? sender,RoutedEventArgs e) { if (sender is Button { Tag: SectionEditorType type }) _model?.SelectForm(type); }
     private void LoadPreset(object? sender, RoutedEventArgs e)

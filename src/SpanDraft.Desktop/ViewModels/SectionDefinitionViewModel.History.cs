@@ -79,7 +79,7 @@ public sealed partial class SectionDefinitionViewModel
             _beforeInputChange = null; _section = null; _axisValues = [];
             RefreshInputs();
             if (_type is not null) { NormalizeAxis(); Recalculate(null); }
-            else Refresh();
+            else { UpdateDraft(); Refresh(); }
             Notify(nameof(HighlightedParameter));
         }
         finally { _restoringHistory = false; RefreshHistoryAvailability(); }

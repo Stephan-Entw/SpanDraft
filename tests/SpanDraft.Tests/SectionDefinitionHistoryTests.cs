@@ -26,6 +26,28 @@ public sealed class SectionDefinitionHistoryTests
         { "b" => "100", "h" => "150", "t" or "tw" => "5", "tf" => "10", "r" => "0", "A" => "1000", _ => input.Key.StartsWith('I') ? "1000000" : "20000" });
     }
     [Fact]
+    public async Task ApplyingPendingValueCreatesOneConfirmedHistoryStep()
+    {
+        var vm = new SectionDefinitionViewModel(initialState: new(
+            new CircleSectionGeometry(M(.08)), SectionAxisDesignation.Y));
+        var section = vm.Section;
+        var input = Input(vm, "d"); input.PendingText = "100";
+        var preview = vm.Preview; Assert.Equal(.1, preview!.Width);
+        Assert.True(vm.ConfirmCommand.CanExecute(null)); Assert.True(vm.ConfirmCommand.CanExecute(null));
+        Assert.Same(section, vm.Section); Assert.Same(preview, vm.Preview);
+        Assert.Equal(.08, input.ConfirmedValue); Assert.False(vm.CanUndo);
+        Assert.True(await vm.ConfirmAsync()); Assert.True(vm.CanUndo);
+        Assert.Equal(.1, Assert.IsType<CircleSectionGeometry>(vm.Section).Diameter.Meters);
+        Assert.True(vm.Undo()); Assert.False(vm.CanUndo); Assert.True(vm.CanRedo);
+        Assert.Equal(.08, Input(vm, "d").ConfirmedValue); Assert.False(Input(vm, "d").IsPending);
+        Assert.Equal(SectionAxisDesignation.Y, vm.SelectedAxis);
+        Assert.Equal(.08, Assert.IsType<CircleSectionGeometry>(vm.Section).Diameter.Meters);
+        Assert.True(vm.Redo()); Assert.False(vm.CanRedo); Assert.Null(vm.SelectedAxis);
+        Assert.Equal(.1, Input(vm, "d").ConfirmedValue); Assert.False(Input(vm, "d").IsPending);
+        Assert.Equal(.1, Assert.IsType<CircleSectionGeometry>(vm.Section).Diameter.Meters);
+    }
+
+    [Fact]
     public void DimensionsRestoreConfirmedSiValuesWithoutRawTextAndRecalculate()
     {
         var vm = Rectangle(); Assert.False(vm.CanUndo);

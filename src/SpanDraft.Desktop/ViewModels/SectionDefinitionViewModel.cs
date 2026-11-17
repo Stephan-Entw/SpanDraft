@@ -32,6 +32,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         public SectionAxisDesignation? Axis { get; set; }
         public Dictionary<string, SectionDefinitionAxisValue> Blocks { get; } = [];
         public SectionPreviewGeometry? Preview { get; set; }
+        public SectionPreviewGeometry? PendingPreview { get; set; }
     }
     private readonly Dictionary<SectionEditorType, FormDraft> _drafts = [];
     private readonly ISectionDefinitionLibrary? _library;
@@ -41,6 +42,10 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     private string _pendingName = "";
     private string? _nameError, _saveError, _highlight;
     private ISectionDefinition? _section;
+    private ISectionDefinition? _draftSection;
+    private string? _draftName;
+    private int _pendingCount;
+    private bool _draftValueChanged, _previewIsStale;
     private IReadOnlyList<SectionDefinitionAxisValue> _axisValues = [];
     private IReadOnlyList<SectionDefinitionPreset> _libraryEntries = [];
 
@@ -67,7 +72,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         EditNameCommand = new(BeginNameEdit, () => HasDefinition && !IsBusy);
         ResetNameCommand = new(ResetName, () => HasDefinition && !IsBusy);
         SaveLibraryCommand = new(SaveLibraryAsync, () => CanSaveLibrary);
-        ConfirmCommand = new(ConfirmAsync, () => CanConfirm);
+        ConfirmCommand = new(ConfirmAsync, CanApply);
         CancelCommand = new(() => CloseRequested?.Invoke(null), () => !IsBusy);
         if (initialState is not null) Initialize(initialState);
     }
@@ -101,7 +106,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         _presentation = options;
         if (_type is not null)
             UpdateAutomaticName(Parameters.Where(p => p.ConfirmedValue is not null).ToDictionary(p => p.Key, p => p.ConfirmedValue!.Value));
-        Notify(nameof(Presentation)); Refresh();
+        UpdateDraft(); Notify(nameof(Presentation)); Refresh();
     }
 
     internal void RefreshLibraryState() => Refresh();
@@ -117,7 +122,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     public bool HasRadius => !IsManual && Parameters.Any(p => p.Key == "r");
     public SectionDefinitionLayout LayoutState => !HasDefinition ? SectionDefinitionLayout.FormSelection
         : IsManual ? SectionDefinitionLayout.Manual
-        : HasValidSection ? SectionDefinitionLayout.ParametricSection : SectionDefinitionLayout.ParametricDraft;
+        : _draftSection is not null || _section is not null ? SectionDefinitionLayout.ParametricSection : SectionDefinitionLayout.ParametricDraft;
     public bool ShowPreview => LayoutState is SectionDefinitionLayout.ParametricDraft or SectionDefinitionLayout.ParametricSection;
     public bool ShowValues => LayoutState is SectionDefinitionLayout.ParametricSection or SectionDefinitionLayout.Manual;
     public bool ShowConfirm => HasDefinition;
@@ -127,7 +132,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     public string SelectedFormName => IsManual ? Strings.SectionDefinitionManualChoice : Forms.FirstOrDefault(f => f.Value == _type)?.Label ?? "";
     public bool IsBusy => _busy;
     public bool IsEditingName => _editingName;
-    public string DisplayName => _type is null ? Strings.SectionDefinitionTitle : Current.CustomName ?? Current.AutomaticName;
+    public string DisplayName => _type is null ? Strings.SectionDefinitionTitle : Current.CustomName ?? _draftName ?? Current.AutomaticName;
     public string PendingName
     {
         get => _pendingName;
@@ -181,20 +186,27 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     public IReadOnlyList<AxisChoice> AvailableAxes => _type is null ? [] : AxesForCurrent().Select(a => new AxisChoice(a)).ToArray();
     public SectionAxisDesignation? SelectedAxis
     {
-        get => _type is null ? null : Current.Axis;
-        set
-        {
-            if (!HasDefinition || IsBusy || !RequiresAxisSelection || value is null || !AxesForCurrent().Contains(value.Value) || Current.Axis == value) return;
-            var before = CaptureHistory();
-            Current.Axis = value;
-            if (IsManual) Current.ManualAxisSelections[Current.Configuration] = value;
-            Refresh(); RecordHistory(before);
-        }
+        get => _type is null || _draftSection is null || _draftValueChanged ? null : Current.Axis;
+        set { if (value is { } axis) SelectAxis(axis); }
+    }
+    public bool SelectAxis(SectionAxisDesignation axis)
+    {
+        if (!HasDefinition || IsBusy || !RequiresAxisSelection || !AxesForCurrent().Contains(axis)
+            || !CommitPendingInput() || !HasCommittedInputs || !NeedsAxisSelection(_section!)) return false;
+        if (Current.Axis == axis) return true;
+        var before = CaptureHistory();
+        Current.Axis = axis;
+        if (IsManual) Current.ManualAxisSelections[Current.Configuration] = axis;
+        Refresh(); RecordHistory(before);
+        return true;
     }
     public SectionAxisDesignation ResultAxis => SelectedAxis is { } selected && AxesForCurrent().Contains(selected)
         ? selected : AxesForCurrent()[0];
-    public bool AxesEquivalent => HasValidSection && _section!.Axes.Count == 2 && HaveEquivalentProperties(_section.Axes[0], _section.Axes[1]);
-    public bool RequiresAxisSelection => HasValidSection && _section!.Axes.Count > 1 && !AxesEquivalent;
+    public bool AxesEquivalent => HasDefinition && _draftSection is not null && HaveEquivalentAxes(_draftSection);
+    private static bool HaveEquivalentAxes(ISectionDefinition section) => section.Axes.Count == 2
+        && HaveEquivalentProperties(section.Axes[0], section.Axes[1]);
+    private static bool NeedsAxisSelection(ISectionDefinition section) => section.Axes.Count > 1 && !HaveEquivalentAxes(section);
+    public bool RequiresAxisSelection => HasDefinition && _draftSection is not null && NeedsAxisSelection(_draftSection);
     public static bool NearlyEqual(double first, double second) => first == second || Math.Abs(first - second) / Math.Max(Math.Abs(first), Math.Abs(second)) <= 1e-9;
     public static bool HaveEquivalentProperties(SectionAxisProperties first, SectionAxisProperties second) =>
         NearlyEqual(first.SecondMomentOfArea.MetersToTheFourth, second.SecondMomentOfArea.MetersToTheFourth)
@@ -206,18 +218,19 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         _type is SectionEditorType.Rectangle or SectionEditorType.RectangularHollow ? p.Key == "h" ? 0 : p.Key == "b" ? 1 : 2 : 0).ToArray();
     public IReadOnlyList<SectionDefinitionInput> ManualAreaInputs => IsManual ? [Current.Inputs["A"]] : [];
     public IReadOnlyList<SectionDefinitionInput> ManualInputs => IsManual ? Parameters : [];
-    public SectionPreviewGeometry? Preview => _type is null ? null : Current.Preview;
+    public SectionPreviewGeometry? Preview => _type is null ? null : Current.PendingPreview ?? Current.Preview;
+    public bool PreviewIsStale => ShowPreview && Preview is not null && _previewIsStale;
     public ISectionDefinition? Section => _section;
     public bool HasValidSection => HasDefinition && _section is not null;
     public TechnicalText AreaLabel => Strings.SectionDefinitionArea + " " + TechnicalSymbols.Area;
-    public string Area => _section is null ? "—" : Format(_section.Area.SquareMeters, QuantityKind.Area);
+    public string Area => _draftSection is null ? "—" : Format(_draftSection.Area.SquareMeters, QuantityKind.Area);
     public IReadOnlyList<SectionDefinitionAxisValue> AxisValues => _axisValues;
     private void RefreshAxisValues()
     {
         var blocks = new List<SectionDefinitionAxisValue>();
         if (ShowValues)
         {
-            bool combined = !IsManual && AxesEquivalent;
+            bool combined = !IsManual && (_draftSection is not null ? AxesEquivalent : _axisValues.Count == 1);
             foreach (var axis in combined ? AxesForCurrent().Take(1) : AxesForCurrent())
             {
                 string key = (IsManual ? "manual-" : "calculated-") + axis + (combined ? "-combined" : "");
@@ -226,14 +239,15 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
                     block = new(axis, IsManual ? [Current.Inputs["I" + axis], Current.Inputs["W" + axis]] : []);
                     Current.Blocks[key] = block;
                 }
-                var properties = _section?.GetAxis(axis);
+                var properties = _draftSection?.GetAxis(axis);
                 string letter = combined ? "" : axis.ToString().ToLowerInvariant();
                 string heading = new AxisChoice(axis).Label;
-                if (combined) heading = string.Join(" / ", AvailableAxes.Select(a => a.Label)) + " · " + Strings.SectionDefinitionEquivalent;
+                if (combined) heading = string.Join(" / ", AvailableAxes.Select(a => a.Label))
+                    + (AxesEquivalent ? " · " + Strings.SectionDefinitionEquivalent : "");
                 else if (AxesEquivalent) heading += " · " + Strings.SectionDefinitionEquivalent;
-                else if (HasValidSection && _section!.Axes.Count == 2)
+                else if (_draftSection?.Axes.Count == 2)
                 {
-                    var other = _section.Axes.Single(a => a.AxisDesignation != axis);
+                    var other = _draftSection.Axes.Single(a => a.AxisDesignation != axis);
                     double inertia = properties!.SecondMomentOfArea.MetersToTheFourth, otherInertia = other.SecondMomentOfArea.MetersToTheFourth;
                     if (!NearlyEqual(inertia, otherInertia)) heading += " · " + (inertia > otherInertia ? Strings.SectionDefinitionStrongAxis : Strings.SectionDefinitionWeakAxis);
                 }
@@ -248,9 +262,19 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         }
         if (!_axisValues.SequenceEqual(blocks)) { _axisValues = blocks; Notify(nameof(AxisValues)); }
     }
-    public bool CanConfirm => HasDefinition && !IsBusy && !_editingName && _section is not null && !string.IsNullOrWhiteSpace(DisplayName)
-        && (!RequiresAxisSelection || SelectedAxis is not null)
-        && Parameters.All(p => !p.IsPending && !p.HasError);
+    public bool CanConfirm => HasCommittedInputs && !IsBusy && !_editingName && !string.IsNullOrWhiteSpace(DisplayName)
+        && (!NeedsAxisSelection(_section!) || Current.Axis is not null);
+    private bool CanApply()
+    {
+        if (_pendingCount == 0) return CanConfirm;
+        return HasDefinition && !IsBusy && !_editingName && !string.IsNullOrWhiteSpace(DisplayName)
+            && _pendingCount == 1 && _draftSection is not null && (!RequiresAxisSelection || SelectedAxis is not null);
+    }
+    private bool CommitPendingInput()
+    {
+        var pending = Parameters.Where(p => p.IsPending).ToArray();
+        return pending.Length == 0 || pending.Length == 1 && pending[0].Commit();
+    }
     public ActionCommand ChangeFormCommand { get; }
     public ActionCommand EditNameCommand { get; }
     public ActionCommand ResetNameCommand { get; }
@@ -323,32 +347,62 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         }
         else
         {
-            Notify(nameof(CanConfirm)); RefreshLibraryAction();
-            ConfirmCommand.Refresh(); RefreshHistoryAvailability();
+            UpdateDraft(); Refresh(refreshLibraryEntries: false);
         }
     }
     private void Recalculate(SectionDefinitionInput? source)
     {
         _section = null;
+        Current.Preview = Current.PendingPreview ?? Current.Preview;
+        Current.PendingPreview = null;
         foreach (var input in Parameters) input.SetGeometryError(null);
         var values = Parameters.Where(p => p.ConfirmedValue is not null).ToDictionary(p => p.Key, p => p.ConfirmedValue!.Value);
-        if (Parameters.Any(p => p.HasParseError)) { Refresh(); return; }
+        if (Parameters.Any(p => p.HasParseError)) { UpdateDraft(); Refresh(); return; }
         try
         {
-            SectionPreviewGeometry? preview;
-            if (Parameters.All(p => p.ConfirmedValue is not null))
-            {
-                _section = ConstructSection(values);
-                preview = _section is IParametricSectionDefinition parametric
-                    ? SectionPreviewGeometryResolver.FromSection(_type!.Value, values, parametric) : null;
-            }
-            else preview = IsManual ? null : SectionPreviewGeometryResolver.Resolve(_type!.Value, values);
-            Current.Preview = preview;
+            var result = EvaluateValues(values);
+            _section = result.Section; Current.Preview = result.Preview;
             UpdateAutomaticName(values);
         }
         catch (PreviewGeometryException error) { MarkGeometryError(error.Key, source); }
         catch (ArgumentException error) { MarkGeometryError(error.ParamName, source); }
-        Refresh();
+        UpdateDraft(); Refresh();
+    }
+    private (ISectionDefinition? Section, SectionPreviewGeometry? Preview) EvaluateValues(Dictionary<string, double> values)
+    {
+        if (values.Count != Parameters.Count)
+            return (null, IsManual ? null : SectionPreviewGeometryResolver.Resolve(_type!.Value, values));
+        var section = ConstructSection(values);
+        return (section, section is IParametricSectionDefinition parametric
+            ? SectionPreviewGeometryResolver.FromSection(_type!.Value, values, parametric) : null);
+    }
+    private void UpdateDraft()
+    {
+        _draftSection = _section; _draftName = null; _draftValueChanged = false;
+        var parameters = Parameters;
+        var pending = parameters.Where(p => p.IsPending).ToArray();
+        _pendingCount = pending.Length;
+        _previewIsStale = parameters.Any(p => p.HasError);
+        if (pending.Length == 0) { if (_type is not null) Current.PendingPreview = null; return; }
+        _draftSection = null; _previewIsStale = true;
+        if (pending.Length != 1 || !pending[0].TryParsePendingValue(out var value)
+            || parameters.Any(p => !p.IsPending && p.HasParseError)) return;
+        var values = parameters.Where(p => !p.IsPending && p.ConfirmedValue is not null)
+            .ToDictionary(p => p.Key, p => p.ConfirmedValue!.Value);
+        values[pending[0].Key] = value;
+        try
+        {
+            var result = EvaluateValues(values);
+            _draftSection = result.Section;
+            _draftValueChanged = pending[0].ConfirmedValue != value;
+            _draftName = AutomaticName(values, _draftSection);
+            if (result.Preview is { } preview)
+                Current.PendingPreview = preview with { Dimensions = preview.Dimensions.ToDictionary(p => p.Key,
+                    p => p.Key == pending[0].Key ? p.Value with { IsConfirmed = false, IsPending = true } : p.Value) };
+            _previewIsStale = false;
+        }
+        catch (PreviewGeometryException) { }
+        catch (ArgumentException) { }
     }
     private void MarkGeometryError(string? parameter, SectionDefinitionInput? source)
     {
@@ -387,10 +441,11 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
             _ => throw new InvalidOperationException()
         };
     }
-    private void UpdateAutomaticName(Dictionary<string, double> values)
+    private void UpdateAutomaticName(Dictionary<string, double> values) => Current.AutomaticName = AutomaticName(values, _section);
+    private string AutomaticName(Dictionary<string, double> values, ISectionDefinition? section)
     {
-        if (_section is not null) { Current.AutomaticName = SectionDisplay.Name(_section, Presentation); return; }
-        if (IsManual) { Current.AutomaticName = Strings.SectionDefinitionCustomName; return; }
+        if (section is not null) return SectionDisplay.Name(section, Presentation);
+        if (IsManual) return Strings.SectionDefinitionCustomName;
         string[] main = SectionPreviewGeometryResolver.ParameterKeys(_type!.Value).Where(k => k != "r").ToArray();
         var name = SelectedFormName;
         if (main.All(values.ContainsKey))
@@ -400,7 +455,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
                 + SectionDisplay.Dimensions(main.Select(k => values[k]), unit, Presentation);
             if (values.TryGetValue("r", out double radius) && radius > 0) name += SectionDisplay.RadiusSuffix(radius, unit, Presentation);
         }
-        Current.AutomaticName = name;
+        return name;
     }
     public void BeginNameEdit() { if (!HasDefinition || IsBusy) return; _pendingName = DisplayName; _editingName = true; _nameError = null; Refresh(); }
     public bool CommitName()
@@ -423,6 +478,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     }
     public Task<bool> ConfirmAsync()
     {
+        if (!CanApply() || !CommitPendingInput()) return Task.FromResult(false);
         if (!CanConfirm || _section is not { } section) return Task.FromResult(false);
         CloseRequested?.Invoke(new SectionDefinitionResult(section, ResultAxis, DisplayName, !HasCustomName));
         return Task.FromResult(true);
@@ -524,13 +580,14 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
             nameof(HasLibraryNameConflict), nameof(LibraryActionLabel), nameof(LibraryMessage), nameof(HasLibraryMessage) }) Notify(property);
         SaveLibraryCommand.Refresh();
     }
-    private void Refresh()
+    private void Refresh(bool refreshLibraryEntries = true)
     {
-        RefreshAxisValues(); RefreshLibraryEntries();
+        RefreshAxisValues();
+        if (refreshLibraryEntries) RefreshLibraryEntries();
         foreach (var property in new[] { nameof(Type), nameof(IsChoosingForm), nameof(HasDefinition), nameof(IsManual), nameof(HasPreview),
             nameof(ValuesTitle), nameof(SelectedFormName), nameof(SelectedFormType), nameof(IsBusy), nameof(IsEditingName), nameof(DisplayName), nameof(PendingName), nameof(NameError),
             nameof(HasNameError), nameof(LibraryError), nameof(HasLibraryError), nameof(Configuration), nameof(AvailableAxes), nameof(SelectedAxis),
-            nameof(HasRadius), nameof(Preview), nameof(Section), nameof(HasValidSection),
+            nameof(HasRadius), nameof(Preview), nameof(PreviewIsStale), nameof(Section), nameof(HasValidSection),
             nameof(Area), nameof(CanConfirm), nameof(LayoutState), nameof(ShowPreview), nameof(ShowValues),
             nameof(ShowConfirm), nameof(IsLibraryEmpty),
             nameof(HasCustomName), nameof(ShowResetName), nameof(HeaderTitle), nameof(AxesEquivalent), nameof(RequiresAxisSelection) }) Notify(property);

@@ -551,10 +551,11 @@ public sealed class SectionPreviewRenderingTests : SectionDefinitionPrototypeTes
             SectionEditorType.USection, SectionEditorType.TSection, SectionEditorType.Angle })
         {
             var vm = new SectionDefinitionViewModel(); vm.SelectForm(type);
-            foreach (int state in new[] { 0, 1, 2 })
+            foreach (int state in new[] { 0, 1, 2, 3 })
             {
                 if (state == 1) Fill(vm, false);
                 if (state == 2) Commit(vm, "r", "0");
+                if (state == 3) Input(vm, "r").PendingText = "8";
                 var geometry = vm.Preview!; var radius = geometry.Dimensions["r"];
                 foreach (var units in new[] { UnitProfile.Default, UnitProfile.UnitedStates })
                 foreach (var size in new[] { new Size(380, 360), new Size(520, 440) })
@@ -564,7 +565,7 @@ public sealed class SectionPreviewRenderingTests : SectionDefinitionPrototypeTes
                         text => SchematicText.Measure(text, SpanDraft.Desktop.Controls.AppTypography.Typeface, 12));
                     var drawing = layout.Dimensions.Single(d => d.Key == "r");
                     var line = Assert.Single(drawing.Lines); var arrow = Assert.Single(drawing.Arrows);
-                    Assert.Equal(radius.IsConfirmed ? QuantityFormatter.FormatInputEquation("r", radius.Value, unit) : "r", drawing.Text);
+                    Assert.Equal(radius.IsConfirmed || radius.IsPending ? QuantityFormatter.FormatInputEquation("r", radius.Value, unit) : "r", drawing.Text);
                     Assert.Equal(layout.Project(radius.End), line.Start); Assert.Equal(line.Start, arrow.Tip);
                     Vector ray = line.End - line.Start;
                     double angle = Math.Atan2(Math.Abs(ray.Y), ray.X) * 180 / Math.PI;
@@ -669,9 +670,10 @@ public sealed class SectionPreviewRenderingTests : SectionDefinitionPrototypeTes
         {
             using var scope = new UiCultureScope(culture);
             var vm = new SectionDefinitionViewModel(); vm.SelectForm(type); Check(true);
-            var preview = vm.Preview;
             vm.Parameters[0].PendingText = "200";
-            Assert.Same(preview, vm.Preview); Check(true);
+            Assert.Null(vm.Section); Assert.Null(vm.Parameters[0].ConfirmedValue); Assert.False(vm.CanConfirm);
+            Assert.True(vm.Preview!.Dimensions[vm.Parameters[0].Key].IsPending);
+            Check(vm.Parameters.Count > 1);
             if (vm.Parameters.Count > 1) { vm.Parameters[0].Commit(); Check(true); }
             Fill(vm, false); Check(false);
 
