@@ -224,6 +224,10 @@ public static class Strings
     public static string OverviewType => Get(nameof(OverviewType));
     public static string OverviewValue => Get(nameof(OverviewValue));
     public static string CalculationUnavailable => Get(nameof(CalculationUnavailable));
+    public static string NoResultsYet => Get(nameof(NoResultsYet));
+    public static string ModelUnstable => Get(nameof(ModelUnstable));
+    public static string AnalysisAccuracyUnavailable => Get(nameof(AnalysisAccuracyUnavailable));
+    public static string AnalysisNumericalFailure => Get(nameof(AnalysisNumericalFailure));
     public static string SupportsMissing => Get(nameof(SupportsMissing));
     public static string InsufficientSupport => Get(nameof(InsufficientSupport));
     public static string IncompleteModel => Get(nameof(IncompleteModel));

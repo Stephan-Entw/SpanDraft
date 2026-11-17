@@ -179,11 +179,7 @@ public sealed class ResultDiagram : Control
             Math.Max(1, Bounds.Width - 16), TextAlignment.Center);
         title.Draw(context, new(8, 8));
         if (Projection is not { } projection)
-        {
-            using var status = SchematicText.Format(Presentation?.StatusText ?? Strings.CalculationUnavailable, AppTypography.Typeface, SecondarySize, text, Math.Max(1, Bounds.Width - 16));
-            status.Draw(context, new(8, 48));
             return;
-        }
         double left = projection.StationLayout.Stations[0].ScreenX;
         double right = projection.StationLayout.Stations[^1].ScreenX;
         Geometry? curveClip = null;

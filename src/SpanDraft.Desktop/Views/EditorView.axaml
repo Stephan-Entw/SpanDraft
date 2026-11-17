@@ -169,15 +169,26 @@
         <!-- The same hairline as the other dividers, between the beam and the results. -->
         <Border x:Name="ResultsDivider" Grid.Row="1" Height="1" Background="{DynamicResource Border}" />
         <ScrollViewer Grid.Row="2" x:Name="DiagramScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
-          <!-- The bottom margin gives the last diagram the same room below it as between the diagrams. -->
-          <StackPanel x:Name="ResultDiagrams" Spacing="{StaticResource Space16}" Margin="0,0,0,16">
-            <controls:ResultDiagram Kind="TransverseDisplacement" Presentation="{Binding Presentation}"
-                                    StationLayout="{Binding #BeamSurface.StationLayout}" />
-            <controls:ResultDiagram Kind="ShearForce" Presentation="{Binding Presentation}"
-                                    StationLayout="{Binding #BeamSurface.StationLayout}" />
-            <controls:ResultDiagram Kind="BendingMoment" Presentation="{Binding Presentation}"
-                                    StationLayout="{Binding #BeamSurface.StationLayout}" />
-          </StackPanel>
+          <Grid>
+            <Grid x:Name="ResultStatus" IsVisible="{Binding !Presentation.IsSuccess}"
+                  RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space8}" MaxWidth="480"
+                  Margin="{DynamicResource Padding24}" HorizontalAlignment="Center" VerticalAlignment="Top">
+              <TextBlock x:Name="AnalysisStatusTitle" Text="{Binding Presentation.StatusTitle}"
+                         Classes="bodyStrong" TextAlignment="Center" TextWrapping="Wrap" />
+              <TextBlock x:Name="AnalysisStatus" Grid.Row="1" Text="{Binding Presentation.StatusText}"
+                         Foreground="{DynamicResource TextSecondary}" FontSize="{DynamicResource SecondarySize}"
+                         TextAlignment="Center" TextWrapping="Wrap" />
+            </Grid>
+            <!-- The bottom margin gives the last diagram the same room below it as between the diagrams. -->
+            <StackPanel x:Name="ResultDiagrams" IsVisible="{Binding Presentation.IsSuccess}" Spacing="{StaticResource Space16}" Margin="0,0,0,16">
+              <controls:ResultDiagram Kind="TransverseDisplacement" Presentation="{Binding Presentation}"
+                                      StationLayout="{Binding #BeamSurface.StationLayout}" />
+              <controls:ResultDiagram Kind="ShearForce" Presentation="{Binding Presentation}"
+                                      StationLayout="{Binding #BeamSurface.StationLayout}" />
+              <controls:ResultDiagram Kind="BendingMoment" Presentation="{Binding Presentation}"
+                                      StationLayout="{Binding #BeamSurface.StationLayout}" />
+            </StackPanel>
+          </Grid>
         </ScrollViewer>
       </Grid>
       <views:ProjectOverviewView Grid.Column="1" />

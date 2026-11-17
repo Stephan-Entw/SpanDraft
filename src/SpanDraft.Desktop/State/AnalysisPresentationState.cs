@@ -55,13 +55,22 @@ public sealed record AnalysisPresentationState
     }
 
     public bool IsSuccess => Result is not null;
+    public string StatusTitle => Kind switch
+    {
+        AnalysisPresentationKind.Success => Strings.CalculationComplete,
+        AnalysisPresentationKind.MissingSupports or AnalysisPresentationKind.IncompleteModel => Strings.NoResultsYet,
+        AnalysisPresentationKind.UnstableModel => Strings.ModelUnstable,
+        _ => Strings.CalculationNotPossible
+    };
+
     public string StatusText => Kind switch
     {
         AnalysisPresentationKind.Success => Strings.CalculationComplete,
-        AnalysisPresentationKind.MissingSupports => Strings.CalculationUnavailable + " · " + Strings.SupportsMissing,
-        AnalysisPresentationKind.UnstableModel => Strings.CalculationUnavailable + " · " +
-            (HasMomentReleases ? Strings.InsufficientSupportWithMomentReleases : Strings.InsufficientSupport),
-        AnalysisPresentationKind.IncompleteModel => Strings.CalculationUnavailable + " · " + Strings.IncompleteModel,
+        AnalysisPresentationKind.MissingSupports => Strings.SupportsMissing,
+        AnalysisPresentationKind.UnstableModel => HasMomentReleases ? Strings.InsufficientSupportWithMomentReleases : Strings.InsufficientSupport,
+        AnalysisPresentationKind.IncompleteModel => Strings.IncompleteModel,
+        AnalysisPresentationKind.IllConditionedSystem => Strings.AnalysisAccuracyUnavailable,
+        AnalysisPresentationKind.NumericalFailure => Strings.AnalysisNumericalFailure,
         _ => Strings.CalculationNotPossible
     };
 

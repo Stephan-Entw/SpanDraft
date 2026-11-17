@@ -305,14 +305,19 @@ public sealed class DesktopMomentReleaseEditTests
         Assert.NotNull(BeamLengthConstraints.Error(editor.Document, Mm(3500)));
     }
 
-    [Fact]
-    public void AnUnstableModelWithReleasesNamesTheReleasesInItsStatusText()
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("en-US")]
+    public void AnUnstableModelWithReleasesNamesTheReleasesInItsStatusText(string uiCulture)
     {
+        using var culture = new UiCultureScope(uiCulture);
         // Pinned end and one roller with a release in the middle: a mechanism the solver reports exactly.
         var editor = Editor([new(Guid.NewGuid(), Mm(0), SupportType.Pinned, "A"), new(Guid.NewGuid(), Mm(4000), SupportType.Roller, "B")],
             releases: new EditorMomentRelease(Guid.NewGuid(), Mm(2000), "G1"));
         Assert.Equal(AnalysisPresentationKind.UnstableModel, editor.Presentation.Kind);
-        Assert.Contains(SpanDraft.Desktop.Resources.Strings.InsufficientSupportWithMomentReleases, editor.Presentation.StatusText);
+        Assert.Equal(uiCulture == "de-DE"
+            ? "Prüfe die Lagerung und die Gelenke. Das Modell ist nicht ausreichend gehalten."
+            : "Check the supports and hinges. The model is not sufficiently restrained.", editor.Presentation.StatusText);
         var without = Editor([new(Guid.NewGuid(), Mm(0), SupportType.Pinned, "A")]);
         Assert.Equal(AnalysisPresentationKind.UnstableModel, without.Presentation.Kind);
         Assert.DoesNotContain(SpanDraft.Desktop.Resources.Strings.InsufficientSupportWithMomentReleases, without.Presentation.StatusText);

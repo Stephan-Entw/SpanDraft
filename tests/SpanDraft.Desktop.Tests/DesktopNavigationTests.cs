@@ -410,7 +410,8 @@ public sealed class DesktopNavigationTests
         Assert.Contains(overview.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Long committed load name 35");
         Assert.True(overview.FindControl<StackPanel>("ReactionsSection")!.IsVisible);
         Assert.True(overview.FindControl<StackPanel>("IndicatorsPanel")!.IsVisible);
-        Assert.False(overview.FindControl<TextBlock>("AnalysisStatus")!.IsVisible);
+        Assert.Null(overview.FindControl<TextBlock>("AnalysisStatus"));
+        Assert.False(view.FindControl<Grid>("ResultStatus")!.IsVisible);
         AssertTables(overview);
         var projectText = overview.FindControl<Grid>("ProjectBlock")!.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text);
         Assert.Contains(culture == "de-DE" ? "Balkenmodell" : "Beam model", projectText);
@@ -446,7 +447,10 @@ public sealed class DesktopNavigationTests
         Layout(window, width, height);
         Assert.False(overview.FindControl<StackPanel>("ReactionsSection")!.IsVisible);
         Assert.False(overview.FindControl<StackPanel>("IndicatorsPanel")!.IsVisible);
-        var status = overview.FindControl<TextBlock>("AnalysisStatus")!;
+        Assert.False(overview.FindControl<StackPanel>("IndicatorsSection")!.IsVisible);
+        Assert.Null(overview.FindControl<TextBlock>("AnalysisStatus"));
+        var status = view.FindControl<TextBlock>("AnalysisStatus")!;
+        Assert.True(view.FindControl<Grid>("ResultStatus")!.IsVisible);
         Assert.True(status.IsVisible);
         Assert.Equal(model.Editor.Presentation.StatusText, status.Text);
         Assert.Contains(overview.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Long committed load name 35");
@@ -583,6 +587,8 @@ public sealed class DesktopNavigationTests
         var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
         var window = new MainWindow { DataContext = model };
         ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
+        Assert.True(model.Editor!.Session.Commit(ProjectTestSupport.State()));
+        Assert.True(model.Editor.Presentation.IsSuccess, model.Editor.Presentation.StatusText);
         Layout(window);
         var view = Assert.Single(window.GetVisualDescendants().OfType<EditorView>());
         var editorScroll = view.FindControl<ScrollViewer>("EditorScroll")!;
@@ -648,7 +654,7 @@ public sealed class DesktopNavigationTests
     }
 
     [Fact]
-    public void EmptyEntityTablesHideTheirHeadersAndKeepTheExistingAnalysisStatus()
+    public void EmptyEntityTablesHideTheirHeadersAndLeaveAnalysisStatusToResults()
     {
         using var environment = new DesktopControlEnvironment();
         var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
@@ -663,8 +669,13 @@ public sealed class DesktopNavigationTests
             Assert.False(((Control)table.Parent!.Parent!).IsVisible);
         }
         Assert.False(overview.FindControl<StackPanel>("ReactionsSection")!.IsVisible);
-        Assert.True(overview.FindControl<TextBlock>("AnalysisStatus")!.IsVisible);
-        Assert.Equal(model.Editor!.Presentation.StatusText, overview.FindControl<TextBlock>("AnalysisStatus")!.Text);
+        Assert.False(overview.FindControl<StackPanel>("IndicatorsSection")!.IsVisible);
+        Assert.Null(overview.FindControl<TextBlock>("AnalysisStatus"));
+        var view = Assert.Single(window.GetVisualDescendants().OfType<EditorView>());
+        var status = view.FindControl<TextBlock>("AnalysisStatus")!;
+        Assert.True(view.FindControl<Grid>("ResultStatus")!.IsVisible);
+        Assert.True(status.IsVisible);
+        Assert.Equal(model.Editor!.Presentation.StatusText, status.Text);
         Assert.Empty(overview.GetVisualDescendants().OfType<Button>());
     }
 

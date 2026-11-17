@@ -199,9 +199,17 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
             Assert.Equal(title, diagram.Title);
             var drawing = new DrawingGroup();
             using (var context = drawing.Open()) diagram.Render(context);
-            // Background and text remain; no curve/grid/zero-line pens survive.
+            // Only the title remains as text; the global analysis status belongs to the view.
+            Assert.Equal(title, string.Concat(TextRuns(drawing)
+                .Select(d => d.GlyphRun!.Characters.ToString())));
             Assert.DoesNotContain(drawing.Children.OfType<GeometryDrawing>(), d => d.Pen is not null);
         }
+        static IEnumerable<GlyphRunDrawing> TextRuns(Drawing drawing) => drawing switch
+        {
+            DrawingGroup group => group.Children.SelectMany(TextRuns),
+            GlyphRunDrawing run => [run],
+            _ => []
+        };
     }
 
     [Theory]

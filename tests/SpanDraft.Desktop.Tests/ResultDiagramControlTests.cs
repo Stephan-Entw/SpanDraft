@@ -16,6 +16,146 @@ namespace SpanDraft.Tests;
 [Collection("Avalonia")]
 public sealed class ResultDiagramControlTests : DesktopResultDiagramControlTestSupport
 {
+    [Theory]
+    [InlineData("de-DE", 0)]
+    [InlineData("en-US", -600)]
+    public void ResultsOwnOneStatusAndRestoreDiagramLayoutAfterFailure(string culture, double annotationOffset)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var cultures = new UiCultureScope(culture);
+        var document = Document();
+        var editor = new EditorViewModel(document.WithSupports([]), () => { });
+        editor.SetAnnotationOffset(document.Loads[0].Id, new(0, annotationOffset));
+        var view = new EditorView { DataContext = editor };
+        var window = new Window { Content = view };
+        var status = view.FindControl<Grid>("ResultStatus")!;
+        var statusText = view.FindControl<TextBlock>("AnalysisStatus")!;
+        var statusTitle = view.FindControl<TextBlock>("AnalysisStatusTitle")!;
+        var stack = view.FindControl<StackPanel>("ResultDiagrams")!;
+        var upper = view.FindControl<ScrollViewer>("EditorScroll")!;
+        var lower = view.FindControl<ScrollViewer>("DiagramScroll")!;
+        var surface = view.FindControl<BeamEditorSurface>("BeamSurface")!;
+        Arrange(window, 1250, 618);
+        var overview = view.GetVisualDescendants().OfType<ProjectOverviewView>().Single();
+        AssertFailure();
+        Assert.True(editor.Session.Commit(new(document, editor.EditorPresentation)));
+        Arrange(window, 1250, 618);
+        AssertSuccess();
+        double diagramExtent = lower.Extent.Height;
+        double diagramWidth = Diagrams(view)[0].Bounds.Width;
+        var diagramPositions = Diagrams(view).Select(d => d.Bounds).ToArray();
+        var projections = Diagrams(view).Select(d => d.Projection).ToArray();
+        lower.Offset = new(0, 60);
+        Assert.True(lower.Offset.Y > 0);
+
+        Assert.True(editor.Session.Commit(new(document.WithSupports([]), editor.EditorPresentation)));
+        Arrange(window, 1250, 618);
+        AssertFailure();
+        Assert.True(lower.Extent.Height < diagramExtent);
+        Assert.Equal(0, lower.Offset.Y);
+        Assert.Equal(annotationOffset != 0, upper.ScrollBarMaximum.Y > 0);
+        Assert.Equal(annotationOffset != 0 ? ScrollBarVisibility.Visible : ScrollBarVisibility.Hidden,
+            lower.VerticalScrollBarVisibility);
+
+        Assert.True(editor.Undo());
+        Arrange(window, 1250, 618);
+        AssertSuccess();
+        Assert.Equal(diagramExtent, lower.Extent.Height);
+        Assert.Equal(diagramWidth, Diagrams(view)[0].Bounds.Width);
+        Assert.Equal(diagramPositions, Diagrams(view).Select(d => d.Bounds));
+        for (int i = 0; i < projections.Length; i++)
+            Assert.NotSame(projections[i], Diagrams(view)[i].Projection);
+
+        // The inert test window is never shown; check visibility through the workspace ancestors.
+        bool VisibleInWorkspace(Control control) => control.IsVisible && control.GetVisualAncestors()
+            .OfType<Control>().TakeWhile(c => c is not Window).All(c => c.IsVisible);
+
+        void AssertFailure()
+        {
+            Assert.False(editor.Presentation.IsSuccess);
+            Assert.True(VisibleInWorkspace(status));
+            Assert.Equal(editor.Presentation.StatusTitle, statusTitle.Text);
+            Assert.Equal(editor.Presentation.StatusText, statusText.Text);
+            Assert.Empty(status.GetVisualDescendants().OfType<PathIcon>());
+            double center = status.TranslatePoint(default, lower)!.Value.X + status.Bounds.Width / 2;
+            Assert.InRange(Math.Abs(center - lower.Viewport.Width / 2), 0, .5);
+            Assert.True(status.Bounds.Top > 0);
+            Assert.True(statusTitle.Bounds.Bottom < statusText.Bounds.Top);
+            foreach (var text in new[] { statusTitle, statusText })
+            {
+                Assert.Equal(Avalonia.Media.TextAlignment.Center, text.TextAlignment);
+                Assert.All(text.TextLayout.TextLines, line => Assert.False(line.HasCollapsed));
+                Assert.True(text.Bounds.Height >= text.TextLayout.Height);
+                Assert.True(new Rect(status.Bounds.Size).Contains(new Rect(text.Bounds.Position, text.Bounds.Size)));
+            }
+            Assert.Same(statusText, Assert.Single(view.GetVisualDescendants().OfType<TextBlock>(),
+                t => VisibleInWorkspace(t) && t.Text == editor.Presentation.StatusText));
+            Assert.False(stack.IsVisible);
+            Assert.Equal(default, stack.DesiredSize);
+            Assert.All(Diagrams(view), d =>
+            {
+                Assert.False(VisibleInWorkspace(d));
+                Assert.Null(d.Projection);
+                Assert.Empty(d.MarkerLabels);
+            });
+            Assert.Null(overview.FindControl<TextBlock>("AnalysisStatus"));
+            Assert.False(overview.FindControl<StackPanel>("IndicatorsSection")!.IsVisible);
+            Assert.False(VisibleInWorkspace(overview.FindControl<StackPanel>("IndicatorsPanel")!));
+            Assert.Equal(upper.Viewport.Width, lower.Viewport.Width);
+            Assert.True(lower.Extent.Width <= lower.Viewport.Width);
+        }
+
+        void AssertSuccess()
+        {
+            Assert.True(editor.Presentation.IsSuccess);
+            Assert.False(status.IsVisible);
+            Assert.Equal(default, status.DesiredSize);
+            Assert.True(stack.IsVisible);
+            Assert.Equal(3, Diagrams(view).Length);
+            Assert.All(Diagrams(view), d =>
+            {
+                Assert.True(VisibleInWorkspace(d));
+                Assert.Equal(180, d.Bounds.Height);
+                Assert.Same(editor.Presentation, d.Presentation);
+                Assert.Same(surface.StationLayout, d.Projection!.StationLayout);
+                Assert.Equal(surface.Bounds.Width, d.Bounds.Width);
+                Assert.Equal(surface.TranslatePoint(default, view)!.Value.X, d.TranslatePoint(default, view)!.Value.X);
+            });
+            Assert.Equal(0, Diagrams(view)[0].Bounds.Top);
+            Assert.True(overview.FindControl<StackPanel>("IndicatorsSection")!.IsVisible);
+            Assert.True(VisibleInWorkspace(overview.FindControl<StackPanel>("IndicatorsPanel")!));
+            Assert.Equal(upper.Viewport.Width, lower.Viewport.Width);
+            Assert.Equal(ScrollBarVisibility.Disabled, lower.HorizontalScrollBarVisibility);
+            Assert.True(lower.Extent.Width <= lower.Viewport.Width);
+        }
+    }
+
+    [Fact]
+    public void LongStatusHintWrapsWithoutClippingInTheCompactResultsArea()
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var culture = new UiCultureScope("de-DE");
+        var view = new EditorView { DataContext = new EditorViewModel(Document().WithSupports([]), () => { }) };
+        var window = new Window { Content = view };
+        Arrange(window, 1100, 618);
+        var state = new AnalysisPresentationState(AnalysisPresentationKind.IllConditionedSystem, null);
+        var status = view.FindControl<Grid>("ResultStatus")!;
+        var title = view.FindControl<TextBlock>("AnalysisStatusTitle")!;
+        var hint = view.FindControl<TextBlock>("AnalysisStatus")!;
+        // Exercise the longest explanation without requiring a numerical failure fixture in a layout test.
+        title.Text = state.StatusTitle;
+        hint.Text = state.StatusText;
+        Arrange(window, 1100, 618);
+
+        Assert.True(hint.TextLayout.TextLines.Count > 1);
+        Assert.All(hint.TextLayout.TextLines, line => Assert.False(line.HasCollapsed));
+        Assert.True(hint.Bounds.Height >= hint.TextLayout.Height);
+        Assert.True(new Rect(status.Bounds.Size).Contains(new Rect(hint.Bounds.Position, hint.Bounds.Size)));
+        Assert.True(title.Bounds.Bottom < hint.Bounds.Top);
+        var scroll = view.FindControl<ScrollViewer>("DiagramScroll")!;
+        Assert.True(scroll.Extent.Height <= scroll.Viewport.Height);
+        Assert.True(scroll.Extent.Width <= scroll.Viewport.Width);
+    }
 
     [Fact]
     public void HeightChangesReclaimGuttersAndRestoreIndependentScrollOffsets()

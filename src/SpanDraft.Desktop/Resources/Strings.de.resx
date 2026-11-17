@@ -46,9 +46,9 @@
   <data name="OverviewType" xml:space="preserve"><value>Typ</value></data>
   <data name="OverviewValue" xml:space="preserve"><value>Wert</value></data>
   <data name="CalculationUnavailable" xml:space="preserve"><value>Berechnung nicht verfügbar</value></data>
-  <data name="SupportsMissing" xml:space="preserve"><value>Lagerung fehlt</value></data>
-  <data name="InsufficientSupport" xml:space="preserve"><value>Lagerung nicht ausreichend</value></data>
-  <data name="IncompleteModel" xml:space="preserve"><value>Modell unvollständig</value></data>
+  <data name="SupportsMissing" xml:space="preserve"><value>Ergänze eine Lagerung, damit das Modell berechnet werden kann.</value></data>
+  <data name="InsufficientSupport" xml:space="preserve"><value>Prüfe die Lagerung. Das Modell ist nicht ausreichend gehalten.</value></data>
+  <data name="IncompleteModel" xml:space="preserve"><value>Prüfe, ob alle Modellangaben vollständig und gültig sind.</value></data>
   <data name="CalculationNotPossible" xml:space="preserve"><value>Berechnung nicht möglich</value></data>
   <data name="CalculationComplete" xml:space="preserve"><value>Berechnung abgeschlossen</value></data>
   <data name="InvalidLength" xml:space="preserve"><value>Eine endliche Länge größer als null eingeben.</value></data>
@@ -438,7 +438,7 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="MomentReleaseAtMoment" xml:space="preserve"><value>An einem Moment ist kein Gelenk möglich.</value></data>
   <data name="SupportAtMomentRelease" xml:space="preserve"><value>An einem Gelenk sind Einspannung und Drehfeder nicht möglich.</value></data>
   <data name="MomentAtMomentRelease" xml:space="preserve"><value>An einem Gelenk kann kein Moment wirken.</value></data>
-  <data name="InsufficientSupportWithMomentReleases" xml:space="preserve"><value>Lagerung nicht ausreichend oder zu viele Gelenke</value></data>
+  <data name="InsufficientSupportWithMomentReleases" xml:space="preserve"><value>Prüfe die Lagerung und die Gelenke. Das Modell ist nicht ausreichend gehalten.</value></data>
   <data name="MomentReleaseResults" xml:space="preserve"><value>Gelenkgrößen</value></data>
   <data name="ReportMomentReleaseTheory" xml:space="preserve"><value>Gelenke übertragen Quer- und Normalkraft; das Biegemoment ist dort null, die Rotation springt (θ− links, θ+ rechts).</value></data>
   <data name="Diagnostics" xml:space="preserve"><value>Diagnose</value></data>
@@ -471,4 +471,8 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="DiagnosticsPresentationHint" xml:space="preserve"><value>Synchrone Verarbeitung des neuen Zustands</value></data>
   <data name="DiagnosticsUiHint" xml:space="preserve"><value>Bis zum gerenderten Anwendungs-Frame; keine bestätigte Display-Ausgabe</value></data>
   <data name="DiagnosticsTotalHint" xml:space="preserve"><value>Summe aller Phasen</value></data>
+  <data name="NoResultsYet" xml:space="preserve"><value>Noch keine Ergebnisse</value></data>
+  <data name="ModelUnstable" xml:space="preserve"><value>Modell nicht stabil</value></data>
+  <data name="AnalysisAccuracyUnavailable" xml:space="preserve"><value>Für dieses Modell konnte kein numerisch verlässliches Ergebnis ermittelt werden. Prüfe Lagerabstände und Steifigkeiten.</value></data>
+  <data name="AnalysisNumericalFailure" xml:space="preserve"><value>Die Berechnung konnte nicht abgeschlossen werden. Prüfe das Modell und die Eingabewerte.</value></data>
 </root>

@@ -227,10 +227,9 @@
           </Grid>
           <ItemsControl x:Name="MomentReleaseResultTable" ItemsSource="{Binding Overview.MomentReleaseResults}" ItemTemplate="{StaticResource MomentReleaseResultRowTemplate}" />
         </StackPanel>
-        <StackPanel Spacing="{StaticResource Space4}">
+        <StackPanel x:Name="IndicatorsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Presentation.IsSuccess}">
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.Indicators}" Classes="sectionTitle" />
-          <controls:TechnicalTextBlock x:Name="AnalysisStatus" Text="{Binding Overview.Analysis.StatusText}" IsVisible="{Binding !Overview.Analysis.IsSuccess}" Classes="secondary" />
           <StackPanel x:Name="IndicatorsPanel" IsVisible="{Binding Overview.Analysis.IsSuccess}">
             <Grid Classes="overviewRow" ColumnDefinitions="*,Auto">
               <TextBlock Text="{x:Static resources:Strings.MaximumDeflection}" Classes="propertyLabel" />

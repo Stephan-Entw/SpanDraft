@@ -46,9 +46,9 @@
   <data name="OverviewType" xml:space="preserve"><value>Type</value></data>
   <data name="OverviewValue" xml:space="preserve"><value>Value</value></data>
   <data name="CalculationUnavailable" xml:space="preserve"><value>Calculation unavailable</value></data>
-  <data name="SupportsMissing" xml:space="preserve"><value>Supports missing</value></data>
-  <data name="InsufficientSupport" xml:space="preserve"><value>Insufficient support</value></data>
-  <data name="IncompleteModel" xml:space="preserve"><value>Incomplete model</value></data>
+  <data name="SupportsMissing" xml:space="preserve"><value>Add supports to calculate results for this model.</value></data>
+  <data name="InsufficientSupport" xml:space="preserve"><value>Check the supports. The model is not sufficiently restrained.</value></data>
+  <data name="IncompleteModel" xml:space="preserve"><value>Check that all model inputs are complete and valid.</value></data>
   <data name="CalculationNotPossible" xml:space="preserve"><value>Calculation not possible</value></data>
   <data name="CalculationComplete" xml:space="preserve"><value>Calculation complete</value></data>
   <data name="InvalidLength" xml:space="preserve"><value>Enter a finite length greater than zero.</value></data>
@@ -438,7 +438,7 @@ Remove the entry from Recent projects?</value></data>
   <data name="MomentReleaseAtMoment" xml:space="preserve"><value>A hinge is not possible at a moment.</value></data>
   <data name="SupportAtMomentRelease" xml:space="preserve"><value>A fixed support and a rotational spring are not possible at a hinge.</value></data>
   <data name="MomentAtMomentRelease" xml:space="preserve"><value>A moment cannot act at a hinge.</value></data>
-  <data name="InsufficientSupportWithMomentReleases" xml:space="preserve"><value>Insufficient support or too many hinges</value></data>
+  <data name="InsufficientSupportWithMomentReleases" xml:space="preserve"><value>Check the supports and hinges. The model is not sufficiently restrained.</value></data>
   <data name="MomentReleaseResults" xml:space="preserve"><value>Hinge results</value></data>
   <data name="ReportMomentReleaseTheory" xml:space="preserve"><value>Hinges transmit shear and axial force; the bending moment is zero there and the rotation jumps (θ− left, θ+ right).</value></data>
   <data name="Diagnostics" xml:space="preserve"><value>Diagnostics</value></data>
@@ -471,4 +471,8 @@ Remove the entry from Recent projects?</value></data>
   <data name="DiagnosticsPresentationHint" xml:space="preserve"><value>Synchronous processing of the new state</value></data>
   <data name="DiagnosticsUiHint" xml:space="preserve"><value>Until the rendered application frame; not a confirmed display output</value></data>
   <data name="DiagnosticsTotalHint" xml:space="preserve"><value>Sum of all phases</value></data>
+  <data name="NoResultsYet" xml:space="preserve"><value>No results yet</value></data>
+  <data name="ModelUnstable" xml:space="preserve"><value>Model is unstable</value></data>
+  <data name="AnalysisAccuracyUnavailable" xml:space="preserve"><value>A numerically reliable result could not be obtained for this model. Check support spacing and stiffness values.</value></data>
+  <data name="AnalysisNumericalFailure" xml:space="preserve"><value>The calculation could not be completed. Check the model and input values.</value></data>
 </root>

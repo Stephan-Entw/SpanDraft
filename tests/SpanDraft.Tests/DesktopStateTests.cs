@@ -280,14 +280,19 @@ public class DesktopStateTests
                 SecondMomentOfArea.FromMetersToTheFourth(1e-6), SectionModulus.FromCubicMeters(0.001)),
             supports, loads ?? []);
 
-    [Fact]
-    public void MissingSupportsUsesStructuredCodeAndNoTechnicalDiagnostic()
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("en-US")]
+    public void MissingSupportsUsesStructuredCodeAndNoTechnicalDiagnostic(string uiCulture)
     {
-        using var culture = new UiCultureScope("de-DE");
+        using var culture = new UiCultureScope(uiCulture);
         var outcome = BeamAnalysis.Analyze(AnalysisBeam([]));
         var state = AnalysisPresentationState.FromOutcome(outcome);
         Assert.Equal(AnalysisPresentationKind.MissingSupports, state.Kind);
-        Assert.Equal("Berechnung nicht verfügbar · Lagerung fehlt", state.StatusText);
+        Assert.Equal(uiCulture == "de-DE" ? "Noch keine Ergebnisse" : "No results yet", state.StatusTitle);
+        Assert.Equal(uiCulture == "de-DE"
+            ? "Ergänze eine Lagerung, damit das Modell berechnet werden kann."
+            : "Add supports to calculate results for this model.", state.StatusText);
         Assert.DoesNotContain(outcome.Failure!.TechnicalMessage, state.StatusText);
         Assert.Null(state.Result);
         Assert.False(state.IsSuccess);
@@ -295,13 +300,17 @@ public class DesktopStateTests
     }
 
     [Theory]
-    [InlineData(AnalysisPresentationKind.IncompleteModel)]
-    [InlineData(AnalysisPresentationKind.UnstableModel)]
-    [InlineData(AnalysisPresentationKind.IllConditionedSystem)]
-    [InlineData(AnalysisPresentationKind.NumericalFailure)]
-    public void StructuredAnalysisFailuresMapToLocalizedPresentation(AnalysisPresentationKind kind)
+    [InlineData("de-DE", AnalysisPresentationKind.IncompleteModel)]
+    [InlineData("en-US", AnalysisPresentationKind.IncompleteModel)]
+    [InlineData("de-DE", AnalysisPresentationKind.UnstableModel)]
+    [InlineData("en-US", AnalysisPresentationKind.UnstableModel)]
+    [InlineData("de-DE", AnalysisPresentationKind.IllConditionedSystem)]
+    [InlineData("en-US", AnalysisPresentationKind.IllConditionedSystem)]
+    [InlineData("de-DE", AnalysisPresentationKind.NumericalFailure)]
+    [InlineData("en-US", AnalysisPresentationKind.NumericalFailure)]
+    public void StructuredAnalysisFailuresMapToLocalizedPresentation(string uiCulture, AnalysisPresentationKind kind)
     {
-        using var culture = new UiCultureScope("de-DE");
+        using var culture = new UiCultureScope(uiCulture);
         var fixedSupport = new Support(Length.FromMeters(0), SupportType.Fixed);
         BeamModel beam = kind switch
         {
@@ -323,12 +332,27 @@ public class DesktopStateTests
             Assert.Equal(BeamAnalysisFailureCode.IllConditionedSystem, outcome.Failure!.Code);
         Assert.Null(state.Result);
         Assert.DoesNotContain(outcome.Failure!.TechnicalMessage, state.StatusText);
-        Assert.Equal(kind switch
+        var (title, text) = (uiCulture, kind) switch
         {
-            AnalysisPresentationKind.IncompleteModel => "Berechnung nicht verfügbar · Modell unvollständig",
-            AnalysisPresentationKind.UnstableModel => "Berechnung nicht verfügbar · Lagerung nicht ausreichend",
-            _ => "Berechnung nicht möglich"
-        }, state.StatusText);
+            ("de-DE", AnalysisPresentationKind.IncompleteModel) => ("Noch keine Ergebnisse",
+                "Prüfe, ob alle Modellangaben vollständig und gültig sind."),
+            ("en-US", AnalysisPresentationKind.IncompleteModel) => ("No results yet",
+                "Check that all model inputs are complete and valid."),
+            ("de-DE", AnalysisPresentationKind.UnstableModel) => ("Modell nicht stabil",
+                "Prüfe die Lagerung. Das Modell ist nicht ausreichend gehalten."),
+            ("en-US", AnalysisPresentationKind.UnstableModel) => ("Model is unstable",
+                "Check the supports. The model is not sufficiently restrained."),
+            ("de-DE", AnalysisPresentationKind.IllConditionedSystem) => ("Berechnung nicht möglich",
+                "Für dieses Modell konnte kein numerisch verlässliches Ergebnis ermittelt werden. Prüfe Lagerabstände und Steifigkeiten."),
+            ("en-US", AnalysisPresentationKind.IllConditionedSystem) => ("Calculation not possible",
+                "A numerically reliable result could not be obtained for this model. Check support spacing and stiffness values."),
+            ("de-DE", _) => ("Berechnung nicht möglich",
+                "Die Berechnung konnte nicht abgeschlossen werden. Prüfe das Modell und die Eingabewerte."),
+            _ => ("Calculation not possible",
+                "The calculation could not be completed. Check the model and input values.")
+        };
+        Assert.Equal(title, state.StatusTitle);
+        Assert.Equal(text, state.StatusText);
     }
 
     [Theory]
