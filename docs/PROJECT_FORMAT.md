@@ -248,9 +248,9 @@ oder begrenzt; Domain-Konstruktoren sind die letzte fachliche Validierungsinstan
 
 Entity-GUIDs müssen gültig, nichtleer und projektweit eindeutig sein. Namen
 müssen nichtleer, getrimmt und ohne Beachtung der Groß-/Kleinschreibung eindeutig
-sein. Lagerpositionen müssen verschieden sein; Positionen und Lastbereiche
-müssen innerhalb des Balkens liegen. Annotationen dürfen jede vorhandene Entity
-höchstens einmal referenzieren. Projekte ohne Lager oder mit unzureichender
+sein. Lagerkombinationen an gemeinsamen Stationen müssen gültig sein. Positionen
+und Lastbereiche müssen innerhalb des Balkens liegen. Annotationen dürfen jede
+vorhandene Entity höchstens einmal referenzieren. Projekte ohne Lager oder mit unzureichender
 Lagerung bleiben persistierbar; Analysis beschreibt ihre Berechenbarkeit.
 
 Recovery ist ein privater lokaler Slot, kein Autosave der Benutzerdatei.

@@ -58,7 +58,12 @@ public static class ProjectFileCodec
 
     public static ProjectState FromDto(ProjectFileV1 file) => FromDto(ProjectFileV1Reader.Migrate(file));
 
-    public static ProjectFileV5 ToDto(ProjectState state) => ToDto(state, allowLegacy: false);
+    public static ProjectFileV5 ToDto(ProjectState state)
+    {
+        if (state.Document.Supports.Any(s => s.Spring is { Translational: not null, Rotational: not null }))
+            throw new ProjectFormatException("Translational and rotational springs must be separate support entities.");
+        return ToDto(state, allowLegacy: false);
+    }
 
     internal static byte[] SerializeRecovery(ProjectState state) =>
         JsonSerializer.SerializeToUtf8Bytes(ToDto(state, allowLegacy: true), JsonOptions);
@@ -375,7 +380,7 @@ public static class ProjectFileCodec
         var errors = BeamModelValidator.Validate(document.ToBeamModel()).Where(e => e.Code != ValidationErrorCode.MissingSupports).ToArray();
         if (errors.Length > 0) throw new ProjectFormatException(errors[0].Message);
         if (SupportStations.Violations(document.Supports).Any())
-            throw new ProjectFormatException("Support positions must be unique.");
+            throw new ProjectFormatException("Invalid support combination at a shared station.");
         var offsets = new Dictionary<Guid, AnnotationOffset>();
         foreach (var entry in Required(p.AnnotationOffsets, "annotationOffsets"))
         {

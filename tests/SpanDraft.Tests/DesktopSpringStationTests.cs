@@ -69,6 +69,24 @@ public sealed class DesktopSpringStationTests
         Assert.Equal(Mm(500), core[2].Position);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CoreSupportMappingPreservesDocumentOrderForEitherSpringOrder(bool reverse)
+    {
+        EditorSupport[] springs = reverse ? [D(500), W(500)] : [W(500), D(500)];
+        EditorSupport[] supports = [Pinned(0), springs[0], Roller(1000), springs[1]];
+        var core = SupportStations.ToCore(supports);
+        Assert.Equal(3, core.Count);
+        Assert.Equal(new[] { supports[0].Id }, core[0].EditorIds);
+        Assert.Equal(reverse ? new[] { DId, WId } : new[] { WId, DId }, core[1].EditorIds);
+        Assert.Equal(new[] { supports[2].Id }, core[2].EditorIds);
+        Assert.Equal(SupportType.Spring, core[1].Support.Type);
+        Assert.Equal(Mm(500), core[1].Support.Position);
+        Assert.Equal(1e5, core[1].Support.TranslationalSpring!.Value.NewtonsPerMeter);
+        Assert.Equal(1e4, core[1].Support.RotationalSpring!.Value.NewtonMetersPerRadian);
+    }
+
     [Fact]
     public void BothSpringsOfAStationAreHitSeparatelyAtTheirOwnStrokes()
     {

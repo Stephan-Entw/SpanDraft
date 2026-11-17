@@ -63,6 +63,19 @@ public sealed class ProjectFileSpringSupportTests
     }
 
     [Fact]
+    public void NormalWriterRejectsASingleEditorSupportWithBothSpringStiffnesses()
+    {
+        var state = WithSprings();
+        var support = state.Document.Supports[1];
+        // Bypass the document constructor's guard to test the writer against an invalid in-memory state.
+        var combined = support.Spring! with { Rotational = RotationalStiffness.FromNewtonMetersPerRadian(1e4) };
+        typeof(EditorSupport).GetProperty(nameof(EditorSupport.Spring))!.SetValue(support, combined);
+        Assert.Throws<ProjectFormatException>(() => ProjectFileCodec.Serialize(state));
+        Assert.Throws<ProjectFormatException>(() => ProjectFileCodec.ToDto(state));
+        Assert.Same(combined, support.Spring);
+    }
+
+    [Fact]
     public void ImmutableFixtureWithACombinedEntryLoadsAsTwoSpringsAndSolves()
     {
         var loaded = ProjectFileCodec.Deserialize(Fixture("V5", "spring-supports"));

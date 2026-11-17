@@ -71,7 +71,7 @@ internal static class SupportStations
                 var translational = station.Single(s => s.Spring!.Translational is not null);
                 var rotational = station.Single(s => s.Spring!.Rotational is not null);
                 result.Add(new(new SpringData(translational.Spring!.Translational, rotational.Spring!.Rotational)
-                    .ToCore(support.Position), [translational.Id, rotational.Id]));
+                    .ToCore(support.Position), station.Select(s => s.Id).ToArray()));
                 continue;
             }
             result.Add(new(support.Type == SupportType.Spring
