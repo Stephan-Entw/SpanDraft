@@ -12,6 +12,9 @@ if (args.Length > 1 || (args.Length == 1 && args[0] != "--no-regenerate-assets")
 
 string root = Path.GetFullPath(Path.Combine(ScriptDirectory(), ".."));
 string help = Path.Combine(root, "help"), site = Path.Combine(help, "site"), work = Path.Combine(help, ".build");
+string fonts = Path.Combine(root, "src", "SpanDraft.Desktop", "Assets", "Fonts");
+string[] fontFiles = ["IBMPlexSans-Regular.ttf", "IBMPlexSans-Italic.ttf", "IBMPlexSans-SemiBold.ttf",
+    "IBMPlexSans-SemiBoldItalic.ttf", "IBMPlexMono-Regular.ttf", "NOTICE.txt", "OFL.txt"];
 string[] shared = ["koordinaten", "querschnitt-achsen", "lager-einspannung", "lager-festlager", "lager-loslager", "lager-federlager",
     "punktkraft-vorzeichen", "punktmoment-vorzeichen", "streckenlast-vorzeichen"];
 string[] localized = ["beispiel-lagerung", "beispiel-belastung", "diagramm-durchbiegung", "diagramm-querkraft", "diagramm-biegemoment"];
@@ -41,6 +44,12 @@ try
     if (Directory.Exists(work)) Directory.Delete(work, true);
     Directory.CreateDirectory(work);
     CopyTree(Path.Combine(help, "assets"), Path.Combine(site, "assets"));
+    Directory.CreateDirectory(Path.Combine(site, "assets", "fonts"));
+    foreach (string name in fontFiles)
+    {
+        RequireFile(Path.Combine(fonts, name));
+        File.Copy(Path.Combine(fonts, name), Path.Combine(site, "assets", "fonts", name));
+    }
     foreach (string language in new[] { "de", "en" })
     {
         string source = Path.Combine(help, "docs", language), staged = Path.Combine(work, language, "docs");
@@ -110,11 +119,31 @@ try
             RequireFile(Path.Combine(output, "js", resource));
     }
     ValidateSite(site, names);
+    foreach (string name in fontFiles)
+        if (!File.ReadAllBytes(Path.Combine(fonts, name)).AsSpan()
+            .SequenceEqual(File.ReadAllBytes(Path.Combine(site, "assets", "fonts", name))))
+            throw new InvalidOperationException($"Altered bundled help font resource: {name}");
+    foreach (string language in new[] { "de", "en" })
+    {
+        string stylesheet = Path.Combine(site, language, "stylesheets", "fonts.css");
+        RequireFile(stylesheet);
+        if (!File.ReadAllBytes(stylesheet).AsSpan()
+            .SequenceEqual(File.ReadAllBytes(Path.Combine(help, "shared", "stylesheets", "fonts.css"))))
+            throw new InvalidOperationException($"Altered help font definitions: {stylesheet}");
+        foreach (string html in Directory.GetFiles(Path.Combine(site, language), "*.html", SearchOption.AllDirectories))
+        {
+            bool linked = Regex.Matches(File.ReadAllText(html), "<link\\b[^>]*>", RegexOptions.IgnoreCase)
+                .Any(tag => Regex.Matches(tag.Value, "\\bhref=[\"'](?<url>[^\"']+)[\"']", RegexOptions.IgnoreCase)
+                    .Any(reference => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(html)!,
+                        WebUtility.HtmlDecode(reference.Groups["url"].Value))) == stylesheet));
+            if (!linked) throw new InvalidOperationException($"Missing local font stylesheet in {html}");
+        }
+    }
     foreach (var pair in pagePairs)
         foreach (string language in new[] { "de", "en" })
             ValidateLanguageSwitch(Path.Combine(site, language, Path.ChangeExtension(language == "de" ? pair.De : pair.En, ".html")),
                 language, Path.Combine(site, "de", Path.ChangeExtension(pair.De, ".html")), Path.Combine(site, "en", Path.ChangeExtension(pair.En, ".html")));
-    Console.WriteLine("Offline help validated: DE/EN, eleven pages each, nineteen shared/localized PNGs, page-preserving language switches, links, MathML and local runtime resources.");
+    Console.WriteLine("Offline help validated: DE/EN, eleven pages each, nineteen shared/localized PNGs, page-preserving language switches, links, MathML, bundled Plex fonts and local runtime resources.");
     return 0;
 }
 catch (Exception error)

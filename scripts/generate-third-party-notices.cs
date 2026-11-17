@@ -37,7 +37,7 @@ try
         .OrderBy(package => package.Split('/')[0], StringComparer.OrdinalIgnoreCase)
         .ThenBy(package => package.Split('/')[1], StringComparer.OrdinalIgnoreCase);
     var content = string.Join("\n\n\n", orderedPackages.Select(package => notices[package].TrimEnd('\n'))) + "\n";
-    content += "\n\nLicense notice for bundled IBM Plex Sans\n" + new string('-', 39) + "\n"
+    content += "\n\nLicense notice for bundled IBM Plex Sans and Mono\n" + new string('-', 48) + "\n"
         + (await File.ReadAllTextAsync(Path.Combine(repositoryRoot, "src", "SpanDraft.Desktop", "Assets", "Fonts", "NOTICE.txt"))).TrimEnd()
         + "\n\n" + (await File.ReadAllTextAsync(Path.Combine(repositoryRoot, "src", "SpanDraft.Desktop", "Assets", "Fonts", "OFL.txt"))).TrimEnd() + "\n";
     var bytes = new UTF8Encoding(false).GetBytes(content);

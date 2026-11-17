@@ -1,2 +1,5 @@
 {% extends "base.html" %}
 {% set config = dict(config, extra=dict(config.extra, alternate=page.meta.spandraft_languages)) %}
+{% block fonts %}
+  <link rel="stylesheet" href="{{ 'stylesheets/fonts.css' | url }}">
+{% endblock %}

@@ -8,7 +8,7 @@
   <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
     <SelectableTextBlock x:Name="LicenseContent" Margin="{DynamicResource Padding24}"
                          TextWrapping="Wrap" Focusable="True"
-                         FontFamily="Menlo, Consolas, DejaVu Sans Mono, Liberation Mono, Courier New"
+                         FontFamily="{DynamicResource MonospaceFont}"
                          FontSize="{DynamicResource BodySize}"
                          SelectionBrush="{DynamicResource Accent}"
                          SelectionForegroundBrush="{DynamicResource TextOnAccent}" />

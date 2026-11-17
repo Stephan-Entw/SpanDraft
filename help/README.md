@@ -49,8 +49,12 @@ Open `help/site/de/index.html` or `help/site/en/index.html` directly in a browse
 with networking disabled, and check navigation, search and images. The build
 places technical PNGs once under `help/site/assets/` and adjusts their HTML links;
 keep the complete `site/` tree together. Each language retains its own theme and
-search resources. The manual uses system fonts, native MathML and a local
-`iframe-worker` polyfill; no web server or runtime CDN is needed. The vendored
+search resources. Normal text uses bundled IBM Plex Sans; code uses IBM Plex Mono.
+The build copies the desktop font sources and their NOTICE/OFL files once to
+`site/assets/fonts/`. Both languages and the standalone 404 pages load the same
+font definitions through `shared/stylesheets/fonts.css`; the theme's `fonts`
+template block replaces its external font loader. The manual uses native MathML
+and a local `iframe-worker` polyfill; no web server or runtime CDN is needed. The vendored
 polyfill is iframe-worker 1.0.4 (MIT), from
 https://github.com/squidfunk/iframe-worker; its license is beside the JavaScript.
 
