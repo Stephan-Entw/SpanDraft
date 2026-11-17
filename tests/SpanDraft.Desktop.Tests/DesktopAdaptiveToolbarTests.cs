@@ -52,7 +52,7 @@ public sealed class DesktopAdaptiveToolbarTests
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
         var (narrow, narrowView, narrowTools) = Open(1100);
         Assert.True(narrowTools.IsCompact);
-        Assert.Equal(9, Captions(narrowTools).Length);
+        Assert.Equal(10, Captions(narrowTools).Length);
         Assert.All(Captions(narrowTools), c => Assert.Equal(0, c.DesiredSize.Width));
         Assert.Equal(new[] { Strings.Loads, Strings.ToolbarSupportsAndHinges }, GroupLabels(narrowTools).Select(l => l.Text));
         Assert.All(GroupLabels(narrowTools), l => Assert.True(l.IsVisible && l.Bounds.Width > 0));
@@ -83,17 +83,22 @@ public sealed class DesktopAdaptiveToolbarTests
     [Theory]
     [InlineData("de-DE")]
     [InlineData("en-US")]
-    public void TheDefaultWindowWidthKeepsTheCaptionsWithRoomToSpare(string culture)
+    public void TheDefaultWindowWidthShowsTheCompactToolbarWithoutClippingAndTheCaptionsReturnWithMoreRoom(string culture)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
         int defaultWidth = (int)new MainWindow().Width;
         var (window, view, tools) = Open(defaultWidth);
         var grid = Assert.IsType<Grid>(view.FindControl<Border>("EditorToolbar")!.Child);
-        Assert.False(tools.IsCompact);
-        // The gap to the right group exceeds the bare column spacing, so the captions do not sit at the switching edge.
-        var gap = grid.Children[1].Bounds.Left - (tools.Bounds.Left + tools.DesiredSize.Width);
-        Assert.True(gap > grid.ColumnSpacing + 0.01, $"Only {gap} px between the tools and the right group at {defaultWidth}.");
+        // With two spring tools the captioned row no longer fits the default width: the icons stay, the group labels name them.
+        Assert.True(tools.IsCompact);
+        Assert.All(Captions(tools), c => Assert.False(c.IsVisible));
+        Assert.All(GroupLabels(tools), l => Assert.True(l.IsVisible));
+        Assert.True(tools.DesiredSize.Width <= tools.Bounds.Width + 0.01);
+        Assert.True(tools.Bounds.Width + grid.ColumnSpacing + grid.Children[1].Bounds.Width <= grid.Bounds.Width + 0.01);
         window.Close();
+        var (wide, _, wideTools) = Open(defaultWidth + 300);
+        Assert.False(wideTools.IsCompact);
+        wide.Close();
     }
 
     [Theory]

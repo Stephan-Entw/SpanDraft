@@ -228,6 +228,34 @@ public sealed class DesktopMomentReleaseEditTests
     }
 
     [Fact]
+    public void ARotationalSpringIsRefusedAtAReleaseAlreadyWhileHoveringAndATranslationalOneIsNot()
+    {
+        var editor = Editor(releases: new EditorMomentRelease(Guid.NewGuid(), Mm(1000), "G1"));
+        editor.ToggleSpringTool(SpringKind.Rotational);
+        editor.HoverPlacement(Mm(1000));
+        Assert.True(editor.Preview!.IsInvalid);
+        Assert.Null(editor.Preview.Spring!.Translational);
+        Assert.NotNull(editor.Preview.Spring.Rotational);
+        Assert.Equal(SpanDraft.Desktop.Resources.Strings.SupportAtMomentRelease, editor.SupportFeedback);
+        Assert.False(editor.PlaceSupport());
+        editor.HoverPlacement(Mm(1500));
+        Assert.False(editor.Preview!.IsInvalid);
+        editor.ToggleSpringTool(SpringKind.Translational);
+        editor.HoverPlacement(Mm(1000));
+        Assert.False(editor.Preview!.IsInvalid);
+        Assert.NotNull(editor.Preview.Spring!.Translational);
+        Assert.Null(editor.Preview.Spring.Rotational);
+        Assert.True(editor.PlaceSupport());
+        // Opening the draft keeps the kind: a rotational spring cannot be chosen at the release either.
+        var draft = editor.SupportDraft!;
+        draft.TranslationalText = "1e6";
+        Assert.True(draft.IsValid);
+        draft.SelectedType = draft.Types.Single(o => o.Kind == SpringKind.Rotational);
+        draft.RotationalText = "5000";
+        Assert.False(draft.IsValid);
+    }
+
+    [Fact]
     public void ASupportOrMomentThatCollidesWithAReleaseIsRefusedAtPlacementDragAndInTheFlyout()
     {
         var editor = Editor(releases: new EditorMomentRelease(Guid.NewGuid(), Mm(1000), "G1"));
@@ -245,13 +273,13 @@ public sealed class DesktopMomentReleaseEditTests
         draft.Type = SupportType.Fixed;
         Assert.False(draft.IsValid);
         Assert.False(editor.ConfirmSupport());
-        draft.Type = SupportType.Spring;
+        draft.SelectedType = draft.Types.Single(o => o.Kind == SpringKind.Translational);
         draft.TranslationalText = "1e6";
         Assert.True(draft.IsValid);
-        draft.HasRotational = true;
+        draft.SelectedType = draft.Types.Single(o => o.Kind == SpringKind.Rotational);
         draft.RotationalText = "5000";
         Assert.False(draft.IsValid);
-        draft.HasRotational = false;
+        draft.SelectedType = draft.Types.Single(o => o.Kind == SpringKind.Translational);
         Assert.True(draft.IsValid);
         draft.Type = SupportType.Pinned;
         Assert.True(editor.ConfirmSupport());

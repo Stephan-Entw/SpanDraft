@@ -22,9 +22,9 @@ public sealed class SpringSupportReportTests
         [new EditorPointForce(Guid.NewGuid(), M(.5), Force.FromNewtons(-1000), "F1")]);
 
     [Theory]
-    [InlineData("de-DE")]
-    [InlineData("en-US")]
-    public void ReportShowsSpringStiffnessesReactionsAndTheSpringNote(string culture)
+    [InlineData("de-DE", "Federlager sind linear-elastisch mit konstanter Steifigkeit und axial starr.")]
+    [InlineData("en-US", "Spring supports are linear-elastic with constant stiffness and axially rigid.")]
+    public void ReportShowsSpringStiffnessesReactionsAndTheSpringNote(string culture, string springNote)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
         var editor = EditorViewModel.ForSession(ProjectSession.Create(new ProjectState(Document(true), new([]))), () => { });
@@ -37,7 +37,7 @@ public sealed class SpringSupportReportTests
         Assert.Equal(3, reactions.Rows.Count);
         // Spring and partial restraint reactions are real values, not placeholders.
         Assert.All(reactions.Rows.Skip(1), r => Assert.Contains(r.Skip(1), v => v.Any(char.IsDigit)));
-        Assert.Contains(report.Data.Labels.Assumptions, n => n.Contains(Strings.ReportSpringTheory));
+        Assert.Contains(report.Data.Labels.Assumptions, n => n.Contains(springNote));
     }
 
     [Fact]

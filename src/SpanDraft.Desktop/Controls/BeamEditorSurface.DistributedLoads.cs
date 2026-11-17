@@ -135,7 +135,8 @@ public partial class BeamEditorSurface
         if (_editor is null || _scene is null) return;
         foreach (Guid id in ids)
         {
-            string text = _scene.Annotations.First(a => a.Id == id).Text;
+            string text = _scene.Supports.FirstOrDefault(s => s.Id == id)?.Name
+                ?? _scene.Annotations.First(a => a.EntityIds.Contains(id)).Text;
             var button = new Button { Content = text };
             button.Classes.Add("ghost");
             button.Click += (_, _) =>

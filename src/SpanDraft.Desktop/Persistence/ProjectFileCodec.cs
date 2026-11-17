@@ -323,7 +323,7 @@ public static class ProjectFileCodec
 
     private static ProjectState MapValidated(DocumentV5 documentDto, PresentationV2 presentationDto)
     {
-        var d = Required(documentDto, "document");
+        var d = SpringSupportSplit.Apply(Required(documentDto, "document"));
         var m = Required(d.Material, "material");
         var s = Required(d.Section, "section");
         var n = Required(d.NamingState, "namingState");
@@ -374,7 +374,7 @@ public static class ProjectFileCodec
             }));
         var errors = BeamModelValidator.Validate(document.ToBeamModel()).Where(e => e.Code != ValidationErrorCode.MissingSupports).ToArray();
         if (errors.Length > 0) throw new ProjectFormatException(errors[0].Message);
-        if (document.Supports.Select(x => x.Position).Distinct().Count() != document.Supports.Count)
+        if (SupportStations.Violations(document.Supports).Any())
             throw new ProjectFormatException("Support positions must be unique.");
         var offsets = new Dictionary<Guid, AnnotationOffset>();
         foreach (var entry in Required(p.AnnotationOffsets, "annotationOffsets"))

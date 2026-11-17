@@ -24,19 +24,30 @@ public static class SupportSymbol
     public static SpringSupportGeometry SpringGeometry(SpringData spring) =>
         new(spring.Translational is not null, spring.Rotational is not null, spring.RigidTranslation);
 
+    /// <summary>
+    /// The support under the point. Where a translational and a rotational spring share a station, the point belongs to the
+    /// spring whose own strokes it is closest to; the ring, the ground line and the hatches belong to both, so a point that
+    /// is not clearly nearer to one of them hits neither.
+    /// </summary>
     public static Guid? HitTest(IReadOnlyList<EditorSupport> supports, StationTransform transform, double beamY, double x, double y)
     {
-        Guid? hit = null;
+        EditorSupport? hit = null;
         double nearest = double.PositiveInfinity;
+        var inside = new List<(EditorSupport Support, double Dx, double Dy)>();
         foreach (var support in supports)
         {
-            double sx = transform.PhysicalToScreen(support.Position.Meters);
-            double dx = x - sx;
+            double dx = x - transform.PhysicalToScreen(support.Position.Meters);
             double dy = y - beamY;
-            bool inside = Contains(support.Type, support.Spring, support.Position.Meters, transform, dx, dy);
+            if (!Contains(support.Type, support.Spring, support.Position.Meters, transform, dx, dy)) continue;
+            inside.Add((support, dx, dy));
             double distance = dx * dx + dy * dy;
-            if (inside && distance < nearest) { hit = support.Id; nearest = distance; }
+            if (distance < nearest) { hit = support; nearest = distance; }
         }
-        return hit;
+        if (hit is null) return null;
+        var sharing = inside.Where(c => c.Support.Position.Meters == hit.Position.Meters && c.Support.Type == SupportType.Spring).ToList();
+        if (hit.Type != SupportType.Spring || sharing.Count < 2) return hit.Id;
+        var ranked = sharing.Select(c => (c.Support, Distance: SpringGeometry(c.Support.Spring!).DistanceToSpring(c.Dx, c.Dy)))
+            .OrderBy(c => c.Distance).ToList();
+        return ranked[0].Distance <= HitPadding && ranked[1].Distance - ranked[0].Distance > 0.5 ? ranked[0].Support.Id : null;
     }
 }

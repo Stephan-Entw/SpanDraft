@@ -372,7 +372,7 @@ public sealed class InteractionPerformanceTests
                 editor.EditMomentRelease(editor.Document.MomentReleases.Single().Id); editor.DeleteMomentRelease();
                 break;
             default:
-                editor.ToggleSupportTool(action == InteractionAction.SpringSupport ? SupportType.Spring : SupportType.Roller);
+                if (action == InteractionAction.SpringSupport) editor.ToggleSpringTool(SpringKind.Translational); else editor.ToggleSupportTool(SupportType.Roller);
                 editor.HoverPlacement(M(1)); Assert.True(editor.PlaceSupport());
                 if (action == InteractionAction.SpringSupport) editor.SupportDraft!.TranslationalText = "100";
                 Assert.True(editor.ConfirmSupport());

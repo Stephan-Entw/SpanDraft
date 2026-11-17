@@ -573,9 +573,12 @@ public sealed class DesktopSupportTests
         using (new CultureScope("de-DE"))
         {
             Assert.Equal("Lager", Strings.Support);
-            Assert.Equal("Einspannung", SupportDraftViewModel.Types[0].Name);
-            Assert.Equal("Festlager", SupportDraftViewModel.Types[1].Name);
-            Assert.Equal("Loslager", SupportDraftViewModel.Types[2].Name);
+            var types = new SupportDraftViewModel(() => new Session().Editor.Document, null, SupportType.Pinned, Mm(100)).Types;
+            Assert.Equal("Einspannung", types[0].Name);
+            Assert.Equal("Festlager", types[1].Name);
+            Assert.Equal("Loslager", types[2].Name);
+            Assert.Equal("Wegfeder", types[3].Name);
+            Assert.Equal("Drehfeder", types[4].Name);
         }
         using (new CultureScope("fr-FR")) Assert.Equal("Support", Strings.Support);
     }

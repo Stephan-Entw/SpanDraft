@@ -19,9 +19,10 @@ public sealed partial class EditorViewModel : ObservableObject
     private readonly InteractionPerformance? _performance;
     private AnalysisPresentationState _presentation;
     private ProjectOverviewState _overview;
-    private KeyValuePair<Guid, AnnotationOffset>? _annotationPreview;
+    private EditorPresentationState? _annotationPreview;
     private SupportInteraction _interaction;
     private SupportType? _placementTool;
+    private SpringKind? _springTool;
     private SupportDraftViewModel? _draft;
     private SupportPreview? _preview;
     private Guid? _hoveredSupportId;
@@ -76,7 +77,8 @@ public sealed partial class EditorViewModel : ObservableObject
         FixedToolCommand = new(() => ToggleSupportTool(SupportType.Fixed));
         PinnedToolCommand = new(() => ToggleSupportTool(SupportType.Pinned));
         RollerToolCommand = new(() => ToggleSupportTool(SupportType.Roller));
-        SpringToolCommand = new(() => ToggleSupportTool(SupportType.Spring));
+        TranslationalSpringToolCommand = new(() => ToggleSpringTool(SpringKind.Translational));
+        RotationalSpringToolCommand = new(() => ToggleSpringTool(SpringKind.Rotational));
         MomentReleaseToolCommand = new(ToggleMomentReleaseTool);
         ConfirmMomentReleaseCommand = new(() => ConfirmMomentRelease());
         CancelMomentReleaseCommand = new(CancelMomentReleaseInteraction);
@@ -129,8 +131,7 @@ public sealed partial class EditorViewModel : ObservableObject
         if (IsResultProbeTool) RefreshResultProbe();
     }
     public EditorPresentationState EditorPresentation => Session.CurrentRevision.State.Presentation;
-    public EditorPresentationState RenderPresentation => _annotationPreview is { } p
-        ? EditorPresentation.WithOffset(p.Key, p.Value) : EditorPresentation;
+    public EditorPresentationState RenderPresentation => _annotationPreview ?? EditorPresentation;
     public LengthInputViewModel DimensionLength { get; }
     public ConstraintConflictState? ConstraintConflict => _constraintConflict;
     public IReadOnlyList<Guid> ConflictEntityIds => ConstraintConflict?.BlockingEntityIds ?? Array.Empty<Guid>();
@@ -138,7 +139,8 @@ public sealed partial class EditorViewModel : ObservableObject
     public ActionCommand FixedToolCommand { get; }
     public ActionCommand PinnedToolCommand { get; }
     public ActionCommand RollerToolCommand { get; }
-    public ActionCommand SpringToolCommand { get; }
+    public ActionCommand TranslationalSpringToolCommand { get; }
+    public ActionCommand RotationalSpringToolCommand { get; }
     public ActionCommand ConfirmSupportCommand { get; }
     public ActionCommand CancelSupportCommand { get; }
     public ActionCommand DeleteSupportCommand { get; }
@@ -147,7 +149,8 @@ public sealed partial class EditorViewModel : ObservableObject
     public bool IsFixedTool => PlacementTool == SupportType.Fixed;
     public bool IsPinnedTool => PlacementTool == SupportType.Pinned;
     public bool IsRollerTool => PlacementTool == SupportType.Roller;
-    public bool IsSpringTool => PlacementTool == SupportType.Spring;
+    public bool IsTranslationalSpringTool => _springTool == SpringKind.Translational;
+    public bool IsRotationalSpringTool => _springTool == SpringKind.Rotational;
     public SupportDraftViewModel? SupportDraft => _draft;
     public bool IsSupportFlyoutVisible => _draft is not null && Interaction is SupportInteraction.NewDraft or SupportInteraction.EditDraft;
     public SupportPreview? Preview => _preview;
@@ -178,13 +181,28 @@ public sealed partial class EditorViewModel : ObservableObject
             QuantityFormatter.FormatInputNumber(position.Meters, ResultPresentation.Profile[QuantityKind.BeamLength], ResultPresentation),
             ResultPresentation.Profile[QuantityKind.BeamLength].Symbol) : "";
 
+    /// <summary>Activates the placement tool of a rigid support; a spring support is placed by its own tool, see <see cref="ToggleSpringTool"/>.</summary>
     public void ToggleSupportTool(SupportType type)
     {
         if (!Enum.IsDefined(type)) throw new ArgumentOutOfRangeException(nameof(type));
-        bool deactivate = PlacementTool == type;
+        if (type == SupportType.Spring) throw new ArgumentException("A spring support needs a spring kind.", nameof(type));
+        ActivateTool(type, null);
+    }
+
+    /// <summary>Activates the placement tool of a translational or a rotational spring support.</summary>
+    public void ToggleSpringTool(SpringKind kind)
+    {
+        if (kind is not (SpringKind.Translational or SpringKind.Rotational)) throw new ArgumentOutOfRangeException(nameof(kind));
+        ActivateTool(SupportType.Spring, kind);
+    }
+
+    private void ActivateTool(SupportType type, SpringKind? kind)
+    {
+        bool deactivate = PlacementTool == type && _springTool == kind;
         CancelEditorInteraction();
         if (deactivate) return;
         _placementTool = type;
+        _springTool = kind;
         _interaction = SupportInteraction.Placement;
         NotifySupportState();
     }
@@ -193,7 +211,12 @@ public sealed partial class EditorViewModel : ObservableObject
     {
         if (Interaction != SupportInteraction.Placement) return;
         var type = PlacementTool!.Value;
-        var spring = type == SupportType.Spring ? PlacementSpring : null;
+        var spring = _springTool switch
+        {
+            SpringKind.Translational => PlacementTranslationalSpring,
+            SpringKind.Rotational => PlacementRotationalSpring,
+            _ => null
+        };
         _preview = position is { } p ? new(p, type, !CanSupportAt(p, type, spring), spring) : null;
         _supportFeedback = _preview?.IsInvalid == true ? PositionError(position!.Value, null, type, spring) : null;
         NotifySupportState();
@@ -203,7 +226,7 @@ public sealed partial class EditorViewModel : ObservableObject
     {
         if (Interaction != SupportInteraction.Placement || Preview is not { IsInvalid: false } preview
             || !CanSupportAt(preview.Position, preview.Type, preview.Spring)) return false;
-        OpenDraft(null, preview.Type, preview.Position);
+        OpenDraft(null, preview.Type, preview.Position, preview.Spring, _springTool);
         return true;
     }
 
@@ -329,6 +352,7 @@ public sealed partial class EditorViewModel : ObservableObject
         _dragSupport = null;
         _dragValid = false;
         _placementTool = null;
+        _springTool = null;
         _preview = null;
         _hoveredSupportId = null;
         _supportFeedback = null;
@@ -336,30 +360,35 @@ public sealed partial class EditorViewModel : ObservableObject
         NotifySupportState();
     }
 
-    private bool CanPosition(Length position, Guid? exclude = null) =>
-        CanPosition(position.Meters, exclude);
-
-    /// <summary>Checks the inclusive SI range and exact committed-position collisions.</summary>
+    /// <summary>Checks the inclusive SI range and exact committed-position collisions: no other support stands there.</summary>
     public bool CanPosition(double positionMeters, Guid? exclude = null) =>
-        positionMeters >= 0 && positionMeters <= Document.Length.Meters
+        InsideBeam(positionMeters)
         && !Document.Supports.Any(s => s.Id != exclude && s.Position.Meters == positionMeters);
 
-    /// <summary>Position and type together: a fixed support or a rotational spring cannot stand at a moment release.</summary>
+    private bool InsideBeam(double positionMeters) => positionMeters >= 0 && positionMeters <= Document.Length.Meters;
+
+    /// <summary>
+    /// Position and type together: the position lies in the beam, the station rule of the supports holds (one translational
+    /// and one rotational spring may share a position) and the hinge rule of <see cref="MomentReleaseRules"/> holds
+    /// (a fixed support or a rotational spring cannot stand at a moment release).
+    /// </summary>
     private bool CanSupportAt(Length position, SupportType type, SpringData? spring, Guid? exclude = null) =>
-        CanPosition(position, exclude) && !MomentReleaseRules.SupportConflicts(Document, position, type, spring);
+        InsideBeam(position.Meters) && SupportStations.Allows(Document.Supports, position, type, spring, exclude)
+        && !MomentReleaseRules.SupportConflicts(Document, position, type, spring);
 
     private string PositionError(Length position, Guid? exclude = null, SupportType? type = null, SpringData? spring = null) =>
         position.Meters > Document.Length.Meters ? Strings.PositionInsideBeam
-        : Document.Supports.Any(s => s.Id != exclude && s.Position == position) ? Strings.SupportAlreadyExists
+        : type is { } station && !SupportStations.Allows(Document.Supports, position, station, spring, exclude) ? Strings.SupportAlreadyExists
         : type is { } kind && MomentReleaseRules.SupportConflicts(Document, position, kind, spring) ? Strings.SupportAtMomentRelease
         : Strings.PositionInsideBeam;
 
-    /// <summary>The symbol shown while a spring support is placed; the stiffness is entered in the flyout.</summary>
-    private static readonly SpringData PlacementSpring = new(TranslationalStiffness.FromNewtonsPerMeter(1), null);
+    /// <summary>The SI values used by the placement preview and the initial, editable draft, as for point loads.</summary>
+    private static readonly SpringData PlacementTranslationalSpring = new(TranslationalStiffness.FromNewtonsPerMeter(1e6), null);
+    private static readonly SpringData PlacementRotationalSpring = new(null, RotationalStiffness.FromNewtonMetersPerRadian(1000));
 
-    private void OpenDraft(Guid? id, SupportType type, Length position, SpringData? spring = null)
+    private void OpenDraft(Guid? id, SupportType type, Length position, SpringData? spring = null, SpringKind? kind = null)
     {
-        _draft = new(() => Document, id, type, position, ResultPresentation.Profile, spring);
+        _draft = new(() => Document, id, type, position, ResultPresentation.Profile, spring, kind);
         _draft.PropertyChanged += DraftChanged;
         _preview = _draft.Preview;
         _hoveredSupportId = null;
@@ -379,7 +408,7 @@ public sealed partial class EditorViewModel : ObservableObject
     private void NotifySupportState()
     {
         foreach (string name in new[] { nameof(Interaction), nameof(PlacementTool), nameof(IsFixedTool),
-            nameof(IsPinnedTool), nameof(IsRollerTool), nameof(IsSpringTool), nameof(SupportDraft), nameof(IsSupportFlyoutVisible), nameof(Preview),
+            nameof(IsPinnedTool), nameof(IsRollerTool), nameof(IsTranslationalSpringTool), nameof(IsRotationalSpringTool), nameof(SupportDraft), nameof(IsSupportFlyoutVisible), nameof(Preview),
             nameof(HoveredSupportId), nameof(HiddenSupportId), nameof(SupportFeedback),
             nameof(HasSupportFeedback), nameof(HasCoordinate), nameof(CoordinateText), nameof(SupportPreviewName) }) Notify(name);
     }
@@ -452,18 +481,26 @@ public sealed partial class EditorViewModel : ObservableObject
         return true;
     }
 
-    public bool SetAnnotationOffset(Guid id, AnnotationOffset? offset)
+    public bool SetAnnotationOffset(Guid id, AnnotationOffset? offset) => SetAnnotationOffsets([id], offset);
+
+    public bool SetAnnotationOffsets(IReadOnlyList<Guid> ids, AnnotationOffset? offset)
     {
         using var measurement = InteractionPerformance.Measure(_performance, InteractionAction.AnnotationOffset);
-        if (IsBusy || !Document.EntityIds.Contains(id)) return false;
-        Commit(Document, EditorPresentation.WithOffset(id, offset));
+        if (IsBusy || ids.Count == 0 || ids.Any(id => !Document.EntityIds.Contains(id))) return false;
+        var presentation = EditorPresentation;
+        foreach (var id in ids) presentation = presentation.WithOffset(id, offset);
+        Commit(Document, presentation);
         return true;
     }
 
-    public void PreviewAnnotationOffset(Guid id, AnnotationOffset offset)
+    public void PreviewAnnotationOffset(Guid id, AnnotationOffset offset) => PreviewAnnotationOffsets([id], offset);
+
+    public void PreviewAnnotationOffsets(IReadOnlyList<Guid> ids, AnnotationOffset offset)
     {
-        if (IsBusy || !Document.EntityIds.Contains(id)) return;
-        _annotationPreview = new(id, offset);
+        if (IsBusy || ids.Count == 0 || ids.Any(id => !Document.EntityIds.Contains(id))) return;
+        var presentation = EditorPresentation;
+        foreach (var id in ids) presentation = presentation.WithOffset(id, offset);
+        _annotationPreview = presentation;
         Notify(nameof(RenderPresentation));
     }
 

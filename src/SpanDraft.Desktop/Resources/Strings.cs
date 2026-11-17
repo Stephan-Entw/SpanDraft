@@ -204,7 +204,8 @@ public static class Strings
     public static string ToolbarFixedSupport => Get(nameof(ToolbarFixedSupport));
     public static string ToolbarPinnedSupport => Get(nameof(ToolbarPinnedSupport));
     public static string ToolbarRollerSupport => Get(nameof(ToolbarRollerSupport));
-    public static string ToolbarSpringSupport => Get(nameof(ToolbarSpringSupport));
+    public static string ToolbarTranslationalSpring => Get(nameof(ToolbarTranslationalSpring));
+    public static string ToolbarRotationalSpring => Get(nameof(ToolbarRotationalSpring));
     public static string ToolbarSupportsAndHinges => Get(nameof(ToolbarSupportsAndHinges));
     public static string BeamModel => Get(nameof(BeamModel));
     public static string OverviewLength => Get(nameof(OverviewLength));
@@ -276,11 +277,10 @@ public static class Strings
     public static string UnitTranslationalStiffness => Get(nameof(UnitTranslationalStiffness));
     public static string UnitRotationalStiffness => Get(nameof(UnitRotationalStiffness));
     public static string SpringSupport => Get(nameof(SpringSupport));
+    public static string TranslationalSpringSupport => Get(nameof(TranslationalSpringSupport));
+    public static string RotationalSpringSupport => Get(nameof(RotationalSpringSupport));
     public static string SpringRigidTranslation => Get(nameof(SpringRigidTranslation));
     public static string InvalidStiffness => Get(nameof(InvalidStiffness));
-    public static string SpringRequired => Get(nameof(SpringRequired));
-    public static string SpringTranslationalLabel => Get(nameof(SpringTranslationalLabel));
-    public static string SpringRotationalLabel => Get(nameof(SpringRotationalLabel));
     public static string SpringTranslationalName => Get(nameof(SpringTranslationalName));
     public static string SpringRotationalName => Get(nameof(SpringRotationalName));
     public static string SpringRigidTranslationLabel => Get(nameof(SpringRigidTranslationLabel));

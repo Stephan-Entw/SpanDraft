@@ -68,7 +68,7 @@ public sealed class DesktopMomentReleaseControlTests
         int index = tools.Children.IndexOf(hinge);
         Assert.IsType<Avalonia.Controls.Shapes.Rectangle>(tools.Children[index + 1]);
         Assert.Same(view.FindControl<ToggleButton>("ResultProbeToolButton"), tools.Children[index + 2]);
-        Assert.Equal(10, tools.Children.OfType<ToggleButton>().Count(b => b.Command is not null));
+        Assert.Equal(11, tools.Children.OfType<ToggleButton>().Count(b => b.Command is not null));
 
         // No tool is clipped: the row needs no more width than the toolbar grants it, and the tools follow each other without overlap.
         Assert.True(tools.DesiredSize.Width <= tools.Bounds.Width + 0.01,

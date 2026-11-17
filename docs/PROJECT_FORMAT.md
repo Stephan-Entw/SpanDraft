@@ -93,10 +93,20 @@ IDs, Namen, Entity-Reihenfolge, Lasten, Lager und Naming-Zähler bleiben erhalte
 Lager verwenden `fixed`, `pinned`, `roller` oder `spring`; Punktlasten `force`, `moment`.
 Ein Federlager speichert optional `translationalStiffness` (N/m) und `rotationalStiffness`
 (N·m/rad), beide endlich und streng positiv, sowie `rigidTranslation` (nur `true` wird
-geschrieben). Mindestens eine Feder ist verpflichtend; `rigidTranslation` verlangt eine
+geschrieben). Der Schreiber legt jede Feder als eigenen Eintrag mit eigener `id`, eigenem
+`name`, eigener Position bzw. eigenem `positionRef` und genau einer Steifigkeit ab; ein
+Eintrag ist entweder eine Wegfeder oder eine Drehfeder. `rigidTranslation` verlangt eine
 Drehfeder ohne Wegfeder. Diese Felder sind nur bei `spring` zulässig und lassen
-Dateien ohne sie unverändert gültig. Positionen eines Federlagers dürfen nicht mit
-denen anderer Lager zusammenfallen.
+Dateien ohne sie unverändert gültig.
+
+Mehrere Lager an einer Position sind nur genau eine reine Wegfeder und eine reine Drehfeder,
+beide ohne `rigidTranslation`; alles andere an einer Position (zwei gleiche Federn, Feder und
+starres Lager, mehr als zwei Lager) ist ungültig. Beide Einträge bleiben im Editor und in der
+Datei getrennte Objekte, auch an derselben Position. Erst beim Aufbau des Berechnungsmodells
+werden die beiden zu einem Federlager mit Weg- und Drehfeder zusammengefasst. Ein Eintrag mit
+beiden Steifigkeiten bleibt lesbar (früherer V5-Stand); der Leser macht daraus zwei Lager:
+Die Wegfeder behält `id`, `name` und Position, die Drehfeder bekommt den nächsten freien
+Lagernamen und eine daraus deterministisch abgeleitete, im Projekt unbenutzte `id`.
 Ein Balken ist die geordnete Kette seiner Abschnitte. Der erste Abschnitt steht in den
 Dokumentfeldern `material`, `section`, `bendingAxis`, `sectionDisplayName`, `segmentId` (optional)
 und `length`; `length` ist die Länge dieses ersten Abschnitts, bei einem Abschnitt also die

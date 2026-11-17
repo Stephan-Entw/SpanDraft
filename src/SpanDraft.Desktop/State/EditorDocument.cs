@@ -57,6 +57,9 @@ public sealed record EditorDocument
         _segments = NormalizeSegments(segments);
         (_boundaries, _length) = Accumulate(_segments);
         _supports = Array.AsReadOnly((supports ?? []).ToArray());
+        // Every spring is a support of its own; a translational and a rotational spring are joined only for Core.
+        if (_supports.Any(s => s.Type == SupportType.Spring && s.Spring is { Translational: not null, Rotational: not null }))
+            throw new ArgumentException("An editor spring support carries one spring.", nameof(supports));
         _loads = Array.AsReadOnly((loads ?? []).ToArray());
         _distributedLoads = Array.AsReadOnly((distributedLoads ?? []).ToArray());
         _momentReleases = Array.AsReadOnly((momentReleases ?? []).ToArray());
@@ -454,22 +457,30 @@ public sealed record EditorDocument
                 conflicts.Add(new(l.Id, l.Name, GeometryConflictKind.RuleViolation, DistributedLoadEndpoint.End));
         if (conflicts.Count > 0) return conflicts;
 
-        // Desktop projects require distinct support positions, even when Core allows different rigid types together.
-        var supportPositions = new HashSet<Length>();
-        foreach (var support in Supports)
-            if (!supportPositions.Add(support.Position))
-                conflicts.Add(new(support.Id, support.Name, GeometryConflictKind.RuleViolation));
+        // Several supports share a station only as one translational and one rotational spring; the rest is for Core.
+        foreach (var support in SupportStations.Violations(Supports))
+            conflicts.Add(new(support.Id, support.Name, GeometryConflictKind.RuleViolation));
 
         var pointLoads = Loads.Count;
-        foreach (var error in BeamModelValidator.Validate(ToBeamModel(includeSelfWeight: false)))
+        var core = SupportStations.ToCore(Supports);
+        foreach (var error in BeamModelValidator.Validate(ToBeamModel(includeSelfWeight: false, core)))
         {
             if (error.Code == ValidationErrorCode.MissingSupports) continue;
             var match = System.Text.RegularExpressions.Regex.Match(error.Path ?? "", @"^(Supports|Loads|MomentReleases)\[(\d+)\]");
             if (!match.Success) continue;
             int i = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+            if (match.Groups[1].Value == "Supports")
+            {
+                // A Core support may stand for two editor supports: both are the conflict.
+                foreach (var id in core[i].EditorIds)
+                {
+                    var editorSupport = Supports.First(x => x.Id == id);
+                    if (!conflicts.Any(c => c.EntityId == id)) conflicts.Add(new(id, editorSupport.Name, GeometryConflictKind.RuleViolation));
+                }
+                continue;
+            }
             (Guid Id, string Name)? entity = match.Groups[1].Value switch
             {
-                "Supports" => (Supports[i].Id, Supports[i].Name),
                 "MomentReleases" => (MomentReleases[i].Id, MomentReleases[i].Name),
                 _ when i < pointLoads => (Loads[i].Id, Loads[i].Name),
                 _ when i - pointLoads < DistributedLoads.Count => (DistributedLoads[i - pointLoads].Id, DistributedLoads[i - pointLoads].Name),
@@ -491,14 +502,12 @@ public sealed record EditorDocument
 
     public BeamModel ToBeamModel() => ToBeamModel(includeSelfWeight: true);
 
-    private BeamModel ToBeamModel(bool includeSelfWeight) => new(Length, _segments.Select((segment, index) =>
+    private BeamModel ToBeamModel(bool includeSelfWeight, IReadOnlyList<SupportStations.CoreSupport>? core = null) => new(Length, _segments.Select((segment, index) =>
         {
             var (start, end) = SegmentRange(index);
             return new BeamSegment(start, end, segment.Material, segment.Section, segment.BendingAxis);
         }),
-        Supports.Select(s => s.Type == SupportType.Spring
-            ? (s.Spring ?? throw new InvalidOperationException("A spring support needs its springs.")).ToCore(s.Position)
-            : new Support(s.Position, s.Type)),
+        (core ?? SupportStations.ToCore(Supports)).Select(c => c.Support),
         Loads.Select(l => l.ToCore()).Concat(DistributedLoads.Select(l => l.ToCore()))
             .Concat(includeSelfWeight ? SelfWeightLoads : []), MomentReleases.Select(r => r.ToCore()));
 }

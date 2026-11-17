@@ -9,7 +9,11 @@ namespace SpanDraft.Desktop.Controls;
 public sealed record SupportVisual(Guid? Id, SupportPreview Preview, string Name, double X, bool IsPreview, bool IsMirrored);
 /// <summary>AutoBounds is the offset-independent reference; Bounds is the final visible rectangle.</summary>
 public sealed record EntityAnnotation(Guid? Id, bool IsSupport, string Text, Rect AutoBounds, Rect Bounds,
-    bool IsPreview, bool IsInvalid, bool IsManual = false);
+    bool IsPreview, bool IsInvalid, bool IsManual = false)
+{
+    public IReadOnlyList<Guid>? GroupedEntityIds { get; init; }
+    public IReadOnlyList<Guid> EntityIds => GroupedEntityIds ?? (Id is { } id ? [id] : []);
+}
 
 /// <summary>One measured scene shared by drawing and hit testing. No station layout is generated here.</summary>
 public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<SupportVisual> Supports,
@@ -79,18 +83,17 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             measure = text => reserved.TryGetValue(text, out var size) ? size : originalMeasure(text);
         }
         var annotations = new List<EntityAnnotation>();
-        double above = Place(loads.Select((v, i) => (v.Id, v.Name, Text: PointLoadSymbol.Label(v.Preview, v.Name, results),
+        double above = Place(loads.Select((v, i) => (Ids(v.Id), Text: PointLoadSymbol.Label(v.Preview, v.Name, results),
             v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)).Concat(distributed.Select((v, i) =>
-            (v.Id, v.Name, Text: DistributedLoadSymbol.Label(v, results), X: v.CenterX,
+            (Ids(v.Id), Text: DistributedLoadSymbol.Label(v, results), X: v.CenterX,
                 v.IsPreview, v.Preview.IsInvalid, Order: loads.Count + i))), false);
         // A hinge label shares the support rows below the beam.
-        double below = Place(supports.Select((v, i) => (v.Id, v.Name, Text: v.Name,
-            v.X, v.IsPreview, v.Preview.IsInvalid, Order: i)).Concat(releases.Select((v, i) =>
-            (v.Id, v.Name, Text: v.Name, v.X, v.IsPreview, v.Preview.IsInvalid, Order: supports.Count + i))), true);
+        double below = Place(SupportLabels().Concat(releases.Select((v, i) =>
+            (Ids(v.Id), Text: v.Name, v.X, v.IsPreview, v.Preview.IsInvalid, Order: supports.Count + i))), true);
         // Establish every reference anchor before considering any offsets. A manual
         // label can never move its own anchor through the obstacle pass below.
         for (int i = 0; i < annotations.Count; i++)
-            if (annotations[i].Id is { } id && presentation?.AnnotationOffsets.TryGetValue(id, out var offset) == true)
+            if (ManualOffsets(annotations[i].EntityIds) is [var offset])
                 annotations[i] = annotations[i] with
                 {
                     Bounds = annotations[i].AutoBounds.Translate(new Vector(offset.Dx, offset.Dy)), IsManual = true
@@ -117,6 +120,34 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
                 SegmentBoundaryXs = document.SegmentBoundaries.Select(b => frame.Layout.Transform.PhysicalToScreen(b.Meters)).ToArray()
             };
 
+        static IReadOnlyList<Guid> Ids(Guid? id) => id is { } value ? [value] : [];
+
+        AnnotationOffset[] ManualOffsets(IReadOnlyList<Guid> ids) => presentation is null ? []
+            : ids.Where(presentation.AnnotationOffsets.ContainsKey).Select(id => presentation.AnnotationOffsets[id]).Distinct().ToArray();
+
+        IEnumerable<(IReadOnlyList<Guid> EntityIds, string Text, double X, bool IsPreview, bool IsInvalid, int Order)> SupportLabels()
+        {
+            foreach (var station in supports.Select((visual, order) => (Visual: visual, Order: order))
+                .GroupBy(v => v.Visual.Preview.Position))
+            {
+                var members = station.ToArray();
+                var ids = members.Where(m => m.Visual.Id is not null).Select(m => m.Visual.Id!.Value).ToArray();
+                if (members.Length == 2 && ids.Length == 2
+                    && members.All(m => m.Visual.Preview.Type == SupportType.Spring)
+                    && SupportStations.IsAllowedStation(members.Select(m => (m.Visual.Preview.Type, m.Visual.Preview.Spring)).ToArray())
+                    // Different manual positions are user intent: keep both labels until the conflict is resolved.
+                    && ManualOffsets(ids).Length <= 1)
+                {
+                    yield return (ids, string.Join(" + ", members.Select(m => m.Visual.Name)), members[0].Visual.X,
+                        members.Any(m => m.Visual.IsPreview), members.Any(m => m.Visual.Preview.IsInvalid), members[0].Order);
+                }
+                else
+                    foreach (var member in members)
+                        yield return (Ids(member.Visual.Id), member.Visual.Name, member.Visual.X,
+                            member.Visual.IsPreview, member.Visual.Preview.IsInvalid, member.Order);
+            }
+        }
+
         void AvoidManual(bool support)
         {
             double line = annotations.Where(a => a.IsSupport == support).Select(a => a.AutoBounds.Height)
@@ -141,14 +172,14 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
             }
         }
 
-        double Place(IEnumerable<(Guid? Id, string Name, string Text, double X, bool IsPreview, bool IsInvalid, int Order)> source, bool support)
+        double Place(IEnumerable<(IReadOnlyList<Guid> EntityIds, string Text, double X, bool IsPreview, bool IsInvalid, int Order)> source, bool support)
         {
             var measured = source.Select(v => (Value: v, Size: measure(v.Text))).ToArray();
             double rowHeight = Math.Max(SchematicMetrics.AxisLabelLineHeight,
                 measured.Select(v => v.Size.Height).DefaultIfEmpty(SchematicMetrics.AxisLabelLineHeight).Max());
             double line = rowHeight + SchematicMetrics.EntityLabelPadding;
             var ends = new List<double>();
-            foreach (var item in measured.OrderBy(v => Left(v.Value.X, v.Size.Width)).ThenBy(v => v.Value.Order).ThenBy(v => v.Value.Id))
+            foreach (var item in measured.OrderBy(v => Left(v.Value.X, v.Size.Width)).ThenBy(v => v.Value.Order))
             {
                 double left = Left(item.Value.X, item.Size.Width);
                 int lane = ends.FindIndex(end => left - end >= SchematicMetrics.EntityLabelPadding);
@@ -157,7 +188,9 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
                 double y = support ? frame.Viewport.BeamY + SchematicMetrics.SupportLabelTopOffset + lane * line
                     : frame.Viewport.BeamY - SchematicMetrics.ForceTopOffset * loadSymbolScale - 8 - item.Size.Height - lane * line;
                 var bounds = new Rect(left, y, item.Size.Width, item.Size.Height);
-                annotations.Add(new(item.Value.Id, support, item.Value.Text, bounds, bounds, item.Value.IsPreview, item.Value.IsInvalid));
+                annotations.Add(new(item.Value.EntityIds.Count == 1 ? item.Value.EntityIds[0] : null,
+                    support, item.Value.Text, bounds, bounds, item.Value.IsPreview, item.Value.IsInvalid)
+                    { GroupedEntityIds = item.Value.EntityIds.Count > 1 ? item.Value.EntityIds : null });
             }
             // Only put spacing between support rows; the axis provides the lower
             // clearance. Keep one support row available even before placement.
@@ -173,11 +206,11 @@ public sealed record BeamRenderState(BeamLayoutFrame Frame, IReadOnlyList<Suppor
         Annotations.LastOrDefault(a => a.Bounds.Contains(new Point(x, y)));
 
     public IReadOnlyList<EntityAnnotation> HitTestLabels(double x, double y) =>
-        Annotations.Where(a => a.Id is not null && a.Bounds.Contains(new Point(x, y))).ToArray();
+        Annotations.Where(a => a.EntityIds.Count > 0 && a.Bounds.Contains(new Point(x, y))).ToArray();
 
     /// <summary>The distinct entities with a label under the point; several labels of one entity count once.</summary>
     public IReadOnlyList<Guid> HitTestLabelEntities(double x, double y) =>
-        HitTestLabels(x, y).Select(a => a.Id!.Value).Distinct().ToArray();
+        HitTestLabels(x, y).SelectMany(a => a.EntityIds).Distinct().ToArray();
 
     /// <summary>Local scene hits only. Labels take precedence; all different symbol entities are equal candidates.</summary>
     public IReadOnlyList<Guid> HitTestEntities(double x, double y)

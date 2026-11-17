@@ -99,11 +99,18 @@
               <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.ToolbarRollerSupport}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton Classes="toolbar captioned" IsChecked="{Binding IsSpringTool, Mode=OneWay}" Command="{Binding SpringToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.SpringSupport}"
-                        ToolTip.Tip="{x:Static resources:Strings.SpringSupport}">
+          <ToggleButton Classes="toolbar captioned" IsChecked="{Binding IsTranslationalSpringTool, Mode=OneWay}" Command="{Binding TranslationalSpringToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.TranslationalSpringSupport}"
+                        ToolTip.Tip="{x:Static resources:Strings.TranslationalSpringSupport}">
             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
-              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.SpringSupport}" Stretch="Uniform" />
-              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.ToolbarSpringSupport}" VerticalAlignment="Center" />
+              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.TranslationalSpringSupport}" Stretch="Uniform" />
+              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.ToolbarTranslationalSpring}" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton Classes="toolbar captioned" IsChecked="{Binding IsRotationalSpringTool, Mode=OneWay}" Command="{Binding RotationalSpringToolCommand}" AutomationProperties.Name="{x:Static resources:Strings.RotationalSpringSupport}"
+                        ToolTip.Tip="{x:Static resources:Strings.RotationalSpringSupport}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+              <Image Classes="toolbarIcon" Source="{StaticResource ToolbarIcon.RotationalSpringSupport}" Stretch="Uniform" />
+              <TextBlock Classes="toolbarCaption" Text="{x:Static resources:Strings.ToolbarRotationalSpring}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
           <ToggleButton x:Name="MomentReleaseToolButton" Classes="toolbar captioned" IsChecked="{Binding IsMomentReleaseTool, Mode=OneWay}"

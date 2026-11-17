@@ -157,10 +157,10 @@ public partial class BeamEditorSurface : UserControl
         if (_editor.IsSelfWeightFlyoutVisible && new Rect(BeamPane.Bounds.Size).Contains(point)
             && _scene?.DistributedLoads.FirstOrDefault(l => l.Id == _editor.Document.SelfWeight?.Id) is { } selfWeight
             && DistributedLoadSymbol.Contains(selfWeight, point.X, point.Y)) return;
-        if (_scene?.HitTestLabel(point.X, point.Y) is { } label && label.Id is { } labelId
-            && (labelId == _editor.SupportDraft?.OriginalId || labelId == _editor.LoadDraft?.OriginalId
-                || labelId == _editor.DistributedLoadDraft?.OriginalId || labelId == _editor.MomentReleaseDraft?.OriginalId
-                || _editor.IsSelfWeightFlyoutVisible && labelId == _editor.Document.SelfWeight?.Id)) return;
+        if (_scene?.HitTestLabel(point.X, point.Y) is { } label
+            && label.EntityIds.Any(id => id == _editor.SupportDraft?.OriginalId || id == _editor.LoadDraft?.OriginalId
+                || id == _editor.DistributedLoadDraft?.OriginalId || id == _editor.MomentReleaseDraft?.OriginalId
+                || _editor.IsSelfWeightFlyoutVisible && id == _editor.Document.SelfWeight?.Id)) return;
         ReleaseGesture();
         _editor.CancelEditorInteraction();
         e.Handled = !OverToolbar(e.Source);
@@ -186,7 +186,7 @@ public partial class BeamEditorSurface : UserControl
             _editor.CancelPointerDrag();
         }
         if (_labelGesture is { } label && (e.PropertyName == nameof(EditorViewModel.Document)
-            && !_editor!.Document.EntityIds.Contains(label.EntityId)
+            && label.EntityIds.Any(id => !_editor!.Document.EntityIds.Contains(id))
             || e.PropertyName == nameof(EditorViewModel.IsSupportFlyoutVisible) && _editor!.Interaction == SupportInteraction.Placement
             || e.PropertyName == nameof(EditorViewModel.IsLoadFlyoutVisible) && _editor!.LoadState == LoadInteraction.Placement
             || e.PropertyName == nameof(EditorViewModel.IsDistributedLoadFlyoutVisible) && _editor!.DistributedLoadState == DistributedLoadInteraction.Placement
@@ -396,7 +396,8 @@ public partial class BeamEditorSurface : UserControl
             return;
         }
         // Several labels of one entity (self-weight per segment) are one candidate, not a choice.
-        if (_editor.IsEditorNeutral && _scene?.HitTestLabelEntities(point.X, point.Y) is { Count: > 1 } labelEntities)
+        if (_editor.IsEditorNeutral && _scene?.HitTestLabelEntities(point.X, point.Y) is { Count: > 1 } labelEntities
+            && _scene.HitTestLabels(point.X, point.Y).Count > 1)
         {
             ShowEntitySelection(labelEntities, point);
             e.Handled = true;
@@ -404,14 +405,15 @@ public partial class BeamEditorSurface : UserControl
         }
         if (_scene?.HitTestLabel(point.X, point.Y) is { } label)
         {
-            if (label.Id is { } labelId && Frame is not null
-                && (_editor.IsEditorNeutral || labelId == _editor.SupportDraft?.OriginalId || labelId == _editor.LoadDraft?.OriginalId
-                    || labelId == _editor.DistributedLoadDraft?.OriginalId || labelId == _editor.MomentReleaseDraft?.OriginalId
-                    || _editor.IsSelfWeightFlyoutVisible && labelId == _editor.Document.SelfWeight?.Id))
+            if (label.EntityIds.Count > 0 && Frame is not null
+                && (_editor.IsEditorNeutral || label.EntityIds.Any(id => id == _editor.SupportDraft?.OriginalId || id == _editor.LoadDraft?.OriginalId
+                    || id == _editor.DistributedLoadDraft?.OriginalId || id == _editor.MomentReleaseDraft?.OriginalId
+                    || _editor.IsSelfWeightFlyoutVisible && id == _editor.Document.SelfWeight?.Id)))
             {
                 Focus();
                 _layout.BeginInteraction(BeamPointerInteraction.LabelDrag);
-                _labelGesture = new(label, point, _editor.EditorPresentation.AnnotationOffsets.TryGetValue(labelId, out var offset) ? offset : null);
+                _labelGesture = new(label, point, label.Id is { } labelId
+                    && _editor.EditorPresentation.AnnotationOffsets.TryGetValue(labelId, out var offset) ? offset : null);
                 FreezeLabelPane();
                 _pointer = e.Pointer;
                 e.Pointer.Capture(this);

@@ -12,7 +12,7 @@ language links and current-language markers without changing the Markdown source
 
 Technical PNGs come from SpanDraft's actual Avalonia renderers. Edit them in
 `tools/SpanDraft.HelpAssets`, then regenerate; do not maintain separate drawings.
-`assets/shared/` contains eight illustrations without language-dependent text.
+`assets/shared/` contains ten illustrations without language-dependent text.
 `assets/de/` and `assets/en/` each contain two labeled examples and three result
 diagrams. The transparent PNGs need no background correction in HTML or CSS.
 

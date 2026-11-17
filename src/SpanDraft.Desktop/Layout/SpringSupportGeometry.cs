@@ -2,7 +2,7 @@ namespace SpanDraft.Desktop.Layout;
 
 /// <summary>
 /// Local DIP geometry of a spring support: a joint on the beam, a zigzag spring (translational), a spiral around the
-/// joint (rotational) and a rigid body below it where the translation is held. It shares the ground line, hatches,
+/// joint (rotational, hanging from its outer end at 9 o'clock) and a rigid body below it where the translation is held. It shares the ground line, hatches,
 /// extents and hit zone with the hinged supports so spring supports align with them.
 /// </summary>
 public readonly record struct SpringSupportGeometry(bool HasTranslationalSpring, bool HasRotationalSpring, bool RigidTranslation)
@@ -13,6 +13,8 @@ public readonly record struct SpringSupportGeometry(bool HasTranslationalSpring,
     public const double SpiralOuterRadius = 11;
     public const double SpiralTurns = 1.5;
     public const int SpiralSegments = 36;
+    /// <summary>The innermost quarter turn is omitted: the spiral ends at 12 o'clock and a short stroke leads down to the joint.</summary>
+    private const int SpiralFirstSegment = SpiralSegments / 6;
 
     private static readonly HingedSupportGeometry Ground_ = new(true);
 
@@ -33,7 +35,13 @@ public readonly record struct SpringSupportGeometry(bool HasTranslationalSpring,
             double top = Joint.Radius, bottom = SchematicMetrics.SupportGroundY;
             if (!HasTranslationalSpring)
             {
-                yield return (0, top, 0, bottom);
+                // A rotational spring hangs from the outer end of its spiral (9 o'clock), straight down to the ground.
+                if (HasRotationalSpring)
+                {
+                    var end = SpiralPoint(SpiralSegments);
+                    yield return (end.X, end.Y, end.X, bottom);
+                }
+                else yield return (0, top, 0, bottom);
                 yield break;
             }
             // Straight lead-in and lead-out, the coils between them alternate to both sides of the axis.
@@ -53,26 +61,45 @@ public readonly record struct SpringSupportGeometry(bool HasTranslationalSpring,
         }
     }
 
-    /// <summary>The spiral of the rotational spring as short segments around the joint.</summary>
+    /// <summary>
+    /// The rotational spring: a short stroke from the joint up to the inner end of the spiral at 12 o'clock, then the spiral as
+    /// short segments around the joint, ending at its outer end at 9 o'clock.
+    /// </summary>
     public IEnumerable<(double StartX, double StartY, double EndX, double EndY)> Spiral
     {
         get
         {
             if (!HasRotationalSpring) yield break;
-            (double X, double Y) At(int i)
+            var previous = SpiralPoint(SpiralFirstSegment);
+            yield return (previous.X, -Joint.Radius, previous.X, previous.Y);
+            for (int i = SpiralFirstSegment + 1; i <= SpiralSegments; i++)
             {
-                double t = (double)i / SpiralSegments;
-                double angle = t * SpiralTurns * 2 * Math.PI, radius = SpiralInnerRadius + t * (SpiralOuterRadius - SpiralInnerRadius);
-                return (radius * Math.Cos(angle), -radius * Math.Sin(angle));
-            }
-            var previous = At(0);
-            for (int i = 1; i <= SpiralSegments; i++)
-            {
-                var next = At(i);
+                var next = SpiralPoint(i);
                 yield return (previous.X, previous.Y, next.X, next.Y);
                 previous = next;
             }
         }
+    }
+
+    private static (double X, double Y) SpiralPoint(int i)
+    {
+        double t = (double)i / SpiralSegments;
+        double angle = t * SpiralTurns * 2 * Math.PI, radius = SpiralInnerRadius + t * (SpiralOuterRadius - SpiralInnerRadius);
+        return (radius * Math.Cos(angle), -radius * Math.Sin(angle));
+    }
+
+    /// <summary>
+    /// The distance from a point to the strokes that belong to this spring alone: the zigzag or roller body and the spiral with
+    /// its stroke. The ring, the ground line and the hatches are shared with every support of the station and not counted.
+    /// </summary>
+    public double DistanceToSpring(double dx, double dy) => Body.Concat(Spiral)
+        .Min(l => DistanceToSegment(dx, dy, l.StartX, l.StartY, l.EndX, l.EndY));
+
+    private static double DistanceToSegment(double px, double py, double x1, double y1, double x2, double y2)
+    {
+        double sx = x2 - x1, sy = y2 - y1, length2 = sx * sx + sy * sy;
+        double t = length2 == 0 ? 0 : Math.Clamp(((px - x1) * sx + (py - y1) * sy) / length2, 0, 1);
+        return Math.Sqrt(Math.Pow(px - (x1 + t * sx), 2) + Math.Pow(py - (y1 + t * sy), 2));
     }
 
     private double TopRadius => HasRotationalSpring ? SpiralOuterRadius : Joint.Radius;

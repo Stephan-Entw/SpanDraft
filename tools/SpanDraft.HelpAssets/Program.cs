@@ -40,7 +40,8 @@ internal static class Program
             CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
             Save(Support(SupportType.Fixed), "shared/lager-einspannung");
             Save(Support(SupportType.Pinned), "shared/lager-festlager"); Save(Support(SupportType.Roller), "shared/lager-loslager");
-            Save(Support(SupportType.Spring), "shared/lager-federlager");
+            Save(Support(SupportType.Spring, new SpringData(TranslationalStiffness.FromNewtonsPerMeter(1e6), null)), "shared/lager-wegfeder");
+            Save(Support(SupportType.Spring, new SpringData(null, RotationalStiffness.FromNewtonMetersPerRadian(1e5))), "shared/lager-drehfeder");
             Save(LoadSigns(PointLoadKind.Force), "shared/punktkraft-vorzeichen");
             Save(LoadSigns(PointLoadKind.Moment), "shared/punktmoment-vorzeichen"); Save(LoadSigns(pointKind: null), "shared/streckenlast-vorzeichen");
             Save(Coordinates(), "shared/koordinaten"); Save(Section(), "shared/querschnitt-achsen");
@@ -52,7 +53,7 @@ internal static class Program
                 foreach (var (name, diagram) in Results()) Save(diagram, language + "/" + name);
             }
             ValidateAssets(output);
-            Console.WriteLine($"Generated nineteen transparent SpanDraft help PNGs in {output}");
+            Console.WriteLine($"Generated twenty transparent SpanDraft help PNGs in {output}");
             return 0;
             void Save(Control control, string name)
             {
@@ -73,7 +74,7 @@ internal static class Program
     private static void ValidateAssets(string output)
     {
         var files = Directory.GetFiles(output, "*.png", SearchOption.AllDirectories);
-        if (files.Length != 19) throw new InvalidOperationException($"Expected nineteen help PNGs, found {files.Length}.");
+        if (files.Length != 20) throw new InvalidOperationException($"Expected twenty help PNGs, found {files.Length}.");
         foreach (string file in files)
         {
             using var bitmap = SKBitmap.Decode(file) ?? throw new InvalidOperationException($"Invalid PNG: {file}");
@@ -86,7 +87,7 @@ internal static class Program
         foreach (string file in Directory.GetFiles(Path.Combine(output, "de"), "*.png"))
             if (File.ReadAllBytes(file).SequenceEqual(File.ReadAllBytes(Path.Combine(output, "en", Path.GetFileName(file)))))
                 throw new InvalidOperationException($"Localized PNGs are identical: {file}");
-        Console.WriteLine("Validated nineteen visible PNGs with transparent exteriors and distinct DE/EN assets.");
+        Console.WriteLine("Validated twenty visible PNGs with transparent exteriors and distinct DE/EN assets.");
     }
     private static void InitializeCursors()
     {
@@ -156,11 +157,10 @@ internal static class Program
         }
         return page;
     }
-    private static Canvas Support(SupportType type)
+    private static Canvas Support(SupportType type, SpringData? spring = null)
     {
         var page = Page(96, 76);
-        var doc = Document().WithSupports([new(Guid.NewGuid(), Length.FromMeters(type == SupportType.Fixed ? 0 : 1), type, "A",
-            type == SupportType.Spring ? new SpringData(TranslationalStiffness.FromNewtonsPerMeter(1e6), RotationalStiffness.FromNewtonMetersPerRadian(1e5)) : null)]);
+        var doc = Document().WithSupports([new(Guid.NewGuid(), Length.FromMeters(type == SupportType.Fixed ? 0 : 1), type, "A", spring)]);
         Add(page, Beam(doc, 96, 76, 30, type == SupportType.Fixed ? 48 : 12, 12), 0, 0, 96, 76);
         return page;
     }

@@ -26,11 +26,25 @@ unterschiedlich treffen. Ein Ergebnis beschreibt immer ein bestätigtes Modell.
 
 ## Federlager-Draft
 
-Ein neu gesetztes Federlager startet mit einer Wegfeder ohne Wert: Der Anwender muss
-die Steifigkeit selbst eingeben, weil jeder Vorgabewert eine falsche Lagernachgiebigkeit
-unbemerkt in die Berechnung tragen würde. Die Kombinationsregeln (mindestens eine Feder,
-„starr in w“ nur mit Drehfeder und ohne Wegfeder) sind im Draft erzwungen, damit nie ein
-nicht bestehendes Core-Objekt entsteht.
+Wegfeder und Drehfeder sind getrennte Werkzeuge und getrennte Optionen des Lagertyp-Selektors.
+Jede ist ein eigenständiges Lager mit eigener ID, eigenem Namen, eigener Positionsreferenz und
+eigener Steifigkeit, auch wenn beide an derselben Station stehen. Die Art bestimmt, welches
+Steifigkeitsfeld sichtbar ist und welcher Anteil in die Feder eingeht.
+Ein Spring-Draft entsteht nie ohne ausdrücklich gewählte Art, und schon die Platzierungsvorschau
+verwendet die zur Art passende Feder, damit die Gelenkprüfung der Drehfeder beim Hover greift.
+„Starr in w“ ist keine Federaktivierung, sondern eine eigene mechanische Option der Drehfeder
+und nur dort wählbar.
+
+Es gibt kein kombiniertes Lager, weder als Objekt noch als Option des Selektors. Das zweite
+Federwerkzeug auf einer Station, an der die andere Art liegt, legt ein ganz normales neues Lager
+mit dem nächsten Namen an; nichts wird zwischen beiden abgeleitet oder übertragen. Beide sind
+einzeln anklickbar (der Treffer entscheidet nach der Geometrie der jeweiligen Feder, nie nach der
+Listenreihenfolge), verschiebbar und löschbar. Erst beim Aufbau des Core-Modells entsteht aus
+Wegfeder und Drehfeder an derselben Position eine Feder mit beiden Anteilen; die Stationsregel
+dafür steht an einer Stelle und gilt gleich für Platzieren, Hover, Ziehen, Positionseingabe und
+Typwechsel. Ein Typwechsel auf die Art, die an der Station schon liegt, wird wie jede andere
+Verletzung der Stationsregel bei „Übernehmen“ abgelehnt. „Starr in w“ ist an einer Station mit
+Wegfeder nicht wählbar.
 
 ## Gelenk-Draft und Werkzeugleiste
 
@@ -46,7 +60,8 @@ nicht tragen dürfen.
 Die Werkzeugleiste hat zwei Darstellungen: Solange Icons mit Beschriftung in die verfügbare Breite passen,
 zeigt sie diese, sonst nur die Icons der Last- und Lagerwerkzeuge mit je einer kurzen Gruppenbezeichnung davor.
 Die Umschaltung richtet sich nach der Breite, die die beschriftete Leiste braucht, nicht nach einer festen
-Fensterbreite, weil die Texte je Sprache verschieden lang sind und neue Werkzeuge hinzukommen. Einzelne
+Fensterbreite, weil die Texte je Sprache verschieden lang sind und neue Werkzeuge hinzukommen; seit den getrennten
+Federwerkzeugen zeigt deshalb schon die Standardbreite die kompakte Darstellung, und das ist bewusst akzeptiert. Einzelne
 Werkzeuge ohne Beschriftung in der breiten Darstellung wären inkonsistent und schwer zu erkennen; ein
 Überlaufmenü hätte häufig benutzte Werkzeuge versteckt. Die Mindestbreite des Fensters blieb bewusst
 unverändert, weil sie jedes Layout des Editors betrifft. Tests halten fest, dass die Leiste in beiden Sprachen

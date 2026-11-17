@@ -25,8 +25,11 @@ public sealed class ProjectFileSpringSupportTests
                 new(TranslationalStiffness.FromNewtonsPerMeter(1234567.8901234567), null)),
             new(Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"), M(.6), SupportType.Spring, "C",
                 new(null, RotationalStiffness.FromNewtonMetersPerRadian(0.1))),
+            // A translational and a rotational spring at one position: two supports of their own.
             new(Guid.Parse("99999999-9999-9999-9999-999999999999"), M(.8), SupportType.Spring, "D",
-                new(TranslationalStiffness.FromNewtonsPerMeter(1e12), RotationalStiffness.FromNewtonMetersPerRadian(1e9))),
+                new(TranslationalStiffness.FromNewtonsPerMeter(1e12), null)),
+            new(Guid.Parse("77777777-7777-7777-7777-777777777777"), M(.8), SupportType.Spring, "F",
+                new(null, RotationalStiffness.FromNewtonMetersPerRadian(1e9))),
             new(Guid.Parse("88888888-8888-8888-8888-888888888888"), M(1), SupportType.Spring, "E",
                 new(null, RotationalStiffness.FromNewtonMetersPerRadian(5e4), true))])
     };
@@ -44,10 +47,14 @@ public sealed class ProjectFileSpringSupportTests
         Assert.Equal(new[] { "id", "name", "type", "position" }, supports[0]!.AsObject().Select(p => p.Key));
         Assert.Equal(new[] { "id", "name", "type", "position", "translationalStiffness" }, supports[1]!.AsObject().Select(p => p.Key));
         Assert.Equal(new[] { "id", "name", "type", "position", "rotationalStiffness" }, supports[2]!.AsObject().Select(p => p.Key));
-        Assert.Equal(new[] { "id", "name", "type", "position", "translationalStiffness", "rotationalStiffness" },
-            supports[3]!.AsObject().Select(p => p.Key));
+        Assert.Equal(new[] { "id", "name", "type", "position", "translationalStiffness" }, supports[3]!.AsObject().Select(p => p.Key));
+        Assert.Equal(new[] { "id", "name", "type", "position", "rotationalStiffness" }, supports[4]!.AsObject().Select(p => p.Key));
         Assert.Equal(new[] { "id", "name", "type", "position", "rotationalStiffness", "rigidTranslation" },
-            supports[4]!.AsObject().Select(p => p.Key));
+            supports[5]!.AsObject().Select(p => p.Key));
+        // Both springs of the shared station keep their own identity, name and position.
+        Assert.Equal(supports[3]!["position"]!.GetValue<double>(), supports[4]!["position"]!.GetValue<double>());
+        Assert.NotEqual(supports[3]!["id"]!.GetValue<Guid>(), supports[4]!["id"]!.GetValue<Guid>());
+        Assert.Equal(new[] { "D", "F" }, new[] { supports[3]!["name"]!.GetValue<string>(), supports[4]!["name"]!.GetValue<string>() });
         Assert.All(supports.Skip(1), s => Assert.Equal("spring", s!["type"]!.GetValue<string>()));
         Assert.Equal(BitConverter.DoubleToInt64Bits(1234567.8901234567),
             BitConverter.DoubleToInt64Bits(loaded.Document.Supports[1].Spring!.Translational!.Value.NewtonsPerMeter));
@@ -56,18 +63,32 @@ public sealed class ProjectFileSpringSupportTests
     }
 
     [Fact]
-    public void ImmutableFixtureLoadsEveryCombinationAndSolvesIt()
+    public void ImmutableFixtureWithACombinedEntryLoadsAsTwoSpringsAndSolves()
     {
         var loaded = ProjectFileCodec.Deserialize(Fixture("V5", "spring-supports"));
         var springs = loaded.Document.Supports.Where(s => s.Type == SupportType.Spring).ToArray();
-        Assert.Equal(4, springs.Length);
+        // The entry D with both stiffnesses is read as two supports; the rotational one follows its translational spring.
+        Assert.Equal(5, springs.Length);
         Assert.Equal(2.5e6, springs[0].Spring!.Translational!.Value.NewtonsPerMeter);
         Assert.Null(springs[0].Spring!.Rotational);
         Assert.Equal(3e4, springs[1].Spring!.Rotational!.Value.NewtonMetersPerRadian);
         Assert.Null(springs[1].Spring!.Translational);
-        Assert.Equal((1.5e6, 8e3), (springs[2].Spring!.Translational!.Value.NewtonsPerMeter,
-            springs[2].Spring!.Rotational!.Value.NewtonMetersPerRadian));
-        Assert.True(springs[3].Spring!.RigidTranslation);
+        var (translational, rotational) = (springs[2], springs[3]);
+        Assert.Equal(("D", Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"), 1.5e6), (translational.Name, translational.Id,
+            translational.Spring!.Translational!.Value.NewtonsPerMeter));
+        Assert.Null(translational.Spring.Rotational);
+        Assert.Equal(8e3, rotational.Spring!.Rotational!.Value.NewtonMetersPerRadian);
+        Assert.Null(rotational.Spring.Translational);
+        Assert.Equal(translational.Position, rotational.Position);
+        // The next free support name, and an identity of its own that is the same every time the file is read.
+        Assert.Equal("F", rotational.Name);
+        Assert.NotEqual(translational.Id, rotational.Id);
+        Assert.NotEqual(Guid.Empty, rotational.Id);
+        Assert.Equal(7, loaded.Document.NamingState.NextSupportOrdinal);
+        Assert.Equal(rotational.Id, ProjectFileCodec.Deserialize(Fixture("V5", "spring-supports")).Document.Supports.Single(s => s.Name == "F").Id);
+        Assert.True(springs[4].Spring!.RigidTranslation);
+        // Core sees the two springs of the station as one support with both springs.
+        Assert.Equal(5, loaded.Document.ToBeamModel().Supports.Count);
         var solution = SolverTestSupport.Solve(loaded.Document.ToBeamModel());
         // The load -1000 N is carried by the reactions of all supports that hold the transverse translation.
         double total = solution.Nodes.Sum(n => n.ReactionY?.Newtons ?? 0);

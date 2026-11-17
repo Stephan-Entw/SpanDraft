@@ -7,14 +7,19 @@ using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
 
-public sealed record SupportTypeOption(SupportType Type)
+public sealed record SupportTypeOption(SupportType Type, SpringKind? Kind = null)
 {
     public string Name => Type switch
     {
         SupportType.Fixed => Strings.FixedSupport,
         SupportType.Pinned => Strings.PinnedSupport,
         SupportType.Roller => Strings.RollerSupport,
-        SupportType.Spring => Strings.SpringSupport,
+        SupportType.Spring => Kind switch
+        {
+            SpringKind.Translational => Strings.TranslationalSpringSupport,
+            SpringKind.Rotational => Strings.RotationalSpringSupport,
+            _ => throw new ArgumentOutOfRangeException(nameof(Kind))
+        },
         _ => throw new ArgumentOutOfRangeException(nameof(Type))
     };
 }
@@ -24,11 +29,12 @@ public sealed class SupportDraftViewModel : ObservableObject
 {
     private readonly Func<EditorDocument> _read;
     private readonly UnitDefinition _positionUnit, _translationalUnit, _rotationalUnit;
-    private bool _hasTranslational, _hasRotational, _rigidTranslation;
+    private SpringKind _kind;
+    private bool _rigidTranslation;
     private readonly string _referenceTranslationalText, _referenceRotationalText;
     private readonly double? _referenceTranslational, _referenceRotational;
     private string _translationalText, _rotationalText;
-    private string? _translationalError, _rotationalError, _springError;
+    private string? _translationalError, _rotationalError;
     private SpringData? _spring;
     private Length _bufferReferencePosition;
     private string _bufferReferenceText;
@@ -41,17 +47,24 @@ public sealed class SupportDraftViewModel : ObservableObject
     private SupportPreview _preview;
 
     public SupportDraftViewModel(Func<EditorDocument> read, Guid? originalId, SupportType type, Length position,
-        UnitProfile? profile = null, SpringData? spring = null)
+        UnitProfile? profile = null, SpringData? spring = null, SpringKind? kind = null)
     {
         _read = read;
         profile ??= UnitProfile.Default;
         _positionUnit = profile[QuantityKind.BeamLength];
         _translationalUnit = profile[QuantityKind.TranslationalStiffness];
         _rotationalUnit = profile[QuantityKind.RotationalStiffness];
-        // A new spring support starts with a translational spring whose stiffness the user has to give.
-        bool fresh = type == SupportType.Spring && spring is null;
-        _hasTranslational = fresh || spring?.Translational is not null;
-        _hasRotational = spring?.Rotational is not null;
+        // Both placement values and existing values use the exact-input path; every support carries one spring only.
+        if (spring is { Translational: not null, Rotational: not null })
+            throw new ArgumentException("A spring support of the editor carries one spring.", nameof(spring));
+        if (type == SupportType.Spring && spring is null && kind is not (SpringKind.Translational or SpringKind.Rotational))
+            throw new ArgumentException("A new spring support needs a translational or a rotational spring kind.", nameof(kind));
+        _kind = spring switch
+        {
+            { Rotational: not null } => SpringKind.Rotational,
+            { Translational: not null } => SpringKind.Translational,
+            _ => kind ?? SpringKind.Translational
+        };
         _rigidTranslation = spring?.RigidTranslation == true;
         _referenceTranslational = spring?.Translational?.NewtonsPerMeter;
         _referenceRotational = spring?.Rotational?.NewtonMetersPerRadian;
@@ -89,9 +102,11 @@ public sealed class SupportDraftViewModel : ObservableObject
     /// <summary>What the position is measured from, and whether it is bound to the end of a segment.</summary>
     public PositionReferenceDraft Reference { get; }
 
-    public static IReadOnlyList<SupportTypeOption> Types { get; } = Array.AsReadOnly(new[]
+    /// <summary>The support types the flyout offers; each spring is a support type of its own.</summary>
+    public IReadOnlyList<SupportTypeOption> Types { get; } = Array.AsReadOnly(new SupportTypeOption[]
     {
-        new SupportTypeOption(SupportType.Fixed), new(SupportType.Pinned), new(SupportType.Roller), new(SupportType.Spring)
+        new(SupportType.Fixed), new(SupportType.Pinned), new(SupportType.Roller),
+        new(SupportType.Spring, SpringKind.Translational), new(SupportType.Spring, SpringKind.Rotational)
     });
     public Guid? OriginalId { get; }
     public string PositionUnit => _positionUnit.Symbol;
@@ -119,56 +134,50 @@ public sealed class SupportDraftViewModel : ObservableObject
         set
         {
             if (!Set(ref _type, value)) return;
-            // Switching to a spring support offers a translational spring first, as for a freshly placed one.
-            if (value == SupportType.Spring && !_hasTranslational && !_hasRotational)
-            {
-                _hasTranslational = true;
-                Notify(nameof(HasTranslational));
-                Notify(nameof(CanRigidTranslation));
-            }
             Notify(nameof(SelectedType));
             Notify(nameof(IsSpring));
             Validate();
         }
     }
+    /// <summary>The spring kind of the draft; meaningful for a spring support only.</summary>
+    public SpringKind Kind => _kind;
     public SupportTypeOption? SelectedType
     {
-        get => Types.FirstOrDefault(t => t.Type == Type);
-        set { if (value is not null) Type = value.Type; }
+        get => Types.FirstOrDefault(t => t.Type == Type && (Type != SupportType.Spring || t.Kind == _kind));
+        set
+        {
+            if (value is null) return;
+            if (value.Kind is { } kind) SetKind(kind);
+            Type = value.Type;
+        }
+    }
+
+    // Only visibility and the springs that are built depend on the kind; the typed texts and exact references stay as they are.
+    private void SetKind(SpringKind kind)
+    {
+        if (kind == _kind) return;
+        _kind = kind;
+        if (kind != SpringKind.Rotational && _rigidTranslation) { _rigidTranslation = false; Notify(nameof(RigidTranslation)); }
+        foreach (string name in new[] { nameof(Kind), nameof(SelectedType), nameof(HasTranslational), nameof(HasRotational), nameof(CanRigidTranslation) }) Notify(name);
+        if (IsSpring) Validate();
     }
     public bool IsSpring => Type == SupportType.Spring;
+    public TechnicalText TranslationalLabel => TechnicalSymbols.TranslationalStiffness;
+    public TechnicalText RotationalLabel => TechnicalSymbols.RotationalStiffness;
     public string TranslationalUnit => _translationalUnit.Symbol;
     public string RotationalUnit => _rotationalUnit.Symbol;
-    public bool HasTranslational
-    {
-        get => _hasTranslational;
-        set
-        {
-            if (!Set(ref _hasTranslational, value)) return;
-            // A translational spring replaces the rigid translation of a partial restraint.
-            if (value && _rigidTranslation) { _rigidTranslation = false; Notify(nameof(RigidTranslation)); }
-            Notify(nameof(CanRigidTranslation));
-            Validate();
-        }
-    }
-    public bool HasRotational
-    {
-        get => _hasRotational;
-        set
-        {
-            if (!Set(ref _hasRotational, value)) return;
-            if (!value && _rigidTranslation) { _rigidTranslation = false; Notify(nameof(RigidTranslation)); }
-            Notify(nameof(CanRigidTranslation));
-            Validate();
-        }
-    }
+    public bool HasTranslational => _kind == SpringKind.Translational;
+    public bool HasRotational => _kind == SpringKind.Rotational;
     public bool RigidTranslation
     {
         get => _rigidTranslation;
         set { if (value ? CanRigidTranslation : true) { if (Set(ref _rigidTranslation, value)) Validate(); } }
     }
-    /// <summary>The translation is rigid only in combination with a rotational spring and without a translational one.</summary>
-    public bool CanRigidTranslation => _hasRotational && !_hasTranslational;
+    /// <summary>The translation is rigid only for a rotational spring, and not where a translational spring stands at the same position.</summary>
+    public bool CanRigidTranslation => _kind == SpringKind.Rotational && !TranslationalSpringHere();
+
+    private bool TranslationalSpringHere() => _read().Supports.Any(s => s.Id != OriginalId
+        && s.Position.Meters == Reference.Position.Meters && SupportStations.IsTranslationalSpring(s.Type, s.Spring));
     public string TranslationalText
     {
         get => _translationalText;
@@ -183,14 +192,12 @@ public sealed class SupportDraftViewModel : ObservableObject
     public bool HasTranslationalError => _translationalError is not null;
     public string? RotationalError => _rotationalError;
     public bool HasRotationalError => _rotationalError is not null;
-    public string? SpringError => _springError;
-    public bool HasSpringError => _springError is not null;
 
     /// <summary>The validated springs of a spring support; null for other types and while the input is invalid.</summary>
     public SpringData? Spring => IsSpring && IsValid ? _spring : null;
     public string? ErrorText => _errorText;
     public bool HasError => _errorText is not null;
-    public bool IsValid => !HasError && !HasNameError && !HasTranslationalError && !HasRotationalError && !HasSpringError;
+    public bool IsValid => !HasError && !HasNameError && !HasTranslationalError && !HasRotationalError;
     public SupportPreview Preview => _preview;
     public Length CanvasPosition => Preview.Position;
 
@@ -214,6 +221,8 @@ public sealed class SupportDraftViewModel : ObservableObject
         var document = _read();
         EntityNaming.TryNormalize(document, NameText, OriginalId, out _, out var nameError);
         _nameError = EntityNaming.Message(nameError);
+        // The springs are built first: the station rule below must see the current kind, not the one of the previous input.
+        ValidateSpring();
         string? error = null;
         if (!Enum.IsDefined(Type)) error = Strings.InvalidSupportType;
         else if (!TryDistance(out var distance))
@@ -222,14 +231,15 @@ public sealed class SupportDraftViewModel : ObservableObject
         {
             Reference.TrySetDistance(distance);
             var position = Reference.Position;
-            if (document.Supports.Any(s => s.Id != OriginalId && s.Position == position))
+            // A station holds several supports only as one translational and one rotational spring; this is also what
+            // refuses a type that would make two springs of one kind, and a rigid translation next to a translational spring.
+            if (!SupportStations.Allows(document.Supports, position, Type, IsSpring ? PreviewSpring() : null, OriginalId))
                 error = Strings.SupportAlreadyExists;
-            else if (MomentReleaseRules.SupportConflicts(document, position, Type, IsSpring && _hasRotational ? PreviewSpring() : null))
+            else if (MomentReleaseRules.SupportConflicts(document, position, Type, IsSpring && HasRotational ? PreviewSpring() : null))
                 error = Strings.SupportAtMomentRelease;
             _inputPosition = position;
         }
         _errorText = error;
-        ValidateSpring();
         // Text is a commit buffer, never a movement control. Only pointer interaction
         // can move this preview; a valid type may still be visualized immediately.
         _preview = _preview with
@@ -239,8 +249,8 @@ public sealed class SupportDraftViewModel : ObservableObject
         };
         Notify(nameof(NameError));
         Notify(nameof(HasNameError));
-        foreach (string name in new[] { nameof(TranslationalError), nameof(HasTranslationalError), nameof(RotationalError),
-            nameof(HasRotationalError), nameof(SpringError), nameof(HasSpringError), nameof(Spring) }) Notify(name);
+        foreach (string name in new[] { nameof(CanRigidTranslation), nameof(TranslationalError), nameof(HasTranslationalError), nameof(RotationalError),
+            nameof(HasRotationalError), nameof(Spring) }) Notify(name);
         Notify(nameof(ErrorText));
         Notify(nameof(HasError));
         Notify(nameof(IsValid));
@@ -249,27 +259,26 @@ public sealed class SupportDraftViewModel : ObservableObject
 
     private void ValidateSpring()
     {
-        _translationalError = _rotationalError = _springError = null;
+        _translationalError = _rotationalError = null;
         _spring = null;
         if (!IsSpring) return;
         TranslationalStiffness? translational = null;
         RotationalStiffness? rotational = null;
-        if (_hasTranslational && TryStiffness(_translationalText, _referenceTranslationalText, _referenceTranslational,
+        if (HasTranslational && TryStiffness(_translationalText, _referenceTranslationalText, _referenceTranslational,
             _translationalUnit, out double w)) translational = TranslationalStiffness.FromNewtonsPerMeter(w);
-        else if (_hasTranslational) _translationalError = Strings.InvalidStiffness;
-        if (_hasRotational && TryStiffness(_rotationalText, _referenceRotationalText, _referenceRotational,
+        else if (HasTranslational) _translationalError = Strings.InvalidStiffness;
+        if (HasRotational && TryStiffness(_rotationalText, _referenceRotationalText, _referenceRotational,
             _rotationalUnit, out double t)) rotational = RotationalStiffness.FromNewtonMetersPerRadian(t);
-        else if (_hasRotational) _rotationalError = Strings.InvalidStiffness;
-        if (!_hasTranslational && !_hasRotational) _springError = Strings.SpringRequired;
+        else if (HasRotational) _rotationalError = Strings.InvalidStiffness;
         if (IsValidInput()) _spring = new(translational, rotational, _rigidTranslation);
 
-        bool IsValidInput() => _translationalError is null && _rotationalError is null && _springError is null;
+        bool IsValidInput() => _translationalError is null && _rotationalError is null;
     }
 
     /// <summary>The symbol follows the chosen springs while their values are still being typed.</summary>
     private SpringData PreviewSpring() => _spring ?? new(
-        _hasTranslational ? TranslationalStiffness.FromNewtonsPerMeter(1) : null,
-        _hasRotational ? RotationalStiffness.FromNewtonMetersPerRadian(1) : null,
+        HasTranslational ? TranslationalStiffness.FromNewtonsPerMeter(1) : null,
+        HasRotational ? RotationalStiffness.FromNewtonMetersPerRadian(1) : null,
         _rigidTranslation);
 
     private static bool TryStiffness(string text, string referenceText, double? reference, UnitDefinition unit, out double value)

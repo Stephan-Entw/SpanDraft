@@ -40,7 +40,13 @@ public partial class BeamEditorSurface
         _labelGesture = null;
         RestoreLabelPane();
         ReleaseGesture();
-        if (_editor is { } editor) { gesture.Complete(editor); gesture.OpenOnClick(editor); }
+        if (_editor is { } editor)
+        {
+            gesture.Complete(editor);
+            if (!gesture.IsDragging && gesture.EntityIds.Count > 1 && editor.IsEditorNeutral)
+                ShowEntitySelection(gesture.EntityIds, point);
+            else gesture.OpenOnClick(editor);
+        }
         SynchronizeVisuals();
     }
 

@@ -165,19 +165,23 @@ public sealed class ProjectOverviewState
         _ => throw new ArgumentOutOfRangeException(nameof(support))
     };
 
-    /// <summary>The spring support with its stiffness values in the display units, one per acting spring.</summary>
+    /// <summary>The spring by its kind with its stiffness in the display units; every spring is a support of its own.</summary>
     private string SpringDescription(SpringData spring)
     {
         var options = Analysis.Options;
-        var parts = new List<string> { Strings.SpringSupport };
+        var parts = new List<string>
+        {
+            spring.Translational is not null && spring.Rotational is not null ? Strings.SpringSupport
+                : spring.Rotational is not null ? Strings.RotationalSpringSupport : Strings.TranslationalSpringSupport
+        };
+        if (spring.RigidTranslation)
+            parts[0] += ", " + Strings.SpringRigidTranslation;
         if (spring.Translational is { } translational)
             parts.Add("k = " + QuantityFormatter.FormatInput(translational.NewtonsPerMeter,
                 options.Profile[QuantityKind.TranslationalStiffness], options));
-        if (spring.RigidTranslation)
-            parts.Add(Strings.SpringRigidTranslation);
         if (spring.Rotational is { } rotational)
             parts.Add("kθ = " + QuantityFormatter.FormatInput(rotational.NewtonMetersPerRadian,
                 options.Profile[QuantityKind.RotationalStiffness], options));
-        return string.Join(", ", parts);
+        return string.Join("\n", parts);
     }
 }

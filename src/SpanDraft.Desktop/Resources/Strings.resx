@@ -29,7 +29,8 @@
   <data name="ToolbarFixedSupport" xml:space="preserve"><value>Fixed</value></data>
   <data name="ToolbarPinnedSupport" xml:space="preserve"><value>Pinned</value></data>
   <data name="ToolbarRollerSupport" xml:space="preserve"><value>Roller</value></data>
-  <data name="ToolbarSpringSupport" xml:space="preserve"><value>Spring</value></data>
+  <data name="ToolbarTranslationalSpring" xml:space="preserve"><value>Translational spring</value></data>
+  <data name="ToolbarRotationalSpring" xml:space="preserve"><value>Rotational spring</value></data>
   <data name="ToolbarSupportsAndHinges" xml:space="preserve"><value>Supports &amp; Hinges</value></data>
   <data name="BeamModel" xml:space="preserve"><value>Beam model</value></data>
   <data name="OverviewLength" xml:space="preserve"><value>Length {0} {1}</value></data>
@@ -139,11 +140,10 @@
   <data name="UnitTranslationalStiffness" xml:space="preserve"><value>Translational spring stiffness</value></data>
   <data name="UnitRotationalStiffness" xml:space="preserve"><value>Rotational spring stiffness</value></data>
   <data name="SpringSupport" xml:space="preserve"><value>Spring Support</value></data>
+  <data name="TranslationalSpringSupport" xml:space="preserve"><value>Translational spring</value></data>
+  <data name="RotationalSpringSupport" xml:space="preserve"><value>Rotational spring</value></data>
   <data name="SpringRigidTranslation" xml:space="preserve"><value>rigid in w</value></data>
   <data name="InvalidStiffness" xml:space="preserve"><value>Enter a stiffness greater than zero.</value></data>
-  <data name="SpringRequired" xml:space="preserve"><value>Select at least one spring.</value></data>
-  <data name="SpringTranslationalLabel" xml:space="preserve"><value>Spring w</value></data>
-  <data name="SpringRotationalLabel" xml:space="preserve"><value>Spring θ</value></data>
   <data name="SpringTranslationalName" xml:space="preserve"><value>Translational spring stiffness</value></data>
   <data name="SpringRotationalName" xml:space="preserve"><value>Rotational spring stiffness</value></data>
   <data name="SpringRigidTranslationLabel" xml:space="preserve"><value>Rigid in w</value></data>
@@ -334,7 +334,7 @@
   <data name="ReportPage" xml:space="preserve"><value>Page {0} of {1}</value></data>
   <data name="ReportNotes" xml:space="preserve"><value>Calculation model</value></data>
   <data name="ReportRounding" xml:space="preserve"><value>Numerical values are rounded to {0}.</value></data>
-  <data name="ReportSpringTheory" xml:space="preserve"><value>Spring supports are ideal linear-elastic with a load-independent stiffness and are rigid in the axial direction.</value></data>
+  <data name="ReportSpringTheory" xml:space="preserve"><value>Spring supports are linear-elastic with constant stiffness and axially rigid.</value></data>
   <data name="ReportTheory" xml:space="preserve"><value>Calculation based on Euler-Bernoulli theory, assuming linear-elastic behavior and small deformations. Material and cross-section are constant along the beam length; shear deformations are neglected.</value></data>
   <data name="ReportPosition" xml:space="preserve"><value>x = {0} {1}{2}</value></data>
   <data name="ReportSavePdf" xml:space="preserve"><value>Save PDF</value></data>

@@ -330,25 +330,29 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
     }
 
     [Fact]
-    public void SupportsSharingAStationReportOneCommonReactionRow()
+    public void ATranslationalAndARotationalSpringAtOneStationReportOneCommonReactionRow()
     {
-        // Project files and the editor keep support positions unique; only a programmatic document reaches
-        // this state. The report must still show the station's common reaction once, never once per support.
+        // The two springs are supports of their own and are listed as such; the solver reports one reaction for the
+        // station, so the report shows it once under both names, never once per support.
         var state = ReportTestProjects.Create();
         var supports = state.Document.Supports;
+        var middle = Length.FromMeters(1);
         state = state with { Document = state.Document.WithSupports([
-            supports[0], new(Guid.NewGuid(), supports[0].Position, SupportType.Fixed, "Clamp"), supports[1]]) };
+            supports[0],
+            new(Guid.NewGuid(), middle, SupportType.Spring, "C", new(TranslationalStiffness.FromNewtonsPerMeter(5e5), null)),
+            new(Guid.NewGuid(), middle, SupportType.Spring, "D", new(null, RotationalStiffness.FromNewtonMetersPerRadian(2e4))),
+            supports[1]]) };
         var editor = EditorViewModel.ForSession(ProjectSession.Create(state), () => { });
         using var report = ProjectReport.Capture(editor, Now);
         var solution = editor.Presentation.Result!.Solution;
-        var node = solution.Nodes.Single(n => n.Position == supports[0].Position);
-        Assert.Equal(3, report.Data.Tables.Single(t => t.Title == Strings.Supports).Rows.Count);
+        var node = solution.Nodes.Single(n => n.Position == middle);
+        Assert.Equal(4, report.Data.Tables.Single(t => t.Title == Strings.Supports).Rows.Count);
         var reactions = report.Data.Tables.Single(t => t.Title == Strings.Reactions).Rows;
-        Assert.Equal(new[] { supports[0].Name + " + Clamp", supports[1].Name }, reactions.Select(r => r[0]));
+        Assert.Equal(new[] { supports[0].Name, "C + D", supports[1].Name }, reactions.Select(r => r[0]));
         string Number(double value, QuantityKind kind) => QuantityFormatter.FormatResultNumber(value, kind, editor.ResultPresentation);
         Assert.Equal(new[] { Number(node.ReactionX!.Value.Newtons, QuantityKind.AxialForce),
             Number(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce),
-            Number(node.ReactionMoment!.Value.NewtonMeters, QuantityKind.Moment) }, reactions[0].Skip(1));
+            Number(node.ReactionMoment!.Value.NewtonMeters, QuantityKind.Moment) }, reactions[1].Skip(1));
         // Summing the reported rows reproduces the applied load; nothing is counted twice.
         double applied = state.Document.Loads.Sum(l => l.Value) + state.Document.DistributedLoads.Sum(q =>
             q.StartIntensity.NewtonsPerMeter * (q.EndPosition.Meters - q.StartPosition.Meters));

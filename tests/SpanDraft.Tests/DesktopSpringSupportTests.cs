@@ -19,8 +19,6 @@ public sealed class DesktopSpringSupportTests
     private static Length Mm(double value) => Length.FromMillimeters(value);
     private static SpringData Translational(double k) => new(TranslationalStiffness.FromNewtonsPerMeter(k), null);
     private static SpringData Rotational(double k) => new(null, RotationalStiffness.FromNewtonMetersPerRadian(k));
-    private static SpringData Combined(double k, double kt) =>
-        new(TranslationalStiffness.FromNewtonsPerMeter(k), RotationalStiffness.FromNewtonMetersPerRadian(kt));
     private static SpringData Partial(double kt) => new(null, RotationalStiffness.FromNewtonMetersPerRadian(kt), true);
 
     [Fact]
@@ -135,6 +133,41 @@ public sealed class DesktopSpringSupportTests
     }
 
     [Fact]
+    public void ARotationalSpringHangsFromTheOuterEndOfItsSpiralAtNineOClockStraightDownToTheGround()
+    {
+        var geometry = new SpringSupportGeometry(false, true, false);
+        var end = geometry.Spiral.Last();
+        Assert.Equal(-SpringSupportGeometry.SpiralOuterRadius, end.EndX, 9);
+        Assert.Equal(0, end.EndY, 9);
+        var stem = Assert.Single(geometry.Body);
+        Assert.Equal((end.EndX, end.EndY, end.EndX, SchematicMetrics.SupportGroundY), stem);
+        // The stem leaves the symbol's axis, so it is no longer the plain centred stem of the other supports.
+        Assert.NotEqual(0, stem.StartX);
+        Assert.InRange(stem.StartX, -geometry.LeftExtent, geometry.RightExtent);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheSpiralEndsAtTwelveOClockWithAShortVerticalStrokeDownToTheJoint(bool translational)
+    {
+        var geometry = new SpringSupportGeometry(translational, true, false);
+        var spiral = geometry.Spiral.ToArray();
+        var connector = spiral[0];
+        // The stroke is vertical, on the axis, and runs from the joint outwards to the inner end of the spiral.
+        Assert.Equal(0, connector.StartX, 9);
+        Assert.Equal(0, connector.EndX, 9);
+        Assert.Equal(-geometry.Joint.Radius, connector.StartY, 9);
+        Assert.True(connector.EndY < connector.StartY);
+        // The spiral continues from there without a gap and keeps clear of the joint ring.
+        Assert.Equal((connector.EndX, connector.EndY), (spiral[1].StartX, spiral[1].StartY));
+        Assert.True(-connector.EndY - geometry.Joint.Radius > SchematicMetrics.SymbolStrokeWidth);
+        Assert.All(spiral.Skip(1), l => Assert.True(Math.Sqrt(l.StartX * l.StartX + l.StartY * l.StartY) > geometry.Joint.Radius + SchematicMetrics.SymbolStrokeWidth));
+        // The outer end stays at 9 o'clock.
+        Assert.Equal(-SpringSupportGeometry.SpiralOuterRadius, spiral[^1].EndX, 9);
+    }
+
+    [Fact]
     public void TheSpiralOfARotationalSpringRaisesTheTopAndTheHitZoneOnly()
     {
         var plain = new SpringSupportGeometry(true, false, false);
@@ -168,7 +201,8 @@ public sealed class DesktopSpringSupportTests
     public void StationRequirementsOfSpringSupportsEqualThoseOfTheHingedSupports()
     {
         var spring = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section,
-            [new(Guid.NewGuid(), Mm(0), SupportType.Pinned, "A"), new(Guid.NewGuid(), Mm(500), SupportType.Spring, "B", Combined(1e5, 1e4))]);
+            [new(Guid.NewGuid(), Mm(0), SupportType.Pinned, "A"), new(Guid.NewGuid(), Mm(500), SupportType.Spring, "B", Translational(1e5)),
+                new(Guid.NewGuid(), Mm(500), SupportType.Spring, "C", Rotational(1e4))]);
         var rigid = new EditorDocument(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section,
             [new(Guid.NewGuid(), Mm(0), SupportType.Pinned, "A"), new(Guid.NewGuid(), Mm(500), SupportType.Roller, "B")]);
         var a = StationRequirementBuilder.FromDocument(spring, 1.25);
@@ -183,28 +217,38 @@ public sealed class DesktopSpringSupportTests
             [new(Guid.NewGuid(), Mm(0), SupportType.Pinned, "A"),
                 new(Guid.NewGuid(), Mm(200), SupportType.Spring, "B", Translational(2.5e6)),
                 new(Guid.NewGuid(), Mm(400), SupportType.Spring, "C", Rotational(3e4)),
-                new(Guid.NewGuid(), Mm(600), SupportType.Spring, "D", Combined(1.5e6, 8e3)),
+                new(Guid.NewGuid(), Mm(600), SupportType.Spring, "D", Translational(1.5e6)),
+                new(Guid.NewGuid(), Mm(600), SupportType.Spring, "F", Rotational(8e3)),
                 new(Guid.NewGuid(), Mm(800), SupportType.Spring, "E", Partial(4.5e4))]);
         var state = ProjectOverviewState.From(document, AnalysisPresentationState.FromOutcome(BeamAnalysis.Analyze(document.ToBeamModel())));
         // Digit grouping and the language of the type name follow the culture; the content does not.
-        string[] types = state.Supports.Select(x => string.Concat(x.Type.Where(c => !char.IsWhiteSpace(c)))).ToArray();
-        string name = string.Concat(Strings.SpringSupport.Where(c => !char.IsWhiteSpace(c)));
+        string Squeezed(string text) => string.Concat(text.Where(c => !char.IsWhiteSpace(c)));
+        var types = state.Supports.Select(x => x.Type.Split('\n').Select(Squeezed).ToArray()).ToArray();
+        string wegfeder = Squeezed(Strings.TranslationalSpringSupport), drehfeder = Squeezed(Strings.RotationalSpringSupport);
         string rigid = string.Concat(Strings.SpringRigidTranslation.Where(c => !char.IsWhiteSpace(c)));
-        Assert.Equal(name + ",k=2500N/mm", types[1]);
-        Assert.Equal(name + ",kθ=30000N·m/rad", types[2]);
-        Assert.Equal(name + ",k=1500N/mm,kθ=8000N·m/rad", types[3]);
-        Assert.Equal(name + "," + rigid + ",kθ=45000N·m/rad", types[4]);
-        Assert.NotEmpty(state.Reactions);
+        // Every spring is listed as a support of its own, named by its kind.
+        Assert.Equal(new[] { wegfeder, "k=2500N/mm" }, types[1]);
+        Assert.Equal(new[] { drehfeder, "kθ=30000N·m/rad" }, types[2]);
+        Assert.Equal(new[] { wegfeder, "k=1500N/mm" }, types[3]);
+        Assert.Equal(new[] { drehfeder, "kθ=8000N·m/rad" }, types[4]);
+        Assert.Equal(new[] { drehfeder + "," + rigid, "kθ=45000N·m/rad" }, types[5]);
+        // The solver reports one reaction per station: the two springs of one station share a row.
+        Assert.Contains(state.Reactions, r => r.Name == "D + F" && r.Id is null);
+        Assert.Equal(5, state.Reactions.Count);
     }
 
     [Fact]
     public void ComparerTreatsEveryStiffnessKindAndTypeChangeAsMechanical()
     {
-        EditorDocument Make(SpringData spring) => new(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section,
-            [new(Guid.NewGuid(), Mm(0), SupportType.Pinned, "A"), new(Guid.NewGuid(), Mm(500), SupportType.Spring, "B", spring)]);
-        var reference = Make(Combined(1e5, 1e4)).ToBeamModel();
-        Assert.True(BeamModelMechanicalComparer.AreEquivalent(reference, Make(Combined(1e5, 1e4)).ToBeamModel()));
-        foreach (var other in new[] { Combined(2e5, 1e4), Combined(1e5, 2e4), Translational(1e5), Rotational(1e4), Partial(1e4) })
+        // The springs of one position are joined for Core: a translational and a rotational spring make one support.
+        EditorDocument Make(params SpringData[] springs) => new(Mm(1000), ProjectTemplates.Material, ProjectTemplates.Section,
+            [new(Guid.NewGuid(), Mm(0), SupportType.Pinned, "A"), .. springs.Select((spring, i) =>
+                new EditorSupport(Guid.NewGuid(), Mm(500), SupportType.Spring, "S" + i, spring))]);
+        var reference = Make(Translational(1e5), Rotational(1e4)).ToBeamModel();
+        Assert.Equal(2, reference.Supports.Count);
+        Assert.True(BeamModelMechanicalComparer.AreEquivalent(reference, Make(Translational(1e5), Rotational(1e4)).ToBeamModel()));
+        foreach (var other in new[] { new[] { Translational(2e5), Rotational(1e4) }, [Translational(1e5), Rotational(2e4)],
+            [Translational(1e5)], [Rotational(1e4)], [Partial(1e4)] })
             Assert.False(BeamModelMechanicalComparer.AreEquivalent(reference, Make(other).ToBeamModel()));
         Assert.True(BeamModelMechanicalComparer.IsKnownSupportType(SupportType.Spring));
     }

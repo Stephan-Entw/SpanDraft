@@ -5,9 +5,10 @@ using SpanDraft.Desktop.ViewModels;
 namespace SpanDraft.Desktop.Controls;
 
 /// <summary>One screen-space annotation gesture. Contains no document or committed state.</summary>
-public sealed class LabelDragGesture(EntityAnnotation label, Point press, AnnotationOffset? originalOffset)
+public sealed class LabelDragGesture(EntityAnnotation label, Point press, AnnotationOffset? originalOffset = null)
 {
-    public Guid EntityId { get; } = label.Id ?? throw new ArgumentException("A committed entity is required.", nameof(label));
+    public IReadOnlyList<Guid> EntityIds { get; } = label.EntityIds.Count > 0 ? label.EntityIds.ToArray()
+        : throw new ArgumentException("A committed entity is required.", nameof(label));
     public bool IsSupport { get; } = label.IsSupport;
     public AnnotationOffset? OriginalOffset { get; } = originalOffset;
     public Rect AutoBounds { get; } = label.AutoBounds;
@@ -30,20 +31,24 @@ public sealed class LabelDragGesture(EntityAnnotation label, Point press, Annota
         if (Update(pointer) is { } offset)
         {
             _pendingOffset = offset;
-            editor.PreviewAnnotationOffset(EntityId, offset);
+            editor.PreviewAnnotationOffsets(EntityIds, offset);
         }
     }
 
-    public bool OpenOnClick(EditorViewModel editor) => !IsDragging
-        && (editor.Document.SelfWeight?.Id == EntityId ? editor.EditSelfWeight(EntityId)
-            : editor.Document.MomentReleases.Any(r => r.Id == EntityId) ? editor.EditMomentRelease(EntityId)
-            : IsSupport ? editor.EditSupport(EntityId) : editor.Document.DistributedLoads.Any(l => l.Id == EntityId)
-            ? editor.EditDistributedLoad(EntityId) : editor.EditLoad(EntityId));
+    public bool OpenOnClick(EditorViewModel editor)
+    {
+        if (IsDragging || EntityIds.Count != 1) return false;
+        var id = EntityIds[0];
+        return editor.Document.SelfWeight?.Id == id ? editor.EditSelfWeight(id)
+            : editor.Document.MomentReleases.Any(r => r.Id == id) ? editor.EditMomentRelease(id)
+            : IsSupport ? editor.EditSupport(id) : editor.Document.DistributedLoads.Any(l => l.Id == id)
+            ? editor.EditDistributedLoad(id) : editor.EditLoad(id);
+    }
 
     public void Complete(EditorViewModel editor)
     {
         editor.ClearAnnotationPreview();
-        if (_pendingOffset is { } offset) editor.SetAnnotationOffset(EntityId, offset);
+        if (_pendingOffset is { } offset) editor.SetAnnotationOffsets(EntityIds, offset);
         _pendingOffset = null;
     }
 

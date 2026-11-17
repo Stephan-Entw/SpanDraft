@@ -22,6 +22,10 @@ public static class TechnicalSymbols
     public static TechnicalText ReactionX { get; } = new(new("R", Role: TechnicalRole.Variable), Index("x", true));
     public static TechnicalText ReactionY { get; } = new(new("R", Role: TechnicalRole.Variable), Index("y", true));
     public static TechnicalText Diameter { get; } = "Ø";
+    /// <summary>The stiffness k of a translational spring.</summary>
+    public static TechnicalText TranslationalStiffness { get; } = Variable("k");
+    /// <summary>The stiffness kθ of a rotational spring.</summary>
+    public static TechnicalText RotationalStiffness { get; } = new(new("k", Role: TechnicalRole.Variable), Index("θ", true));
 
     /// <summary>The rotation θ, optionally with a superscript side mark (− left, + right) as at a moment release.</summary>
     public static TechnicalText Rotation(string? side = null) => side is null or "" ? Variable("θ")

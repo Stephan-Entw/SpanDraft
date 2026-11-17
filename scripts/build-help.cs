@@ -15,7 +15,7 @@ string help = Path.Combine(root, "help"), site = Path.Combine(help, "site"), wor
 string fonts = Path.Combine(root, "src", "SpanDraft.Desktop", "Assets", "Fonts");
 string[] fontFiles = ["IBMPlexSans-Regular.ttf", "IBMPlexSans-Italic.ttf", "IBMPlexSans-SemiBold.ttf",
     "IBMPlexSans-SemiBoldItalic.ttf", "IBMPlexMono-Regular.ttf", "NOTICE.txt", "OFL.txt"];
-string[] shared = ["koordinaten", "querschnitt-achsen", "lager-einspannung", "lager-festlager", "lager-loslager", "lager-federlager",
+string[] shared = ["koordinaten", "querschnitt-achsen", "lager-einspannung", "lager-festlager", "lager-loslager", "lager-wegfeder", "lager-drehfeder",
     "punktkraft-vorzeichen", "punktmoment-vorzeichen", "streckenlast-vorzeichen"];
 string[] localized = ["beispiel-lagerung", "beispiel-belastung", "diagramm-durchbiegung", "diagramm-querkraft", "diagramm-biegemoment"];
 string[] names = [.. shared, .. localized];
@@ -143,7 +143,7 @@ try
         foreach (string language in new[] { "de", "en" })
             ValidateLanguageSwitch(Path.Combine(site, language, Path.ChangeExtension(language == "de" ? pair.De : pair.En, ".html")),
                 language, Path.Combine(site, "de", Path.ChangeExtension(pair.De, ".html")), Path.Combine(site, "en", Path.ChangeExtension(pair.En, ".html")));
-    Console.WriteLine("Offline help validated: DE/EN, eleven pages each, nineteen shared/localized PNGs, page-preserving language switches, links, MathML, bundled Plex fonts and local runtime resources.");
+    Console.WriteLine("Offline help validated: DE/EN, eleven pages each, twenty shared/localized PNGs, page-preserving language switches, links, MathML, bundled Plex fonts and local runtime resources.");
     return 0;
 }
 catch (Exception error)

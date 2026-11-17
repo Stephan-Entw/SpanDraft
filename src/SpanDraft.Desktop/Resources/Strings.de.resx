@@ -29,7 +29,8 @@
   <data name="ToolbarFixedSupport" xml:space="preserve"><value>Einspannung</value></data>
   <data name="ToolbarPinnedSupport" xml:space="preserve"><value>Festlager</value></data>
   <data name="ToolbarRollerSupport" xml:space="preserve"><value>Loslager</value></data>
-  <data name="ToolbarSpringSupport" xml:space="preserve"><value>Federlager</value></data>
+  <data name="ToolbarTranslationalSpring" xml:space="preserve"><value>Wegfeder</value></data>
+  <data name="ToolbarRotationalSpring" xml:space="preserve"><value>Drehfeder</value></data>
   <data name="ToolbarSupportsAndHinges" xml:space="preserve"><value>Lager &amp; Gelenke</value></data>
   <data name="BeamModel" xml:space="preserve"><value>Balkenmodell</value></data>
   <data name="OverviewLength" xml:space="preserve"><value>Länge {0} {1}</value></data>
@@ -139,11 +140,10 @@
   <data name="UnitTranslationalStiffness" xml:space="preserve"><value>Wegfedersteifigkeit</value></data>
   <data name="UnitRotationalStiffness" xml:space="preserve"><value>Drehfedersteifigkeit</value></data>
   <data name="SpringSupport" xml:space="preserve"><value>Federlager</value></data>
+  <data name="TranslationalSpringSupport" xml:space="preserve"><value>Wegfeder</value></data>
+  <data name="RotationalSpringSupport" xml:space="preserve"><value>Drehfeder</value></data>
   <data name="SpringRigidTranslation" xml:space="preserve"><value>starr in w</value></data>
   <data name="InvalidStiffness" xml:space="preserve"><value>Steifigkeit größer als null eingeben.</value></data>
-  <data name="SpringRequired" xml:space="preserve"><value>Mindestens eine Feder auswählen.</value></data>
-  <data name="SpringTranslationalLabel" xml:space="preserve"><value>Feder w</value></data>
-  <data name="SpringRotationalLabel" xml:space="preserve"><value>Feder θ</value></data>
   <data name="SpringTranslationalName" xml:space="preserve"><value>Wegfedersteifigkeit</value></data>
   <data name="SpringRotationalName" xml:space="preserve"><value>Drehfedersteifigkeit</value></data>
   <data name="SpringRigidTranslationLabel" xml:space="preserve"><value>Starr in w</value></data>
@@ -334,7 +334,7 @@
   <data name="ReportPage" xml:space="preserve"><value>Seite {0} von {1}</value></data>
   <data name="ReportNotes" xml:space="preserve"><value>Berechnungsmodell</value></data>
   <data name="ReportRounding" xml:space="preserve"><value>Zahlenwerte sind auf {0} gerundet.</value></data>
-  <data name="ReportSpringTheory" xml:space="preserve"><value>Federlager sind ideal linear-elastisch mit lastunabhängiger Steifigkeit und in Balkenlängsrichtung starr.</value></data>
+  <data name="ReportSpringTheory" xml:space="preserve"><value>Federlager sind linear-elastisch mit konstanter Steifigkeit und axial starr.</value></data>
   <data name="ReportTheory" xml:space="preserve"><value>Berechnung nach Euler-Bernoulli, linear-elastisch und für kleine Verformungen. Werkstoff und Querschnitt sind über die Balkenlänge konstant; Schubverformungen werden vernachlässigt.</value></data>
   <data name="ReportPosition" xml:space="preserve"><value>x = {0} {1}{2}</value></data>
   <data name="ReportSavePdf" xml:space="preserve"><value>PDF speichern</value></data>

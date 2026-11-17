@@ -103,14 +103,14 @@ public sealed class DesktopLoadFlyoutControlTests
         Assert.True(typeInput.IsDropDownOpen);
         var popup = Assert.Single(typeInput.GetVisualDescendants().OfType<Popup>());
         Assert.True(popup.IsOpen);
-        Assert.Equal(4, typeInput.ItemCount);
-        Assert.All(SupportDraftViewModel.Types, option => Assert.Contains(option, typeInput.Items));
-        var next = SupportDraftViewModel.Types.First(option => option.Type != type);
+        Assert.Equal(5, typeInput.ItemCount);
+        Assert.All(editor.SupportDraft.Types, option => Assert.Contains(option, typeInput.Items));
+        var next = editor.SupportDraft.Types.First(option => option.Type != type);
         typeInput.SelectedItem = next; Dispatcher.UIThread.RunJobs();
         Assert.Equal(next.Type, editor.SupportDraft.Type);
         typeInput.IsDropDownOpen = false; Dispatcher.UIThread.RunJobs();
         Assert.False(typeInput.IsDropDownOpen);
-        typeInput.SelectedItem = SupportDraftViewModel.Types.First(option => option.Type == type);
+        typeInput.SelectedItem = editor.SupportDraft.Types.First(option => option.Type == type);
         Assert.True(editor.ConfirmSupport());
         Assert.True(editor.EditSupport(editor.Document.Supports[0].Id));
         Dispatcher.UIThread.RunJobs();
@@ -145,7 +145,7 @@ public sealed class DesktopLoadFlyoutControlTests
         pointer.Capture(null); Dispatcher.UIThread.RunJobs();
         Assert.True(type.IsDropDownOpen);
         var item = Assert.IsType<ComboBoxItem>(type.ContainerFromIndex(1));
-        var option = SupportDraftViewModel.Types[1];
+        var option = editor.SupportDraft!.Types[1];
         var label = Assert.Single(item.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == option.Name);
         Assert.True(label.TextLayout.TextLines[0].Width <= label.Bounds.Width,
             $"The dropdown item is clipped: {label.Text}, text {label.TextLayout.TextLines[0].Width}, bounds {label.Bounds.Width}");

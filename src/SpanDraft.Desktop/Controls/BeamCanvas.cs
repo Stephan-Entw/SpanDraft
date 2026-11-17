@@ -123,9 +123,11 @@ public sealed class BeamCanvas : Control
         var selfWeightId = scene.DistributedLoads.FirstOrDefault(l => l.IsSelfWeight)?.Id;
         foreach (var label in scene.Annotations)
         {
+            bool highlighted = label.EntityIds.Any(id => id == (label.IsSupport ? HighlightedSupportId : HighlightedLoadId)
+                || label.IsSupport && id == HighlightedMomentReleaseId || !label.IsSupport && id == HighlightedDistributedLoadId);
             using var text = SchematicText.Format(label.Text, AppTypography.Typeface, LabelFontSize,
-                Brush(label.Id, label.IsSupport, label.IsPreview, label.IsInvalid,
-                    label.Id is not null && label.Id == selfWeightId));
+                Brush(null, label.IsSupport, label.IsPreview || highlighted, label.IsInvalid || label.EntityIds.Any(id => Conflict(id)),
+                    selfWeightId is { } weightId && label.EntityIds.Contains(weightId)));
             text.Draw(context, label.Bounds.Position);
         }
     }
