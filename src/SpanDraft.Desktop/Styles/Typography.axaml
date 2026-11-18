@@ -1,7 +1,11 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls">
-  <Style Selector="UserControl, Window">
+  <!-- Inherited text properties start at every top level: windows and the hosts of popups,
+       flyouts, dropdowns and tooltips, which do not inherit from the window that opened them. -->
+  <Style Selector="Window, PopupRoot, OverlayPopupHost">
     <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
     <Setter Property="FontFeatures" Value="tnum" />
+    <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
   <!-- Some platform fallback glyphs extend beyond the nominal line box.
        Keep their diacritics visible, including button/menu AccessText. -->
@@ -9,8 +13,6 @@
     <Setter Property="ClipToBounds" Value="False" />
   </Style>
   <Style Selector="Window">
-    <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     <Setter Property="Background" Value="{DynamicResource AppBackground}" />
   </Style>
   <Style Selector=":is(TextBlock).pageTitle">

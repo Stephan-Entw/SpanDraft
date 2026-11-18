@@ -16,19 +16,23 @@
   <SolidColorBrush x:Key="BorderStrong">#C5CDD8</SolidColorBrush>
   <SolidColorBrush x:Key="InputBorder">#8892A3</SolidColorBrush>
 
-  <!-- Text. TextMuted reaches 5.0:1 on AppBackground. -->
+  <!-- Text. TextMuted reaches 5.0:1 on AppBackground. TextDisabled (2.7:1 on Surface) stays readable
+       but is clearly lighter than TextSecondary (2.1:1 apart), so quiet and unavailable never look alike. -->
   <SolidColorBrush x:Key="TextPrimary">#202631</SolidColorBrush>
   <SolidColorBrush x:Key="TextSecondary">#5E6878</SolidColorBrush>
   <SolidColorBrush x:Key="TextMuted">#5F6B7C</SolidColorBrush>
-  <SolidColorBrush x:Key="TextDisabled">#737E8C</SolidColorBrush>
+  <SolidColorBrush x:Key="TextDisabled">#949DAA</SolidColorBrush>
 
-  <!-- Accent "Stahlblau hell": buttons, focus, selection. White on Accent 6.5:1. -->
-  <SolidColorBrush x:Key="Accent">#2E6098</SolidColorBrush>
-  <SolidColorBrush x:Key="AccentHover">#275287</SolidColorBrush>
-  <SolidColorBrush x:Key="AccentPressed">#20446F</SolidColorBrush>
+  <!-- Accent "Stahlblau hell": buttons, focus, selection. White on Accent 6.5:1.
+       The colors also replace the operating-system accent in Fluent controls (FluentBridge.axaml). -->
+  <Color x:Key="AccentColor">#2E6098</Color>
+  <Color x:Key="AccentHoverColor">#275287</Color>
+  <Color x:Key="AccentPressedColor">#20446F</Color>
+  <SolidColorBrush x:Key="Accent" Color="{StaticResource AccentColor}" />
+  <SolidColorBrush x:Key="AccentHover" Color="{StaticResource AccentHoverColor}" />
+  <SolidColorBrush x:Key="AccentPressed" Color="{StaticResource AccentPressedColor}" />
   <SolidColorBrush x:Key="AccentSubtle">#DCE7F4</SolidColorBrush>
   <SolidColorBrush x:Key="TextOnAccent">#FFFFFF</SolidColorBrush>
-  <!-- left marker stripe of a selected list row, so selection differs clearly from hover. -->
 
   <!-- Status. Red is reserved for errors. -->
   <SolidColorBrush x:Key="Error">#B42318</SolidColorBrush>

@@ -6,6 +6,7 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="/Styles/DesignTokens.axaml" />
+        <ResourceInclude Source="/Styles/FluentBridge.axaml" />
         <ResourceInclude Source="/Styles/Icons.axaml" />
         <ResourceInclude Source="/Assets/Icons/Generated/ToolbarIcons.axaml" />
         <ResourceInclude Source="/Assets/Icons/Generated/FluentIcons.axaml" />

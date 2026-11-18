@@ -24,7 +24,7 @@ public sealed class ListSelectionControlTests
         list.SelectedIndex = 0; Dispatcher.UIThread.RunJobs();
         Assert.Empty(row.GetVisualDescendants().OfType<Border>());
         Assert.Equal(origin, content.Bounds);
-        Assert.Equal(new CornerRadius(4), row.CornerRadius);
+        Assert.Equal(default, row.CornerRadius);
         Assert.Same(Application.Current!.FindResource("AccentSubtle"), content.Background);
         ((IPseudoClasses)row.Classes).Set(":pointerover", true); Dispatcher.UIThread.RunJobs();
         Assert.Same(Application.Current!.FindResource("AccentSubtle"), content.Background);

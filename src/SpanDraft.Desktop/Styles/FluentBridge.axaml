@@ -1,0 +1,77 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Maps Fluent's own resources to the design tokens. Fluent templates read these keys directly
+       (often as template values that application styles cannot override), so the retained Fluent
+       controls, popups and states use the same font, accent and surfaces as the rest of the app.
+       Only aliases of existing tokens belong here, no new colors or sizes. -->
+
+  <!-- Default typography of Fluent popup hosts and of controls Fluent sets explicitly (ToolTip). -->
+  <StaticResource x:Key="ContentControlThemeFontFamily" ResourceKey="AppFont" />
+  <StaticResource x:Key="ControlContentThemeFontSize" ResourceKey="BodySize" />
+  <StaticResource x:Key="ToolTipContentThemeFontSize" ResourceKey="SecondarySize" />
+
+  <!-- The application accent instead of the operating-system accent. Fluent uses Light1 only for
+       pointer-over and Dark1 only for pressed states; both follow the app's darker interaction steps. -->
+  <StaticResource x:Key="SystemAccentColor" ResourceKey="AccentColor" />
+  <StaticResource x:Key="SystemAccentColorLight1" ResourceKey="AccentHoverColor" />
+  <StaticResource x:Key="SystemAccentColorDark1" ResourceKey="AccentPressedColor" />
+
+  <!-- Popup surfaces: dropdowns, menus, flyouts and tooltips lie on Surface like the editor flyouts. -->
+  <StaticResource x:Key="ComboBoxDropDownBackground" ResourceKey="Surface" />
+  <StaticResource x:Key="ComboBoxDropDownBorderBrush" ResourceKey="BorderStrong" />
+  <StaticResource x:Key="MenuFlyoutPresenterBackground" ResourceKey="Surface" />
+  <StaticResource x:Key="MenuFlyoutPresenterBorderBrush" ResourceKey="BorderStrong" />
+  <StaticResource x:Key="FlyoutPresenterBackground" ResourceKey="Surface" />
+  <StaticResource x:Key="FlyoutBorderThemeBrush" ResourceKey="BorderStrong" />
+  <StaticResource x:Key="ToolTipBackground" ResourceKey="Surface" />
+  <StaticResource x:Key="ToolTipBorderBrush" ResourceKey="BorderStrong" />
+  <StaticResource x:Key="ToolTipForeground" ResourceKey="TextPrimary" />
+  <!-- Fluent's 5/7 padding balances Segoe UI; IBM Plex has a symmetric line box and needs symmetric padding. -->
+  <StaticResource x:Key="ToolTipBorderThemePadding" ResourceKey="InlinePadding" />
+
+  <!-- Dropdown entries -->
+  <StaticResource x:Key="ComboBoxItemForeground" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="ComboBoxItemForegroundPointerOver" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="ComboBoxItemForegroundPressed" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="ComboBoxItemForegroundDisabled" ResourceKey="TextDisabled" />
+
+  <!-- Menu and context-menu entries -->
+  <StaticResource x:Key="MenuFlyoutItemForegroundPointerOver" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="MenuFlyoutItemForegroundDisabled" ResourceKey="TextDisabled" />
+  <StaticResource x:Key="MenuFlyoutItemBackgroundPointerOver" ResourceKey="SurfaceHover" />
+  <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" ResourceKey="TextSecondary" />
+  <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" ResourceKey="TextSecondary" />
+  <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundDisabled" ResourceKey="TextDisabled" />
+
+  <!-- CheckBox and RadioButton keep Fluent's templates. Text as everywhere, unchecked frames like
+       inputs (InputBorder, TextMuted on hover), disabled in TextDisabled. -->
+  <StaticResource x:Key="CheckBoxForegroundUnchecked" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="CheckBoxForegroundUncheckedPointerOver" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="CheckBoxForegroundUncheckedPressed" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="CheckBoxForegroundChecked" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="CheckBoxForegroundCheckedPointerOver" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="CheckBoxForegroundCheckedPressed" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="CheckBoxForegroundUncheckedDisabled" ResourceKey="TextDisabled" />
+  <StaticResource x:Key="CheckBoxForegroundCheckedDisabled" ResourceKey="TextDisabled" />
+  <StaticResource x:Key="CheckBoxCheckBackgroundStrokeUnchecked" ResourceKey="InputBorder" />
+  <StaticResource x:Key="CheckBoxCheckBackgroundStrokeUncheckedPointerOver" ResourceKey="TextMuted" />
+  <StaticResource x:Key="CheckBoxCheckBackgroundStrokeUncheckedPressed" ResourceKey="TextMuted" />
+  <StaticResource x:Key="CheckBoxCheckBackgroundStrokeUncheckedDisabled" ResourceKey="TextDisabled" />
+  <StaticResource x:Key="CheckBoxCheckBackgroundFillUncheckedPressed" ResourceKey="SurfacePressed" />
+  <StaticResource x:Key="CheckBoxCheckBackgroundFillCheckedDisabled" ResourceKey="TextDisabled" />
+
+  <StaticResource x:Key="RadioButtonForegroundPointerOver" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="RadioButtonForegroundPressed" ResourceKey="TextPrimary" />
+  <StaticResource x:Key="RadioButtonForegroundDisabled" ResourceKey="TextDisabled" />
+  <StaticResource x:Key="RadioButtonOuterEllipseStroke" ResourceKey="InputBorder" />
+  <StaticResource x:Key="RadioButtonOuterEllipseStrokePointerOver" ResourceKey="TextMuted" />
+  <StaticResource x:Key="RadioButtonOuterEllipseStrokePressed" ResourceKey="TextMuted" />
+  <StaticResource x:Key="RadioButtonOuterEllipseStrokeDisabled" ResourceKey="TextDisabled" />
+  <StaticResource x:Key="RadioButtonOuterEllipseFillPressed" ResourceKey="SurfacePressed" />
+  <StaticResource x:Key="RadioButtonOuterEllipseCheckedFillDisabled" ResourceKey="TextDisabled" />
+  <StaticResource x:Key="RadioButtonOuterEllipseCheckedStrokeDisabled" ResourceKey="TextDisabled" />
+
+  <!-- Placeholder text: readable (TextMuted, 5:1) and still recognizably not an entered value.
+       Fluent would also halve its opacity, which brings it back below 2.5:1. -->
+  <StaticResource x:Key="TextControlPlaceholderForeground" ResourceKey="TextMuted" />
+  <x:Double x:Key="TextControlPlaceholderOpacity">1</x:Double>
+</ResourceDictionary>
