@@ -387,6 +387,7 @@ public static class Strings
     public static string MaterialStrength => Get(nameof(MaterialStrength));
     public static string MaterialStrengthColumn => Get(nameof(MaterialStrengthColumn));
     public static string MaterialStrengthType => Get(nameof(MaterialStrengthType));
+    public static string MaterialStrengthTypePlaceholder => Get(nameof(MaterialStrengthTypePlaceholder));
     public static string MaterialStrengthRe => Get(nameof(MaterialStrengthRe));
     public static string MaterialStrengthRp02 => Get(nameof(MaterialStrengthRp02));
     public static string MaterialStrengthUnspecified => Get(nameof(MaterialStrengthUnspecified));

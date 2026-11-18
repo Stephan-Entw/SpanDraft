@@ -6,29 +6,29 @@
              x:Class="SpanDraft.Desktop.Controls.PointLoadFlyout"
              x:DataType="vm:EditorViewModel" KeyDown="FlyoutKeyDown" KeyboardNavigation.TabNavigation="Cycle">
   <Border Classes="supportFlyout" MinWidth="300">
-    <StackPanel Spacing="{StaticResource Space8}">
+    <StackPanel Spacing="{StaticResource Space8}" Grid.IsSharedSizeScope="True">
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <TextBlock Text="{x:Static resources:Strings.EntityNameLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Grid.Column="1" x:Name="NameInput" Text="{Binding LoadDraft.NameText, Mode=TwoWay}" Classes.error="{Binding LoadDraft.HasNameError}"
                    AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
-        </Grid>
+        </controls:FlyoutFormRow>
         <controls:TechnicalTextBlock Text="{Binding LoadDraft.NameError}" IsVisible="{Binding LoadDraft.HasNameError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <TextBlock controls:TechnicalTextPresenter.Content="{Binding LoadDraft.PositionLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="PositionInput" Text="{Binding LoadDraft.PositionText, Mode=TwoWay}"
                    Classes.error="{Binding LoadDraft.HasPositionError}" AutomationProperties.Name="{Binding LoadDraft.PositionLabel.PlainText}" />
-          <controls:TechnicalTextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding LoadDraft.PositionUnit}" VerticalAlignment="Center" />
-        </Grid>
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding LoadDraft.PositionUnit}" VerticalAlignment="Center" Classes="propertyLabel" />
+        </controls:FlyoutFormRow>
         <controls:PositionReferenceRow x:Name="PositionReference" DataContext="{Binding LoadDraft.Reference}" />
         <controls:TechnicalTextBlock Text="{Binding LoadDraft.PositionError}" IsVisible="{Binding LoadDraft.HasPositionError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <controls:TechnicalTextBlock Text="{Binding LoadDraft.ValueLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric loadValue" Grid.Column="1" x:Name="ValueInput" Text="{Binding LoadDraft.ValueText, Mode=TwoWay}"
                    Classes.error="{Binding LoadDraft.HasValueError}" AutomationProperties.Name="{Binding LoadDraft.ValueLabel}">
@@ -37,8 +37,8 @@
                       AutomationProperties.Name="{x:Static resources:Strings.ToggleLoadSign}" ToolTip.Tip="{x:Static resources:Strings.ToggleLoadSign}" />
             </TextBox.InnerLeftContent>
           </TextBox>
-          <controls:TechnicalTextBlock Grid.Column="2" x:Name="ValueUnit" Text="{Binding LoadDraft.Unit}" VerticalAlignment="Center" />
-        </Grid>
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="ValueUnit" Text="{Binding LoadDraft.Unit}" VerticalAlignment="Center" Classes="propertyLabel" />
+        </controls:FlyoutFormRow>
         <controls:TechnicalTextBlock Text="{Binding LoadDraft.ValueError}" IsVisible="{Binding LoadDraft.HasValueError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
         <controls:TechnicalTextBlock Text="{Binding LoadFeedback}" IsVisible="{Binding HasLoadFeedback}"

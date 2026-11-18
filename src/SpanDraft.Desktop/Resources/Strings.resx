@@ -361,6 +361,7 @@
   <data name="MaterialStrength" xml:space="preserve"><value>Strength value</value></data>
   <data name="MaterialStrengthColumn" xml:space="preserve"><value>Strength [{0}]</value></data>
   <data name="MaterialStrengthType" xml:space="preserve"><value>Strength type</value></data>
+  <data name="MaterialStrengthTypePlaceholder" xml:space="preserve"><value>Type</value></data>
   <data name="MaterialStrengthRe" xml:space="preserve"><value>Yield strength</value></data>
   <data name="MaterialStrengthRp02" xml:space="preserve"><value>0.2% proof strength</value></data>
   <data name="MaterialStrengthUnspecified" xml:space="preserve"><value>Type not specified</value></data>

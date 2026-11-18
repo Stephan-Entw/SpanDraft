@@ -78,6 +78,42 @@ public sealed class ProjectSetupIntegrationTests
     }
 
     [Fact]
+    public async Task EveryBusyDependentSetupCommandLearnsWhenTheLibrariesStartAndFinishLoading()
+    {
+        var files = new Files(); var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials"));
+        Assert.True(await main.NewAsync()); var setup = main.Setup;
+        setup.AddSegmentCommand.Execute(null); Assert.Equal(2, setup.Cards.Count);
+        var commands = new List<(string Name, System.Windows.Input.ICommand Command)>
+        {
+            ("Cancel", setup.CancelCommand), ("ChangeMaterial", setup.ChangeMaterialCommand),
+            ("ChangeSection", setup.ChangeSectionCommand), ("AddSegment", setup.AddSegmentCommand),
+        };
+        foreach (var card in setup.Cards)
+            commands.AddRange(new (string, System.Windows.Input.ICommand)[]
+            {
+                ("card.ChangeSection", card.ChangeSectionCommand), ("card.ChangeMaterial", card.ChangeMaterialCommand),
+                ("card.InsertBefore", card.InsertBeforeCommand), ("card.InsertAfter", card.InsertAfterCommand),
+                ("card.Duplicate", card.DuplicateCommand), ("card.Remove", card.RemoveCommand),
+            });
+        var raised = commands.ToDictionary(c => c, _ => 0);
+        foreach (var entry in commands) entry.Command.CanExecuteChanged += (_, _) => raised[entry]++;
+        Assert.All(commands, c => Assert.True(c.Command.CanExecute(null), c.Name));
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        files.BeforeRead = _ => release.Task;
+        var loading = main.InitializeLibrariesAsync();
+        try
+        {
+            Assert.True(setup.IsBusy);
+            // A view binds to a command by reading CanExecute once and then only follows the event.
+            Assert.All(commands, c => { Assert.False(c.Command.CanExecute(null), c.Name); Assert.True(raised[c] > 0, c.Name + " was not told about the busy phase"); });
+            foreach (var entry in commands) raised[entry] = 0;
+        }
+        finally { release.TrySetResult(); await loading; }
+        Assert.False(setup.IsBusy);
+        Assert.All(commands, c => { Assert.True(c.Command.CanExecute(null), c.Name); Assert.True(raised[c] > 0, c.Name + " was not told that loading finished"); });
+    }
+
+    [Fact]
     public async Task EmptySelectionsStayEmptyOnCancelAndOnlyConfirmedSectionIsTransferred()
     {
         var app = new App(create: false); Assert.True(await app.Main.NewAsync()); var setup = app.Main.Setup;

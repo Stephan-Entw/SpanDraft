@@ -6,40 +6,40 @@
              x:Class="SpanDraft.Desktop.Controls.DistributedLoadFlyout"
              x:DataType="vm:EditorViewModel" KeyDown="FlyoutKeyDown" KeyboardNavigation.TabNavigation="Cycle">
   <Border Classes="supportFlyout" MinWidth="300">
-    <StackPanel Spacing="{StaticResource Space8}">
+    <StackPanel Spacing="{StaticResource Space8}" Grid.IsSharedSizeScope="True">
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <TextBlock Text="{x:Static resources:Strings.EntityNameLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Grid.Column="1" x:Name="NameInput" Text="{Binding DistributedLoadDraft.NameText, Mode=TwoWay}" Classes.error="{Binding DistributedLoadDraft.HasNameError}"
                    AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
-        </Grid>
+        </controls:FlyoutFormRow>
         <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.NameError}" IsVisible="{Binding DistributedLoadDraft.HasNameError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <TextBlock controls:TechnicalTextPresenter.Content="{Binding DistributedLoadDraft.StartLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="StartInput" Text="{Binding DistributedLoadDraft.StartText, Mode=TwoWay}"
                    Classes.error="{Binding DistributedLoadDraft.HasStartError}" AutomationProperties.Name="{Binding DistributedLoadDraft.StartLabel.PlainText}" />
-          <controls:TechnicalTextBlock Grid.Column="2" x:Name="StartUnit" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
-        </Grid>
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="StartUnit" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" Classes="propertyLabel" />
+        </controls:FlyoutFormRow>
         <controls:PositionReferenceRow x:Name="StartReference" DataContext="{Binding DistributedLoadDraft.StartReference}" />
         <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.StartError}" IsVisible="{Binding DistributedLoadDraft.HasStartError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <TextBlock controls:TechnicalTextPresenter.Content="{Binding DistributedLoadDraft.EndLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="EndInput" Text="{Binding DistributedLoadDraft.EndText, Mode=TwoWay}"
                    Classes.error="{Binding DistributedLoadDraft.HasEndError}" AutomationProperties.Name="{Binding DistributedLoadDraft.EndLabel.PlainText}" />
-          <controls:TechnicalTextBlock Grid.Column="2" x:Name="EndUnit" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" />
-        </Grid>
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="EndUnit" Text="{Binding DistributedLoadDraft.PositionUnit}" VerticalAlignment="Center" Classes="propertyLabel" />
+        </controls:FlyoutFormRow>
         <controls:PositionReferenceRow x:Name="EndReference" DataContext="{Binding DistributedLoadDraft.EndReference}" />
         <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.EndError}" IsVisible="{Binding DistributedLoadDraft.HasEndError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <TextBlock Text="{x:Static resources:Strings.DistributedStartIntensityLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric loadValue" Grid.Column="1" x:Name="ValueInput" Text="{Binding DistributedLoadDraft.StartIntensityText, Mode=TwoWay}"
                    Classes.error="{Binding DistributedLoadDraft.HasStartIntensityError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedStartIntensityLabel}">
@@ -48,13 +48,13 @@
                       AutomationProperties.Name="{x:Static resources:Strings.ToggleLoadSign}" ToolTip.Tip="{x:Static resources:Strings.ToggleLoadSign}" />
             </TextBox.InnerLeftContent>
           </TextBox>
-          <controls:TechnicalTextBlock Grid.Column="2" x:Name="ValueUnit" Text="{Binding DistributedLoadDraft.IntensityUnit}" VerticalAlignment="Center" />
-        </Grid>
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="ValueUnit" Text="{Binding DistributedLoadDraft.IntensityUnit}" VerticalAlignment="Center" Classes="propertyLabel" />
+        </controls:FlyoutFormRow>
         <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.StartIntensityError}" IsVisible="{Binding DistributedLoadDraft.HasStartIntensityError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <TextBlock Text="{x:Static resources:Strings.DistributedEndIntensityLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric loadValue" Grid.Column="1" x:Name="EndValueInput" Text="{Binding DistributedLoadDraft.EndIntensityText, Mode=TwoWay}"
                    Classes.error="{Binding DistributedLoadDraft.HasEndIntensityError}" AutomationProperties.Name="{x:Static resources:Strings.DistributedEndIntensityLabel}">
@@ -63,8 +63,8 @@
                       AutomationProperties.Name="{x:Static resources:Strings.ToggleLoadSign}" ToolTip.Tip="{x:Static resources:Strings.ToggleLoadSign}" />
             </TextBox.InnerLeftContent>
           </TextBox>
-          <controls:TechnicalTextBlock Grid.Column="2" x:Name="EndValueUnit" Text="{Binding DistributedLoadDraft.IntensityUnit}" VerticalAlignment="Center" />
-        </Grid>
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="EndValueUnit" Text="{Binding DistributedLoadDraft.IntensityUnit}" VerticalAlignment="Center" Classes="propertyLabel" />
+        </controls:FlyoutFormRow>
         <controls:TechnicalTextBlock Text="{Binding DistributedLoadDraft.EndIntensityError}" IsVisible="{Binding DistributedLoadDraft.HasEndIntensityError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
         <controls:TechnicalTextBlock Text="{Binding DistributedLoadFeedback}" IsVisible="{Binding HasDistributedLoadFeedback}"

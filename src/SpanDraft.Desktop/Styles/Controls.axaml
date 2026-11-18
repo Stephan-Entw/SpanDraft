@@ -148,6 +148,8 @@
       <SolidColorBrush x:Key="ComboBoxBackgroundUnfocused" Color="Transparent" />
     </Style.Resources>
     <Setter Property="VerticalContentAlignment" Value="Center" />
+    <!-- Same muted tone as a TextBox placeholder: a missing choice must not read like an entered value. -->
+    <Setter Property="PlaceholderForeground" Value="{DynamicResource TextMuted}" />
   </Style>
   <Style Selector="TextBox">
     <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -471,6 +473,9 @@
     <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusM}" />
     <Setter Property="Padding" Value="{DynamicResource Padding16}" />
+  </Style>
+  <Style Selector="controls|FlyoutFormRow">
+    <Setter Property="ColumnSpacing" Value="{StaticResource Space8}" />
   </Style>
   <Style Selector="StackPanel.editorFlyoutFooter">
     <Setter Property="Orientation" Value="Horizontal" />

@@ -6,25 +6,25 @@
              x:Class="SpanDraft.Desktop.Controls.MomentReleaseFlyout"
              x:DataType="vm:EditorViewModel" KeyDown="FlyoutKeyDown" KeyboardNavigation.TabNavigation="Cycle">
   <Border Classes="supportFlyout" MinWidth="300">
-    <StackPanel Spacing="{StaticResource Space8}">
+    <StackPanel Spacing="{StaticResource Space8}" Grid.IsSharedSizeScope="True">
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <TextBlock Text="{x:Static resources:Strings.EntityNameLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Grid.Column="1" x:Name="NameInput" Text="{Binding MomentReleaseDraft.NameText, Mode=TwoWay}"
                    Classes.error="{Binding MomentReleaseDraft.HasNameError}"
                    AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
-        </Grid>
+        </controls:FlyoutFormRow>
         <controls:TechnicalTextBlock Text="{Binding MomentReleaseDraft.NameError}" IsVisible="{Binding MomentReleaseDraft.HasNameError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <TextBlock controls:TechnicalTextPresenter.Content="{Binding MomentReleaseDraft.PositionLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="PositionInput" Text="{Binding MomentReleaseDraft.PositionText, Mode=TwoWay}"
                    Classes.error="{Binding MomentReleaseDraft.HasError}"
                    AutomationProperties.Name="{Binding MomentReleaseDraft.PositionLabel.PlainText}" />
-          <controls:TechnicalTextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding MomentReleaseDraft.PositionUnit}" VerticalAlignment="Center" />
-        </Grid>
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding MomentReleaseDraft.PositionUnit}" VerticalAlignment="Center" Classes="propertyLabel" />
+        </controls:FlyoutFormRow>
         <controls:PositionReferenceRow x:Name="PositionReference" DataContext="{Binding MomentReleaseDraft.Reference}" />
         <controls:TechnicalTextBlock Text="{Binding MomentReleaseDraft.ErrorText}" IsVisible="{Binding MomentReleaseDraft.HasError}"
                    Classes="validationMessage" TextWrapping="Wrap" />

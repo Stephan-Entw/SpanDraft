@@ -98,8 +98,10 @@ public sealed class DesktopSpringFlyoutControlTests
         Assert.Equal(Origin(flyout.FindControl<TextBlock>("PositionUnit")!, flyout).X, Origin(flyout.FindControl<Control>(unitName)!, flyout).X, 3);
         // The stiffness symbol shares the label column with the other rows and is not clipped.
         var label = flyout.FindControl<TextBlock>(labelName)!;
-        Assert.InRange(Math.Abs(Origin(flyout.FindControl<TextBox>("NameInput")!, flyout).X - 88 - 8 - Origin(label, flyout).X), 0, 1.5);
-        Assert.True(label.DesiredSize.Width <= 88 + 0.5, $"{labelName} is wider than its label column: {label.DesiredSize.Width}");
+        var nameInput = flyout.FindControl<TextBox>("NameInput")!;
+        Assert.Equal(Origin(nameInput, flyout).X, Origin(input, flyout).X, 3);
+        Assert.InRange(Origin(nameInput, flyout).X - 8 - (Origin(label, flyout).X + label.Bounds.Width), -0.5, 0.5);
+        Assert.True(label.DesiredSize.Width <= label.Bounds.Width + 0.5, $"{labelName} is wider than its label column: {label.DesiredSize.Width}");
         // Rows keep their order and do not overlap each other or the footer.
         double[] tops = new[] { "TypeInput", inputName, "PositionInput" }
             .Select(n => Origin(flyout.FindControl<Control>(n)!, flyout).Y).ToArray();

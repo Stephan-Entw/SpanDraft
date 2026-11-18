@@ -86,6 +86,11 @@ public sealed class SetupSegmentCard : ObservableObject
         MaterialName = draft.Material is { } material ? MaterialDisplay.Format(material) : Strings.SelectMaterialRequired;
         MaterialSummaryText = draft.Material is { } m ? ProjectSetupViewModel.MaterialSummaryTextOf(m, presentation) : (TechnicalText)"";
         Notify(nameof(LengthError)); Notify(nameof(HasLengthError));
+        RefreshCommands();
+    }
+
+    internal void RefreshCommands()
+    {
         foreach (var command in new[] { ChangeSectionCommand, ChangeMaterialCommand, InsertBeforeCommand, InsertAfterCommand,
             DuplicateCommand, RemoveCommand }) command.Refresh();
     }

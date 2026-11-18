@@ -188,6 +188,37 @@ public sealed class DesktopSegmentSetupControlTests
         window.Close();
     }
 
+    [Fact]
+    public async Task TheAddButtonAndTheCardActionsOfACreateSetupBoundWhileTheLibrariesLoadBecomeAvailableWhenTheyAreLoaded()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new ProjectTestSupport.Files(); var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials"));
+        Assert.True(await main.NewAsync());
+        // Continuations run inline when the gate opens, so that the end of the busy phase happens on the UI thread.
+        var release = new TaskCompletionSource();
+        files.BeforeRead = _ => release.Task;
+        var loading = main.InitializeLibrariesAsync();
+        // The view reads the availability of every command for the first time while the libraries are still loading.
+        var view = new ProjectSetupView { DataContext = main.Setup };
+        var window = new Window { Content = view, Width = 1100, Height = 650 };
+        window.Show();
+        Arrange(window, 1100, 650);
+        var add = view.Part<Button>("AddSegmentButton");
+        var menu = view.FirstCard().Part<Button>("SectionCardButton");
+        try { Assert.True(main.Setup.IsBusy); Assert.False(add.IsEffectivelyEnabled); Assert.False(menu.IsEffectivelyEnabled); }
+        finally { release.TrySetResult(); await loading; }
+        Arrange(window, 1100, 650);
+        Assert.False(main.Setup.IsBusy);
+        Assert.True(add.IsEffectivelyEnabled); Assert.True(menu.IsEffectivelyEnabled);
+        Assert.True(add.Focusable && add.IsTabStop);
+        add.Focus(); Assert.True(add.IsFocused);
+        add.Command!.Execute(null);
+        Arrange(window, 1100, 650);
+        Assert.Equal(2, view.Cards().Count);
+        Assert.All(view.Cards(), card => Assert.True(card.Part<Button>("SectionCardButton").IsEffectivelyEnabled));
+        window.Close();
+    }
+
     [Theory]
     [InlineData(3)]
     [InlineData(1)]

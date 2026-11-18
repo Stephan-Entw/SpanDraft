@@ -6,17 +6,17 @@
              x:Class="SpanDraft.Desktop.Controls.SupportFlyout"
              x:DataType="vm:EditorViewModel" KeyDown="FlyoutKeyDown" KeyboardNavigation.TabNavigation="Cycle">
   <Border Classes="supportFlyout" MinWidth="300">
-    <StackPanel Spacing="{StaticResource Space8}">
+    <StackPanel Spacing="{StaticResource Space8}" Grid.IsSharedSizeScope="True">
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <TextBlock Text="{x:Static resources:Strings.EntityNameLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Grid.Column="1" x:Name="NameInput" Text="{Binding SupportDraft.NameText, Mode=TwoWay}" Classes.error="{Binding SupportDraft.HasNameError}"
                    AutomationProperties.Name="{x:Static resources:Strings.EntityNameLabel}" />
-        </Grid>
+        </controls:FlyoutFormRow>
         <controls:TechnicalTextBlock Text="{Binding SupportDraft.NameError}" IsVisible="{Binding SupportDraft.HasNameError}"
                    Classes="validationMessage" TextWrapping="Wrap" />
       </StackPanel>
-      <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+      <controls:FlyoutFormRow>
         <TextBlock Text="{x:Static resources:Strings.SupportTypeLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
         <ComboBox Grid.Column="1" x:Name="TypeInput" DropDownClosed="TypeDropDownClosed" ItemsSource="{Binding SupportDraft.Types}"
                   SelectedItem="{Binding SupportDraft.SelectedType, Mode=TwoWay}"
@@ -25,29 +25,29 @@
             <DataTemplate x:DataType="vm:SupportTypeOption"><controls:TechnicalTextBlock Text="{Binding Name}" /></DataTemplate>
           </ComboBox.ItemTemplate>
         </ComboBox>
-      </Grid>
+      </controls:FlyoutFormRow>
       <StackPanel x:Name="SpringSection" Spacing="{StaticResource Space4}" IsVisible="{Binding SupportDraft.IsSpring}">
         <StackPanel Spacing="{StaticResource Space4}" IsVisible="{Binding SupportDraft.HasTranslational}">
-          <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+          <controls:FlyoutFormRow>
             <TextBlock x:Name="TranslationalLabel" controls:TechnicalTextPresenter.Content="{Binding SupportDraft.TranslationalLabel}"
                        Classes="propertyLabel" VerticalAlignment="Center" />
             <TextBox Classes="numeric" Grid.Column="1" x:Name="TranslationalInput" Text="{Binding SupportDraft.TranslationalText, Mode=TwoWay}"
                      Classes.error="{Binding SupportDraft.HasTranslationalError}"
                      AutomationProperties.Name="{x:Static resources:Strings.SpringTranslationalName}" />
-            <controls:TechnicalTextBlock Grid.Column="2" x:Name="TranslationalUnit" Text="{Binding SupportDraft.TranslationalUnit}" VerticalAlignment="Center" />
-          </Grid>
+            <controls:TechnicalTextBlock Grid.Column="2" x:Name="TranslationalUnit" Text="{Binding SupportDraft.TranslationalUnit}" VerticalAlignment="Center" Classes="propertyLabel" />
+          </controls:FlyoutFormRow>
           <controls:TechnicalTextBlock Text="{Binding SupportDraft.TranslationalError}" IsVisible="{Binding SupportDraft.HasTranslationalError}"
                      Classes="validationMessage" TextWrapping="Wrap" />
         </StackPanel>
         <StackPanel Spacing="{StaticResource Space4}" IsVisible="{Binding SupportDraft.HasRotational}">
-          <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+          <controls:FlyoutFormRow>
             <TextBlock x:Name="RotationalLabel" controls:TechnicalTextPresenter.Content="{Binding SupportDraft.RotationalLabel}"
                        Classes="propertyLabel" VerticalAlignment="Center" />
             <TextBox Classes="numeric" Grid.Column="1" x:Name="RotationalInput" Text="{Binding SupportDraft.RotationalText, Mode=TwoWay}"
                      Classes.error="{Binding SupportDraft.HasRotationalError}"
                      AutomationProperties.Name="{x:Static resources:Strings.SpringRotationalName}" />
-            <controls:TechnicalTextBlock Grid.Column="2" x:Name="RotationalUnit" Text="{Binding SupportDraft.RotationalUnit}" VerticalAlignment="Center" />
-          </Grid>
+            <controls:TechnicalTextBlock Grid.Column="2" x:Name="RotationalUnit" Text="{Binding SupportDraft.RotationalUnit}" VerticalAlignment="Center" Classes="propertyLabel" />
+          </controls:FlyoutFormRow>
           <controls:TechnicalTextBlock Text="{Binding SupportDraft.RotationalError}" IsVisible="{Binding SupportDraft.HasRotationalError}"
                      Classes="validationMessage" TextWrapping="Wrap" />
         </StackPanel>
@@ -56,13 +56,13 @@
                   AutomationProperties.Name="{x:Static resources:Strings.SpringRigidTranslationLabel}" />
       </StackPanel>
       <StackPanel Spacing="{StaticResource Space4}">
-        <Grid ColumnDefinitions="88,150,Auto" ColumnSpacing="{StaticResource Space8}">
+        <controls:FlyoutFormRow>
           <TextBlock controls:TechnicalTextPresenter.Content="{Binding SupportDraft.PositionLabel}" Classes="propertyLabel" VerticalAlignment="Center" />
           <TextBox Classes="numeric" Grid.Column="1" x:Name="PositionInput" Text="{Binding SupportDraft.PositionText, Mode=TwoWay}"
                    Classes.error="{Binding SupportDraft.HasError}"
                    AutomationProperties.Name="{Binding SupportDraft.PositionLabel.PlainText}" />
-          <controls:TechnicalTextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding SupportDraft.PositionUnit}" VerticalAlignment="Center" />
-        </Grid>
+          <controls:TechnicalTextBlock Grid.Column="2" x:Name="PositionUnit" Text="{Binding SupportDraft.PositionUnit}" VerticalAlignment="Center" Classes="propertyLabel" />
+        </controls:FlyoutFormRow>
         <controls:PositionReferenceRow x:Name="PositionReference" DataContext="{Binding SupportDraft.Reference}" />
         <controls:TechnicalTextBlock Text="{Binding SupportDraft.ErrorText}" IsVisible="{Binding SupportDraft.HasError}"
                    Classes="validationMessage" TextWrapping="Wrap" />

@@ -5,17 +5,32 @@
              xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
              x:Class="SpanDraft.Desktop.Controls.SelfWeightFlyout"
              x:DataType="vm:EditorViewModel" KeyDown="FlyoutKeyDown" KeyboardNavigation.TabNavigation="Cycle">
+  <UserControl.Styles>
+    <!-- Read-only values start where the text of the input fields in the other flyouts starts
+         (field border + ControlPadding), so they keep the same distance from the labels. -->
+    <Style Selector="controls|FlyoutFormRow > TextBlock.bodyStrong">
+      <Setter Property="Margin" Value="13,0,0,0" />
+    </Style>
+  </UserControl.Styles>
   <Border Classes="supportFlyout" MinWidth="300">
     <StackPanel Spacing="{StaticResource Space8}">
-      <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space16}"
-            RowSpacing="{StaticResource Space4}" HorizontalAlignment="Left">
-        <TextBlock x:Name="WeightTitle" Text="{x:Static resources:Strings.SelfWeight}" />
-        <TextBlock x:Name="WeightValue" Grid.Column="1" controls:TechnicalTextPresenter.Content="{Binding SelfWeightValue}" />
-        <TextBlock x:Name="AreaTitle" Grid.Row="1" Text="{x:Static resources:Strings.SectionDefinitionArea}" />
-        <TextBlock x:Name="AreaValue" Grid.Row="1" Grid.Column="1" controls:TechnicalTextPresenter.Content="{Binding SelfWeightArea}" />
-        <TextBlock x:Name="DensityTitle" Grid.Row="2" Text="{x:Static resources:Strings.MaterialDensity}" />
-        <TextBlock x:Name="DensityValue" Grid.Row="2" Grid.Column="1" controls:TechnicalTextPresenter.Content="{Binding SelfWeightDensity}" />
-      </Grid>
+      <StackPanel Grid.IsSharedSizeScope="True">
+        <controls:FlyoutFormRow MinHeight="{DynamicResource StandardControl}">
+          <TextBlock x:Name="WeightTitle" Text="{x:Static resources:Strings.SelfWeight}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBlock x:Name="WeightValue" Grid.Column="1" Grid.ColumnSpan="2" Classes="bodyStrong" HorizontalAlignment="Left" VerticalAlignment="Center"
+                     controls:TechnicalTextPresenter.Content="{Binding SelfWeightValue}" />
+        </controls:FlyoutFormRow>
+        <controls:FlyoutFormRow MinHeight="{DynamicResource StandardControl}">
+          <TextBlock x:Name="AreaTitle" Text="{x:Static resources:Strings.SectionDefinitionArea}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBlock x:Name="AreaValue" Grid.Column="1" Grid.ColumnSpan="2" Classes="bodyStrong" HorizontalAlignment="Left" VerticalAlignment="Center"
+                     controls:TechnicalTextPresenter.Content="{Binding SelfWeightArea}" />
+        </controls:FlyoutFormRow>
+        <controls:FlyoutFormRow MinHeight="{DynamicResource StandardControl}">
+          <TextBlock x:Name="DensityTitle" Text="{x:Static resources:Strings.MaterialDensity}" Classes="propertyLabel" VerticalAlignment="Center" />
+          <TextBlock x:Name="DensityValue" Grid.Column="1" Grid.ColumnSpan="2" Classes="bodyStrong" HorizontalAlignment="Left" VerticalAlignment="Center"
+                     controls:TechnicalTextPresenter.Content="{Binding SelfWeightDensity}" />
+        </controls:FlyoutFormRow>
+      </StackPanel>
       <StackPanel x:Name="Footer" Classes="editorFlyoutFooter">
         <Button x:Name="DeleteAction" Content="{x:Static resources:Strings.Delete}" Classes="ghost dangerGhost"
                 Command="{Binding DisableSelfWeightCommand}" />

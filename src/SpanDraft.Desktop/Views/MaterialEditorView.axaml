@@ -67,7 +67,10 @@
         </Grid.ColumnDefinitions>
         <TextBlock Text="{x:Static resources:Strings.MaterialStrength}" Classes="propertyLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
         <Grid Grid.Column="2" ColumnDefinitions="76,8,68,8,48" HorizontalAlignment="Left">
-          <ComboBox x:Name="MaterialStrengthTypeInput" Width="76" Grid.Column="0" ItemsSource="{Binding StrengthTypes}" SelectedItem="{Binding StrengthType, Mode=TwoWay}"
+          <!-- The symbol (Rp0,2) needs more room than the default padding leaves in this narrow column; the placeholder
+                   shows that a choice is still missing instead of an empty box. -->
+          <ComboBox x:Name="MaterialStrengthTypeInput" Width="76" Grid.Column="0" Padding="8,4,0,4"
+                    PlaceholderText="{x:Static resources:Strings.MaterialStrengthTypePlaceholder}" ItemsSource="{Binding StrengthTypes}" SelectedItem="{Binding StrengthType, Mode=TwoWay}"
                     LostFocus="StrengthTypeLostFocus" HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.MaterialStrengthType}">
             <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock controls:TechnicalTextPresenter.Content="{Binding DisplayText}" /></DataTemplate></ComboBox.ItemTemplate>
           </ComboBox>

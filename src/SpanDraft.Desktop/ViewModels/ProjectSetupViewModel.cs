@@ -95,6 +95,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         CancelCommand = new(cancel, () => CanCancel && !IsBusy);
         ChangeMaterialCommand = new(ShowMaterials, () => !IsBusy);
         ChangeSectionCommand = new(ShowSections, () => !IsBusy);
+        AddSegmentCommand = new(() => InsertSegment(_segments.Count), () => !IsBusy);
     }
     public event Action<ProjectSetupViewModel>? ConfirmedDraftChanged;
     public ProjectSetupDraft Draft
@@ -166,8 +167,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
     public bool HasSeveralSegments => _segments.Count > 1;
     public string SelectedSegmentTitle => string.Format(CultureInfo.CurrentUICulture, Strings.SegmentSelected, _selectedSegment + 1);
     public System.Collections.ObjectModel.ObservableCollection<SetupSegmentCard> Cards { get; } = [];
-    public ActionCommand AddSegmentCommand => _addSegment ??= new(() => InsertSegment(_segments.Count), () => !IsBusy);
-    private ActionCommand? _addSegment;
+    public ActionCommand AddSegmentCommand { get; }
     private string? _segmentError;
 
     /// <summary>Why the last change of the segment chain was rejected; null when there is nothing to say.</summary>
@@ -533,9 +533,19 @@ public sealed class ProjectSetupViewModel : ObservableObject
     internal void RefreshLibraryState()
     {
         foreach (var name in new[] { nameof(IsBusy), nameof(CanApply), nameof(CanCancel), nameof(MaterialName), nameof(StartupError), nameof(HasStartupError) }) Notify(name);
-        ApplyCommand.Refresh(); CancelCommand.Refresh(); ChangeMaterialCommand.Refresh(); ChangeSectionCommand.Refresh();
+        RefreshBusyDependentCommands();
         if (CurrentStep is SetupStepViewModel step) step.Refresh();
         Definition?.RefreshLibraryState();
+    }
+    /// <summary>
+    /// Every command whose availability follows <see cref="IsBusy"/>, the actions of the cards included: the setup
+    /// is created while the libraries still load, so each of them has to learn when the busy phase ends.
+    /// </summary>
+    private void RefreshBusyDependentCommands()
+    {
+        ApplyCommand.Refresh(); CancelCommand.Refresh(); ChangeMaterialCommand.Refresh(); ChangeSectionCommand.Refresh();
+        AddSegmentCommand.Refresh();
+        foreach (var card in Cards) card.RefreshCommands();
     }
     private string Given(double si, QuantityKind kind) => QuantityFormatter.FormatInput(si, ResultPresentation.Profile[kind], ResultPresentation);
     private string SectionProperty(double si, QuantityKind kind) => SectionDisplay.Property(SelectedSection!, si, kind, ResultPresentation);

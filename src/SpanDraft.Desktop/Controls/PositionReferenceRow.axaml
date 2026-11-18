@@ -2,9 +2,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
              xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
              x:Class="SpanDraft.Desktop.Controls.PositionReferenceRow" x:DataType="vm:PositionReferenceDraft">
   <StackPanel Spacing="{StaticResource Space4}">
-    <Grid x:Name="ReferenceChoice" ColumnDefinitions="88,150" ColumnSpacing="{StaticResource Space8}" IsVisible="{Binding ShowReference}">
+    <controls:FlyoutFormRow x:Name="ReferenceChoice" IsVisible="{Binding ShowReference}">
       <TextBlock Text="{x:Static resources:Strings.PositionReference}" Classes="propertyLabel" VerticalAlignment="Center" />
       <ComboBox x:Name="ReferenceInput" Grid.Column="1" ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedOption, Mode=TwoWay}"
                 HorizontalAlignment="Stretch" AutomationProperties.Name="{x:Static resources:Strings.PositionReference}">
@@ -12,10 +13,10 @@
           <DataTemplate x:DataType="vm:PositionReferenceOption"><TextBlock Text="{Binding Name}" /></DataTemplate>
         </ComboBox.ItemTemplate>
       </ComboBox>
-    </Grid>
-    <Grid x:Name="PositionInfoRow" ColumnDefinitions="88,*" ColumnSpacing="{StaticResource Space8}" IsVisible="{Binding ShowPositionInfo}">
-      <TextBlock x:Name="PositionInfo" Grid.Column="1" Text="{Binding PositionInfo}" Classes="propertyLabel" />
-    </Grid>
+    </controls:FlyoutFormRow>
+    <controls:FlyoutFormRow x:Name="PositionInfoRow" IsVisible="{Binding ShowPositionInfo}">
+      <TextBlock x:Name="PositionInfo" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding PositionInfo}" Classes="propertyLabel" />
+    </controls:FlyoutFormRow>
     <CheckBox x:Name="HoldEndInput" Content="{Binding HoldEndLabel}" IsChecked="{Binding HoldEnd, Mode=TwoWay}"
               IsVisible="{Binding CanHoldEnd}" />
   </StackPanel>

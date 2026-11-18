@@ -361,6 +361,7 @@
   <data name="MaterialStrength" xml:space="preserve"><value>Festigkeitskennwert</value></data>
   <data name="MaterialStrengthColumn" xml:space="preserve"><value>Kennwert [{0}]</value></data>
   <data name="MaterialStrengthType" xml:space="preserve"><value>Kennwerttyp</value></data>
+  <data name="MaterialStrengthTypePlaceholder" xml:space="preserve"><value>Art</value></data>
   <data name="MaterialStrengthRe" xml:space="preserve"><value>Streckgrenze</value></data>
   <data name="MaterialStrengthRp02" xml:space="preserve"><value>0,2-%-Dehngrenze</value></data>
   <data name="MaterialStrengthUnspecified" xml:space="preserve"><value>Typ nicht festgelegt</value></data>
