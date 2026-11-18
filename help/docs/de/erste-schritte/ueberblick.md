@@ -18,7 +18,7 @@ SpanDraft ist ein visuelles Berechnungsprogramm für einzelne gerade Balken. Ein
   <li class="spandraft-workflow-step">
     <div class="spandraft-workflow-content">
       <span class="spandraft-workflow-title">Lasten hinzufügen</span>
-      <span class="spandraft-workflow-description">Punktkräfte, Punktmomente und Streckenlasten anordnen sowie optional Eigengewicht aktivieren.</span>
+      <span class="spandraft-workflow-description">Einzelkräfte, Einzelmomente und Streckenlasten anordnen sowie optional Eigengewicht aktivieren.</span>
     </div>
   </li>
   <li class="spandraft-workflow-step">

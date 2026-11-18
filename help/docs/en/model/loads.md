@@ -13,10 +13,10 @@ A point force `F` acts at a position `x`, including at a beam end. Its sign dete
 
 ## Point moment
 
-A point moment `M` acts at a position `x` without introducing an additional resultant shear force at that position.
+A point moment `C` is an external moment applied at a position `x`. It causes no jump in the shear force there. In the toolbar, select **Moment** and enter the value of `C` in the **Moment M** field. The result diagram uses `M(x)` for the internal bending moment.
 
 <figure class="spandraft-load-signs">
-  <div class="spandraft-load-sign-labels"><span><code>M &gt; 0</code> · counterclockwise</span><span><code>M &lt; 0</code> · clockwise</span></div>
+  <div class="spandraft-load-sign-labels"><span><code>C &gt; 0</code> · counterclockwise</span><span><code>C &lt; 0</code> · clockwise</span></div>
   <img src="../assets/punktmoment-vorzeichen.png" alt="Point moments: counterclockwise on the left, clockwise on the right">
 </figure>
 

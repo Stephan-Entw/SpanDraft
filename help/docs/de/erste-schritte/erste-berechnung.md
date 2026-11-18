@@ -1,12 +1,12 @@
-# Erste Berechnung: ein Balken mit mittiger Punktlast
+# Erste Berechnung: ein Balken mit mittiger Einzelkraft
 
-An einem einfach gelagerten Balken mit mittiger Punktkraft wird einmal der vollständige SpanDraft-Ablauf gezeigt.
+An einem einfach gelagerten Balken mit mittiger Einzelkraft wird einmal der vollständige SpanDraft-Ablauf gezeigt.
 
 ## 1. Projekt definieren
 
 Ein neues Balkenprojekt benötigt zunächst einen Berechnungstitel, seine Länge, einen Werkstoff und einen Querschnitt. „Erstellt von“, Projekt und Referenz sind freiwillige Angaben. Ein vorgeschlagener Ersteller kann geändert oder vollständig gelöscht werden. Für das Beispiel sind das:
 
-- Berechnungstitel **Balken mit mittiger Punktlast**;
+- Berechnungstitel **Balken mit mittiger Einzelkraft**;
 - Balkenlänge `L = 2 m`;
 - Werkstoff **S235JR**;
 - Rechteckquerschnitt **40 × 80 mm** mit Breite `b = 40 mm` und Höhe `h = 80 mm`;
@@ -22,9 +22,9 @@ Im nächsten Schritt wird festgelegt, wie der Balken gehalten wird. Im Beispiel 
 
 ## 3. Belastung hinzufügen
 
-![Dieselbe Lagerung mit einer nach unten gerichteten Punktkraft F in der Balkenmitte bei L/2](../assets/beispiel-belastung.png)
+![Dieselbe Lagerung mit einer nach unten gerichteten Einzelkraft F in der Balkenmitte bei L/2](../assets/beispiel-belastung.png)
 
-Im Beispiel wirkt eine Punktkraft von **1 kN** in der Balkenmitte nach unten. SpanDraft verwendet die positive `w`-Richtung nach oben. Deshalb wird die Kraft als **`F = −1 kN`** bei `x = L/2 = 1 m` eingegeben.
+Im Beispiel wirkt eine Einzelkraft von **1 kN** in der Balkenmitte nach unten. SpanDraft verwendet die positive `w`-Richtung nach oben. Wählen Sie daher **Punktkraft** und geben Sie **`F = −1 kN`** bei `x = L/2 = 1 m` ein.
 
 ## 4. Automatisch berechnen und Ergebnisse beurteilen
 
@@ -41,7 +41,7 @@ Die Diagramme zeigen die Durchbiegung `w(x)`, die Querkraft `V(x)` und das Biege
 Am Beispiel lässt sich unmittelbar erkennen:
 
 - Die Durchbiegung ist in der Mitte betragsmäßig am größten.
-- Die Querkraft springt an der Punktkraft.
+- Die Querkraft springt an der Einzelkraft.
 - Das größte Biegemoment liegt in der Mitte.
 
 Details erläutern [Ergebnisdiagramme und Lagerreaktionen](../ergebnisse/diagramme-reaktionen.md), [Spannung und Sicherheitsfaktor](../ergebnisse/spannung-sicherheit.md) sowie [Was SpanDraft berechnet – und was nicht](../hintergrund/modellannahmen.md).

@@ -12,9 +12,9 @@ Relevant ist häufig, wo die größte Verformung auftritt und wie groß ihr Betr
 
 ## Querkraft `V(x)`
 
-![Querkraft des Beispielbalkens mit positiven und negativen Werten und einem Sprung an der mittigen Punktkraft](../assets/diagramm-querkraft.png)
+![Querkraft des Beispielbalkens mit positiven und negativen Werten und einem Sprung an der mittigen Einzelkraft](../assets/diagramm-querkraft.png)
 
-`V(x)` zeigt die innere Querkraft entlang des Balkens. Punktkräfte und vertikale Lagerreaktionen können sichtbare Sprünge erzeugen. Unter einer konstanten Streckenlast ändert sich die Querkraft kontinuierlich, unter einer linear veränderlichen Streckenlast zusätzlich mit veränderlicher Steigung; ihr Extremwert liegt dort, wo die Streckenlast null wird.
+`V(x)` zeigt die innere Querkraft entlang des Balkens. Einzelkräfte und vertikale Lagerreaktionen können sichtbare Sprünge erzeugen. Unter einer konstanten Streckenlast ändert sich die Querkraft kontinuierlich, unter einer linear veränderlichen Streckenlast zusätzlich mit veränderlicher Steigung; ihr Extremwert liegt dort, wo die Streckenlast null wird.
 
 Positive und negative Werte kennzeichnen unterschiedliche Richtungen nach der verwendeten Vorzeichenkonvention. Das Vorzeichen ist keine Bewertung als „gut“ oder „schlecht“.
 
@@ -24,7 +24,7 @@ Positive und negative Werte kennzeichnen unterschiedliche Richtungen nach der ve
 
 `M(x)` zeigt den inneren Biegemomentverlauf. Große Beträge kennzeichnen Bereiche hoher Biegebeanspruchung. Positive und negative Werte entsprechen unterschiedlichen Biegerichtungen.
 
-Für die maximale Biegespannung werden beide Richtungen berücksichtigt; maßgebend ist der relevante Momentbetrag. Die Extremwerte werden im Diagramm markiert. Ein aufgebrachtes Punktmoment kann einen Sprung im Momentendiagramm erzeugen.
+Für die maximale Biegespannung werden beide Richtungen berücksichtigt; maßgebend ist der relevante Momentbetrag. Die Extremwerte werden im Diagramm markiert. Ein aufgebrachtes Einzelmoment `C` kann einen Sprung im Momentendiagramm erzeugen.
 
 <span id="lagerreaktionen-in-der-projektubersicht"></span>
 

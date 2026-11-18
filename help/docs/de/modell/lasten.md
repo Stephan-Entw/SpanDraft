@@ -2,25 +2,29 @@
 
 Lasten beschreiben die vorgegebenen Einwirkungen in der zweidimensionalen Biegeebene.
 
-## Punktkraft
+<span id="punktkraft"></span>
 
-Eine Punktkraft `F` wirkt an einer Position `x`, auch an einem Balkenende. Das Vorzeichen gibt die Richtung an.
+## Einzelkraft
+
+Eine Einzelkraft `F` wirkt an einer Position `x`, auch an einem Balkenende. Wählen Sie in der Werkzeugleiste **Punktkraft**. Das Vorzeichen gibt die Richtung an.
 
 <figure class="spandraft-load-signs">
   <div class="spandraft-load-sign-labels"><span><code>F &gt; 0</code> · nach oben</span><span><code>F &lt; 0</code> · nach unten</span></div>
-  <img src="../assets/punktkraft-vorzeichen.png" alt="Punktkraftpfeile: links aufwärts, rechts abwärts">
+  <img src="../assets/punktkraft-vorzeichen.png" alt="Pfeile für Einzelkräfte, links nach oben und rechts nach unten">
 </figure>
 
-## Punktmoment
+<span id="punktmoment"></span>
 
-Ein Punktmoment `M` wirkt an einer Position `x`, ohne dort eine zusätzliche resultierende Querkraft aufzubringen.
+## Einzelmoment
+
+Ein äußeres Einzelmoment `C` wirkt an einer Position `x`. Es verursacht dort keinen Sprung der Querkraft. Wählen Sie in der Werkzeugleiste **Moment** und geben Sie den Wert von `C` im Feld **Moment M** ein. Im Ergebnisdiagramm steht `M(x)` für das innere Biegemoment.
 
 <figure class="spandraft-load-signs">
-  <div class="spandraft-load-sign-labels"><span><code>M &gt; 0</code> · gegen den Uhrzeigersinn</span><span><code>M &lt; 0</code> · im Uhrzeigersinn</span></div>
-  <img src="../assets/punktmoment-vorzeichen.png" alt="Punktmomente: links gegen den Uhrzeigersinn, rechts im Uhrzeigersinn">
+  <div class="spandraft-load-sign-labels"><span><code>C &gt; 0</code> · gegen den Uhrzeigersinn</span><span><code>C &lt; 0</code> · im Uhrzeigersinn</span></div>
+  <img src="../assets/punktmoment-vorzeichen.png" alt="Einzelmomente, links gegen den Uhrzeigersinn und rechts im Uhrzeigersinn">
 </figure>
 
-Mehrere Punktkräfte und Punktmomente dürfen an derselben Position liegen.
+Mehrere Einzelkräfte und Einzelmomente dürfen an derselben Position liegen. Im Bericht stehen sie in den Tabellen **Kräfte** und **Momente**. Ein Name wie `M1` wird beim Anlegen eines Einzelmoments automatisch vergeben.
 
 ## Streckenlast
 

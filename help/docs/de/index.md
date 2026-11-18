@@ -31,7 +31,7 @@ Die wichtigsten Grenzen stehen auf [Was SpanDraft berechnet – und was nicht](h
 
 1. Ein neues Projekt anlegen und Balkenlänge, Werkstoff, Querschnitt und Biegeachse bestimmen.
 2. Die tatsächlich vorgesehenen Lagerbedingungen abbilden.
-3. Punktkräfte, Punktmomente und/oder Streckenlasten (konstant oder linear veränderlich) platzieren sowie bei Bedarf Eigengewicht aktivieren.
+3. Einzelkräfte, Einzelmomente und/oder Streckenlasten (konstant oder linear veränderlich) platzieren sowie bei Bedarf Eigengewicht aktivieren.
 4. Ergebnisse und Fehlermeldungen prüfen; bei Bedarf die Eingaben korrigieren.
 5. Die Projektdatei im Format `.spandraft` speichern.
 
