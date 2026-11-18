@@ -182,11 +182,41 @@ public sealed class DesktopSettingsTests
         model.Select(kind);
         Assert.Same(UserSettings.Standard(kind), model.Pending.Profile);
         Assert.False(model.HasCustomProfile);
-        Assert.Equal(9, model.LeftUnits.Count);
-        Assert.Equal(9, model.RightUnits.Count);
-        foreach (var row in model.LeftUnits.Concat(model.RightUnits))
+        var rows = model.UnitGroups.SelectMany(g => g.Units).ToArray();
+        Assert.Equal(18, rows.Length);
+        foreach (var row in rows)
             Assert.All(row.Units, unit => Assert.Equal(UnitCatalog.DimensionOf(row.Quantity), unit.Dimension));
-        Assert.False(model.RightUnits.Single(r => r.Quantity == QuantityKind.Rotation).IsEditable);
+        Assert.False(rows.Single(r => r.Quantity == QuantityKind.Rotation).IsEditable);
+    }
+
+    [Fact]
+    public void UnitsAreGroupedByEngineeringTopicAndEveryEditableQuantityAppearsOnce()
+    {
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
+        Assert.Equal(new[] { Strings.UnitGroupGeometry, Strings.UnitGroupLoads, Strings.UnitGroupDeformation, Strings.UnitGroupMaterial, Strings.UnitGroupSprings },
+            model.UnitGroups.Select(g => g.Title));
+        Assert.Equal(new[]
+        {
+            new[] { QuantityKind.BeamLength, QuantityKind.SectionDimension, QuantityKind.Area, QuantityKind.SecondMomentOfArea, QuantityKind.SectionModulus },
+            new[] { QuantityKind.TransverseForce, QuantityKind.AxialForce, QuantityKind.Moment, QuantityKind.DistributedLoad },
+            new[] { QuantityKind.TransverseDisplacement, QuantityKind.AxialDisplacement, QuantityKind.Rotation },
+            new[] { QuantityKind.YoungsModulus, QuantityKind.MaterialStrength, QuantityKind.Stress, QuantityKind.Density },
+            new[] { QuantityKind.TranslationalStiffness, QuantityKind.RotationalStiffness }
+        }, model.UnitGroups.Select(g => g.Units.Select(u => u.Quantity).ToArray()));
+        // Nothing is lost by the grouping: the quantities without a unit choice (safety factor, Poisson's ratio) are the only ones left out.
+        Assert.Equal(Enum.GetValues<QuantityKind>().Except([QuantityKind.SafetyFactor, QuantityKind.PoissonRatio]).Order(),
+            model.UnitGroups.SelectMany(g => g.Units).Select(u => u.Quantity).Order());
+        Assert.All(model.UnitGroups, g => Assert.NotEmpty(g.Units));
+    }
+
+    [Theory]
+    [InlineData("de-DE", "Geometrie", "Lasten und Schnittgrößen", "Verformung", "Werkstoff", "Federn")]
+    [InlineData("en-US", "Geometry", "Loads and section forces", "Deformation", "Material", "Springs")]
+    public void UnitGroupTitlesFollowTheUiLanguage(string culture, params string[] titles)
+    {
+        using var scope = new UiCultureScope(culture);
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
+        Assert.Equal(titles, model.UnitGroups.Select(g => g.Title));
     }
 
     [Fact]

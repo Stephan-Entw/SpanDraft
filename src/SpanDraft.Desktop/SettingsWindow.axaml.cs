@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Presentation;
@@ -29,12 +28,6 @@ public partial class SettingsWindow : Window
             Width = Math.Min(Width, availableWidth);
             Height = Math.Min(Height, availableHeight);
         };
-        AddHandler(KeyDownEvent, (_, e) =>
-        {
-            if (e.Key != Key.Escape) return;
-            e.Handled = true;
-            if (!model.IsSaving) Close();
-        }, Avalonia.Interactivity.RoutingStrategies.Bubble);
     }
 
     private void CancelSettings(object? sender, RoutedEventArgs e) => Close();

@@ -159,9 +159,9 @@ vom zugehörigen Objekt lösen. Der Offset verändert ausschließlich die Darste
 
 Die Zehnerpotenzen sind ein Kontrollkästchen und kein Umschalter: Der Dialog
 übernimmt Änderungen erst mit OK, ein Umschalter signalisiert dagegen sofortige
-Wirkung, und Abbrechen wirkte dann widersprüchlich. Die Vorschau steht rechts in
-der Spalte der rechten Einheitenliste, damit Ursache und Wirkung nebeneinander
-liegen, ohne den Dialog zu verlängern. Sie zeigt einen gerundeten Vorgabewert,
+Wirkung, und Abbrechen wirkte dann widersprüchlich. Die Vorschau steht direkt
+unter den Optionen im Feldraster des Dialogs, damit Ursache und Wirkung
+nebeneinander liegen. Sie zeigt einen gerundeten Vorgabewert,
 weil der Dialog die Stelle ist, an der `≈` erklärt wird; der Bericht erklärt es
 nicht.
 

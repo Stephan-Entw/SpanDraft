@@ -6,11 +6,22 @@
         xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
         x:Class="SpanDraft.Desktop.SettingsWindow" x:DataType="vm:SettingsViewModel"
         Title="{x:Static resources:Strings.SettingsTitle}"
-        Width="900" Height="780" MinWidth="820" MinHeight="450"
-        ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+        Width="800" Height="640" MinWidth="768" MinHeight="450"
+        ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Surface}">
   <Window.Resources>
+    <!-- One field width for the whole window, sized for the longest unit symbol and the dropdown arrow, not
+         for free text as in the material editor. Both unit columns share one label column and the same
+         field width. The last column of the lower sections takes what a field does not need (hints, preview). -->
+    <GridLength x:Key="SettingsFieldWidth">136</GridLength>
+    <!-- The language and format fields show words such as "English (United States)", not unit symbols. -->
+    <GridLength x:Key="SettingsTextFieldWidth">224</GridLength>
     <DataTemplate x:Key="UnitRow" x:DataType="vm:UnitSettingViewModel">
-      <Grid ColumnDefinitions="*,132" ColumnSpacing="{StaticResource Space12}" MinHeight="34" Margin="0,0,0,4">
+      <Grid ColumnSpacing="{StaticResource Space12}" MinHeight="{DynamicResource StandardControl}">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsLabel" />
+          <ColumnDefinition Width="{StaticResource SettingsFieldWidth}" />
+        </Grid.ColumnDefinitions>
         <TextBlock controls:TechnicalTextPresenter.Content="{Binding LabelText}" VerticalAlignment="Center" Classes="propertyLabel" TextWrapping="Wrap" />
         <ComboBox Grid.Column="1" ItemsSource="{Binding Units}" SelectedItem="{Binding SelectedUnit, Mode=TwoWay}"
                   IsVisible="{Binding IsEditable}" HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Label}">
@@ -22,11 +33,23 @@
                    VerticalAlignment="Center" Margin="12,0,0,0" />
       </Grid>
     </DataTemplate>
+    <DataTemplate x:Key="UnitGroup" x:DataType="vm:UnitSettingGroup">
+      <StackPanel Spacing="{StaticResource Space8}">
+        <TextBlock Text="{Binding Title}" Classes="bodyStrong" />
+        <ItemsControl ItemsSource="{Binding Units}" ItemTemplate="{StaticResource UnitRow}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><StackPanel Spacing="{StaticResource Space4}" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+        </ItemsControl>
+      </StackPanel>
+    </DataTemplate>
   </Window.Resources>
-  <ScrollViewer x:Name="SettingsScroll" Background="{DynamicResource AppBackground}"
-                VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Margin="{DynamicResource Padding24}" Spacing="{StaticResource Space16}">
-      <StackPanel x:Name="EditableSettings" Spacing="{StaticResource Space16}" IsEnabled="{Binding !IsSaving}">
+  <!-- The action strip is a row of the window, not part of the scrolled form: it stays visible at every size,
+       and with it the message about a rejected save. -->
+  <Grid RowDefinitions="*,Auto">
+    <ScrollViewer x:Name="SettingsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel x:Name="EditableSettings" Margin="{DynamicResource Padding24}" Spacing="{StaticResource Space24}"
+                  IsEnabled="{Binding !IsSaving}">
         <StackPanel Spacing="{StaticResource Space16}">
           <TextBlock Text="{x:Static resources:Strings.SettingsUnits}" Classes="sectionTitle" />
           <StackPanel x:Name="ProfileRow" Orientation="Horizontal" Spacing="{StaticResource Space16}">
@@ -39,28 +62,47 @@
             <RadioButton x:Name="CustomProfileOption" Content="{x:Static resources:Strings.ProfileCustom}" GroupName="Units"
                          IsVisible="{Binding HasCustomProfile}" IsChecked="{Binding IsCustom, Mode=TwoWay}" />
           </StackPanel>
-          <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
-            <ItemsControl x:Name="LeftUnitList" ItemsSource="{Binding LeftUnits}" ItemTemplate="{StaticResource UnitRow}" />
-            <ItemsControl x:Name="RightUnitList" Grid.Column="1" ItemsSource="{Binding RightUnits}" ItemTemplate="{StaticResource UnitRow}" />
+          <!-- Two columns, so that switching the unit system shows every changed field without scrolling. -->
+          <Grid x:Name="UnitColumns" ColumnDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space24}"
+                HorizontalAlignment="Left" Grid.IsSharedSizeScope="True">
+            <ItemsControl x:Name="UnitGroupListLeft" ItemsSource="{Binding LeftUnitGroups}" ItemTemplate="{StaticResource UnitGroup}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Spacing="{StaticResource Space16}" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <ItemsControl x:Name="UnitGroupListRight" Grid.Column="1" ItemsSource="{Binding RightUnitGroups}" ItemTemplate="{StaticResource UnitGroup}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Spacing="{StaticResource Space16}" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
           </Grid>
         </StackPanel>
-        <StackPanel Spacing="{StaticResource Space12}">
-          <TextBlock Text="{x:Static resources:Strings.SettingsNumeric}" Classes="sectionTitle" />
-          <!-- Same two columns as the unit lists: the preview starts at the right unit column. -->
-          <Grid x:Name="NumericSettings" ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
-            <StackPanel Spacing="{StaticResource Space12}">
-              <Grid ColumnDefinitions="Auto,220" ColumnSpacing="{StaticResource Space16}" HorizontalAlignment="Left">
-                <TextBlock Text="{x:Static resources:Strings.SignificantDigits}" Classes="propertyLabel" VerticalAlignment="Center" />
-                <ComboBox x:Name="SignificantDigitsPicker" Grid.Column="1" Width="220"
-                          ItemsSource="{Binding SignificantDigitChoices}" SelectedValueBinding="{ReflectionBinding Value}"
-                          SelectedValue="{Binding SignificantDigits, Mode=TwoWay}"
-                          AutomationProperties.Name="{x:Static resources:Strings.SignificantDigits}">
-                  <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
-                  </ComboBox.ItemTemplate>
-                </ComboBox>
-              </Grid>
-              <CheckBox x:Name="PowersOfTenOption" IsChecked="{Binding UsesPowersOfTen, Mode=TwoWay}"
+        <!-- The lower sections have long labels of their own; they form a second label column. -->
+        <StackPanel x:Name="FormSections" Spacing="{StaticResource Space24}" Grid.IsSharedSizeScope="True">
+          <StackPanel Spacing="{StaticResource Space12}">
+            <TextBlock Text="{x:Static resources:Strings.SettingsNumeric}" Classes="sectionTitle" />
+            <Grid x:Name="NumericSettings" ColumnSpacing="{StaticResource Space12}" RowSpacing="{StaticResource Space8}">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsLabel" />
+                <ColumnDefinition Width="{StaticResource SettingsTextFieldWidth}" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" MinHeight="{DynamicResource StandardControl}" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <TextBlock Text="{x:Static resources:Strings.SignificantDigits}" Classes="propertyLabel" VerticalAlignment="Center" />
+              <ComboBox x:Name="SignificantDigitsPicker" Grid.Column="1" HorizontalAlignment="Stretch"
+                        ItemsSource="{Binding SignificantDigitChoices}" SelectedValueBinding="{ReflectionBinding Value}"
+                        SelectedValue="{Binding SignificantDigits, Mode=TwoWay}"
+                        AutomationProperties.Name="{x:Static resources:Strings.SignificantDigits}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <CheckBox x:Name="PowersOfTenOption" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" IsChecked="{Binding UsesPowersOfTen, Mode=TwoWay}"
                         AutomationProperties.Name="{x:Static resources:Strings.PowersOfTen}"
                         AutomationProperties.HelpText="{Binding PowersOfTenHint}">
                 <StackPanel Spacing="2">
@@ -68,10 +110,8 @@
                   <TextBlock x:Name="PowersOfTenHint" Text="{Binding PowersOfTenHint}" Classes="caption" TextWrapping="Wrap" />
                 </StackPanel>
               </CheckBox>
-            </StackPanel>
-            <StackPanel x:Name="NumberPreview" Grid.Column="1" Spacing="{StaticResource Space8}">
-              <TextBlock Text="{x:Static resources:Strings.NumberPreview}" Classes="propertyLabel" />
-              <ItemsControl x:Name="NumberPreviewRows" ItemsSource="{Binding PreviewRows}" Grid.IsSharedSizeScope="True">
+              <TextBlock Grid.Row="2" Text="{x:Static resources:Strings.NumberPreview}" Classes="propertyLabel" VerticalAlignment="Top" />
+              <ItemsControl x:Name="NumberPreviewRows" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding PreviewRows}" Grid.IsSharedSizeScope="True">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:NumberPreviewRow">
                     <Grid Margin="0,0,0,4">
@@ -89,45 +129,59 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-            </StackPanel>
-          </Grid>
-          <TextBlock x:Name="PresentationHint" Text="{x:Static resources:Strings.PresentationCalculationHint}" Classes="caption" TextWrapping="Wrap" />
-        </StackPanel>
-        <StackPanel Spacing="{StaticResource Space12}">
-          <TextBlock Text="{x:Static resources:Strings.SettingsLanguage}" Classes="sectionTitle" />
-          <Grid ColumnDefinitions="Auto,220" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space16}"
-                RowSpacing="{StaticResource Space12}">
-            <TextBlock Text="{x:Static resources:Strings.InterfaceLanguage}" Classes="propertyLabel" VerticalAlignment="Center" />
-            <ComboBox x:Name="LanguagePicker" Grid.Column="1" ItemsSource="{Binding UiLanguages}"
-                      SelectedValueBinding="{ReflectionBinding Value}"
-                      SelectedValue="{Binding SelectedUiLanguage, Mode=TwoWay}" Width="220" HorizontalAlignment="Left"
-                      AutomationProperties.Name="{x:Static resources:Strings.InterfaceLanguage}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-            <TextBlock Grid.Row="1" Text="{x:Static resources:Strings.RegionalFormat}" Classes="propertyLabel" VerticalAlignment="Center" />
-            <ComboBox x:Name="RegionalFormatPicker" Grid.Row="1" Grid.Column="1" ItemsSource="{Binding RegionalFormats}"
-                      SelectedValueBinding="{ReflectionBinding Value}"
-                      SelectedValue="{Binding SelectedRegionalFormat, Mode=TwoWay}" Width="220" HorizontalAlignment="Left"
-                      AutomationProperties.Name="{x:Static resources:Strings.RegionalFormat}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-          </Grid>
-          <TextBlock x:Name="LocaleRestartHint" Text="{x:Static resources:Strings.LocaleRestartHint}" Classes="caption" TextWrapping="Wrap" />
+              <TextBlock x:Name="PresentationHint" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
+                         Text="{x:Static resources:Strings.PresentationCalculationHint}" Classes="caption" TextWrapping="Wrap" />
+            </Grid>
+          </StackPanel>
+          <StackPanel Spacing="{StaticResource Space12}">
+            <TextBlock Text="{x:Static resources:Strings.SettingsLanguage}" Classes="sectionTitle" />
+            <Grid ColumnSpacing="{StaticResource Space12}" RowSpacing="{StaticResource Space8}">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="SettingsLabel" />
+                <ColumnDefinition Width="{StaticResource SettingsTextFieldWidth}" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" MinHeight="{DynamicResource StandardControl}" />
+                <RowDefinition Height="Auto" MinHeight="{DynamicResource StandardControl}" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <TextBlock Text="{x:Static resources:Strings.InterfaceLanguage}" Classes="propertyLabel" VerticalAlignment="Center" />
+              <ComboBox x:Name="LanguagePicker" Grid.Column="1" ItemsSource="{Binding UiLanguages}"
+                        SelectedValueBinding="{ReflectionBinding Value}"
+                        SelectedValue="{Binding SelectedUiLanguage, Mode=TwoWay}" HorizontalAlignment="Stretch"
+                        AutomationProperties.Name="{x:Static resources:Strings.InterfaceLanguage}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Grid.Row="1" Text="{x:Static resources:Strings.RegionalFormat}" Classes="propertyLabel" VerticalAlignment="Center" />
+              <ComboBox x:Name="RegionalFormatPicker" Grid.Row="1" Grid.Column="1" ItemsSource="{Binding RegionalFormats}"
+                        SelectedValueBinding="{ReflectionBinding Value}"
+                        SelectedValue="{Binding SelectedRegionalFormat, Mode=TwoWay}" HorizontalAlignment="Stretch"
+                        AutomationProperties.Name="{x:Static resources:Strings.RegionalFormat}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock x:Name="LocaleRestartHint" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                         Text="{x:Static resources:Strings.LocaleRestartHint}" Classes="caption" TextWrapping="Wrap" />
+            </Grid>
+          </StackPanel>
         </StackPanel>
       </StackPanel>
-      <TextBlock Text="{Binding ErrorText}" IsVisible="{Binding HasError}" Classes="validationMessage" />
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Space8}">
-        <Button x:Name="CancelButton" Content="{x:Static resources:Strings.Cancel}" Classes="secondary"
-                Height="{DynamicResource StandardControl}" MinWidth="80" VerticalAlignment="Center"
-                IsEnabled="{Binding !IsSaving}" Click="CancelSettings" />
-        <Button x:Name="OkButton" Content="{x:Static resources:Strings.OK}" Classes="primary" IsDefault="True"
-                Height="{DynamicResource StandardControl}" MinWidth="80" VerticalAlignment="Center"
-                IsEnabled="{Binding !IsSaving}" Click="ConfirmSettings" />
-      </StackPanel>
-    </StackPanel>
-  </ScrollViewer>
+    </ScrollViewer>
+    <Border x:Name="SettingsFooter" Grid.Row="1" Classes="dialogFooter">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space16}">
+        <TextBlock x:Name="SaveError" Text="{Binding ErrorText}" IsVisible="{Binding HasError}" Classes="validationMessage"
+                   VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1" Classes="dialogButtons">
+          <Button x:Name="CancelButton" Content="{x:Static resources:Strings.Cancel}" Classes="secondary" IsCancel="True"
+                  IsEnabled="{Binding !IsSaving}" Click="CancelSettings" />
+          <Button x:Name="OkButton" Content="{x:Static resources:Strings.OK}" Classes="primary" IsDefault="True"
+                  IsEnabled="{Binding !IsSaving}" Click="ConfirmSettings" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
 </Window>

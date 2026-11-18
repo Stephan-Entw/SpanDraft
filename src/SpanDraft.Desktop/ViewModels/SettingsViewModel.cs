@@ -29,6 +29,9 @@ public sealed class UnitSettingViewModel : ObservableObject
     internal void Refresh() => Notify(nameof(SelectedUnit));
 }
 
+/// <summary>The unit settings of one engineering topic, shown under a common heading.</summary>
+public sealed record UnitSettingGroup(string Title, IReadOnlyList<UnitSettingViewModel> Units);
+
 /// <summary>Independent dialog transaction; rejected saves retain the pending edits.</summary>
 public sealed class SettingsViewModel : ObservableObject
 {
@@ -41,24 +44,37 @@ public sealed class SettingsViewModel : ObservableObject
     public SettingsViewModel(UserSettings settings, Func<UserSettings, Task<string?>> apply)
     {
         _applied = _pending = settings; _apply = apply;
-        LeftUnits = new[]
-        {
-            Row(QuantityKind.BeamLength, Strings.UnitBeamLength), Row(QuantityKind.SectionDimension, Strings.UnitSectionDimension),
-            Row(QuantityKind.TransverseDisplacement, Strings.UnitDeflection), Row(QuantityKind.AxialDisplacement, Strings.UnitAxialDisplacement),
-            Row(QuantityKind.Area, Strings.UnitArea + " " + TechnicalSymbols.Area),
-            Row(QuantityKind.SecondMomentOfArea, Strings.UnitInertia + " " + TechnicalSymbols.Inertia()),
-            Row(QuantityKind.SectionModulus, Strings.UnitModulus + " " + TechnicalSymbols.Modulus()),
-            Row(QuantityKind.TranslationalStiffness, Strings.UnitTranslationalStiffness),
-            Row(QuantityKind.RotationalStiffness, Strings.UnitRotationalStiffness)
-        };
-        RightUnits = new[]
-        {
-            Row(QuantityKind.TransverseForce, Strings.UnitForce), Row(QuantityKind.AxialForce, Strings.UnitAxialForce),
-            Row(QuantityKind.Moment, Strings.Moment), Row(QuantityKind.DistributedLoad, Strings.DistributedLoad),
-            Row(QuantityKind.Stress, Strings.UnitStress), Row(QuantityKind.Rotation, Strings.UnitRotation),
-            Row(QuantityKind.YoungsModulus, Strings.MaterialYoungsModulus),
-            Row(QuantityKind.MaterialStrength, Strings.MaterialStrength), Row(QuantityKind.Density, Strings.MaterialDensity)
-        };
+        // Grouped by engineering topic, so a unit is found where the quantity belongs instead of in a list of 18 rows.
+        UnitGroups =
+        [
+            new(Strings.UnitGroupGeometry,
+            [
+                Row(QuantityKind.BeamLength, Strings.UnitBeamLength), Row(QuantityKind.SectionDimension, Strings.UnitSectionDimension),
+                Row(QuantityKind.Area, Strings.UnitArea + " " + TechnicalSymbols.Area),
+                Row(QuantityKind.SecondMomentOfArea, Strings.UnitInertia + " " + TechnicalSymbols.Inertia()),
+                Row(QuantityKind.SectionModulus, Strings.UnitModulus + " " + TechnicalSymbols.Modulus())
+            ]),
+            new(Strings.UnitGroupLoads,
+            [
+                Row(QuantityKind.TransverseForce, Strings.UnitForce), Row(QuantityKind.AxialForce, Strings.UnitAxialForce),
+                Row(QuantityKind.Moment, Strings.Moment), Row(QuantityKind.DistributedLoad, Strings.DistributedLoad)
+            ]),
+            new(Strings.UnitGroupDeformation,
+            [
+                Row(QuantityKind.TransverseDisplacement, Strings.UnitDeflection), Row(QuantityKind.AxialDisplacement, Strings.UnitAxialDisplacement),
+                Row(QuantityKind.Rotation, Strings.UnitRotation)
+            ]),
+            new(Strings.UnitGroupMaterial,
+            [
+                Row(QuantityKind.YoungsModulus, Strings.MaterialYoungsModulus), Row(QuantityKind.MaterialStrength, Strings.MaterialStrength),
+                Row(QuantityKind.Stress, Strings.UnitStress), Row(QuantityKind.Density, Strings.MaterialDensity)
+            ]),
+            new(Strings.UnitGroupSprings,
+            [
+                Row(QuantityKind.TranslationalStiffness, Strings.UnitTranslationalStiffness),
+                Row(QuantityKind.RotationalStiffness, Strings.UnitRotationalStiffness)
+            ])
+        ];
         UiLanguages =
         [
             new(UiLanguagePreference.System, Strings.SystemLanguage),
@@ -140,8 +156,10 @@ public sealed class SettingsViewModel : ObservableObject
         get => _pending.Notation;
         set => Update(_pending with { Notation = value });
     }
-    public IReadOnlyList<UnitSettingViewModel> LeftUnits { get; }
-    public IReadOnlyList<UnitSettingViewModel> RightUnits { get; }
+    public IReadOnlyList<UnitSettingGroup> UnitGroups { get; }
+    /// <summary>The window shows the groups in two columns of about equal length: geometry and loads, then the rest.</summary>
+    public IReadOnlyList<UnitSettingGroup> LeftUnitGroups => UnitGroups.Take(2).ToArray();
+    public IReadOnlyList<UnitSettingGroup> RightUnitGroups => UnitGroups.Skip(2).ToArray();
     public IReadOnlyList<SetupChoice<UiLanguagePreference>> UiLanguages { get; }
     public IReadOnlyList<SetupChoice<RegionalFormatPreference>> RegionalFormats { get; }
     public UiLanguagePreference SelectedUiLanguage
@@ -194,6 +212,6 @@ public sealed class SettingsViewModel : ObservableObject
             nameof(HasError), nameof(HasCustomProfile), nameof(IsMechanical), nameof(IsStructural), nameof(IsUnitedStates),
             nameof(IsCustom), nameof(SignificantDigits), nameof(SelectedNotation), nameof(UsesPowersOfTen), nameof(PreviewRows),
             nameof(SelectedUiLanguage), nameof(SelectedRegionalFormat) }) Notify(name);
-        foreach (var row in LeftUnits.Concat(RightUnits)) row.Refresh();
+        foreach (var row in UnitGroups.SelectMany(g => g.Units)) row.Refresh();
     }
 }

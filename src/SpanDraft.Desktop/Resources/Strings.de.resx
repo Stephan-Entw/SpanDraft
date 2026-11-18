@@ -139,6 +139,11 @@
   <data name="UnitRotation" xml:space="preserve"><value>Rotation</value></data>
   <data name="UnitTranslationalStiffness" xml:space="preserve"><value>Wegfedersteifigkeit</value></data>
   <data name="UnitRotationalStiffness" xml:space="preserve"><value>Drehfedersteifigkeit</value></data>
+  <data name="UnitGroupGeometry" xml:space="preserve"><value>Geometrie</value></data>
+  <data name="UnitGroupLoads" xml:space="preserve"><value>Lasten und Schnittgrößen</value></data>
+  <data name="UnitGroupDeformation" xml:space="preserve"><value>Verformung</value></data>
+  <data name="UnitGroupMaterial" xml:space="preserve"><value>Werkstoff</value></data>
+  <data name="UnitGroupSprings" xml:space="preserve"><value>Federn</value></data>
   <data name="SpringSupport" xml:space="preserve"><value>Federlager</value></data>
   <data name="TranslationalSpringSupport" xml:space="preserve"><value>Wegfeder</value></data>
   <data name="RotationalSpringSupport" xml:space="preserve"><value>Drehfeder</value></data>

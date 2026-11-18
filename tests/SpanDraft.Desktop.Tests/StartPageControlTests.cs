@@ -131,8 +131,9 @@ public sealed class StartPageControlTests
                 Assert.Equal(TextWrapping.Wrap, text.TextWrapping);
                 Assert.True(text.TextLayout.Height <= text.Bounds.Height + 1);
                 var buttons = dialog.GetVisualDescendants().OfType<Button>().ToArray();
-                Assert.Equal(new[] { remove, cancel }, buttons.Select(b => b.Content));
-                Assert.True(buttons[0].IsDefault); Assert.False(buttons[1].IsDefault);
+                // Cancel directly left of the primary action; removing only a list entry is not destructive, so Enter confirms it.
+                Assert.Equal(new[] { cancel, remove }, buttons.Select(b => b.Content));
+                Assert.True(buttons[0].IsCancel); Assert.True(buttons[1].IsDefault); Assert.False(buttons[0].IsDefault);
                 var panel = (Control)dialog.Content!;
                 foreach (var button in buttons)
                 {
@@ -143,7 +144,7 @@ public sealed class StartPageControlTests
                 }
                 if (action == "escape") dialog.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
                 else if (action == "close") dialog.Close();
-                else buttons[action == "remove" ? 0 : 1].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                else buttons[action == "remove" ? 1 : 0].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.Equal(action == "remove", await WaitFor(pending));
             }
         }

@@ -276,6 +276,11 @@ public static class Strings
     public static string UnitRotation => Get(nameof(UnitRotation));
     public static string UnitTranslationalStiffness => Get(nameof(UnitTranslationalStiffness));
     public static string UnitRotationalStiffness => Get(nameof(UnitRotationalStiffness));
+    public static string UnitGroupGeometry => Get(nameof(UnitGroupGeometry));
+    public static string UnitGroupLoads => Get(nameof(UnitGroupLoads));
+    public static string UnitGroupDeformation => Get(nameof(UnitGroupDeformation));
+    public static string UnitGroupMaterial => Get(nameof(UnitGroupMaterial));
+    public static string UnitGroupSprings => Get(nameof(UnitGroupSprings));
     public static string SpringSupport => Get(nameof(SpringSupport));
     public static string TranslationalSpringSupport => Get(nameof(TranslationalSpringSupport));
     public static string RotationalSpringSupport => Get(nameof(RotationalSpringSupport));

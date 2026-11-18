@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SpanDraft.Desktop.ViewModels;
@@ -35,12 +34,6 @@ public partial class MaterialEditorWindow : Window
             model.CancelCommand.Execute(null);
         };
         Closed += (_, _) => model.CloseRequested -= Finish;
-        AddHandler(KeyDownEvent, (_, e) =>
-        {
-            if (e.Handled || e.Key != Key.Escape || e.KeyModifiers != KeyModifiers.None) return;
-            e.Handled = true;
-            model.CancelCommand.Execute(null);
-        }, RoutingStrategies.Bubble);
     }
 
     private void Finish(bool accepted)

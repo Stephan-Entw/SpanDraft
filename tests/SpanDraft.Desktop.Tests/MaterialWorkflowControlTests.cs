@@ -370,7 +370,9 @@ public sealed class MaterialWorkflowControlTests
             var dialogs = new ProjectDialogs(owner); var decision = dialogs.ResolveMaterialNameConflictAsync(displayName); Dispatcher.UIThread.RunJobs();
             var conflict = Assert.Single(owner.OwnedWindows); var buttons = conflict.GetVisualDescendants().OfType<Button>().ToArray();
             Assert.Contains(conflict.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == string.Format(Strings.MaterialNameConflictQuestion, displayName));
-            Assert.Equal(new[] { Strings.ReplaceMaterial, Strings.RenameMaterial, Strings.Cancel }, buttons.Select(b => b.Content));
+            // Renaming is the primary answer (rightmost, Enter); the destructive replacement stands left of Cancel and never answers Enter.
+            Assert.Equal(new[] { Strings.ReplaceMaterial, Strings.Cancel, Strings.RenameMaterial }, buttons.Select(b => b.Content));
+            Assert.Equal(new[] { false, false, true }, buttons.Select(b => b.IsDefault));
             Activate(buttons[0]); Assert.Equal(MaterialNameConflictDecision.Replace, await decision);
             var confirmation = dialogs.ConfirmMaterialReplaceAsync(displayName); Dispatcher.UIThread.RunJobs();
             var confirmWindow = Assert.Single(owner.OwnedWindows); Assert.Equal(2, confirmWindow.GetVisualDescendants().OfType<Button>().Count());

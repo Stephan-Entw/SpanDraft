@@ -26,15 +26,23 @@ namespace SpanDraft.Tests;
 [Collection("Avalonia")]
 public sealed class DesktopSettingsControlTests
 {
+    /// <summary>The default window size, and the smallest the window supports.</summary>
+    private static (double Width, double Height) Size(bool smallest)
+    {
+        var probe = new SettingsWindow(new(UserSettings.Default, _ => Task.FromResult<string?>(null)));
+        return smallest ? (probe.MinWidth, probe.MinHeight) : (probe.Width, probe.Height);
+    }
+
     [Theory]
-    [InlineData("de-DE", 900, 780)]
-    [InlineData("en-US", 900, 780)]
-    [InlineData("de-DE", 820, 450)]
-    [InlineData("en-US", 820, 450)]
-    public void DialogKeepsOneScrollablePageWithAlignedFormsAndReachableActions(string culture, double width, double height)
+    [InlineData("de-DE", false)]
+    [InlineData("en-US", false)]
+    [InlineData("de-DE", true)]
+    [InlineData("en-US", true)]
+    public void DialogKeepsAFixedFooterBelowOneScrollablePageWithAlignedForms(string culture, bool smallest)
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new ResultCultureScope(culture, culture);
+        var (width, height) = Size(smallest);
         var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
         var window = new SettingsWindow(model);
         Arrange(window, width, height);
@@ -46,26 +54,22 @@ public sealed class DesktopSettingsControlTests
         var region = window.FindControl<ComboBox>("RegionalFormatPicker")!;
         Assert.True(language.IsEnabled); Assert.True(region.IsEnabled);
         Assert.Equal(3, language.Items.Count); Assert.Equal(3, region.Items.Count);
-        Assert.Equal(220, language.Bounds.Width, 6); Assert.Equal(220, region.Bounds.Width, 6);
-        Assert.Equal(language.Bounds.Left, region.Bounds.Left, 6);
         Assert.Equal(UiLanguagePreference.System, language.SelectedValue);
         Assert.Equal(RegionalFormatPreference.System, region.SelectedValue);
         var restart = window.FindControl<TextBlock>("LocaleRestartHint")!;
         Assert.Equal(Strings.LocaleRestartHint, restart.Text);
         Assert.True(restart.Bounds.Height >= restart.TextLayout.Height);
         Assert.Null(window.FindControl<Button>("ApplyButton"));
-        Assert.True(window.FindControl<Button>("OkButton")!.IsEnabled);
-        Assert.Equal(Strings.OK, window.FindControl<Button>("OkButton")!.Content);
-        Assert.Equal(Strings.Cancel, window.FindControl<Button>("CancelButton")!.Content);
         var ok = window.FindControl<Button>("OkButton")!;
         var cancel = window.FindControl<Button>("CancelButton")!;
+        Assert.True(ok.IsEnabled);
+        Assert.Equal(Strings.OK, ok.Content); Assert.Equal(Strings.Cancel, cancel.Content);
         Assert.Equal(ok.Bounds.Height, cancel.Bounds.Height);
         Assert.Equal(ok.Bounds.Top, cancel.Bounds.Top);
-        Assert.Equal(ok.VerticalAlignment, cancel.VerticalAlignment);
-        Assert.Equal(ok.Padding, cancel.Padding);
-        Assert.Equal(ok.MinWidth, cancel.MinWidth);
-        Assert.True(ok.Bounds.Width >= 80); Assert.True(cancel.Bounds.Width >= 80);
+        Assert.Equal(ok.Bounds.Width, cancel.Bounds.Width, 3);
         Assert.Contains("primary", ok.Classes); Assert.Contains("secondary", cancel.Classes);
+        Assert.True(ok.IsDefault); Assert.False(cancel.IsDefault); Assert.True(cancel.IsCancel); Assert.False(ok.IsCancel);
+        AssertFooterIsFixed(window, scroll, width, height);
         Assert.False(window.FindControl<RadioButton>("CustomProfileOption")!.IsVisible);
         var profiles = window.FindControl<StackPanel>("ProfileRow")!;
         var radios = profiles.Children.OfType<RadioButton>().Where(r => r.IsVisible).ToArray();
@@ -73,68 +77,223 @@ public sealed class DesktopSettingsControlTests
         Assert.True(radios[1].Bounds.Left >= radios[0].Bounds.Right);
         Assert.True(radios[2].Bounds.Left >= radios[1].Bounds.Right);
         Assert.Empty(window.GetVisualDescendants().OfType<TabControl>());
-        foreach (var radio in window.GetVisualDescendants().OfType<RadioButton>().Where(r => r.GroupName == "Presentation"))
+        // Units are grouped by topic in two columns: geometry and loads left, the rest right; each group stands under
+        // its heading, in the order of the product decision.
+        var columns = new[] { window.FindControl<ItemsControl>("UnitGroupListLeft")!, window.FindControl<ItemsControl>("UnitGroupListRight")! };
+        var groupsPerColumn = new[] { model.UnitGroups.Take(2).ToArray(), model.UnitGroups.Skip(2).ToArray() };
+        Assert.Equal(new[] { 2, 3 }, groupsPerColumn.Select(g => g.Length));
+        Assert.True(X(columns[1], window) > X(columns[0], window) + columns[0].Bounds.Width - .01, "the columns do not overlap");
+        Assert.Equal(Y(columns[0], window), Y(columns[1], window), 3);
+        foreach (var (list, groups) in columns.Zip(groupsPerColumn))
         {
-            var description = radio.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Classes.Contains("secondary"));
-            var origin = description.TranslatePoint(default, radio)!.Value;
-            Assert.True(origin.Y + description.Bounds.Height <= radio.Bounds.Height);
-            Assert.True(description.Bounds.Height >= description.TextLayout.Height);
-        }
-        foreach (string name in new[] { "LeftUnitList", "RightUnitList" })
-        {
-            var list = window.FindControl<ItemsControl>(name)!;
-            var combos = list.GetVisualDescendants().OfType<ComboBox>().Where(c => c.IsVisible).ToArray();
-            Assert.Equal(name == "LeftUnitList" ? 9 : 7, combos.Length);
-            Assert.All(combos, c => Assert.Equal(132, c.Bounds.Width, 6));
-            double x = combos[0].TranslatePoint(default, list)!.Value.X;
-            Assert.All(combos, c => Assert.Equal(x, c.TranslatePoint(default, list)!.Value.X, 6));
-            foreach (var label in list.GetVisualDescendants().OfType<TextBlock>().Where(t => TechnicalTextPresenter.GetContent(t) is not null))
+            var groupTitles = list.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Classes.Contains("bodyStrong")).ToArray();
+            Assert.Equal(groups.Select(g => g.Title), groupTitles.Select(t => t.Text));
+            Assert.Equal(groupTitles.OrderBy(t => Y(t, window)), groupTitles);
+            foreach (var row in groups.SelectMany((g, i) => g.Units.Select(u => (Group: i, Unit: u))))
             {
-                var row = Assert.IsType<UnitSettingViewModel>(label.DataContext);
-                var symbol = row.Quantity switch
+                var label = list.GetVisualDescendants().OfType<TextBlock>().Single(t => TechnicalTextPresenter.GetContent(t) is not null && ReferenceEquals(t.DataContext, row.Unit));
+                Assert.True(Y(label, window) > Y(groupTitles[row.Group], window), $"{row.Unit.Label} stands under its heading");
+                if (row.Group + 1 < groupTitles.Length) Assert.True(Y(label, window) < Y(groupTitles[row.Group + 1], window), $"{row.Unit.Label} stands above the next heading");
+                var symbol = row.Unit.Quantity switch
                 {
                     QuantityKind.Area => TechnicalSymbols.Area,
                     QuantityKind.SecondMomentOfArea => TechnicalSymbols.Inertia(),
                     QuantityKind.SectionModulus => TechnicalSymbols.Modulus(),
                     _ => null
                 };
-                Assert.Equal(row.Label, new TextBlockAutomationPeer(label).GetName());
-                var picker = ((Grid)label.Parent!).Children.OfType<ComboBox>().Single();
-                Assert.Equal(row.Label, AutomationProperties.GetName(picker));
+                Assert.Equal(row.Unit.Label, new TextBlockAutomationPeer(label).GetName());
+                if (row.Unit.IsEditable)
+                    Assert.Equal(row.Unit.Label, AutomationProperties.GetName(((Grid)label.Parent!).Children.OfType<ComboBox>().Single()));
                 var runs = label.Inlines!.Cast<Run>().ToArray();
                 if (symbol is not null)
                 {
-                    Assert.Equal(symbol.Runs, row.LabelText.Runs.TakeLast(symbol.Runs.Count));
-                    Assert.EndsWith(" " + symbol.PlainText, row.Label);
+                    Assert.Equal(symbol.Runs, row.Unit.LabelText.Runs.TakeLast(symbol.Runs.Count));
+                    Assert.EndsWith(" " + symbol.PlainText, row.Unit.Label);
                     Assert.Equal(FontStyle.Italic, runs[^1].FontStyle);
                     Assert.Equal(FontStyle.Normal, runs[0].FontStyle);
                 }
                 else Assert.All(runs, run => Assert.Equal(FontStyle.Normal, run.FontStyle));
-                Assert.True(label.TextLayout.Width <= label.Bounds.Width + .01);
-                Assert.True(label.TextLayout.Height <= label.Bounds.Height + .01);
+                Assert.True(label.TextLayout.Width <= label.Bounds.Width + .01, $"label clipped: {row.Unit.Label}");
+                Assert.True(label.TextLayout.Height <= label.Bounds.Height + .01, $"label clipped: {row.Unit.Label}");
             }
         }
-        Export(scroll, $"settings-{culture}-{width}x{height}-top.png", width, height);
+        Assert.Equal(16, columns.SelectMany(c => c.GetVisualDescendants().OfType<ComboBox>()).Count(c => c.IsVisible));
+        AssertUnitsFitTheWindowWidth(window, scroll);
+        // Switching the unit system must show every changed field at once: at the default size the profile choice
+        // and all unit fields are inside the viewport without scrolling.
+        if (!smallest) AssertUnitsAreVisibleWithoutScrolling(window, scroll);
+        AssertOneFormRaster(window);
         AssertNumericSection(window);
+        Export(window, $"settings-{culture}-{width}x{height}-top.png", width, height);
         scroll.Offset = new(0, window.FindControl<Grid>("NumericSettings")!.TranslatePoint(default, (Control)scroll.Content!)!.Value.Y - 60);
         Arrange(window, width, height);
-        Export(scroll, $"settings-{culture}-{width}x{height}-numeric.png", width, height);
+        AssertFooterIsFixed(window, scroll, width, height);
+        Export(window, $"settings-{culture}-{width}x{height}-numeric.png", width, height);
         scroll.Offset = default;
         Arrange(window, width, height);
         model.ChangeUnit(QuantityKind.BeamLength, UnitCatalog.Inch);
         Arrange(window, width, height);
         Assert.True(window.FindControl<RadioButton>("CustomProfileOption")!.IsVisible);
         Assert.True(window.FindControl<Button>("OkButton")!.IsEnabled);
-        if (height == 450)
+        if (smallest) Assert.True(scroll.Extent.Height > scroll.Viewport.Height, "the content scrolls instead of growing the window");
+        Export(window, $"settings-{culture}-{width}x{height}-custom.png", width, height);
+    }
+
+    /// <summary>
+    /// A rejected save says so next to the buttons that triggered it, not at the end of the scrolled form: the message stays
+    /// visible and inside the window, while the form above it scrolls.
+    /// </summary>
+    [Theory]
+    [InlineData("de-DE", false)]
+    [InlineData("en-US", false)]
+    [InlineData("de-DE", true)]
+    [InlineData("en-US", true)]
+    public async Task ARejectedSaveShowsItsMessageInTheFixedFooter(string culture, bool smallest)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new ResultCultureScope(culture, culture);
+        var (width, height) = Size(smallest);
+        const string message = "Die Einstellungen konnten nicht gespeichert werden: Zugriff verweigert. Bitte Schreibrechte prüfen und erneut versuchen.";
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(message));
+        var window = new SettingsWindow(model);
+        Arrange(window, width, height);
+        var error = window.FindControl<TextBlock>("SaveError")!;
+        Assert.False(error.IsVisible);
+        model.SignificantDigits = 5;
+        Assert.False(await model.ApplyAsync());
+        Arrange(window, width, height);
+        var scroll = window.FindControl<ScrollViewer>("SettingsScroll")!;
+        Assert.True(error.IsVisible); Assert.Equal(message, error.Text);
+        Assert.DoesNotContain(error.GetVisualAncestors(), a => ReferenceEquals(a, scroll));
+        var bounds = new Rect(error.TranslatePoint(default, window)!.Value, error.Bounds.Size);
+        Assert.True(bounds.Bottom <= height + .5 && bounds.Right <= width + .5 && bounds.X >= 0, "the message lies inside the window");
+        Assert.True(error.TextLayout.Height <= error.Bounds.Height + .01, "the message is not clipped");
+        // The message and the buttons share the footer, and the message does not run into them.
+        var ok = window.FindControl<Button>("OkButton")!; var cancel = window.FindControl<Button>("CancelButton")!;
+        Assert.True(bounds.Right <= cancel.TranslatePoint(default, window)!.Value.X + .5);
+        Assert.Same(window.FindControl<Border>("SettingsFooter"), error.GetVisualAncestors().OfType<Border>().First(b => b.Classes.Contains("dialogFooter")));
+        AssertFooterIsFixed(window, scroll, width, height);
+        scroll.Offset = new(0, scroll.Extent.Height); Arrange(window, width, height);
+        Assert.True(error.IsVisible);
+        Assert.True(error.TranslatePoint(default, window)!.Value.Y + error.Bounds.Height <= height + .5);
+        Export(window, $"settings-{culture}-{width}x{height}-error.png", width, height);
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("en-US")]
+    public void EveryUnitSymbolFitsTheNarrowUnitField(string culture)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new ResultCultureScope(culture, culture);
+        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
+        var window = new SettingsWindow(model);
+        var (width, height) = Size(false);
+        Arrange(window, width, height);
+        var rows = model.UnitGroups.SelectMany(g => g.Units).Where(u => u.IsEditable).ToArray();
+        for (int round = 0; round < rows.Max(r => r.Units.Count); round++)
         {
-            Assert.True(scroll.Extent.Height > scroll.Viewport.Height);
-            scroll.Offset = new(0, scroll.Extent.Height);
+            foreach (var row in rows) row.SelectedUnit = row.Units[Math.Min(round, row.Units.Count - 1)];
             Arrange(window, width, height);
-            var button = window.FindControl<Button>("OkButton")!;
-            var origin = button.TranslatePoint(default, scroll)!.Value;
-            Assert.InRange(origin.Y, 0, scroll.Viewport.Height - button.Bounds.Height);
+            foreach (var field in window.FindControl<Grid>("UnitColumns")!.GetVisualDescendants().OfType<ComboBox>().Where(c => c.IsVisible))
+            {
+                var text = field.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsVisible && t.Text == ((UnitDefinition)field.SelectedItem!).Symbol);
+                Assert.True(text.Bounds.Width >= text.TextLayout.Width - .01, $"{text.Text} fits its field");
+                var arrow = field.GetVisualDescendants().OfType<PathIcon>().First(p => p.Name == "DropDownGlyph");
+                var textRight = text.TranslatePoint(default, field)!.Value.X + text.TextLayout.Width;
+                Assert.True(textRight <= arrow.TranslatePoint(default, field)!.Value.X, $"{text.Text} stays left of the dropdown arrow");
+            }
         }
-        Export(scroll, $"settings-{culture}-{width}x{height}-custom.png", width, height);
+    }
+
+    /// <summary>The footer is a row of the window below the scroll viewer, fully inside the window at any scroll position.</summary>
+    private static void AssertFooterIsFixed(SettingsWindow window, ScrollViewer scroll, double width, double height)
+    {
+        var footer = window.FindControl<Border>("SettingsFooter")!;
+        Assert.Contains("dialogFooter", footer.Classes);
+        foreach (var name in new[] { "OkButton", "CancelButton" })
+        {
+            var button = window.FindControl<Button>(name)!;
+            Assert.DoesNotContain(button.GetVisualAncestors(), a => ReferenceEquals(a, scroll));
+            Assert.Contains(footer, button.GetVisualAncestors());
+            var bounds = new Rect(button.TranslatePoint(default, window)!.Value, button.Bounds.Size);
+            Assert.True(bounds.X >= 0 && bounds.Y >= 0 && bounds.Right <= width + .5 && bounds.Bottom <= height + .5, $"{name} lies inside the window");
+        }
+        var footerBounds = new Rect(footer.TranslatePoint(default, window)!.Value, footer.Bounds.Size);
+        var scrollBounds = new Rect(scroll.TranslatePoint(default, window)!.Value, scroll.Bounds.Size);
+        Assert.True(footerBounds.Top >= scrollBounds.Bottom - .5, "the footer does not overlap the scrolled content");
+        Assert.True(footerBounds.Bottom <= height + .5);
+    }
+
+    private static double Y(Control control, Visual root) => control.TranslatePoint(default, root)!.Value.Y;
+    private static double X(Control control, Visual root) => control.TranslatePoint(default, root)!.Value.X;
+
+    /// <summary>The radio buttons and every unit field lie completely inside the visible part of the scroll viewer.</summary>
+    private static void AssertUnitsAreVisibleWithoutScrolling(SettingsWindow window, ScrollViewer scroll)
+    {
+        Assert.Equal(0, scroll.Offset.Y);
+        var viewport = new Rect(default, scroll.Viewport);
+        var radios = window.FindControl<StackPanel>("ProfileRow")!.Children.OfType<RadioButton>().Where(r => r.IsVisible).ToArray();
+        var fields = window.FindControl<Grid>("UnitColumns")!.GetVisualDescendants().OfType<Control>()
+            .Where(c => c.IsVisible && (c is ComboBox || (c is TextBlock t && t.Classes.Contains("propertyLabel")))).ToArray();
+        Assert.Equal(16 + 18, fields.Length);
+        foreach (var control in radios.Cast<Control>().Concat(fields))
+        {
+            var bounds = new Rect(control.TranslatePoint(default, scroll)!.Value, control.Bounds.Size);
+            Assert.True(viewport.Contains(bounds.TopLeft) && viewport.Contains(bounds.BottomRight) , $"{control.GetType().Name} {AutomationProperties.GetName(control)} lies in the viewport: {bounds} in {viewport}");
+        }
+    }
+
+    /// <summary>At no supported size the unit columns are cut off at the right edge.</summary>
+    private static void AssertUnitsFitTheWindowWidth(SettingsWindow window, ScrollViewer scroll)
+    {
+        var columns = window.FindControl<Grid>("UnitColumns")!;
+        Assert.True(X(columns, scroll) + columns.Bounds.Width <= scroll.Viewport.Width - 24 + .5, "the right unit column is not clipped and keeps the page margin");
+        Assert.True(columns.DesiredSize.Width <= columns.Bounds.Width + .01);
+    }
+
+    /// <summary>
+    /// The unit fields form one raster in both columns: the same label width, the same field width and the same distance
+    /// between label and field. The number and language fields have their own wider field for words but share one
+    /// label column and one left edge. The label colour and the label-field distance are those of the material editor.
+    /// </summary>
+    private static void AssertOneFormRaster(SettingsWindow window)
+    {
+        var scroll = window.FindControl<ScrollViewer>("SettingsScroll")!;
+        var content = (Control)scroll.Content!;
+        double Xc(Control control) => control.TranslatePoint(default, content)!.Value.X;
+        var sides = new[] { "UnitGroupListLeft", "UnitGroupListRight" }.Select(name => window.FindControl<ItemsControl>(name)!).ToArray();
+        var unitFields = sides.Select(side => side.GetVisualDescendants().OfType<ComboBox>().Where(c => c.IsVisible).ToArray()).ToArray();
+        var unitLabels = sides.Select(side => side.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsVisible && t.Classes.Contains("propertyLabel")).ToArray()).ToArray();
+        Assert.Equal(new[] { 9, 9 }, unitLabels.Select(l => l.Length));
+        var allFields = unitFields.SelectMany(f => f).ToArray();
+        Assert.Equal(16, allFields.Length);
+        Assert.All(allFields, f => Assert.Equal(allFields[0].Bounds.Width, f.Bounds.Width, 3));
+        Assert.True(allFields[0].Bounds.Width < 160, "the unit fields are only as wide as a unit symbol needs");
+        for (int side = 0; side < 2; side++)
+        {
+            Assert.All(unitFields[side], f => Assert.Equal(Xc(unitFields[side][0]), Xc(f), 3));
+            Assert.All(unitLabels[side], l => Assert.Equal(Xc(unitLabels[side][0]), Xc(l), 3));
+        }
+        // Both columns have the same label width and the same distance between label and field.
+        Assert.Equal(Xc(unitFields[0][0]) - Xc(unitLabels[0][0]), Xc(unitFields[1][0]) - Xc(unitLabels[1][0]), 3);
+        var spacing = ((Grid)unitLabels[0][0].Parent!).ColumnSpacing;
+        Assert.Equal(12, spacing);
+        // The lower sections: one label column and one field width for digits, language and format.
+        var lowerFields = new[] { "SignificantDigitsPicker", "LanguagePicker", "RegionalFormatPicker" }.Select(n => window.FindControl<ComboBox>(n)!).ToArray();
+        Assert.All(lowerFields, f => Assert.Equal(Xc(lowerFields[0]), Xc(f), 3));
+        Assert.All(lowerFields, f => Assert.Equal(lowerFields[0].Bounds.Width, f.Bounds.Width, 3));
+        var lowerLabels = window.FindControl<StackPanel>("FormSections")!.GetVisualDescendants().OfType<TextBlock>()
+            .Where(t => t.IsVisible && t.Classes.Contains("propertyLabel") && t.FindAncestorOfType<ItemsControl>()?.Name != "NumberPreviewRows").ToArray();
+        Assert.Equal(4, lowerLabels.Length);
+        Assert.All(lowerLabels, l => Assert.Equal(Xc(lowerLabels[0]), Xc(l), 3));
+        foreach (var field in lowerFields) // the displayed words are not cut off by the field
+        {
+            var item = field.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsVisible && t.Text == (field.SelectedItem as SetupChoiceLabel)?.Label);
+            Assert.True(item.Bounds.Width >= item.TextLayout.Width - .01, $"{item.Text} is not clipped");
+        }
+        foreach (var label in unitLabels.SelectMany(l => l).Concat(lowerLabels))
+            Assert.True(label.TextLayout.Width <= label.Bounds.Width + .01, $"label clipped: {label.Text}");
     }
 
     [Theory]
@@ -249,7 +408,8 @@ public sealed class DesktopSettingsControlTests
         int writes = 0;
         var model = new SettingsViewModel(UserSettings.Default, _ =>
         { writes++; return Task.FromResult<string?>(null); });
-        var window = new SettingsWindow(model);
+        var owner = new Window(); owner.Show();
+        var window = new SettingsWindow(model); window.Show(owner);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
         model.Select(UnitProfileKind.UnitedStates); model.SignificantDigits = 5;
         model.SelectedUiLanguage = UiLanguagePreference.English;
@@ -301,7 +461,8 @@ public sealed class DesktopSettingsControlTests
         var completion = new TaskCompletionSource<string?>();
         int writes = 0;
         var model = new SettingsViewModel(UserSettings.Default, _ => { writes++; return completion.Task; });
-        var window = new SettingsWindow(model);
+        var owner = new Window(); owner.Show();
+        var window = new SettingsWindow(model); window.Show(owner);
         bool closeApproved = false; window.Closing += (_, e) => closeApproved = !e.Cancel;
         model.SignificantDigits = 5;
         Click(window, "OkButton");
@@ -367,30 +528,30 @@ public sealed class DesktopSettingsControlTests
         window.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
 
     /// <summary>
-    /// The preview starts at the right unit column, the controls stay in the left column, and no text of the
-    /// section is clipped; the preview columns line up across rows.
+    /// The number formatting uses the same columns as the units: the digits field, the check box and the preview start at the
+    /// field edge, nothing is clipped, and the preview columns line up across rows.
     /// </summary>
     private static void AssertNumericSection(Window window)
     {
         var content = (Control)((ScrollViewer)window.FindControl<ScrollViewer>("SettingsScroll")!).Content!;
         double X(Control control) => control.TranslatePoint(default, content)!.Value.X;
         var section = window.FindControl<Grid>("NumericSettings")!;
-        var preview = window.FindControl<StackPanel>("NumberPreview")!;
-        var rightUnits = window.FindControl<ItemsControl>("RightUnitList")!;
-        Assert.Equal(X(rightUnits), X(preview), 6);
+        var preview = window.FindControl<ItemsControl>("NumberPreviewRows")!;
         var digits = window.FindControl<ComboBox>("SignificantDigitsPicker")!;
         var powers = window.FindControl<CheckBox>("PowersOfTenOption")!;
-        Assert.Equal(220, digits.Bounds.Width, 6);
-        Assert.True(X(digits) + digits.Bounds.Width <= X(preview), "digits picker overlaps the preview");
-        Assert.True(X(powers) + powers.Bounds.Width <= X(preview), "check box overlaps the preview");
+        Assert.Equal(X(digits), X(powers), 3);
+        Assert.Equal(X(digits), X(preview), 3);
+        Assert.Equal(X(digits), X(window.FindControl<TextBlock>("PresentationHint")!), 3);
         Assert.True(X(preview) + preview.Bounds.Width <= X(section) + section.Bounds.Width + .01);
+        // The label of the preview stands in the label column like the labels of the fields.
+        var previewLabel = section.Children.OfType<TextBlock>().Single(t => t.Text == Strings.NumberPreview);
+        Assert.Equal(X(section.Children.OfType<TextBlock>().First()), X(previewLabel), 3);
         foreach (var text in section.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible))
         {
             Assert.True(text.TextLayout.Width <= text.Bounds.Width + .01, $"clipped: {text.Text}");
             Assert.True(text.TextLayout.Height <= text.Bounds.Height + .01, $"clipped: {text.Text}");
         }
-        var rows = window.FindControl<ItemsControl>("NumberPreviewRows")!.GetVisualDescendants().OfType<Grid>()
-            .Where(g => g.DataContext is NumberPreviewRow).ToArray();
+        var rows = preview.GetVisualDescendants().OfType<Grid>().Where(g => g.DataContext is NumberPreviewRow).ToArray();
         Assert.Equal(3, rows.Length);
         for (int column = 0; column < 4; column++)
         {

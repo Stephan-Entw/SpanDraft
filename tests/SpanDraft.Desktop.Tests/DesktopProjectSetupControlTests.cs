@@ -195,15 +195,18 @@ public sealed class DesktopProjectSetupControlTests
         var owner = new Window { Width = 1100, Height = 650 }; owner.Show();
         var type = typeof(MainWindow).Assembly.GetType("SpanDraft.Desktop.ProjectDialogs")!;
         var dialogs = (IProjectDialogs)Activator.CreateInstance(type, [owner])!;
-        foreach (var action in new[] { "escape", "cancel", "delete" })
+        foreach (var action in new[] { "enter", "escape", "cancel", "delete" })
         {
             const string displayName = "Mine (1.4567) · UNS Example · AISI Shop";
             var pending = material ? dialogs.ConfirmMaterialDeleteAsync(displayName) : dialogs.ConfirmSectionDeleteAsync("Mine");
             var dialog = Assert.Single(owner.OwnedWindows); Arrange(dialog, 520, 300);
             if (material) Assert.Contains(dialog.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == string.Format(Strings.DeleteMaterialQuestion, displayName));
             var buttons = dialog.GetVisualDescendants().OfType<Button>().Where(b => b.Content is string).ToArray();
-            Assert.True(buttons[0].IsDefault); Assert.False(buttons[1].IsDefault);
+            // Delete is destructive: right of Cancel, red, and neither it nor Cancel answers Enter.
+            Assert.All(buttons, b => Assert.False(b.IsDefault));
             Assert.Equal(Strings.Cancel, buttons[0].Content); Assert.Equal(Strings.Delete, buttons[1].Content);
+            Assert.True(buttons[0].IsCancel); Assert.Contains("destructive", buttons[1].Classes);
+            if (action == "enter") { dialog.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter }); Assert.False(pending.IsCompleted); dialog.Close(); await WaitFor(pending); continue; }
             if (action == "escape") dialog.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
             else buttons[action == "cancel" ? 0 : 1].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.Equal(action == "delete", await WaitFor(pending));

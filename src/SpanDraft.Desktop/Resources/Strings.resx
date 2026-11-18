@@ -139,6 +139,11 @@
   <data name="UnitRotation" xml:space="preserve"><value>Rotation</value></data>
   <data name="UnitTranslationalStiffness" xml:space="preserve"><value>Translational spring stiffness</value></data>
   <data name="UnitRotationalStiffness" xml:space="preserve"><value>Rotational spring stiffness</value></data>
+  <data name="UnitGroupGeometry" xml:space="preserve"><value>Geometry</value></data>
+  <data name="UnitGroupLoads" xml:space="preserve"><value>Loads and section forces</value></data>
+  <data name="UnitGroupDeformation" xml:space="preserve"><value>Deformation</value></data>
+  <data name="UnitGroupMaterial" xml:space="preserve"><value>Material</value></data>
+  <data name="UnitGroupSprings" xml:space="preserve"><value>Springs</value></data>
   <data name="SpringSupport" xml:space="preserve"><value>Spring Support</value></data>
   <data name="TranslationalSpringSupport" xml:space="preserve"><value>Translational spring</value></data>
   <data name="RotationalSpringSupport" xml:space="preserve"><value>Rotational spring</value></data>

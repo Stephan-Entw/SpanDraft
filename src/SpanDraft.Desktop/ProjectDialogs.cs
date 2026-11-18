@@ -2,8 +2,6 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using SpanDraft.Desktop.Resources;
@@ -39,75 +37,78 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
     }
 
     public Task<LeaveDecision> ConfirmLeaveAsync(string projectFileName) => ShowAsync(
-        string.Format(CultureInfo.CurrentUICulture, Strings.LeaveQuestion, projectFileName),
-        [(Strings.Save, LeaveDecision.Save, "primary"), (Strings.DontSave, LeaveDecision.Discard, "secondary"), (Strings.Cancel, LeaveDecision.Cancel, "secondary")]);
+        string.Format(CultureInfo.CurrentUICulture, Strings.LeaveQuestion, projectFileName), DialogChoices.Leave());
 
     public Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc) => damaged
-        ? ShowAsync(Strings.RecoveryDiscardQuestion,
-            [(Strings.Discard, RecoveryDecision.Discard, "primary"), (Strings.Cancel, RecoveryDecision.Cancel, "secondary")])
+        ? ShowAsync(Strings.RecoveryDiscardQuestion, DialogChoices.DamagedRecovery())
         : ShowAsync(string.Format(CultureInfo.CurrentUICulture, Strings.RecoveryQuestion,
-            writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)),
-            [(Strings.Restore, RecoveryDecision.Restore, "primary"), (Strings.Discard, RecoveryDecision.Discard, "secondary")]);
+            writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)), DialogChoices.Recovery());
 
     public Task<RecoveryDecision> ConfirmSetupRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc) => damaged
         ? ConfirmRecoveryAsync(true, null)
         : ShowAsync(string.Format(CultureInfo.CurrentUICulture, Strings.SetupRecoveryQuestion,
-            writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)),
-            [(Strings.Restore, RecoveryDecision.Restore, "primary"), (Strings.Discard, RecoveryDecision.Discard, "secondary")]);
+            writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)), DialogChoices.Recovery());
 
-    public async Task ShowErrorAsync(string message) => await ShowAsync(message, [(Strings.OK, true, "primary")]);
+    public async Task ShowErrorAsync(string message) => await ShowAsync(message, DialogChoices.Acknowledge());
 
     public Task<bool> ConfirmRemoveMissingRecentAsync(string path) => ShowAsync(
-        string.Format(CultureInfo.CurrentUICulture, Strings.MissingRecentQuestion, path),
-        [(Strings.RemoveFromRecent, true, "primary"), (Strings.Cancel, false, "secondary")]);
+        string.Format(CultureInfo.CurrentUICulture, Strings.MissingRecentQuestion, path), DialogChoices.RemoveMissingRecent());
 
     public Task<bool> ConfirmMaterialDeleteAsync(string displayName) => ShowAsync(
-        string.Format(CultureInfo.CurrentUICulture, Strings.DeleteMaterialQuestion, displayName),
-        [(Strings.Cancel, false, "secondary"), (Strings.Delete, true, "primary")]);
+        string.Format(CultureInfo.CurrentUICulture, Strings.DeleteMaterialQuestion, displayName), DialogChoices.Delete());
     public Task<bool> ConfirmSectionDeleteAsync(string name) => ShowAsync(
-        string.Format(CultureInfo.CurrentUICulture, Strings.DeleteSectionQuestion, name),
-        [(Strings.Cancel, false, "secondary"), (Strings.Delete, true, "primary")]);
+        string.Format(CultureInfo.CurrentUICulture, Strings.DeleteSectionQuestion, name), DialogChoices.Delete());
 
     public Task ShowMaterialEditorAsync(MaterialEditorViewModel editor) =>
         new MaterialEditorWindow(editor) { Icon = owner.Icon }.ShowDialog(owner);
 
     public Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string displayName) => ShowAsync(
-        string.Format(CultureInfo.CurrentUICulture, Strings.MaterialNameConflictQuestion, displayName),
-        [(Strings.ReplaceMaterial, MaterialNameConflictDecision.Replace, "primary"),
-         (Strings.RenameMaterial, MaterialNameConflictDecision.Rename, "secondary"), (Strings.Cancel, MaterialNameConflictDecision.Cancel, "secondary")]);
+        string.Format(CultureInfo.CurrentUICulture, Strings.MaterialNameConflictQuestion, displayName), DialogChoices.MaterialNameConflict());
 
     public Task<bool> ConfirmMaterialReplaceAsync(string displayName) => ShowAsync(
-        string.Format(CultureInfo.CurrentUICulture, Strings.ReplaceMaterialQuestion, displayName),
-        [(Strings.Cancel, false, "secondary"), (Strings.ReplaceMaterial, true, "primary")]);
+        string.Format(CultureInfo.CurrentUICulture, Strings.ReplaceMaterialQuestion, displayName), DialogChoices.ReplaceMaterial());
 
-    private Task<T> ShowAsync<T>(string message, (string Label, T Result, string Role)[] choices)
+    private Task<T> ShowAsync<T>(string message, IReadOnlyList<DialogChoice<T>> choices)
     {
+        var (plan, dismissResult) = DialogConvention.Arrange(choices);
         var dialog = new Window
         {
             Title = Strings.ApplicationTitle, Width = 520, SizeToContent = SizeToContent.Height,
             CanResize = false, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Icon = owner.Icon
         };
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
-        foreach (var (label, result, role) in choices)
+        dialog.Classes.Add("dialog");
+        bool answered = false;
+        var buttons = new StackPanel();
+        buttons.Classes.Add("dialogButtons");
+        foreach (var entry in plan)
         {
-            var button = new Button { Content = label, IsDefault = typeof(T) == typeof(MaterialNameConflictDecision)
-                ? Equals(result, MaterialNameConflictDecision.Cancel) : buttons.Children.Count == 0 };
-            button.Classes.Add(role);
-            AutomationProperties.SetName(button, label);
-            button.Click += (_, _) => dialog.Close(result);
+            var button = new Button { Content = entry.Label, IsDefault = entry.IsDefault, IsCancel = entry.IsCancel };
+            button.Classes.Add(entry.StyleClass);
+            AutomationProperties.SetName(button, entry.Label);
+            button.Click += (_, _) => { answered = true; dialog.Close(entry.Result); };
             buttons.Children.Add(button);
         }
-        dialog.Content = new StackPanel
+        var footer = new Border { Child = buttons };
+        footer.Classes.Add("dialogFooter");
+        Grid.SetRow(footer, 1);
+        dialog.Content = new Grid
         {
-            Margin = new Thickness(24), Spacing = 24,
+            RowDefinitions = new RowDefinitions("Auto,Auto"),
             Children =
             {
-                new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxHeight = 400 },
-                buttons
+                new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxHeight = 400, Margin = new Thickness(24) },
+                footer
             }
         };
-        dialog.KeyDown += (_, e) => { if (e.Key == Key.Escape) { e.Handled = true; dialog.Close(default(T)); } };
+        // Escape presses the Cancel button (IsCancel). The title bar button answers like Cancel as well, not with whatever
+        // default(T) happens to be.
+        dialog.Closing += (_, e) =>
+        {
+            if (answered || e.CloseReason != WindowCloseReason.WindowClosing) return;
+            e.Cancel = true; answered = true;
+            dialog.Close(dismissResult);
+        };
         return dialog.ShowDialog<T>(owner);
     }
 }

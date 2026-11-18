@@ -486,6 +486,40 @@
   <Style Selector="Button.dangerGhost:not(:disabled)">
     <Setter Property="Foreground" Value="{DynamicResource Error}" />
   </Style>
+  <!-- Action strip at the foot of a dialog window: fixed below the content, one pattern for the material editor,
+       the settings and the confirmation dialogs. Cancel sits directly left of the primary action. -->
+  <Style Selector="Window.dialog">
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+  </Style>
+  <Style Selector="Border.dialogFooter">
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="24,16" />
+  </Style>
+  <Style Selector="StackPanel.dialogButtons">
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="Spacing" Value="{StaticResource Space8}" />
+  </Style>
+  <Style Selector="StackPanel.dialogButtons > Button">
+    <Setter Property="MinWidth" Value="96" />
+  </Style>
+  <!-- A destructive dialog action: red text and frame instead of the accent, never the Enter default. -->
+  <Style Selector="Button.destructive:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Error}" />
+    <Setter Property="Foreground" Value="{DynamicResource Error}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.destructive:pointerover:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource ErrorSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Error}" />
+  </Style>
+  <Style Selector="Button.destructive:pressed:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource Error}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnAccent}" />
+  </Style>
   <Style Selector="controls|LoadSignButton">
     <Setter Property="Width" Value="{DynamicResource LoadSignButtonSize}" />
     <Setter Property="Height" Value="{DynamicResource LoadSignButtonSize}" />
