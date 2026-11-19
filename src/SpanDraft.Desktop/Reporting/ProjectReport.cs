@@ -7,6 +7,7 @@ using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Reporting;
 using SpanDraft.Reporting.Notation;
+using static SpanDraft.Reporting.ReportCellWrap;
 
 namespace SpanDraft.Desktop.Reporting;
 
@@ -83,27 +84,37 @@ internal static class ProjectReport
         if (several)
             indicators.Add(new(Strings.ReportGoverningSegment, (governing + 1).ToString(CultureInfo.CurrentUICulture), null));
         var timestamp = createdAt ?? DateTimeOffset.Now;
+        var positionHeader = TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]";
         var data = new ReportData(state.Info?.CalculationTitle ?? Strings.ReportHeading, state.Info?.Author ?? "",
             ApplicationMetadata.Version, timestamp, timestamp.ToLocalTime().ToString("d", CultureInfo.CurrentCulture), metadata,
             segments,
             new ReportTable?[]
             {
                 SegmentOverview(overview),
-                new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.25f, .50f, .25f],
-                    overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Description, s.Position }).ToArray(), LeftAlignedColumn: 1),
-                new(Strings.MomentReleases, [Strings.OverviewName, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]",
-                        overview.RotationLeftHeaderText, overview.RotationRightHeaderText, overview.ReleaseShearHeaderText],
-                    [.14f, .18f, .22f, .22f, .24f], overview.MomentReleases.Zip(overview.MomentReleaseResults, (release, result) =>
-                        (IReadOnlyList<string>)new[] { release.Name, release.Position, result.RotationLeft, result.RotationRight, result.Shear }).ToArray()),
-                new(Strings.Forces, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.18f, .47f, .35f],
-                    overview.Forces.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
-                new(Strings.Moments, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.18f, .47f, .35f],
-                    overview.Moments.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
-                new(Strings.DistributedLoads, [Strings.OverviewName, Strings.OverviewValue, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.16f, .52f, .32f],
-                    overview.DistributedLoads.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray()),
+                new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, positionHeader],
+                    overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Description, s.Position }).ToArray(),
+                    LeftAlignedColumn: 1, CellWrap: [Text, SupportDescription, Quantity]),
+                new(Strings.MomentReleases, [Strings.OverviewName, Strings.OverviewType, positionHeader],
+                    overview.MomentReleases.Select(r => (IReadOnlyList<string>)new[] { r.Name, r.Type, r.Position }).ToArray(),
+                    LeftAlignedColumn: 1, CellWrap: [Text, Text, Quantity]),
+                new(Strings.Forces, [Strings.OverviewName, Strings.OverviewValue, positionHeader],
+                    overview.Forces.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray(),
+                    CellWrap: [Text, Quantity, Quantity]),
+                new(Strings.Moments, [Strings.OverviewName, Strings.OverviewValue, positionHeader],
+                    overview.Moments.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray(),
+                    CellWrap: [Text, Quantity, Quantity]),
+                new(Strings.DistributedLoads, [Strings.OverviewName, Strings.OverviewValue, positionHeader],
+                    overview.DistributedLoads.Select(l => (IReadOnlyList<string>)new[] { l.Name, l.Value, l.Position }).ToArray(),
+                    CellWrap: [Text, QuantityRange, QuantityRange]),
                 new(Strings.Reactions, [Strings.Support, overview.ReactionXHeaderText, overview.ReactionYHeaderText, overview.ReactionMomentHeaderText],
-                    [.16f, .24f, .30f, .30f], overview.Reactions.Select(r => (IReadOnlyList<string>)new[]
-                    { r.Name, Missing(r.Rx), Missing(r.Ry), Missing(r.Moment) }).ToArray())
+                    overview.Reactions.Select(r => (IReadOnlyList<string>)new[]
+                    { r.Name, Missing(r.Rx), Missing(r.Ry), Missing(r.Moment) }).ToArray(),
+                    CellWrap: [SharedSupportName, Quantity, Quantity, Quantity]),
+                new(Strings.MomentReleaseResults,
+                    [Strings.MomentRelease, overview.RotationLeftHeaderText, overview.RotationRightHeaderText, overview.ReleaseShearHeaderText],
+                    overview.MomentReleaseResults.Select(r =>
+                        (IReadOnlyList<string>)new[] { r.Name, r.RotationLeft, r.RotationRight, r.Shear }).ToArray(),
+                    CellWrap: [Text, Quantity, Quantity, ShearPair])
             }.Where(t => t is { Rows.Count: > 0 }).Select(t => t!).ToArray(),
             indicators.ToArray(), new(Strings.ReportHeading.ToUpperInvariant(), Strings.ReportContinuation, Strings.ReportPage,
                 Strings.Section, Strings.ReportMaterial,
@@ -119,7 +130,7 @@ internal static class ProjectReport
 
     // The overview of the beam model as in the project overview: every segment, also a single one, with its heading and the
     // complete description, wrapping instead of shortening. No positions; those belong to the beam drawing.
-    private static ReportTable SegmentOverview(ProjectOverviewState overview) => new(Strings.SetupSegments, [], [1f],
+    private static ReportTable SegmentOverview(ProjectOverviewState overview) => new(Strings.SetupSegments, [],
         overview.Segments.Select(segment => (IReadOnlyList<string>)new[] { segment.Title + "\n" + segment.Description }).ToArray(),
         LeftAlignedColumn: 0, StrongFirstLine: true);
 

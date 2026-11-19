@@ -6,7 +6,7 @@ using SkiaSharp;
 namespace SpanDraft.Reporting;
 
 /// <summary>One frozen A4 composition, shared by preview, PDF and printer output.</summary>
-internal sealed class ReportDocument : IDisposable
+internal sealed partial class ReportDocument : IDisposable
 {
     internal const float Mm = 72 / 25.4f;
     internal const float PageWidth = 210 * Mm, PageHeight = 297 * Mm;
@@ -21,6 +21,7 @@ internal sealed class ReportDocument : IDisposable
     private readonly ReportTechnicalGraphics graphics;
     private readonly List<IDisposable> ownedGraphics = [];
     private readonly SegmentDetail[] details;
+    private readonly ReportTableLayout?[] tableLayouts;
     private readonly float summaryHeight, notesHeight, embeddedNotesHeight;
     private readonly List<(string Text, SKRect Bounds)> textRuns = [];
     private readonly (IReadOnlyList<HeaderLine> Lines, float BodyTop) projectHeader;
@@ -44,7 +45,8 @@ internal sealed class ReportDocument : IDisposable
                 MaterialProperties = s.MaterialProperties.ToArray() }).ToArray(),
             Indicators = data.Indicators.ToArray(),
             Labels = data.Labels with { Assumptions = data.Labels.Assumptions.ToArray() },
-            Tables = data.Tables.Select(t => t with { Headers = t.Headers.ToArray(), Widths = t.Widths.ToArray(),
+            Tables = data.Tables.Select(t => t with { Headers = t.Headers.ToArray(),
+                CellWrap = t.CellWrap?.ToArray(),
                 Rows = t.Rows.Select(r => (IReadOnlyList<string>)r.ToArray()).ToArray() }).ToArray()
         };
         this.graphics = graphics;
@@ -53,6 +55,7 @@ internal sealed class ReportDocument : IDisposable
         summaryHeight = 19 + SummaryRows().Sum(row => row.Max(cell => cell.Label.Length * LineHeight + 4));
         notesHeight = 20 + Data.Labels.Assumptions.Sum(n => Wrap(n, PageWidth - 2 * Margin, 8).Length * LineHeight);
         embeddedNotesHeight = 20 + Data.Labels.Assumptions.Sum(n => Wrap(n, EmbeddedNotesWidth, 8).Length * LineHeight);
+        tableLayouts = Data.Tables.Select(table => table.Rows.Count == 0 ? null : LayoutTable(table)).ToArray();
         Pages = Compose();
     }
 
@@ -124,7 +127,7 @@ internal sealed class ReportDocument : IDisposable
             if (firstPage)
             {
                 var region = new SKRect(Margin + LeftWidth + Gutter, bodyTop, PageWidth - Margin, bottom);
-                var filled = FillRegion(region, cursor, freshRegion);
+                var filled = FillRegion(region, cursor, freshRegion.Height, firstPage: true);
                 fragments.AddRange(filled.Fragments);
                 cursor = filled.Cursor;
             }
@@ -134,7 +137,7 @@ internal sealed class ReportDocument : IDisposable
                 for (int column = 0; column < 2; column++)
                 {
                     float x = Margin + column * (columnWidth + columnGap);
-                    var filled = FillRegion(new(x, bodyTop, x + columnWidth, bottom), cursor, freshRegion);
+                    var filled = FillRegion(new(x, bodyTop, x + columnWidth, bottom), cursor, freshRegion.Height);
                     fragments.AddRange(filled.Fragments);
                     cursor = filled.Cursor;
                 }
@@ -224,10 +227,10 @@ internal sealed class ReportDocument : IDisposable
             foreach (var row in fragment.Rows)
             {
                 bottom += Math.Max(RowHeight, row.LineCount * LineHeight + 3);
-                if (row.FirstLine + row.LineCount != row.Cells.Max(c => c.Length)) continue;
+                if (row.FirstLine + row.LineCount != fragment.Layout.RowLineCounts[row.Row]) continue;
                 var left = FillRegion(new(leftRegion.Left, leftRegion.Top, leftRegion.Right,
-                    Math.Min(leftRegion.Bottom, bottom + .001f)), start, leftRegion);
-                var right = FillRegion(rightRegion, left.Cursor, leftRegion);
+                    Math.Min(leftRegion.Bottom, bottom + .001f)), start, leftRegion.Height);
+                var right = FillRegion(rightRegion, left.Cursor, leftRegion.Height);
                 if (right.Cursor.TableIndex != Data.Tables.Count || right.Fragments.Count == 0) continue;
                 float leftHeight = Height(left.Fragments), rightHeight = Height(right.Fragments);
                 float difference = Math.Abs(leftHeight - rightHeight);
@@ -249,40 +252,34 @@ internal sealed class ReportDocument : IDisposable
         internal bool Continued => RowIndex > 0 || RowLineOffset > 0;
     }
 
-    // freshRegion describes the repeatable regions available after the current one.
-    // It permits whole-row decisions without depending on pages or table identities.
     private (List<ReportTableFragment> Fragments, TableCursor Cursor) FillRegion(
-        SKRect region, TableCursor cursor, SKRect freshRegion)
+        SKRect region, TableCursor cursor, float freshHeight, bool firstPage = false)
     {
         var fragments = new List<ReportTableFragment>();
         float y = region.Top;
-        // Translation of equal-width float rectangles can change their computed width by an ULP.
-        // Use one wrapping width for repeatable regions so fragmented rows retain identical lines.
-        float width = Math.Abs(region.Width - freshRegion.Width) < .001f ? freshRegion.Width : region.Width;
         while (cursor.TableIndex < Data.Tables.Count)
         {
-            var input = Data.Tables[cursor.TableIndex];
-            if (input.Rows.Count == 0) { cursor = new(cursor.TableIndex + 1); continue; }
-            float heading = TableHeading(input, width, cursor.Continued);
+            var layout = tableLayouts[cursor.TableIndex];
+            if (layout is null) { cursor = new(cursor.TableIndex + 1); continue; }
+            float heading = cursor.Continued ? layout.ContinuationHeadingHeight : layout.HeadingHeight;
             if (region.Bottom - y < heading + RowHeight) break;
             var slices = new List<ReportRowSlice>();
             float rowTop = y + heading;
             int table = cursor.TableIndex;
-            while (cursor.RowIndex < input.Rows.Count)
+            while (cursor.RowIndex < layout.Rows.Count)
             {
-                var cells = WrapRow(input, cursor.RowIndex, width);
-                int lines = cells.Max(c => c.Length);
+                var cells = layout.Rows[cursor.RowIndex];
+                int lines = layout.RowLineCounts[cursor.RowIndex];
                 int remaining = lines - cursor.RowLineOffset;
                 float available = region.Bottom - rowTop;
                 int count = remaining;
                 if (Math.Max(RowHeight, remaining * LineHeight + 3) > available)
                 {
-                    var freshCells = WrapRow(input, cursor.RowIndex, freshRegion.Width);
-                    float freshHeight = TableHeading(input, freshRegion.Width, cursor.Continued)
-                        + Math.Max(RowHeight, freshCells.Max(c => c.Length) * LineHeight + 3);
-                    // Split only oversized rows, and never carry a line offset across widths.
+                    float wholeRowHeight = (cursor.Continued ? layout.ContinuationHeadingHeight : layout.HeadingHeight)
+                        + Math.Max(RowHeight, lines * LineHeight + 3);
+                    // Keep rows that fit a fresh column intact. Split oversized rows on continuation pages.
                     if (cursor.RowLineOffset == 0 &&
-                        (freshHeight <= freshRegion.Height || width != freshRegion.Width)) break;
+                        (wholeRowHeight <= freshHeight || firstPage)) break;
                     count = (int)Math.Floor((available - 3) / LineHeight);
                     if (count <= 0 || available < RowHeight) break;
                 }
@@ -296,27 +293,12 @@ internal sealed class ReportDocument : IDisposable
                 cursor = cursor with { RowIndex = cursor.RowIndex + 1, RowLineOffset = 0 };
             }
             if (slices.Count == 0) break;
-            fragments.Add(new(table, new(region.Left, y, region.Right, rowTop), heading, slices.ToArray()));
-            if (cursor.RowIndex != input.Rows.Count) break;
+            fragments.Add(new(table, new(region.Left, y, region.Left + RightWidth, rowTop), heading, slices.ToArray(), layout));
+            if (cursor.RowIndex != layout.Rows.Count) break;
             cursor = new(table + 1);
             y = rowTop + BlockGap;
         }
         return (fragments, cursor);
-    }
-
-    private string[][] WrapRow(ReportTable table, int row, float width) =>
-        table.Rows[row].Select((value, column) =>
-            Wrap(value, table.Widths[column] * width - 4, 8.5f, column == 0,
-                table.StrongFirstLine ? ProtectedSpaces(value) : null)).ToArray();
-
-    private string[] TableTitle(ReportTable table, float width, bool continued) =>
-        Wrap(table.Title + (continued ? " · " + Data.Labels.Continuation : ""), width, 10, true);
-
-    private float TableHeading(ReportTable table, float width, bool continued)
-    {
-        float title = TableTitle(table, width, continued).Length * LineHeight + 6;
-        int lines = table.Headers.Select((h, i) => Wrap(h, table.Widths[i] * width, 7.5f, i == 0).Length).DefaultIfEmpty(0).Max();
-        return title + lines * LineHeight + 2;
     }
 
     internal IReadOnlyList<(ReportGraphic Kind, SKRect Bounds)> TechnicalAreas(int pageIndex)
@@ -512,21 +494,19 @@ internal sealed class ReportDocument : IDisposable
     private void DrawTable(SKCanvas canvas, ReportTableFragment fragment)
     {
         var table = Data.Tables[fragment.Table]; var bounds = fragment.Bounds;
+        var layout = fragment.Layout;
         bool continued = fragment.Rows[0].Row > 0 || fragment.Rows[0].FirstLine > 0;
-        var title = TableTitle(table, bounds.Width, continued);
+        var title = continued ? layout.ContinuationTitle : layout.Title;
         Lines(canvas, title, bounds.Left, bounds.Top, 10, true);
         float titleHeight = title.Length * LineHeight;
         Line(canvas, bounds.Left, bounds.Top + titleHeight + 2, bounds.Right, bounds.Top + titleHeight + 2, Rule, .5f);
-        float x = bounds.Left;
         for (int i = 0; i < table.Headers.Count; i++)
         {
-            float cellWidth = table.Widths[i] * bounds.Width;
-            var lines = Wrap(table.Headers[i], cellWidth, 7.5f, i == 0);
-            bool leftAligned = i == 0 || table.LeftAlignedColumn == i;
-            Lines(canvas, lines, leftAligned ? x : x + cellWidth,
-                bounds.Top + titleHeight + 6, 7.5f,
+            var column = layout.Columns[i];
+            bool leftAligned = table.IsLeftAligned(i);
+            Lines(canvas, column.Header, bounds.Left + (leftAligned ? column.Left : column.Right),
+                bounds.Top + titleHeight + 6, TableHeaderSize,
                 i == 0, leftAligned ? SKTextAlign.Left : SKTextAlign.Right, Secondary);
-            x += cellWidth;
         }
         if (table.Headers.Count > 0)
             Line(canvas, bounds.Left, bounds.Top + fragment.HeadingHeight - 3,
@@ -534,32 +514,28 @@ internal sealed class ReportDocument : IDisposable
         float y = bounds.Top + fragment.HeadingHeight + 2;
         foreach (var row in fragment.Rows)
         {
-            x = bounds.Left;
             for (int i = 0; i < row.Cells.Count; i++)
             {
-                float cellWidth = table.Widths[i] * bounds.Width;
-                bool leftAligned = i == 0 || table.LeftAlignedColumn == i;
+                var column = layout.Columns[i];
+                bool leftAligned = table.IsLeftAligned(i);
                 var lines = row.Cells[i].Skip(row.FirstLine).Take(row.LineCount).ToArray();
-                float measured = lines.Select(line => Width(line, 8.5f, i == 0)).DefaultIfEmpty(0).Max();
-                // Keep an indivisible number inside its cell even at high selected precision.
-                float size = measured > cellWidth - 4 ? 8.5f * (cellWidth - 4) / measured : 8.5f;
+                float size = column.ValueSize;
                 if (table.StrongFirstLine)
                 {
                     // The heading line of a row is strong; its description is not.
                     for (int line = 0; line < lines.Length; line++)
-                        Text(canvas, lines[line], x, y + line * LineHeight, size, strong: row.FirstLine + line == 0);
+                        Text(canvas, lines[line], bounds.Left + column.Left, y + line * LineHeight, size, strong: row.FirstLine + line == 0);
                 }
                 else
-                    Lines(canvas, lines, leftAligned ? x : x + cellWidth,
+                    Lines(canvas, lines, bounds.Left + (leftAligned ? column.Left : column.Right),
                         y, size, i == 0, leftAligned ? SKTextAlign.Left : SKTextAlign.Right);
-                x += cellWidth;
             }
             y += Math.Max(RowHeight, row.LineCount * LineHeight + 3);
         }
     }
 
     private sealed record SummaryCell(ReportIndicator Indicator, float Left, float Right,
-        float ValueLeft, TechnicalText[] Label);
+        float PositionLeft, TechnicalText[] Label);
 
     private const float SummaryPositionGap = 18;
 
@@ -568,6 +544,10 @@ internal sealed class ReportDocument : IDisposable
         float width = PageWidth - 2 * Margin;
         float leftWidth = (width - Gutter) * .55f;
         int rows = (Data.Indicators.Count + 1) / 2;
+        var positionInsets = Data.Indicators.Chunk(Math.Max(1, rows)).Select(column =>
+            column.Where(indicator => indicator.Position is not null)
+                .Select(indicator => Width(indicator.Value, 9, true) + SummaryPositionGap + Width(indicator.Position!, 7.5f))
+                .DefaultIfEmpty().Max()).ToArray();
         for (int row = 0; row < rows; row++)
         {
             var cells = new List<SummaryCell>();
@@ -579,9 +559,10 @@ internal sealed class ReportDocument : IDisposable
                 float left = column == 0 ? Margin : Margin + leftWidth + Gutter;
                 float right = column == 0 ? Margin + leftWidth : PageWidth - Margin;
                 float valueLeft = right - Width(indicator.Value, 9, true);
-                float positionWidth = indicator.Position is { } position ? Width(position, 7.5f) + SummaryPositionGap : 0;
-                var label = Wrap(indicator.Label, valueLeft - left - 8 - positionWidth, 8.5f);
-                cells.Add(new(indicator, left, right, valueLeft, label));
+                float positionLeft = right - positionInsets[column];
+                float labelRight = indicator.Position is null ? valueLeft : positionLeft;
+                var label = Wrap(indicator.Label, labelRight - left - 8, 8.5f);
+                cells.Add(new(indicator, left, right, positionLeft, label));
             }
             yield return cells.ToArray();
         }
@@ -599,7 +580,7 @@ internal sealed class ReportDocument : IDisposable
                 Lines(canvas, cell.Label, cell.Left, y);
                 Text(canvas, cell.Indicator.Value, cell.Right, y, 9, true, SKTextAlign.Right);
                 if (cell.Indicator.Position is { } position)
-                    Text(canvas, position, cell.ValueLeft - SummaryPositionGap, y, 7.5f, align: SKTextAlign.Right, color: Secondary);
+                    Text(canvas, position, cell.PositionLeft, y, 7.5f, color: Secondary);
             }
             y += row.Max(cell => cell.Label.Length * LineHeight + 4);
         }
@@ -656,7 +637,8 @@ internal sealed class ReportDocument : IDisposable
     private string[] Wrap(string text, float width, float size, bool strong = false, IReadOnlySet<int>? protectedSpaces = null) =>
         Wrap((TechnicalText)text, width, size, strong, protectedSpaces).Select(line => line.PlainText).ToArray();
 
-    private TechnicalText[] Wrap(TechnicalText text, float width, float size, bool strong = false, IReadOnlySet<int>? protectedSpaces = null)
+    private TechnicalText[] Wrap(TechnicalText text, float width, float size, bool strong = false,
+        IReadOnlySet<int>? protectedSpaces = null, bool keepNonbreakingGroup = true)
     {
         var lines = new List<TechnicalText>();
         int offset = 0;
@@ -683,7 +665,7 @@ internal sealed class ReportDocument : IDisposable
                 while (space > 0 && protectedSpaces?.Contains(pendingOffset + space) == true)
                     space = pending.PlainText.LastIndexOf(' ', space - 1);
                 if (space > 0) count = space;
-                else
+                else if (keepNonbreakingGroup)
                 {
                     // Emergency word wrapping must still honor nonbreaking numeric groups.
                     int end = pending.PlainText.IndexOf(' ');

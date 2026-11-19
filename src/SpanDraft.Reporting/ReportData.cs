@@ -15,8 +15,12 @@ internal sealed record ReportLabels(string Heading, string Continuation, string 
     string Title, string Project, string Reference, string Author);
 /// <param name="StrongFirstLine">Each row is a heading line followed by a description that wraps without being shortened.</param>
 internal sealed record ReportTable(string Title, IReadOnlyList<TechnicalText> Headers,
-    IReadOnlyList<float> Widths, IReadOnlyList<IReadOnlyList<string>> Rows, int? LeftAlignedColumn = null,
-    bool StrongFirstLine = false);
+    IReadOnlyList<IReadOnlyList<string>> Rows, int? LeftAlignedColumn = null,
+    bool StrongFirstLine = false, IReadOnlyList<ReportCellWrap>? CellWrap = null)
+{
+    internal bool IsLeftAligned(int column) => column == 0 || LeftAlignedColumn == column;
+}
+internal enum ReportCellWrap { Text, Quantity, QuantityRange, ShearPair, SupportDescription, SharedSupportName }
 internal sealed record ReportIndicator(TechnicalText Label, string Value, string? Position);
 internal enum ReportGraphic { Beam, Displacement, Shear, Moment, Section }
 /// <param name="MinimumDiagramHeight">The height of a result diagram with a plot of its normal compact height.</param>
@@ -24,8 +28,15 @@ internal enum ReportGraphic { Beam, Displacement, Shear, Moment, Section }
 internal sealed record ReportTechnicalGraphics(float BeamHeight, float MinimumDiagramHeight,
     Action<SKCanvas, ReportGraphic, int, SKRect> Draw);
 internal sealed record ReportRowSlice(int Row, int FirstLine, int LineCount, IReadOnlyList<string[]> Cells);
+internal sealed record ReportTableLayout(IReadOnlyList<ReportTableColumn> Columns,
+    IReadOnlyList<string[][]> Rows, IReadOnlyList<int> RowLineCounts, string[] Title, string[] ContinuationTitle,
+    float HeadingHeight, float ContinuationHeadingHeight);
+internal sealed record ReportTableColumn(float Left, float Width, float ValueSize, TechnicalText[] Header)
+{
+    internal float Right => Left + Width;
+}
 internal sealed record ReportTableFragment(int Table, SKRect Bounds, float HeadingHeight,
-    IReadOnlyList<ReportRowSlice> Rows);
+    IReadOnlyList<ReportRowSlice> Rows, ReportTableLayout Layout);
 internal enum ReportBlockKind { Summary, Segment, Notes }
 /// <summary>A block of the page flow below the tables; it always lies completely on one page.</summary>
 /// <param name="Embedded">The notes sit in the free room beside the sketch of the last segment block instead of below it.</param>

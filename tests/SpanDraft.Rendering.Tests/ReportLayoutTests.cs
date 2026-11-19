@@ -20,7 +20,7 @@ public sealed class ReportLayoutTests : ProjectReportTestSupport
         var (main, _) = Open(ReportTestProjects.Create());
         using var captured = ProjectReport.Capture(main.Editor!, Now);
         Assert.All(captured.Data.Indicators.Take(2), indicator => Assert.StartsWith("x = ", indicator.Position));
-        var indicators = captured.Data.Indicators.Select((indicator, index) => index < 2
+        var indicators = captured.Data.Indicators.Select((indicator, index) => index == 0
             ? indicator with { Position = $"x = 1234567{CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator}890123 mm (x−)" }
             : indicator).ToArray();
         using var report = new ReportDocument(captured.Data with { Indicators = indicators }, new(80, 60, (_, _, _, _) => { }));
@@ -39,6 +39,9 @@ public sealed class ReportLayoutTests : ProjectReportTestSupport
         Assert.Equal(labels[2].Left, labels[3].Left, 3);
         Assert.True(values[0].Right < labels[2].Left);
         Assert.True(values[0].Right - labels[0].Left > values[2].Right - labels[2].Left);
+        var positions = indicators.Take(2).Select((indicator, index) => Assert.Single(report.TextRuns,
+            run => run.Text == indicator.Position && run.Bounds.Top == labels[index].Top).Bounds).ToArray();
+        Assert.Equal(positions[0].Left, positions[1].Left, 3);
         for (int index = 0; index < indicators.Length; index++)
         {
             Assert.Equal(labels[index].Top, values[index].Top);

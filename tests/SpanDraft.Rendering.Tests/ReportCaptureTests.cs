@@ -191,13 +191,13 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         using var captured = ProjectReport.Capture(main.Editor!, Now);
         string number = QuantityFormatter.FormatResultNumber(123456789012345d, QuantityKind.PoissonRatio,
             significantDigits: 5, notation: EngineeringNotation.Off);
-        var table = new ReportTable("Grouped numbers", ["Name", "Value"], [.8f, .2f],
-            [new[] { "Group", number }]);
+        var table = new ReportTable("Grouped numbers", ["Name", "Value"],
+            [new[] { "Group", number }], CellWrap: [ReportCellWrap.Text, ReportCellWrap.Quantity]);
         using var report = new ReportDocument(captured.Data with { Tables = [table] }, new(80, 60, (_, _, _, _) => { }));
         using var bitmap = report.RenderPage(0);
         var run = Assert.Single(report.TextRuns, r => r.Text == number);
         var fragment = Assert.Single(report.Pages[0].Tables);
-        Assert.True(run.Bounds.Left >= fragment.Bounds.Left + fragment.Bounds.Width * .8f - .1f);
+        Assert.True(run.Bounds.Left >= fragment.Bounds.Left + fragment.Layout.Columns[1].Left - .01f);
         Assert.True(run.Bounds.Right <= fragment.Bounds.Right + .1f);
         using var pdf = new MemoryStream(); report.WritePdf(pdf); Assert.True(pdf.Length > 0);
     }

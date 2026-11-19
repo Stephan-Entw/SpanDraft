@@ -137,7 +137,7 @@ public sealed class ReportSectionDetailTests : ProjectReportTestSupport
         var table = report.Data.Tables[0];
         Assert.Equal(SpanDraft.Desktop.Resources.Strings.SetupSegments, table.Title);
         Assert.Empty(table.Headers);
-        Assert.Single(table.Widths);
+        Assert.All(table.Rows, row => Assert.Single(row));
         Assert.Equal(editor.Overview.Segments.Select(s => s.Title + "\n" + s.Description), table.Rows.Select(r => r[0]));
         using var bitmap = report.RenderPage(0, 96);
         var heading = Assert.Single(report.TextRuns, r => r.Text == editor.Overview.Segments[0].Title && r.Bounds.Left > ReportDocument.Margin + ReportDocument.LeftWidth);
@@ -149,7 +149,7 @@ public sealed class ReportSectionDetailTests : ProjectReportTestSupport
     {
         const float minimum = 60;
         var source = SyntheticReportData.Create();
-        ReportTable Table(int rows) => new("Forces", ["Name"], [1],
+        ReportTable Table(int rows) => new("Forces", ["Name"],
             Enumerable.Range(0, rows).Select(i => (IReadOnlyList<string>)new[] { "F" + i }).ToArray());
         // A short right column: the left column keeps its compact height, every diagram has exactly the minimum.
         using var compact = new ReportDocument(source with { Tables = [Table(2)] }, new(130, minimum, (_, _, _, _) => { }));
@@ -170,7 +170,7 @@ public sealed class ReportSectionDetailTests : ProjectReportTestSupport
     public void KeyFiguresFollowTheUpperAreaOnPageOneWhenTheyFitAndMoveWithTheFollowingBlocksWhenTheyDoNot()
     {
         var source = SyntheticReportData.Create();
-        ReportTable Table(int rows) => new("Forces", ["Name"], [1],
+        ReportTable Table(int rows) => new("Forces", ["Name"],
             Enumerable.Range(0, rows).Select(i => (IReadOnlyList<string>)new[] { "F" + i }).ToArray());
         using var fits = new ReportDocument(source with { Tables = [Table(2)] }, new(130, 60, (_, _, _, _) => { }));
         Assert.True(fits.Pages[0].SummaryTop >= fits.Pages[0].UpperBottom + 16 - .01f);

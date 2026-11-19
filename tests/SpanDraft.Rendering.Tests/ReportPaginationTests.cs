@@ -13,7 +13,7 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     public void TablesFlowAcrossColumnsAndSummaryFollowsEveryRow(int count)
     {
         var source = SyntheticReportData.Create();
-        ReportTable Table(string title, int rows) => new(title, ["Name"], [1],
+        ReportTable Table(string title, int rows) => new(title, ["Name"],
             Enumerable.Range(0, rows).Select(i => (IReadOnlyList<string>)new[] { title + i }).ToArray());
         using var report = new ReportDocument(source with
         {
@@ -50,7 +50,7 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     public void FirstPageStartsNextTableOnlyWhenACompleteDataRowFits(bool rowFits)
     {
         var source = SyntheticReportData.Create();
-        ReportTable Table(string title, int rows) => new(title, ["Name"], [1],
+        ReportTable Table(string title, int rows) => new(title, ["Name"],
             Enumerable.Range(0, rows).Select(i => (IReadOnlyList<string>)new[] { "R" + i }).ToArray());
         using var probe = new ReportDocument(source with { Tables = [Table("First", 200)] }, new(130, 60, (_, _, _, _) => { }));
         var fragment = probe.Pages[0].Tables[0];
@@ -72,7 +72,7 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
         var source = SyntheticReportData.Create();
         var rows = Enumerable.Range(0, 24).Select(i => (IReadOnlyList<string>)new[]
             { i + " " + string.Join(" ", Enumerable.Repeat("long cell content", 16)) }).ToArray();
-        using var report = new ReportDocument(source with { Tables = [new("Reactions", ["Name"], [1], rows)] },
+        using var report = new ReportDocument(source with { Tables = [new("Reactions", ["Name"], rows)] },
             new(130, 60, (_, _, _, _) => { }));
         Assert.True(report.Pages.Count > 1);
         var slices = report.Pages.SelectMany(p => p.Tables).SelectMany(t => t.Rows).ToArray();
@@ -85,7 +85,7 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     public void ContinuationPageFlowsThroughShortTablesThenReactionsLeftToRightBeforeNextPage()
     {
         var source = SyntheticReportData.Create();
-        ReportTable Table(string title, int count) => new(title, ["Name"], [1],
+        ReportTable Table(string title, int count) => new(title, ["Name"],
             Enumerable.Range(0, count).Select(i => (IReadOnlyList<string>)new[] { title + i }).ToArray());
         using var probe = new ReportDocument(source with { Tables = [Table("Stream", 300)] }, new(130, 60, (_, _, _, _) => { }));
         int firstPageRows = Assert.Single(probe.Pages[0].Tables).Rows.Count;
@@ -123,7 +123,7 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     public void FinalContinuationBalancesAnyTableAtWholeRowBoundaries(string title, bool wrapped)
     {
         var source = SyntheticReportData.Create();
-        ReportTable Table(string name, int count) => new(name, ["Name"], [1],
+        ReportTable Table(string name, int count) => new(name, ["Name"],
             Enumerable.Range(0, count).Select(i => (IReadOnlyList<string>)new[] { name + i }).ToArray());
         using var probe = new ReportDocument(source with { Tables = [Table("Stream", 300)] }, new(130, 60, (_, _, _, _) => { }));
         int firstPageRows = Assert.Single(probe.Pages[0].Tables).Rows.Count;
@@ -131,7 +131,7 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
         var rows = Enumerable.Range(0, 18).Select(i => (IReadOnlyList<string>)new[] { title + i + suffix }).ToArray();
         using var report = new ReportDocument(source with
         {
-            Tables = [Table("Forces", firstPageRows), new(title, ["Name"], [1], rows)]
+            Tables = [Table("Forces", firstPageRows), new(title, ["Name"], rows)]
         }, new(130, 60, (_, _, _, _) => { }));
         Assert.Equal(probe.Pages[0].Tables[0].Bounds, report.Pages[0].Tables[0].Bounds);
         Assert.Equal(firstPageRows, Assert.Single(report.Pages[0].Tables).Rows.Count);
@@ -162,7 +162,7 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     public void FinalContinuationChoosesBestSplitInsideReactionsAfterShortTables()
     {
         var source = SyntheticReportData.Create();
-        ReportTable Table(string title, int count) => new(title, ["Name"], [1],
+        ReportTable Table(string title, int count) => new(title, ["Name"],
             Enumerable.Range(0, count).Select(i => (IReadOnlyList<string>)new[] { title + i }).ToArray());
         using var probe = new ReportDocument(source with { Tables = [Table("Stream", 300)] }, new(130, 60, (_, _, _, _) => { }));
         using var report = new ReportDocument(source with
@@ -187,12 +187,12 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     public void FinalContinuationCanSplitBetweenTablesOrBetweenTallWholeRows(bool tallRows)
     {
         var source = SyntheticReportData.Create();
-        ReportTable Table(string title, int count) => new(title, ["Name"], [1],
+        ReportTable Table(string title, int count) => new(title, ["Name"],
             Enumerable.Range(0, count).Select(i => (IReadOnlyList<string>)new[] { title + i }).ToArray());
         using var probe = new ReportDocument(source with { Tables = [Table("Stream", 300)] }, new(130, 60, (_, _, _, _) => { }));
         var tables = new List<ReportTable> { Table("Forces", probe.Pages[0].Tables[0].Rows.Count) };
         if (tallRows)
-            tables.Add(new("Tall", ["Name"], [1], Enumerable.Range(0, 2)
+            tables.Add(new("Tall", ["Name"], Enumerable.Range(0, 2)
                 .Select(i => (IReadOnlyList<string>)new[] { string.Join("\n", Enumerable.Repeat("Row" + i, 8)) }).ToArray()));
         else
             tables.AddRange([Table("First", 4), Table("Next", 4)]);
@@ -229,7 +229,7 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     public void SingleShortRemainingTableStaysInLeftColumn(int rows)
     {
         var source = SyntheticReportData.Create();
-        ReportTable Table(string title, int count) => new(title, ["Name"], [1],
+        ReportTable Table(string title, int count) => new(title, ["Name"],
             Enumerable.Range(0, count).Select(i => (IReadOnlyList<string>)new[] { title + i }).ToArray());
         using var probe = new ReportDocument(source with { Tables = [Table("Stream", 300)] }, new(130, 60, (_, _, _, _) => { }));
         using var report = new ReportDocument(source with
@@ -248,12 +248,12 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     {
         var source = SyntheticReportData.Create();
         string[] titles = ["Supports", "Forces", "Moments", "Distributed", "Reactions"];
-        var tables = titles.Select((title, table) => new ReportTable(title, ["Name"], [1],
+        var tables = titles.Select((title, table) => new ReportTable(title, ["Name"],
             Enumerable.Range(0, table == longTable ? 400 : 2)
                 .Select(row => (IReadOnlyList<string>)new[] { $"T{table}R{row}" }).ToArray())).ToArray();
         using var report = new ReportDocument(source with
         {
-            Tables = [new("Empty", ["Name"], [1], []), .. tables, new("Empty", ["Name"], [1], [])]
+            Tables = [new("Empty", ["Name"], []), .. tables, new("Empty", ["Name"], [])]
         }, new(130, 60, (_, _, _, _) => { }));
         AssertCompleteTablesAndFinalSummary(report);
         var fragments = report.Pages.SelectMany(p => p.Tables).Where(f => f.Table == longTable + 1).ToArray();
@@ -267,10 +267,10 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     }
 
     [Fact]
-    public void FirstRowMovedToAnotherPageIsRewrappedWithoutContinuationTitle()
+    public void FirstRowMovedForHeightKeepsItsNarrowLayoutWithoutContinuationTitle()
     {
         var source = SyntheticReportData.Create();
-        ReportTable Table(string title, IReadOnlyList<IReadOnlyList<string>> rows) => new(title, ["Name"], [1], rows);
+        ReportTable Table(string title, IReadOnlyList<IReadOnlyList<string>> rows) => new(title, ["Name"], rows);
         var simpleRows = Enumerable.Range(0, 200).Select(i => (IReadOnlyList<string>)new[] { "R" + i }).ToArray();
         using var probe = new ReportDocument(source with { Tables = [Table("First", simpleRows)] }, new(130, 60, (_, _, _, _) => { }));
         var first = probe.Pages[0].Tables[0];
@@ -286,9 +286,12 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
         var row = Assert.Single(next.Rows);
         Assert.Equal(0, row.FirstLine);
         Assert.Equal(row.Cells[0].Length, row.LineCount);
-        Assert.True(next.Bounds.Width > first.Bounds.Width);
         using var narrow = new ReportDocument(source with { Tables = [Table("Second", [new[] { longCell }])] }, new(130, 60, (_, _, _, _) => { }));
-        Assert.True(narrow.Pages[0].Tables[0].Rows[0].LineCount > row.LineCount);
+        var onFirstPage = Assert.Single(narrow.Pages[0].Tables);
+        Assert.Equal(ReportDocument.RightWidth, next.Bounds.Width, 3);
+        Assert.Equal(onFirstPage.Layout.Columns[0].Width, next.Layout.Columns[0].Width);
+        Assert.Equal(onFirstPage.Layout.Columns[0].ValueSize, next.Layout.Columns[0].ValueSize);
+        Assert.Equal(onFirstPage.Rows[0].Cells[0], row.Cells[0]);
         using var bitmap = report.RenderPage(1, 96);
         Assert.Contains(report.TextRuns, r => r.Text == "Second");
         Assert.DoesNotContain(report.TextRuns, r => r.Text == "Second \u00b7 " + report.Data.Labels.Continuation);
@@ -302,13 +305,14 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
         string text = string.Join("\n", Enumerable.Range(0, 180).Select(i => $"Line {i}"));
         using var report = new ReportDocument(source with
         {
-            Tables = [new("Arbitrary", ["Name", "Value"], [.7f, .3f], [new[] { text, "42" }, new[] { "End", "7" }])]
+            Tables = [new("Arbitrary", ["Name", "Value"], [new[] { text, "42" }, new[] { "End", "7" }])]
         }, new(130, 60, (_, _, _, _) => { }));
         Assert.Empty(report.Pages[0].Tables);
         AssertCompleteTablesAndFinalSummary(report);
         var fragments = report.Pages.SelectMany(p => p.Tables).ToArray();
         Assert.True(fragments.Length > 2);
-        Assert.All(fragments, f => Assert.Equal(fragments[0].Bounds.Width, f.Bounds.Width, 3));
+        Assert.Equal(ReportDocument.RightWidth, fragments[0].Bounds.Width, 3);
+        Assert.All(fragments, f => Assert.Same(fragments[0].Layout, f.Layout));
         Assert.Equal(Enumerable.Range(0, 180).Select(i => $"Line {i}"), fragments.SelectMany(f => f.Rows)
             .Where(r => r.Row == 0).SelectMany(r => r.Cells[0].Skip(r.FirstLine).Take(r.LineCount)));
         for (int page = 1; page < report.Pages.Count; page++)
@@ -326,11 +330,79 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     }
 
     [Theory]
+    [InlineData("Type", "A", "Fixed support", "2\u202f000", true)]
+    [InlineData("Value", "g", "−151 N/m", "0…2\u202f000", false)]
+    public void ShortTableContentLeavesTwoEqualGapsBetweenRenderedColumns(
+        string heading, string name, string value, string position, bool leftAligned)
+    {
+        var table = new ReportTable("Table", ["Name", heading, "x [mm]"],
+            [new[] { name, value, position }], LeftAlignedColumn: leftAligned ? 1 : null,
+            CellWrap: [ReportCellWrap.Text, leftAligned ? ReportCellWrap.Text : ReportCellWrap.Quantity, ReportCellWrap.QuantityRange]);
+        using var report = new ReportDocument(SyntheticReportData.Create() with { Tables = [table] }, new(130, 60, (_, _, _, _) => { }));
+        var fragment = Assert.Single(report.Pages[0].Tables);
+        using var bitmap = report.RenderPage(0, 96);
+        var nameHeader = Assert.Single(report.TextRuns, run => run.Text == "Name").Bounds;
+        var valueHeader = Assert.Single(report.TextRuns, run => run.Text == heading).Bounds;
+        var positionHeader = Assert.Single(report.TextRuns, run => run.Text == "x [mm]").Bounds;
+        var valueRun = Assert.Single(report.TextRuns, run => run.Text == value).Bounds;
+        var positionRun = Assert.Single(report.TextRuns, run => run.Text == position).Bounds;
+
+        Assert.Equal(valueRun.Left - nameHeader.Right, positionRun.Left - valueRun.Right, .01f);
+        Assert.Equal(leftAligned ? valueRun.Left : valueRun.Right, leftAligned ? valueHeader.Left : valueHeader.Right, .01f);
+        Assert.Equal(positionRun.Right, positionHeader.Right, .01f);
+        Assert.Equal(fragment.Bounds.Right, positionRun.Right, .01f);
+    }
+
+    [Fact]
+    public void WideValuesScaleByColumnAndStartOnTheFirstPage()
+    {
+        var source = SyntheticReportData.Create();
+        string quantity = new string('8', 10) + " N";
+        const string shortQuantity = "8 N";
+        var table = new ReportTable("Values", ["Name", "Value", "Other"],
+            Enumerable.Range(0, 128).Select(i =>
+            {
+                string value = i % 2 == 0 ? quantity : shortQuantity;
+                return (IReadOnlyList<string>)new[] { "Row " + i, value, value };
+            }).ToArray(),
+            CellWrap: [ReportCellWrap.Text, ReportCellWrap.Quantity, ReportCellWrap.Quantity]);
+        using var report = new ReportDocument(source with { Tables = [table] }, new(130, 60, (_, _, _, _) => { }));
+
+        Assert.Single(report.Pages[0].Tables);
+        AssertCompleteTablesAndFinalSummary(report);
+        var fragments = report.Pages.SelectMany(p => p.Tables).ToArray();
+        Assert.True(fragments.Length > 2);
+        Assert.Equal(0, fragments[0].Rows[0].Row);
+        var layout = fragments[0].Layout;
+        Assert.Equal(ReportDocument.RightWidth, fragments[0].Bounds.Width, 3);
+        Assert.Equal(8.5f, layout.Columns[0].ValueSize);
+        Assert.All(layout.Columns.Skip(1), column =>
+        {
+            Assert.InRange(column.ValueSize, 7, 8.49f);
+        });
+        Assert.All(fragments, fragment => Assert.Same(layout, fragment.Layout));
+        Assert.All(layout.Rows.Zip(table.Rows), pair =>
+            Assert.Equal(pair.Second.Skip(1), pair.First.Skip(1).Select(cell => Assert.Single(cell))));
+        using var bitmap = report.RenderPage(0, 96);
+        foreach (var column in layout.Columns.Skip(1))
+        {
+            float right = fragments[0].Bounds.Left + column.Right;
+            foreach (string value in new[] { quantity, shortQuantity })
+            {
+                var runs = report.TextRuns.Where(run => run.Text == value && Math.Abs(right - run.Bounds.Right) < .01f).ToArray();
+                Assert.NotEmpty(runs);
+                using var measured = new ReportTextLayout(value, column.ValueSize);
+                Assert.All(runs, run => Assert.Equal(measured.Width, run.Bounds.Width, .01f));
+            }
+        }
+    }
+
+    [Theory]
     [InlineData(false)] [InlineData(true)]
     public void BlocksAreFlowedAfterTheUnreservedTableStreamAndMoveAsAWhole(bool largeNotes)
     {
         var source = SyntheticReportData.Create();
-        var table = new ReportTable("Any table", ["Name"], [1], Enumerable.Range(0, 30)
+        var table = new ReportTable("Any table", ["Name"], Enumerable.Range(0, 30)
             .Select(i => (IReadOnlyList<string>)new[] { "R" + i }).ToArray());
         var data = source with { Tables = [table], Segments = [], Indicators = [] };
         using var baseline = new ReportDocument(data with { Labels = data.Labels with { Assumptions = [] } }, new(130, 60, (_, _, _, _) => { }));
@@ -355,10 +427,10 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     public void EmptyStreamProducesSummaryAndImpossibleContentFailsWithoutLooping()
     {
         var source = SyntheticReportData.Create();
-        using var empty = new ReportDocument(source with { Tables = [new("Empty", ["Name"], [1], [])] }, new(130, 60, (_, _, _, _) => { }));
+        using var empty = new ReportDocument(source with { Tables = [new("Empty", ["Name"], [])] }, new(130, 60, (_, _, _, _) => { }));
         AssertCompleteTablesAndFinalSummary(empty);
         Assert.All(empty.Pages, p => Assert.Empty(p.Tables));
-        var impossible = new ReportTable("Table", [string.Join("\n", Enumerable.Repeat("Header", 100))], [1], [new[] { "Row" }]);
+        var impossible = new ReportTable("Table", [string.Join("\n", Enumerable.Repeat("Header", 100))], [new[] { "Row" }]);
         Assert.Throws<InvalidOperationException>(() => new ReportDocument(source with { Tables = [impossible] }, new(130, 60, (_, _, _, _) => { })));
         Assert.Throws<InvalidOperationException>(() => new ReportDocument(source with
         {
@@ -371,7 +443,7 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
     {
         var source = SyntheticReportData.Create(true);
         var tables = source.Tables.Select(t => t with { Rows = Enumerable.Range(0, 15).SelectMany(_ => t.Rows).ToArray() }).ToArray();
-        using var report = new ReportDocument(source with { Tables = [tables[0], new("Empty", ["Name"], [1], []), .. tables.Skip(1)] },
+        using var report = new ReportDocument(source with { Tables = [tables[0], new("Empty", ["Name"], []), .. tables.Skip(1)] },
             new(190, 60, (_, _, _, _) => { }));
         Assert.True(report.Pages.Count > 2);
         for (int table = 0; table < report.Data.Tables.Count; table++)
@@ -392,10 +464,11 @@ public sealed class ReportPaginationTests : ProjectReportTestSupport
         var data = source with
         {
             Metadata = [("Titel", string.Join(" ", Enumerable.Repeat("Sehr langer Berechnungstitel", 80)))],
-            Tables = [new("Long table", ["Name", "Value"], [.5f, .5f], [new[] { name, "42" }, new[] { "Last row", "7" }])]
+            Tables = [new("Long table", ["Name", "Value"], [new[] { name, "42" }, new[] { "Last row", "7" }])]
         };
         using var report = new ReportDocument(data, new(130, 60, (_, _, _, _) => { }));
         var slices = report.Pages.SelectMany(p => p.Tables).SelectMany(f => f.Rows).Where(r => r.Row == 0).ToArray();
+        Assert.All(report.Pages.SelectMany(p => p.Tables), fragment => Assert.Equal(ReportDocument.RightWidth, fragment.Bounds.Width, 3));
         Assert.True(slices.Length > 1);
         AssertCompleteTablesAndFinalSummary(report);
         Assert.Equal(name, string.Concat(slices.SelectMany(r => r.Cells[0].Skip(r.FirstLine).Take(r.LineCount))));
