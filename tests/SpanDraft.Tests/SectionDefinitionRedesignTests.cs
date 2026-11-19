@@ -62,9 +62,14 @@ public sealed class SectionDefinitionRedesignTests : SectionDefinitionRedesignTe
         Assert.False(vm.CanSaveLibrary); Assert.True(vm.IsInLibrary); Assert.Null(vm.LibraryError);
         Assert.False(await vm.SaveLibraryAsync()); Assert.Null(vm.LibraryError); Assert.Equal(1, library.SaveCalls);
         Assert.Same(original, Assert.Single(library.Entries)); Assert.Equal(name, vm.DisplayName); Assert.True(vm.CanConfirm);
-        var diameter = vm.Parameters.Single(); diameter.PendingText = "120"; diameter.Commit();
-        Assert.Null(vm.LibraryError); Assert.NotEqual(name, vm.DisplayName);
-        Assert.True(await vm.SaveLibraryAsync()); Assert.Equal(vm.DisplayName, library.Entries[1].Name);
+        var diameter = vm.Parameters.Single(); diameter.PendingText = "120";
+        string draftName = vm.DisplayName;
+        Assert.Null(vm.LibraryError); Assert.NotEqual(name, draftName);
+        Assert.True(vm.SaveLibraryCommand.CanExecute(null)); Assert.True(diameter.IsPending);
+        Assert.True(await vm.SaveLibraryAsync());
+        Assert.False(diameter.IsPending); Assert.Equal(draftName, library.Entries[1].Name);
+        Assert.Equal(M(.12), Assert.IsType<CircleSectionGeometry>(library.Entries[1].Section).Diameter);
+        Assert.True(vm.IsInLibrary);
         Assert.Same(original, library.Entries[0]);
     }
     [Fact]
@@ -100,10 +105,11 @@ public sealed class SectionDefinitionRedesignTests : SectionDefinitionRedesignTe
         loaded.BeginNameEdit(); loaded.PendingName = " SAVED ";
         Assert.True(loaded.IsInLibrary); Assert.False(loaded.HasLibraryNameConflict); loaded.CommitName();
         loaded.SelectedAxis = loaded.AvailableAxes[0].Value; Assert.True(loaded.IsInLibrary);
-        var input = loaded.Parameters[0]; input.PendingText = type == SectionEditorType.Manual ? "1100" : "120"; input.Commit();
+        var input = loaded.Parameters[0]; input.PendingText = type == SectionEditorType.Manual ? "1100" : "120";
         Assert.False(loaded.IsInLibrary); Assert.True(loaded.HasLibraryNameConflict); Assert.False(loaded.CanSaveLibrary);
         Assert.Null(loaded.LibraryError); Assert.Equal(Strings.LibraryNameTaken, loaded.LibraryMessage);
         Assert.False(await loaded.SaveLibraryAsync()); Assert.Equal(1, library.SaveCalls); Assert.Same(entry, Assert.Single(library.Entries));
+        Assert.True(input.IsPending); Assert.True(input.Commit());
         Assert.True(loaded.Undo()); Assert.True(loaded.IsInLibrary); Assert.Null(loaded.LibraryMessage);
         Assert.True(loaded.Redo()); Assert.True(loaded.HasLibraryNameConflict);
         await loaded.DeletePresetAsync(entry);
@@ -296,7 +302,7 @@ public sealed class SectionDefinitionRedesignTests : SectionDefinitionRedesignTe
         var vm = new SectionDefinitionViewModel(); Assert.False(vm.ShowLibraryAction);
         vm.SelectForm(type); Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
         var input = vm.Parameters[0]; input.PendingText = "100";
-        Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
+        Assert.True(vm.ShowLibraryAction); Assert.Equal(vm.Parameters.Count == 1, vm.CanSaveLibrary);
         if (vm.Parameters.Count > 1)
         { input.Commit(); Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary); }
         Fill(vm); Assert.True(vm.ShowLibraryAction); Assert.True(vm.CanSaveLibrary); Assert.Null(vm.SelectedAxis);
@@ -304,19 +310,19 @@ public sealed class SectionDefinitionRedesignTests : SectionDefinitionRedesignTe
         var valid = input.PendingText;
         input.PendingText = "invalid"; Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
         input.Commit(); Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
-        input.PendingText = valid; input.Commit(); Assert.True(vm.ShowLibraryAction); Assert.True(vm.CanSaveLibrary);
+        input.PendingText = valid; Assert.True(vm.ShowLibraryAction); Assert.True(vm.CanSaveLibrary); input.Commit();
         vm.BeginNameEdit(); vm.PendingName = " "; Assert.True(vm.ShowLibraryAction); Assert.False(vm.CanSaveLibrary);
         Assert.False(vm.CommitName()); Assert.False(vm.CanSaveLibrary); vm.CancelNameEdit(); Assert.True(vm.CanSaveLibrary);
         var hidden = new SectionDefinitionViewModel(showLibraryOption: false); hidden.SelectForm(type); Fill(hidden);
         Assert.False(hidden.ShowLibraryAction); Assert.False(hidden.CanSaveLibrary);
     }
     [Fact]
-    public async Task PendingInputAndInvalidNameBlockSaveButLibraryFailuresNeverBlockApply()
+    public async Task InvalidNameBlocksSaveButLibraryFailuresNeverBlockApply()
     {
         var library = new Library { SaveError = "Write failed" }; var vm = new SectionDefinitionViewModel(library: library);
         vm.SelectForm(SectionEditorType.Circle); Fill(vm);
-        vm.Parameters[0].PendingText = "101"; Assert.False(vm.SaveLibraryCommand.CanExecute(null)); Assert.False(vm.CanConfirm);
-        vm.Parameters[0].Commit(); vm.BeginNameEdit(); vm.PendingName = ""; Assert.False(vm.CanSaveLibrary); vm.CancelNameEdit();
+        vm.Parameters[0].PendingText = "101"; Assert.True(vm.SaveLibraryCommand.CanExecute(null)); Assert.False(vm.CanConfirm);
+        vm.BeginNameEdit(); vm.PendingName = ""; Assert.False(vm.CanSaveLibrary); vm.CancelNameEdit();
         Assert.False(await vm.SaveLibraryAsync()); Assert.Equal("Write failed", vm.LibraryError); Assert.True(vm.CanConfirm);
         Assert.True(await vm.ConfirmAsync()); Assert.Empty(library.Entries);
         library.SaveError = null; Assert.True(await vm.SaveLibraryAsync());

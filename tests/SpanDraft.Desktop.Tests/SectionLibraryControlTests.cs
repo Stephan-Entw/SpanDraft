@@ -84,7 +84,9 @@ public sealed class SectionLibraryControlTests : SectionDefinitionRedesignTestSu
             var input = vm.Parameters.Single();
             Fill(vm); Check(true); Stable();
             string valid = input.PendingText;
-            input.PendingText = "120"; Check(false); Stable();
+            var field = view.GetVisualDescendants().OfType<TextBox>().Single(box => box.DataContext == input);
+            Assert.True(field.Focus()); field.Text = "120"; Check(true); Stable();
+            Assert.True(field.IsFocused); Assert.True(input.IsPending);
             Assert.True(input.Commit()); Check(true); Stable();
             input.PendingText = "invalid"; Check(false); Stable();
             Assert.False(input.Commit()); Check(false); Stable();

@@ -98,7 +98,7 @@ public sealed class SectionDefinitionTransitionTests : SectionDefinitionPrototyp
         var vm = new SectionDefinitionViewModel(); vm.SelectForm(type); Fill(vm, false);
         var input = Input(vm, key); input.PendingText = text;
         var section = vm.Section; var preview = vm.Preview; var name = vm.DisplayName;
-        Assert.False(vm.CanConfirm); Assert.False(vm.CanSaveLibrary);
+        Assert.False(vm.CanConfirm); Assert.True(vm.CanSaveLibrary);
         Assert.True(vm.ConfirmCommand.CanExecute(null)); Assert.True(vm.ConfirmCommand.CanExecute(null));
         Assert.Same(section, vm.Section); Assert.Same(preview, vm.Preview); Assert.Equal(name, vm.DisplayName);
         Assert.True(input.IsPending);
@@ -120,6 +120,7 @@ public sealed class SectionDefinitionTransitionTests : SectionDefinitionPrototyp
         var vm = new SectionDefinitionViewModel(); vm.SelectForm(SectionEditorType.Rectangle);
         Commit(vm, "b", "120"); var height = Input(vm, "h"); height.PendingText = "200";
         Assert.False(vm.ConfirmCommand.CanExecute(null)); Assert.False(await vm.ConfirmAsync());
+        Assert.True(vm.SaveLibraryCommand.CanExecute(null));
         Assert.True(height.IsPending); Assert.Null(height.ConfirmedValue);
         Assert.True(height.Commit()); Assert.True(vm.RequiresAxisSelection);
         Assert.False(vm.ConfirmCommand.CanExecute(null)); Assert.False(await vm.ConfirmAsync());
@@ -150,6 +151,7 @@ public sealed class SectionDefinitionTransitionTests : SectionDefinitionPrototyp
         var input = Input(vm, "t"); var section = vm.Section; var preview = vm.Preview;
         input.PendingText = text;
         Assert.False(vm.ConfirmCommand.CanExecute(null)); Assert.False(await vm.ConfirmAsync());
+        Assert.False(vm.SaveLibraryCommand.CanExecute(null)); Assert.False(await vm.SaveLibraryAsync());
         Assert.Same(section, vm.Section); Assert.Same(preview, vm.Preview);
         Assert.Equal(.005, input.ConfirmedValue); Assert.True(input.IsPending);
         Assert.False(input.HasError); Assert.False(input.HasParseError);
@@ -216,7 +218,8 @@ public sealed class SectionDefinitionTransitionTests : SectionDefinitionPrototyp
         Assert.True(vm.ShowLibraryAction);
         Assert.False(vm.CanSaveLibrary);
         Assert.False(vm.SaveLibraryCommand.CanExecute(null));
-        foreach (var input in vm.Parameters.ToArray())
+        var parameters = vm.Parameters;
+        foreach (var input in parameters)
         {
             var section = vm.Section;
             var confirmed = input.ConfirmedValue;
@@ -232,8 +235,9 @@ public sealed class SectionDefinitionTransitionTests : SectionDefinitionPrototyp
                 Assert.True(draft.Dimensions[input.Key].IsPending);
                 Assert.False(draft.Dimensions[input.Key].IsConfirmed);
             }
-            Assert.False(vm.CanSaveLibrary);
-            Assert.False(vm.SaveLibraryCommand.CanExecute(null));
+            bool completesSection = input == parameters[^1];
+            Assert.Equal(completesSection, vm.CanSaveLibrary);
+            Assert.Equal(completesSection, vm.SaveLibraryCommand.CanExecute(null));
             input.Commit();
             if (vm.Preview is { } committed) Assert.True(committed.Dimensions[input.Key].IsConfirmed);
         }

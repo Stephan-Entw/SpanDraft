@@ -155,9 +155,9 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     private string LibraryName => IsEditingName ? PendingName.Trim() : DisplayName;
     private SectionLibraryEntry? ExistingLibraryEntry => string.IsNullOrWhiteSpace(LibraryName) ? null
         : _library?.Entries.FirstOrDefault(e => StringComparer.OrdinalIgnoreCase.Equals(e.Name, LibraryName));
-    public bool IsInLibrary => HasCommittedInputs && ExistingLibraryEntry is { } entry
-        && ProjectState.SectionContentEquals(entry.Section, _section!);
-    public bool HasLibraryNameConflict => HasCommittedInputs && ExistingLibraryEntry is not null && !IsInLibrary;
+    public bool IsInLibrary => HasValidLibraryDraft && ExistingLibraryEntry is { } entry
+        && ProjectState.SectionContentEquals(entry.Section, _draftSection!);
+    public bool HasLibraryNameConflict => HasValidLibraryDraft && ExistingLibraryEntry is not null && !IsInLibrary;
     public string LibraryActionLabel => IsInLibrary ? Strings.InLibrary : Strings.SaveToLibrary;
     public string? LibraryMessage => HasLibraryNameConflict ? Strings.LibraryNameTaken
         : LibraryError == Strings.LibrarySaveFailed ? Strings.LibrarySaveFailedShort : LibraryError;
@@ -166,7 +166,9 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     public bool IsLibraryEmpty => _libraryEntries.Count == 0 && _library?.Error is null && _library is not null;
     private bool HasCommittedInputs => HasDefinition && _section is not null
         && Parameters.All(p => !p.IsPending && !p.HasError);
-    public bool CanSaveLibrary => ShowLibraryAction && HasCommittedInputs && !IsBusy
+    private bool HasValidLibraryDraft => HasDefinition && _draftSection is not null
+        && (_pendingCount > 0 || HasCommittedInputs);
+    public bool CanSaveLibrary => ShowLibraryAction && HasValidLibraryDraft && !IsBusy
         && !string.IsNullOrWhiteSpace(LibraryName) && ExistingLibraryEntry is null;
     private FormDraft Current => _drafts[_type!.Value];
     public SetupChoice<ManualAxisConfiguration> Configuration
@@ -485,7 +487,8 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     }
     public async Task<bool> SaveLibraryAsync()
     {
-        if (!CanSaveLibrary || !CommitName() || _section is not { } section) return false;
+        if (!CanSaveLibrary || !CommitPendingInput() || !HasCommittedInputs
+            || !CommitName() || _section is not { } section) return false;
         string name = DisplayName;
         _saveError = _library?.CanSave != true ? _library?.Error ?? Strings.SectionLibraryUnavailable
             : _library.ContainsName(name) ? Strings.LibraryNameConflict : null;
