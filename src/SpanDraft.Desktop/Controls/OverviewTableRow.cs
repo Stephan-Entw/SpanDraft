@@ -76,7 +76,7 @@ public sealed class OverviewTableScope : AvaloniaObject
 public sealed class OverviewTableRow : Panel
 {
     /// <summary>
-    /// A single name wider than this is shortened with an ellipsis: 72 px hold about ten bold characters, enough for
+    /// A name wider than this is shortened with an ellipsis: 72 DIP hold about ten bold characters, enough for
     /// generated and short user names, while the type or value keeps most of the panel.
     /// </summary>
     public const double NameCap = 72;
@@ -85,8 +85,6 @@ public sealed class OverviewTableRow : Panel
         AvaloniaProperty.RegisterAttached<OverviewTableRow, Control, OverviewTableScope?>("Scope", inherits: true);
     public static readonly AttachedProperty<int> ColumnProperty = AvaloniaProperty.RegisterAttached<OverviewTableRow, Control, int>("Column");
     public static readonly AttachedProperty<int> RowProperty = AvaloniaProperty.RegisterAttached<OverviewTableRow, Control, int>("Row");
-    /// <summary>A name that must stay complete, such as "B + F" of a shared reaction.</summary>
-    public static readonly AttachedProperty<bool> UncappedProperty = AvaloniaProperty.RegisterAttached<OverviewTableRow, Control, bool>("Uncapped");
     public static readonly StyledProperty<bool> IsHeaderProperty = AvaloniaProperty.Register<OverviewTableRow, bool>(nameof(IsHeader));
 
     public static OverviewTableScope? GetScope(Control control) => control.GetValue(ScopeProperty);
@@ -95,8 +93,6 @@ public sealed class OverviewTableRow : Panel
     public static void SetColumn(Control control, int value) => control.SetValue(ColumnProperty, value);
     public static int GetRow(Control control) => control.GetValue(RowProperty);
     public static void SetRow(Control control, int value) => control.SetValue(RowProperty, value);
-    public static bool GetUncapped(Control control) => control.GetValue(UncappedProperty);
-    public static void SetUncapped(Control control, bool value) => control.SetValue(UncappedProperty, value);
 
     /// <summary>A heading only follows the columns; it never widens them.</summary>
     public bool IsHeader { get => GetValue(IsHeaderProperty); set => SetValue(IsHeaderProperty, value); }
@@ -126,7 +122,7 @@ public sealed class OverviewTableRow : Panel
             {
                 cell.Measure(Size.Infinity);
                 int column = Column(cell, n);
-                double w = column == 0 && !GetUncapped(cell) ? Math.Min(cell.DesiredSize.Width, NameCap) : cell.DesiredSize.Width;
+                double w = column == 0 ? Math.Min(cell.DesiredSize.Width, NameCap) : cell.DesiredSize.Width;
                 natural[column] = Math.Max(natural[column], w);
             }
             // The wrapped width depends on the limit, which depends on the other columns; two rounds settle it.

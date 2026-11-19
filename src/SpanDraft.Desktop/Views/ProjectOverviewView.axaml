@@ -72,7 +72,7 @@
       <controls:OverviewTableRow Classes="overviewRow">
         <!-- A shared row is not an action, but its name stays readable through this tooltip. -->
         <Border Background="Transparent" ToolTip.Tip="{Binding Name}" />
-        <Button controls:OverviewTableRow.Uncapped="{Binding Id, Converter={x:Static ObjectConverters.IsNull}}" Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
+        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
                 IsHitTestVisible="{Binding IsEditable}" Focusable="{Binding IsEditable}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">

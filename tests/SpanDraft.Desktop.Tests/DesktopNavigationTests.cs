@@ -162,9 +162,10 @@ public sealed class DesktopNavigationTests
         ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
         var state = ProjectTestSupport.State();
         // Two supports of different type at the same station are valid outside the interactive placement path.
-        var clamp = new EditorSupport(Guid.NewGuid(), Length.FromMeters(0), SupportType.Roller, "Clamp");
+        var supports = state.Document.Supports;
         Assert.True(model.Editor!.Session.Commit(new(
-            (state.Document with { Length = Length.FromMeters(1) }).WithSupports([.. state.Document.Supports, clamp]), state.Presentation)));
+            (state.Document with { Length = Length.FromMeters(1) }).WithSupports(
+                [supports[0], supports[1], supports[2] with { Position = supports[1].Position }]), state.Presentation)));
         Layout(window);
         var editor = model.Editor;
         var overview = Assert.Single(window.GetVisualDescendants().OfType<ProjectOverviewView>());
@@ -173,12 +174,14 @@ public sealed class DesktopNavigationTests
         var revision = editor.Session.CurrentRevision;
 
         var shared = Assert.Single(buttons, b => ((ProjectOverviewReaction)b.DataContext!).Id is null);
-        Assert.Equal("A + Clamp", ((ProjectOverviewReaction)shared.DataContext!).Name);
+        var caption = Assert.IsAssignableFrom<TextBlock>(shared.Content);
+        Assert.Equal("B + C", caption.Text);
+        Assert.False(Assert.Single(caption.TextLayout.TextLines).HasCollapsed);
         Assert.False(shared.IsHitTestVisible);
         Assert.False(shared.Focusable);
         // The inert name cell behind the button keeps the full, possibly trimmed name reachable by tooltip.
         var nameCell = Assert.Single(((Panel)shared.Parent!).Children.OfType<Border>());
-        Assert.Equal("A + Clamp", ToolTip.GetTip(nameCell));
+        Assert.Equal("B + C", ToolTip.GetTip(nameCell));
         Assert.True(nameCell.IsHitTestVisible);
         Assert.NotNull(nameCell.Background);
         Assert.False(nameCell.Focusable);
@@ -717,14 +720,14 @@ public sealed class DesktopNavigationTests
             var tops = details.Select(d => d.TranslatePoint(default, row)!.Value.Y).Prepend(type.Bounds.Top).ToArray();
             for (int i = 1; i < tops.Length; i++) Assert.Equal(type.Bounds.Height, tops[i] - tops[i - 1], 0.5);
         }
-        // Two springs at one station share a reaction row whose name is never shortened, even past the cap.
-        var shared = TableRows(overview, "ReactionTable").Where(r => !r.IsHeader).Select(r => r.Children.OfType<Button>().Single())
-            .Single(b => ((ProjectOverviewReaction)b.DataContext!).Id is null);
-        var caption = (TextBlock)shared.Content!;
+        var shared = Assert.Single(TableRows(overview, "ReactionTable"),
+            row => !row.IsHeader && row.DataContext is ProjectOverviewReaction { Id: null });
+        var caption = Assert.IsAssignableFrom<TextBlock>(Assert.Single(shared.Children.OfType<Button>()).Content);
         Assert.Equal("Wegfeder rechts + E", caption.Text);
-        Assert.True(caption.TextLayout.Width > OverviewTableRow.NameCap);
-        Assert.Single(caption.TextLayout.TextLines);
-        Assert.False(caption.TextLayout.TextLines[0].HasCollapsed);
+        Assert.Equal(TextTrimming.CharacterEllipsis, caption.TextTrimming);
+        Assert.True(Assert.Single(caption.TextLayout.TextLines).HasCollapsed);
+        var nameCell = Assert.Single(shared.Children.OfType<Border>());
+        Assert.Equal("Wegfeder rechts + E", ToolTip.GetTip(nameCell));
     }
 
     [Theory]
@@ -821,7 +824,7 @@ public sealed class DesktopNavigationTests
                     Assert.Equal(widths[c], cell.Bounds.Width, 0.5);
                     foreach (var text in Texts(cell))
                     {
-                        // A single name longer than the cap is shortened to exactly the cap.
+                        // A name longer than the cap is shortened to exactly the cap.
                         bool shortened = text.TextLayout.TextLines.Any(l => l.HasCollapsed);
                         Assert.True(!shortened || c == 0, $"{name}: '{Plain(text.Text)}' is shortened");
                         widest[c] = Math.Max(widest[c], shortened ? OverviewTableRow.NameCap : text.TextLayout.Width);
@@ -837,10 +840,10 @@ public sealed class DesktopNavigationTests
                             text.TextAlignment == TextAlignment.Right ? TextAlignment.Right : TextAlignment.Left);
                     }
                 }
-                // The widest data line sets the width; a single long name is shortened at the cap.
+                // The widest data line sets the width; a long name is shortened at the cap.
                 Assert.Equal(widest[c], widths[c], 1.0);
             }
-            Assert.True(widths[0] <= OverviewTableRow.NameCap + 0.5 || name == "ReactionTable");
+            Assert.True(widths[0] <= OverviewTableRow.NameCap + 0.5, $"{name}: name column width {widths[0]}");
             Assert.Equal(0, lefts[0], 0.5);
             Assert.Equal(tableWidth, lefts[^1] + widths[^1], 0.5);
             var gaps = Enumerable.Range(0, columns - 1).Select(c => lefts[c + 1] - lefts[c] - widths[c]).ToArray();
