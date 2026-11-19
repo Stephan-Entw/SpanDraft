@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Presenters;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -115,7 +116,8 @@ public sealed class DesktopPageLayoutTests
     [Theory]
     [InlineData("de-DE", 1300, 800)] [InlineData("en-US", 1300, 800)]
     [InlineData("de-DE", 1100, 650)] [InlineData("en-US", 1100, 650)]
-    public async Task SectionGalleryStartsOnThePageGridBelowItsSingleTitle(string culture, int width, int height)
+    [InlineData("de-DE", 1600, 900)] [InlineData("en-US", 1600, 900)]
+    public async Task SectionGalleryIsCenteredBelowItsSingleTitle(string culture, int width, int height)
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
         var (window, main) = await Shell(width, height);
@@ -125,8 +127,12 @@ public sealed class DesktopPageLayoutTests
         var chooser = view.FindControl<StackPanel>("FormChooser")!;
         var group = view.FindControl<TextBlock>("ParametricGroupTitle")!;
         Assert.Contains("sectionTitle", group.Classes);
-        Assert.Equal(In(title, window).Left, In(chooser, window).Left, 0.5);
-        Assert.Equal(In(title, window).Left, In(group, window).Left, 0.5);
+        var viewport = view.FindControl<ScrollViewer>("GalleryScroll")!.GetVisualDescendants().OfType<ScrollContentPresenter>().Single();
+        var viewportBounds = In(viewport, window);
+        var chooserBounds = In(chooser, window);
+        Assert.Equal(chooserBounds.Left - viewportBounds.Left, viewportBounds.Right - chooserBounds.Right, 0.5);
+        Assert.Equal(chooserBounds.Left, In(group, window).Left, 0.5);
+        Assert.True(In(title, window).Bottom < In(group, window).Top);
         var grid = Assert.Single(chooser.GetVisualDescendants().OfType<UniformGrid>());
         Assert.Equal(4, grid.Columns);
         var tiles = grid.Children.OfType<Control>().Select(c => c.GetVisualDescendants().OfType<Button>().First()).ToArray();

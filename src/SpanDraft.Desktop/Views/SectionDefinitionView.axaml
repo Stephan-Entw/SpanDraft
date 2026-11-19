@@ -81,10 +81,8 @@
     </Border>
     <Grid Grid.Row="1">
       <ScrollViewer x:Name="GalleryScroll" IsVisible="{Binding IsChoosingForm}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <!-- The page header carries the only page title; the gallery starts on the normal page grid and grows by rows. -->
         <Grid Margin="{StaticResource Padding24}">
-        <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="960" /></Grid.ColumnDefinitions>
-        <StackPanel x:Name="FormChooser" Spacing="{StaticResource Space12}" VerticalAlignment="Top" IsEnabled="{Binding !IsBusy}">
+        <StackPanel x:Name="FormChooser" MaxWidth="960" Spacing="{StaticResource Space12}" VerticalAlignment="Top" IsEnabled="{Binding !IsBusy}">
           <TextBlock x:Name="ParametricGroupTitle" Text="{x:Static resources:Strings.SectionDefinitionParametricGroup}" Classes="sectionTitle" />
           <ItemsControl x:Name="FormGallery" ItemsSource="{Binding Forms}" Margin="0,0,-16,0">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
