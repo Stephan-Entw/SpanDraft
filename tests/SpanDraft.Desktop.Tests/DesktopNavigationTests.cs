@@ -12,6 +12,7 @@ using SpanDraft.Core.Supports;
 using SpanDraft.Desktop;
 using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Layout;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Core.Units;
@@ -176,12 +177,12 @@ public sealed class DesktopNavigationTests
         Assert.False(shared.IsHitTestVisible);
         Assert.False(shared.Focusable);
         // The inert name cell behind the button keeps the full, possibly trimmed name reachable by tooltip.
-        var nameCell = Assert.Single(((Grid)shared.Parent!).Children.OfType<Border>());
+        var nameCell = Assert.Single(((Panel)shared.Parent!).Children.OfType<Border>());
         Assert.Equal("A + Clamp", ToolTip.GetTip(nameCell));
         Assert.True(nameCell.IsHitTestVisible);
         Assert.NotNull(nameCell.Background);
         Assert.False(nameCell.Focusable);
-        Assert.Equal(Grid.GetColumn(shared), Grid.GetColumn(nameCell));
+        Assert.Equal(OverviewTableRow.GetColumn(shared), OverviewTableRow.GetColumn(nameCell));
         Assert.True(nameCell.Bounds.Contains(shared.Bounds));
         // The hidden native root has no hit testing; the inert button above the cell is what lets it be hit.
         shared.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -397,7 +398,7 @@ public sealed class DesktopNavigationTests
         Assert.Equal(view.Bounds.Width, toolbar.Bounds.Width);
         Assert.Equal(toolbar.Bounds.Bottom, workspace.Bounds.Top);
         Assert.True(editorScroll.Bounds.Width > overview.Bounds.Width);
-        Assert.Equal(320, overview.Bounds.Width);
+        Assert.Equal(340, overview.Bounds.Width);
         Assert.Equal(editorScroll.Bounds.Right, overview.Bounds.Left);
         Assert.True(canvas.Bounds.Width > 0 && canvas.Bounds.Height > 0);
         Assert.Equal(11, toolbar.GetVisualDescendants().OfType<ToggleButton>().Count(b => b.Command is not null));
@@ -679,82 +680,211 @@ public sealed class DesktopNavigationTests
         Assert.Empty(overview.GetVisualDescendants().OfType<Button>());
     }
 
-    private static void AssertTables(ProjectOverviewView overview)
+    [Theory]
+    [InlineData("de-DE", 1300, 800)] [InlineData("en-US", 1300, 800)]
+    [InlineData("de-DE", 1100, 650)] [InlineData("en-US", 1100, 650)]
+    public void SpringDetailsSitBelowTheTypeAndCountForItsColumn(string culture, double width, double height)
     {
-        foreach (var (name, columns) in new[] { ("SupportTable", 3), ("ForceTable", 3), ("MomentTable", 3), ("DistributedLoadTable", 3), ("ReactionTable", 4) })
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new UiCultureScope(culture);
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
+        var window = new MainWindow { DataContext = model };
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
+        var editor = model.Editor!;
+        Assert.True(editor.Session.Commit(new(SpringDocument(editor), editor.Session.CurrentRevision.State.Presentation)));
+        Layout(window, width, height);
+        var overview = Assert.Single(window.GetVisualDescendants().OfType<ProjectOverviewView>());
+        Assert.Equal(340, overview.Bounds.Width);
+        AssertTables(overview);
+        var rows = TableRows(overview, "SupportTable").Where(r => !r.IsHeader).ToArray();
+        Assert.Equal(6, rows.Length);
+        foreach (var row in rows)
         {
-            var table = overview.FindControl<ItemsControl>(name)!;
-            var header = ((StackPanel)table.Parent!).Children.OfType<Grid>().Single(g => g.Classes.Contains("tableHeader"));
-            var rows = table.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("overviewRow")).ToArray();
-            Assert.Equal(table.ItemCount, rows.Length);
-            if (table.ItemCount == 0)
+            var item = Assert.IsType<ProjectOverviewItem>(row.DataContext);
+            var type = row.Children.OfType<TextBlock>().First(); var position = row.Children.OfType<TextBlock>().Last();
+            Assert.Equal(Plain(position.Text), Plain(item.Position));
+            Assert.Equal(type.Bounds.Top, position.Bounds.Top, 0.5);
+            var details = row.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Classes.Contains("supportDetail")).ToArray();
+            Assert.Equal(item.Details.Select(Plain), details.Select(d => Plain(d.Text)));
+            foreach (var detail in details)
             {
-                Assert.Empty(rows);
-                Assert.False(((Control)table.Parent!.Parent!).IsVisible);
-                continue;
+                // Details start at the type's edge, below it, and never wrap inside a number or unit.
+                Assert.Equal(type.TranslatePoint(default, row)!.Value.X, detail.TranslatePoint(default, row)!.Value.X, 0.5);
+                Assert.True(detail.TranslatePoint(default, row)!.Value.Y >= type.Bounds.Bottom - 0.5);
+                Assert.Single(detail.TextLayout.TextLines);
             }
-            Assert.NotEmpty(rows);
-            Assert.Equal(TextAlignment.Center, header.Children.OfType<TextBlock>().First().TextAlignment);
-            if (name == "SupportTable")
+            // Type and details follow at one line pitch.
+            var tops = details.Select(d => d.TranslatePoint(default, row)!.Value.Y).Prepend(type.Bounds.Top).ToArray();
+            for (int i = 1; i < tops.Length; i++) Assert.Equal(type.Bounds.Height, tops[i] - tops[i - 1], 0.5);
+        }
+        // Two springs at one station share a reaction row whose name is never shortened, even past the cap.
+        var shared = TableRows(overview, "ReactionTable").Where(r => !r.IsHeader).Select(r => r.Children.OfType<Button>().Single())
+            .Single(b => ((ProjectOverviewReaction)b.DataContext!).Id is null);
+        var caption = (TextBlock)shared.Content!;
+        Assert.Equal("Wegfeder rechts + E", caption.Text);
+        Assert.True(caption.TextLayout.Width > OverviewTableRow.NameCap);
+        Assert.Single(caption.TextLayout.TextLines);
+        Assert.False(caption.TextLayout.TextLines[0].HasCollapsed);
+    }
+
+    [Theory]
+    [InlineData("de-DE")] [InlineData("en-US")]
+    public void OverviewTablesSettleOnOneLayoutAndWrapALongValueOnlyAfterItsEllipsis(string culture)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new UiCultureScope(culture);
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
+        var editor = model.Editor!;
+        Assert.True(editor.Session.Commit(new(SpringDocument(editor, longLinearLoad: true), editor.Session.CurrentRevision.State.Presentation)));
+        // An unrealistically long linear load forces the wrapping path in the fixed panel width.
+        var view = new ProjectOverviewView { DataContext = editor, Width = 340 };
+        var window = new Window { Content = view, Width = 340, Height = 600 };
+        window.Show();
+        for (int pass = 0; pass < 3; pass++) { window.Measure(new Size(340, 600)); window.Arrange(new Rect(0, 0, 340, 600)); window.UpdateLayout(); }
+        var linear = TableRows(view, "DistributedLoadTable").Where(r => !r.IsHeader).Single(r => ((ProjectOverviewItem)r.DataContext!).Name == "q1");
+        var value = linear.Children.OfType<TextBlock>().First();
+        Assert.Equal(2, value.TextLayout.TextLines.Count);
+        Assert.Equal(value.Text!.IndexOf("… ", StringComparison.Ordinal) + 2, value.TextLayout.TextLines[1].FirstTextSourceIndex);
+        AssertTables(view, wrapping: true);
+        // A layout that a row's own report changes again would never settle: after a full relayout every row is valid
+        // and every cell stays where it was.
+        var rows = view.GetVisualDescendants().OfType<OverviewTableRow>().Where(r => r.IsEffectivelyVisible).ToArray();
+        Assert.True(rows.Length > 10);
+        var before = rows.SelectMany(r => r.Children).Select(c => c.Bounds).ToArray();
+        foreach (var row in rows) row.InvalidateMeasure();
+        window.UpdateLayout();
+        Assert.All(rows, row => Assert.True(row.IsMeasureValid && row.IsArrangeValid));
+        Assert.Equal(before, rows.SelectMany(r => r.Children).Select(c => c.Bounds).ToArray());
+        window.Close();
+    }
+
+    private static EditorDocument SpringDocument(EditorViewModel editor, bool longLinearLoad = false)
+    {
+        var current = editor.Session.CurrentRevision.State; var segment = current.Document.Segments[0];
+        Length Mm(double mm) => Length.FromMeters(mm / 1000);
+        var rotation = SpanDraft.Core.Units.RotationalStiffness.FromNewtonMetersPerRadian(2.35e7);
+        var translation = SpanDraft.Core.Units.TranslationalStiffness.FromNewtonsPerMeter(2.5e6);
+        return new EditorDocument(Mm(12000), segment.Material, segment.Section, segment.BendingAxis,
+            [new(Guid.NewGuid(), Mm(0), SupportType.Fixed, "A"),
+                new(Guid.NewGuid(), Mm(6000), SupportType.Pinned, "B"),
+                new(Guid.NewGuid(), Mm(9000), SupportType.Spring, "C", new(null, rotation, true)),
+                new(Guid.NewGuid(), Mm(12000), SupportType.Spring, "Wegfeder rechts", new(translation)),
+                new(Guid.NewGuid(), Mm(12000), SupportType.Spring, "E", new(null, rotation)),
+                new(Guid.NewGuid(), Mm(3000), SupportType.Roller, "Kranbahnstütze links außen")],
+            [new EditorPointForce(Guid.NewGuid(), Mm(2000), Force.FromNewtons(-4500), "F1")], current.Document.NamingState,
+            [new(Guid.NewGuid(), Mm(10000), Mm(11500), ForcePerLength.FromNewtonsPerMeter(longLinearLoad ? -1234500 : -2000),
+                ForcePerLength.FromNewtonsPerMeter(longLinearLoad ? -2345600 : -6000), "q1")]);
+    }
+
+    private static string? Plain(string? text) => text?.Replace(TechnicalLineBreaks.NoBreakSpace, ' ').Replace(TechnicalLineBreaks.WordJoiner.ToString(), "");
+
+    private static OverviewTableRow[] TableRows(Control overview, string table)
+    {
+        var items = overview.FindControl<ItemsControl>(table)!;
+        var header = ((StackPanel)items.Parent!).Children.OfType<OverviewTableRow>().Single();
+        return items.GetVisualDescendants().OfType<OverviewTableRow>().Prepend(header).ToArray();
+    }
+
+    /// <summary>
+    /// Every table sizes itself: each column is as wide as its widest data line (headings never count), the rest of the
+    /// width goes evenly into the gaps (at least 12), and the outer columns sit flush with the table edges.
+    /// </summary>
+    private static void AssertTables(Control overview, bool wrapping = false)
+    {
+        var tables = new[] { ("SupportTable", 3), ("MomentReleaseTable", 3), ("ForceTable", 3), ("MomentTable", 3),
+            ("DistributedLoadTable", 3), ("ReactionTable", 4), ("MomentReleaseResultTable", 4) };
+        var scopes = new List<OverviewTableScope>();
+        foreach (var (name, columns) in tables)
+        {
+            var items = overview.FindControl<ItemsControl>(name)!;
+            var all = TableRows(overview, name);
+            var header = all[0]; var rows = all.Skip(1).ToArray();
+            Assert.True(header.IsHeader);
+            Assert.Equal(items.ItemCount, rows.Length);
+            if (items.ItemCount == 0) { Assert.False(((Control)items.Parent!.Parent!).IsVisible); continue; }
+            var scope = OverviewTableRow.GetScope(header)!;
+            Assert.All(rows, r => Assert.Same(scope, OverviewTableRow.GetScope(r)));
+            scopes.Add(scope);
+            Assert.Equal(columns, scope.Alignments.Length);
+            double tableWidth = header.Bounds.Width;
+            var lefts = new double[columns]; var widths = new double[columns]; var widest = new double[columns];
+            for (int c = 0; c < columns; c++)
             {
-                Assert.Equal(string.Format(Strings.OverviewPosition, "mm"), header.Children.OfType<TextBlock>().Last().Text);
-                Assert.True(header.ColumnDefinitions[0].ActualWidth > 48);
-                Assert.Equal(TextAlignment.Center, header.Children.OfType<TextBlock>().ElementAt(1).TextAlignment);
-            }
-            if (name is "ForceTable" or "MomentTable" or "DistributedLoadTable")
-            {
-                if (name == "DistributedLoadTable")
+                var cells = rows.SelectMany(r => r.Children.Where(x => x.IsVisible && OverviewTableRow.GetColumn(x) == c)).ToArray();
+                Assert.NotEmpty(cells);
+                lefts[c] = cells[0].Bounds.X; widths[c] = cells[0].Bounds.Width;
+                foreach (var cell in cells)
                 {
-                    // A linear load shows two intensities, so this table gives the value column more room than the
-                    // position range, whose text must still fit its column.
-                    Assert.True(header.ColumnDefinitions[1].ActualWidth > header.ColumnDefinitions[2].ActualWidth);
-                    foreach (var load in rows)
+                    // One column box for the whole table.
+                    Assert.Equal(lefts[c], cell.Bounds.X, 0.5);
+                    Assert.Equal(widths[c], cell.Bounds.Width, 0.5);
+                    foreach (var text in Texts(cell))
                     {
-                        var position = load.Children.OfType<TextBlock>().Last();
-                        Assert.True(position.DesiredSize.Width <= load.ColumnDefinitions[2].ActualWidth + 0.5);
+                        // A single name longer than the cap is shortened to exactly the cap.
+                        bool shortened = text.TextLayout.TextLines.Any(l => l.HasCollapsed);
+                        Assert.True(!shortened || c == 0, $"{name}: '{Plain(text.Text)}' is shortened");
+                        widest[c] = Math.Max(widest[c], shortened ? OverviewTableRow.NameCap : text.TextLayout.Width);
+                        bool mayWrap = wrapping && c == scope.WrapColumn;
+                        if (!mayWrap) Assert.True(text.TextLayout.TextLines.Count == 1, $"{name}: '{Plain(text.Text)}' wraps");
+                        Assert.True(text.TextLayout.Width <= cell.Bounds.Width + 0.5, $"{name}: '{Plain(text.Text)}' is clipped");
+                        // Numbers and units are joined: an ordinary space only follows "=" or "…".
+                        var shown = text.Text ?? "";
+                        if (scope.Alignments[c] == 'R' || text.Classes.Contains("supportDetail"))
+                            Assert.All(Enumerable.Range(0, shown.Length).Where(i => shown[i] == ' '),
+                                i => Assert.True(i > 0 && shown[i - 1] is '=' or '…', $"{name}: '{Plain(shown)}' may break at {i}"));
+                        if (c > 0) Assert.Equal(scope.Alignments[c] == 'R' ? TextAlignment.Right : TextAlignment.Left,
+                            text.TextAlignment == TextAlignment.Right ? TextAlignment.Right : TextAlignment.Left);
                     }
                 }
-                else
-                {
-                    // More space for positions/ranges moves the value column left.
-                    Assert.True(header.ColumnDefinitions[1].ActualWidth < header.ColumnDefinitions[2].ActualWidth);
-                    double previousValueRight = 48 + 6 + (header.Bounds.Width - 48 - 12) / 2;
-                    Assert.True(header.ColumnDefinitions[0].ActualWidth + 6 + header.ColumnDefinitions[1].ActualWidth < previousValueRight);
-                }
-                Assert.Equal(new[] { Strings.OverviewName, Strings.OverviewValue, "Position [mm]" },
-                    header.Children.OfType<TextBlock>().Select(t => t.Text));
-                foreach (var row in rows)
-                {
-                    var load = Assert.IsType<ProjectOverviewItem>(row.DataContext);
-                    Assert.Equal(new[] { load.Name, load.Value, load.Position },
-                        row.Children.Select(c => c is Button button ? ((TextBlock)button.Content!).Text : ((TextBlock)c).Text));
-                }
+                // The widest data line sets the width; a single long name is shortened at the cap.
+                Assert.Equal(widest[c], widths[c], 1.0);
+            }
+            Assert.True(widths[0] <= OverviewTableRow.NameCap + 0.5 || name == "ReactionTable");
+            Assert.Equal(0, lefts[0], 0.5);
+            Assert.Equal(tableWidth, lefts[^1] + widths[^1], 0.5);
+            var gaps = Enumerable.Range(0, columns - 1).Select(c => lefts[c + 1] - lefts[c] - widths[c]).ToArray();
+            Assert.All(gaps, g => { Assert.True(g >= OverviewTableScope.MinGap - 0.5, $"{name}: gap {g}"); Assert.Equal(gaps[0], g, 1.0); });
+            // Headings follow the columns without widening them: a wider heading reaches into the gap.
+            foreach (var cell in header.Children.OfType<TextBlock>())
+            {
+                int c = OverviewTableRow.GetColumn(cell);
+                if (scope.Alignments[c] == 'R') Assert.Equal(lefts[c] + widths[c], cell.Bounds.Right, 0.5);
+                else Assert.Equal(lefts[c], cell.Bounds.X, 0.5);
+                Assert.Single(cell.TextLayout.TextLines);
             }
             foreach (var row in rows)
             {
-                Assert.Equal(columns, row.ColumnDefinitions.Count);
                 var action = Assert.Single(row.Children.OfType<Button>());
                 Assert.Contains("overviewEntityAction", action.Classes);
-                Assert.True(action.Focusable);
-                Assert.Equal(Avalonia.Layout.HorizontalAlignment.Center, action.HorizontalContentAlignment);
                 var caption = Assert.IsAssignableFrom<TextBlock>(action.Content);
-                Assert.Equal(TextAlignment.Center, caption.TextAlignment);
-                // Check the arranged caption, not just its text-alignment property.
-                // The header's bounds exclude the grid spacing included in ActualWidth.
-                var nameHeader = header.Children.OfType<TextBlock>().First();
-                Assert.Equal(nameHeader.Bounds.Left, action.Bounds.Left);
-                Assert.Equal(nameHeader.Bounds.Width, action.Bounds.Width);
-                var center = caption.TranslatePoint(new Point(caption.Bounds.Width / 2, caption.Bounds.Height / 2), row)!.Value;
-                Assert.InRange(Math.Abs(center.X - nameHeader.Bounds.Center.X), 0, 0.5);
-                Assert.InRange(Math.Abs(center.Y - row.Bounds.Height / 2), 0, 0.5);
-                Assert.True(caption.Bounds.Width <= caption.DesiredSize.Width + 1);
-                Assert.Equal(header.Bounds.Width, row.Bounds.Width);
-                for (int i = 0; i < columns; i++)
-                    Assert.Equal(header.ColumnDefinitions[i].ActualWidth, row.ColumnDefinitions[i].ActualWidth);
-                foreach (var number in row.Children.OfType<TextBlock>().Where(t => t.Classes.Contains("number")))
-                    Assert.Equal(TextAlignment.Right, number.TextAlignment);
+                Assert.Equal(lefts[0], caption.TranslatePoint(default, row)!.Value.X, 0.5);
+            }
+            if (name is "ForceTable" or "MomentTable" or "DistributedLoadTable")
+            {
+                Assert.Equal(new[] { Strings.OverviewName, Strings.OverviewValue, "Position [mm]" }, header.Children.OfType<TextBlock>().Select(t => t.Text));
+                foreach (var row in rows)
+                {
+                    var load = Assert.IsType<ProjectOverviewItem>(row.DataContext);
+                    Assert.Equal(new[] { load.Name, Plain(load.Value), Plain(load.Position) },
+                        row.Children.Select(c => Plain(c is Button button ? ((TextBlock)button.Content!).Text : ((TextBlock)c).Text)));
+                }
             }
         }
+        Assert.Equal(scopes.Count, scopes.Distinct().Count());
+        // Section titles start where their tables start.
+        foreach (var title in overview.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Classes.Contains("sectionTitle") && t.IsVisible))
+        {
+            Assert.NotEqual(TextAlignment.Center, title.TextAlignment);
+            Assert.Single(title.TextLayout.TextLines);
+        }
+
+        static IEnumerable<TextBlock> Texts(Control cell) => cell switch
+        {
+            TextBlock text => [text],
+            Button button => [(TextBlock)button.Content!],
+            _ => cell.GetVisualDescendants().OfType<TextBlock>()
+        };
     }
 
     private static void Layout(Window window, double width = 1250, double height = 800)
@@ -774,6 +904,8 @@ public sealed class DesktopNavigationTests
         content.Measure(new Size(width, height));
         content.InvalidateArrange();
         content.Arrange(new Rect(0, 0, width, height));
+        // Shared column sizes settle when the layout manager reports the finished pass.
+        window.UpdateLayout();
         if (window.GetVisualDescendants().OfType<EditorView>().SingleOrDefault() is { } editor)
         {
             // The inert platform reports a fixed native client size; set the tested editor size explicitly.
@@ -791,6 +923,7 @@ public sealed class DesktopNavigationTests
                 editor.Measure(new Size(width, height - 32));
                 editor.InvalidateArrange();
                 editor.Arrange(new Rect(0, 0, width, height - 32));
+                window.UpdateLayout();
             }
         }
     }

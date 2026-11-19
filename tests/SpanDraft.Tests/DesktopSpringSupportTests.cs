@@ -223,7 +223,9 @@ public sealed class DesktopSpringSupportTests
         var state = ProjectOverviewState.From(document, AnalysisPresentationState.FromOutcome(BeamAnalysis.Analyze(document.ToBeamModel())));
         // Digit grouping and the language of the type name follow the culture; the content does not.
         string Squeezed(string text) => string.Concat(text.Where(c => !char.IsWhiteSpace(c)));
-        var types = state.Supports.Select(x => x.Type.Split('\n').Select(Squeezed).ToArray()).ToArray();
+        // The type is one line; rigid translation and stiffnesses are separate detail lines below it.
+        Assert.All(state.Supports, x => Assert.DoesNotContain('\n', x.Type));
+        var types = state.Supports.Select(x => x.Details.Prepend(x.Type).Select(Squeezed).ToArray()).ToArray();
         string wegfeder = Squeezed(Strings.TranslationalSpringSupport), drehfeder = Squeezed(Strings.RotationalSpringSupport);
         string rigid = string.Concat(Strings.SpringRigidTranslation.Where(c => !char.IsWhiteSpace(c)));
         // Every spring is listed as a support of its own, named by its kind.
@@ -231,7 +233,10 @@ public sealed class DesktopSpringSupportTests
         Assert.Equal(new[] { drehfeder, "kθ=30000N·m/rad" }, types[2]);
         Assert.Equal(new[] { wegfeder, "k=1500N/mm" }, types[3]);
         Assert.Equal(new[] { drehfeder, "kθ=8000N·m/rad" }, types[4]);
-        Assert.Equal(new[] { drehfeder + "," + rigid, "kθ=45000N·m/rad" }, types[5]);
+        Assert.Equal(new[] { drehfeder, rigid, "kθ=45000N·m/rad" }, types[5]);
+        Assert.Empty(state.Supports[0].Details);
+        // Outputs without detail rows get type and details as one multi-line cell.
+        Assert.Equal(string.Join("\n", state.Supports[5].Details.Prepend(state.Supports[5].Type)), state.Supports[5].Description);
         // The solver reports one reaction per station: the two springs of one station share a row.
         Assert.Contains(state.Reactions, r => r.Name == "D + F" && r.Id is null);
         Assert.Equal(5, state.Reactions.Count);

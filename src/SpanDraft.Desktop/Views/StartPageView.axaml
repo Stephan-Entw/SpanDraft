@@ -23,9 +23,9 @@
     </Style>
   </UserControl.Styles>
   <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,*">
-    <Border Classes="workspaceHeader">
-      <TextBlock Text="{x:Static resources:Strings.Start}" Classes="pageTitle"
-                 Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
+    <Border x:Name="StartHeader" Classes="workspaceHeader">
+      <TextBlock x:Name="StartTitle" Text="{x:Static resources:Strings.Start}" Classes="pageTitle"
+                 Foreground="{DynamicResource TextPrimary}" />
     </Border>
     <Grid Grid.Row="1" Margin="{StaticResource Padding24}" ColumnDefinitions="280,48,720" HorizontalAlignment="Left">
       <StackPanel Spacing="{StaticResource Space16}">

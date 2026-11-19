@@ -370,8 +370,6 @@ public static class Strings
     public static string DeleteMaterialQuestion => Get(nameof(DeleteMaterialQuestion));
     public static string DeleteSectionQuestion => Get(nameof(DeleteSectionQuestion));
     public static string SectionDefinitionChooseTitle => Get(nameof(SectionDefinitionChooseTitle));
-    public static string SectionDefinitionGalleryTitle => Get(nameof(SectionDefinitionGalleryTitle));
-    public static string SectionDefinitionGalleryLead => Get(nameof(SectionDefinitionGalleryLead));
     public static string SectionDefinitionResetName => Get(nameof(SectionDefinitionResetName));
     public static string SectionDefinitionAutomatic => Get(nameof(SectionDefinitionAutomatic));
     public static string SectionDefinitionFromLibrary => Get(nameof(SectionDefinitionFromLibrary));

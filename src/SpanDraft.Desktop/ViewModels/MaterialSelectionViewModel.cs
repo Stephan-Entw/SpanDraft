@@ -96,6 +96,7 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
     }
     public IReadOnlyList<MaterialFilter> Filters { get; }
     public IReadOnlyList<MaterialFilter> CategoryFilters => Filters.Where(f => f.Kind is MaterialFilterKind.All or MaterialFilterKind.Category).ToArray();
+    public IReadOnlyList<MaterialFilter> SourceFilters => [ProjectFilter, BuiltInFilter, UserFilter];
     public MaterialFilter UserFilter => Filters.Single(f => f.Kind == MaterialFilterKind.User);
     public MaterialFilter BuiltInFilter => Filters.Single(f => f.Kind == MaterialFilterKind.BuiltIn);
     public MaterialFilter ProjectFilter => Filters.Single(f => f.Kind == MaterialFilterKind.Project);

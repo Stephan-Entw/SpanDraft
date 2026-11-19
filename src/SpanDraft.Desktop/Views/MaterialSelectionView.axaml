@@ -33,9 +33,9 @@
     </Style>
   </UserControl.Styles>
   <Grid Background="{DynamicResource Surface}" RowDefinitions="Auto,*">
-    <Border Classes="workspaceHeader">
+    <Border x:Name="MaterialHeader" Classes="workspaceHeader">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-        <controls:TechnicalTextBlock x:Name="MaterialWorkspaceTitle" Text="{Binding Title}" Classes="pageTitle" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <controls:TechnicalTextBlock x:Name="MaterialWorkspaceTitle" Text="{Binding Title}" Classes="pageTitle" />
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
           <Button x:Name="CancelMaterialSelectionButton" Content="{x:Static resources:Strings.Cancel}" Command="{Binding BackCommand}" Classes="secondary" Height="{DynamicResource StandardControl}" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
           <Button x:Name="UseMaterialButton" Content="{x:Static resources:Strings.Apply}" Command="{Binding UseSelectedCommand}" Classes="primary" AutomationProperties.Name="{x:Static resources:Strings.Apply}" />
@@ -54,9 +54,10 @@
             <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="8,16,8,0">
               <TextBlock Text="{x:Static resources:Strings.MaterialSource}" Classes="sectionTitle" />
             </Border>
-            <Button x:Name="ProjectMaterialsButton" Content="{x:Static resources:Strings.MaterialCurrentEntry}" Command="{Binding ShowProjectCommand}" Classes="materialNavigation" Classes.selected="{Binding IsProjectFilter}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.MaterialCurrentEntry}" />
-            <Button x:Name="BuiltInMaterialsButton" Content="{x:Static resources:Strings.BuiltInMaterials}" Command="{Binding ShowBuiltInCommand}" Classes="materialNavigation" Classes.selected="{Binding IsBuiltInFilter}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.BuiltInMaterials}" />
-            <Button x:Name="MyMaterialsButton" Content="{x:Static resources:Strings.MyMaterials}" Command="{Binding ShowUserCommand}" Classes="materialNavigation" Classes.selected="{Binding IsUserFilter}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" AutomationProperties.Name="{x:Static resources:Strings.MyMaterials}" />
+            <!-- Same list type as the categories: one row rhythm, one selection, arrow keys within the group. -->
+            <ListBox x:Name="MaterialSources" ItemsSource="{Binding SourceFilters}" SelectedItem="{Binding SelectedFilter, Mode=TwoWay}" Classes="materialFilters" AutomationProperties.Name="{x:Static resources:Strings.MaterialSource}">
+              <ListBox.ItemTemplate><DataTemplate x:DataType="vm:MaterialFilter"><controls:TechnicalTextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
           </StackPanel>
         </ScrollViewer>
       </Border>

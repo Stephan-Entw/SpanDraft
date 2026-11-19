@@ -30,9 +30,9 @@ public sealed class SpringSupportReportTests
         var editor = EditorViewModel.ForSession(ProjectSession.Create(new ProjectState(Document(true), new([]))), () => { });
         using var report = ProjectReport.Capture(editor, Now);
         var supports = Assert.Single(report.Data.Tables, t => t.Title == Strings.Supports);
-        Assert.Equal(editor.Overview.Supports.Select(s => s.Type), supports.Rows.Select(r => r[1]));
-        Assert.Contains(supports.Rows, r => r[1].Contains("N/mm") && r[1].Contains("k = "));
-        Assert.Contains(supports.Rows, r => r[1].Contains("N·m/rad") && r[1].Contains("kθ = "));
+        Assert.Equal(editor.Overview.Supports.Select(s => s.Description), supports.Rows.Select(r => r[1]));
+        Assert.Contains(supports.Rows, r => r[1].Contains("N/mm") && r[1].Contains("\nk = "));
+        Assert.Contains(supports.Rows, r => r[1].Contains("N·m/rad") && r[1].Contains("\nkθ = "));
         var reactions = Assert.Single(report.Data.Tables, t => t.Title == Strings.Reactions);
         Assert.Equal(3, reactions.Rows.Count);
         // Spring and partial restraint reactions are real values, not placeholders.

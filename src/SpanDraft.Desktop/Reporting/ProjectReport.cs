@@ -90,7 +90,7 @@ internal static class ProjectReport
             {
                 SegmentOverview(overview),
                 new(Strings.Supports, [Strings.OverviewName, Strings.OverviewType, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]"], [.25f, .50f, .25f],
-                    overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Type, s.Position }).ToArray(), LeftAlignedColumn: 1),
+                    overview.Supports.Select(s => (IReadOnlyList<string>)new[] { s.Name, s.Description, s.Position }).ToArray(), LeftAlignedColumn: 1),
                 new(Strings.MomentReleases, [Strings.OverviewName, TechnicalSymbols.Axis("x") + " [" + profile[QuantityKind.BeamLength].Symbol + "]",
                         overview.RotationLeftHeaderText, overview.RotationRightHeaderText, overview.ReleaseShearHeaderText],
                     [.14f, .18f, .22f, .22f, .24f], overview.MomentReleases.Zip(overview.MomentReleaseResults, (release, result) =>

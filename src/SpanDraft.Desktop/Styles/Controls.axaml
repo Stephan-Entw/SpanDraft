@@ -395,7 +395,16 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
     <Setter Property="BorderThickness" Value="{DynamicResource BottomBorder}" />
     <Setter Property="Padding" Value="24,16" />
-    <Setter Property="MinHeight" Value="70" />
+    <!-- One fixed height for every page header, so title, actions and divider stay put when navigating. -->
+    <Setter Property="Height" Value="70" />
+  </Style>
+  <Style Selector="Border.workspaceHeader > Control">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.workspaceHeader :is(TextBlock).pageTitle">
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
   <Style Selector="ListBox.materialEntries, ListBox.materialFilters">
     <Setter Property="Background" Value="Transparent" />
@@ -430,15 +439,6 @@
   <Style Selector="ListBox.materialEntries ListBoxItem:selected /template/ ContentPresenter, ListBox.materialFilters ListBoxItem:selected /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AccentSubtle}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-  </Style>
-  <Style Selector="Button.materialNavigation">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Padding" Value="8,6" />
-    <Setter Property="MinHeight" Value="0" />
-  </Style>
-  <Style Selector="Button.materialNavigation.selected, Button.materialNavigation.selected:pointerover">
-    <Setter Property="Background" Value="{DynamicResource AccentSubtle}" />
   </Style>
   <Style Selector="controls|MaterialTableColumns.materialColumns :is(TextBlock), Grid.materialProperties :is(TextBlock)">
     <Setter Property="VerticalAlignment" Value="Center" />

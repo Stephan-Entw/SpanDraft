@@ -165,7 +165,7 @@
     <Grid Grid.Row="1" x:Name="EditorWorkspace">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" />
-        <ColumnDefinition Width="320" />
+        <ColumnDefinition Width="340" />
       </Grid.ColumnDefinitions>
       <Grid x:Name="EditorContent" RowDefinitions="Auto,Auto,*" SizeChanged="WorkspaceSizeChanged"
             Background="{DynamicResource CanvasBackground}">

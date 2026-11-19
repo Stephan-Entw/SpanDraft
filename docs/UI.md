@@ -119,6 +119,10 @@ Das Balkenmodell der Übersicht zeigt jeden Abschnitt, auch einen einzelnen, als
 Beschreibung, die umbricht, statt zu kürzen: Wer das Modell prüft, muss die vollständige technische Angabe sehen.
 Beide Orte beziehen ihre Namen aus derselben Quelle, damit „Abschnitt 2“ im Bild und in der Leiste dasselbe meint.
 
+Die Tabellen der Übersicht bemessen ihre Spalten jede für sich nur nach den Datenzeilen und verteilen den Rest gleichmäßig
+auf die Lücken: Gemeinsame Achsen über Tabellen mit kurzen Inhalten erzeugten sonst an einer Stelle große Löcher, und ein
+Spaltenkopf, der mitzählte, würde eine schmale Zahlenspalte nur seinetwegen verbreitern.
+
 ## Streckenlast-Draft
 
 Eine Streckenlast hat zwei Randintensitäten, meistens aber ist sie konstant. Der

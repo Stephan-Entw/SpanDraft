@@ -242,7 +242,7 @@ public sealed class ResultDiagramControlTests : DesktopResultDiagramControlTestS
         var lower = view.FindControl<ScrollViewer>("DiagramScroll")!;
         var surface = view.FindControl<BeamEditorSurface>("BeamSurface")!;
         var overview = Assert.Single(view.GetVisualDescendants().OfType<ProjectOverviewView>());
-        Assert.Equal(320, overview.Bounds.Width);
+        Assert.Equal(340, overview.Bounds.Width);
         Assert.Equal(width - overview.Bounds.Width, upper.Bounds.Width);
         Assert.Equal(upper.Bounds.Right, overview.Bounds.Left);
         Assert.Equal(upper.Viewport.Width, lower.Viewport.Width);

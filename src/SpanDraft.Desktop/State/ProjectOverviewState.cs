@@ -17,7 +17,14 @@ public sealed record ProjectOverviewSegment(int Number, string Range, string Sec
     public string Description => SegmentLabels.Description(Section, Material);
 }
 
-public sealed record ProjectOverviewItem(Guid Id, string Name, string Type, string Value, string Position);
+public sealed record ProjectOverviewItem(Guid Id, string Name, string Type, string Value, string Position)
+{
+    /// <summary>Secondary lines below the one-line type, such as the stiffnesses of a spring.</summary>
+    public IReadOnlyList<string> Details { get; init; } = [];
+    public bool HasDetails => Details.Count > 0;
+    /// <summary>Type and details as one multi-line cell, for outputs without a separate detail row.</summary>
+    public string Description => string.Join("\n", Details.Prepend(Type));
+}
 /// <summary>
 /// The rotations on both sides of a moment release and the shear force it transmits, in the display units. The shear is
 /// one value, or the left and the right one separated by a slash where a load or a support at the release makes it jump.
@@ -52,7 +59,7 @@ public sealed class ProjectOverviewState
         Length = string.Format(CultureInfo.CurrentUICulture, Strings.OverviewLength, Position(document.Length),
             analysis.Options.Profile[QuantityKind.BeamLength].Symbol);
         Supports = Array.AsReadOnly(document.Supports.Select(s => new ProjectOverviewItem(s.Id, s.Name,
-            SupportTypeName(s), "", Position(s.Position))).ToArray());
+            SupportTypeName(s), "", Position(s.Position)) { Details = s.Spring is { } spring && s.Type == SupportType.Spring ? SpringDetails(spring) : [] }).ToArray());
         MomentReleases = Array.AsReadOnly(document.MomentReleases.Select(r => new ProjectOverviewItem(r.Id, r.Name,
             Strings.MomentRelease, "", Position(r.Position))).ToArray());
         IReadOnlyList<ProjectOverviewItem> PointLoads(PointLoadKind kind) => Array.AsReadOnly(document.Loads
@@ -161,27 +168,23 @@ public sealed class ProjectOverviewState
         SupportType.Fixed => Strings.FixedSupport,
         SupportType.Pinned => Strings.PinnedSupport,
         SupportType.Roller => Strings.RollerSupport,
-        SupportType.Spring => SpringDescription(support.Spring!),
+        SupportType.Spring => support.Spring!.Translational is not null && support.Spring.Rotational is not null ? Strings.SpringSupport
+            : support.Spring.Rotational is not null ? Strings.RotationalSpringSupport : Strings.TranslationalSpringSupport,
         _ => throw new ArgumentOutOfRangeException(nameof(support))
     };
 
-    /// <summary>The spring by its kind with its stiffness in the display units; every spring is a support of its own.</summary>
-    private string SpringDescription(SpringData spring)
+    /// <summary>The spring's rigid translation and stiffnesses in the display units, one line each.</summary>
+    private IReadOnlyList<string> SpringDetails(SpringData spring)
     {
         var options = Analysis.Options;
-        var parts = new List<string>
-        {
-            spring.Translational is not null && spring.Rotational is not null ? Strings.SpringSupport
-                : spring.Rotational is not null ? Strings.RotationalSpringSupport : Strings.TranslationalSpringSupport
-        };
-        if (spring.RigidTranslation)
-            parts[0] += ", " + Strings.SpringRigidTranslation;
+        var details = new List<string>();
+        if (spring.RigidTranslation) details.Add(Strings.SpringRigidTranslation);
         if (spring.Translational is { } translational)
-            parts.Add("k = " + QuantityFormatter.FormatInput(translational.NewtonsPerMeter,
+            details.Add("k = " + QuantityFormatter.FormatInput(translational.NewtonsPerMeter,
                 options.Profile[QuantityKind.TranslationalStiffness], options));
         if (spring.Rotational is { } rotational)
-            parts.Add("kθ = " + QuantityFormatter.FormatInput(rotational.NewtonMetersPerRadian,
+            details.Add("kθ = " + QuantityFormatter.FormatInput(rotational.NewtonMetersPerRadian,
                 options.Profile[QuantityKind.RotationalStiffness], options));
-        return string.Join("\n", parts);
+        return details.AsReadOnly();
     }
 }

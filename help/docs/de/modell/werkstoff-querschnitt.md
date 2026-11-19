@@ -32,10 +32,10 @@ er im Werkstoffeditor festgelegt werden.
 Die gemeinsame Werkstofftabelle enthält den Projektwerkstoff und verfügbare
 Vorlagen. Der Projektwerkstoff trägt ein Häkchen und den Zusatz **(aktuell im
 Projekt)**. Wenn er zu Suche und Filter passt, steht er an erster Stelle.
-Unter **Quelle** können Sie ausschließlich den Projektwerkstoff, eingebaute
-Werkstoffe oder **Meine Werkstoffe** anzeigen. Kategorien berücksichtigen alle
-drei Quellen. Ein Schloss kennzeichnet ausschließlich eingebaute,
-schreibgeschützte Werkstoffe. **Kopie erstellen…** legt
+Unter **Quelle** können Sie ausschließlich den Projektwerkstoff,
+**Mitgelieferte Werkstoffe** oder **Meine Werkstoffe** anzeigen. Kategorien
+berücksichtigen alle drei Quellen. Ein Schloss kennzeichnet ausschließlich
+mitgelieferte, schreibgeschützte Werkstoffe. **Kopie erstellen…** legt
 eine bearbeitbare Variante in **Meine Werkstoffe** an. Auch **Neuer Werkstoff**
 speichert nach Bestätigung einen eigenen Bibliothekseintrag.
 

@@ -49,11 +49,11 @@
     </Style>
   </UserControl.Styles>
   <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,*">
-    <Border Grid.Row="0" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Padding="24,16">
+    <Border x:Name="DefinitionHeaderBar" Grid.Row="0" Classes="workspaceHeader">
       <Grid x:Name="CommandHeader" ColumnDefinitions="*,Auto" ColumnSpacing="16" Height="{DynamicResource StandardControl}">
         <Grid x:Name="DefinitionHeader" VerticalAlignment="Stretch">
             <Button x:Name="TitleButton" Command="{Binding EditNameCommand}" IsVisible="{Binding !IsEditingName}" Classes="ghost definitionTitleButton"
-                HorizontalAlignment="Left" HorizontalContentAlignment="Stretch" Height="{DynamicResource StandardControl}" Padding="0"
+                HorizontalAlignment="Left" HorizontalContentAlignment="Stretch" Height="{DynamicResource StandardControl}" Padding="0" BorderThickness="0"
                 AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionEditName}">
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <controls:TechnicalTextBlock x:Name="DefinitionTitle" Text="{Binding HeaderTitle}" Classes="pageTitle" Foreground="{DynamicResource TextPrimary}"
@@ -81,17 +81,18 @@
     </Border>
     <Grid Grid.Row="1">
       <ScrollViewer x:Name="GalleryScroll" IsVisible="{Binding IsChoosingForm}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel x:Name="FormChooser" Spacing="16" MaxWidth="1090" Margin="32" VerticalAlignment="Center" IsEnabled="{Binding !IsBusy}">
-          <TextBlock Text="{x:Static resources:Strings.SectionDefinitionGalleryTitle}" Classes="pageTitle" />
-          <TextBlock Text="{x:Static resources:Strings.SectionDefinitionGalleryLead}" FontSize="{DynamicResource SubtitleSize}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,12" />
-          <TextBlock Text="{x:Static resources:Strings.SectionDefinitionParametricGroup}" Classes="caption" FontWeight="SemiBold" />
-          <ItemsControl ItemsSource="{Binding Forms}" Margin="0,0,-16,0">
+        <!-- The page header carries the only page title; the gallery starts on the normal page grid and grows by rows. -->
+        <Grid Margin="{StaticResource Padding24}">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="960" /></Grid.ColumnDefinitions>
+        <StackPanel x:Name="FormChooser" Spacing="{StaticResource Space12}" VerticalAlignment="Top" IsEnabled="{Binding !IsBusy}">
+          <TextBlock x:Name="ParametricGroupTitle" Text="{x:Static resources:Strings.SectionDefinitionParametricGroup}" Classes="sectionTitle" />
+          <ItemsControl x:Name="FormGallery" ItemsSource="{Binding Forms}" Margin="0,0,-16,0">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:SectionDefinitionForm">
-                <Button Height="168" Tag="{Binding Value}" Click="SelectForm" Margin="0,0,16,16" Classes="secondary"
+                <Button Classes="secondary" Height="144" Tag="{Binding Value}" Click="SelectForm" Margin="0,0,16,16"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Label}">
-                  <StackPanel Spacing="16" VerticalAlignment="Center">
+                  <StackPanel Spacing="12" VerticalAlignment="Center">
                     <controls:SectionShapeIcon Type="{Binding Value}" Width="68" Height="68" HorizontalAlignment="Center" />
                     <controls:TechnicalTextBlock Text="{Binding Label}" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="{DynamicResource SubtitleSize}" />
                   </StackPanel>
@@ -99,15 +100,17 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <Button x:Name="ManualFormButton" Click="SelectManual" Height="58"
-              Classes="secondary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+          <!-- Manual values are a different way in, so they keep the row-and-chevron form of the setup cards. -->
+          <Button x:Name="ManualFormButton" Click="SelectManual" Height="48"
+              Classes="secondary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="16,0"
               AutomationProperties.Name="{x:Static resources:Strings.SectionDefinitionManualChoice}">
-            <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="{x:Static resources:Strings.SectionDefinitionManualChoice}" TextWrapping="Wrap" />
-              <TextBlock Grid.Column="1" Text="›" Margin="12,0,0,0" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock Text="{x:Static resources:Strings.SectionDefinitionManualChoice}" TextWrapping="Wrap" VerticalAlignment="Center" />
+              <PathIcon Grid.Column="1" Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronRight}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
             </Grid>
           </Button>
         </StackPanel>
+        </Grid>
       </ScrollViewer>
       <Grid x:Name="DefinitionColumns" ColumnDefinitions="*" IsVisible="{Binding HasDefinition}">
         <Border x:Name="InputColumn" Background="{DynamicResource AppBackground}" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0">

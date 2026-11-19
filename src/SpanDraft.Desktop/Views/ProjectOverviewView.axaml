@@ -4,64 +4,62 @@
              xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
              xmlns:state="clr-namespace:SpanDraft.Desktop.State"
              xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             xmlns:presentation="clr-namespace:SpanDraft.Desktop.Presentation"
              x:Class="SpanDraft.Desktop.Views.ProjectOverviewView"
              x:DataType="vm:EditorViewModel">
   <UserControl.Resources>
     <DataTemplate x:Key="SupportRowTemplate" x:DataType="state:ProjectOverviewItem">
-      <Grid Classes="overviewRow" ColumnDefinitions="64,*,96">
+      <controls:OverviewTableRow Classes="overviewRow">
         <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
           <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
         </Button>
-        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Type}" Classes="centered" />
-        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
-      </Grid>
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="1" Text="{Binding Type}" Classes="text" />
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="2" Text="{Binding Position, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
+        <!-- Spring details sit below the type and count for its column. They move up by the first line's vertical
+             padding, so type and details follow at one line pitch; the bottom margin restores the row padding. -->
+        <ItemsControl x:Name="SupportDetails" controls:OverviewTableRow.Column="1" controls:OverviewTableRow.Row="1" ItemsSource="{Binding Details}"
+                      IsVisible="{Binding HasDetails}" Margin="0,-4,0,4">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String"><controls:TechnicalTextBlock Text="{Binding, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="supportDetail" /></DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </controls:OverviewTableRow>
     </DataTemplate>
     <DataTemplate x:Key="LoadRowTemplate" x:DataType="state:ProjectOverviewItem">
-      <Grid Classes="overviewRow" ColumnDefinitions="64,0.7*,1.3*">
+      <controls:OverviewTableRow Classes="overviewRow">
         <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
           <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
         </Button>
-        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Value}" Classes="number" />
-        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
-      </Grid>
-    </DataTemplate>
-    <DataTemplate x:Key="DistributedLoadRowTemplate" x:DataType="state:ProjectOverviewItem">
-      <Grid Classes="overviewRow" ColumnDefinitions="64,1.25*,0.75*">
-        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
-                AutomationProperties.Name="{Binding Name}"
-                IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
-          <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
-        </Button>
-        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Value}" Classes="number" />
-        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
-      </Grid>
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="1" Text="{Binding Value, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="2" Text="{Binding Position, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
+      </controls:OverviewTableRow>
     </DataTemplate>
     <DataTemplate x:Key="MomentReleaseRowTemplate" x:DataType="state:ProjectOverviewItem">
-      <Grid Classes="overviewRow" ColumnDefinitions="64,*,96">
+      <controls:OverviewTableRow Classes="overviewRow">
         <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
           <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
         </Button>
-        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Type}" Classes="centered" />
-        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Position}" Classes="number" />
-      </Grid>
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="1" Text="{Binding Type}" Classes="text" />
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="2" Text="{Binding Position, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
+      </controls:OverviewTableRow>
     </DataTemplate>
     <DataTemplate x:Key="MomentReleaseResultRowTemplate" x:DataType="state:ProjectOverviewReleaseResult">
-      <Grid Classes="overviewRow" ColumnDefinitions="64,1.3*,1.3*,0.8*">
+      <controls:OverviewTableRow Classes="overviewRow">
         <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
           <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
         </Button>
-        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding RotationLeft}" Classes="number" TextWrapping="NoWrap" />
-        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding RotationRight}" Classes="number" TextWrapping="NoWrap" />
-        <controls:TechnicalTextBlock Grid.Column="3" Text="{Binding Shear}" Classes="number" />
-      </Grid>
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="1" Text="{Binding RotationLeft, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="2" Text="{Binding RotationRight, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="3" Text="{Binding Shear, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
+      </controls:OverviewTableRow>
     </DataTemplate>
     <DataTemplate x:Key="SegmentRowTemplate" x:DataType="state:ProjectOverviewSegment">
       <!-- A block per segment: its heading and one description that wraps like text and is never shortened. -->
@@ -71,19 +69,19 @@
       </StackPanel>
     </DataTemplate>
     <DataTemplate x:Key="ReactionRowTemplate" x:DataType="state:ProjectOverviewReaction">
-      <Grid Classes="overviewRow" ColumnDefinitions="64,*,*,*">
-        <!-- A shared row is not an action, but its trimmed name stays readable through this tooltip. -->
+      <controls:OverviewTableRow Classes="overviewRow">
+        <!-- A shared row is not an action, but its name stays readable through this tooltip. -->
         <Border Background="Transparent" ToolTip.Tip="{Binding Name}" />
-        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
+        <Button controls:OverviewTableRow.Uncapped="{Binding Id, Converter={x:Static ObjectConverters.IsNull}}" Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
                 AutomationProperties.Name="{Binding Name}"
                 IsHitTestVisible="{Binding IsEditable}" Focusable="{Binding IsEditable}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
           <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
         </Button>
-        <controls:TechnicalTextBlock Grid.Column="1" Text="{Binding Rx}" Classes="number" />
-        <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Ry}" Classes="number" />
-        <controls:TechnicalTextBlock Grid.Column="3" Text="{Binding Moment}" Classes="number" />
-      </Grid>
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="1" Text="{Binding Rx, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="2" Text="{Binding Ry, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
+        <controls:TechnicalTextBlock controls:OverviewTableRow.Column="3" Text="{Binding Moment, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
+      </controls:OverviewTableRow>
     </DataTemplate>
   </UserControl.Resources>
   <UserControl.Styles>
@@ -91,20 +89,20 @@
       <Setter Property="TextWrapping" Value="Wrap" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
-    <Style Selector=":is(TextBlock).sectionTitle">
-      <Setter Property="TextAlignment" Value="Center" />
-    </Style>
     <Style Selector="Grid.overviewRow">
-      <Setter Property="ColumnSpacing" Value="6" />
+      <Setter Property="ColumnSpacing" Value="{StaticResource Space12}" />
       <Setter Property="MinHeight" Value="24" />
     </Style>
-    <Style Selector="Grid.overviewRow :is(TextBlock)">
+    <Style Selector="controls|OverviewTableRow.overviewRow">
+      <Setter Property="MinHeight" Value="24" />
+    </Style>
+    <Style Selector=".overviewRow :is(TextBlock)">
       <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
     </Style>
-    <Style Selector="Grid.tableHeader :is(TextBlock)">
+    <Style Selector=".tableHeader :is(TextBlock)">
       <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
     </Style>
-    <!-- Keep dividers within the existing section gaps. -->
     <Style Selector="Border.overviewSeparator">
       <Setter Property="Height" Value="{StaticResource Space8}" />
       <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
@@ -112,7 +110,6 @@
     </Style>
     <Style Selector=":is(TextBlock).entityName">
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="TextAlignment" Value="Center" />
       <Setter Property="TextWrapping" Value="NoWrap" />
       <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     </Style>
@@ -121,15 +118,20 @@
       <Setter Property="Padding" Value="0" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
       <Setter Property="Cursor" Value="Hand" />
     </Style>
-    <Style Selector=":is(TextBlock).centered">
-      <Setter Property="TextAlignment" Value="Center" />
-    </Style>
     <Style Selector=":is(TextBlock).number">
       <Setter Property="TextAlignment" Value="Right" />
+    </Style>
+    <Style Selector=":is(TextBlock).text">
+      <Setter Property="TextWrapping" Value="NoWrap" />
+    </Style>
+    <Style Selector=":is(TextBlock).supportDetail">
+      <Setter Property="FontSize" Value="{DynamicResource SecondarySize}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
     </Style>
     <Style Selector="ItemsControl">
       <Setter Property="ItemsPanel">
@@ -139,6 +141,7 @@
   </UserControl.Styles>
   <Border Background="{DynamicResource SurfaceSubtle}" BorderBrush="{DynamicResource Border}" BorderThickness="1,0,0,0">
     <ScrollViewer x:Name="OverviewScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <!-- Every table sizes its own columns from its data rows (OverviewTableScope); tables share no axes. -->
       <StackPanel Margin="{DynamicResource Padding16}" Spacing="{StaticResource Space4}">
         <Grid x:Name="ProjectBlock" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space4}">
           <TextBlock Text="{x:Static resources:Strings.BeamModel}" Classes="sectionTitle" />
@@ -148,12 +151,13 @@
         <StackPanel x:Name="SupportsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.HasSupports}">
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.Supports}" Classes="sectionTitle" />
-          <StackPanel IsVisible="{Binding Overview.HasSupports}">
-            <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,*,96">
-              <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
-              <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewType}" Classes="centered" />
-              <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
-            </Grid>
+          <StackPanel>
+            <controls:OverviewTableRow.Scope><controls:OverviewTableScope Alignments="LLR" /></controls:OverviewTableRow.Scope>
+            <controls:OverviewTableRow Classes="overviewRow tableHeader" IsHeader="True">
+              <TextBlock controls:OverviewTableRow.Column="0" Text="{x:Static resources:Strings.OverviewName}" />
+              <TextBlock controls:OverviewTableRow.Column="1" Text="{x:Static resources:Strings.OverviewType}" />
+              <TextBlock controls:OverviewTableRow.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
+            </controls:OverviewTableRow>
             <ItemsControl x:Name="SupportTable" ItemsSource="{Binding Overview.Supports}" ItemTemplate="{StaticResource SupportRowTemplate}" />
           </StackPanel>
         </StackPanel>
@@ -161,11 +165,12 @@
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.MomentReleases}" Classes="sectionTitle" />
           <StackPanel>
-            <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,*,96">
-              <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
-              <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewType}" Classes="centered" />
-              <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
-            </Grid>
+            <controls:OverviewTableRow.Scope><controls:OverviewTableScope Alignments="LLR" /></controls:OverviewTableRow.Scope>
+            <controls:OverviewTableRow Classes="overviewRow tableHeader" IsHeader="True">
+              <TextBlock controls:OverviewTableRow.Column="0" Text="{x:Static resources:Strings.OverviewName}" />
+              <TextBlock controls:OverviewTableRow.Column="1" Text="{x:Static resources:Strings.OverviewType}" />
+              <TextBlock controls:OverviewTableRow.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
+            </controls:OverviewTableRow>
             <ItemsControl x:Name="MomentReleaseTable" ItemsSource="{Binding Overview.MomentReleases}" ItemTemplate="{StaticResource MomentReleaseRowTemplate}" />
           </StackPanel>
         </StackPanel>
@@ -173,11 +178,12 @@
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.Forces}" Classes="sectionTitle" />
           <StackPanel>
-            <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,0.7*,1.3*">
-              <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
-              <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
-              <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
-            </Grid>
+            <controls:OverviewTableRow.Scope><controls:OverviewTableScope Alignments="LRR" WrapColumn="1" /></controls:OverviewTableRow.Scope>
+            <controls:OverviewTableRow Classes="overviewRow tableHeader" IsHeader="True">
+              <TextBlock controls:OverviewTableRow.Column="0" Text="{x:Static resources:Strings.OverviewName}" />
+              <TextBlock controls:OverviewTableRow.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
+              <TextBlock controls:OverviewTableRow.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
+            </controls:OverviewTableRow>
             <ItemsControl x:Name="ForceTable" ItemsSource="{Binding Overview.Forces}" ItemTemplate="{StaticResource LoadRowTemplate}" />
           </StackPanel>
         </StackPanel>
@@ -185,11 +191,12 @@
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.Moments}" Classes="sectionTitle" />
           <StackPanel>
-            <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,0.7*,1.3*">
-              <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
-              <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
-              <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
-            </Grid>
+            <controls:OverviewTableRow.Scope><controls:OverviewTableScope Alignments="LRR" WrapColumn="1" /></controls:OverviewTableRow.Scope>
+            <controls:OverviewTableRow Classes="overviewRow tableHeader" IsHeader="True">
+              <TextBlock controls:OverviewTableRow.Column="0" Text="{x:Static resources:Strings.OverviewName}" />
+              <TextBlock controls:OverviewTableRow.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
+              <TextBlock controls:OverviewTableRow.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
+            </controls:OverviewTableRow>
             <ItemsControl x:Name="MomentTable" ItemsSource="{Binding Overview.Moments}" ItemTemplate="{StaticResource LoadRowTemplate}" />
           </StackPanel>
         </StackPanel>
@@ -197,35 +204,42 @@
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.DistributedLoads}" Classes="sectionTitle" />
           <StackPanel>
-            <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,1.25*,0.75*">
-              <TextBlock Text="{x:Static resources:Strings.OverviewName}" Classes="centered" />
-              <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
-              <controls:TechnicalTextBlock Grid.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
-            </Grid>
-            <ItemsControl x:Name="DistributedLoadTable" ItemsSource="{Binding Overview.DistributedLoads}" ItemTemplate="{StaticResource DistributedLoadRowTemplate}" />
+            <controls:OverviewTableRow.Scope><controls:OverviewTableScope Alignments="LRR" WrapColumn="1" /></controls:OverviewTableRow.Scope>
+            <controls:OverviewTableRow Classes="overviewRow tableHeader" IsHeader="True">
+              <TextBlock controls:OverviewTableRow.Column="0" Text="{x:Static resources:Strings.OverviewName}" />
+              <TextBlock controls:OverviewTableRow.Column="1" Text="{x:Static resources:Strings.OverviewValue}" Classes="number" />
+              <TextBlock controls:OverviewTableRow.Column="2" Text="{Binding Overview.PositionHeader}" Classes="number" />
+            </controls:OverviewTableRow>
+            <ItemsControl x:Name="DistributedLoadTable" ItemsSource="{Binding Overview.DistributedLoads}" ItemTemplate="{StaticResource LoadRowTemplate}" />
           </StackPanel>
         </StackPanel>
         <StackPanel x:Name="ReactionsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.HasReactions}">
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.Reactions}" Classes="sectionTitle" />
-          <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,*,*,*">
-            <TextBlock Text="{x:Static resources:Strings.Support}" Classes="centered" />
-            <TextBlock x:Name="ReactionXHeader" Grid.Column="1" controls:TechnicalTextPresenter.Content="{Binding Overview.ReactionXHeaderText}" Classes="number" />
-            <TextBlock x:Name="ReactionYHeader" Grid.Column="2" controls:TechnicalTextPresenter.Content="{Binding Overview.ReactionYHeaderText}" Classes="number" />
-            <TextBlock x:Name="ReactionMomentHeader" Grid.Column="3" controls:TechnicalTextPresenter.Content="{Binding Overview.ReactionMomentHeaderText}" Classes="number" />
-          </Grid>
-          <ItemsControl x:Name="ReactionTable" ItemsSource="{Binding Overview.Reactions}" ItemTemplate="{StaticResource ReactionRowTemplate}" />
+          <StackPanel>
+            <controls:OverviewTableRow.Scope><controls:OverviewTableScope Alignments="LRRR" /></controls:OverviewTableRow.Scope>
+            <controls:OverviewTableRow Classes="overviewRow tableHeader" IsHeader="True">
+              <TextBlock controls:OverviewTableRow.Column="0" Text="{x:Static resources:Strings.Support}" />
+              <TextBlock x:Name="ReactionXHeader" controls:OverviewTableRow.Column="1" controls:TechnicalTextPresenter.Content="{Binding Overview.ReactionXHeaderText}" Classes="number" />
+              <TextBlock x:Name="ReactionYHeader" controls:OverviewTableRow.Column="2" controls:TechnicalTextPresenter.Content="{Binding Overview.ReactionYHeaderText}" Classes="number" />
+              <TextBlock x:Name="ReactionMomentHeader" controls:OverviewTableRow.Column="3" controls:TechnicalTextPresenter.Content="{Binding Overview.ReactionMomentHeaderText}" Classes="number" />
+            </controls:OverviewTableRow>
+            <ItemsControl x:Name="ReactionTable" ItemsSource="{Binding Overview.Reactions}" ItemTemplate="{StaticResource ReactionRowTemplate}" />
+          </StackPanel>
         </StackPanel>
         <StackPanel x:Name="MomentReleaseResultsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Overview.HasMomentReleaseResults}">
           <Border Classes="overviewSeparator" />
           <TextBlock Text="{x:Static resources:Strings.MomentReleaseResults}" Classes="sectionTitle" />
-          <Grid Classes="overviewRow tableHeader" ColumnDefinitions="64,1.3*,1.3*,0.8*">
-            <TextBlock Text="{x:Static resources:Strings.MomentRelease}" Classes="centered" />
-            <TextBlock x:Name="RotationLeftHeader" Grid.Column="1" controls:TechnicalTextPresenter.Content="{Binding Overview.RotationLeftHeaderText}" Classes="number" TextWrapping="NoWrap" />
-            <TextBlock x:Name="RotationRightHeader" Grid.Column="2" controls:TechnicalTextPresenter.Content="{Binding Overview.RotationRightHeaderText}" Classes="number" TextWrapping="NoWrap" />
-            <TextBlock x:Name="ReleaseShearHeader" Grid.Column="3" controls:TechnicalTextPresenter.Content="{Binding Overview.ReleaseShearHeaderText}" Classes="number" />
-          </Grid>
-          <ItemsControl x:Name="MomentReleaseResultTable" ItemsSource="{Binding Overview.MomentReleaseResults}" ItemTemplate="{StaticResource MomentReleaseResultRowTemplate}" />
+          <StackPanel>
+            <controls:OverviewTableRow.Scope><controls:OverviewTableScope Alignments="LRRR" /></controls:OverviewTableRow.Scope>
+            <controls:OverviewTableRow Classes="overviewRow tableHeader" IsHeader="True">
+              <TextBlock controls:OverviewTableRow.Column="0" Text="{x:Static resources:Strings.MomentRelease}" />
+              <TextBlock x:Name="RotationLeftHeader" controls:OverviewTableRow.Column="1" controls:TechnicalTextPresenter.Content="{Binding Overview.RotationLeftHeaderText}" Classes="number" />
+              <TextBlock x:Name="RotationRightHeader" controls:OverviewTableRow.Column="2" controls:TechnicalTextPresenter.Content="{Binding Overview.RotationRightHeaderText}" Classes="number" />
+              <TextBlock x:Name="ReleaseShearHeader" controls:OverviewTableRow.Column="3" controls:TechnicalTextPresenter.Content="{Binding Overview.ReleaseShearHeaderText}" Classes="number" />
+            </controls:OverviewTableRow>
+            <ItemsControl x:Name="MomentReleaseResultTable" ItemsSource="{Binding Overview.MomentReleaseResults}" ItemTemplate="{StaticResource MomentReleaseResultRowTemplate}" />
+          </StackPanel>
         </StackPanel>
         <StackPanel x:Name="IndicatorsSection" Spacing="{StaticResource Space4}" IsVisible="{Binding Presentation.IsSuccess}">
           <Border Classes="overviewSeparator" />

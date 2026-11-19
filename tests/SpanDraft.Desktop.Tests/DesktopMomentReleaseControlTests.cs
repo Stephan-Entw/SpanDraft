@@ -152,19 +152,23 @@ public sealed class DesktopMomentReleaseControlTests
         var editor = new EditorViewModel(document, () => { });
         var result = Assert.Single(editor.Overview.MomentReleaseResults);
         if (load == -50) Assert.True(SpanDraft.Reporting.Notation.TechnicalText.HasExponents(result.RotationLeft), result.RotationLeft);
-        var view = new ProjectOverviewView { DataContext = editor, Width = 320 };
-        var window = new Window { Content = view, Width = 320, Height = 800 };
-        window.Show(); Layout(window, 320, 800);
+        var view = new ProjectOverviewView { DataContext = editor, Width = 340 };
+        var window = new Window { Content = view, Width = 340, Height = 800 };
+        window.Show(); Layout(window, 340, 800);
         var table = view.FindControl<ItemsControl>("MomentReleaseResultTable")!;
-        var row = Assert.Single(table.GetVisualDescendants().OfType<Grid>(), g => g.ColumnDefinitions.Count == 4);
-        var header = view.FindControl<TextBlock>("RotationLeftHeader")!.GetVisualAncestors().OfType<Grid>().First();
-        // Both rotation columns are as wide in the header as in the row, so every value sits under its caption.
-        Assert.Equal(header.ColumnDefinitions.Select(c => c.Width.Value), row.ColumnDefinitions.Select(c => c.Width.Value));
-        foreach (var (grid, column) in new[] { (header, 1), (header, 2), (row, 1), (row, 2) })
+        var row = Assert.Single(table.GetVisualDescendants().OfType<OverviewTableRow>());
+        var header = view.FindControl<TextBlock>("RotationLeftHeader")!.GetVisualAncestors().OfType<OverviewTableRow>().First();
+        Assert.True(header.IsHeader);
+        Assert.Same(OverviewTableRow.GetScope(header), OverviewTableRow.GetScope(row));
+        foreach (int column in new[] { 1, 2 })
         {
-            var cell = grid.Children.OfType<TextBlock>().Single(t => Grid.GetColumn(t) == column);
+            // Each value ends at its heading's right edge, on one line and inside its column.
+            var caption = header.Children.OfType<TextBlock>().Single(t => OverviewTableRow.GetColumn(t) == column);
+            var cell = row.Children.OfType<TextBlock>().Single(t => OverviewTableRow.GetColumn(t) == column);
+            Assert.Equal(caption.Bounds.Right, cell.Bounds.Right, 0.5);
             Assert.Single(cell.TextLayout.TextLines);
-            Assert.True(cell.DesiredSize.Width <= cell.Bounds.Width + 0.01, $"'{cell.Text ?? cell.Inlines?.Text}' needs {cell.DesiredSize.Width} of {cell.Bounds.Width}.");
+            Assert.True(cell.TextLayout.Width <= cell.Bounds.Width + 0.01, $"'{cell.Text}' needs {cell.TextLayout.Width} of {cell.Bounds.Width}.");
+            Assert.Single(caption.TextLayout.TextLines);
         }
         window.Close();
     }

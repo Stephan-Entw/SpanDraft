@@ -281,8 +281,6 @@
   <data name="SectionDefinitionStrongAxis" xml:space="preserve"><value>strong axis</value></data>
   <data name="SectionDefinitionWeakAxis" xml:space="preserve"><value>weak axis</value></data>
   <data name="SectionDefinitionChooseTitle" xml:space="preserve"><value>Select a section</value></data>
-  <data name="SectionDefinitionGalleryTitle" xml:space="preserve"><value>Choose a section shape</value></data>
-  <data name="SectionDefinitionGalleryLead" xml:space="preserve"><value>Choose the geometry for your section.</value></data>
   <data name="SectionDefinitionResetName" xml:space="preserve"><value>Use automatic name</value></data>
   <data name="SaveToLibrary" xml:space="preserve"><value>Save to library</value></data>
   <data name="SectionDefinitionFromLibrary" xml:space="preserve"><value>From my library</value></data>
@@ -292,7 +290,7 @@
   <data name="SectionDefinitionParametricForm" xml:space="preserve"><value>Parametric shape</value></data>
   <data name="SectionDefinitionManualFormDescription" xml:space="preserve"><value>Manual section properties</value></data>
   <data name="SectionDefinitionChangeProfile" xml:space="preserve"><value>Change ›</value></data>
-  <data name="SectionDefinitionParametricGroup" xml:space="preserve"><value>PARAMETRIC SECTIONS</value></data>
+  <data name="SectionDefinitionParametricGroup" xml:space="preserve"><value>Parametric sections</value></data>
   <data name="SectionDefinitionAutomatic" xml:space="preserve"><value>Automatic</value></data>
   <data name="AllMaterials" xml:space="preserve"><value>All materials</value></data>
   <data name="MaterialSearch" xml:space="preserve"><value>Search materials</value></data>
