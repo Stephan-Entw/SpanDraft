@@ -179,9 +179,9 @@ public sealed class DesktopNavigationTests
         Assert.False(Assert.Single(caption.TextLayout.TextLines).HasCollapsed);
         Assert.False(shared.IsHitTestVisible);
         Assert.False(shared.Focusable);
-        // The inert name cell behind the button keeps the full, possibly trimmed name reachable by tooltip.
         var nameCell = Assert.Single(((Panel)shared.Parent!).Children.OfType<Border>());
-        Assert.Equal("B + C", ToolTip.GetTip(nameCell));
+        Assert.Null(ToolTip.GetTip(nameCell));
+        Assert.Null(ToolTip.GetTip(shared));
         Assert.True(nameCell.IsHitTestVisible);
         Assert.NotNull(nameCell.Background);
         Assert.False(nameCell.Focusable);
@@ -199,7 +199,9 @@ public sealed class DesktopNavigationTests
             Assert.True(row.IsEditable);
             Assert.True(single.IsHitTestVisible);
             Assert.True(single.Focusable);
-            Assert.Equal(row.Name, ToolTip.GetTip(single));
+            Assert.Equal(row.Name, AutomationProperties.GetName(single));
+            Assert.False(Assert.Single(Assert.IsAssignableFrom<TextBlock>(single.Content).TextLayout.TextLines).HasCollapsed);
+            Assert.Null(ToolTip.GetTip(single));
             ActivateName(single, window, true);
             Assert.Equal(row.Id, editor.SupportDraft!.OriginalId);
             editor.CancelEditorInteraction();
@@ -728,6 +730,33 @@ public sealed class DesktopNavigationTests
         Assert.True(Assert.Single(caption.TextLayout.TextLines).HasCollapsed);
         var nameCell = Assert.Single(shared.Children.OfType<Border>());
         Assert.Equal("Wegfeder rechts + E", ToolTip.GetTip(nameCell));
+    }
+
+    [Fact]
+    public void OverviewNameTooltipsFollowTheArrangedTextAndKeepFullAutomationNames()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var model = new MainWindowViewModel(); model.NewCommand.Execute(null);
+        var window = new MainWindow { DataContext = model };
+        ProjectTestSupport.CompleteSetup(model); model.Setup.ApplyCommand.Execute(null);
+        var editor = model.Editor!;
+        Assert.True(editor.Session.Commit(new(SpringDocument(editor), editor.Session.CurrentRevision.State.Presentation)));
+        Layout(window);
+        var overview = Assert.Single(window.GetVisualDescendants().OfType<ProjectOverviewView>());
+        var buttons = overview.FindControl<ItemsControl>("SupportTable")!.GetVisualDescendants().OfType<Button>().ToArray();
+
+        AssertName("A", trimmed: false);
+        AssertName("Kranbahnstütze links außen", trimmed: true);
+        window.Close();
+
+        void AssertName(string name, bool trimmed)
+        {
+            var button = Assert.Single(buttons, b => ((ProjectOverviewItem)b.DataContext!).Name == name);
+            var caption = Assert.IsAssignableFrom<TextBlock>(button.Content);
+            Assert.Equal(trimmed, Assert.Single(caption.TextLayout.TextLines).HasCollapsed);
+            Assert.Equal(trimmed ? name : null, ToolTip.GetTip(button));
+            Assert.Equal(name, AutomationProperties.GetName(button));
+        }
     }
 
     [Theory]

@@ -23,7 +23,7 @@
     </DataTemplate>
   </Window.DataTemplates>
   <Grid RowDefinitions="Auto,*">
-    <Menu x:Name="MainMenu">
+    <Menu x:Name="MainMenu" KeyboardNavigation.TabNavigation="None" KeyboardNavigation.IsTabStop="False">
       <MenuItem Header="{x:Static resources:Strings.File}">
         <MenuItem x:Name="NewMenuItem" Header="{x:Static resources:Strings.NewProject}" Command="{Binding NewCommand}" />
         <MenuItem x:Name="OpenMenuItem" Header="{x:Static resources:Strings.Open}" Command="{Binding OpenCommand}" />

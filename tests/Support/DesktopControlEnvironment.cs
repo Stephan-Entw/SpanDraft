@@ -76,11 +76,27 @@ public sealed class DesktopControlEnvironment : IDisposable
 
     private static void Bind(Type serviceType, object service)
     {
+        var registration = GetRegistration(serviceType);
+        registration.GetType().GetMethod("ToConstant")!.MakeGenericMethod(serviceType).Invoke(registration, [service]);
+    }
+
+    private static object GetRegistration(Type serviceType)
+    {
         var locator = typeof(AvaloniaLocator).GetProperty("CurrentMutable")!.GetValue(null)!;
-        var registration = locator.GetType().GetMethods()
+        return locator.GetType().GetMethods()
             .Single(m => m.Name == "Bind" && m.IsGenericMethodDefinition && m.GetParameters().Length == 0)
             .MakeGenericMethod(serviceType).Invoke(locator, null)!;
-        registration.GetType().GetMethod("ToConstant")!.MakeGenericMethod(serviceType).Invoke(registration, [service]);
+    }
+
+    public void EnableRoutedKeyboardNavigation()
+    {
+        foreach (string name in new[] { "KeyboardNavigationHandler", "AccessKeyHandler" })
+        {
+            var implementation = typeof(InputElement).Assembly.GetType("Avalonia.Input." + name)!;
+            var service = implementation.GetInterface("I" + name)!;
+            var registration = GetRegistration(service);
+            registration.GetType().GetMethod("ToTransient")!.MakeGenericMethod(implementation).Invoke(registration, null);
+        }
     }
 
     public static bool MoveFocus(InputElement root, IInputElement input, NavigationDirection direction)

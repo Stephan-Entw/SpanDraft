@@ -251,6 +251,8 @@ public static class Strings
     public static string Zoom => Get(nameof(Zoom));
     public static string About => Get(nameof(About));
     public static string AboutDescription => Get(nameof(AboutDescription));
+    public static string AboutGitHubToolTip => Get(nameof(AboutGitHubToolTip));
+    public static string AboutPrivacyToolTip => Get(nameof(AboutPrivacyToolTip));
     public static string VersionLabel => Get(nameof(VersionLabel));
     public static string GitHubLink => Get(nameof(GitHubLink));
     public static string LinkOpenError => Get(nameof(LinkOpenError));
@@ -378,7 +380,6 @@ public static class Strings
     public static string SectionDefinitionLibrarySaved => Get(nameof(SectionDefinitionLibrarySaved));
     public static string SectionDefinitionParametricForm => Get(nameof(SectionDefinitionParametricForm));
     public static string SectionDefinitionManualFormDescription => Get(nameof(SectionDefinitionManualFormDescription));
-    public static string SectionDefinitionChangeProfile => Get(nameof(SectionDefinitionChangeProfile));
     public static string SectionDefinitionParametricGroup => Get(nameof(SectionDefinitionParametricGroup));
     public static string SectionDefinitionDimensions => Get(nameof(SectionDefinitionDimensions));
     public static string AllMaterials => Get(nameof(AllMaterials));

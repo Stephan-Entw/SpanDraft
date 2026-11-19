@@ -318,6 +318,11 @@ public sealed class DesktopProjectSetupControlTests
         {
             Assert.True(double.IsNaN(button.Height)); Assert.Equal(default, button.BorderThickness);
             Assert.All(button.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible), text => Assert.True(text.Bounds.Height >= text.TextLayout.Height));
+            var change = Assert.Single(button.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == Strings.ChangeLink);
+            Assert.True(change.IsEffectivelyVisible);
+            Assert.Equal(Application.Current!.FindResource("Accent"), change.Foreground);
+            Assert.True(change.TextDecorations is null or { Count: 0 });
+            Assert.Equal(Colors.Transparent, Assert.IsAssignableFrom<ISolidColorBrush>(button.Background).Color);
         }
         Assert.True(lengthArea.Bounds.Right < section.Bounds.Left); Assert.True(section.Bounds.Right < material.Bounds.Left);
         Assert.True(section.Bounds.Width > material.Bounds.Width);
@@ -494,6 +499,9 @@ public sealed class DesktopProjectSetupControlTests
         Assert.Equal("Author", setup.Draft.Author);
         Assert.True(DesktopControlEnvironment.MoveFocus(window, project, NavigationDirection.Next)); Assert.True(reference.IsFocused);
         Assert.True(DesktopControlEnvironment.MoveFocus(window, reference, NavigationDirection.Next));
+        var segmentMenu = beam.Part<Button>("SegmentMenuButton")!;
+        Assert.True(segmentMenu.IsFocused);
+        Assert.True(DesktopControlEnvironment.MoveFocus(window, segmentMenu, NavigationDirection.Next));
         var lengthInput = beam.Part<TextBox>("SetupLengthInput")!;
         Assert.True(lengthInput.IsFocused);
         Assert.True(DesktopControlEnvironment.MoveFocus(window, lengthInput, NavigationDirection.Next));

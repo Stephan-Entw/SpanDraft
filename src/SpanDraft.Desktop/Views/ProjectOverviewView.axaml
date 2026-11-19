@@ -10,10 +10,10 @@
   <UserControl.Resources>
     <DataTemplate x:Key="SupportRowTemplate" x:DataType="state:ProjectOverviewItem">
       <controls:OverviewTableRow Classes="overviewRow">
-        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
+        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding #EntityName.NameToolTip}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
-          <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
+          <controls:OverviewEntityName x:Name="EntityName" Text="{Binding Name}" Classes="entityName" />
         </Button>
         <controls:TechnicalTextBlock controls:OverviewTableRow.Column="1" Text="{Binding Type}" Classes="text" />
         <controls:TechnicalTextBlock controls:OverviewTableRow.Column="2" Text="{Binding Position, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
@@ -29,10 +29,10 @@
     </DataTemplate>
     <DataTemplate x:Key="LoadRowTemplate" x:DataType="state:ProjectOverviewItem">
       <controls:OverviewTableRow Classes="overviewRow">
-        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
+        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding #EntityName.NameToolTip}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
-          <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
+          <controls:OverviewEntityName x:Name="EntityName" Text="{Binding Name}" Classes="entityName" />
         </Button>
         <controls:TechnicalTextBlock controls:OverviewTableRow.Column="1" Text="{Binding Value, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
         <controls:TechnicalTextBlock controls:OverviewTableRow.Column="2" Text="{Binding Position, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
@@ -40,10 +40,10 @@
     </DataTemplate>
     <DataTemplate x:Key="MomentReleaseRowTemplate" x:DataType="state:ProjectOverviewItem">
       <controls:OverviewTableRow Classes="overviewRow">
-        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
+        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding #EntityName.NameToolTip}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
-          <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
+          <controls:OverviewEntityName x:Name="EntityName" Text="{Binding Name}" Classes="entityName" />
         </Button>
         <controls:TechnicalTextBlock controls:OverviewTableRow.Column="1" Text="{Binding Type}" Classes="text" />
         <controls:TechnicalTextBlock controls:OverviewTableRow.Column="2" Text="{Binding Position, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
@@ -51,10 +51,10 @@
     </DataTemplate>
     <DataTemplate x:Key="MomentReleaseResultRowTemplate" x:DataType="state:ProjectOverviewReleaseResult">
       <controls:OverviewTableRow Classes="overviewRow">
-        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
+        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding #EntityName.NameToolTip}"
                 AutomationProperties.Name="{Binding Name}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
-          <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
+          <controls:OverviewEntityName x:Name="EntityName" Text="{Binding Name}" Classes="entityName" />
         </Button>
         <controls:TechnicalTextBlock controls:OverviewTableRow.Column="1" Text="{Binding RotationLeft, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
         <controls:TechnicalTextBlock controls:OverviewTableRow.Column="2" Text="{Binding RotationRight, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
@@ -70,13 +70,13 @@
     </DataTemplate>
     <DataTemplate x:Key="ReactionRowTemplate" x:DataType="state:ProjectOverviewReaction">
       <controls:OverviewTableRow Classes="overviewRow">
-        <!-- A shared row is not an action, but its name stays readable through this tooltip. -->
-        <Border Background="Transparent" ToolTip.Tip="{Binding Name}" />
-        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding Name}"
+        <!-- The transparent cell hosts the tooltip when the shared reaction button is inert. -->
+        <Border Background="Transparent" ToolTip.Tip="{Binding #EntityName.NameToolTip}" />
+        <Button Classes="ghost overviewEntityAction" Click="EntityNameClicked" ToolTip.Tip="{Binding #EntityName.NameToolTip}"
                 AutomationProperties.Name="{Binding Name}"
                 IsHitTestVisible="{Binding IsEditable}" Focusable="{Binding IsEditable}"
                 IsEnabled="{Binding !$parent[UserControl].((vm:EditorViewModel)DataContext).IsBusy}">
-          <controls:TechnicalTextBlock Text="{Binding Name}" Classes="entityName" />
+          <controls:OverviewEntityName x:Name="EntityName" Text="{Binding Name}" Classes="entityName" />
         </Button>
         <controls:TechnicalTextBlock controls:OverviewTableRow.Column="1" Text="{Binding Rx, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />
         <controls:TechnicalTextBlock controls:OverviewTableRow.Column="2" Text="{Binding Ry, Converter={x:Static presentation:TechnicalLineBreaks.Converter}}" Classes="number" />

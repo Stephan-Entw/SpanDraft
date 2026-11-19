@@ -5,10 +5,13 @@ using Avalonia.Controls.Presenters;
 using Avalonia.Data;
 using Avalonia.Diagnostics;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SpanDraft.Desktop;
+using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
@@ -125,6 +128,108 @@ public sealed class DesktopMenuControlTests
         Press(file, Key.Down); Arrange(window, 1100, 650);
         Assert.True(action.IsFocused); Press(action, Key.Enter);
         Assert.Equal(1, executed); Assert.False(file.IsSubMenuOpen); Assert.False(popup.IsOpen);
+        window.Close();
+    }
+
+    [Fact]
+    public void ProjectSetupTabsInCardOrderAndMainMenuUsesAltAndF10()
+    {
+        using var environment = new DesktopControlEnvironment();
+        environment.EnableRoutedKeyboardNavigation();
+        var files = new Files();
+        var window = new MainWindow(new(files, new(files, "settings"), UserSettings.Default));
+        window.Show(); Dispatcher.UIThread.RunJobs();
+        Assert.True(window.Initialization.IsCompletedSuccessfully);
+        var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
+        main.NewCommand.Execute(null);
+        Arrange(window, 1250, 800);
+
+        var menu = window.FindControl<Menu>("MainMenu")!;
+        var file = Assert.IsType<MenuItem>(menu.Items[0]);
+        var setup = Assert.Single(window.GetVisualDescendants().OfType<ProjectSetupView>());
+        var card = setup.FirstCard();
+        var title = setup.Part<TextBox>("CalculationTitleInput");
+        var cardOrder = new Control[]
+        {
+            setup.Part<TextBox>("ReferenceInput"), card.Part<Button>("SegmentMenuButton"),
+            card.Part<TextBox>("SetupLengthInput"), card.Part<Button>("SectionCardButton"),
+            card.Part<Button>("MaterialCardButton"), setup.Part<Button>("AddSegmentButton")
+        };
+
+        Assert.True(title.Focus());
+        var visited = new List<Control> { title };
+        while (true)
+        {
+            SendKey(Key.Tab);
+            var focused = Assert.IsAssignableFrom<Control>(window.FocusManager.GetFocusedElement());
+            Assert.False(menu.IsKeyboardFocusWithin);
+            if (ReferenceEquals(focused, title)) break;
+            Assert.DoesNotContain(focused, visited);
+            visited.Add(focused);
+        }
+        Assert.Equal(cardOrder, visited.Skip(visited.IndexOf(cardOrder[0])).Take(cardOrder.Length));
+        SendKey(Key.Tab, KeyModifiers.Shift);
+        Assert.True(visited[^1].IsFocused);
+        SendKey(Key.Tab);
+        Assert.True(title.IsFocused);
+
+        SendKey(Key.LeftAlt, KeyModifiers.Alt);
+        SendKey(Key.LeftAlt, routedEvent: InputElement.KeyUpEvent);
+        Assert.True(menu.IsOpen);
+        Assert.True(file.IsFocused);
+        SendKey(Key.LeftAlt, KeyModifiers.Alt);
+        SendKey(Key.LeftAlt, routedEvent: InputElement.KeyUpEvent);
+        Assert.False(menu.IsOpen);
+        Assert.True(title.IsFocused);
+
+        SendKey(Key.F10);
+        Assert.True(menu.IsOpen);
+        Assert.True(file.IsFocused);
+        menu.Close();
+        window.Close();
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(window.IsVisible);
+
+        void SendKey(Key key, KeyModifiers modifiers = KeyModifiers.None, RoutedEvent? routedEvent = null) =>
+            ((Control)window.FocusManager.GetFocusedElement()!).RaiseEvent(new KeyEventArgs
+            {
+                RoutedEvent = routedEvent ?? InputElement.KeyDownEvent,
+                Key = key,
+                KeyModifiers = modifiers
+            });
+    }
+
+    [Fact]
+    public void AboutLinksShareUnderliningAndAccentStatesWithVisibleKeyboardFocus()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var window = new AboutWindow { WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Show(); Arrange(window, 380, 400);
+
+        var app = Application.Current!;
+        var links = ((Control)window.Content!).GetVisualDescendants().OfType<Button>().ToArray();
+        Assert.Equal(new[] { ApplicationMetadata.LicenseShortName, Strings.Privacy, Strings.GitHubLink },
+            links.Select(link => Assert.IsType<TextBlock>(link.Content).Text));
+        Assert.Equal(new object[] { ApplicationMetadata.License, Strings.AboutPrivacyToolTip, Strings.AboutGitHubToolTip },
+            links.Select(ToolTip.GetTip));
+        foreach (var link in links)
+        {
+            var caption = Assert.IsType<TextBlock>(link.Content);
+            Assert.Equal(TextDecorationLocation.Underline, Assert.Single(caption.TextDecorations!).Location);
+            Assert.Equal(app.FindResource("Accent"), caption.Foreground);
+            var states = (IPseudoClasses)link.Classes;
+            states.Set(":pointerover", true);
+            Assert.Equal(app.FindResource("AccentHover"), caption.Foreground);
+            states.Set(":pressed", true);
+            Assert.Equal(app.FindResource("AccentPressed"), caption.Foreground);
+            states.Set(":pressed", false);
+            states.Set(":pointerover", false);
+
+            Assert.True(link.Focus(NavigationMethod.Tab));
+            var ring = Assert.Single(link.GetVisualDescendants().OfType<Border>(), border => border.Name == "FocusRing");
+            Assert.True(ring.IsVisible);
+            Assert.Equal(app.FindResource("Accent"), ring.BorderBrush);
+        }
         window.Close();
     }
 

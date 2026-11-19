@@ -66,6 +66,8 @@
   <data name="Zoom" xml:space="preserve"><value>Zoom</value></data>
   <data name="About" xml:space="preserve"><value>Über SpanDraft</value></data>
   <data name="AboutDescription" xml:space="preserve"><value>Open-Source-Tool zur Balkenberechnung</value></data>
+  <data name="AboutGitHubToolTip" xml:space="preserve"><value>Quellcode auf GitHub im Browser öffnen</value></data>
+  <data name="AboutPrivacyToolTip" xml:space="preserve"><value>Mitgelieferte Datenschutzerklärung anzeigen</value></data>
   <data name="VersionLabel" xml:space="preserve"><value>Version</value></data>
   <data name="GitHubLink" xml:space="preserve"><value>GitHub</value></data>
   <data name="LinkOpenError" xml:space="preserve"><value>Der Link konnte nicht im Browser geöffnet werden.</value></data>
@@ -289,7 +291,6 @@
   <data name="SectionDefinitionDimensions" xml:space="preserve"><value>Abmessungen</value></data>
   <data name="SectionDefinitionParametricForm" xml:space="preserve"><value>Parametrische Form</value></data>
   <data name="SectionDefinitionManualFormDescription" xml:space="preserve"><value>Manuelle Querschnittswerte</value></data>
-  <data name="SectionDefinitionChangeProfile" xml:space="preserve"><value>Ändern ›</value></data>
   <data name="SectionDefinitionParametricGroup" xml:space="preserve"><value>Parametrische Querschnitte</value></data>
   <data name="SectionDefinitionAutomatic" xml:space="preserve"><value>Automatisch</value></data>
   <data name="AllMaterials" xml:space="preserve"><value>Alle Werkstoffe</value></data>

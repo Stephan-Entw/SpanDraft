@@ -479,6 +479,41 @@ public sealed class SectionDefinitionControlTests : SectionDefinitionPrototypeTe
             }
         }
     }
+    [Fact]
+    public void ProfileCardShowsFullCardHoverAndFocusAndOpensFormSelectionWithEnter()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var vm = new SectionDefinitionViewModel();
+        vm.SelectForm(SectionEditorType.Circle);
+        var view = new SectionDefinitionView { DataContext = vm };
+        var window = new Window { Content = view };
+        window.Show();
+        ArrangeSection(window);
+
+        var card = view.FindControl<Button>("ProfileCard")!;
+        var content = Assert.IsType<Grid>(card.Content);
+        var change = Assert.Single(content.Children.OfType<TextBlock>(), text => text.Text == Strings.ChangeLink);
+        var app = Application.Current!;
+        Assert.Equal(app.FindResource("Accent"), change.Foreground);
+        Assert.True(change.TextDecorations is null or { Count: 0 });
+        Assert.Equal(app.FindResource("Surface"), card.Background);
+        Assert.Empty(card.GetVisualDescendants().OfType<Button>());
+
+        var states = (IPseudoClasses)card.Classes;
+        states.Set(":pointerover", true);
+        Assert.Equal(app.FindResource("SurfaceHover"), card.Background);
+        states.Set(":pointerover", false);
+        Assert.True(card.Focus(NavigationMethod.Tab));
+        ArrangeSection(window);
+        var ring = Assert.Single(card.GetVisualDescendants().OfType<Border>(), border => border.Name == "FocusRing");
+        Assert.True(ring.IsVisible);
+        Assert.Equal(card.Bounds.Size, ring.Bounds.Size);
+
+        card.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
+        Assert.True(vm.IsChoosingForm);
+        window.Close();
+    }
+
     [Theory]
     [InlineData("de-DE", 1000, 600)] [InlineData("en-US", 1000, 600)]
     [InlineData("de-DE", 1100, 650)] [InlineData("en-US", 1100, 650)]
@@ -490,7 +525,7 @@ public sealed class SectionDefinitionControlTests : SectionDefinitionPrototypeTe
         {
             var vm = new SectionDefinitionViewModel(new(units)); var view = new SectionDefinitionView { DataContext = vm };
             var window = new Window { Content = view }; window.Show(); ArrangeSection(window, width, height);
-            Assert.False(view.FindControl<Button>("ChangeFormButton")!.IsEffectivelyVisible);
+            Assert.False(view.FindControl<Button>("ProfileCard")!.IsEffectivelyVisible);
             foreach (var form in vm.Forms)
             {
                 vm.ChangeFormCommand.Execute(null); vm.SelectForm(form.Value); ArrangeSection(window, width, height);
@@ -545,11 +580,11 @@ public sealed class SectionDefinitionControlTests : SectionDefinitionPrototypeTe
                 Assert.True(icon.IsEffectivelyVisible); Assert.Same(view.FindControl<Grid>("ProfileCardContent"), icon.Parent);
                 Assert.Equal(formType(), icon.Type); Assert.Equal(new Size(32, 32), icon.Bounds.Size);
                 Assert.Null(view.FindControl<TextBlock>("SelectedFormLabel"));
-                var changeForm = view.FindControl<Button>("ChangeFormButton")!;
+                var changeForm = view.FindControl<Button>("ProfileCard")!;
                 Assert.True(changeForm.IsEffectivelyVisible);
                 Assert.Same(vm.ChangeFormCommand, changeForm.Command);
                 Assert.DoesNotContain(changeForm, view.FindControl<StackPanel>("HeaderActions")!.Children);
-                Assert.Equal(70, view.FindControl<Border>("ProfileCard")!.MinHeight);
+                Assert.Equal(70, changeForm.MinHeight);
                 Assert.True(header.Bounds.Width <= width - 48);
                 var title = view.FindControl<TextBlock>("DefinitionTitle")!; var edit = view.FindControl<PathIcon>("TitleEditIcon")!;
                 Assert.InRange(edit.Bounds.Left - title.Bounds.Right, 7.5, 8.5);

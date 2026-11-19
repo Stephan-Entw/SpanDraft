@@ -182,7 +182,14 @@ public partial class MainWindow : Window
             || e.Key == Key.Y && e.KeyModifiers == KeyModifiers.Control && OperatingSystem.IsWindows();
         if (historyKey && HasEditableTextFocus()) return;
         // Keyboard menu activation must protect drafts before focus leaves their input.
-        if (e.Key is Key.F10 or Key.LeftAlt or Key.RightAlt)
+        if (e.Key == Key.F10 && e.KeyModifiers == KeyModifiers.None)
+        {
+            _model.SetMainMenuOpen(true);
+            MainMenu.Open();
+            e.Handled = true;
+            return;
+        }
+        if (e.Key is Key.LeftAlt or Key.RightAlt)
         {
             _model.SetMainMenuOpen(true);
             Dispatcher.UIThread.Post(() => _model.SetMainMenuOpen(MainMenu.IsOpen), DispatcherPriority.Background);

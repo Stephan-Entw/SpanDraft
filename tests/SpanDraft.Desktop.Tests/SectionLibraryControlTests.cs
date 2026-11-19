@@ -263,6 +263,13 @@ public sealed class SectionLibraryControlTests : SectionDefinitionRedesignTestSu
             var buttons = view.FindControl<ItemsControl>("LibraryEntryList")!.GetVisualDescendants().OfType<Button>().ToArray();
             var load = buttons.Single(b => b.Classes.Contains("presetLoad"));
             var delete = buttons.Single(b => b.Classes.Contains("presetDelete"));
+            var hover = (IPseudoClasses)load.Classes;
+            hover.Set(":pointerover", true);
+            var surface = Assert.Single(load.GetVisualDescendants().OfType<Avalonia.Controls.Presenters.ContentPresenter>(),
+                presenter => presenter.Name == "DraftContent");
+            Assert.Equal(Application.Current!.FindResource("SurfaceHover"), surface.Background);
+            Assert.Equal(load.Bounds.Size, surface.Bounds.Size);
+            hover.Set(":pointerover", false);
             delete.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Dispatcher.UIThread.RunJobs();
             Assert.Equal(1, library.DeleteCalls); Assert.Null(vm.Section); Assert.False(vm.HasCustomName);
             Assert.Equal(library.DeleteError, vm.LibraryError);
@@ -366,7 +373,7 @@ public sealed class SectionLibraryControlTests : SectionDefinitionRedesignTestSu
                     Assert.True(position.Y >= 0);
                     Assert.True(position.Y + box.Bounds.Height <= heading.TranslatePoint(default, view)!.Value.Y, type + ": inputs overlap library heading");
                 }
-                var profile = view.FindControl<Border>("ProfileCard")!;
+                var profile = view.FindControl<Button>("ProfileCard")!;
                 var profileLeft = profile.TranslatePoint(default, view)!.Value.X;
                 var profileRight = profileLeft + profile.Bounds.Width;
                 var cards = list.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("presetCard")).ToArray();
@@ -382,6 +389,12 @@ public sealed class SectionLibraryControlTests : SectionDefinitionRedesignTestSu
                     var delete = buttons.Single(b => b.Classes.Contains("presetDelete"));
                     Assert.DoesNotContain(delete.GetVisualAncestors(), a => a is Button);
                     Assert.True(load.TranslatePoint(default, entry)!.Value.X + load.Bounds.Width <= delete.TranslatePoint(default, entry)!.Value.X);
+                    var row = Assert.IsType<Grid>(entry.Child);
+                    Assert.Equal(default, load.Bounds.Position);
+                    Assert.Equal(row.Bounds.Height, load.Bounds.Height);
+                    Assert.InRange(Math.Abs(delete.Bounds.Center.Y - row.Bounds.Height / 2), 0, 1 / window.RenderScaling);
+                    Assert.Equal(new CornerRadius(entry.CornerRadius.TopLeft - entry.BorderThickness.Left, 0, 0,
+                        entry.CornerRadius.BottomLeft - entry.BorderThickness.Left), load.CornerRadius);
                     Assert.Equal(Strings.SectionDefinitionDeleteLibrary, Avalonia.Automation.AutomationProperties.GetName(delete));
                     Assert.Equal(Strings.SectionDefinitionDeleteLibrary, ToolTip.GetTip(delete));
                     Assert.Same(Application.Current!.FindResource("FluentIcon.Delete"), Assert.IsType<PathIcon>(delete.Content).Data);
@@ -566,7 +579,7 @@ public sealed class SectionLibraryControlTests : SectionDefinitionRedesignTestSu
         Assert.Same(Application.Current!.FindResource("FluentIcon.Info"), infoIcon.Data);
         Assert.Equal(new Thickness(0), radiusHint.BorderThickness);
         Assert.Same(Application.Current!.FindResource("FluentIcon.Edit"), view.FindControl<PathIcon>("TitleEditIcon")!.Data);
-        Assert.DoesNotContain(view.FindControl<StackPanel>("HeaderActions")!.Children, c => c == view.FindControl<Button>("ChangeFormButton"));
+        Assert.DoesNotContain(view.FindControl<StackPanel>("HeaderActions")!.Children, c => c == view.FindControl<Button>("ProfileCard"));
         var layout = SectionPreviewDrawingLayout.Create(vm.Preview!, new Size(724, 700), UnitCatalog.Millimeter, _ => new Size(80, 14));
         Assert.Equal(310, Math.Max(layout.ProfileBounds.Width, layout.ProfileBounds.Height), 6);
         radiusHint.Focus(); Dispatcher.UIThread.RunJobs(); Assert.True(ToolTip.GetIsOpen(radiusHint)); Capture("info-focus"); CaptureTip(radiusHint, "info-tooltip");

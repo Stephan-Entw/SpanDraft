@@ -6,7 +6,7 @@ using SpanDraft.Reporting.Notation;
 namespace SpanDraft.Desktop.Controls;
 
 /// <summary>Preserves the bound string while shaping scientific exponents with the bundled font.</summary>
-public sealed class TechnicalTextBlock : TextBlock
+public class TechnicalTextBlock : TextBlock
 {
     protected override TextLayout CreateTextLayout(string? text)
     {
