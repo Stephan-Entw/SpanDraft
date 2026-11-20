@@ -17,6 +17,11 @@
   from the resulting executable/app bundle by absolute path. Verify its process
   path and that it started after the build before taking screenshots or reporting
   visual results.
+- Native macOS UI checks require the interactive WindowServer/display session.
+  Run `./scripts/agent ui-launch` directly with the agent runtime's escalated
+  execution, outside the sandbox. Request approval for that command if needed
+  and do not try it in the sandbox first. After the launch verifies the process
+  against the current checkout and build, continue with the planned UI checks.
 - UI layout tests should prefer structural and relative invariants such as
   alignment, containment, equal sizing and absence of clipping or overflow over
   narrow absolute pixel ranges. Use absolute bounds only when the size itself is

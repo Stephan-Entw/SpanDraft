@@ -9,6 +9,7 @@ Usage: ./scripts/agent <command>
   help [--regenerate-assets]                  Build offline help
   icons [--check]                            Update or check generated Toolbar and Fluent icons
   ui-launch                                  Build and launch a fresh macOS development instance
+                                             Sandboxed agents must use escalated execution with host GUI access
   verify                                     Run local product checks and tests in English
 
 Modules: product, desktop, rendering, tooling (or the full test project name).
@@ -160,9 +161,10 @@ icons() {
 
 check_display() {
     local session displays uid
+    local gui_hint='From a sandboxed agent, rerun ./scripts/agent ui-launch outside the sandbox or with escalated GUI access.'
     uid=$(id -u)
     [[ $(/bin/launchctl managername) == Aqua && $(/usr/bin/stat -f '%u' /dev/console) == "$uid" ]] \
-        || die 'No active macOS console session is available.'
+        || die "No active macOS console session is available. $gui_hint"
     session=$(/usr/sbin/ioreg -n Root -d 1)
     if ! awk -v uid="$uid" '
         /"IOConsoleUsers" = / {
@@ -175,11 +177,11 @@ check_display() {
         }
         END { exit !available }
     ' <<<"$session"; then
-        die 'The macOS console session is locked or unavailable.'
+        die "The macOS console session is locked or unavailable. $gui_hint"
     fi
     displays=$(/usr/sbin/system_profiler SPDisplaysDataType -json)
     grep -Eq '"spdisplays_online"[[:space:]]*:[[:space:]]*"spdisplays_yes"' <<<"$displays" \
-        || die 'No macOS display is available for a UI check.'
+        || die "No macOS display is available for a UI check. $gui_hint"
 }
 
 launch_ui() {
