@@ -1,49 +1,79 @@
 # Project guidelines
 
+## Sources of truth
+
 - `docs/KONZEPT.md` defines product vision, scope and roadmap.
 - Durable technical contracts belong in their dedicated documents:
   `docs/DOMAIN.md`, `docs/SOLVER.md`, `docs/ENGINEERING.md`, `docs/ANALYSIS.md`,
   `docs/PROJECT_FORMAT.md`, `docs/LIBRARIES.md` and `docs/VALIDATION.md`.
-- Keep `docs/UI.md` limited to rationale that code and tests do not adequately
-  explain. Do not mirror the current interface or require documentation updates
-  for changes to controls, menus, dialogs or layout.
+- Read only the documentation relevant to the current task.
+- `docs/UI.md` contains rationale that code and tests do not adequately explain.
+  Do not mirror routine control, menu, dialog or layout changes there.
+- `docs/TESTING.md` defines the testing strategy. Read it before changing test
+  structure, coverage, tolerances, isolation or test levels.
 - Do not duplicate implementation details, milestone histories or changing test
   counts across documentation. Prefer code and tests for implementation details.
-- For UI changes, follow the existing compact Windows-desktop/Fluent design,
-  especially the section editor and material library. Inspect and reuse their
-  controls, design tokens and layout patterns; avoid web-app styling such as
-  dashboard cards, oversized forms or responsive stacking.
-- For manual UI checks, build the current checkout and launch a fresh instance
-  from the resulting executable/app bundle by absolute path. Verify its process
-  path and that it started after the build before taking screenshots or reporting
-  visual results.
+
+## Architecture and UI
+
+- Keep Core independent of UI, numerical libraries, persistence and reporting.
+- For UI changes, follow the existing compact Windows-desktop/Fluent design.
+  Inspect and reuse established controls, design tokens and layout patterns,
+  especially in the section editor and material library. Avoid web-app styling
+  such as dashboard cards, oversized forms or responsive stacking.
+- Prefer structural and relative UI layout invariants such as alignment,
+  containment, equal sizing and absence of clipping or overflow. Use absolute
+  bounds only when the size itself is an intentional product constraint.
+
+## Agent workflow
+
+- Prefer repository-provided agent commands over ad-hoc equivalent build, test,
+  generation or launch commands.
+- On macOS agent environments use:
+  - `./scripts/agent build`
+  - `./scripts/agent test [module] [-class ... | -method ...]`
+  - `./scripts/agent help [--regenerate-assets]`
+  - `./scripts/agent icons [--check]`
+  - `./scripts/agent ui-launch`
+  - `./scripts/agent verify`
+- Do not probe equivalent raw `dotnet` commands first when a repository command
+  covers the operation. Outside agent environments, use the standard README and
+  CI workflows.
+- Keep repository exploration targeted: search first, then read only the files or
+  ranges needed for the task. Avoid dumping multiple complete files, generated
+  artifacts or persisted tool outputs unless their full contents are required.
+- Prefer the agent's search/read tools; otherwise use `rg`. Quote glob arguments
+  under zsh and use macOS/BSD-compatible shell syntax.
+- After a sandbox, permission, IPC, cache or display-state failure, do not retry
+  command variants blindly. Use the documented repository path or identify the
+  failure class before retrying.
+- For long-running commands, use the agent runtime's background/wait mechanism
+  rather than repeated `sleep` polling.
 - Native macOS UI checks require the interactive WindowServer/display session.
   Run `./scripts/agent ui-launch` directly with the agent runtime's escalated
   execution, outside the sandbox. Request approval for that command if needed
   and do not try it in the sandbox first. After the launch verifies the process
   against the current checkout and build, continue with the planned UI checks.
-- UI layout tests should prefer structural and relative invariants such as
-  alignment, containment, equal sizing and absence of clipping or overflow over
-  narrow absolute pixel ranges. Use absolute bounds only when the size itself is
-  an intentional product constraint.
+
+## Generated resources
+
 - SVG files under `src/SpanDraft.Desktop/Assets/Icons/Toolbar` and `Fluent` are
-  design sources. After changes, run `dotnet run --file scripts/update-icons.cs`;
-  add `-- --check` to verify the committed resources.
-- Keep Core independent of UI, numerical libraries, persistence and reporting.
-- Section-definition draft invariant: custom and library display names are
-  form-local. Switching the section shape must never carry a name into another
-  FormDraft; returning to a form restores its own name. See `docs/UI.md`.
-- Commit messages follow Conventional Commits: `<type>: <short description>`.
-  Use types such as `feat:`, `fix:`, `docs:`, `test:`, `refactor:` or `chore:`;
-  write the description in English.
-  Example: `feat: add beam domain model with SI units and validation`.
+  design sources. After changing them, use `./scripts/agent icons`; use
+  `./scripts/agent icons --check` to verify committed generated resources.
+- Do not edit generated resources when a source or generator exists.
 
 ## Testing
 
-- Follow `docs/TESTING.md`; test each contract on the cheapest reliable level.
-- Keep exhaustive numerical and state matrices on Product level; use representative
-  cases for Desktop and Rendering where the input dimensions do not interact.
-- Do not weaken analytical or independent numerical validation to improve runtime.
-- Tests sharing global Avalonia or rendering state must remain isolated.
-- Identify the framework-specific behavior before adding Desktop or Rendering tests.
-- Move or replace meaningful assertions when optimizing tests; do not simply delete them.
+- Follow `docs/TESTING.md` and test each contract on the cheapest reliable level.
+- During iteration, run the narrowest relevant tests.
+- Do not weaken analytical, numerical or compatibility coverage to make tests
+  pass or improve runtime.
+- Use `./scripts/agent verify` for broad changes or final local verification.
+  Independent solver validation remains a separate workflow and is run only when
+  required by the affected contract or validation documentation.
+
+## Commits
+
+- Commit messages follow Conventional Commits: `<type>: <short description>`.
+- Use types such as `feat:`, `fix:`, `docs:`, `test:`, `refactor:` or `chore:`;
+  write the description in English.
