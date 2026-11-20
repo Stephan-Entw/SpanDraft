@@ -1,0 +1,68 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
+        xmlns:ctxt="clr-namespace:ColorTextBlock.Avalonia;assembly=ColorTextBlock.Avalonia"
+        x:Class="SpanDraft.Desktop.DocumentWindow"
+        Width="640" Height="560" MinWidth="480" MinHeight="320"
+        ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+  <md:MarkdownScrollViewer x:Name="DocumentContent" Padding="{DynamicResource Padding24}"
+                           SelectionEnabled="True" SelectionBrush="{DynamicResource Accent}">
+    <md:MarkdownScrollViewer.Styles>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock.Heading1">
+        <Setter Property="FontSize" Value="{DynamicResource PageTitleSize}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,5,0,12" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock.Heading2">
+        <Setter Property="FontSize" Value="{DynamicResource SectionTitleSize}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,8,0,8" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock.Heading3">
+        <Setter Property="FontSize" Value="{DynamicResource SubtitleSize}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,8,0,4" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock.Paragraph">
+        <Setter Property="Margin" Value="0,0,0,8" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer Grid.List">
+        <Setter Property="Margin" Value="12,0,0,4" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer Grid.List > StackPanel > ctxt|CTextBlock.Paragraph">
+        <Setter Property="Margin" Value="0,0,0,6" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer Grid.List > ctxt|CTextBlock.ListMarker">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer Border.Note">
+        <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+        <Setter Property="BorderThickness" Value="2,0,0,0" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer Border.Note > ctxt|CTextBlock.Note">
+        <Setter Property="Margin" Value="8,4" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer Border.CodeBlock">
+        <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+        <Setter Property="BorderThickness" Value="{DynamicResource BorderWidth}" />
+        <Setter Property="CornerRadius" Value="{DynamicResource RadiusXS}" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="Padding" Value="12,8" />
+      </Style>
+      <Style Selector=".Markdown_Avalonia_MarkdownViewer TextBlock.CodeBlock">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
+        <Setter Property="FontSize" Value="{DynamicResource BodySize}" />
+        <Setter Property="Margin" Value="0" />
+      </Style>
+    </md:MarkdownScrollViewer.Styles>
+  </md:MarkdownScrollViewer>
+</Window>

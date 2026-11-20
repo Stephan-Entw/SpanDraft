@@ -317,6 +317,8 @@
   <data name="MaterialLibrary" xml:space="preserve"><value>Bibliothek</value></data>
   <data name="MaterialDetailsTitle" xml:space="preserve"><value>Eigenschaften</value></data>
   <data name="UserManual" xml:space="preserve"><value>Benutzerhandbuch</value></data>
+  <data name="WhatsNew" xml:space="preserve"><value>Was ist neu?</value></data>
+  <data name="WhatsNewOpenError" xml:space="preserve"><value>Die Versionshinweise konnten nicht geöffnet werden.</value></data>
   <data name="UserManualOpenError" xml:space="preserve"><value>Das Benutzerhandbuch konnte nicht geöffnet werden.</value></data>
   <data name="Start" xml:space="preserve"><value>Start</value></data>
   <data name="Project" xml:space="preserve"><value>Projekt</value></data>

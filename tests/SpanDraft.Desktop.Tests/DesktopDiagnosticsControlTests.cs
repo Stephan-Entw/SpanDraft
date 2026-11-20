@@ -74,15 +74,9 @@ public sealed class DesktopDiagnosticsControlTests
         .Where(t => Shown(t, window)).Select(t => t.Text ?? string.Empty).ToArray();
 
     [Fact]
-    public void HelpMenuOffersDiagnosticsBetweenUserManualAndAboutAndDialogsHaveNoMenuRow()
+    public void DiagnosticsDialogHasNoMenuRow()
     {
         using var environment = new DesktopControlEnvironment();
-        var window = new MainWindow();
-        var help = Assert.IsType<MenuItem>(window.FindControl<MenuItem>("DiagnosticsMenuItem")!.Parent);
-        Assert.Equal(Strings.Help, help.Header);
-        Assert.Equal(new object?[] { Strings.UserManual, Strings.Diagnostics, null, Strings.About },
-            help.Items.OfType<Control>().Select(i => (i as MenuItem)?.Header).ToArray());
-        Assert.Equal("DiagnosticsMenuItem", ((MenuItem)help.Items.OfType<Control>().ElementAt(1)).Name);
         var dialog = new DiagnosticsWindow();
         Arrange(dialog);
         Assert.Empty(dialog.GetVisualDescendants().OfType<Menu>());

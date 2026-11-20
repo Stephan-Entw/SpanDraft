@@ -12,11 +12,7 @@ public sealed class DesktopApplicationMetadataTests
     [Fact]
     public void ThirdPartyNoticesAreShippedAsReadableCompanionFile()
     {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SpanDraft.sln")))
-            directory = directory.Parent;
-        Assert.NotNull(directory);
-        var expected = File.ReadAllBytes(Path.Combine(directory.FullName, "THIRD_PARTY_NOTICES.txt"));
+        var expected = File.ReadAllBytes(Path.Combine(Repository(), "THIRD_PARTY_NOTICES.txt"));
         Assert.NotEmpty(expected);
         Assert.Equal(expected, File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "THIRD_PARTY_NOTICES.txt")));
         Assert.DoesNotContain(typeof(App).Assembly.GetManifestResourceNames(),
@@ -24,15 +20,17 @@ public sealed class DesktopApplicationMetadataTests
     }
 
     [Fact]
-    public void BundledLicenseMatchesTheCompleteRepositoryFile()
+    public void BundledLicenseMatchesTheLocalGnuMarkdownFile()
     {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SpanDraft.sln")))
-            directory = directory.Parent;
-        Assert.NotNull(directory);
-        var expected = File.ReadAllText(Path.Combine(directory.FullName, "LICENSE"));
+        var filename = Path.Combine(Repository(), "legal", "license", "gpl-3.0.md");
+        var expected = File.ReadAllBytes(filename);
         Assert.NotEmpty(expected);
-        Assert.Equal(expected, ApplicationLicense.ReadText());
+        using var embedded = typeof(App).Assembly.GetManifestResourceStream("SpanDraft.Desktop.license.gpl-3.0.md");
+        Assert.NotNull(embedded);
+        using var bytes = new MemoryStream();
+        embedded.CopyTo(bytes);
+        Assert.Equal(expected, bytes.ToArray());
+        Assert.Equal(File.ReadAllText(filename), ApplicationDocuments.ReadLicense());
     }
 
     [Theory]
@@ -40,22 +38,31 @@ public sealed class DesktopApplicationMetadataTests
     [InlineData("de-CH", "de")]
     [InlineData("en-US", "en")]
     [InlineData("fr-FR", "en")]
-    public void BundledPrivacyMatchesTheRepositoryFileForTheUiCulture(string cultureName, string language)
+    public void BundledLocalizedDocumentsMatchTheCompleteFilesForTheUiCulture(string cultureName, string language)
     {
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SpanDraft.sln")))
-            directory = directory.Parent;
-        Assert.NotNull(directory);
-        var expected = File.ReadAllText(Path.Combine(directory.FullName, "legal", "privacy", $"{language}.md"));
-        Assert.False(string.IsNullOrWhiteSpace(expected));
+        var root = Repository();
+        var privacy = File.ReadAllText(Path.Combine(root, "legal", "privacy", $"{language}.md"));
+        var releaseNotes = File.ReadAllText(Path.Combine(root, "release-notes", $"{language}.md"));
+        Assert.False(string.IsNullOrWhiteSpace(privacy));
+        Assert.False(string.IsNullOrWhiteSpace(releaseNotes));
 
         var previousCulture = CultureInfo.CurrentUICulture;
         try
         {
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(cultureName);
-            Assert.Equal(expected, ApplicationPrivacy.ReadText());
+            Assert.Equal(privacy, ApplicationDocuments.ReadPrivacy());
+            Assert.Equal(releaseNotes, ApplicationDocuments.ReadReleaseNotes());
         }
         finally { CultureInfo.CurrentUICulture = previousCulture; }
+    }
+
+    private static string Repository()
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "SpanDraft.sln")))
+            directory = directory.Parent;
+        Assert.NotNull(directory);
+        return directory.FullName;
     }
 
     [Fact]

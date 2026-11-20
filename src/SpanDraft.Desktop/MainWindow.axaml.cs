@@ -7,6 +7,7 @@ using Avalonia.VisualTree;
 using SpanDraft.Desktop.Diagnostics;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.ViewModels;
 
 namespace SpanDraft.Desktop;
@@ -21,6 +22,7 @@ public partial class MainWindow : Window
     private bool _closing;
     private bool _closeApproved;
     private AboutWindow? _aboutWindow;
+    private DocumentWindow? _releaseNotesWindow;
     private DiagnosticsWindow? _diagnosticsWindow;
     private SettingsWindow? _settingsWindow;
     private bool _initializing = true;
@@ -164,6 +166,21 @@ public partial class MainWindow : Window
         _diagnosticsWindow = window;
         window.Closed += (_, _) => _diagnosticsWindow = null;
         window.Show(this);
+    }
+
+    private async void ShowWhatsNew(object? sender, RoutedEventArgs e)
+    {
+        if (_initializing || _closing || _releaseNotesWindow is not null) return;
+        try
+        {
+            _releaseNotesWindow = new DocumentWindow(Strings.WhatsNew, ApplicationDocuments.ReadReleaseNotes()) { Icon = Icon };
+            await _releaseNotesWindow.ShowDialog(this);
+        }
+        catch (Exception)
+        {
+            await _dialogs.ShowErrorAsync(Strings.WhatsNewOpenError);
+        }
+        finally { _releaseNotesWindow = null; }
     }
 
     private async void ShowAbout(object? sender, RoutedEventArgs e)

@@ -17,45 +17,6 @@ public sealed class DesktopTypographyTests
 {
     private const string Symbols = "−·≈±²³ΣσεØäöüÄÖÜßρν∞⁰¹⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉\u202f\u00a0×≤≥—…";
 
-    [Fact]
-    public void LicenseUsesBundledMonoWithoutMissingGlyphsOrHorizontalOverflow()
-    {
-        using var environment = new DesktopControlEnvironment();
-        var window = new LicenseWindow();
-        var viewer = Assert.IsType<ScrollViewer>(window.Content);
-        var text = window.FindControl<SelectableTextBlock>("LicenseContent")!;
-        Assert.Equal("avares://SpanDraft.Desktop/Assets/Fonts#IBM Plex Mono", text.FontFamily.ToString());
-        Assert.Equal(Application.Current!.FindResource("MonospaceFont"), text.FontFamily);
-        Assert.Equal(ApplicationLicense.ReadText(), text.Text);
-        foreach (double width in new[] { window.Width, window.MinWidth })
-        {
-            window.Width = width;
-            var size = new Size(width, window.Height);
-            window.ApplyTemplate();
-            window.Measure(size);
-            window.Arrange(new Rect(size));
-            DesktopControlEnvironment.ArrangeSection(window, width, window.Height);
-            Assert.True(viewer.Viewport.Width > 0);
-            Assert.True(viewer.Extent.Width <= viewer.Viewport.Width + 0.5,
-                $"At {width}: extent {viewer.Extent.Width} exceeds viewport {viewer.Viewport.Width}.");
-            Assert.All(text.TextLayout.TextLines, line => Assert.True(line.Width <= text.Bounds.Width + 0.5,
-                $"At {width}: visible line width {line.Width} exceeds bounds {text.Bounds.Width}."));
-            var runs = text.TextLayout.TextLines.SelectMany(line => line.TextRuns).OfType<ShapedTextRun>().ToArray();
-            Assert.NotEmpty(runs);
-            Assert.All(runs, run =>
-            {
-                Assert.Equal("IBM Plex Mono", run.GlyphRun.GlyphTypeface.FamilyName);
-                Assert.All(run.GlyphRun.GlyphInfos, glyph => Assert.NotEqual(0, glyph.GlyphIndex));
-            });
-        }
-        using var sample = new TextLayout("iMW0. ", new Typeface(text.FontFamily), text.FontSize, Brushes.Black);
-        var advances = sample.TextLines.SelectMany(line => line.TextRuns).OfType<ShapedTextRun>()
-            .SelectMany(run => run.GlyphRun.GlyphInfos).Select(glyph => glyph.GlyphAdvance).ToArray();
-        Assert.Equal(6, advances.Length);
-        Assert.True(advances[0] > 0);
-        Assert.All(advances, advance => Assert.Equal(advances[0], advance, 5));
-    }
-
     private static void AssertPlexGlyphs(TextLayout layout)
     {
         var runs = layout.TextLines.SelectMany(line => line.TextRuns).OfType<ShapedTextRun>().ToArray();

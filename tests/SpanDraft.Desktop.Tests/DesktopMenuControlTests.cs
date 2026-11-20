@@ -212,6 +212,7 @@ public sealed class DesktopMenuControlTests
             links.Select(link => Assert.IsType<TextBlock>(link.Content).Text));
         Assert.Equal(new object[] { ApplicationMetadata.License, Strings.AboutPrivacyToolTip, Strings.AboutGitHubToolTip },
             links.Select(ToolTip.GetTip));
+        Assert.Equal(ApplicationMetadata.RepositoryUrl, links[2].Tag);
         foreach (var link in links)
         {
             var caption = Assert.IsType<TextBlock>(link.Content);
@@ -237,7 +238,7 @@ public sealed class DesktopMenuControlTests
     public void MenuLessDialogsDoNotAcquireAMenuRow()
     {
         using var environment = new DesktopControlEnvironment();
-        foreach (var dialog in new Window[] { new AboutWindow(), new SettingsWindow(), new LicenseWindow() })
+        foreach (var dialog in new Window[] { new AboutWindow(), new SettingsWindow(), new DocumentWindow("Document", "# Heading") })
         {
             Arrange(dialog, double.IsNaN(dialog.Width) ? 1100 : dialog.Width, double.IsNaN(dialog.Height) ? 650 : dialog.Height);
             Assert.Empty(dialog.GetVisualDescendants().OfType<Menu>());

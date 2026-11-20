@@ -6,10 +6,12 @@ GitHub Windows x64 releases are automatic after a successful push CI run on
 ## Version and release preparation
 
 The central product version is `<Version>` in `Directory.Build.props`.
-`RELEASE_NOTES.md` contains user-facing notes with the newest version first and
-exact headings such as `## 0.1.1`. Versions use `MAJOR.MINOR.PATCH`, without leading
-zeros or suffixes; tags use the `v` prefix. Do not add a release date before
-publication.
+`release-notes/en.md` and `release-notes/de.md` contain the English and German
+user-facing notes with the newest version first and exact headings such as
+`## 0.1.1`. The app displays the corresponding file in full. The English file
+is the canonical source for GitHub Releases. Versions use `MAJOR.MINOR.PATCH`
+without leading zeros or suffixes, and tags use the `v` prefix. Add release
+dates after publication.
 
 The final commit on `main` must have this exact subject:
 
@@ -17,10 +19,11 @@ The final commit on `main` must have this exact subject:
 chore: prepare release vX.Y.Z
 ```
 
-It must change exactly these two files:
+It must change exactly these three files:
 
 - `Directory.Build.props`, setting the effective Desktop version to `X.Y.Z`.
-- `RELEASE_NOTES.md`, containing exactly one non-empty `## X.Y.Z` section.
+- `release-notes/en.md` and `release-notes/de.md`, each containing exactly one
+  non-empty `## X.Y.Z` section for the target version.
 
 Product changes, fixes, dependencies, packaging, workflows and general
 documentation belong in earlier commits. If Desktop dependencies changed,
@@ -35,14 +38,14 @@ automatically, without another approval.**
 
 1. Finish features and fixes. Perform targeted manual product or installer checks
    during development when the change needs them.
-2. Create the final two-file `chore: prepare release vX.Y.Z` commit and push `main`.
+2. Create the final three-file `chore: prepare release vX.Y.Z` commit and push `main`.
 3. The existing CI runs Product, Validation and Help. Only a successful push run
    on `main` can trigger release processing; PRs and manually started CI cannot
    publish.
 4. The Release workflow validates the subject, exact changed-file set, effective
-   MSBuild version and matching non-empty notes section. Ordinary commits finish
-   successfully with `is_release=false`; malformed release-preparation subjects
-   fail.
+   MSBuild version and matching non-empty notes section in both languages.
+   Ordinary commits finish successfully with `is_release=false`. Malformed
+   release-preparation subjects fail.
 5. On `windows-2025`, the existing packaging script builds the installer once.
    The automated smoke test installs that EXE, checks the installed contents and
    shortcuts, verifies the project icon and per-user file association, then opens
@@ -53,8 +56,9 @@ automatically, without another approval.**
    an internal Actions artifact. The publish job verifies its exact filename and
    hash before publishing that same EXE.
 7. GitHub creates `vX.Y.Z` on the tested commit and publishes `SpanDraft vX.Y.Z`.
-   Notes are only the contents under `## X.Y.Z` up to the next `## ` heading or
-   EOF. The installer is the only custom asset; GitHub's source archives are normal.
+   GitHub takes the contents under `## X.Y.Z` in `release-notes/en.md` up to
+   the next `## ` heading or EOF. The installer is the only custom asset.
+   GitHub generates the usual source archives.
 
 The workflow checks that remote `main` still points to the candidate before
 packaging and immediately before publication. Release concurrency cancels older
@@ -82,7 +86,7 @@ If a product bug is found before publication:
    published. A later commit on `main` also makes the old candidate stale.
 2. Revert the unpublished release-preparation commit with a normal commit.
 3. Commit the fix normally, then create a new final release-preparation commit
-   with the same two-file contract. The same version may be reused while it has
+   with the same three-file contract. The same version may be reused while it has
    never been publicly released.
 4. Push the new final SHA; the complete CI, packaging and smoke-test path repeats.
 

@@ -107,6 +107,11 @@ try {
             throw "Missing or empty installed file: $path"
         }
     }
+    $installedLicense = Join-Path $installDirectory 'LICENSE'
+    $sourceLicense = Join-Path $repoRoot 'LICENSE'
+    if ((Get-FileHash -LiteralPath $installedLicense).Hash -cne (Get-FileHash -LiteralPath $sourceLicense).Hash) {
+        throw 'The installed license differs from the repository LICENSE.'
+    }
     if ((Get-FileHash -LiteralPath $projectIcon).Hash -cne (Get-FileHash -LiteralPath $sourceIcon).Hash) {
         throw 'The installed project icon differs from the checked-in ICO.'
     }

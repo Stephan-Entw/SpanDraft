@@ -2,6 +2,9 @@
 THIRD_PARTY_NOTICES.txt text eol=lf
 src/SpanDraft.Desktop/Assets/Fonts/*.txt text eol=lf
 
+# Preserve the official GNU Markdown download byte for byte.
+legal/license/gpl-3.0.md -text
+
 # The icon generator also checks its committed resources byte-for-byte.
 src/SpanDraft.Desktop/Assets/Icons/Generated/*.axaml text eol=lf
 

@@ -37,7 +37,9 @@
   <ItemGroup>
     <AssemblyMetadata Include="LicenseDisplayName" Value="$(LicenseDisplayName)" />
     <AssemblyMetadata Include="LicenseShortName" Value="$(LicenseShortName)" />
-    <EmbeddedResource Include="../../LICENSE" LogicalName="SpanDraft.Desktop.LICENSE" />
+    <EmbeddedResource Include="../../legal/license/gpl-3.0.md" LogicalName="SpanDraft.Desktop.license.gpl-3.0.md" />
+    <EmbeddedResource Include="../../release-notes/de.md" LogicalName="SpanDraft.Desktop.release-notes.de.md" />
+    <EmbeddedResource Include="../../release-notes/en.md" LogicalName="SpanDraft.Desktop.release-notes.en.md" />
     <EmbeddedResource Include="../../legal/privacy/de.md" LogicalName="SpanDraft.Desktop.privacy.de.md" />
     <EmbeddedResource Include="../../legal/privacy/en.md" LogicalName="SpanDraft.Desktop.privacy.en.md" />
     <EmbeddedResource Include="Libraries/material-catalog.json" LogicalName="SpanDraft.Desktop.Libraries.material-catalog.json" />

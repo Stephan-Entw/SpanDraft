@@ -56,6 +56,8 @@ public static class Strings
 
     public static string UserManual => Get(nameof(UserManual));
     public static string UserManualOpenError => Get(nameof(UserManualOpenError));
+    public static string WhatsNew => Get(nameof(WhatsNew));
+    public static string WhatsNewOpenError => Get(nameof(WhatsNewOpenError));
     public static string SectionDefinitionShapeI => Get(nameof(SectionDefinitionShapeI));
     public static string SectionDefinitionArea => Get(nameof(SectionDefinitionArea));
     public static string SectionDefinitionInertia => Get(nameof(SectionDefinitionInertia));

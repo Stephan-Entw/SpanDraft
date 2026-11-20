@@ -52,7 +52,6 @@ jobs:
           import os
           import re
           import subprocess
-          from pathlib import Path
 
           def command(*args):
               return subprocess.check_output(args, text=True).rstrip('\r\n')
@@ -68,22 +67,12 @@ jobs:
           if not match:
               raise SystemExit('Invalid release-preparation subject.')
           version = match[1]
-          changed = command('git', 'diff', '--no-renames', '--name-only', 'HEAD^', 'HEAD').splitlines()
-          if sorted(changed) != ['Directory.Build.props', 'RELEASE_NOTES.md']:
-              raise SystemExit('Release preparation must change exactly Directory.Build.props and RELEASE_NOTES.md.')
           actual = command('dotnet', 'msbuild', 'src/SpanDraft.Desktop/SpanDraft.Desktop.csproj',
                            '-nologo', '-getProperty:Version', '-property:Configuration=Release',
                            '-property:RuntimeIdentifier=win-x64')
           if actual != version:
               raise SystemExit(f'MSBuild Version {actual!r} does not match {version}.')
-          lines = Path('RELEASE_NOTES.md').read_text(encoding='utf-8').splitlines()
-          headings = [i for i, line in enumerate(lines) if line == f'## {version}']
-          if len(headings) != 1:
-              raise SystemExit('Expected exactly one matching release-notes heading.')
-          start = headings[0] + 1
-          end = next((i for i in range(start, len(lines)) if lines[i].startswith('## ')), len(lines))
-          if not '\n'.join(lines[start:end]).strip():
-              raise SystemExit('Release notes must not be empty.')
+          subprocess.run(['python3', 'scripts/release_notes.py', 'validate', version], check=True)
           remote = command('git', 'ls-remote', '--exit-code', 'origin', 'refs/heads/main').split()
           if remote != [os.environ['RELEASE_SHA'], 'refs/heads/main']:
               raise SystemExit('main has moved beyond this release candidate.')
@@ -235,17 +224,8 @@ jobs:
           if installer.stat().st_size == 0 or hashlib.sha256(installer.read_bytes()).hexdigest() != expected_hash:
               raise SystemExit('Installer SHA-256 does not match the smoke-tested installer.')
 
-          lines = Path('RELEASE_NOTES.md').read_text(encoding='utf-8').splitlines(keepends=True)
-          headings = [i for i, line in enumerate(lines) if line.rstrip('\r\n') == f'## {version}']
-          if len(headings) != 1:
-              raise SystemExit('Expected exactly one matching release-notes heading.')
-          start = headings[0] + 1
-          end = next((i for i in range(start, len(lines)) if lines[i].startswith('## ')), len(lines))
-          notes = ''.join(lines[start:end])
-          if not notes.strip():
-              raise SystemExit('Release notes must not be empty.')
           notes_file = Path(os.environ['RUNNER_TEMP']) / 'spandraft-release-notes.md'
-          notes_file.write_text(notes, encoding='utf-8')
+          subprocess.run(['python3', 'scripts/release_notes.py', 'export-en', version, str(notes_file)], check=True)
 
           if api(f'releases/tags/{tag}', allow_missing=True) is not None:
               raise SystemExit('A release already exists; it will not be modified.')

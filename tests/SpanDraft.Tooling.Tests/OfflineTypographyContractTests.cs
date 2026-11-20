@@ -42,11 +42,8 @@ public sealed class OfflineTypographyContractTests
     }
 
     [Fact]
-    public void LicenseAndOwnedHelpSourcesDoNotDeclareSystemFontFamilies()
+    public void OwnedHelpSourcesUseBundledFontFamilies()
     {
-        var license = XDocument.Load(Path.Combine(Repository(), "src", "SpanDraft.Desktop", "LicenseWindow.axaml"));
-        var families = license.Descendants().Attributes("FontFamily").Select(attribute => attribute.Value).ToArray();
-        Assert.Equal(new[] { "{DynamicResource MonospaceFont}" }, families);
         foreach (string file in Directory.EnumerateFiles(Path.Combine(Repository(), "help", "shared"), "*", SearchOption.AllDirectories)
             .Where(file => Path.GetExtension(file) is ".css" or ".html"))
         {

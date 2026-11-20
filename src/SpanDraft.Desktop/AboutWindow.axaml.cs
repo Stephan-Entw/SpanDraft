@@ -7,8 +7,7 @@ namespace SpanDraft.Desktop;
 
 public partial class AboutWindow : Window
 {
-    private LicenseWindow? _licenseWindow;
-    private PrivacyWindow? _privacyWindow;
+    private DocumentWindow? _documentWindow;
 
     public AboutWindow()
     {
@@ -39,37 +38,26 @@ public partial class AboutWindow : Window
         }
     }
 
-    private async void OpenLicense(object? sender, RoutedEventArgs e)
-    {
-        if (_licenseWindow is not null) return;
-        LinkError.Text = Strings.LicenseOpenError;
-        LinkError.IsVisible = false;
-        try
-        {
-            _licenseWindow = new LicenseWindow { Icon = Icon };
-            await _licenseWindow.ShowDialog(this);
-        }
-        catch (Exception)
-        {
-            LinkError.IsVisible = true;
-        }
-        finally { _licenseWindow = null; }
-    }
+    private async void OpenLicense(object? sender, RoutedEventArgs e) =>
+        await OpenDocumentAsync(ApplicationMetadata.License, ApplicationDocuments.ReadLicense, Strings.LicenseOpenError);
 
-    private async void OpenPrivacy(object? sender, RoutedEventArgs e)
+    private async void OpenPrivacy(object? sender, RoutedEventArgs e) =>
+        await OpenDocumentAsync(Strings.Privacy, ApplicationDocuments.ReadPrivacy, Strings.PrivacyOpenError);
+
+    private async Task OpenDocumentAsync(string title, Func<string> readMarkdown, string error)
     {
-        if (_privacyWindow is not null) return;
-        LinkError.Text = Strings.PrivacyOpenError;
+        if (_documentWindow is not null) return;
+        LinkError.Text = error;
         LinkError.IsVisible = false;
         try
         {
-            _privacyWindow = new PrivacyWindow { Icon = Icon };
-            await _privacyWindow.ShowDialog(this);
+            _documentWindow = new DocumentWindow(title, readMarkdown()) { Icon = Icon };
+            await _documentWindow.ShowDialog(this);
         }
         catch (Exception)
         {
             LinkError.IsVisible = true;
         }
-        finally { _privacyWindow = null; }
+        finally { _documentWindow = null; }
     }
 }
