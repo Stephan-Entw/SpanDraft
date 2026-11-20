@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Features>$(Features);FileBasedProgram</Features>
+    <DefineConstants>$(DefineConstants);APP_ICON_BUILD_PROJECT</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../scripts/update-app-icons.cs" Link="update-app-icons.cs" />
+    <PackageReference Include="Svg.Skia" Version="5.1.1" />
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+  </ItemGroup>
+</Project>

@@ -30,6 +30,10 @@ try
     Directory.CreateDirectory(temporary);
     if (!File.Exists(converter))
     {
+        if (Environment.GetEnvironmentVariable("SPANDRAFT_ICON_CACHE_ONLY") == "1")
+            throw new InvalidOperationException("The pinned SvgToXaml converter is not cached. " +
+                "Bootstrap it outside the agent sandbox with dotnet run --file scripts/update-icons.cs -- --check.");
+
         using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
         var bytes = await client.GetByteArrayAsync($"https://codeload.github.com/wieslawsoltes/SvgToXaml/zip/{revision}");
         if (Convert.ToHexString(SHA256.HashData(bytes)) != archiveHash)

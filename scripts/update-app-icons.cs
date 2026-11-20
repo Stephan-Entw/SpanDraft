@@ -43,19 +43,54 @@ try
     if (OperatingSystem.IsMacOS())
     {
         string iconset = Path.Combine(temporary, "SpanDraft.iconset");
-        Directory.CreateDirectory(iconset);
+        string icns = Path.Combine(temporary, "SpanDraft.icns");
+#if APP_ICON_BUILD_PROJECT
+        // iconutil can unpack an ICNS in the agent sandbox even when packing fails.
+        bool checkIconset = check;
+#else
+        bool checkIconset = false;
+#endif
+        if (checkIconset)
+            await Iconutil("iconset", Path.Combine(assets, "SpanDraft.icns"), iconset);
+        else
+            Directory.CreateDirectory(iconset);
         foreach (int size in new[] { 16, 32, 128, 256, 512 })
         {
-            await File.WriteAllBytesAsync(Path.Combine(iconset, $"icon_{size}x{size}.png"), Png(size));
-            await File.WriteAllBytesAsync(Path.Combine(iconset, $"icon_{size}x{size}@2x.png"), Png(size * 2));
+            await CheckOrWriteImage($"icon_{size}x{size}.png", size);
+            await CheckOrWriteImage($"icon_{size}x{size}@2x.png", size * 2);
         }
-        string icns = Path.Combine(temporary, "SpanDraft.icns");
-        var start = new ProcessStartInfo("/usr/bin/iconutil") { UseShellExecute = false };
-        foreach (string argument in new[] { "--convert", "icns", "--output", icns, iconset }) start.ArgumentList.Add(argument);
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("Cannot start iconutil.");
-        await process.WaitForExitAsync();
-        if (process.ExitCode != 0) throw new InvalidOperationException("iconutil failed.");
-        outputs.Add("SpanDraft.icns", await File.ReadAllBytesAsync(icns));
+        if (!checkIconset)
+        {
+            await Iconutil("icns", iconset, icns);
+            outputs.Add("SpanDraft.icns", await File.ReadAllBytesAsync(icns));
+        }
+
+        async Task CheckOrWriteImage(string name, int size)
+        {
+            string path = Path.Combine(iconset, name);
+            byte[] expected = Png(size);
+            if (!checkIconset)
+            {
+                await File.WriteAllBytesAsync(path, expected);
+                return;
+            }
+
+            using var actual = SKBitmap.Decode(path);
+            using var rendered = SKBitmap.Decode(expected);
+            if (actual is null || actual.Width != size || actual.Height != size)
+                throw new InvalidOperationException($"Outdated or missing: SpanDraft.icns ({name}).");
+
+            SKColor[] actualPixels = actual.Pixels, expectedPixels = rendered.Pixels;
+            if (actualPixels.AsSpan().SequenceEqual(expectedPixels)) return;
+
+            // iconutil changes semi-transparent RGB when extracting the two legacy ARGB slots.
+            if (name is "icon_16x16.png" or "icon_32x32.png" &&
+                actualPixels.Zip(expectedPixels).All(pair => pair.First.Alpha == pair.Second.Alpha &&
+                    (pair.Second.Alpha != byte.MaxValue || pair.First == pair.Second)))
+                return;
+
+            throw new InvalidOperationException($"Outdated: SpanDraft.icns ({name}).");
+        }
     }
     bool outdated = false;
     foreach (var (name, bytes) in outputs)
@@ -94,3 +129,12 @@ catch (Exception error)
 finally { Directory.Delete(temporary, recursive: true); }
 
 static string ScriptDirectory([CallerFilePath] string path = "") => Path.GetDirectoryName(path)!;
+
+static async Task Iconutil(string format, string input, string output)
+{
+    var start = new ProcessStartInfo("/usr/bin/iconutil") { UseShellExecute = false };
+    foreach (string argument in new[] { "--convert", format, "--output", output, input }) start.ArgumentList.Add(argument);
+    using var process = Process.Start(start) ?? throw new InvalidOperationException("Cannot start iconutil.");
+    await process.WaitForExitAsync();
+    if (process.ExitCode != 0) throw new InvalidOperationException($"iconutil failed to convert {input} to {format}.");
+}

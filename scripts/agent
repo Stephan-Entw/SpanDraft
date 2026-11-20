@@ -1,0 +1,282 @@
+#!/bin/bash
+set -eo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: ./scripts/agent <command>
+  build                                      Build the product solution in Release
+  test [module] [-class NAME | -method NAME]   Build and run xUnit Release tests
+  help [--regenerate-assets]                  Build offline help
+  icons [--check]                            Update or check generated Toolbar and Fluent icons
+  ui-launch                                  Build and launch a fresh macOS development instance
+  verify                                     Run local product checks and tests in English
+
+Modules: product, desktop, rendering, tooling (or the full test project name).
+xUnit filters take a fully qualified name or wildcard.
+EOF
+}
+
+die() {
+    printf 'agent: %s\n' "$*" >&2
+    exit 1
+}
+
+usage_error() {
+    printf 'agent: %s\n' "$*" >&2
+    usage >&2
+    exit 2
+}
+
+case "${1:-}" in
+    --help|-h) usage; exit 0 ;;
+    '') usage_error 'Specify a command.' ;;
+esac
+command=$1
+shift
+
+root=$(CDPATH= cd -P -- "$(dirname "$0")/.." && pwd)
+cd "$root"
+
+export AVALONIA_TELEMETRY_OPTOUT=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
+export DOTNET_CLI_UI_LANGUAGE=en-US
+framework=net10.0
+solution=SpanDraft.sln
+modules=(SpanDraft.Tests SpanDraft.Desktop.Tests SpanDraft.Rendering.Tests SpanDraft.Tooling.Tests)
+build_options=(--disable-build-servers -m:1 -nr:false -p:UseSharedCompilation=false --tl:off)
+scratch=
+trap 'if [[ -n "$scratch" ]]; then rm -rf -- "$scratch"; fi' EXIT
+
+prepare_scratch() {
+    if [[ -z "$scratch" ]]; then
+        scratch=$(mktemp -d "${TMPDIR:-/tmp}/spandraft-agent.XXXXXXXX")
+    fi
+}
+
+restore_packages() {
+    local target=$1 status
+    shift
+    if dotnet restore "$target" "${build_options[@]}" -p:Configuration=Release \
+        -p:NuGetAudit=false --ignore-failed-sources "$@"; then
+        return
+    else
+        status=$?
+        printf 'agent: Restore failed for %s. Check the NuGet errors above and make sure the required packages are cached.\n' "$target" >&2
+        return "$status"
+    fi
+}
+
+release_build() {
+    local target=$1 status log
+    shift
+    prepare_scratch || return "$?"
+    log="$scratch/build.log"
+    local options=(--configuration Release --no-restore "${build_options[@]}" "$@")
+    if dotnet build "$target" "${options[@]}" >"$log" 2>&1; then
+        cat "$log"
+        return
+    else
+        status=$?
+    fi
+    cat "$log" >&2
+    # MSBuild reports missing assets on --no-restore. A compiler error needs no restore.
+    if ! awk '
+        /(^|[[:space:]])error[[:space:]]+([[:alnum:]]+[0-9]+)?[[:space:]]*:/ {
+            if ($0 ~ /(^|[[:space:]])error (NETSDK1004|NETSDK1005|NETSDK1047|NETSDK1060|NETSDK1064|NU1101|NU1102|NU1301):/)
+                restore = 1
+            else
+                other = 1
+        }
+        END { exit !(restore && !other) }
+    ' "$log"; then
+        return "$status"
+    fi
+    printf 'agent: Restoring %s with the standard NuGet cache and sources.\n' "$target" >&2
+    restore_packages "$target" "$@" || return "$?"
+    dotnet build "$target" "${options[@]}"
+}
+
+run_tests() {
+    local target=$1 module assembly status first_failure=0
+    shift
+    release_build "$target" || return "$?"
+    for module in "${modules[@]}"; do
+        assembly="tests/$module/bin/Release/$framework/$module.dll"
+        printf 'agent: Running %s\n' "$module"
+        if dotnet "$assembly" -noColor -noAutoReporters "$@"; then
+            continue
+        else
+            status=$?
+            if [[ $first_failure -eq 0 ]]; then
+                first_failure=$status
+            fi
+        fi
+    done
+    return "$first_failure"
+}
+
+test_command() {
+    local target=$solution
+    if [[ $# -gt 0 && $1 != -* ]]; then
+        case "$1" in
+            product|SpanDraft.Tests) modules=(SpanDraft.Tests) ;;
+            desktop|SpanDraft.Desktop.Tests) modules=(SpanDraft.Desktop.Tests) ;;
+            rendering|SpanDraft.Rendering.Tests) modules=(SpanDraft.Rendering.Tests) ;;
+            tooling|SpanDraft.Tooling.Tests) modules=(SpanDraft.Tooling.Tests) ;;
+            *) usage_error "Unknown test module '$1'." ;;
+        esac
+        target="tests/${modules[0]}/${modules[0]}.csproj"
+        shift
+    fi
+    if [[ $# -ne 0 ]]; then
+        [[ $# -eq 2 && ( $1 == -class || $1 == -method ) && -n $2 && $2 != -* ]] \
+            || usage_error 'Use -class NAME or -method NAME.'
+    fi
+    run_tests "$target" "$@"
+}
+
+run_tool() {
+    local tool=$1
+    shift
+    release_build "tools/$tool/$tool.csproj"
+    dotnet "tools/$tool/bin/Release/$framework/$tool.dll" "$@"
+}
+
+run_temporary_tool() {
+    local tool=$1 output
+    shift
+    prepare_scratch
+    output="$scratch/$tool"
+    local project="tools/$tool/$tool.csproj"
+    local paths=("-p:BaseOutputPath=$output/bin/" "-p:BaseIntermediateOutputPath=$output/obj/")
+    # A new temporary output directory never contains restore assets.
+    restore_packages "$project" "${paths[@]}"
+    release_build "$project" "${paths[@]}"
+    dotnet "$output/bin/Release/$framework/$tool.dll" "$@"
+}
+
+icons() {
+    SPANDRAFT_ICON_CACHE_ONLY=1 run_temporary_tool SpanDraft.IconBuild "$@"
+}
+
+check_display() {
+    local session displays uid
+    uid=$(id -u)
+    [[ $(/bin/launchctl managername) == Aqua && $(/usr/bin/stat -f '%u' /dev/console) == "$uid" ]] \
+        || die 'No active macOS console session is available.'
+    session=$(/usr/sbin/ioreg -n Root -d 1)
+    if ! awk -v uid="$uid" '
+        /"IOConsoleUsers" = / {
+            count = split($0, sessions, "},")
+            for (i = 1; i <= count; i++) {
+                if (sessions[i] ~ ("\"kCGSSessionUserIDKey\"=" uid "[,}]") &&
+                    sessions[i] ~ /"kCGSSessionOnConsoleKey"=Yes/ &&
+                    sessions[i] !~ /"CGSSessionScreenIsLocked"=Yes/) available = 1
+            }
+        }
+        END { exit !available }
+    ' <<<"$session"; then
+        die 'The macOS console session is locked or unavailable.'
+    fi
+    displays=$(/usr/sbin/system_profiler SPDisplaysDataType -json)
+    grep -Eq '"spdisplays_online"[[:space:]]*:[[:space:]]*"spdisplays_yes"' <<<"$displays" \
+        || die 'No macOS display is available for a UI check.'
+}
+
+launch_ui() {
+    local executable pid log attempt
+    check_display
+    release_build src/SpanDraft.Desktop/SpanDraft.Desktop.csproj
+    executable="$root/src/SpanDraft.Desktop/bin/Release/$framework/SpanDraft.app/Contents/MacOS/SpanDraft.Desktop"
+    [[ -x "$executable" ]] || die "Development app executable is missing: $executable"
+    mkdir -p .artifacts
+    log=$(mktemp "$root/.artifacts/agent-ui.XXXXXXXX")
+    "$executable" </dev/null >"$log" 2>&1 &
+    pid=$!
+    for ((attempt = 0; attempt < 10; attempt++)); do
+        kill -0 "$pid" 2>/dev/null || break
+        if /usr/sbin/lsof -a -p "$pid" -d txt -Fn -- "$executable" | grep -Fx "n$executable" >/dev/null &&
+            kill -0 "$pid" 2>/dev/null; then
+            disown "$pid"
+            printf 'agent: Started PID %s\nExecutable: %s\nLog: %s\n' "$pid" "$executable" "$log"
+            return
+        fi
+        sleep 0.2
+    done
+    die "Could not verify the development app at PID $pid. Start log: $log"
+}
+
+check_ignored_sources() {
+    git ls-files --others --ignored --exclude-standard -z -- src tests tools scripts validation/dotnet validation/python |
+        (
+            found=0
+            while IFS= read -r -d '' path; do
+                case "$path" in
+                    */[Bb]in/*|*/[Oo]bj/*|*/[Dd]ebug/*|*/[Rr]elease/*|*/artifacts/*|*/.artifacts/*|*/publish/*|\
+                    */[Tt]est[Rr]esult*/*|*/"Generated Files"/*|*/Generated_Code/*|*/.venv/*|*/__pycache__/*) continue ;;
+                esac
+                case "$path" in
+                    *.cs|*.fs|*.csproj|*.fsproj|*.sln|*.slnx|*.props|*.targets|*.axaml|*.resx|*.svg|*.png|*.ico|*.icns|*.ttf|\
+                    *.plist|*.json|*.xml|*.yaml|*.yml|*.toml|*.spandraft|*.sh|*.ps1|*.py|*.js|*.ts|*.iss|scripts/agent)
+                        printf 'agent: Ignored source file: %s\n' "$path" >&2
+                        found=1 ;;
+                esac
+            done
+            exit "$found"
+        )
+}
+
+report_validation() {
+    local baseline local_changes committed_changes=
+    local sources=(
+        ':(glob)src/SpanDraft.Core/**/*.cs' ':(glob)src/SpanDraft.Core/**/*.csproj'
+        ':(glob)src/SpanDraft.Solver/**/*.cs' ':(glob)src/SpanDraft.Solver/**/*.csproj'
+        ':(exclude,glob)**/bin/**' ':(exclude,glob)**/obj/**'
+    )
+    local_changes=$(git status --porcelain --untracked-files=all -- "${sources[@]}")
+    if baseline=$(git merge-base HEAD refs/remotes/origin/main 2>/dev/null); then
+        committed_changes=$(git diff --name-only "$baseline" HEAD -- "${sources[@]}")
+    else
+        printf 'agent: No local origin/main merge base. Validation notice covers working tree and index changes only.\n' >&2
+    fi
+    if [[ -n "$local_changes" || -n "$committed_changes" ]]; then
+        printf 'agent: Core or Solver sources changed. Run the separate workflow in validation/README.md.\n' >&2
+    fi
+}
+
+verify() {
+    report_validation
+    git diff --check
+    git diff --cached --check
+    check_ignored_sources
+    LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=0 \
+        run_tests "$solution" -culture en-US
+    icons --check
+    run_temporary_tool SpanDraft.AppIconBuild --check
+    run_temporary_tool SpanDraft.NoticeCheck --check-local
+    # The solution build already produced all product references.
+    local tool=SpanDraft.HelpAssets
+    release_build "tools/$tool/$tool.csproj" -p:BuildProjectReferences=false
+    dotnet "tools/$tool/bin/Release/$framework/$tool.dll" --check "$root/help/assets"
+}
+
+case "$command" in
+    build|ui-launch|verify)
+        [[ $# -eq 0 ]] || usage_error "'$command' takes no arguments."
+        case "$command" in
+            build) release_build "$solution" ;;
+            ui-launch) launch_ui ;;
+            verify) verify ;;
+        esac ;;
+    test) test_command "$@" ;;
+    help)
+        case "$#" in
+            0) run_tool SpanDraft.HelpBuild --no-regenerate-assets ;;
+            1) [[ $1 == --regenerate-assets ]] || usage_error "Invalid help option '$1'."
+               run_tool SpanDraft.HelpBuild ;;
+            *) usage_error 'Use help [--regenerate-assets].' ;;
+        esac ;;
+    icons)
+        [[ $# -eq 0 || ( $# -eq 1 && $1 == --check ) ]] || usage_error 'Use icons [--check].'
+        icons "$@" ;;
+    *) usage_error "Unknown command '$command'." ;;
+esac
