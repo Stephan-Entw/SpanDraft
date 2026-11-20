@@ -3,6 +3,7 @@
         xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
         xmlns:ctxt="clr-namespace:ColorTextBlock.Avalonia;assembly=ColorTextBlock.Avalonia"
         x:Class="SpanDraft.Desktop.DocumentWindow"
+        x:ClassModifier="internal"
         Width="640" Height="560" MinWidth="480" MinHeight="320"
         ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
   <md:MarkdownScrollViewer x:Name="DocumentContent" Padding="{DynamicResource Padding24}"

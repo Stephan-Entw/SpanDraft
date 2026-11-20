@@ -8,7 +8,7 @@ using ColorTextBlock.Avalonia;
 
 namespace SpanDraft.Desktop;
 
-public partial class DocumentWindow : Window
+internal partial class DocumentWindow : Window
 {
     public DocumentWindow(string title, string markdown)
     {
