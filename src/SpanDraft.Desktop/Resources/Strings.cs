@@ -78,7 +78,7 @@ public static class Strings
     public static string SectionDefinitionCustomName => Get(nameof(SectionDefinitionCustomName));
     public static string SectionDefinitionManualProperties => Get(nameof(SectionDefinitionManualProperties));
     public static string SectionDefinitionTitle => Get(nameof(SectionDefinitionTitle));
-    public static string ChangeLink => Get(nameof(ChangeLink));
+    public static string ChangeAction => Get(nameof(ChangeAction));
     public static string SetupLength => Get(nameof(SetupLength));
     public static string SectionDefinitionEditName => Get(nameof(SectionDefinitionEditName));
     public static string SectionDefinitionSaveLibrary => Get(nameof(SectionDefinitionSaveLibrary));

@@ -241,7 +241,7 @@
   <data name="DeleteSectionQuestion" xml:space="preserve"><value>Delete “{0}” from your cross-section library? Existing projects will remain unchanged.</value></data>
   <data name="SectionDefinitionDeleteLibrary" xml:space="preserve"><value>Remove from library</value></data>
   <data name="SectionDefinitionTitle" xml:space="preserve"><value>Section definition</value></data>
-  <data name="ChangeLink" xml:space="preserve"><value>Change ›</value></data>
+  <data name="ChangeAction" xml:space="preserve"><value>Change ›</value></data>
   <data name="SetupLength" xml:space="preserve"><value>Length</value></data>
   <data name="SectionDefinitionEditName" xml:space="preserve"><value>Edit section name</value></data>
   <data name="SectionDefinitionSaveLibrary" xml:space="preserve"><value>Save in my section library</value></data>

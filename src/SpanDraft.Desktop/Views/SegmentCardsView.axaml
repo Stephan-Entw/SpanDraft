@@ -56,7 +56,7 @@
                     </Grid>
                   </StackPanel>
                   <TextBlock Text="{x:Static resources:Strings.SectionSelection}" Classes="bodyStrong" IsVisible="{Binding !HasSection}" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.ChangeLink}" Classes="changeLink" IsVisible="{Binding HasSection}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.ChangeAction}" Classes="changeAction" IsVisible="{Binding HasSection}" VerticalAlignment="Center" />
                   <PathIcon Grid.Column="1" Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronRight}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" IsVisible="{Binding !HasSection}" />
                 </Grid>
               </Button>
@@ -72,7 +72,7 @@
                     </StackPanel>
                   </StackPanel>
                   <TextBlock Text="{x:Static resources:Strings.SelectMaterialRequired}" Classes="bodyStrong" IsVisible="{Binding !HasMaterial}" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.ChangeLink}" Classes="changeLink" IsVisible="{Binding HasMaterial}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="{x:Static resources:Strings.ChangeAction}" Classes="changeAction" IsVisible="{Binding HasMaterial}" VerticalAlignment="Center" />
                   <PathIcon Grid.Column="1" Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronRight}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" IsVisible="{Binding !HasMaterial}" />
                 </Grid>
               </Button>

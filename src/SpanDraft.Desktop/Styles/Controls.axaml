@@ -299,7 +299,7 @@
     <Setter Property="Margin" Value="8,4" />
     <Setter Property="Background" Value="{DynamicResource Border}" />
   </Style>
-  <Style Selector="TextBlock.changeLink">
+  <Style Selector="TextBlock.changeAction">
     <Setter Property="Foreground" Value="{DynamicResource Accent}" />
   </Style>
   <!-- Keep Fluent artwork on its original artboard instead of stretching its ink bounds. -->

@@ -130,7 +130,7 @@
                     <TextBlock Text="{x:Static resources:Strings.SectionDefinitionParametricForm}" Classes="caption" IsVisible="{Binding !IsManual}" TextWrapping="Wrap" />
                     <TextBlock Text="{x:Static resources:Strings.SectionDefinitionManualFormDescription}" Classes="caption" IsVisible="{Binding IsManual}" TextWrapping="Wrap" />
                   </StackPanel>
-                  <TextBlock Grid.Column="2" Text="{x:Static resources:Strings.ChangeLink}" Classes="changeLink" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Text="{x:Static resources:Strings.ChangeAction}" Classes="changeAction" VerticalAlignment="Center" />
                 </Grid>
               </Button>
               <StackPanel Classes="dimensionsPanel" IsVisible="{Binding !IsManual}">

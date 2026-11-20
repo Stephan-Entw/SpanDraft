@@ -492,7 +492,7 @@ public sealed class SectionDefinitionControlTests : SectionDefinitionPrototypeTe
 
         var card = view.FindControl<Button>("ProfileCard")!;
         var content = Assert.IsType<Grid>(card.Content);
-        var change = Assert.Single(content.Children.OfType<TextBlock>(), text => text.Text == Strings.ChangeLink);
+        var change = Assert.Single(content.Children.OfType<TextBlock>(), text => text.Text == Strings.ChangeAction);
         var app = Application.Current!;
         Assert.Equal(app.FindResource("Accent"), change.Foreground);
         Assert.True(change.TextDecorations is null or { Count: 0 });

@@ -318,7 +318,7 @@ public sealed class DesktopProjectSetupControlTests
         {
             Assert.True(double.IsNaN(button.Height)); Assert.Equal(default, button.BorderThickness);
             Assert.All(button.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible), text => Assert.True(text.Bounds.Height >= text.TextLayout.Height));
-            var change = Assert.Single(button.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == Strings.ChangeLink);
+            var change = Assert.Single(button.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == Strings.ChangeAction);
             Assert.True(change.IsEffectivelyVisible);
             Assert.Equal(Application.Current!.FindResource("Accent"), change.Foreground);
             Assert.True(change.TextDecorations is null or { Count: 0 });
