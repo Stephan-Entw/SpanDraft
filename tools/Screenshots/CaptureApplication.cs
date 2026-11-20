@@ -14,7 +14,8 @@ using SpanDraft.Desktop.Views;
 
 namespace SpanDraft.Screenshots;
 
-internal sealed class CaptureApplication(WorkerRequest request, IsolatedFileStore files, string projectPath, RecentProjectEntry[] demoRecents)
+internal sealed class CaptureApplication(WorkerRequest request, IsolatedFileStore files, string projectPath,
+    string projectHash, RecentProjectEntry[] demoRecents)
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
     private MainWindow window = null!;
@@ -81,7 +82,7 @@ internal sealed class CaptureApplication(WorkerRequest request, IsolatedFileStor
     private async Task CaptureAll()
     {
         var main = (MainWindowViewModel)window.DataContext!;
-        CaptureFiles.AssertDemoRecents(demoRecents, request.BuildFinishedUtc);
+        CaptureFiles.AssertDemoRecents(demoRecents, request.Language, request.BuildFinishedUtc);
         if (!main.StartPage.RecentProjects.Select(r => r.FilePath).SequenceEqual(demoRecents.Select(r => r.Path)))
             throw new InvalidOperationException("Unexpected recent projects in isolated start page.");
         foreach (var recent in main.StartPage.RecentProjects) CaptureFiles.AssertNoPersonalPaths(recent.FilePath);
@@ -140,7 +141,9 @@ internal sealed class CaptureApplication(WorkerRequest request, IsolatedFileStor
             if (main.Session?.IsDirty != false) throw new InvalidOperationException("The screenshot run changed the demo session.");
         }
         CaptureFiles.AssertFixture(request.Fixture);
-        CaptureFiles.AssertFixture(projectPath);
+        if (CaptureFiles.Hash(projectPath) != projectHash)
+            throw new InvalidOperationException("The prepared demo project changed during capture.");
+        CaptureFiles.AssertNoPersonalPaths(File.ReadAllText(projectPath));
         foreach (string stateFile in Directory.EnumerateFiles(Path.Combine(request.RunRoot, "State")))
             CaptureFiles.AssertNoPersonalPaths(File.ReadAllText(stateFile));
         CaptureFiles.Write(Path.Combine(request.RunRoot, "worker-result.json"), new WorkerResult(evidence.ToArray(),

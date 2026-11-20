@@ -2,9 +2,10 @@
 
 This independent, manual export uses the real SpanDraft application and native
 Windows HWND capture. A complete run creates ten Microsoft Store PNGs and two
-Penpot hero PNGs. The website is outside this tool: Store Project PNGs can later
-be copied separately into the website repository and processed responsively by
-Astro there. This tool has no website dependency or WebP processing.
+Penpot hero PNGs. The website imports the two original Penpot hero PNGs from
+`src/assets/` in the website repository and builds responsive WebP images with
+Astro. Copy the `penpot/hero-project-{culture}.png` files there under their
+existing names. This tool has no website dependency or WebP processing.
 
 ## Prerequisites and invocation
 
@@ -71,7 +72,7 @@ Redirected input is supported; no interactive confirmation is needed.
 | Profile | Complete visible window | Windows scaling | Motifs | Languages |
 | --- | --- | --- | --- | --- |
 | Store | **3312 × 1863 px**, PNG, exactly 16:9 | **250%** | Start, Project, Section, Report, Materials | de-DE, en-US |
-| PenpotHero | **2400 × 1834 px**, PNG | **200%** | Project | de-DE, en-US |
+| PenpotHero | **2400 × 1868 px**, PNG | **200%** | Project | de-DE, en-US |
 
 Profiles in `CaptureConfiguration.cs` define actual pixel targets, including the
 native title bar. Scaling determines the effective UI size inside those pixels;
@@ -86,8 +87,8 @@ the runner neither requests 290% Windows DPI nor resamples the screenshot.
 Store requires 240 DPI and Avalonia `RenderScaling = 2.5`; Penpot requires
 192 DPI and `RenderScaling = 2.0` at its unchanged 200% default.
 
-Penpot's native height provides room for all three result diagrams without a
-vertical scrollbar, while retaining the same width and 200% scaling.
+Penpot's native height provides room for the divider, all three result diagrams
+and the spacing below them at 200% scaling, without a vertical scrollbar.
 The runner rejects Penpot captures with a remaining vertical scroll range in
 the editor, diagrams or project overview.
 
@@ -195,11 +196,13 @@ error messages redact checkout and user-profile paths.
 ## Fixture and isolation
 
 `Fixtures/Crane Beam.spandraft` is preserved byte for byte, with its original
-SHA-256 checked by runner, workers and tests. Store Project and Penpot Project
-open identical private copies through the same real project-opening workflow.
-There is no specially modified hero project. Section and report also use this
-fixture. Section/material editing is canceled; the project session must remain
-unchanged and solve successfully.
+SHA-256 checked by runner, workers and tests. Each worker prepares a private copy
+with the language's project filename, calculation and project titles, and author.
+The copy omits the saved section name so the application generates it from the
+geometry in the active UI language. All motifs use the same preparation, with
+identical engineering data. Workers open the copy through the real project-opening
+workflow and check its hash at the end of capture. Section and material editing
+is canceled, and the project session must stay clean and solve successfully.
 
 All settings, recovery slots and user libraries are redirected to worker-local
 state. The restricted file store rejects access outside that state and the
@@ -208,10 +211,10 @@ no operating-system username is supplied. Personal paths and visible internal
 run paths are rejected.
 
 The isolated start page contains five display-only recent paths under
-`C:\SpanDraft\Examples\`: Crane Beam, Cantilever Beam, Simply Supported Beam,
-Overhang Beam and Fixed-End Beam. They need not exist and are never opened. Both
-languages use the same prepared timestamps. All five rows and their neutral paths
-must be visible within the viewport before the fixture copy is opened.
+`C:\SpanDraft\Examples\`. The example filenames are localized and both languages
+use the same prepared timestamps. The paths need not exist and are never opened.
+All five rows and their paths must be visible within the viewport before the
+fixture copy is opened.
 
 The materials motif uses the real browser, the built-in library and selected
 `S355JR (1.0045)`, scrolled into view with an empty search. Selection is not applied

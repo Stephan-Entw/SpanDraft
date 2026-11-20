@@ -15,7 +15,7 @@ public static class CapturePublication
 
     public static void ValidateWorker(WorkerRequest request, WorkerResult result, DateTimeOffset runStarted)
     {
-        CaptureFiles.AssertDemoRecents(result.StartRecents, request.BuildFinishedUtc);
+        CaptureFiles.AssertDemoRecents(result.StartRecents, request.Language, request.BuildFinishedUtc);
         if (request.Scenes.Contains("Materials") && result.SelectedBuiltInMaterial != "S355JR (1.0045)")
             throw new InvalidDataException("The materials motif did not capture the selected built-in S355JR entry.");
         foreach (string path in result.AccessedPaths) CaptureFiles.AssertNoPersonalPaths(path);

@@ -238,19 +238,19 @@ internal static class Program
             throw new InvalidOperationException("The display configuration changed before application startup.");
         string state = Path.Combine(request.RunRoot, "State"); Directory.CreateDirectory(state);
         string examples = Path.Combine(request.RunRoot, "Examples"); Directory.CreateDirectory(examples);
-        string project = Path.Combine(examples, "Crane Beam.spandraft");
-        File.Copy(request.Fixture, project);
+        string project = CaptureFiles.PrepareDemoProject(request.Fixture, examples, request.Language);
+        string projectHash = CaptureFiles.Hash(project);
         var files = new IsolatedFileStore(state, [project, request.Fixture]);
         var settings = UserSettings.Default with { UiLanguage = request.Language == "de-DE" ? UiLanguagePreference.German : UiLanguagePreference.English,
             RegionalFormat = RegionalFormatPreference.GermanGermany };
         var stores = DesktopStateStores.InDirectory(files, state);
         var startup = new DesktopStartupContext(files, new(files, Path.Combine(state, "settings.json")), settings)
             { StateStores = stores, UserNameProvider = static () => null };
-        var recents = CaptureFiles.DemoRecents(request.BuildFinishedUtc);
+        var recents = CaptureFiles.DemoRecents(request.Language, request.BuildFinishedUtc);
         files.WriteAtomicAsync(stores.Recents.FilePath, RecentProjectsCodec.Serialize(recents))
             .GetAwaiter().GetResult();
         CultureConfigurator.Apply(CultureConfigurator.Resolve(settings, CultureInfo.GetCultureInfo("de-DE"), CultureInfo.GetCultureInfo(request.Language)));
-        var capture = new CaptureApplication(request, files, project, recents);
+        var capture = new CaptureApplication(request, files, project, projectHash, recents);
         return AppBuilder.Configure(() => new App(startup)).UsePlatformDetect().LogToTrace()
             .StartWithClassicDesktopLifetime([], capture.Start);
     }

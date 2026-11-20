@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using SpanDraft.Desktop.Persistence;
 
 namespace SpanDraft.Screenshots;
@@ -15,7 +16,7 @@ public sealed record CaptureSize(int Width, int Height)
 public sealed record CaptureProfile(string Name, string Directory, CaptureSize Size, string[] Scenes)
 {
     public static readonly CaptureProfile Store = new("Store", "store", new(3312, 1863), CaptureFiles.Scenes);
-    public static readonly CaptureProfile PenpotHero = new("PenpotHero", "penpot", new(2400, 1834), ["Project"]);
+    public static readonly CaptureProfile PenpotHero = new("PenpotHero", "penpot", new(2400, 1868), ["Project"]);
 }
 
 public sealed record CaptureBatch(CaptureProfile Profile, string Language, string[] Scenes, int ScalePercent)
@@ -63,7 +64,6 @@ public static class CaptureFiles
     public const string FixtureHash = "46EEA4FECFAE14FEAA059F5E3CCD3C6A623191C0FF3E3647754C608B9E046931";
     public static readonly string[] Languages = ["de-DE", "en-US"];
     public static readonly string[] Scenes = ["Start", "Project", "Section", "Materials", "Report"];
-    public static readonly string[] ExampleNames = ["Crane Beam.spandraft", "Cantilever Beam.spandraft", "Simply Supported Beam.spandraft", "Overhang Beam.spandraft", "Fixed-End Beam.spandraft"];
     public static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
     public static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
@@ -82,17 +82,42 @@ public static class CaptureFiles
         };
     }
 
-    public static RecentProjectEntry[] DemoRecents(DateTimeOffset referenceTime)
+    private static string[] ExampleNames(string language) => language switch
+    {
+        "de-DE" => ["Kranträger", "Kragträger", "Einfeldträger", "Träger mit Überhang", "Beidseitig eingespannter Träger"],
+        "en-US" => ["Crane Beam", "Cantilever Beam", "Simply Supported Beam", "Overhang Beam", "Fixed-End Beam"],
+        _ => throw new ArgumentException("Unknown screenshot culture.", nameof(language))
+    };
+
+    internal static string PrepareDemoProject(string fixture, string examples, string language)
+    {
+        var names = ExampleNames(language);
+        var copy = JsonNode.Parse(File.ReadAllBytes(fixture))!.AsObject();
+        copy["document"]!.AsObject().Remove("sectionDisplayName");
+        if (language == "de-DE")
+        {
+            var info = copy["info"]!.AsObject();
+            info["calculationTitle"] = "Kranträger Version 1";
+            info["projectTitle"] = "Brückenkrananlage";
+            info["author"] = "Technische Abteilung";
+        }
+        string path = Path.Combine(examples, names[0] + ".spandraft");
+        using var stream = File.Open(path, FileMode.CreateNew, FileAccess.Write);
+        JsonSerializer.Serialize(stream, copy, Json);
+        return path;
+    }
+
+    public static RecentProjectEntry[] DemoRecents(string language, DateTimeOffset referenceTime)
     {
         TimeSpan[] ages = [new(0, 1, 20, 0), new(0, 6, 45, 0), new(1, 3, 10, 0), new(4, 8, 35, 0), new(11, 2, 50, 0)];
-        return ExampleNames.Select((name, i) => new RecentProjectEntry(@"C:\SpanDraft\Examples\" + name,
+        return ExampleNames(language).Select((name, i) => new RecentProjectEntry(@"C:\SpanDraft\Examples\" + name + ".spandraft",
             referenceTime.ToUniversalTime() - ages[i])).ToArray();
     }
 
-    public static void AssertDemoRecents(RecentProjectEntry[] entries, DateTimeOffset referenceTime)
+    public static void AssertDemoRecents(RecentProjectEntry[] entries, string language, DateTimeOffset referenceTime)
     {
-        if (!entries.SequenceEqual(DemoRecents(referenceTime)))
-            throw new InvalidDataException("The start page must contain the five neutral demo recent paths and their prepared timestamps.");
+        if (!entries.SequenceEqual(DemoRecents(language, referenceTime)))
+            throw new InvalidDataException($"The start page must contain the five {language} demo recent paths and their prepared timestamps.");
         foreach (var entry in entries) AssertNoPersonalPaths(entry.Path);
     }
 

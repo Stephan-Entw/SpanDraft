@@ -1,10 +1,14 @@
+using System.Globalization;
 using System.Security;
 using System.Runtime.InteropServices;
+using System.Text.Json.Nodes;
 using Avalonia.Threading;
+using SpanDraft.Analysis;
 using SpanDraft.Core.Sections.Parametric;
 using SpanDraft.Desktop;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Screenshots;
 using Xunit;
@@ -31,7 +35,7 @@ public sealed class ScreenshotTests
         Assert.All(batches[..2], b => Assert.Equal((3312, 1863), b.Profile.Size.Pixels));
         Assert.Equal(16 * batches[0].Profile.Size.Height, 9 * batches[0].Profile.Size.Width);
         Assert.Equal((1324.8, 745.2), (batches[0].Profile.Size.Width / 2.5, batches[0].Profile.Size.Height / 2.5));
-        Assert.Equal((2400, 1834), batches[2].Profile.Size.Pixels);
+        Assert.Equal((2400, 1868), batches[2].Profile.Size.Pixels);
         Assert.Equal(10, batches[..2].SelectMany(b => b.RelativeFiles).Count());
         Assert.Equal(2, batches[2..].SelectMany(b => b.RelativeFiles).Count());
         Assert.Equal(12, batches.SelectMany(b => b.RelativeFiles).Distinct().Count());
@@ -51,7 +55,7 @@ public sealed class ScreenshotTests
         var copy = System.Text.Json.JsonSerializer.Deserialize<WorkerRequest>(
             System.Text.Json.JsonSerializer.Serialize(request, CaptureFiles.Json), CaptureFiles.Json)!;
         Assert.Equal(expected, CaptureFiles.FileName(copy.Profile, "Project", culture));
-        Assert.Equal((2400, 1834), copy.Profile.Size.Pixels);
+        Assert.Equal((2400, 1868), copy.Profile.Size.Pixels);
         Assert.Equal(200, copy.ScalePercent);
         Assert.Equal(request.Fixture, copy.Fixture);
         Assert.Throws<ArgumentException>(() => CaptureFiles.FileName(copy.Profile, "Section", culture));
@@ -90,7 +94,7 @@ public sealed class ScreenshotTests
         Assert.False(CaptureScaling.Matches(dpi, double.NaN, scale));
         var batch = Assert.Single(CaptureBatch.Select("Store", "de-DE", "Project", scale, scale));
         Assert.Equal((3312, 1863), batch.Profile.Size.Pixels);
-        Assert.Equal((2400, 1834), Assert.Single(CaptureBatch.Select("Penpot", "de-DE", "Project", scale, scale)).Profile.Size.Pixels);
+        Assert.Equal((2400, 1868), Assert.Single(CaptureBatch.Select("Penpot", "de-DE", "Project", scale, scale)).Profile.Size.Pixels);
         var display = new DisplayDevice("primary", "display", "PCI", 5, 2940, 1846, 0, 0, dpi);
         Assert.Equal(display, DisplaySnapshot.RequireTarget([display], scale).CaptureDisplay);
     }
@@ -150,15 +154,18 @@ public sealed class ScreenshotTests
     public void CaptureNamesRejectUnknownMotifsAndCultures(string scene, string culture) =>
         Assert.Throws<ArgumentException>(() => CaptureFiles.FileName(CaptureProfile.Store, scene, culture));
 
-    [Fact]
-    public void DemoRecentsContainFiveNeutralWindowsPathsAndPreparedTimestamps()
+    [Theory]
+    [InlineData("de-DE", "Kranträger", "Kragträger", "Einfeldträger", "Träger mit Überhang", "Beidseitig eingespannter Träger")]
+    [InlineData("en-US", "Crane Beam", "Cantilever Beam", "Simply Supported Beam", "Overhang Beam", "Fixed-End Beam")]
+    public void DemoRecentsContainLocalizedNamesAndPreparedTimestamps(string language, params string[] names)
     {
         var reference = new DateTimeOffset(2026, 10, 26, 18, 0, 0, TimeSpan.FromHours(1));
-        var recents = CaptureFiles.DemoRecents(reference);
+        var recents = CaptureFiles.DemoRecents(language, reference);
         Assert.Equal(5, recents.Length);
-        Assert.Equal(new[] { @"C:\SpanDraft\Examples\Crane Beam.spandraft", @"C:\SpanDraft\Examples\Cantilever Beam.spandraft",
-            @"C:\SpanDraft\Examples\Simply Supported Beam.spandraft", @"C:\SpanDraft\Examples\Overhang Beam.spandraft",
-            @"C:\SpanDraft\Examples\Fixed-End Beam.spandraft" }, recents.Select(e => e.Path));
+        Assert.Equal(names.Select(name => @"C:\SpanDraft\Examples\" + name + ".spandraft"), recents.Select(e => e.Path));
+        if (IsWindows)
+            Assert.Equal(names, recents.Select(entry => new RecentProjectItemViewModel(entry,
+                _ => throw new InvalidOperationException("Demo recents are display-only."), () => true).Name));
         Assert.All(recents, entry =>
         {
             Assert.StartsWith(@"C:\SpanDraft\Examples\", entry.Path);
@@ -168,16 +175,16 @@ public sealed class ScreenshotTests
         Assert.Equal(new[] { new TimeSpan(0, 1, 20, 0), new(0, 6, 45, 0), new(1, 3, 10, 0), new(4, 8, 35, 0), new(11, 2, 50, 0) },
             recents.Select(e => reference - e.LastUsedUtc).ToArray());
         Assert.True(recents.Select(e => e.LastUsedUtc.UtcDateTime.Date).Distinct().Count() >= 3);
-        CaptureFiles.AssertDemoRecents(recents, reference);
+        CaptureFiles.AssertDemoRecents(recents, language, reference);
         var invalid = recents.ToArray(); invalid[0] = invalid[0] with { Path = TestPath("artifacts/internal.spandraft") };
-        Assert.Throws<InvalidDataException>(() => CaptureFiles.AssertDemoRecents(invalid, reference));
+        Assert.Throws<InvalidDataException>(() => CaptureFiles.AssertDemoRecents(invalid, language, reference));
     }
 
     [Fact(Skip = "The native Windows screenshot fixture uses Windows absolute paths.", SkipUnless = nameof(IsWindows))]
     public async Task DemoRecentsRoundTripWithoutReadingTheExampleFilesOnWindows()
     {
         var reference = new DateTimeOffset(2026, 10, 26, 18, 0, 0, TimeSpan.FromHours(1));
-        var recents = CaptureFiles.DemoRecents(reference);
+        var recents = CaptureFiles.DemoRecents("en-US", reference);
         Assert.All(recents, entry => Assert.True(Path.IsPathFullyQualified(entry.Path)));
         var files = new Files(); var reads = new List<string>();
         files.Data["isolated-recents.json"] = RecentProjectsCodec.Serialize(recents);
@@ -187,7 +194,7 @@ public sealed class ScreenshotTests
         Assert.Equal(recents, store.Entries);
         Assert.Equal("isolated-recents.json", Assert.Single(reads));
         Assert.Empty(files.Writes);
-        CaptureFiles.AssertDemoRecents(store.Entries.ToArray(), reference);
+        CaptureFiles.AssertDemoRecents(store.Entries.ToArray(), "en-US", reference);
     }
 
     [Fact]
@@ -197,6 +204,51 @@ public sealed class ScreenshotTests
         var section = Assert.IsType<ISectionGeometry>(ProjectFileCodec.Deserialize(File.ReadAllBytes(Fixture)).Document.Section);
         Assert.Equal(.1, section.Height.Meters); Assert.Equal(.08, section.Width.Meters);
         Assert.Equal(.012, section.FlangeThickness.Meters); Assert.Equal(.01, section.WebThickness.Meters); Assert.Equal(.006, section.Radius.Meters);
+    }
+
+    [Theory]
+    [InlineData("de-DE", "Kranträger.spandraft", "Kranträger Version 1", "Brückenkrananlage",
+        "Technische Abteilung", "I/H-Profil 100 × 80 × 10 × 12 mm (r = 6 mm)")]
+    [InlineData("en-US", "Crane Beam.spandraft", "Crane Beam Version 1", "Overhead Crane System",
+        "Engineering Department", "I/H section 100 × 80 × 10 × 12 mm (r = 6 mm)")]
+    public void PreparedProjectLocalizesOnlyVisibleDemoTextAndStillSolves(string language, string fileName,
+        string calculationTitle, string projectTitle, string author, string sectionName)
+    {
+        byte[] original = File.ReadAllBytes(Fixture);
+        CaptureFiles.AssertFixture(Fixture);
+        var directory = Directory.CreateTempSubdirectory("spandraft-screenshot-");
+        var previousUi = CultureInfo.CurrentUICulture;
+        var previousCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            string copyPath = CaptureFiles.PrepareDemoProject(Fixture, directory.FullName, language);
+            Assert.Equal(Path.Combine(directory.FullName, fileName), copyPath);
+            Assert.Equal(original, File.ReadAllBytes(Fixture));
+            CaptureFiles.AssertFixture(Fixture);
+            byte[] prepared = File.ReadAllBytes(copyPath);
+
+            var expected = JsonNode.Parse(original)!;
+            expected["document"]!.AsObject().Remove("sectionDisplayName");
+            expected["info"]!["calculationTitle"] = calculationTitle;
+            expected["info"]!["projectTitle"] = projectTitle;
+            expected["info"]!["author"] = author;
+            Assert.True(JsonNode.DeepEquals(expected, JsonNode.Parse(prepared)),
+                "Only the designated display text may differ from the original project.");
+
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language);
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+            var loaded = ProjectFileCodec.Deserialize(prepared);
+            var segment = Assert.Single(loaded.Document.Segments);
+            Assert.Null(segment.SectionDisplayName);
+            Assert.Equal(sectionName, SegmentLabels.SectionName(segment));
+            Assert.NotNull(BeamAnalysis.Analyze(loaded.Document.ToBeamModel()).Result);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previousUi;
+            CultureInfo.CurrentCulture = previousCulture;
+            directory.Delete(recursive: true);
+        }
     }
 
     [Theory]

@@ -29,7 +29,7 @@ public sealed class ScreenshotPublicationTests
             Assert.Equal(5, Directory.GetFiles(Path.Combine(destination, "store", "EN"), "*.png").Length);
             var penpot = Directory.GetFiles(Path.Combine(destination, "penpot"), "*.png");
             Assert.Equal(2, penpot.Length);
-            Assert.All(penpot, path => Assert.Equal((2400, 1834), CaptureFiles.PngSize(path)));
+            Assert.All(penpot, path => Assert.Equal((2400, 1868), CaptureFiles.PngSize(path)));
             Assert.True(CaptureFiles.Read<System.Text.Json.JsonElement>(Path.Combine(destination, "result.json")).GetProperty("success").GetBoolean());
         });
     }
@@ -83,7 +83,7 @@ public sealed class ScreenshotPublicationTests
             {
                 case "missing-image": File.Delete(first); break;
                 case "duplicate-evidence": captures[^1] = captures[0]; break;
-                case "wrong-size": WritePngHeader(first, new(2400, 1834)); break;
+                case "wrong-size": WritePngHeader(first, CaptureProfile.PenpotHero.Size); break;
                 case "extra-image": WritePngHeader(Path.Combine(staging, "stale.png"), new(3312, 1863)); break;
                 case "unclean-state": Directory.CreateDirectory(Path.Combine(staging, "State")); File.WriteAllText(Path.Combine(staging, "State", "settings.json"), "{}"); break;
                 case "empty-worker-directory": Directory.CreateDirectory(Path.Combine(staging, Guid.NewGuid().ToString("N"))); break;
@@ -141,6 +141,7 @@ public sealed class ScreenshotPublicationTests
     [InlineData("stale-file")]
     [InlineData("fixture")]
     [InlineData("recents")]
+    [InlineData("recents-language")]
     public void WorkerValidationRejectsInvalidNativeEvidenceAndStaleOutputs(string fault)
     {
         WithDirectory(root =>
@@ -153,7 +154,7 @@ public sealed class ScreenshotPublicationTests
                 batch.Profile, batch.ScalePercent, built, new([display], display.Name));
             var captures = StageImages(root, [batch]);
             File.Move(Path.Combine(root, batch.RelativeFiles[0]), Path.Combine(root, captures[0].File));
-            var result = new WorkerResult(captures, CaptureFiles.FixtureHash, [], CaptureFiles.DemoRecents(built), null);
+            var result = new WorkerResult(captures, CaptureFiles.FixtureHash, [], CaptureFiles.DemoRecents(batch.Language, built), null);
             CapturePublication.ValidateWorker(request, result, runStarted);
             captures[0] = fault switch
             {
@@ -168,6 +169,7 @@ public sealed class ScreenshotPublicationTests
             if (fault == "stale-file") File.SetLastWriteTimeUtc(Path.Combine(root, captures[0].File), built.UtcDateTime);
             if (fault == "fixture") result = result with { FixtureHash = "modified" };
             if (fault == "recents") result = result with { StartRecents = [] };
+            if (fault == "recents-language") result = result with { StartRecents = CaptureFiles.DemoRecents("en-US", built) };
             Assert.Throws<InvalidDataException>(() => CapturePublication.ValidateWorker(request, result, runStarted));
         });
     }
