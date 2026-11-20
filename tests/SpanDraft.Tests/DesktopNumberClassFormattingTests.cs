@@ -17,7 +17,7 @@ public sealed class DesktopNumberClassFormattingTests
     [InlineData(0.8, "800", false)]
     [InlineData(0.800000004, "800", true)]
     [InlineData(1.234, "1\u202f234", false)]
-    [InlineData(-1.2345, "-1\u202f235", true)]
+    [InlineData(-1.2345, "−1\u202f235", true)]
     [InlineData(0, "0", false)]
     [InlineData(12.5, "12\u202f500", false)]
     public void GivenValuesUseTheResultRoundingAndAreMarkedOnlyWhenRounded(double meters, string number, bool approximate)
@@ -43,7 +43,7 @@ public sealed class DesktopNumberClassFormattingTests
     [InlineData(0.8, "800", "800")]
     [InlineData(0.800000004, "≈ 800", "800,000004")]
     [InlineData(1.234, "1\u202f234", "1234")]
-    [InlineData(-1.2345, "≈ -1\u202f235", "-1234,5")]
+    [InlineData(-1.2345, "≈ −1\u202f235", "−1234,5")]
     [InlineData(123.456789012, "≈ 123\u202f457", "123456,789012")]
     public void TheEditingBufferKeepsAllDigitsOfARoundedGivenValue(double meters, string display, string editing)
     {
@@ -54,7 +54,7 @@ public sealed class DesktopNumberClassFormattingTests
     [Theory]
     [InlineData(1e-7, "100\u00a0·\u00a010⁻⁹", "0,0000001")]
     [InlineData(1e16, "10\u00a0·\u00a010¹⁵", "10\u202f000\u202f000\u202f000\u202f000\u202f000")]
-    [InlineData(-1e16, "-10\u00a0·\u00a010¹⁵", "-10\u202f000\u202f000\u202f000\u202f000\u202f000")]
+    [InlineData(-1e16, "−10\u00a0·\u00a010¹⁵", "−10\u202f000\u202f000\u202f000\u202f000\u202f000")]
     [InlineData(123456789012, "≈ 123\u00a0·\u00a010⁹", "123\u202f456\u202f789\u202f012")]
     public void GivenValuesFollowTheNotationSetting(double newtons, string automatic, string off)
     {
@@ -96,7 +96,7 @@ public sealed class DesktopNumberClassFormattingTests
         Assert.Equal("≈ 3,94", QuantityFormatter.FormatInputNumber(0.1, UnitCatalog.Inch, culture: German));
         Assert.Equal("≈ 3,94 in", QuantityFormatter.FormatInput(0.1, UnitCatalog.Inch, culture: German));
         Assert.Equal("F1 ≈ 3,94 in", QuantityFormatter.FormatInputEquation("F1", 0.1, UnitCatalog.Inch, culture: German));
-        Assert.Equal("≈ -3,94 in", QuantityFormatter.FormatInput(-0.1, UnitCatalog.Inch, culture: German));
+        Assert.Equal("≈ −3,94 in", QuantityFormatter.FormatInput(-0.1, UnitCatalog.Inch, culture: German));
         // Every rounded value is marked, independent of how many digits the exact value has. No zeros are added.
         Assert.Equal("≈ 1,23 N", QuantityFormatter.FormatInput(1.23456789012, UnitCatalog.Newton, culture: German));
         Assert.Equal("≈ 1,23 N", QuantityFormatter.FormatInput(1.234567890123, UnitCatalog.Newton, culture: German));
@@ -113,7 +113,7 @@ public sealed class DesktopNumberClassFormattingTests
     [InlineData(1, "≈ 39,4")]                      // 39.37007874015748 in
     [InlineData(10, "≈ 394")]                      // 393.7007874015748 in
     [InlineData(100, "≈ 3\u202f937")]                 // 3 937.007874015748 in
-    [InlineData(-100, "≈ -3\u202f937")]
+    [InlineData(-100, "≈ −3\u202f937")]
     [InlineData(0.0001, "≈ 0,00394")]              // 0.003937007874015748 in
     public void RoundedGivenValuesKeepWholeUnits(double meters, string expected) =>
         Assert.Equal(expected, QuantityFormatter.FormatInputNumber(meters, UnitCatalog.Inch, culture: German));
@@ -122,10 +122,10 @@ public sealed class DesktopNumberClassFormattingTests
     [InlineData(0.012356, QuantityKind.TransverseDisplacement, "12,4 mm")]
     [InlineData(0.012, QuantityKind.TransverseDisplacement, "12 mm")]
     [InlineData(0.000003456, QuantityKind.TransverseDisplacement, "0,00346 mm")]
-    [InlineData(-0.012356, QuantityKind.TransverseDisplacement, "-12,4 mm")]
+    [InlineData(-0.012356, QuantityKind.TransverseDisplacement, "−12,4 mm")]
     [InlineData(1234.56, QuantityKind.TransverseForce, "1\u202f235 N")]
     [InlineData(12345.67, QuantityKind.TransverseForce, "12\u202f346 N")]
-    [InlineData(-12345.67, QuantityKind.TransverseForce, "-12\u202f346 N")]
+    [InlineData(-12345.67, QuantityKind.TransverseForce, "−12\u202f346 N")]
     [InlineData(1234567, QuantityKind.TransverseForce, "1,23\u00a0·\u00a010⁶ N")]
     [InlineData(999999.6, QuantityKind.TransverseForce, "1\u00a0·\u00a010⁶ N")]
     [InlineData(999499.4, QuantityKind.TransverseForce, "999\u202f499 N")]
@@ -154,9 +154,9 @@ public sealed class DesktopNumberClassFormattingTests
     [InlineData(12.5, 5, "12,5")]
     [InlineData(0.5, 1, "0,5")]
     [InlineData(0.25, 1, "0,3")]
-    [InlineData(-0.25, 1, "-0,3")]
+    [InlineData(-0.25, 1, "−0,3")]
     [InlineData(1234.5, 2, "1\u202f235")]
-    [InlineData(-1234.5, 2, "-1\u202f235")]
+    [InlineData(-1234.5, 2, "−1\u202f235")]
     public void ResultPrecisionShowsNoTrailingZeros(double value, int digits, string expected) =>
         Assert.Equal(expected, QuantityFormatter.FormatResultNumber(value, QuantityKind.TransverseForce,
             significantDigits: digits, culture: German));
@@ -164,7 +164,7 @@ public sealed class DesktopNumberClassFormattingTests
     [Theory]
     [InlineData(1234567, "1\u202f234\u202f567")]
     [InlineData(999999.6, "1\u202f000\u202f000")]
-    [InlineData(-1234567.5, "-1\u202f234\u202f568")]
+    [InlineData(-1234567.5, "−1\u202f234\u202f568")]
     [InlineData(0.00012356, "0,000124")]
     [InlineData(0.0000012, "0,0000012")]
     public void ResultsWithNotationOffStayDecimalAndKeepWholeUnits(double value, string expected) =>

@@ -17,7 +17,7 @@ public sealed class DesktopNumericPresentationTests
     [InlineData(12.356, 4, "12.36")]
     [InlineData(12.356, 5, "12.356")]
     [InlineData(12.3, 5, "12.3")]
-    [InlineData(-12.356, 3, "-12.4")]
+    [InlineData(-12.356, 3, "−12.4")]
     [InlineData(0.012356, 3, "0.0124")]
     [InlineData(0.0012356, 3, "0.00124")]
     [InlineData(0.00012356, 3, "124 · 10⁻⁶")]
@@ -26,7 +26,7 @@ public sealed class DesktopNumericPresentationTests
     [InlineData(1234567, 3, "1.23 · 10⁶")]
     [InlineData(0.000000123, 3, "123 · 10⁻⁹")]
     [InlineData(1.25, 2, "1.3")]
-    [InlineData(-1.25, 2, "-1.3")]
+    [InlineData(-1.25, 2, "−1.3")]
     [InlineData(0, 3, "0")]
     public void ResultPrecisionKeepsWholeUnitsAndNeverHidesNonzeroValues(double value, int digits, string expected)
     {
@@ -77,7 +77,7 @@ public sealed class DesktopNumericPresentationTests
     [Theory]
     [InlineData(1234567, "1\u202f234\u202f567")]
     [InlineData(0.00012356, "0.000124")]
-    [InlineData(-1234567, "-1\u202f234\u202f567")]
+    [InlineData(-1234567, "−1\u202f234\u202f567")]
     public void NotationOffAlwaysUsesGroupedDecimalNotation(double value, string expected) =>
         Assert.Equal(expected, QuantityFormatter.FormatResultNumber(value, QuantityKind.PoissonRatio,
             notation: EngineeringNotation.Off, culture: CultureInfo.InvariantCulture));
@@ -97,7 +97,7 @@ public sealed class DesktopNumericPresentationTests
     public void ExtremesSignedZeroAndSemanticInfinityRemainDistinct()
     {
         Assert.Equal("4.94 · 10⁻³²⁴", QuantityFormatter.FormatResultNumber(double.Epsilon, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture));
-        Assert.Equal("-4.94 · 10⁻³²⁴", QuantityFormatter.FormatResultNumber(-double.Epsilon, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture));
+        Assert.Equal("−4.94 · 10⁻³²⁴", QuantityFormatter.FormatResultNumber(-double.Epsilon, QuantityKind.PoissonRatio, culture: CultureInfo.InvariantCulture));
         Assert.Equal("180 · 10³¹⁸ mm⁴", QuantityFormatter.FormatResult(double.MaxValue, QuantityKind.SecondMomentOfArea, culture: CultureInfo.InvariantCulture));
         Assert.Equal("∞", QuantityFormatter.FormatResult(double.PositiveInfinity, QuantityKind.SafetyFactor));
         foreach (var kind in Enum.GetValues<QuantityKind>())

@@ -182,8 +182,9 @@ Herkunft: Bei manuell definierten Profilen sind sie gespeicherte Vorgabewerte,
 bei geometrisch definierten Formen berechnete Werte.
 
 Ganzzahlige Ziffern werden in Dreiergruppen mit schmalem geschütztem Leerzeichen
-(U+202F) gegliedert; nur das Dezimalzeichen folgt dem regionalen Zahlenformat,
-unabhängig von der Oberflächensprache. Engineering-Ausdrücke verwenden geschützte
+(U+202F) gegliedert. Negative Zahlen verwenden das Minuszeichen `−` (U+2212).
+Das Dezimalzeichen folgt dem regionalen Zahlenformat unabhängig von der
+Oberflächensprache. Engineering-Ausdrücke verwenden geschützte
 Abstände um `·`. Die PDF-Ausgabe bewahrt diese Zahlengruppen beim Umbruch.
 E-Modul, Festigkeitskennwert und Dichte besitzen eigene semantische Einheiten;
 metrische Defaults sind GPa, MPa und kg/m³, im US-Profil für beide Druckgrößen ksi.
@@ -192,12 +193,14 @@ Bearbeiten verwendet stets den vollständigen gespeicherten Wert in der gewählt
 Einheit, immer in Dezimalschreibweise ohne Exponent und ohne Zifferngruppen
 (`0,0000042`); das Parsen dieses Texts ergibt exakt den gespeicherten SI-Wert,
 auch an den Grenzen von `double`. Unveränderte Eingabebuffer behalten den
-originalen SI-Wert auch bei Fokuswechsel, Rebinding und Bestätigung. Eingaben verwenden das regionale
-Dezimalzeichen und erlauben E/e-Exponenten sowie optional die ausgegebenen
-Dreiergruppen mit U+202F im Ganzzahlteil. Andere Gruppentrennzeichen,
-fehlerhafte Gruppen und Gruppierungen in Nachkommateil oder Exponent werden
-abgelehnt; Einheitensymbole und die ausgegebene `· 10`-Schreibweise sind kein
-Zahleneingabeformat.
+originalen SI-Wert auch bei Fokuswechsel, Rebinding und Bestätigung. Eingaben
+verwenden das regionale Dezimalzeichen, erlauben E/e-Exponenten und akzeptieren
+`-` (U+002D) und `−` (U+2212) als Vorzeichen der Zahl. Im Ganzzahlteil sind
+Dreiergruppen mit einheitlichem Trennzeichen zulässig: Leerzeichen (U+0020),
+geschütztes Leerzeichen (U+00A0) oder schmales geschütztes Leerzeichen (U+202F).
+Andere Trennzeichen, fehlerhafte Gruppen und Gruppierungen in Nachkommateil oder
+Exponent werden abgelehnt. Einheitensymbole und die ausgegebene
+`· 10`-Schreibweise sind kein Zahleneingabeformat.
 
 Darstellungswechsel verändern weder Berechnung, Projektdatei, Undo/Redo noch
 Dirty-State. Historische Standard-/Detailed-Einstellungen werden unter

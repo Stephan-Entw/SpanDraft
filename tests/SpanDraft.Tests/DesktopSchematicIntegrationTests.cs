@@ -607,11 +607,11 @@ public sealed class DesktopSchematicIntegrationTests
         else { editor.EditSupport(support.Id); editor.SupportDraft!.NameText = "Bearing"; }
         var scene = BeamRenderState.Create(before, Frame(before), DesktopLayoutFixture.Measure, editor.Preview, editor.HiddenSupportId,
             editor.SupportPreviewName, editor.LoadPreview, editor.HiddenLoadId, editor.LoadPreviewName);
-        Assert.Contains(scene.Annotations, a => a.IsPreview && a.Text == (load ? "Motor = -100 N" : "Bearing"));
+        Assert.Contains(scene.Annotations, a => a.IsPreview && a.Text == (load ? "Motor = −100 N" : "Bearing"));
         Assert.Equal(1, calls);
         if (load) Assert.True(editor.ConfirmLoad()); else Assert.True(editor.ConfirmSupport());
         Assert.Equal(1, calls);
-        Assert.Contains(Scene(editor.Document, Frame(editor.Document)).Annotations, a => a.Text == (load ? "Motor = -100 N" : "Bearing"));
+        Assert.Contains(Scene(editor.Document, Frame(editor.Document)).Annotations, a => a.Text == (load ? "Motor = −100 N" : "Bearing"));
     }
 
     [Theory]

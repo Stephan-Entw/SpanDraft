@@ -53,7 +53,7 @@ public sealed class DesktopInputUnitTests
         {
             double original = sign * 1.2345;
             string displayed = QuantityFormatter.FormatResultNumber(original, QuantityKind.BeamLength, options);
-            Assert.Equal((sign < 0 ? "-" : "") + expected, displayed);
+            Assert.Equal((sign < 0 ? "−" : "") + expected, displayed);
             Assert.True(InputQuantityFormatter.TryParse(displayed, UnitCatalog.Millimeter, out var parsed));
             Assert.Equal(original, parsed);
         }
@@ -66,6 +66,26 @@ public sealed class DesktopInputUnitTests
         Assert.True(InputQuantityFormatter.TryParse(otherRegion, UnitCatalog.Millimeter, out var overridden,
             CultureInfo.GetCultureInfo(culture == "de-DE" ? "en-US" : "de-DE")));
         Assert.Equal(1.2345, overridden);
+    }
+
+    [Theory]
+    [InlineData("de-DE", ',')]
+    [InlineData("en-US", '.')]
+    public void IntegerGroupsAcceptEachSupportedSpaceAndBothMinusSigns(string culture, char decimalSeparator)
+    {
+        var region = CultureInfo.GetCultureInfo(culture);
+        foreach (char group in new[] { ' ', '\u00a0', '\u202f' })
+        {
+            string integer = $"400{group}000";
+            Assert.True(InputQuantityFormatter.TryParse(integer, UnitCatalog.Newton, out double parsed, region), integer);
+            Assert.Equal(400000, parsed);
+            foreach (char minus in new[] { '-', '−' })
+            {
+                string text = $"{minus}1{group}234{group}567{decimalSeparator}5";
+                Assert.True(InputQuantityFormatter.TryParse(text, UnitCatalog.Newton, out parsed, region), text);
+                Assert.Equal(-1234567.5, parsed);
+            }
+        }
     }
 
     [Theory]
@@ -90,15 +110,22 @@ public sealed class DesktopInputUnitTests
     }
 
     [Theory]
-    [InlineData("de-DE")] [InlineData("en-US")]
-    public void MalformedGroupsAndUnrelatedSeparatorsRemainInvalid(string culture)
+    [InlineData("de-DE", ',')] [InlineData("en-US", '.')]
+    public void MalformedGroupsAndUnrelatedSeparatorsRemainInvalid(string culture, char decimalSeparator)
     {
         using var scope = new ResultCultureScope(culture, culture);
         foreach (string invalid in new[]
         {
-            "1\u202f22", "1234\u202f567", "12\u202f3456", "12\u202f\u202f345", "\u202f123", "123\u202f",
-            "1.234\u202f567", "1,234\u202f567", "12\u202f200e1\u202f000", "12 200", "12\u00a0200",
-            "12.200,05", "12,200.05", "12\u202f+200", "12\u202f200 000"
+            "\u202f123", "123\u202f", "\u00a0123", "123\u00a0", "1\t234", "1\u2009234",
+            "1.234\u202f567", "1,234\u202f567", "12.200,05", "12,200.05",
+            "12\u202f200 000", "12\u00a0200\u202f000", "12 200\u00a0000"
+        }) Assert.False(InputQuantityFormatter.TryParse(invalid, UnitCatalog.Newton, out _), invalid);
+        foreach (char group in new[] { ' ', '\u00a0', '\u202f' })
+        foreach (string invalid in new[]
+        {
+            $"40{group}00", $"400{group}00", $"1{group}23{group}456", $"1234{group}567",
+            $"12{group}3456", $"12{group}{group}345", $"12{group}+200", $"−{group}123",
+            $"1{group}234{decimalSeparator}{group}5", $"1{group}234e{group}3", $"12{group}200e1{group}000"
         }) Assert.False(InputQuantityFormatter.TryParse(invalid, UnitCatalog.Newton, out _), invalid);
     }
 

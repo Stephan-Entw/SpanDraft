@@ -112,7 +112,7 @@ public sealed class DesktopProjectOverviewTests
         Assert.Empty(overview.Supports[0].Value);
         Assert.Equal(new[] { "F1", "M1", "q1" }, AllLoads(overview).Select(l => l.Name));
         Assert.Equal(new[] { "F", "M", "q" }, AllLoads(overview).Select(l => l.Type));
-        Assert.Equal(new[] { "-100 N", "50 N·m", "-500 N/m" }, AllLoads(overview).Select(l => l.Value));
+        Assert.Equal(new[] { "−100 N", "50 N·m", "−500 N/m" }, AllLoads(overview).Select(l => l.Value));
         Assert.Equal(new[] { "400", "600", "200…800" }, AllLoads(overview).Select(l => l.Position));
         Assert.True(overview.HasSupports);
         Assert.True(overview.HasForces);
@@ -364,7 +364,7 @@ public sealed class DesktopProjectOverviewTests
             var row = editor.Overview.Reactions.Single(r => r.Id == support.Id);
             Assert.Equal(QuantityFormatter.FormatResultNumber(node.ReactionY!.Value.Newtons, QuantityKind.TransverseForce), row.Ry);
             if (node.ReactionX is { } rx) Assert.Equal(QuantityFormatter.FormatResultNumber(rx.Newtons, QuantityKind.AxialForce), row.Rx);
-            if (loaded) Assert.StartsWith("-", row.Ry);
+            if (loaded) Assert.StartsWith("−", row.Ry);
             else Assert.Equal("0", row.Ry);
         }
         if (!loaded)
@@ -394,8 +394,8 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", "-1\u202f235")]
-    [InlineData("en-US", "-1\u202f235")]
+    [InlineData("de-DE", "−1\u202f235")]
+    [InlineData("en-US", "−1\u202f235")]
     public void ReactionDisplayUsesResultPrecisionWithoutRoundingCommittedLoads(string culture, string expected)
     {
         using var scope = new UiCultureScope(culture);
@@ -414,8 +414,8 @@ public sealed class DesktopProjectOverviewTests
     }
 
     [Theory]
-    [InlineData("de-DE", "≈ 400", "≈ -101 N", "≈ 601", "≈ 50,1 N·m", "≈ 200…≈ 801", "≈ -501 N/m")]
-    [InlineData("en-US", "≈ 400", "≈ -101 N", "≈ 601", "≈ 50.1 N·m", "≈ 200…≈ 801", "≈ -501 N/m")]
+    [InlineData("de-DE", "≈ 400", "≈ −101 N", "≈ 601", "≈ 50,1 N·m", "≈ 200…≈ 801", "≈ −501 N/m")]
+    [InlineData("en-US", "≈ 400", "≈ −101 N", "≈ 601", "≈ 50.1 N·m", "≈ 200…≈ 801", "≈ −501 N/m")]
     public void TableCellsShowGivenLoadsAndPositionsRoundedAndMarkedInNumericCulture(string culture, string forcePosition,
         string force, string momentPosition, string moment, string range, string intensity)
     {
@@ -437,11 +437,11 @@ public sealed class DesktopProjectOverviewTests
 
     [Theory]
     [InlineData("de-DE", 1234.5678, "1\u202f235")]
-    [InlineData("en-US", -1234.5678, "-1\u202f235")]
-    [InlineData("de-DE", -0.000123456, "-123 · 10⁻⁶")]
+    [InlineData("en-US", -1234.5678, "−1\u202f235")]
+    [InlineData("de-DE", -0.000123456, "−123 · 10⁻⁶")]
     [InlineData("en-US", 0.000123456, "123 · 10⁻⁶")]
     [InlineData("de-DE", 12345678, "12,3 · 10⁶")]
-    [InlineData("en-US", -12345678, "-12.3 · 10⁶")]
+    [InlineData("en-US", -12345678, "−12.3 · 10⁶")]
     [InlineData("en-US", -0.0, "0")]
     [InlineData("de-DE", double.PositiveInfinity, "∞")]
     public void CompactNumbersBoundWidthWithoutHidingSmallNonzeroValues(string culture, double value, string expected)

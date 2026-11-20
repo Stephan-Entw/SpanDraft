@@ -202,8 +202,8 @@ public sealed class DesktopSelfWeightTests
     }
 
     [Theory]
-    [InlineData("de-DE", "g = -28,2 N/m")]
-    [InlineData("en-US", "g = -28.2 N/m")]
+    [InlineData("de-DE", "g = −28,2 N/m")]
+    [InlineData("en-US", "g = −28.2 N/m")]
     public void FlyoutValuesUseCurrentSectionAndMaterialAndFollowUndo(string culture, string expectedWeight)
     {
         using var scope = new UiCultureScope(culture);

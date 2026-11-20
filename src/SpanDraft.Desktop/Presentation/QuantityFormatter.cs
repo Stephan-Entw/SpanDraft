@@ -27,6 +27,7 @@ public static class QuantityFormatter
 {
     internal const string GroupSeparator = "\u202f";
     internal const string ApproximationSign = "≈";
+    internal const char MinusSign = '−';
 
     // ---- Input: given values -------------------------------------------------------------------------------
 
@@ -137,7 +138,7 @@ public static class QuantityFormatter
         if (grouped) for (int i = integer.Length - 3; i > 0; i -= 3) integer = integer.Insert(i, GroupSeparator);
         string fraction = exponent >= 0 ? "" : point > 0 ? digits[point..] : new string('0', -point) + digits;
         string result = integer + (fraction.Length == 0 ? "" : culture.NumberFormat.NumberDecimalSeparator + fraction);
-        return value.Mantissa.Sign < 0 ? culture.NumberFormat.NegativeSign + result : result;
+        return value.Mantissa.Sign < 0 ? MinusSign + result : result;
     }
 
     private static string Superscript(int exponent) => string.Concat(exponent.ToString(CultureInfo.InvariantCulture)

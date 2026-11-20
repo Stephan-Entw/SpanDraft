@@ -23,9 +23,9 @@ namespace SpanDraft.Tests;
 public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramControlTestSupport
 {
     [Theory]
-    [InlineData("de-DE", ResultDiagramKind.TransverseDisplacement, -1050, 0, "Durchbiegung w(x) [mm]", "0|-0,2|-0,4|-0,6")]
-    [InlineData("en-US", ResultDiagramKind.TransverseDisplacement, -1050, 0, "Deflection w(x) [mm]", "0|-0.2|-0.4|-0.6")]
-    [InlineData("de-DE", ResultDiagramKind.TransverseDisplacement, -10.5, 0, "Durchbiegung w(x) [10⁻³ mm]", "0|-2|-4|-6")]
+    [InlineData("de-DE", ResultDiagramKind.TransverseDisplacement, -1050, 0, "Durchbiegung w(x) [mm]", "0|−0,2|−0,4|−0,6")]
+    [InlineData("en-US", ResultDiagramKind.TransverseDisplacement, -1050, 0, "Deflection w(x) [mm]", "0|−0.2|−0.4|−0.6")]
+    [InlineData("de-DE", ResultDiagramKind.TransverseDisplacement, -10.5, 0, "Durchbiegung w(x) [10⁻³ mm]", "0|−2|−4|−6")]
     [InlineData("de-DE", ResultDiagramKind.ShearForce, -14500, 0, "Querkraft V(x) [10³ N]", "15|10|5|0")]
     [InlineData("de-DE", ResultDiagramKind.BendingMoment, 0, 1100000, "Biegemoment M(x) [10⁶ N·m]", "1,5|1|0,5|0")]
     public void AxisNotationIsSharedByTicksAndTitleWhileExtremaUseResultFormatting(string culture,

@@ -11,7 +11,8 @@ public sealed class AxisTickFormatter
     private AxisTickFormatter(double scaledStep, int decimals, int? engineeringExponent)
     {
         _scaledStep = scaledStep;
-        _pattern = decimals == 0 ? "0" : "0." + new string('#', decimals);
+        string digits = decimals == 0 ? "0" : "0." + new string('#', decimals);
+        _pattern = digits + ";" + QuantityFormatter.MinusSign + digits;
         EngineeringExponent = engineeringExponent;
     }
 

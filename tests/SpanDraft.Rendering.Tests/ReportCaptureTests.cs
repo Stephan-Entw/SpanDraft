@@ -178,24 +178,26 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
         using var report = ProjectReport.Capture(main.Editor!, Now);
         var force = report.Data.Tables.Single(t => t.Title == Strings.Forces).Rows[0];
         Assert.Equal("1\u202f234", force[2]);
-        Assert.Equal("-1\u202f000 N", force[1]);
+        Assert.Equal("−1\u202f000 N", force[1]);
         for (int i = 0; i < report.Pages.Count; i++) { using var bitmap = report.RenderPage(i); AssertTextContained(report); }
     }
 
     [Theory]
-    [InlineData("de-DE")] [InlineData("en-US")]
-    public void PdfWrappingPreservesWholeGroupedNumbersInsideNarrowTableCells(string culture)
+    [InlineData("de-DE", 123456789012345d, "123\u202f456\u202f789\u202f012\u202f345")]
+    [InlineData("en-US", 123456789012345d, "123\u202f456\u202f789\u202f012\u202f345")]
+    [InlineData("en-US", -123456789012345d, "−123\u202f456\u202f789\u202f012\u202f345")]
+    public void PdfWrappingPreservesWholeGroupedNumbersInsideNarrowTableCells(string culture, double value, string expected)
     {
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
         var (main, _) = Open(ReportTestProjects.Create());
         using var captured = ProjectReport.Capture(main.Editor!, Now);
-        string number = QuantityFormatter.FormatResultNumber(123456789012345d, QuantityKind.PoissonRatio,
+        string number = QuantityFormatter.FormatResultNumber(value, QuantityKind.PoissonRatio,
             significantDigits: 5, notation: EngineeringNotation.Off);
         var table = new ReportTable("Grouped numbers", ["Name", "Value"],
             [new[] { "Group", number }], CellWrap: [ReportCellWrap.Text, ReportCellWrap.Quantity]);
         using var report = new ReportDocument(captured.Data with { Tables = [table] }, new(80, 60, (_, _, _, _) => { }));
         using var bitmap = report.RenderPage(0);
-        var run = Assert.Single(report.TextRuns, r => r.Text == number);
+        var run = Assert.Single(report.TextRuns, r => r.Text == expected);
         var fragment = Assert.Single(report.Pages[0].Tables);
         Assert.True(run.Bounds.Left >= fragment.Bounds.Left + fragment.Layout.Columns[1].Left - .01f);
         Assert.True(run.Bounds.Right <= fragment.Bounds.Right + .1f);

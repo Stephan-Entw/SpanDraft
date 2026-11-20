@@ -15,9 +15,9 @@ public sealed class DesktopNumberPresentationAcceptanceTests
 {
     private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
 
-    /// <summary>Digit groups use U+202F, "a · 10ⁿ" uses protected spaces and minus is the culture's sign.</summary>
+    /// <summary>Digit groups use U+202F and "a · 10ⁿ" uses protected spaces.</summary>
     internal static string App(string readable) => Regex.Replace(
-        readable.Replace(" · ", " · ").Replace('−', '-'), "(?<=[0-9]) (?=[0-9]{3}(?![0-9]))", " ");
+        readable.Replace(" · ", " · "), "(?<=[0-9]) (?=[0-9]{3}(?![0-9]))", " ");
 
     private static UnitDefinition Unit(string id) => UnitCatalog.All.Single(u => u.Id == id);
 
@@ -244,7 +244,7 @@ public sealed class DesktopNumberPresentationAcceptanceTests
     [InlineData("0,00042", "0,00042")]
     [InlineData("0,0000042", "0,0000042")]
     [InlineData("12334567,89", "12334567,89")]
-    [InlineData("-1234,5", "-1234,5")]
+    [InlineData("-1234,5", "−1234,5")]
     [InlineData("1e16", "10000000000000000")]
     public void EditingTextIsTheFullDecimalValueWithoutExponentOrGrouping(string entered, string expected)
     {

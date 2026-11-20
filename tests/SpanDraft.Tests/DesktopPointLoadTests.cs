@@ -215,7 +215,8 @@ public sealed class DesktopPointLoadTests
             var draft = s.Editor.LoadDraft!;
             draft.PositionText = position;
             draft.ValueText = value;
-            Assert.Equal(draft.NameText + " = " + value + " " + draft.Unit, PointLoadSymbol.Label(draft.Preview, draft.NameText));
+            Assert.Equal(draft.NameText + " = " + value.Replace('-', '−') + " " + draft.Unit,
+                PointLoadSymbol.Label(draft.Preview, draft.NameText));
             Assert.True(s.Editor.ConfirmLoad());
             Assert.Equal(Mm(700.5), s.Editor.Document.Loads[0].Position);
             Assert.Equal(kind == PointLoadKind.Force ? -12.5 : 12.5, s.Editor.Document.Loads[0].Value);

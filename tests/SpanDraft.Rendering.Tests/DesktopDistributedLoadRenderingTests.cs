@@ -281,7 +281,7 @@ public sealed class DesktopDistributedLoadRenderingTests : DesktopDistributedLoa
         Assert.Equal(a.Select(d => d.Geometry!.Bounds), b.Select(d => d.Geometry!.Bounds));
         var zero = Draw(Visual(q: 0)).Children.Cast<GeometryDrawing>().ToArray();
         Assert.Equal(a.Where(d => d.Brush is null).Select(d => d.Geometry!.Bounds), zero.Select(d => d.Geometry!.Bounds));
-        Assert.Equal("q1 = -500 N/m", DistributedLoadSymbol.Label(Visual().Preview, "q1"));
+        Assert.Equal("q1 = −500 N/m", DistributedLoadSymbol.Label(Visual().Preview, "q1"));
     }
 
     [Fact]

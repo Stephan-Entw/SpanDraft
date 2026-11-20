@@ -15,8 +15,10 @@ internal static class LoadSignToggle
         var remaining = text.AsSpan(start);
         if (remaining.StartsWith(number.NegativeSign, StringComparison.Ordinal))
             return text.Remove(start, number.NegativeSign.Length);
+        if (remaining.Length > 0 && remaining[0] is '-' or QuantityFormatter.MinusSign)
+            return text.Remove(start, 1);
         if (remaining.StartsWith(number.PositiveSign, StringComparison.Ordinal))
-            return text.Remove(start, number.PositiveSign.Length).Insert(start, number.NegativeSign);
-        return text.Length + number.NegativeSign.Length <= 512 ? text.Insert(start, number.NegativeSign) : text;
+            text = text.Remove(start, number.PositiveSign.Length);
+        return text.Length < 512 ? text.Insert(start, QuantityFormatter.MinusSign.ToString()) : text;
     }
 }

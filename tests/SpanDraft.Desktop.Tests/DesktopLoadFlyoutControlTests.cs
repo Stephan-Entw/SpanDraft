@@ -42,7 +42,7 @@ public sealed class DesktopLoadFlyoutControlTests
         sign.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
         Dispatcher.UIThread.RunJobs();
         Assert.True(editor.IsLoadFlyoutVisible);
-        Assert.StartsWith("-", input.Text!);
+        Assert.StartsWith("−", input.Text!);
         window.Close();
     }
 
@@ -255,9 +255,11 @@ public sealed class DesktopLoadFlyoutControlTests
         string value = "  +1\u202f234" + decimalSeparator + "50E+2  ";
         input.Text = value; Dispatcher.UIThread.RunJobs();
         double before = preview(); Assert.True(before > 0);
-        Click(sign); Assert.Equal(value.Replace("+1", "-1"), input.Text); Assert.Equal(-before, preview());
+        Click(sign); Assert.Equal(value.Replace("+1", "−1"), input.Text); Assert.Equal(-before, preview());
         Click(sign); Assert.Equal(value.Replace("+1", "1"), input.Text); Assert.Equal(before, preview());
-        Click(sign); Assert.Equal(value.Replace("+1", "-1"), input.Text); Assert.Equal(-before, preview());
+        Click(sign); Assert.Equal(value.Replace("+1", "−1"), input.Text); Assert.Equal(-before, preview());
+        input.Text = value.Replace("+1", "-1"); Dispatcher.UIThread.RunJobs();
+        Click(sign); Assert.Equal(value.Replace("+1", "1"), input.Text); Assert.Equal(before, preview());
         foreach (string unchanged in new[] { "0", "-0", "", "-", "1E+", "1" + decimalSeparator, "oops" })
         {
             input.Text = unchanged; Dispatcher.UIThread.RunJobs();
