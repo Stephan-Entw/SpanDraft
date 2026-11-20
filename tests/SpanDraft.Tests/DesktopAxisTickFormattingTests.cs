@@ -6,46 +6,29 @@ namespace SpanDraft.Tests;
 public sealed class DesktopAxisTickFormattingTests
 {
     [Theory]
-    [InlineData("de-DE", 1, 2.5, -2, "0,025")]
-    [InlineData("en-US", 1, 2.5, -2, "0.025")]
-    [InlineData("de-DE", -3, 5, -2, "-0,15")]
-    [InlineData("en-US", -3, 5, -2, "-0.15")]
-    [InlineData("de-DE", 5, 2.5, -3, "0,0125")]
-    [InlineData("en-US", 5, 2.5, -3, "0.0125")]
-    [InlineData("de-DE", 4, 2.5, -2, "0,1")]
-    [InlineData("en-US", 4, 2.5, -2, "0.1")]
-    [InlineData("de-DE", 1, 2.5, -3, "2,5·10⁻³")]
-    [InlineData("en-US", 1, 2.5, -3, "2.5·10⁻³")]
-    [InlineData("de-DE", 1, 2, -324, "2·10⁻³²⁴")]
-    [InlineData("en-US", -1, 2, -324, "-2·10⁻³²⁴")]
-    [InlineData("de-DE", 2, 1, 308, "200·10³⁰⁶")]
-    [InlineData("en-US", 2, 1, 308, "200·10³⁰⁶")]
-    [InlineData("de-DE", 1, 5, 3, "5000")]
-    [InlineData("en-US", 2, 5, 3, "10·10³")]
-    public void LabelsUseLocalizedExactDecimalsAndBoundedEngineeringNotation(string culture,
-        int index, double mantissa, int exponent, string expected)
+    [InlineData("de-DE", -3, 0, 2, -1, null, "-0,6|-0,4|-0,2|0")]
+    [InlineData("en-US", -3, 0, 2, -1, null, "-0.6|-0.4|-0.2|0")]
+    [InlineData("de-DE", 0, 1, 1, -2, null, "0|0,01")]
+    [InlineData("en-US", 5, 5, 2.5, -3, null, "0.0125")]
+    [InlineData("de-DE", 0, 1, 5, 3, null, "0|5000")]
+    [InlineData("de-DE", 0, 3, 5, 3, 3, "0|5|10|15")]
+    [InlineData("en-US", -3, 0, 5, 3, 3, "-15|-10|-5|0")]
+    [InlineData("de-DE", -3, 1, 5, 3, 3, "-15|-10|-5|0|5")]
+    [InlineData("de-DE", -1, 1, 2.5, -3, -3, "-2,5|0|2,5")]
+    [InlineData("en-US", -1, 1, 2.5, -3, -3, "-2.5|0|2.5")]
+    [InlineData("en-US", 0, 5, 2.5, -3, -3, "0|2.5|5|7.5|10|12.5")]
+    [InlineData("en-US", 49, 50, 2.5, -4, -3, "12.25|12.5")]
+    [InlineData("en-US", 0, 0, 0, 0, null, "0")]
+    [InlineData("de-DE", 0, 3, 2, -324, -324, "0|2|4|6")]
+    [InlineData("en-US", -1, 1, 1, 309, 309, "-1|0|1")]
+    [InlineData("en-US", -2, 2, 1, 308, 306, "-200|-100|0|100|200")]
+    [InlineData("de-DE", -1, 4, 2.5, 308, 309, "-0,25|0|0,25|0,5|0,75|1")]
+    public void TicksUseOneNotationAndLocalizedExactDecimals(string culture, int lower, int upper,
+        double mantissa, int exponent, int? engineeringExponent, string labels)
     {
         using var scope = new UiCultureScope(culture);
-        Assert.Equal(expected, AxisTickFormatter.Format(index, mantissa, exponent));
-    }
-
-    [Theory]
-    [InlineData("de-DE")]
-    [InlineData("en-US")]
-    public void ZeroHasNoSignOrRedundantDigitsAndNonzeroTicksRemainNonzero(string culture)
-    {
-        using var scope = new UiCultureScope(culture);
-        Assert.Equal("0", AxisTickFormatter.Format(0, 0, 0));
-        foreach (int exponent in new[] { -324, -300, -12, -3, -2, 0, 3, 4, 300, 309 })
-            foreach (int index in new[] { -3, -1, 1, 3 })
-            {
-                string text = AxisTickFormatter.Format(index, 2.5, exponent);
-                Assert.NotEqual("0", text); Assert.NotEqual("-0", text);
-                Assert.DoesNotContain('E', text);
-                Assert.True(text.Length <= 16, text);
-            }
-        // Tick labels keep their own nice-tick digits; result formatting rounds independently and adds no zeros.
-        Assert.Equal(culture == "de-DE" ? "0,025" : "0.025", AxisTickFormatter.Format(1, 2.5, -2));
-        Assert.Equal(culture == "de-DE" ? "0,025" : "0.025", QuantityFormatter.FormatResultNumber(.025, QuantityKind.TransverseForce, ResultPresentationOptions.Default));
+        var formatter = AxisTickFormatter.Create(lower, upper, mantissa, exponent);
+        Assert.Equal(engineeringExponent, formatter.EngineeringExponent);
+        Assert.Equal(labels.Split('|'), Enumerable.Range(lower, upper - lower + 1).Select(index => formatter.Format(index)));
     }
 }

@@ -211,5 +211,10 @@ Profile aus Einstellungen vor den Federlagern enthalten diese Größen nicht; be
 übernehmen sie fehlende Einträge aus dem zuletzt gewählten Standardprofil, ohne ihre
 übrigen Einheiten zu verlieren.
 
-Diagramm-Achsenticks behalten ihre eigenständige Nice-Tick-Logik. Zoom, Seitenzahlen
+Diagramm-Achsenticks behalten ihre eigenständige Nice-Tick-Logik und verwenden
+eine gemeinsame Notation je Achse. Dezimalachsen führen `[Einheit]` im Titel.
+Benötigt ein Tick Engineering-Notation, bestimmt der größte absolute Tick den
+gemeinsamen Exponenten als Vielfaches von drei. Der Faktor steht nur im Titel
+(`Querkraft V(x) [10³ N]`), die Ticks zeigen skalierte Dezimalzahlen.
+Min-/Max-Labels folgen weiterhin der Ergebnisformatierung. Zoom, Seitenzahlen
 und reine UI-Zähler unterliegen ebenfalls nicht der Rundungseinstellung.

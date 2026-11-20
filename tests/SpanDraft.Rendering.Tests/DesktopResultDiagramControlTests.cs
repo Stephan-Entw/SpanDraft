@@ -22,6 +22,44 @@ namespace SpanDraft.Tests;
 [Collection("Avalonia")]
 public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramControlTestSupport
 {
+    [Theory]
+    [InlineData("de-DE", ResultDiagramKind.TransverseDisplacement, -1050, 0, "Durchbiegung w(x) [mm]", "0|-0,2|-0,4|-0,6")]
+    [InlineData("en-US", ResultDiagramKind.TransverseDisplacement, -1050, 0, "Deflection w(x) [mm]", "0|-0.2|-0.4|-0.6")]
+    [InlineData("de-DE", ResultDiagramKind.TransverseDisplacement, -10.5, 0, "Durchbiegung w(x) [10⁻³ mm]", "0|-2|-4|-6")]
+    [InlineData("de-DE", ResultDiagramKind.ShearForce, -14500, 0, "Querkraft V(x) [10³ N]", "15|10|5|0")]
+    [InlineData("de-DE", ResultDiagramKind.BendingMoment, 0, 1100000, "Biegemoment M(x) [10⁶ N·m]", "1,5|1|0,5|0")]
+    public void AxisNotationIsSharedByTicksAndTitleWhileExtremaUseResultFormatting(string culture,
+        ResultDiagramKind kind, double force, double moment, string expectedTitle, string expectedTicks)
+    {
+        using var environment = new DesktopControlEnvironment();
+        using var scope = new ResultCultureScope(culture, culture);
+        var document = Document().WithLoads(moment == 0
+            ? [new EditorPointForce(Guid.NewGuid(), Length.FromMeters(1), Force.FromNewtons(force), "F1")]
+            : [new EditorPointMoment(Guid.NewGuid(), Length.FromMeters(1), Moment.FromNewtonMeters(moment), "M1")]);
+        var diagram = new ResultDiagram
+        {
+            Kind = kind,
+            Presentation = AnalysisPresentationState.FromOutcome(BeamAnalysis.Analyze(document.ToBeamModel())),
+            StationLayout = new BeamLayoutState().Update(document, 720, 240)!.Layout,
+        };
+        diagram.Measure(new Size(720, 180));
+        diagram.Arrange(new Rect(0, 0, 720, 180));
+
+        Assert.Equal(expectedTitle, diagram.Title);
+        Assert.Equal(expectedTicks.Split('|'), diagram.Projection!.Ticks.Select(diagram.TickLabel));
+        AssertReadableMarkers(diagram);
+        Assert.All(diagram.MarkerLabels, label =>
+        {
+            string prefix = label.Marker.Kind switch
+            {
+                ResultDiagramExtremumKind.Minimum => "min = ",
+                ResultDiagramExtremumKind.Maximum => "max = ",
+                _ => "min = max = ",
+            };
+            Assert.Equal(prefix + QuantityFormatter.FormatResult(label.Marker.SiValue,
+                ResultDiagramProjection.QuantityOf(kind)), label.Text);
+        });
+    }
 
     [Theory]
     [InlineData("de-DE", ResultDiagramKind.TransverseDisplacement, "Durchbiegung")]
@@ -193,14 +231,16 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
         {
             Assert.NotNull(diagram.Projection);
             string title = diagram.Title;
+            string unit = UnitProfile.Default[ResultDiagramProjection.QuantityOf(diagram.Kind)].Symbol;
+            string unscaledTitle = title[..title.LastIndexOf('[')] + $"[{unit}]";
             diagram.Presentation = new(kind, null);
             Assert.Null(diagram.Projection);
             Assert.Empty(diagram.MarkerLabels);
-            Assert.Equal(title, diagram.Title);
+            Assert.Equal(unscaledTitle, diagram.Title);
             var drawing = new DrawingGroup();
             using (var context = drawing.Open()) diagram.Render(context);
             // Only the title remains as text; the global analysis status belongs to the view.
-            Assert.Equal(title, string.Concat(TextRuns(drawing)
+            Assert.Equal(unscaledTitle, string.Concat(TextRuns(drawing)
                 .Select(d => d.GlyphRun!.Characters.ToString())));
             Assert.DoesNotContain(drawing.Children.OfType<GeometryDrawing>(), d => d.Pen is not null);
         }
@@ -250,7 +290,7 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
             var kind = ResultDiagramProjection.QuantityOf(diagram.Kind);
             Assert.Same(layouts[i], projection.StationLayout);
             Assert.Same(profile[kind], projection.Unit);
-            Assert.EndsWith($"[{profile[kind].Symbol}]", diagram.Title);
+            Assert.EndsWith(projection.TickFormatter.FormatTitleUnit(profile[kind].Symbol), diagram.Title);
             Assert.Equal(markers[i].Select(m => (m.Kind, m.Position, m.Side, m.SiValue, m.Screen.X)),
                 projection.Markers.Select(m => (m.Kind, m.Position, m.Side, m.SiValue, m.Screen.X)));
             Assert.Equal(jumps[i].Select(j => (j.Left.Position, j.Left.Side, j.Left.SiValue, j.Right.Side, j.Right.SiValue)),
@@ -270,8 +310,8 @@ public sealed class DesktopResultDiagramControlTests : DesktopResultDiagramContr
             }
             Assert.Equal(projection.Ticks.Count, projection.Ticks.Select(diagram.TickLabel).Distinct().Count());
             foreach (var tick in projection.Ticks)
-                Assert.Equal(AxisTickFormatter.Format(tick.Index, projection.Scale.StepMantissa,
-                    projection.Scale.StepExponent, System.Globalization.CultureInfo.GetCultureInfo(culture)), diagram.TickLabel(tick));
+                Assert.Equal(projection.TickFormatter.Format(tick.Index, System.Globalization.CultureInfo.GetCultureInfo(culture)),
+                    diagram.TickLabel(tick));
             AssertReadableMarkers(diagram);
             Snapshot(diagram, $"phase2-{uiCulture}-{profileIndex}-standard-{diagram.Kind}");
         }

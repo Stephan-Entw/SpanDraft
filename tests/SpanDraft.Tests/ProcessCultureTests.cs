@@ -32,7 +32,7 @@ public sealed class ProcessCultureTests
         Assert.True(InputQuantityFormatter.TryParseLength(number, UnitCatalog.Millimeter, out var length)); Assert.Equal(.0125, length.Meters);
         Assert.True(InputQuantityFormatter.TryParsePosition(number, UnitCatalog.Millimeter, M(1), out var position)); Assert.Equal(length, position);
         Assert.Equal(number, InputQuantityFormatter.FormatExact(12.5, UnitCatalog.Newton)); Assert.Equal(number, QuantityFormatter.FormatResultNumber(12.5, QuantityKind.TransverseForce, ResultPresentationOptions.Default));
-        Assert.Equal(number, AxisTickFormatter.Format(5, 2.5, 0));
+        Assert.Equal(number, AxisTickFormatter.Create(0, 5, 2.5, 0).Format(5));
         Assert.True(InputQuantityFormatter.TryParse(number, UnitCatalog.Millimeter, out double si)); Assert.Equal(.0125, si);
         Assert.False(InputQuantityFormatter.TryParse(wrongSeparator, UnitCatalog.Millimeter, out _));
         Assert.Equal(number, InputQuantityFormatter.FormatExact(si, UnitCatalog.Millimeter));

@@ -114,6 +114,9 @@ public sealed record ResultDiagramProjection(StationLayoutResult StationLayout, 
     IReadOnlyList<IReadOnlyList<ResultDiagramPoint>> Sections, IReadOnlyList<ResultDiagramJump> Jumps,
     IReadOnlyList<ResultDiagramTick> Ticks, IReadOnlyList<ResultDiagramMarker> Markers, UnitDefinition Unit)
 {
+    internal AxisTickFormatter TickFormatter { get; } = AxisTickFormatter.Create(
+        Scale.LowerTickIndex, Scale.UpperTickIndex, Scale.StepMantissa, Scale.StepExponent);
+
     public const double MaximumSampleSpacing = 8;
     public const double MaximumChordError = 0.5;
     private const int MaximumDepth = 16;

@@ -50,7 +50,7 @@ public sealed class DesktopResultDiagramScaleTests
         var tick = Assert.Single(scale.Ticks());
         Assert.Equal(0, tick.Index); Assert.Equal(102, tick.ScreenY);
         Assert.Equal(tick.ScreenY, scale.ToScreen(0));
-        Assert.Equal("0", AxisTickFormatter.Format(tick.Index, scale.StepMantissa, scale.StepExponent));
+        Assert.Equal("0", CreateFormatter(scale).Format(tick.Index));
     }
 
     [Theory]
@@ -123,8 +123,8 @@ public sealed class DesktopResultDiagramScaleTests
         Assert.Equal(-2, scale.LowerTickIndex); Assert.Equal(2, scale.UpperTickIndex);
         Assert.False(scale.IsZero);
         AssertReadableAndContained(scale, 36, 132);
-        Assert.All(scale.Ticks().Where(t => t.Index != 0), t =>
-            Assert.NotEqual("0", AxisTickFormatter.Format(t.Index, scale.StepMantissa, scale.StepExponent)));
+        var formatter = CreateFormatter(scale);
+        Assert.All(scale.Ticks().Where(t => t.Index != 0), t => Assert.NotEqual("0", formatter.Format(t.Index)));
     }
 
     [Fact]
@@ -139,7 +139,10 @@ public sealed class DesktopResultDiagramScaleTests
         {
             var scale = new ResultDiagramScale(minimum, maximum, 36, 132);
             AssertReadableAndContained(scale, 36, 132);
-            var labels = scale.Ticks().Select(t => AxisTickFormatter.Format(t.Index, scale.StepMantissa, scale.StepExponent)).ToArray();
+            var formatter = CreateFormatter(scale);
+            Assert.Equal(Math.Max(Math.Abs(minimum), maximum) == double.Epsilon ? -324 : 306,
+                formatter.EngineeringExponent);
+            var labels = scale.Ticks().Select(t => formatter.Format(t.Index)).ToArray();
             Assert.Equal(labels.Length, labels.Distinct().Count());
             Assert.DoesNotContain(labels, label => label.Contains('∞') || label.Contains('E') || label.Contains("NaN"));
             if (minimum < 0) Assert.True(scale.LowerTickIndex < 0);
@@ -174,6 +177,9 @@ public sealed class DesktopResultDiagramScaleTests
     [InlineData(0, 1, 0, double.PositiveInfinity)]
     public void InvalidScaleInputsAreRejected(double minimum, double maximum, double top, double height) =>
         Assert.Throws<ArgumentOutOfRangeException>(() => new ResultDiagramScale(minimum, maximum, top, height));
+
+    private static AxisTickFormatter CreateFormatter(ResultDiagramScale scale) =>
+        AxisTickFormatter.Create(scale.LowerTickIndex, scale.UpperTickIndex, scale.StepMantissa, scale.StepExponent);
 
     private static void AssertReadableAndContained(ResultDiagramScale scale, double top, double height)
     {

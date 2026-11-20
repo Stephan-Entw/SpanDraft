@@ -221,7 +221,7 @@ public sealed class ReportGraphicsTests : ProjectReportTestSupport
             Assert.Equal(projection.Markers.Count, control.MarkerLabels.Count);
             Assert.All(control.MarkerLabels, marker => Assert.True(new Rect(control.Bounds.Size).Contains(marker.Bounds)));
             Assert.All(projection.Ticks, tick => Assert.True(SchematicText.Measure(control.TickLabel(tick), AppTypography.Typeface, 12).Width + 16 <= stations.Stations[0].ScreenX + 1e-6));
-            Assert.Contains("[" + projection.Unit.Symbol + "]", control.Title);
+            Assert.EndsWith(projection.TickFormatter.FormatTitleUnit(projection.Unit.Symbol), control.Title);
             Assert.Equal(report.TechnicalAreas(0)[diagram + 1].Bounds.Height / ReportVisuals.PointsPerDip, control.Bounds.Height, 5);
         }
         var automatic = state with { Presentation = new() };

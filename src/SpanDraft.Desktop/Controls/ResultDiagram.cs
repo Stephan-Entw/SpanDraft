@@ -41,12 +41,21 @@ public sealed class ResultDiagram : Control
     private IEnumerable<Point> MarkerPoints => (Projection?.Markers.Select(m => m.Screen) ?? []).Concat(Regions.Select(r => r.Extremum.Screen)).Distinct();
     private ResultPresentationOptions Options => Presentation?.Options ?? ResultPresentationOptions.Default;
     public string Title => TitleText.PlainText;
-    public TechnicalText TitleText => (Kind switch
+    public TechnicalText TitleText
     {
-        ResultDiagramKind.TransverseDisplacement => Strings.DeflectionDiagram + " " + TechnicalSymbols.Function(TechnicalSymbols.Displacement),
-        ResultDiagramKind.ShearForce => Strings.ShearDiagram + " " + TechnicalSymbols.Function(TechnicalSymbols.Shear),
-        _ => Strings.BendingDiagram + " " + TechnicalSymbols.Function(TechnicalSymbols.Moment)
-    }) + " [" + Options.Profile[ResultDiagramProjection.QuantityOf(Kind)].Symbol + "]";
+        get
+        {
+            TechnicalText title = Kind switch
+            {
+                ResultDiagramKind.TransverseDisplacement => Strings.DeflectionDiagram + " " + TechnicalSymbols.Function(TechnicalSymbols.Displacement),
+                ResultDiagramKind.ShearForce => Strings.ShearDiagram + " " + TechnicalSymbols.Function(TechnicalSymbols.Shear),
+                _ => Strings.BendingDiagram + " " + TechnicalSymbols.Function(TechnicalSymbols.Moment)
+            };
+            return title + (Projection is { } projection
+                ? projection.TickFormatter.FormatTitleUnit(projection.Unit.Symbol)
+                : $" [{Options.Profile[ResultDiagramProjection.QuantityOf(Kind)].Symbol}]");
+        }
+    }
 
     public static readonly StyledProperty<IBrush?> BackgroundBrushProperty =
         AvaloniaProperty.Register<ResultDiagram, IBrush?>(nameof(BackgroundBrush));
@@ -96,7 +105,7 @@ public sealed class ResultDiagram : Control
     }
 
     public string TickLabel(ResultDiagramTick tick) => Projection is { } projection
-        ? AxisTickFormatter.Format(tick.Index, projection.Scale.StepMantissa, projection.Scale.StepExponent, CultureInfo.CurrentCulture)
+        ? projection.TickFormatter.Format(tick.Index)
         : "";
 
     private TextLayout TickText(ResultDiagramTick tick, IBrush brush) =>
