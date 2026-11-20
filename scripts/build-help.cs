@@ -6,7 +6,11 @@ using System.Xml.Linq;
 
 if (args.Length > 1 || (args.Length == 1 && args[0] != "--no-regenerate-assets"))
 {
+#if HELP_BUILD_PROJECT
+    Console.Error.WriteLine("Usage: dotnet SpanDraft.HelpBuild.dll [--no-regenerate-assets]");
+#else
     Console.Error.WriteLine("Usage: dotnet run --file scripts/build-help.cs [-- --no-regenerate-assets]");
+#endif
     return 1;
 }
 
@@ -36,8 +40,15 @@ string[] names = [.. shared, .. localized];
 try
 {
     string zensical = ResolveZensical(help);
+    string assetCommand = args.Length == 0 ? "--generate" : "--check";
+    string assetRoot = Path.Combine(help, "assets");
+#if HELP_BUILD_PROJECT
+    // MSBuild builds and copies the renderer. Keep rendering in its own process.
+    await Run(root, "dotnet", Path.Combine(AppContext.BaseDirectory, "SpanDraft.HelpAssets.dll"), assetCommand, assetRoot);
+#else
     await Run(root, "dotnet", "run", "--project", Path.Combine(root, "tools", "SpanDraft.HelpAssets"),
-        "--configuration", "Release", "--", args.Length == 0 ? "--generate" : "--check", Path.Combine(help, "assets"));
+        "--configuration", "Release", "--", assetCommand, assetRoot);
+#endif
     RequirePngAssets(Path.Combine(help, "assets", "shared"), shared);
     foreach (string language in new[] { "de", "en" }) RequirePngAssets(Path.Combine(help, "assets", language), localized);
     if (Directory.Exists(site)) Directory.Delete(site, true);
