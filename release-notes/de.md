@@ -1,5 +1,26 @@
 # Versionshinweise
 
+## 1.2.0
+
+SpanDraft 1.2.0 erweitert das Balkenmodell um mehrere Balkenabschnitte, Federlager, innere Gelenke und linear veränderliche Streckenlasten. Außerdem bietet die neue Version mehr Kontrolle über die Zahlendarstellung sowie mehrere Verbesserungen an Berechnungsbericht und Bearbeitung.
+
+### Neu
+
+- **Balken abschnittsweise definieren.** Ein Balken kann jetzt aus mehreren Abschnitten mit jeweils eigenem Werkstoff, Querschnitt und eigener Biegeachse bestehen. Ist das Eigengewicht aktiviert, berücksichtigt SpanDraft jeden Abschnitt einzeln und kennzeichnet in Projektübersicht und Berechnungsbericht den Abschnitt mit dem niedrigsten Sicherheitsfaktor.
+- **Lager, Lasten und Gelenke folgen der Balkengeometrie.** Ihre Position kann relativ zum Anfang eines Abschnitts angegeben oder direkt an dessen Ende gebunden werden. Ändert sich die Balkengeometrie, folgt die Position automatisch ihrem Bezug.
+- **Federlager mit Weg- und Drehfedern hinzufügen.** Weg- und Drehfedern können unabhängig voneinander oder gemeinsam an derselben Position angeordnet werden. Eine Drehfeder lässt sich außerdem mit einer starren Querverschiebung kombinieren und bildet damit eine Teileinspannung.
+- **Innere Gelenke modellieren.** Damit lassen sich Gerberträger und andere Systeme mit Momentenfreigaben innerhalb eines durchgehenden Balkens abbilden. Projektübersicht und Berechnungsbericht zeigen die Verdrehungen auf beiden Seiten sowie die Querkraft am Gelenk.
+- **Dreieck- und Trapezlasten aufbringen.** Für eine Streckenlast können am Anfang und Ende unterschiedliche Lastintensitäten vorgegeben werden – auch mit einem Vorzeichenwechsel entlang des Balkens. Beide Werte werden im Editor, in der Projektübersicht und im Berechnungsbericht angezeigt.
+- **Versionshinweise direkt in SpanDraft lesen.** Der Menüpunkt „Was ist neu?“ öffnet die Versionshinweise auf Deutsch oder Englisch, passend zur Oberflächensprache.
+
+### Verbessert
+
+- **Zahlendarstellung anpassen.** Es stehen fünf Rundungsstufen mit direkter Vorschau in den Einstellungen zur Verfügung. Gerundete Vorgabewerte werden mit `≈` gekennzeichnet, während Ergebnisse ohne Näherungszeichen gerundet dargestellt werden. Der Berechnungsbericht dokumentiert die gewählte Rundung. Sehr kleine und große Werte lassen sich optional mit Zehnerpotenzen darstellen.
+- **Berichte und Diagramme klarer lesen.** Die Berichtstabellen für Balkenabschnitte und innere Gelenke wurden neu strukturiert, und die Achsen der Ergebnisdiagramme verwenden jetzt einheitliche Zahlenformate. Verständlichere Berechnungshinweise helfen außerdem dabei, problematische Lagerabstände oder Steifigkeiten zu erkennen, wenn kein verlässliches Ergebnis ermittelt werden kann.
+- **Mit weniger Zwischenschritten bearbeiten.** Änderungen am Querschnitt lassen sich speichern, ohne zuvor die letzte Eingabe mit Enter bestätigen zu müssen. Die Werkzeugleiste des Editors passt sich besser an begrenzten Platz an, und ausgewählte vordefinierte Werkstoffe enthalten jetzt klarere Hinweise zum Gültigkeitsbereich ihrer Referenzwerte.
+
+**Kompatibilität:** Projekte aus früheren Versionen lassen sich wie gewohnt öffnen. Nach dem Speichern mit SpanDraft 1.2.0 verwenden sie das neue V5-Projektformat und benötigen anschließend Version 1.2.0 oder neuer.
+
 ## 1.1.0
 
 - Optionales Eigengewicht des Balkens in Modell, Editor und Berechnungsbericht ergänzt.

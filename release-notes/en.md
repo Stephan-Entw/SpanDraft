@@ -1,5 +1,26 @@
 # Release notes
 
+## 1.2.0
+
+SpanDraft 1.2.0 expands the beam model with multiple beam segments, elastic supports, internal hinges and varying distributed loads. It also brings more control over number formatting and several improvements to reports and editing.
+
+### New
+
+- **Model beams with changing properties.** Split a beam into segments with their own material, cross-section and bending axis. When self-weight is enabled, SpanDraft accounts for each segment individually and identifies the segment with the lowest safety factor in the overview and report.
+- **Keep supports and loads tied to the beam geometry.** Position supports, loads and hinges relative to the start of a segment or attach them to its end. Their position follows the segment automatically when the beam geometry changes.
+- **Add elastic supports.** Translational and rotational springs can be added independently or combined at the same position. A rotational spring can also be combined with rigid transverse restraint to model a partial restraint.
+- **Release bending moments with internal hinges.** Model Gerber beams and other systems with moment releases within a continuous beam. The overview and calculation report show the rotations on both sides of an internal hinge and the shear force at the hinge.
+- **Apply triangular and trapezoidal distributed loads.** Define different load intensities at the start and end of a distributed load, including loads that change direction along the beam. Both values are shown in the editor, overview and report.
+- **Read release notes in SpanDraft.** The “What's new” menu item opens the English or German release notes in the app’s interface language.
+
+### Improved
+
+- **Choose how numbers are rounded.** Select from five display rounding levels and preview the effect directly in Settings. Rounded input values are marked with `≈`, while calculated results are rounded without an approximation marker. The calculation report records the selected rounding level, and very small or large values can optionally be displayed using powers of ten.
+- **Read calculation results more easily.** Report tables for beam segments and internal hinges have been reorganized, and result diagram axes now use consistent number formatting. Calculation messages also give clearer guidance when support spacing or stiffness prevents a reliable result.
+- **Edit with fewer extra steps.** Cross-section changes can be saved without pressing Enter to confirm the last input first. The editor toolbar adapts to limited space, and selected built-in materials now include clearer notes about where their reference values apply.
+
+**Compatibility:** Earlier projects can be opened as usual. Once saved in SpanDraft 1.2.0, they use the new V5 project format and require version 1.2.0 or later.
+
 ## 1.1.0
 
 - Add optional beam self-weight to the model, editor and calculation reports.
