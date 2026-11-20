@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             x:Class="SpanDraft.Desktop.Controls.DiscreteScaleSlider"
+             x:Name="Scale" x:DataType="controls:DiscreteScaleSlider">
+  <UserControl.Styles>
+    <!-- Place the native tick bar between the station labels and the track. -->
+    <Style Selector="Slider#ScaleSlider[TickPlacement=BottomRight] /template/ TickBar#BottomTickBar">
+      <Setter Property="Grid.Row" Value="0" />
+      <Setter Property="VerticalAlignment" Value="Bottom" />
+      <Setter Property="Margin" Value="0,0,0,2" />
+    </Style>
+    <Style Selector="Slider#ScaleSlider:not(:disabled) /template/ TickBar#BottomTickBar">
+      <Setter Property="Fill" Value="{DynamicResource InputBorder}" />
+    </Style>
+    <Style Selector="TextBlock.station">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      <Setter Property="Opacity" Value="0.73" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.14" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="TextBlock.station.active">
+      <Setter Property="Opacity" Value="1" />
+      <Style.Animations>
+        <Animation Duration="0:0:0.14" Easing="SineEaseInOut">
+          <KeyFrame Cue="0%">
+            <Setter Property="ScaleTransform.ScaleX" Value="1" />
+            <Setter Property="ScaleTransform.ScaleY" Value="1" />
+          </KeyFrame>
+          <KeyFrame Cue="50%">
+            <Setter Property="ScaleTransform.ScaleX" Value="1.07" />
+            <Setter Property="ScaleTransform.ScaleY" Value="1.07" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="ScaleTransform.ScaleX" Value="1" />
+            <Setter Property="ScaleTransform.ScaleY" Value="1" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+  </UserControl.Styles>
+  <Grid RowDefinitions="Auto,Auto,Auto">
+    <Slider x:Name="ScaleSlider" Grid.Row="1"
+            Minimum="{Binding #Scale.Minimum}" Maximum="{Binding #Scale.Maximum}"
+            Value="{Binding #Scale.Value, Mode=TwoWay}"
+            TickFrequency="{Binding #Scale.Step}" SmallChange="{Binding #Scale.Step}" LargeChange="{Binding #Scale.Step}"
+            IsSnapToTickEnabled="True" TickPlacement="BottomRight"
+            AutomationProperties.Name="{Binding #Scale.(AutomationProperties.Name)}"
+            AutomationProperties.HelpText="{Binding #Scale.(AutomationProperties.HelpText)}">
+      <Slider.Resources>
+        <x:Double x:Key="SliderTrackThemeHeight">3</x:Double>
+      </Slider.Resources>
+    </Slider>
+    <!-- Arrange the slider first for tick alignment and use its upper padding for the labels. -->
+    <Decorator x:Name="Stations" Margin="0,0,0,-8" IsHitTestVisible="False" />
+    <Panel Grid.Row="2" Margin="0,-10,0,0" IsHitTestVisible="False">
+      <TextBlock Classes="caption" HorizontalAlignment="Left" Text="{Binding #Scale.StartLabel}" />
+      <TextBlock Classes="caption" HorizontalAlignment="Right" Text="{Binding #Scale.EndLabel}" />
+    </Panel>
+  </Grid>
+</UserControl>
