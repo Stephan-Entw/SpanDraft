@@ -9,9 +9,9 @@
   <Grid Background="{DynamicResource AppBackground}">
     <Grid IsVisible="{Binding IsOverview}" RowDefinitions="Auto,*">
       <Border x:Name="SetupHeader" Classes="workspaceHeader">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space16}">
           <controls:TechnicalTextBlock x:Name="SetupTitle" Text="{Binding Title}" Classes="pageTitle" Foreground="{DynamicResource TextPrimary}" />
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space8}">
             <Button x:Name="CancelSetupButton" Content="{x:Static resources:Strings.Cancel}" Command="{Binding CancelCommand}"
                 IsVisible="{Binding CanCancel}" Classes="secondary" Height="{DynamicResource StandardControl}" AutomationProperties.Name="{x:Static resources:Strings.Cancel}" />
             <Button x:Name="ApplySetupButton" Content="{Binding PrimaryAction}" Command="{Binding ApplyCommand}"

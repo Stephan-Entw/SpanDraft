@@ -56,15 +56,16 @@ public sealed class DesktopScrollBarTests
         ScrollButton(bar, "PART_PageUpButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.Equal(initial, bar.Value);
 
-        var normalBrush = grip.Background;
+        var app = Application.Current!;
+        var normalBrush = app.FindResource("TextMuted");
+        Assert.Same(normalBrush, grip.Background);
         ((IPseudoClasses)thumb.Classes).Set(":pointerover", true);
-        Assert.NotEqual(normalBrush, grip.Background);
-        var hoverBrush = grip.Background;
+        Assert.Same(app.FindResource("TextSecondary"), grip.Background);
         ((IPseudoClasses)thumb.Classes).Set(":pressed", true);
-        Assert.NotEqual(hoverBrush, grip.Background);
+        Assert.Same(app.FindResource("TextPrimary"), grip.Background);
         ((IPseudoClasses)thumb.Classes).Set(":pressed", false);
         ((IPseudoClasses)thumb.Classes).Set(":pointerover", false);
-        Assert.Equal(normalBrush, grip.Background);
+        Assert.Same(normalBrush, grip.Background);
         thumb.IsEnabled = false;
         Assert.InRange(grip.Opacity, 0.1, 0.9);
     }
