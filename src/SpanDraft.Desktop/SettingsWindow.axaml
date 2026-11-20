@@ -93,15 +93,14 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
               </Grid.RowDefinitions>
-              <TextBlock Text="{x:Static resources:Strings.SignificantDigits}" Classes="propertyLabel" VerticalAlignment="Center" />
-              <ComboBox x:Name="SignificantDigitsPicker" Grid.Column="1" HorizontalAlignment="Stretch"
-                        ItemsSource="{Binding SignificantDigitChoices}" SelectedValueBinding="{ReflectionBinding Value}"
-                        SelectedValue="{Binding SignificantDigits, Mode=TwoWay}"
-                        AutomationProperties.Name="{x:Static resources:Strings.SignificantDigits}">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate x:DataType="vm:SetupChoiceLabel"><TextBlock Text="{Binding Label}" /></DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
+              <TextBlock Text="{x:Static resources:Strings.Rounding}" Classes="propertyLabel" VerticalAlignment="Top" />
+              <controls:DiscreteScaleSlider x:Name="RoundingScale" Grid.Column="1"
+                                           Minimum="{x:Static presentation:ResultPresentationOptions.MinimumSignificantDigits}"
+                                           Maximum="{x:Static presentation:ResultPresentationOptions.MaximumSignificantDigits}" Step="1"
+                                           Value="{Binding SignificantDigits, Mode=TwoWay}"
+                                           StartLabel="{x:Static resources:Strings.RoundingCoarse}" EndLabel="{x:Static resources:Strings.RoundingFine}"
+                                           AutomationProperties.Name="{x:Static resources:Strings.Rounding}"
+                                           AutomationProperties.HelpText="{x:Static resources:Strings.RoundingHelp}" />
               <CheckBox x:Name="PowersOfTenOption" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" IsChecked="{Binding UsesPowersOfTen, Mode=TwoWay}"
                         AutomationProperties.Name="{x:Static resources:Strings.PowersOfTen}"
                         AutomationProperties.HelpText="{Binding PowersOfTenHint}">

@@ -3,6 +3,7 @@ using Avalonia.Automation;
 using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -280,14 +281,15 @@ public sealed class DesktopSettingsControlTests
         var spacing = ((Grid)unitLabels[0][0].Parent!).ColumnSpacing;
         Assert.Equal(12, spacing);
         // The lower sections: one label column and one field width for digits, language and format.
-        var lowerFields = new[] { "SignificantDigitsPicker", "LanguagePicker", "RegionalFormatPicker" }.Select(n => window.FindControl<ComboBox>(n)!).ToArray();
+        var lowerFields = new Control[] { window.FindControl<DiscreteScaleSlider>("RoundingScale")!,
+            window.FindControl<ComboBox>("LanguagePicker")!, window.FindControl<ComboBox>("RegionalFormatPicker")! };
         Assert.All(lowerFields, f => Assert.Equal(Xc(lowerFields[0]), Xc(f), 3));
         Assert.All(lowerFields, f => Assert.Equal(lowerFields[0].Bounds.Width, f.Bounds.Width, 3));
         var lowerLabels = window.FindControl<StackPanel>("FormSections")!.GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.IsVisible && t.Classes.Contains("propertyLabel") && t.FindAncestorOfType<ItemsControl>()?.Name != "NumberPreviewRows").ToArray();
         Assert.Equal(4, lowerLabels.Length);
         Assert.All(lowerLabels, l => Assert.Equal(Xc(lowerLabels[0]), Xc(l), 3));
-        foreach (var field in lowerFields) // the displayed words are not cut off by the field
+        foreach (var field in lowerFields.OfType<ComboBox>()) // the displayed words are not cut off by the field
         {
             var item = field.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsVisible && t.Text == (field.SelectedItem as SetupChoiceLabel)?.Label);
             Assert.True(item.Bounds.Width >= item.TextLayout.Width - .01, $"{item.Text} is not clipped");
@@ -297,46 +299,104 @@ public sealed class DesktopSettingsControlTests
     }
 
     [Theory]
-    [InlineData("de-DE", "Signifikante Stellen", "Zehnerpotenzen bei sehr kleinen und großen Werten")]
-    [InlineData("en-US", "Significant digits", "Powers of ten for very small and large values")]
-    public void NumericControlsBindBothDirectionsAndRestoreDiscardedPreferences(string culture, string precisionLabel, string notationLabel)
+    [InlineData("de-DE", "Rundung", "grob", "fein", "Zehnerpotenzen bei sehr kleinen und großen Werten")]
+    [InlineData("en-US", "Rounding", "coarse", "fine", "Powers of ten for very small and large values")]
+    public void NumericControlsBindBothDirectionsAndRestoreDiscardedPreferences(string culture, string roundingLabel, string startLabel, string endLabel, string notationLabel)
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new ResultCultureScope(culture, culture);
         var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
         var window = new SettingsWindow(model); Arrange(window, 900, 780);
-        var digits = window.FindControl<ComboBox>("SignificantDigitsPicker")!;
+        var scale = window.FindControl<DiscreteScaleSlider>("RoundingScale")!;
         var powers = window.FindControl<CheckBox>("PowersOfTenOption")!;
-        Assert.Equal(precisionLabel, AutomationProperties.GetName(digits));
+        var slider = scale.GetVisualDescendants().OfType<Slider>().Single();
+        Assert.Equal(roundingLabel, AutomationProperties.GetName(slider));
+        Assert.Equal($"1 {startLabel}, 5 {endLabel}", AutomationProperties.GetHelpText(slider));
+        Assert.Contains(window.FindControl<Grid>("NumericSettings")!.Children.OfType<TextBlock>(), t => t.Text == roundingLabel);
+        Assert.Equal(startLabel, scale.StartLabel);
+        Assert.Equal(endLabel, scale.EndLabel);
+        var start = scale.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text == startLabel);
+        var end = scale.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text == endLabel);
+        Assert.True(start.TranslatePoint(default, scale)!.Value.X < end.TranslatePoint(default, scale)!.Value.X);
         Assert.Equal(notationLabel, AutomationProperties.GetName(powers));
         Assert.Equal(model.PowersOfTenHint, AutomationProperties.GetHelpText(powers));
         Assert.Equal(model.PowersOfTenHint, window.FindControl<TextBlock>("PowersOfTenHint")!.Text);
-        Assert.Equal(3, digits.SelectedValue);
+        Assert.Equal(3, slider.Value);
         Assert.True(powers.IsChecked);
-        // The field label names the digits, so the choices are plain counts with the default marked.
-        Assert.Equal(Enumerable.Range(1, 5), model.SignificantDigitChoices.Select(c => c.Value));
-        Assert.Equal(new[] { "1", "2", culture == "de-DE" ? "3 (Standard)" : "3 (default)", "4", "5" },
-            model.SignificantDigitChoices.Select(c => c.Label));
+        Assert.True(slider.IsSnapToTickEnabled);
         var rows = window.FindControl<ItemsControl>("NumberPreviewRows")!;
-        // The last preview row is the small calculated value; its last column is the displayed text.
-        string Small() => rows.GetVisualDescendants().OfType<Grid>().Last(g => g.DataContext is NumberPreviewRow)
-            .Children.OfType<TextBlock>().Last().Text!;
-        Assert.Equal("420\u00a0·\u00a010⁻⁶ mm", Small());
-        digits.SelectedItem = model.SignificantDigitChoices.Single(c => c.Value == 5);
+        string Displayed(int index) => rows.GetVisualDescendants().OfType<Grid>()
+            .Where(g => g.DataContext is NumberPreviewRow).ElementAt(index).Children.OfType<TextBlock>().Last().Text!;
+        Assert.Equal("420\u00a0·\u00a010⁻⁶ mm", Displayed(2));
+        var originalPreview = Displayed(1);
+        PressScaleAt(2.4);
+        Assert.Equal(2, slider.Value);
+        Assert.Equal(2, model.Pending.SignificantDigits);
+        PressScaleAt(2.6);
+        Assert.Equal(3, slider.Value);
+
+        slider.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Home });
+        for (int value = 1; value <= 5; value++)
+        {
+            Assert.Equal(value, slider.Value);
+            Assert.Equal(value, model.Pending.SignificantDigits);
+            if (value < 5)
+                slider.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Right });
+        }
+        Arrange(window, 900, 780);
+        Assert.NotEqual(originalPreview, Displayed(1));
+        Assert.Equal(culture == "de-DE" ? "2,4583 mm" : "2.4583 mm", Displayed(1));
         powers.IsChecked = false;
-        Assert.Equal(5, model.Pending.SignificantDigits);
         Assert.Equal(EngineeringNotation.Off, model.Pending.Notation);
         Arrange(window, 900, 780);
-        Assert.Equal(culture == "de-DE" ? "0,00042 mm" : "0.00042 mm", Small());
+        Assert.Equal(culture == "de-DE" ? "0,00042 mm" : "0.00042 mm", Displayed(2));
         model.SignificantDigits = 4;
-        Assert.Equal(4, digits.SelectedValue);
+        Assert.Equal(4, slider.Value);
         model.UsesPowersOfTen = true;
         Assert.True(powers.IsChecked);
         model.DiscardPending();
-        Assert.Equal(3, digits.SelectedValue);
+        Assert.Equal(3, slider.Value);
         Assert.True(powers.IsChecked);
+
+        void PressScaleAt(double value)
+        {
+            var track = slider.GetVisualDescendants().OfType<Track>().Single();
+            var thumb = track.Thumb!;
+            var x = thumb.Bounds.Width / 2 + (track.Bounds.Width - thumb.Bounds.Width) * (value - 1) / 4;
+            var position = track.TranslatePoint(new Point(x, track.Bounds.Height / 2), window)!.Value;
+            var pointer = new Pointer(1, PointerType.Mouse, true);
+            var hit = value < slider.Value ? track.DecreaseButton! : track.IncreaseButton!;
+            hit.RaiseEvent(new PointerPressedEventArgs(hit, pointer, window, position, 0,
+                new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed), KeyModifiers.None, 1));
+            hit.RaiseEvent(new PointerReleasedEventArgs(hit, pointer, window, position, 1,
+                new PointerPointProperties(RawInputModifiers.None, PointerUpdateKind.LeftButtonReleased), KeyModifiers.None, MouseButton.Left));
+        }
         Assert.Equal(EngineeringNotation.Automatic, model.Pending.Notation);
         Assert.DoesNotContain(window.GetVisualDescendants().OfType<RadioButton>(), r => r.GroupName == "Presentation");
+    }
+
+    [Fact]
+    public void ScaleLabelsStayCenteredOnTicksWhenResized()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var scale = new DiscreteScaleSlider { Minimum = 1, Maximum = 5, Value = 3, StartLabel = "coarse", EndLabel = "fine" };
+        var window = new Window { Content = scale };
+        foreach (double width in new[] { 181d, 263d })
+        {
+            Arrange(window, width, 160);
+            var slider = scale.GetVisualDescendants().OfType<Slider>().Single();
+            var ticks = slider.GetVisualDescendants().OfType<TickBar>().Single(bar => bar.IsVisible && bar.Placement == TickBarPlacement.Bottom);
+            var labels = scale.GetVisualDescendants().OfType<TextBlock>().Where(label => int.TryParse(label.Text, out _)).ToArray();
+            Assert.Equal(new[] { "1", "2", "3", "4", "5" }, labels.Select(label => label.Text));
+            for (int i = 0; i < labels.Length; i++)
+            {
+                var label = labels[i];
+                double tickX = ticks.ReservedSpace.Width / 2 + i * (ticks.Bounds.Width - ticks.ReservedSpace.Width) / 4;
+                double center = label.TranslatePoint(new Point(label.Bounds.Width / 2, 0), ticks)!.Value.X;
+                Assert.Equal(tickX, center, 3);
+                Assert.True(label.TextLayout.Width <= label.Bounds.Width + .01);
+            }
+        }
     }
 
     [Fact]
@@ -537,11 +597,11 @@ public sealed class DesktopSettingsControlTests
         double X(Control control) => control.TranslatePoint(default, content)!.Value.X;
         var section = window.FindControl<Grid>("NumericSettings")!;
         var preview = window.FindControl<ItemsControl>("NumberPreviewRows")!;
-        var digits = window.FindControl<ComboBox>("SignificantDigitsPicker")!;
+        var scale = window.FindControl<DiscreteScaleSlider>("RoundingScale")!;
         var powers = window.FindControl<CheckBox>("PowersOfTenOption")!;
-        Assert.Equal(X(digits), X(powers), 3);
-        Assert.Equal(X(digits), X(preview), 3);
-        Assert.Equal(X(digits), X(window.FindControl<TextBlock>("PresentationHint")!), 3);
+        Assert.Equal(X(scale), X(powers), 3);
+        Assert.Equal(X(scale), X(preview), 3);
+        Assert.Equal(X(scale), X(window.FindControl<TextBlock>("PresentationHint")!), 3);
         Assert.True(X(preview) + preview.Bounds.Width <= X(section) + section.Bounds.Width + .01);
         // The label of the preview stands in the label column like the labels of the fields.
         var previewLabel = section.Children.OfType<TextBlock>().Single(t => t.Text == Strings.NumberPreview);

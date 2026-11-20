@@ -96,19 +96,6 @@ public sealed class SettingsViewModel : ObservableObject
     public string? ErrorText => _error;
     public bool HasError => ErrorText is not null;
     public bool HasCustomProfile => _pending.HasCustomProfile;
-    /// <summary>
-    /// The significant digits of every displayed value, offered as plain counts 1–5 because the field label
-    /// already names them; the default is marked.
-    /// </summary>
-    public IReadOnlyList<SetupChoice<int>> SignificantDigitChoices { get; } = Enumerable.Range(
-        ResultPresentationOptions.MinimumSignificantDigits,
-        ResultPresentationOptions.MaximumSignificantDigits - ResultPresentationOptions.MinimumSignificantDigits + 1)
-        .Select(digits => new SetupChoice<int>(digits, digits == ResultPresentationOptions.DefaultSignificantDigits
-            ? string.Format(CultureInfo.CurrentUICulture, Strings.SignificantDigitChoiceDefault, digits)
-            : digits.ToString(CultureInfo.CurrentUICulture))).ToArray();
-    /// <summary>A significant-digit count as a phrase ("3 significant digits"), used in running text such as the report.</summary>
-    internal static string SignificantDigitLabel(int digits) => digits == 1 ? Strings.SignificantDigitChoiceOne
-        : string.Format(CultureInfo.CurrentUICulture, Strings.SignificantDigitChoice, digits);
     public int SignificantDigits
     {
         get => _pending.SignificantDigits;

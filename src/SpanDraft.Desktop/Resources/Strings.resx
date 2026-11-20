@@ -337,7 +337,7 @@
   <data name="ReportContinuation" xml:space="preserve"><value>Continuation</value></data>
   <data name="ReportPage" xml:space="preserve"><value>Page {0} of {1}</value></data>
   <data name="ReportNotes" xml:space="preserve"><value>Calculation model</value></data>
-  <data name="ReportRounding" xml:space="preserve"><value>Numerical values are rounded to {0}.</value></data>
+  <data name="ReportRounding" xml:space="preserve"><value>Numerical values are displayed with rounding level {0}.</value></data>
   <data name="ReportSpringTheory" xml:space="preserve"><value>Spring supports are linear-elastic with constant stiffness and axially rigid.</value></data>
   <data name="ReportTheory" xml:space="preserve"><value>Calculation based on Euler-Bernoulli theory, assuming linear-elastic behavior and small deformations. Material and cross-section are constant along the beam length; shear deformations are neglected.</value></data>
   <data name="ReportPosition" xml:space="preserve"><value>x = {0} {1}{2}</value></data>
@@ -380,10 +380,10 @@
   <data name="Forces" xml:space="preserve"><value>Forces</value></data>
   <data name="Moments" xml:space="preserve"><value>Moments</value></data>
   <data name="DistributedLoads" xml:space="preserve"><value>Distributed loads</value></data>
-  <data name="SignificantDigits" xml:space="preserve"><value>Significant digits</value></data>
-  <data name="SignificantDigitChoice" xml:space="preserve"><value>{0} significant digits</value></data>
-  <data name="SignificantDigitChoiceOne" xml:space="preserve"><value>1 significant digit</value></data>
-  <data name="SignificantDigitChoiceDefault" xml:space="preserve"><value>{0} (default)</value></data>
+  <data name="Rounding" xml:space="preserve"><value>Rounding</value></data>
+  <data name="RoundingCoarse" xml:space="preserve"><value>coarse</value></data>
+  <data name="RoundingFine" xml:space="preserve"><value>fine</value></data>
+  <data name="RoundingHelp" xml:space="preserve"><value>1 coarse, 5 fine</value></data>
   <data name="PowersOfTen" xml:space="preserve"><value>Powers of ten for very small and large values</value></data>
   <data name="PowersOfTenHint" xml:space="preserve"><value>Below {0} and from {1}, e.g. {2}</value></data>
   <data name="NumberPreview" xml:space="preserve"><value>Preview</value></data>

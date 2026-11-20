@@ -138,5 +138,5 @@ internal static class ProjectReport
 
     /// <summary>The sentence appended to the calculation-model paragraph that states the display rounding.</summary>
     internal static string RoundingSentence(int significantDigits) =>
-        string.Format(CultureInfo.CurrentUICulture, Strings.ReportRounding, SettingsViewModel.SignificantDigitLabel(significantDigits));
+        string.Format(CultureInfo.CurrentUICulture, Strings.ReportRounding, significantDigits);
 }

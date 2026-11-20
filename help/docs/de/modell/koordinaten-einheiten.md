@@ -49,7 +49,7 @@ Einheiten ändern nur die Darstellung: Intern rechnet SpanDraft mit SI-Werten; d
 ### Zahlendarstellung
 
 Alle angezeigten Zahlen – Vorgabewerte, Bibliothekswerte und Ergebnisse – folgen
-derselben Regel. **Signifikante Stellen** legt die Anzahl `n` fest, 1 bis 5
+derselben Regel. **Rundung** stellt die Stufe `n` von 1 (grob) bis 5 (fein) ein
 (Standard: 3). Jeder Wert wird einzeln in der gewählten Einheit gerundet:
 
 - Ziffern vor dem Komma gehen nie verloren: `1234,5 N` erscheint als

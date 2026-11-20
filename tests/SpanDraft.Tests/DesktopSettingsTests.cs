@@ -147,17 +147,13 @@ public sealed class DesktopSettingsTests
     }
 
     [Theory]
-    [InlineData("de-DE", "Unter 0,001 und ab 1\u202f000\u202f000, z. B. 1,23\u00a0·\u00a010⁶ N", "3 (Standard)")]
-    [InlineData("en-US", "Below 0.001 and from 1\u202f000\u202f000, e.g. 1.23\u00a0·\u00a010⁶ N", "3 (default)")]
-    public void DigitChoicesAreCountsAndThePowersOfTenHintStatesTheThresholds(string culture, string hint, string defaultChoice)
+    [InlineData("de-DE", "Unter 0,001 und ab 1\u202f000\u202f000, z. B. 1,23\u00a0·\u00a010⁶ N")]
+    [InlineData("en-US", "Below 0.001 and from 1\u202f000\u202f000, e.g. 1.23\u00a0·\u00a010⁶ N")]
+    public void PowersOfTenHintStatesTheThresholds(string culture, string hint)
     {
         using var scope = new ResultCultureScope(culture, culture);
         var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
         Assert.Equal(hint, model.PowersOfTenHint);
-        Assert.Equal(new[] { "1", "2", defaultChoice, "4", "5" }, model.SignificantDigitChoices.Select(c => c.Label));
-        // Running text such as the report keeps the full phrase.
-        Assert.Equal(culture == "de-DE" ? "3 signifikante Stellen" : "3 significant digits", SettingsViewModel.SignificantDigitLabel(3));
-        Assert.Equal(culture == "de-DE" ? "1 signifikante Stelle" : "1 significant digit", SettingsViewModel.SignificantDigitLabel(1));
     }
 
     [Fact]
@@ -168,8 +164,6 @@ public sealed class DesktopSettingsTests
         Assert.Equal(3, UserSettings.Default.SignificantDigits);
         Assert.Throws<ArgumentOutOfRangeException>(() => UserSettings.Default with { SignificantDigits = 6 });
         Assert.Throws<ArgumentOutOfRangeException>(() => new ResultPresentationOptions(significantDigits: 0));
-        var model = new SettingsViewModel(UserSettings.Default, _ => Task.FromResult<string?>(null));
-        Assert.Equal(new[] { 1, 2, 3, 4, 5 }, model.SignificantDigitChoices.Select(c => c.Value));
     }
 
     [Theory]

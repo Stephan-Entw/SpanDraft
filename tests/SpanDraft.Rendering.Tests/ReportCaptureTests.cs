@@ -134,11 +134,11 @@ public sealed class ReportCaptureTests : ProjectReportTestSupport
     private const string TheoryEn = "Calculation based on Euler-Bernoulli theory, assuming linear-elastic behavior and small deformations. Material and cross-section are constant along the beam length; shear deformations are neglected. ";
 
     [Theory]
-    [InlineData("de-DE", 3, TheoryDe + "Zahlenwerte sind auf 3 signifikante Stellen gerundet.")]
-    [InlineData("en-US", 3, TheoryEn + "Numerical values are rounded to 3 significant digits.")]
-    [InlineData("de-DE", 5, TheoryDe + "Zahlenwerte sind auf 5 signifikante Stellen gerundet.")]
-    [InlineData("de-DE", 1, TheoryDe + "Zahlenwerte sind auf 1 signifikante Stelle gerundet.")]
-    [InlineData("en-US", 1, TheoryEn + "Numerical values are rounded to 1 significant digit.")]
+    [InlineData("de-DE", 3, TheoryDe + "Zahlenwerte werden mit Rundung 3 dargestellt.")]
+    [InlineData("en-US", 3, TheoryEn + "Numerical values are displayed with rounding level 3.")]
+    [InlineData("de-DE", 5, TheoryDe + "Zahlenwerte werden mit Rundung 5 dargestellt.")]
+    [InlineData("de-DE", 1, TheoryDe + "Zahlenwerte werden mit Rundung 1 dargestellt.")]
+    [InlineData("en-US", 1, TheoryEn + "Numerical values are displayed with rounding level 1.")]
     public void ReportStatesTheRoundingInTheCalculationModelParagraph(string culture, int digits, string expected)
     {
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);

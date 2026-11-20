@@ -419,10 +419,10 @@ public static class Strings
     public static string RenameMaterial => Get(nameof(RenameMaterial));
     public static string MaterialNameConflictQuestion => Get(nameof(MaterialNameConflictQuestion));
     public static string ReplaceMaterialQuestion => Get(nameof(ReplaceMaterialQuestion));
-    public static string SignificantDigits => Get(nameof(SignificantDigits));
-    public static string SignificantDigitChoice => Get(nameof(SignificantDigitChoice));
-    public static string SignificantDigitChoiceOne => Get(nameof(SignificantDigitChoiceOne));
-    public static string SignificantDigitChoiceDefault => Get(nameof(SignificantDigitChoiceDefault));
+    public static string Rounding => Get(nameof(Rounding));
+    public static string RoundingCoarse => Get(nameof(RoundingCoarse));
+    public static string RoundingFine => Get(nameof(RoundingFine));
+    public static string RoundingHelp => Get(nameof(RoundingHelp));
     public static string PowersOfTen => Get(nameof(PowersOfTen));
     public static string PowersOfTenHint => Get(nameof(PowersOfTenHint));
     public static string NumberPreview => Get(nameof(NumberPreview));

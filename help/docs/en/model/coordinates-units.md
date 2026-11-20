@@ -54,7 +54,7 @@ A value that is currently being edited may need to be confirmed or canceled befo
 
 ### Number formatting
 
-All displayed numbers – given values, library values and results – follow the same rule. **Significant digits** sets their number `n`, from 1 to 5 (default: 3). Each value is rounded on its own, in the selected unit:
+All displayed numbers – given values, library values and results – follow the same rule. **Rounding** sets the level `n` from 1 (coarse) to 5 (fine) (default: 3). Each value is rounded on its own, in the selected unit:
 
 - Digits before the decimal separator are never lost: `1234.5 N` is displayed as `1 235 N`, and `12.375 mm` as `12.4 mm`.
 - Halves are rounded away from zero, and trailing zeros are omitted (`12.0 mm` becomes `12 mm`, `999.6 N` becomes `1 000 N`).

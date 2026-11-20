@@ -212,4 +212,4 @@ Profile aus Einstellungen vor den Federlagern enthalten diese Größen nicht; be
 übrigen Einheiten zu verlieren.
 
 Diagramm-Achsenticks behalten ihre eigenständige Nice-Tick-Logik. Zoom, Seitenzahlen
-und reine UI-Zähler unterliegen ebenfalls nicht der Einstellung der signifikanten Stellen.
+und reine UI-Zähler unterliegen ebenfalls nicht der Rundungseinstellung.
