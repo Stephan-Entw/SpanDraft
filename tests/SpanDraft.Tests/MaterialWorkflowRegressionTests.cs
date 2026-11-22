@@ -107,7 +107,7 @@ public sealed class MaterialWorkflowRegressionTests
         public int Analyses { get; private set; }
         public Fixture(bool brokenCatalog = false, bool store = true)
         {
-            Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, files: Files, dialogs: Dialogs, services: TestServices.Create(materialStore: store ? new(Files, "materials") : null, catalogLoader: brokenCatalog ? () => throw new LibraryFormatException("Injected") : null, load: false));
+            Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, files: Files, projectIdentities: Identities, dialogs: Dialogs, services: TestServices.Create(materialStore: store ? new(Files, "materials") : null, catalogLoader: brokenCatalog ? () => throw new LibraryFormatException("Injected") : null, load: false));
             Main.NewCommand.Execute(null);
         }
         public async Task Load(params Material[] entries)

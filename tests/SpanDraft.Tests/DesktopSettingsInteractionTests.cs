@@ -255,7 +255,7 @@ public sealed class DesktopSettingsInteractionTests
 
     private static MainWindowViewModel CreateMain(Files? files = null, SharedServices? services = null, IProjectDialogs? dialogs = null)
     {
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, services: services ?? TestServices.Create(settingsStore: files is null ? null : new(files, "settings"))); main.NewCommand.Execute(null);
+        var main = new MainWindowViewModel(files: files, projectIdentities: Identities, dialogs: dialogs, services: services ?? TestServices.Create(settingsStore: files is null ? null : new(files, "settings"))); main.NewCommand.Execute(null);
         ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
         var document = new EditorDocument(M(1), ProjectTemplates.Material, ProjectTemplates.Section,
             [new(SupportId, M(.1), SupportType.Fixed, "A")],

@@ -131,7 +131,7 @@ public sealed class ReportPreviewTests : ProjectReportTestSupport
         var state = ReportTestProjects.Create(); var files = new Files();
         var dialogs = new ProjectTestSupport.Dialogs { Leave = decision };
         string path = Path.GetFullPath("close-report.spandraft"); files.Data[path] = ProjectFileCodec.Serialize(state);
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs);
+        var main = new MainWindowViewModel(files: files, projectIdentities: ProjectTestSupport.Identities, dialogs: dialogs);
         Assert.True(main.OpenAsync(path).GetAwaiter().GetResult());
         main.Editor!.SetAnnotationOffset(state.Document.Loads[0].Id, new(20, 10));
         Assert.True(main.ReportAsync().GetAwaiter().GetResult());

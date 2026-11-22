@@ -20,6 +20,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     private readonly Func<BeamModel, BeamAnalysisOutcome>? _analyze;
     private readonly InteractionPerformance? _performance;
     private readonly IProjectFileStore _files;
+    private readonly IProjectIdentityResolver _projectIdentities;
+    private readonly ProjectPathRegistry _projectPaths;
+    private readonly ProjectOpenCoordinator _projectOpen;
+    private readonly Action? _surfaceProject;
+    internal WindowId WindowId { get; }
     private readonly IProjectDialogs? _dialogs;
     private readonly ProjectRecovery? _recovery;
     private readonly ProjectSetupRecovery? _setupRecovery;
@@ -31,6 +36,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     private ProjectSetupViewModel _setup;
     private EditorViewModel? _editor;
     private bool _busy;
+    private TaskCompletionSource? _fileOperationCompletion;
     private bool _mainMenuOpen;
     private Exception? _pendingRecoveryError;
     private ResultPresentationOptions _resultPresentation = ResultPresentationOptions.Default;
@@ -43,11 +49,26 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         IProjectFileStore? files = null, IProjectDialogs? dialogs = null, ProjectRecovery? recovery = null,
         SharedServices? services = null, Func<Task>? openUserManual = null,
         ProjectSetupRecovery? setupRecovery = null, Func<string?>? userNameProvider = null,
+        InteractionPerformance? performance = null, IProjectIdentityResolver? projectIdentities = null)
+        : this(WindowId.Create(), new(), projectIdentities ?? new ProjectIdentityResolver(), analyze: analyze,
+            files: files, dialogs: dialogs, recovery: recovery, services: services, openUserManual: openUserManual,
+            setupRecovery: setupRecovery, userNameProvider: userNameProvider, performance: performance) { }
+
+    internal MainWindowViewModel(WindowId windowId, ProjectPathRegistry projectPaths, IProjectIdentityResolver projectIdentities,
+        ProjectOpenCoordinator? projectOpen = null, Action? surfaceProject = null,
+        Func<BeamModel, BeamAnalysisOutcome>? analyze = null, IProjectFileStore? files = null,
+        IProjectDialogs? dialogs = null, ProjectRecovery? recovery = null, SharedServices? services = null,
+        Func<Task>? openUserManual = null, ProjectSetupRecovery? setupRecovery = null, Func<string?>? userNameProvider = null,
         InteractionPerformance? performance = null)
     {
         _analyze = analyze;
         _performance = performance;
         _files = files ?? new ProjectFileStore();
+        WindowId = windowId;
+        _projectIdentities = projectIdentities;
+        _projectPaths = projectPaths;
+        _projectOpen = projectOpen ?? new(_files, projectIdentities, projectPaths);
+        _surfaceProject = surfaceProject;
         _dialogs = dialogs;
         _recovery = recovery;
         _setupRecovery = setupRecovery;
@@ -81,6 +102,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     {
         if (_disposed) return;
         _disposed = true;
+        _projectPaths.ReleaseOwner(WindowId);
+        DetachSession();
+        if (_recovery is not null) _recovery.Failed -= RecoveryFailed;
+        if (_setupRecovery is not null) _setupRecovery.Failed -= RecoveryFailed;
         _settingsRegistration.Dispose();
         _services.Settings.Changed -= SettingsChanged;
         _services.Materials.Changed -= LibraryChanged;
@@ -346,8 +371,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         return RunOperationAsync(async () =>
         {
             if (!await CanLeaveAsync()) return false;
-            await CompleteLeaveAsync();
-            Activate(ProjectSession.Create(new(document, new(), setup.Info)));
+            await PrepareLeaveAsync();
+            ActivatePathlessSession(ProjectSession.Create(new(document, new(), setup.Info)));
             // The author is current at once; remembering it on disk is best effort and never replaces damaged settings.
             await _services.Settings.UpdateLastAuthorAsync(Session!.CurrentRevision.State.Info!.Author);
             await DeleteSetupRecoveryAsync();
@@ -370,17 +395,29 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         return true;
     });
 
-    private void Activate(ProjectSession session)
+    private EditorViewModel CreateEditor(ProjectSession session) =>
+        EditorViewModel.ForSession(session, EditProject, _analyze, ResultPresentation, _performance);
+
+    internal void ActivatePathlessSession(ProjectSession session)
+    {
+        if (session.FilePath is not null) throw new ArgumentException("A file-backed session needs registry ownership.", nameof(session));
+        var editor = CreateEditor(session);
+        _projectPaths.ReleaseOwner(WindowId);
+        AttachEditor(editor);
+        if (session.IsDirty) _recovery?.Schedule(session);
+    }
+
+    private void AttachEditor(EditorViewModel editor)
     {
         DetachSession();
-        _editor = EditorViewModel.ForSession(session, EditProject, _analyze, ResultPresentation, _performance);
+        _editor = editor;
+        var session = editor.Session;
         _editor.IsMainMenuOpen = _mainMenuOpen;
         _editor.PropertyChanged += EditorReportStateChanged;
         session.SetBusy(IsBusy);
         session.Changed += SessionChanged;
         session.StateApplied += CommittedStateChanged;
         Navigate(MainViewMode.Editor);
-        if (session.IsDirty) _recovery?.Schedule(session);
     }
 
     private void DetachSession()
@@ -390,6 +427,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         session.Changed -= SessionChanged;
         session.StateApplied -= CommittedStateChanged;
         Editor!.PropertyChanged -= EditorReportStateChanged;
+        session.SetBusy(false);
     }
 
     private void EditorReportStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -415,53 +453,97 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         return Task.FromResult(true);
     });
 
-    public Task<bool> OpenAsync() => !CanOpenProject ? Task.FromResult(false) : RunOperationAsync(async () =>
+    public async Task<bool> OpenAsync()
     {
-        string? path = _dialogs is null ? null : await _dialogs.PickOpenPathAsync();
+        if (!CanOpenProject || _dialogs is null) return false;
+        string? path = null;
+        await RunOperationAsync(async () => (path = await _dialogs.PickOpenPathAsync()) is not null);
         return path is not null && await OpenPathAsync(path);
-    });
+    }
 
-    public Task<bool> OpenAsync(string path) => !CanOpenProject ? Task.FromResult(false)
-        : RunOperationAsync(() => OpenPathAsync(path));
-
-    public Task<bool> OpenRecentAsync(string path) => !CanOpenProject ? Task.FromResult(false)
-        : RunOperationAsync(() => OpenPathAsync(path, fromRecent: true));
+    public Task<bool> OpenAsync(string path) => OpenPathAsync(path);
+    public Task<bool> OpenRecentAsync(string path) => OpenPathAsync(path, fromRecent: true);
 
     private async Task<bool> OpenPathAsync(string path, bool fromRecent = false)
     {
-        // Parse and validate before touching the old session or asking its leave question.
-        var bytes = await _files.ReadAsync(path);
-        if (bytes is null)
+        if (_disposed || !CanOpenProject && _fileOperationCompletion is null) return false;
+        try
+        {
+            var result = await _projectOpen.OpenAsync(path, new SingleWindowOpen(this, path, fromRecent));
+            if (result.Status == ProjectOpenStatus.AlreadyOpen && CanOpenProject && Session?.FilePath is { } existingPath)
+                await RunOperationAsync(async () => { await RecordRecentAsync(existingPath); return true; });
+            return result.Status is ProjectOpenStatus.Opened or ProjectOpenStatus.AlreadyOpen;
+        }
+        catch (Exception e) when (IsFileError(e))
+        {
+            var outcome = e is DirectoryNotFoundException or FileNotFoundException ? new(ProjectOpenStatus.Missing)
+                : new ProjectOpenResult(ProjectOpenStatus.Failed, Error: e);
+            return await RunOperationAsync(() => PresentOpenResultAsync(outcome, path, fromRecent));
+        }
+    }
+
+    private async Task<bool> ActivateOpenedProjectAsync(ProjectState state, string path)
+    {
+        if (!await CanLeaveAsync()) return false;
+        var editor = CreateEditor(ProjectSession.Open(state, path));
+        await PrepareLeaveAsync();
+        AttachEditor(editor);
+        return true;
+    }
+
+    private async Task<bool> PresentOpenResultAsync(ProjectOpenResult result, string path, bool fromRecent)
+    {
+        if (result.Status == ProjectOpenStatus.Missing)
         {
             if (!fromRecent) throw new IOException(Strings.ProjectFileMissing);
             if (_dialogs is not null && await _dialogs.ConfirmRemoveMissingRecentAsync(Path.GetFullPath(path)))
                 await _services.Recents.RemoveAsync(path);
-            return false;
         }
-        var state = ProjectFileCodec.Deserialize(bytes);
-        var previousSession = Session;
-        bool wasDirty = previousSession?.IsDirty == true;
-        if (!await CanLeaveAsync()) return false;
-        // Saving the old session may itself replace the selected target (including Save As).
-        // Activate the snapshot actually written in that case, rather than a stale pre-guard read.
-        if (wasDirty && previousSession is { IsDirty: false, FilePath: { } savedPath }
-            && string.Equals(Path.GetFullPath(path), savedPath,
-                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-            state = previousSession.CurrentRevision.State;
-        await CompleteLeaveAsync();
-        Activate(ProjectSession.Open(state, Path.GetFullPath(path)));
+        if (result.Error is { } error) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error);
+        if (result.Status != ProjectOpenStatus.Opened) return false;
         await DeleteSetupRecoveryAsync();
         await RecordRecentAsync(Session!.FilePath!);
         return true;
     }
 
+    private sealed class SingleWindowOpen(MainWindowViewModel model, string path, bool fromRecent) : IProjectOpenWorkspace
+    {
+        public WindowId WindowId => model.WindowId;
+
+        public async Task<ProjectOpenResult> RunOpenAsync(Func<Task<ProjectOpenResult>> transaction, bool afterSave)
+        {
+            if (afterSave && model._fileOperationCompletion is { } fileOperation) await fileOperation.Task;
+            if (!model.CanOpenProject || model._disposed) return ProjectOpenResult.Cancelled;
+            var outcome = ProjectOpenResult.Cancelled;
+            await model.RunOperationAsync(async () =>
+            {
+                outcome = await transaction();
+                return await model.PresentOpenResultAsync(outcome, path, fromRecent);
+            }, fileTransaction: true);
+            return outcome;
+        }
+
+        public Task<bool> ActivateProjectAsync(ProjectState state, string canonicalPath) =>
+            model.ActivateOpenedProjectAsync(state, canonicalPath);
+
+        public void ActivateExisting(WindowId owner)
+        {
+            if (owner == WindowId) model._surfaceProject?.Invoke();
+        }
+
+        // Legacy recovery is decided before startup becomes Ready; Phase 6 supplies this surface.
+        public void ActivateRecovery(Guid candidate) { }
+    }
+
     public Task<bool> SaveAsync(bool saveAs = false) => !CanSaveProject ? Task.FromResult(false)
-        : RunOperationAsync(() => SaveCurrentAsync(saveAs));
+        : RunOperationAsync(() => SaveCurrentAsync(saveAs), fileTransaction: true);
 
     public Task<bool> CloseProjectAsync() => !CanCloseProject ? Task.FromResult(false) : RunOperationAsync(async () =>
     {
         if (!await CanLeaveAsync(recordRecent: false)) return false;
-        await CompleteLeaveAsync();
+        await PrepareLeaveAsync();
+        DetachSession();
+        _projectPaths.ReleaseOwner(WindowId);
         _editor = null;
         Navigate(MainViewMode.Start);
         return true;
@@ -482,27 +564,52 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
             if (path is null) return false;
             path = EnsureProjectExtension(path);
         }
-        path = Path.GetFullPath(path);
         string? previousPath = session.FilePath;
-        var revision = session.CurrentRevision;
+        var identity = !saveAs && previousPath is not null && _projectPaths.IdentityOwnedBy(WindowId) is { } owned
+            ? owned : _projectIdentities.Resolve(path);
+        var decision = _projectPaths.ArbitrateSave(identity, WindowId, out var reservation);
+        if (decision == SaveTargetDecision.Rejected) throw new IOException(Strings.ProjectFileInUse);
+
+        path = decision == SaveTargetDecision.SaveCurrent ? previousPath! : identity.CanonicalPath;
         try
         {
-            var bytes = ProjectFileCodec.Serialize(revision.State);
-            if (session.IsDirty && _recovery is not null) await _recovery.FlushAsync(revision.State, path);
-            await _files.WriteAtomicAsync(path, bytes);
-            session.MarkSaved(revision, path);
-        }
-        catch
-        {
-            // A failed Save As retains the prior save target in the recovery snapshot as well.
-            if (session.IsDirty && _recovery is not null)
+            var revision = session.CurrentRevision;
+            var save = session.PrepareSave(revision, path);
+            bool recoveryStarted = false;
+            try
             {
-                try { await _recovery.FlushAsync(revision.State, session.FilePath); }
-                catch (Exception e) when (IsFileError(e)) { _recovery.Schedule(session); }
+                var bytes = ProjectFileCodec.Serialize(revision.State);
+                if (_recovery is not null && (session.IsDirty || reservation is not null))
+                {
+                    recoveryStarted = true;
+                    await _recovery.FlushAsync(revision.State, path);
+                }
+                await _files.WriteAtomicAsync(path, bytes);
             }
-            throw;
+            catch
+            {
+                if (recoveryStarted)
+                {
+                    try
+                    {
+                        if (session.IsDirty) await _recovery!.FlushAsync(revision.State, previousPath);
+                        else await _recovery!.DeleteAsync();
+                    }
+                    catch (Exception e) when (IsFileError(e)) { _recovery!.Schedule(session); }
+                }
+                throw;
+            }
+
+            if (reservation is null) save.MarkSaved();
+            else if (!_projectPaths.TryCommitSave(reservation, save))
+                throw new InvalidOperationException("The save reservation lost ownership after the write.");
+            session.NotifySaved();
         }
-        if (recordRecent) await RecordRecentAsync(path, saveAs ? previousPath : null);
+        finally
+        {
+            if (reservation is not null) _projectPaths.TryReleaseSave(reservation);
+        }
+        if (recordRecent) await RecordRecentAsync(path, saveAs && reservation is not null ? previousPath : null);
         if (_recovery is not null)
         {
             try { await _recovery.DeleteAsync(); }
@@ -526,12 +633,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         };
     }
 
-    private async Task CompleteLeaveAsync()
+    private async Task PrepareLeaveAsync()
     {
         if (_recovery is not null) await _recovery.DeleteAsync();
         Editor?.CancelEditorInteraction();
-        DetachSession();
-        Session?.SetBusy(false);
     }
 
     /// <summary>True only once the shared leave workflow has succeeded. The Window handles its one approved Close.</summary>
@@ -539,7 +644,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     {
         if (!await CanLeaveAsync()) return false;
         ReleaseReport();
-        await CompleteLeaveAsync();
+        await PrepareLeaveAsync();
         await DeleteSetupRecoveryAsync();
         return true;
     });
@@ -576,10 +681,36 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         }
         var choice = _dialogs is null ? RecoveryDecision.Cancel
             : await _dialogs.ConfirmRecoveryAsync(false, snapshot.WrittenAtUtc);
-        if (choice == RecoveryDecision.Restore) Activate(ProjectSession.Restore(snapshot.State, snapshot.OriginalFilePath));
+        if (choice == RecoveryDecision.Restore) RestoreLegacyProject(snapshot);
         else if (choice == RecoveryDecision.Discard) await _recovery.DeleteAsync();
         else return false;
         return true;
+    }
+
+    private void RestoreLegacyProject(RecoverySnapshot snapshot)
+    {
+        ProjectIdentity? identity = null;
+        if (snapshot.OriginalFilePath is { } path)
+        {
+            try { identity = _projectIdentities.Resolve(path); }
+            catch (Exception e) when (IsFileError(e)) { /* The snapshot can be restored without binding it to the original. */ }
+        }
+        if (identity is null)
+        {
+            ActivatePathlessSession(ProjectSession.Restore(snapshot.State, null));
+            return;
+        }
+
+        var token = _projectPaths.ArbitrateOpen(identity).Reservation ?? throw new IOException(Strings.ProjectFileInUse);
+        try
+        {
+            var editor = CreateEditor(ProjectSession.Restore(snapshot.State, identity.CanonicalPath));
+            AttachEditor(editor);
+            if (!_projectPaths.TryCommitOpen(token, WindowId))
+                throw new InvalidOperationException("The recovery open reservation lost ownership during activation.");
+            _recovery?.Schedule(editor.Session);
+        }
+        finally { _projectPaths.TryReleaseOpen(token, ProjectOpenResult.Cancelled); }
     }
 
     private async Task<bool> InitializeSetupRecoveryAsync()
@@ -609,9 +740,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         return true;
     }
 
-    private async Task<bool> RunOperationAsync(Func<Task<bool>> operation)
+    private async Task<bool> RunOperationAsync(Func<Task<bool>> operation, bool fileTransaction = false)
     {
         if (IsWorkspaceBusy) return false;
+        var completion = fileTransaction ? new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) : null;
+        _fileOperationCompletion = completion;
         _busy = true;
         Session?.SetBusy(true);
         NotifySession();
@@ -623,19 +756,24 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         }
         finally
         {
-            _busy = false;
-            Session?.SetBusy(false);
-            NotifySession();
-            if (_pendingRecoveryError is { } recoveryError)
+            try
             {
-                _pendingRecoveryError = null;
-                await ReportRecoveryErrorAsync(recoveryError);
+                _busy = false;
+                _fileOperationCompletion = null;
+                Session?.SetBusy(false);
+                NotifySession();
+                if (_pendingRecoveryError is { } recoveryError)
+                {
+                    _pendingRecoveryError = null;
+                    await ReportRecoveryErrorAsync(recoveryError);
+                }
             }
+            finally { completion?.SetResult(); }
         }
     }
 
     private static bool IsFileError(Exception e) => e is IOException or UnauthorizedAccessException
-        or ProjectFormatException or JsonException or ArgumentException or NotSupportedException;
+        or ProjectFormatException or JsonException or ArgumentException or NotSupportedException or System.Security.SecurityException;
     private Task ShowErrorAsync(string prefix, Exception e) => _dialogs?.ShowErrorAsync(prefix + "\n" + e.Message) ?? Task.CompletedTask;
     private async void RecoveryFailed(Exception error)
     {

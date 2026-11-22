@@ -340,7 +340,7 @@ public sealed class DesktopReportToolbarTests
         files.Data[path] = ProjectFileCodec.Serialize(state with { Document = state.Document with { Length = M(1) } });
         var window = new MainWindow(TestHosts.Initialized(new DesktopApplicationHost(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default))));
         window.Show(); Dispatcher.UIThread.RunJobs();
-        var main = new MainWindowViewModel(files: files);
+        var main = new MainWindowViewModel(files: files, projectIdentities: ProjectTestSupport.Identities);
         Assert.True(main.OpenAsync(path).GetAwaiter().GetResult());
         typeof(MainWindow).GetField("_model", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, main);
         window.DataContext = main;

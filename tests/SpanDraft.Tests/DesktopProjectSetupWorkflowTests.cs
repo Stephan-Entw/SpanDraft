@@ -23,7 +23,7 @@ public sealed class DesktopProjectSetupWorkflowTests
         public int Analyses { get; private set; }
         public Fixture(bool brokenCatalog = false)
         {
-            Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, Files, Dialogs, services: TestServices.Create(materialStore: new(Files, "materials"), sectionStore: new(Files, "sections"), catalogLoader: brokenCatalog ? () => throw new LibraryFormatException("Injected") : null, load: false));
+            Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, Files, Dialogs, projectIdentities: Identities, services: TestServices.Create(materialStore: new(Files, "materials"), sectionStore: new(Files, "sections"), catalogLoader: brokenCatalog ? () => throw new LibraryFormatException("Injected") : null, load: false));
             Main.NewCommand.Execute(null);
         }
         public async Task Load() => await Main.Services.InitializeAsync();

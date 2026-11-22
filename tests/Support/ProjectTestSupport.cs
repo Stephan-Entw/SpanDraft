@@ -16,7 +16,7 @@ internal static class ProjectTestSupport
     /// <summary>A host that holds the initial request exactly as Program hands it over.</summary>
     public static DesktopApplicationHost HostWithLaunchArguments(DesktopStartupContext startup, string[]? args)
     {
-        var host = TestHosts.Initialized(new DesktopApplicationHost(startup));
+        var host = TestHosts.Initialized(new DesktopApplicationHost(startup with { ProjectIdentities = startup.ProjectIdentities ?? Identities }));
         host.SetInitialRequest(SpanDraft.Desktop.Activation.LaunchRequest.FromArguments(args));
         return host;
     }
@@ -26,6 +26,13 @@ internal static class ProjectTestSupport
 
     // These paths address only the in-memory store; no directory is created.
     public static string TestPath(string fileName) => Path.GetFullPath(Path.Combine(VirtualDirectory, fileName));
+
+    public static IProjectIdentityResolver Identities { get; } = new TestIdentityResolver();
+
+    public sealed class TestIdentityResolver(Func<string, ProjectIdentity>? resolve = null) : IProjectIdentityResolver
+    {
+        public ProjectIdentity Resolve(string path) => resolve?.Invoke(path) ?? new(path, caseSensitive: true);
+    }
 
     public static Task WaitFor(Task task) =>
         task.WaitAsync(TimeSpan.FromSeconds(30), Xunit.TestContext.Current.CancellationToken);
@@ -225,7 +232,7 @@ internal static class ProjectTestSupport
         public App(bool create = true)
         {
             Recovery = new(Files, Slot, Delay.Wait, () => Now);
-            Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, Files, Dialogs, Recovery);
+            Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, Files, Dialogs, Recovery, projectIdentities: Identities);
             if (create) { Main.NewCommand.Execute(null); CompleteSetup(Main); Main.Setup.ApplyCommand.Execute(null); }
         }
         public void ChangeLength(double meters = 1.5)

@@ -69,7 +69,7 @@ public sealed class MaterialStrengthReportTests : MaterialStrengthTestSupport
         using var scope = new UiCultureScope(culture);
         var files = new Files(); var path = TestPath("typed-report.spandraft");
         files.Data[path] = ProjectFileCodec.Serialize(WithMaterial(Typed(type)));
-        var main = new MainWindowViewModel(files: files);
+        var main = new MainWindowViewModel(files: files, projectIdentities: ProjectTestSupport.Identities);
         Assert.True(await main.OpenAsync(path));
         using var report = ProjectReport.Capture(main.Editor!);
         Assert.Contains(report.Data.Segments[0].MaterialProperties, p => p.PlainText.StartsWith(MaterialStrengthDisplay.Label(type) + " = ", StringComparison.Ordinal));

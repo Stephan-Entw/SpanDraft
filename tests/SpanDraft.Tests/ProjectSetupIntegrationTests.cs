@@ -606,7 +606,7 @@ public sealed class ProjectSetupIntegrationTests
     {
         var files = new Files(); var dialogs = new Dialogs();
         var store = new LocalSettingsStore(files, "settings");
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, services: TestServices.Create(settingsStore: store, settings: UserSettings.Default with { LastAuthor = "Local author" }));
+        var main = new MainWindowViewModel(files: files, projectIdentities: Identities, dialogs: dialogs, services: TestServices.Create(settingsStore: store, settings: UserSettings.Default with { LastAuthor = "Local author" }));
         var path = TestPath("foreign.spandraft");
         files.Data[path] = ProjectFileCodec.Serialize(State() with { Info = new("Foreign beam", null, null, "Foreign author") });
         Assert.True(await main.OpenAsync(path)); Assert.Equal("Local author", main.Settings.LastAuthor);
@@ -626,7 +626,7 @@ public sealed class ProjectSetupIntegrationTests
         var info = hasInfo ? new ProjectInfo("Recovered beam", null, null, "Recovered author") : null;
         var state = State() with { Info = info };
         files.Data["project-recovery"] = ProjectRecovery.Encode(new(state, null, Now));
-        var main = new MainWindowViewModel(files: files, dialogs: new Dialogs(),
+        var main = new MainWindowViewModel(files: files, projectIdentities: Identities, dialogs: new Dialogs(),
             recovery: new(files, "project-recovery"), services: TestServices.Create(settingsStore: new(files, "settings"), settings: UserSettings.Default with { LastAuthor = "Local author" }));
         Assert.True(await main.InitializeRecoveryAsync());
         Assert.Equal(info, main.Session!.CurrentRevision.State.Info);
@@ -709,7 +709,7 @@ public sealed class ProjectSetupIntegrationTests
         var recovery = new ProjectRecovery(files, "project-recovery");
         if (recover) files.Data["project-recovery"] = ProjectRecovery.Encode(new(state, path, Now));
         if (recover) files.Data.TryRemove(path, out _);
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, recovery: recovery,
+        var main = new MainWindowViewModel(files: files, projectIdentities: Identities, dialogs: dialogs, recovery: recovery,
             userNameProvider: () => "windows.user");
         Assert.True(recover ? await main.InitializeRecoveryAsync() : await main.OpenAsync(path));
         Assert.Equal(info, main.Session!.CurrentRevision.State.Info);

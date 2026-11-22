@@ -19,7 +19,7 @@ public sealed class CloseProjectTests
         {
             Recents = new(Files, "recents", () => Now);
             Recovery = new(Files, "recovery", Delay.Wait, () => Now);
-            Main = new(files: Files, dialogs: Dialogs, recovery: Recovery, services: TestServices.Create(recentStore: Recents));
+            Main = new(files: Files, projectIdentities: Identities, dialogs: Dialogs, recovery: Recovery, services: TestServices.Create(recentStore: Recents));
         }
         public async Task Open()
         {

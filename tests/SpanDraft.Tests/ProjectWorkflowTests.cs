@@ -256,20 +256,48 @@ public sealed class ProjectWorkflowTests
         editor.Session.SetBusy(false); editor.DimensionLength.Cancel(); Assert.Equal(1, app.Analyses);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task SavingDuringLeaveDoesNotActivateAStaleReadOfTheSameOpenTarget(bool saveAs)
+    [Fact]
+    public async Task ReopeningTheOwnedPathKeepsTheCurrentDirtySession()
     {
         var app = new App();
-        if (!saveAs) Assert.True(await app.Main.SaveAsync());
-        else app.Files.Data[app.Dialogs.SavePath!] = ProjectFileCodec.Serialize(State());
+        Assert.True(await app.Main.SaveAsync());
         app.ChangeLength(2);
-        app.Dialogs.Leave = LeaveDecision.Save; app.Dialogs.OpenPath = app.Dialogs.SavePath;
-        var stateBeingSaved = app.Main.Session!.CurrentRevision.State;
+        var session = app.Main.Session!;
+        var oldBytes = app.Files.Data[session.FilePath!];
+        app.Dialogs.OpenPath = session.FilePath;
+        app.Files.BeforeRead = _ => throw new IOException("Reopen must not read the file.");
         Assert.True(await app.Main.OpenAsync());
-        Assert.True(stateBeingSaved.ContentEquals(app.Main.Session!.CurrentRevision.State));
-        Assert.True(stateBeingSaved.ContentEquals(ProjectFileCodec.Deserialize(app.Files.Data[app.Dialogs.OpenPath!])));
-        Assert.False(app.Main.Session.IsDirty); Assert.Empty(app.Main.Session.UndoHistory); Assert.Equal(3, app.Analyses);
+        Assert.Same(session, app.Main.Session);
+        Assert.True(session.IsDirty);
+        Assert.Single(session.UndoHistory);
+        Assert.Equal(0, app.Dialogs.LeaveQuestions);
+        Assert.Equal(oldBytes, app.Files.Data[session.FilePath!]);
+        Assert.Equal(2, app.Analyses);
+    }
+
+    [Fact]
+    public async Task SavingDuringLeaveCannotOverwriteTheReservedOpenTarget()
+    {
+        var app = new App();
+        string path = app.Dialogs.SavePath!;
+        var oldBytes = ProjectFileCodec.Serialize(State());
+        app.Files.Data[path] = oldBytes;
+        app.ChangeLength(2);
+        var session = app.Main.Session!;
+        app.Dialogs.Leave = LeaveDecision.Save; app.Dialogs.OpenPath = path;
+
+        Assert.False(await app.Main.OpenAsync());
+        Assert.Same(session, app.Main.Session);
+        Assert.True(session.IsDirty);
+        Assert.Null(session.FilePath);
+        Assert.Single(app.Dialogs.Errors);
+        Assert.Equal(oldBytes, app.Files.Data[path]);
+        Assert.Empty(app.Files.Writes);
+
+        app.Dialogs.Leave = LeaveDecision.Discard;
+        Assert.True(await app.Main.OpenAsync());
+        Assert.NotSame(session, app.Main.Session);
+        Assert.Equal(path, app.Main.Session!.FilePath);
+        Assert.Equal(3, app.Analyses);
     }
 }

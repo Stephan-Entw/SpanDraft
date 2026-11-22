@@ -92,7 +92,7 @@ public sealed class StartPageControlTests
         var files = new Files(); var dialogs = new Dialogs(); int calls = 0;
         string path = TestPath("keyboard.spandraft"); files.Data[path] = ProjectFileCodec.Serialize(State());
         var store = new RecentProjectsStore(files, "recents", () => Now); await store.RecordUseAsync(path);
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs,
+        var main = new MainWindowViewModel(files: files, projectIdentities: Identities, dialogs: dialogs,
             openUserManual: () => { calls++; return Task.CompletedTask; }, services: TestServices.Create(recentStore: store));
         await main.Services.InitializeAsync();
         var view = new StartPageView { DataContext = main.StartPage };
@@ -163,7 +163,7 @@ public sealed class StartPageControlTests
         var files = new Files(); var store = new RecentProjectsStore(files, "recents", () => Now);
         string path = TestPath("missing.spandraft"); await store.RecordUseAsync(path);
         var dialogs = new Dialogs { RemoveMissingRecent = remove };
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, services: TestServices.Create(recentStore: store));
+        var main = new MainWindowViewModel(files: files, projectIdentities: Identities, dialogs: dialogs, services: TestServices.Create(recentStore: store));
         await main.Services.InitializeAsync();
         var view = new StartPageView { DataContext = main.StartPage };
         var window = new Window { Content = view, Width = 1100, Height = 650 }; window.Show();

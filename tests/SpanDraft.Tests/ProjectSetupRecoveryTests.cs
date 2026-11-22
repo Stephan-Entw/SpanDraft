@@ -40,7 +40,7 @@ public sealed class ProjectSetupRecoveryTests
         {
             Recovery = new(Files, Slot, Delay.Wait, () => Now);
             NormalRecovery = new(Files, ProjectSlot, ProjectDelay.Wait, () => Now);
-            Main = new(files: Files, dialogs: Dialogs, recovery: NormalRecovery, setupRecovery: Recovery, userNameProvider: userNameProvider, services: TestServices.Create(materialStore: new(Files, "materials"), settings: settings));
+            Main = new(files: Files, projectIdentities: Identities, dialogs: Dialogs, recovery: NormalRecovery, setupRecovery: Recovery, userNameProvider: userNameProvider, services: TestServices.Create(materialStore: new(Files, "materials"), settings: settings));
         }
         public void Seed(ProjectSetupDraft? draft = null) => Files.Data[Slot] = ProjectSetupRecovery.Encode(new(draft ?? Draft(), Now));
         public async Task Publish()

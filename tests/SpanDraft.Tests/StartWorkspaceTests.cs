@@ -22,7 +22,7 @@ public sealed class StartWorkspaceTests
         public Fixture()
         {
             Store = new(Files, Slot, () => Time);
-            Main = new(files: Files, dialogs: Dialogs, services: TestServices.Create(recentStore: Store, load: false));
+            Main = new(files: Files, projectIdentities: Identities, dialogs: Dialogs, services: TestServices.Create(recentStore: Store, load: false));
         }
         public async Task Create()
         { Assert.True(await Main.NewAsync()); ProjectTestSupport.CompleteSetup(Main); Assert.True(await Main.Setup.ConfirmAsync()); }
@@ -88,7 +88,7 @@ public sealed class StartWorkspaceTests
             return Task.CompletedTask;
         };
         Assert.True(await f.Main.OpenAsync()); Assert.Equal(path, Assert.Single(f.Store.Entries).Path);
-        var fresh = new MainWindowViewModel(files: f.Files, dialogs: f.Dialogs, services: TestServices.Create(recentStore: f.Store, load: false));
+        var fresh = new MainWindowViewModel(files: f.Files, projectIdentities: Identities, dialogs: f.Dialogs, services: TestServices.Create(recentStore: f.Store, load: false));
         await fresh.Services.InitializeAsync();
         f.Files.BeforeWrite = null; f.Dialogs.OpenPath = TestPath("picker-must-not-be-used.spandraft");
         Assert.Single(fresh.StartPage.RecentProjects).OpenCommand.Execute(null);

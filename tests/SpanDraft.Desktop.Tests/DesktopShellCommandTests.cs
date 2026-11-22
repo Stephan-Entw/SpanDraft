@@ -179,7 +179,7 @@ public sealed class DesktopShellCommandTests
     {
         var files = new Files(); var dialogs = new Dialogs { OpenPath = TestPath("initial.spandraft") };
         files.Data[dialogs.OpenPath] = SpanDraft.Desktop.Persistence.ProjectFileCodec.Serialize(State());
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs);
+        var main = new MainWindowViewModel(files: files, projectIdentities: Identities, dialogs: dialogs);
         Check(true, true, false, false);
         Assert.True(await main.NewAsync()); Check(false, true, false, false);
         Assert.False(await main.NewAsync()); Assert.False(await main.SaveAsync());
@@ -210,7 +210,7 @@ public sealed class DesktopShellCommandTests
     public async Task BusyDisablesFileAndHistoryCommandsAndRestoresThemAfterwards()
     {
         var files = new Files(); var dialogs = new Dialogs();
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs); main.NewCommand.Execute(null); ProjectTestSupport.CompleteSetup(main); Assert.True(await main.Setup.ConfirmAsync());
+        var main = new MainWindowViewModel(files: files, projectIdentities: Identities, dialogs: dialogs); main.NewCommand.Execute(null); ProjectTestSupport.CompleteSetup(main); Assert.True(await main.Setup.ConfirmAsync());
         var pending = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         files.BeforeWrite = (_, _, _) => pending.Task;
         var save = main.SaveAsync(); Assert.True(main.IsWorkspaceBusy);

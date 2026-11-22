@@ -19,6 +19,8 @@ public sealed class DesktopApplicationHost
     public DesktopApplicationHost(DesktopStartupContext? startup = null)
     {
         Files = startup?.Files ?? new ProjectFileStore();
+        ProjectIdentities = startup?.ProjectIdentities ?? new ProjectIdentityResolver();
+        ProjectOpen = new(Files, ProjectIdentities, ProjectPaths);
         var settingsStore = startup?.SettingsStore ?? LocalSettingsStore.Local(Files);
         StateStores = startup?.StateStores ?? DesktopStateStores.Local(Files);
         UserNameProvider = startup?.UserNameProvider ?? (static () => OperatingSystem.IsWindows() ? Environment.UserName : null);
@@ -29,6 +31,9 @@ public sealed class DesktopApplicationHost
     }
 
     public IProjectFileStore Files { get; }
+    internal IProjectIdentityResolver ProjectIdentities { get; }
+    internal ProjectPathRegistry ProjectPaths { get; } = new();
+    internal ProjectOpenCoordinator ProjectOpen { get; }
     /// <summary>The persistence bundle the services were built from; recovery stores are still used directly.</summary>
     public DesktopStateStores StateStores { get; }
     public SharedServices Services { get; }

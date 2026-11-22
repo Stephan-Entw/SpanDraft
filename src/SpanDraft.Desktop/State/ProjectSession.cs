@@ -19,6 +19,7 @@ public sealed class ProjectSession
     }
 
     public static ProjectSession Create(ProjectState state) => new(state, null, false);
+    public static ProjectSession FromTemplate(ProjectState state) => new(state, null, true);
     public static ProjectSession Open(ProjectState state, string filePath) => new(state, filePath, true);
     public static ProjectSession Restore(ProjectState state, string? originalFilePath) => new(state, originalFilePath, false);
     public ProjectRevision CurrentRevision { get; private set; }
@@ -76,11 +77,26 @@ public sealed class ProjectSession
 
     public void MarkSaved(ProjectRevision writtenRevision, string filePath)
     {
+        PrepareSave(writtenRevision, filePath).MarkSaved();
+        NotifySaved();
+    }
+
+    internal PreparedSave PrepareSave(ProjectRevision writtenRevision, string filePath)
+    {
         if (writtenRevision.RevisionId != CurrentRevision.RevisionId)
             throw new InvalidOperationException("The project changed during save.");
-        FilePath = filePath;
-        SavedRevisionId = writtenRevision.RevisionId;
-        Changed?.Invoke();
+        return new(this, writtenRevision.RevisionId, filePath);
+    }
+
+    internal void NotifySaved() => Changed?.Invoke();
+
+    internal sealed class PreparedSave(ProjectSession session, Guid revisionId, string path)
+    {
+        internal void MarkSaved()
+        {
+            session.FilePath = path;
+            session.SavedRevisionId = revisionId;
+        }
     }
 
     public void SetBusy(bool busy)

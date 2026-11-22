@@ -182,7 +182,7 @@ public sealed class ProjectRecoveryTests
         Assert.Equal(1, app.Dialogs.RecoveryQuestions);
 
         var dialogs = new Dialogs { Recovery = RecoveryDecision.Cancel };
-        var fresh = new MainWindowViewModel(files: app.Files, dialogs: dialogs,
+        var fresh = new MainWindowViewModel(files: app.Files, projectIdentities: Identities, dialogs: dialogs,
             recovery: new ProjectRecovery(app.Files, App.Slot));
         Assert.False(await fresh.InitializeRecoveryAsync());
         Assert.Equal(1, dialogs.RecoveryQuestions); Assert.Null(fresh.Session);
@@ -252,7 +252,7 @@ public sealed class ProjectRecoveryTests
         Assert.True(await app.Main.SaveAsync());
         Assert.False(app.Main.Session!.IsDirty); Assert.NotNull(await app.Recovery.ReadAsync()); Assert.Single(app.Dialogs.Errors);
         app.Files.FailDelete = false;
-        var dialogs = new Dialogs(); var fresh = new MainWindowViewModel(files: app.Files, dialogs: dialogs, recovery: app.Recovery);
+        var dialogs = new Dialogs(); var fresh = new MainWindowViewModel(files: app.Files, projectIdentities: Identities, dialogs: dialogs, recovery: app.Recovery);
         Assert.True(await fresh.InitializeRecoveryAsync()); Assert.Null(await app.Recovery.ReadAsync());
         Assert.Equal(0, dialogs.RecoveryQuestions); Assert.Null(fresh.Session);
     }
@@ -351,7 +351,7 @@ public sealed class ProjectRecoveryTests
         var snapshot = (await recovery.ReadAsync())!;
         Assert.True(state.ContentEquals(snapshot.State)); Assert.Equal(Now, snapshot.WrittenAtUtc);
         Assert.Equal(TestPath("original.spandraft"), snapshot.OriginalFilePath);
-        var main = new MainWindowViewModel(files: files, recovery: recovery,
+        var main = new MainWindowViewModel(files: files, projectIdentities: Identities, recovery: recovery,
             dialogs: new Dialogs(),
             userNameProvider: () => "windows.user", services: TestServices.Create(settings: UserSettings.Default with { LastAuthor = "Local author" }));
         Assert.True(await main.InitializeRecoveryAsync()); Assert.True(main.Session!.IsDirty);

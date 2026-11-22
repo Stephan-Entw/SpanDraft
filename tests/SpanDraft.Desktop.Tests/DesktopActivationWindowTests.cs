@@ -26,7 +26,7 @@ public sealed class DesktopActivationWindowTests
         var recovery = new ProjectRecovery(files, ProjectRecovery.Local(files).SlotPath, new Delay().Wait, () => Now);
         if (withRecovery) files.Data[recovery.SlotPath] = ProjectRecovery.Encode(new(State(), null, Now));
         return new(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default)
-        { StateStores = DesktopStateStores.Local(files) with { Recovery = recovery } });
+        { StateStores = DesktopStateStores.Local(files) with { Recovery = recovery }, ProjectIdentities = Identities });
     }
 
     private static void WithUiContext(Action action)
@@ -34,6 +34,39 @@ public sealed class DesktopActivationWindowTests
         var previous = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(new AvaloniaSynchronizationContext());
         try { action(); } finally { SynchronizationContext.SetSynchronizationContext(previous); }
+    }
+
+    [Fact]
+    public void LaunchOpenForTheCurrentIdentitySurfacesTheSameWindowAndSession()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var files = new Files();
+            var host = Host(files);
+            var window = new MainWindow(host);
+            string path = TestPath("activate-owned.spandraft");
+            files.Data[path] = ProjectFileCodec.Serialize(State(3));
+            int reads = 0, surfaced = 0;
+            files.BeforeRead = p => { if (p == path) reads++; return Task.CompletedTask; };
+            window.Surface = target => { Assert.Same(window, target); surfaced++; };
+            DesktopControlEnvironment.ShowInitialized(window);
+            var model = Assert.IsType<MainWindowViewModel>(window.DataContext);
+            Assert.Equal(window.WindowId, model.WindowId);
+            Assert.True(model.OpenAsync(path).GetAwaiter().GetResult());
+            var session = model.Session;
+
+            Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(path)));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, host.Activation.Count);
+            Assert.Equal(1, reads);
+            Assert.Equal(1, surfaced);
+            Assert.Same(session, model.Session);
+            Assert.Equal(window.WindowId, host.ProjectPaths.ArbitrateOpen(Identities.Resolve(path)).Owner);
+
+            window.Close(); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(ProjectPathState.Free, host.ProjectPaths.StateOf(Identities.Resolve(path)));
+        });
     }
 
     [Fact]

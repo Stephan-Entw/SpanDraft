@@ -43,7 +43,7 @@ public abstract class ProjectReportTestSupport : IDisposable
     {
         var files = new Files();
         string path = Path.GetFullPath("report-input.spandraft"); files.Data[path] = ProjectFileCodec.Serialize(state);
-        var main = new MainWindowViewModel(files: files,
+        var main = new MainWindowViewModel(files: files, projectIdentities: ProjectTestSupport.Identities,
             analyze: beam => { analyzed?.Invoke(); return BeamAnalysis.Analyze(beam); }, services: TestServices.Create(settings: UserSettings.Default with
             { Profile = presentation?.Profile ?? UnitProfile.Default, SignificantDigits = presentation?.SignificantDigits ?? 3,
               Notation = presentation?.Notation ?? EngineeringNotation.Automatic }));

@@ -103,6 +103,7 @@
   <data name="ProjectFileFilter" xml:space="preserve"><value>SpanDraft-Projekt (*.spandraft)</value></data>
   <data name="ProjectFileError" xml:space="preserve"><value>Die Projektaktion konnte nicht abgeschlossen werden.</value></data>
   <data name="ProjectFileMissing" xml:space="preserve"><value>Die Projektdatei ist nicht mehr vorhanden.</value></data>
+  <data name="ProjectFileInUse" xml:space="preserve"><value>Die Projektdatei wird von einem anderen Projekt oder Vorgang verwendet.</value></data>
   <data name="ProjectBusy" xml:space="preserve"><value>Eine Projektdateiaktion läuft bereits.</value></data>
   <data name="LocalFilesOnly" xml:space="preserve"><value>Bitte eine lokale Projektdatei auswählen.</value></data>
   <data name="LeaveQuestion" xml:space="preserve"><value>Änderungen an „{0}“ vor dem Verlassen speichern?</value></data>

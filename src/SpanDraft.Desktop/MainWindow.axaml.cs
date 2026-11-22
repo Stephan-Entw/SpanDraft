@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private readonly KeyModifiers _primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
     private ProjectDialogs _dialogs = null!;
     private readonly DesktopApplicationHost _host;
+    internal WindowId WindowId { get; } = WindowId.Create();
     private bool _closing;
     private bool _closeApproved;
     private AboutWindow? _aboutWindow;
@@ -106,7 +107,8 @@ public partial class MainWindow : Window
                 // The shared services were initialized by the bootstrap; this window only adapts them.
                 _model = new(performance: _performance, files: files, dialogs: _dialogs, recovery: stores.Recovery,
                     setupRecovery: stores.SetupRecovery, services: host.Services, openUserManual: OpenUserManualAsync,
-                    userNameProvider: host.UserNameProvider);
+                    userNameProvider: host.UserNameProvider, windowId: WindowId, projectIdentities: host.ProjectIdentities,
+                    projectPaths: host.ProjectPaths, projectOpen: host.ProjectOpen, surfaceProject: () => Surface(this));
                 await _model.ReportStartupErrorsAsync();
                 DataContext = _model;
                 var discardConfirmed = new HashSet<LaunchRequest>(ReferenceEqualityComparer.Instance);

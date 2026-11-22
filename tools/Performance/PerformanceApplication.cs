@@ -25,6 +25,11 @@ internal sealed class MemoryProjectStore : IProjectFileStore
 
 internal sealed class PerformanceApplication(MeasureOptions options, MemoryProjectStore files)
 {
+    private sealed class ReferenceIdentityResolver : IProjectIdentityResolver
+    {
+        public ProjectIdentity Resolve(string path) => new(path, caseSensitive: true);
+    }
+
     private static readonly TimeSpan HostTimeout = TimeSpan.FromSeconds(30);
     private MainWindow _window = null!;
     private MainWindowViewModel _main = null!;
@@ -43,6 +48,7 @@ internal sealed class PerformanceApplication(MeasureOptions options, MemoryProje
         };
         var startup = new DesktopStartupContext(files, new(files, At("settings.json")), settings)
         {
+            ProjectIdentities = new ReferenceIdentityResolver(),
             UserNameProvider = static () => null,
             StateStores = new(new(files, At("recovery.json")), new(files, At("setup-recovery.json")),
                 new(files, At("materials.json")), new(files, At("sections.json")), new(files, At("recents.json")))
@@ -118,6 +124,7 @@ internal sealed class PerformanceApplication(MeasureOptions options, MemoryProje
                         });
                     results.Add(result);
                     Console.WriteLine($"{scenario}/{action}: {result.ValidSampleCount} samples, {result.DiscardedSampleCount} discarded.");
+                    if (!await _main.CloseProjectAsync()) throw new InvalidOperationException("Could not close the synthetic reference.");
                 }
                 var version = typeof(MainWindow).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "unavailable";
                 var run = new RunFile(1, 1, "milliseconds", version, BuildSource.Read(typeof(Program).Assembly), started,

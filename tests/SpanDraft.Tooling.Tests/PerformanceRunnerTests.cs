@@ -60,7 +60,7 @@ public sealed class PerformanceRunnerTests
     {
         var reference = ReferenceScenarios.Create(scenario);
         var files = new MemoryProjectStore(); var recorder = new InteractionPerformance(new Frames());
-        var main = new MainWindowViewModel(files: files, performance: recorder);
+        var main = new MainWindowViewModel(files: files, performance: recorder, projectIdentities: ProjectTestSupport.Identities);
         string path = Path.Combine(Path.GetTempPath(), "SpanDraft-performance-test.spandraft");
         await files.WriteAtomicAsync(path, ProjectFileCodec.Serialize(reference), TestContext.Current.CancellationToken);
         foreach (string action in ReferenceActions.Ids)
@@ -88,6 +88,7 @@ public sealed class PerformanceRunnerTests
                 ReferenceActions.AssertReference(main, reference, true);
                 Assert.False(main.Session.IsDirty);
             }
+            Assert.True(await main.CloseProjectAsync());
         }
     }
 
