@@ -2,6 +2,7 @@ using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.Services;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
@@ -80,9 +81,72 @@ public sealed class DesktopSettingsInteractionTests
         Assert.Same(UnitCatalog.Gigapascal, editor.Inputs[0].Unit);
     }
 
-    private static MainWindowViewModel CreateMain(Files? files = null)
+    [Fact]
+    public async Task TheSettingsFreezeStopsNewOperationsInEveryWorkspaceOnlyWhileTheCommitRunsAndIsReleasedAfterwards()
     {
-        var main = new MainWindowViewModel(files: files, services: TestServices.Create(settingsStore: files is null ? null : new(files, "settings"))); main.NewCommand.Execute(null);
+        var files = new Files(); var services = TestServices.Create(settingsStore: new(files, "settings"));
+        var applying = CreateMain(files, services); var editing = CreateMain(files, services);
+        var setup = new MainWindowViewModel(files: files, services: services); setup.NewCommand.Execute(null);
+        var committing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        files.BeforeWrite = async (path, _, _) => { if (path != "settings") return; committing.TrySetResult(); await release.Task; };
+
+        // An open settings dialog alone locks nothing: the other workspaces stay usable.
+        applying.SetSettingsDialogOpen(true);
+        Assert.False(editing.IsWorkspaceBusy); Assert.True(editing.CanSaveProject); Assert.False(editing.Editor!.PreserveDrafts);
+        Assert.False(setup.IsWorkspaceBusy); Assert.True(setup.Setup.AddSegmentCommand.CanExecute(null));
+
+        var apply = applying.ApplySettingsAsync(SettingsPatch.From(applying.Settings with { SignificantDigits = 5 }));
+        await committing.Task;
+        foreach (var workspace in new[] { applying, editing, setup })
+        {
+            Assert.True(workspace.IsBusy); Assert.True(workspace.IsWorkspaceBusy);
+            Assert.False(workspace.CanNewProject); Assert.False(workspace.CanOpenProject);
+            Assert.False(workspace.CanSaveProject); Assert.False(workspace.CanReport);
+            Assert.False(workspace.SetResultPresentation(UnitProfile.StructuralEngineering, 3));
+        }
+        var revision = editing.Session!.CurrentRevision; var writes = files.Writes.ToArray();
+        Assert.False(await editing.NewAsync()); Assert.False(await editing.OpenAsync()); Assert.False(await editing.SaveAsync(saveAs: true));
+        Assert.False(await editing.CloseProjectAsync()); Assert.False(await editing.ReportAsync());
+        Assert.True(editing.Editor.PreserveDrafts); Assert.True(editing.Session.IsBusy);
+        var longer = editing.Session.CurrentRevision.State with { Document = editing.Editor.Document with { Length = M(2) } };
+        Assert.False(editing.Session.Commit(longer));
+        Assert.False(setup.Setup.AddSegmentCommand.CanExecute(null)); Assert.True(setup.Setup.IsBusy);
+        Assert.Same(revision, editing.Session.CurrentRevision); Assert.Equal(writes, files.Writes.ToArray());
+
+        release.SetResult();
+        Assert.Null(await apply);
+        foreach (var workspace in new[] { applying, editing, setup }) { Assert.False(workspace.IsBusy); Assert.False(workspace.IsWorkspaceBusy); }
+        Assert.True(editing.CanSaveProject); Assert.False(editing.Editor.PreserveDrafts); Assert.False(editing.Session.IsBusy);
+        Assert.True(setup.Setup.AddSegmentCommand.CanExecute(null));
+        Assert.Equal(5, editing.Settings.SignificantDigits);
+        Assert.True(editing.CanNewProject); Assert.True(editing.Session.Commit(longer));
+    }
+
+    [Fact]
+    public async Task AWorkspaceThatIsAlreadyBusyIsNotFrozenAndTheSettingsStayUnchanged()
+    {
+        var files = new Files(); var services = TestServices.Create(settingsStore: new(files, "settings"));
+        var applying = CreateMain(files, services); var busy = CreateMain(files, services, new Dialogs());
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        files.BeforeWrite = async (path, _, _) => { if (path != "settings") await release.Task; };
+        var save = busy.SaveAsync(saveAs: true);
+        Assert.True(busy.IsWorkspaceBusy);
+        var settingsWrites = files.Writes.Count(path => path == "settings");
+
+        Assert.Equal(Strings.ProjectBusy, await applying.ApplySettingsAsync(SettingsPatch.From(applying.Settings with { SignificantDigits = 5 })));
+        Assert.Equal(UserSettings.Default.SignificantDigits, applying.Settings.SignificantDigits);
+        Assert.Equal(settingsWrites, files.Writes.Count(path => path == "settings"));
+        Assert.False(applying.IsWorkspaceBusy); Assert.True(applying.CanSaveProject);
+
+        release.TrySetResult(); await save;
+        Assert.Null(await applying.ApplySettingsAsync(SettingsPatch.From(applying.Settings with { SignificantDigits = 5 })));
+        Assert.Equal(5, busy.Settings.SignificantDigits);
+    }
+
+    private static MainWindowViewModel CreateMain(Files? files = null, SharedServices? services = null, IProjectDialogs? dialogs = null)
+    {
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, services: services ?? TestServices.Create(settingsStore: files is null ? null : new(files, "settings"))); main.NewCommand.Execute(null);
         ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
         var document = new EditorDocument(M(1), ProjectTemplates.Material, ProjectTemplates.Section,
             [new(SupportId, M(.1), SupportType.Fixed, "A")],

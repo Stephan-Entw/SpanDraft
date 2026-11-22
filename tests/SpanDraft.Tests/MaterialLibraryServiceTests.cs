@@ -49,6 +49,18 @@ public sealed class MaterialLibraryServiceTests
     }
 
     [Fact]
+    public async Task ASecurityExceptionWhileLoadingMakesTheLibraryUnavailableInsteadOfFailingTheLoad()
+    {
+        var files = new Files { BeforeRead = _ => throw new System.Security.SecurityException("denied") };
+        var service = Create(files);
+        Assert.False(service.State.IsAvailable); Assert.Null(service.State.Snapshot); Assert.False(service.CanMutate);
+        Assert.Equal(LibraryFailureKind.Io, service.State.Failure!.Kind);
+        Assert.IsType<System.Security.SecurityException>(service.State.Failure.Cause);
+        Assert.Equal(LibraryMutationOutcome.Unavailable, (await service.AddAsync(Entry("A"))).Outcome);
+        Assert.Empty(files.Writes);
+    }
+
+    [Fact]
     public async Task AddReplaceRenameAndDeleteCommitWithAnIncreasingRevisionAndOneChangedEach()
     {
         var files = new Files(); var service = Create(files);

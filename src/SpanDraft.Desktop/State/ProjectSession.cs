@@ -27,7 +27,8 @@ public sealed class ProjectSession
     public Guid? SavedRevisionId { get; private set; }
     public string? FilePath { get; private set; }
     public bool IsDirty => CurrentRevision.RevisionId != SavedRevisionId;
-    public bool IsBusy { get; private set; }
+    private bool _busy, _frozen;
+    public bool IsBusy => _busy || _frozen;
     public bool CanUndo => !IsBusy && _undo.Count > 0;
     public bool CanRedo => !IsBusy && _redo.Count > 0;
     public event Action<ProjectState, ProjectState, EditorChangeKind>? StateApplied;
@@ -82,8 +83,14 @@ public sealed class ProjectSession
 
     public void SetBusy(bool busy)
     {
-        if (IsBusy == busy) return;
-        IsBusy = busy;
+        if (_busy == busy) return;
+        _busy = busy;
         Changed?.Invoke();
     }
+
+    /// <summary>
+    /// Blocks commits, undo/redo and every busy-gated edit during the short settings commit. It publishes no change:
+    /// no project state is affected, the owner refreshes its own busy-dependent state.
+    /// </summary>
+    public void SetFrozen(bool frozen) => _frozen = frozen;
 }

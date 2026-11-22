@@ -10,11 +10,11 @@ public sealed record LibraryFailure(LibraryFailureKind Kind, Exception? Cause = 
 {
     public static readonly LibraryFailure NotLoaded = new(LibraryFailureKind.NotLoaded);
 
-    public static bool IsFailure(Exception e) => e is IOException or UnauthorizedAccessException or LibraryFormatException
-        or JsonException or ArgumentException or NotSupportedException or OverflowException;
+    public static bool IsFailure(Exception e) => e is IOException or UnauthorizedAccessException or System.Security.SecurityException
+        or LibraryFormatException or JsonException or ArgumentException or NotSupportedException or OverflowException;
 
     public static LibraryFailure From(Exception e) =>
-        new(e is IOException or UnauthorizedAccessException ? LibraryFailureKind.Io : LibraryFailureKind.Format, e);
+        new(e is IOException or UnauthorizedAccessException or System.Security.SecurityException ? LibraryFailureKind.Io : LibraryFailureKind.Format, e);
 }
 
 /// <summary>One immutable published state: either a snapshot (Available) or a failure (Unavailable), never an empty writable fallback.</summary>

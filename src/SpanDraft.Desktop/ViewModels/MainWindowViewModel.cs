@@ -123,10 +123,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         };
     }
 
+    // The freeze is a busy state like any other operation: every command, input session and library action is gated by
+    // IsBusy / IsWorkspaceBusy, so nothing new can start between the freeze and its release.
     bool ISettingsParticipant.TryFreezeForSettings()
     {
-        if (_settingsSaving || IsBusy) return false;
+        if (_settingsSaving || HasRunningOperation) return false;
         _settingsSaving = true;
+        Session?.SetFrozen(true);
+        NotifySession();
         return true;
     }
 
@@ -142,7 +146,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         Notify(nameof(Settings));
     }
 
-    void ISettingsParticipant.ReleaseSettingsFreeze() => _settingsSaving = false;
+    void ISettingsParticipant.ReleaseSettingsFreeze()
+    {
+        if (!_settingsSaving) return;
+        _settingsSaving = false;
+        Session?.SetFrozen(false);
+        NotifySession();
+        if (_pendingRecoveryError is { } error) { _pendingRecoveryError = null; RecoveryFailed(error); }
+    }
 
     /// <summary>Changes presentation only; affected open input sessions reject unit changes.</summary>
     public bool SetResultPresentation(UnitProfile profile, int significantDigits = ResultPresentationOptions.DefaultSignificantDigits,
@@ -168,9 +179,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         Notify(nameof(ResultPresentation));
     }
     public ProjectSession? Session => Editor?.Session;
-    public bool IsBusy => _busy || _libraryBusy || ReportPreview?.IsBusy == true;
-    public bool IsWorkspaceBusy => IsBusy || Mode == MainViewMode.ProjectSetup && (Setup.IsBusy
-        || Setup.CurrentStep is MaterialSelectionViewModel { IsEditing: true } or MaterialSelectionViewModel { IsActionBusy: true });
+    public bool IsBusy => _busy || _libraryBusy || _settingsSaving || ReportPreview?.IsBusy == true;
+    /// <summary>An operation is running anywhere in this workspace (an open editor alone is not one).</summary>
+    private bool HasRunningOperation => IsBusy || Mode == MainViewMode.ProjectSetup
+        && (Setup.IsBusy || Setup.CurrentStep is MaterialSelectionViewModel { IsActionBusy: true });
+    public bool IsWorkspaceBusy => HasRunningOperation
+        || Mode == MainViewMode.ProjectSetup && Setup.CurrentStep is MaterialSelectionViewModel { IsEditing: true };
     public MainWorkspaceKind Workspace => Mode == MainViewMode.ReportPreview ? MainWorkspaceKind.ReportPreview
         : Mode == MainViewMode.Start ? MainWorkspaceKind.Start
         : Mode == MainViewMode.Editor ? MainWorkspaceKind.BeamEditor : Setup.Page switch

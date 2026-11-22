@@ -42,6 +42,28 @@ public sealed class SectionLibraryServiceTests
     }
 
     [Fact]
+    public async Task ASecurityExceptionWhileLoadingMakesTheLibraryUnavailableInsteadOfFailingTheLoad()
+    {
+        var files = new Files { BeforeRead = _ => throw new System.Security.SecurityException("denied") };
+        var service = Create(files);
+        Assert.False(service.State.IsAvailable); Assert.False(service.CanMutate);
+        Assert.Equal(LibraryFailureKind.Io, service.State.Failure!.Kind);
+        Assert.IsType<System.Security.SecurityException>(service.State.Failure.Cause);
+        Assert.Equal(LibraryMutationOutcome.Unavailable, (await service.AddAsync(Entry("A"))).Outcome);
+        Assert.Empty(files.Writes);
+    }
+
+    [Fact]
+    public void TheSharedServicesInitializeWithBothLibrariesUnavailableWhenAccessIsDeniedByTheSecurityPolicy()
+    {
+        var files = new Files { BeforeRead = path => path is "materials" or Path_ ? throw new System.Security.SecurityException("denied") : Task.CompletedTask };
+        var services = TestServices.Create(materialStore: new(files, "materials"), sectionStore: new(files, Path_));
+        Assert.False(services.Materials.State.IsAvailable); Assert.False(services.Sections.State.IsAvailable);
+        Assert.Equal(LibraryFailureKind.Io, services.Materials.State.Failure!.Kind);
+        Assert.Equal(LibraryFailureKind.Io, services.Sections.State.Failure!.Kind);
+    }
+
+    [Fact]
     public async Task AddReplaceRenameAndDeleteCommitWithOneChangedEach()
     {
         var files = new Files(); var service = Create(files);
