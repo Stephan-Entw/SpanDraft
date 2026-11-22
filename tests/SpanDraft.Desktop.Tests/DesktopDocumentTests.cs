@@ -142,38 +142,48 @@ public sealed class DesktopDocumentTests
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
         var files = new Files();
-        var main = new MainWindow(TestHosts.Initialized(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default))));
-        main.Show();
-        Dispatcher.UIThread.RunJobs();
-        try
+        var host = TestHosts.Initialized(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default)));
+        var main = new MainWindow(host);
+        files.BeforeRead = async path =>
         {
-            var menu = main.FindControl<Menu>("MainMenu")!;
-            var help = Assert.Single(menu.Items.OfType<MenuItem>(), item => Equals(item.Header, Strings.Help));
-            var notes = main.FindControl<MenuItem>("WhatsNewMenuItem")!;
-            Assert.Equal(new object?[] { Strings.UserManual, whatsNew, Strings.Diagnostics, null, Strings.About },
-                help.Items.Select(item => (item as MenuItem)?.Header));
-            Assert.Equal(whatsNew, notes.Header);
-            notes.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
-            var releaseNotes = ApplicationDocuments.ReadReleaseNotes();
-            using var reader = new StringReader(releaseNotes);
-            Assert.Equal($"# {notesHeading}", reader.ReadLine());
-            CheckDocument(main, whatsNew, releaseNotes);
+            if (path == host.StateStores.Recovery.SlotPath) await Dispatcher.Yield();
+        };
+        DesktopControlEnvironment.RunOnDispatcher(CheckDocumentsAsync);
 
-            var aboutMenuItem = Assert.Single(help.Items.OfType<MenuItem>(), item => Equals(item.Header, Strings.About));
-            aboutMenuItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
-            var about = Assert.IsType<AboutWindow>(Assert.Single(main.OwnedWindows));
-            var links = about.GetLogicalDescendants().OfType<Button>().ToArray();
-            Assert.Equal(new[] { "GPL v3", privacy, "GitHub" }, links.Select(link => Assert.IsType<TextBlock>(link.Content).Text));
-            links[0].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            CheckDocument(about, ApplicationMetadata.License, ApplicationDocuments.ReadLicense());
-            links[1].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            CheckDocument(about, privacy, ApplicationDocuments.ReadPrivacy());
-            about.Close();
-        }
-        finally
+        async Task CheckDocumentsAsync()
         {
-            main.Close();
-            Dispatcher.UIThread.RunJobs();
+            main.Show();
+            try
+            {
+                await main.Initialization;
+                var menu = main.FindControl<Menu>("MainMenu")!;
+                var help = Assert.Single(menu.Items.OfType<MenuItem>(), item => Equals(item.Header, Strings.Help));
+                var notes = main.FindControl<MenuItem>("WhatsNewMenuItem")!;
+                Assert.Equal(new object?[] { Strings.UserManual, whatsNew, Strings.Diagnostics, null, Strings.About },
+                    help.Items.Select(item => (item as MenuItem)?.Header));
+                Assert.Equal(whatsNew, notes.Header);
+                notes.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                var releaseNotes = ApplicationDocuments.ReadReleaseNotes();
+                using var reader = new StringReader(releaseNotes);
+                Assert.Equal($"# {notesHeading}", reader.ReadLine());
+                CheckDocument(main, whatsNew, releaseNotes);
+
+                var aboutMenuItem = Assert.Single(help.Items.OfType<MenuItem>(), item => Equals(item.Header, Strings.About));
+                aboutMenuItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                var about = Assert.IsType<AboutWindow>(Assert.Single(main.OwnedWindows));
+                var links = about.GetLogicalDescendants().OfType<Button>().ToArray();
+                Assert.Equal(new[] { "GPL v3", privacy, "GitHub" }, links.Select(link => Assert.IsType<TextBlock>(link.Content).Text));
+                links[0].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                CheckDocument(about, ApplicationMetadata.License, ApplicationDocuments.ReadLicense());
+                links[1].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                CheckDocument(about, privacy, ApplicationDocuments.ReadPrivacy());
+                about.Close();
+            }
+            finally
+            {
+                main.Close();
+                Dispatcher.UIThread.RunJobs();
+            }
         }
     }
 

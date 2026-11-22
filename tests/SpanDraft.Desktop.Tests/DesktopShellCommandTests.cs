@@ -37,7 +37,7 @@ public sealed class DesktopShellCommandTests
         files.BeforeRead = p => { reads.Add(p); return Task.CompletedTask; };
         var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default);
         var window = new MainWindow(HostWithLaunchArguments(startup, args));
-        window.Show(); Dispatcher.UIThread.RunJobs();
+        DesktopControlEnvironment.ShowInitialized(window);
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
         var expectedReads = new List<string>
         {

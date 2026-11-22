@@ -54,6 +54,30 @@ public sealed class DesktopControlEnvironment : IDisposable
         app.Initialize();
     }
 
+    public static void ShowInitialized(MainWindow window) => RunOnDispatcher(() =>
+    {
+        window.Show();
+        return window.Initialization;
+    });
+
+    public static void RunOnDispatcher(Func<Task> action)
+    {
+        var previous = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(new AvaloniaSynchronizationContext());
+        try
+        {
+            var completion = ProjectTestSupport.WaitFor(action());
+            if (!completion.IsCompleted)
+            {
+                var frame = new DispatcherFrame();
+                completion.GetAwaiter().OnCompleted(() => frame.Continue = false);
+                Dispatcher.UIThread.PushFrame(frame);
+            }
+            completion.GetAwaiter().GetResult();
+        }
+        finally { SynchronizationContext.SetSynchronizationContext(previous); }
+    }
+
     public static void ArrangeSection(Window window,double width=1250,double height=800)
     {
         window.Width=width; window.Height=height; window.ApplyTemplate();

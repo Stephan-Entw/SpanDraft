@@ -138,8 +138,7 @@ public sealed class DesktopMenuControlTests
         environment.EnableRoutedKeyboardNavigation();
         var files = new Files();
         var window = new MainWindow(TestHosts.Initialized(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default))));
-        window.Show(); Dispatcher.UIThread.RunJobs();
-        Assert.True(window.Initialization.IsCompletedSuccessfully);
+        DesktopControlEnvironment.ShowInitialized(window);
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
         main.NewCommand.Execute(null);
         Arrange(window, 1250, 800);

@@ -48,7 +48,7 @@ public sealed class DesktopActivationWindowTests
             files.Data[b] = ProjectFileCodec.Serialize(State(4));
             var host = Host(files);
             var window = new MainWindow(host);
-            window.Show(); Dispatcher.UIThread.RunJobs();
+            DesktopControlEnvironment.ShowInitialized(window);
             var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
 
             Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(a)));
@@ -79,7 +79,7 @@ public sealed class DesktopActivationWindowTests
         files.Data[target] = ProjectFileCodec.Serialize(State(4));
         host = Host(files);
         window = new MainWindow(host);
-        window.Show(); Dispatcher.UIThread.RunJobs();
+        DesktopControlEnvironment.ShowInitialized(window);
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
         host.HandleBrokerRequest(LaunchRequest.OpenProject(a)); Dispatcher.UIThread.RunJobs();
         Assert.True(main.NewAsync().IsCompletedSuccessfully); Dispatcher.UIThread.RunJobs();
@@ -100,7 +100,7 @@ public sealed class DesktopActivationWindowTests
             files.Data[b] = ProjectFileCodec.Serialize(State(4));
             var host = Host(files);
             var window = new MainWindow(host);
-            window.Show(); Dispatcher.UIThread.RunJobs();
+            DesktopControlEnvironment.ShowInitialized(window);
             var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
             host.HandleBrokerRequest(LaunchRequest.OpenProject(a)); Dispatcher.UIThread.RunJobs();
             Assert.True(main.NewAsync().IsCompletedSuccessfully); Dispatcher.UIThread.RunJobs();
@@ -189,7 +189,7 @@ public sealed class DesktopActivationWindowTests
         {
             var host = Host(new Files());
             var window = new MainWindow(host);
-            window.Show(); Dispatcher.UIThread.RunJobs();
+            DesktopControlEnvironment.ShowInitialized(window);
             Assert.Empty(host.Activation.PendingOpenRequests());
             host.Activation.Enqueue(LaunchRequest.Activate);
             Assert.Empty(host.Activation.PendingOpenRequests());

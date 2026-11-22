@@ -93,7 +93,7 @@ public sealed class DesktopDiagnosticsControlTests
         var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default);
         using var culture = new UiCultureScope("en-US");
         var main = new MainWindow(HostWithLaunchArguments(startup, [path]));
-        main.Show(); Dispatcher.UIThread.RunJobs();
+        DesktopControlEnvironment.ShowInitialized(main);
         var model = Assert.IsType<MainWindowViewModel>(main.DataContext);
         var editor = Assert.IsType<EditorViewModel>(model.Editor);
         var item = main.FindControl<MenuItem>("DiagnosticsMenuItem")!;

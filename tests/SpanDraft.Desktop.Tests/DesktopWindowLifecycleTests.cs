@@ -35,7 +35,7 @@ public sealed class DesktopWindowLifecycleTests
         var host = Host(new Files());
         var window = new MainWindow(host);
         Assert.Equal(DesktopApplicationState.Starting, host.State);
-        window.Show(); Dispatcher.UIThread.RunJobs();
+        DesktopControlEnvironment.ShowInitialized(window);
         Assert.Equal(DesktopApplicationState.Ready, host.State);
         window.Close(); Dispatcher.UIThread.RunJobs();
         Assert.Equal(DesktopApplicationState.ShuttingDown, host.State);
@@ -144,8 +144,7 @@ public sealed class DesktopWindowLifecycleTests
         // The bootstrap (here the test) loads the shared services from the host's stores; the window only adapts them.
         TestHosts.Initialized(host);
         var window = new MainWindow(host);
-        window.Show(); Dispatcher.UIThread.RunJobs();
-        Assert.True(window.Initialization.IsCompletedSuccessfully);
+        DesktopControlEnvironment.ShowInitialized(window);
         Assert.Contains(MaterialLibraryStore.Local(files).FilePath, reads);
         Assert.Contains(RecentProjectsStore.Local(files).FilePath, reads);
         Assert.Contains(ProjectRecovery.Local(files).SlotPath, reads);
