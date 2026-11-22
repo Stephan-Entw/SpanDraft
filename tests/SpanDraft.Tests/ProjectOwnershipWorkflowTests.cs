@@ -12,7 +12,7 @@ public sealed class ProjectOwnershipWorkflowTests
 {
     private sealed class Fixture
     {
-        internal readonly Files Files = new();
+        internal readonly Files Files;
         internal readonly Dialogs Dialogs = new();
         internal readonly Delay Delay = new();
         internal readonly ProjectPathRegistry Registry = new();
@@ -22,8 +22,9 @@ public sealed class ProjectOwnershipWorkflowTests
         internal readonly string Slot = TestPath("ownership-recovery.json");
         internal int Analyses, Activations;
 
-        internal Fixture(IProjectIdentityResolver? resolver = null)
+        internal Fixture(IProjectIdentityResolver? resolver = null, Files? files = null)
         {
+            Files = files ?? new();
             Resolver = resolver ?? Identities;
             Recovery = new(Files, Slot, Delay.Wait, () => Now);
             Main = new(WindowId.Create(), Registry, Resolver, surfaceProject: () => Activations++,
@@ -268,6 +269,37 @@ public sealed class ProjectOwnershipWorkflowTests
         byte[] saved = ProjectRecovery.Encode(new(state, path, Now));
         fixture.Files.Data[fixture.Slot] = saved.ToArray();
 
+        var identity = Identities.Resolve(path);
+        if (unresolved)
+        {
+            // The failed startup keeps the legacy slot; the startup loop then ends through the normal shutdown path.
+            Assert.False(await fixture.Main.InitializeRecoveryAsync());
+            Assert.Null(fixture.Main.Session);
+            Assert.Equal(1, fixture.Dialogs.RecoveryQuestions);
+            Assert.Single(fixture.Dialogs.Errors);
+            Assert.Equal(saved, fixture.Files.Data[fixture.Slot]);
+            Assert.Empty(fixture.Files.Writes);
+            Assert.Empty(fixture.Delay.Waiters);
+            Assert.Equal(ProjectPathState.Free, fixture.Registry.StateOf(identity));
+            fixture.Main.Dispose();
+            Assert.Equal(saved, fixture.Files.Data[fixture.Slot]);
+
+            // A later start with a working resolver restores the very same snapshot.
+            var next = new Fixture(files: fixture.Files);
+            Assert.True(await next.Main.InitializeRecoveryAsync());
+            Assert.Empty(next.Dialogs.Errors);
+            Assert.Equal(saved, next.Files.Data[next.Slot]);
+            Assert.Empty(next.Files.Writes);
+            var recovered = next.Main.Session!;
+            Assert.Equal(path, recovered.FilePath);
+            Assert.True(recovered.IsDirty);
+            Assert.True(state.ContentEquals(recovered.CurrentRevision.State));
+            Assert.Equal(next.Main.WindowId, next.Registry.ArbitrateOpen(identity).Owner);
+            next.Main.Dispose();
+            Assert.Equal(ProjectPathState.Free, next.Registry.StateOf(identity));
+            return;
+        }
+
         Assert.True(await fixture.Main.InitializeRecoveryAsync());
         Assert.Equal(saved, fixture.Files.Data[fixture.Slot]);
         Assert.Empty(fixture.Files.Writes);
@@ -275,33 +307,13 @@ public sealed class ProjectOwnershipWorkflowTests
         var restored = fixture.Main.Session!;
         Assert.True(restored.IsDirty);
         Assert.True(state.ContentEquals(restored.CurrentRevision.State));
-        var identity = Identities.Resolve(path);
-        if (unresolved)
-        {
-            Assert.Null(restored.FilePath);
-            Assert.Equal(ProjectPathState.Free, fixture.Registry.StateOf(identity));
-            Assert.Single(fixture.Delay.Waiters);
-
-            string target = TestPath("saved-recovery.spandraft");
-            fixture.Dialogs.SavePath = target;
-            Assert.True(await fixture.Main.SaveAsync());
-            Assert.Equal(1, fixture.Dialogs.SaveQuestions);
-            Assert.Equal(target, restored.FilePath);
-            Assert.True(state.ContentEquals(ProjectFileCodec.Deserialize(fixture.Files.Data[target])));
-            Assert.False(fixture.Files.Data.ContainsKey(path));
-            Assert.False(fixture.Files.Data.ContainsKey(fixture.Slot));
-            Assert.Equal(ProjectPathState.Free, fixture.Registry.StateOf(identity));
-        }
-        else
-        {
-            Assert.Equal(path, restored.FilePath);
-            Assert.Equal(fixture.Main.WindowId, fixture.Registry.ArbitrateOpen(identity).Owner);
-            fixture.Files.BeforeRead = _ => throw new IOException("The restored project is already open.");
-            Assert.True(await fixture.Main.OpenAsync(path));
-            Assert.Same(restored, fixture.Main.Session);
-            fixture.Main.Dispose();
-            Assert.Equal(ProjectPathState.Free, fixture.Registry.StateOf(identity));
-        }
+        Assert.Equal(path, restored.FilePath);
+        Assert.Equal(fixture.Main.WindowId, fixture.Registry.ArbitrateOpen(identity).Owner);
+        fixture.Files.BeforeRead = _ => throw new IOException("The restored project is already open.");
+        Assert.True(await fixture.Main.OpenAsync(path));
+        Assert.Same(restored, fixture.Main.Session);
+        fixture.Main.Dispose();
+        Assert.Equal(ProjectPathState.Free, fixture.Registry.StateOf(identity));
     }
 
     [Fact]

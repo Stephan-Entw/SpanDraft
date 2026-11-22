@@ -689,12 +689,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
     private void RestoreLegacyProject(RecoverySnapshot snapshot)
     {
-        ProjectIdentity? identity = null;
-        if (snapshot.OriginalFilePath is { } path)
-        {
-            try { identity = _projectIdentities.Resolve(path); }
-            catch (Exception e) when (IsFileError(e)) { /* The snapshot can be restored without binding it to the original. */ }
-        }
+        // An original that cannot be identified must not turn into a pathless session: its scheduled recovery write
+        // would replace the slot without OriginalFilePath. The file error fails the restore and leaves the slot intact.
+        var identity = snapshot.OriginalFilePath is { } path ? _projectIdentities.Resolve(path) : null;
         if (identity is null)
         {
             ActivatePathlessSession(ProjectSession.Restore(snapshot.State, null));
