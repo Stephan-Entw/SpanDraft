@@ -446,3 +446,4 @@ help/.cache/
 help/.venv/
 help/.build/
 help/.zensical-*.toml
+graphify-out/

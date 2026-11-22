@@ -42,6 +42,11 @@
 - Keep repository exploration targeted: search first, then read only the files or
   ranges needed for the task. Avoid dumping multiple complete files, generated
   artifacts or persisted tool outputs unless their full contents are required.
+- When `graphify-out/graph.json` exists, use Graphify first for codebase
+  navigation, dependency/impact analysis and locating relevant tests before broad
+  repository searches. Reuse the existing graph; do not rebuild or rescan it routinely.
+- For uncommitted or newly modified files, verify the current source directly rather
+  than relying on Graphify, because the graph may not yet contain those changes.
 - Prefer the agent's search/read tools; otherwise use `rg`. Quote glob arguments
   under zsh and use macOS/BSD-compatible shell syntax.
 - After a sandbox, permission, IPC, cache or display-state failure, do not retry
