@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private AvaloniaInteractionFrameProbe? _frameProbe;
     private readonly KeyModifiers _primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
     private ProjectDialogs _dialogs = null!;
+    private readonly DesktopApplicationHost _host;
     private bool _closing;
     private bool _closeApproved;
     private AboutWindow? _aboutWindow;
@@ -48,6 +49,7 @@ public partial class MainWindow : Window
     public MainWindow(DesktopApplicationHost host, string[]? args = null)
     {
         InitializeComponent();
+        _host = host;
         var files = host.Files;
         NewMenuItem.InputGesture = new(Key.N, _primary);
         OpenMenuItem.InputGesture = new(Key.O, _primary);
@@ -249,14 +251,16 @@ public partial class MainWindow : Window
         e.Cancel = true;
         if (_initializing || _closing || _model.IsWorkspaceBusy || _settingsWindow is not null) return;
         _closing = true;
+        _host.BeginQuit();
         try
         {
-            if (!await _model.RequestCloseAsync()) return;
+            if (!await _model.RequestCloseAsync()) { _host.CancelQuit(); return; }
             _closeApproved = true;
             IsEnabled = false;
             // Even a synchronously completed guard must finish the current Closing event first.
             Dispatcher.UIThread.Post(Close, DispatcherPriority.Send);
         }
+        catch { _host.CancelQuit(); throw; }
         finally { _closing = false; }
     }
 }
