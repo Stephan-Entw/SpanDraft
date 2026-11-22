@@ -253,8 +253,18 @@ und Lastbereiche müssen innerhalb des Balkens liegen. Annotationen dürfen jede
 vorhandene Entity höchstens einmal referenzieren. Projekte ohne Lager oder mit unzureichender
 Lagerung bleiben persistierbar; Analysis beschreibt ihre Berechenbarkeit.
 
-Recovery ist ein privater lokaler Slot, kein Autosave der Benutzerdatei.
-Das bestehende interne Envelope bleibt bei `recoveryVersion = 1`, optionalem
+Recovery besteht aus privaten lokalen Slots, kein Autosave der Benutzerdatei.
+Jeder Workspace mit ungespeicherter Arbeit besitzt genau einen eigenen Slot (Projekt
+oder Create-Draft, nie beides); mehrere Slots verschiedener Workspaces existieren gleichzeitig.
+Solange „Neu“ noch im Workspace eines ungespeicherten Projekts gestartet wird (bis Phase 9),
+wird dessen Stand vor dem Wechsel in das Setup in den Projekt-Slot geflusht; dieser bleibt
+die einzige Recovery, der Draft wird nicht geschrieben (siehe MultiWorkspace_Architecture §12). Die Slots liegen im Unterordner `Recovery/` des
+lokalen Datenbereichs und heißen `project-{RecoveryId}.json` (Projekt-Recovery) bzw.
+`setup-{RecoveryId}.json` (Create-Draft). `RecoveryId` ist eine kleingeschriebene
+GUID ohne Trennzeichen; andere Dateinamen werden ignoriert. Verworfene Slots werden
+nach `Recovery/Discarded/` verschoben, nicht gelöscht.
+
+Das interne Envelope der Projekt-Recovery bleibt bei `recoveryVersion = 1`, optionalem
 Originalpfad und UTC-Zeitstempel. Sein eingebettetes Projekt verwendet genau
 denselben Codec: neue Recovery schreibt V5; historische V1-/V2-/V3-/V4-Projekte bleiben lesbar.
 Ausschließlich private Recovery darf ungeklärte Legacy-Materialien weiterhin
@@ -263,21 +273,36 @@ Das gilt auch für Setup-Recovery. Reguläres Projektspeichern und neue
 Reportausgabe bleiben bis zur Typklärung gesperrt.
 Nur committed Zustände einer dirty Session werden geschrieben; nach Wiederherstellen
 bleibt das Projekt dirty. Die Benutzerdatei wird nicht automatisch geändert.
-Recovery wird ohne Nachfrage entfernt, wenn ihr vollständiger Projektinhalt
-mit der ursprünglichen Projektdatei übereinstimmt.
+Ein Slot, dessen vollständiger Projektinhalt mit der ursprünglichen Projektdatei
+übereinstimmt, wird beim Laden ohne Nachfrage entfernt; ist die Originaldatei nicht
+les- oder deutbar, bleibt die Recovery erhalten.
 
-Create-Drafts verwenden unabhängig davon den privaten Slot `setup-recovery.json`
-mit `recoveryVersion = 2` und UTC-Zeitstempel; Version 1 bleibt ohne
+Create-Drafts verwenden `recoveryVersion = 2` mit UTC-Zeitstempel; Version 1 bleibt ohne
 Projektangaben lesbar. Er enthält ausschließlich
 bestätigte, auch unvollständige Setup-Werte in SI sowie einen optionalen expliziten
 Querschnittsnamen sowie die vier einzeln bestätigten Projektangaben, auch wenn
 der Berechnungstitel noch fehlt; keine Session, Eingabepuffer oder UI-Zustände.
-Querschnitte und Materialien verwenden die bestehenden V2-DTOs. Beim Start wird zuerst die
-Projekt-Recovery bearbeitet, danach der Create-Draft über dem restaurierten Editor
-oder eigenständig ohne Session geöffnet. Cancel im Recovery-Dialog erhält den Slot.
+Querschnitte und Materialien verwenden die bestehenden V2-DTOs. Bei der Projekterstellung
+übernimmt der Slot die `RecoveryId` des Drafts: Zuerst wird `project-{RecoveryId}.json`
+vollständig geschrieben, erst danach `setup-{RecoveryId}.json` entfernt. Existieren
+nach einem Absturz beide, gewinnt das gültige Projekt und der Draft gilt als ersetzt.
 Bewusstes Abbrechen des Drafts, erfolgreiches Öffnen eines anderen Projekts,
 normales Beenden und erfolgreiche Projekterstellung entfernen die Setup-Recovery;
 eine abgebrochene oder fehlgeschlagene Erstellung erhält sie.
+
+Die bisherigen Einzelslots `recovery.json` und `setup-recovery.json` werden weiterhin
+erkannt. Sie werden erst beim Wiederherstellen in einen Slot mit `RecoveryId`
+verschoben; Verwerfen verschiebt sie unter einem eindeutigen Namen nach `Discarded/`.
+
+Beim Start liest der Recovery-Katalog alle Slots einmal; ein einzelner defekter Slot
+ist nur als unlesbar markiert. Er hält den Start nie auf: ungeklärte Recovery
+erscheint dauerhaft als Hinweis auf der Startseite und im Menü (Datei →
+Wiederherstellung…) und wird im Recovery Center entschieden. Nur wenn der
+Recovery-Bereich als Ganzes nicht gelesen werden kann, fragt die Anwendung nach
+(Erneut versuchen / Beenden), weil ungespeicherte Arbeit sonst unbemerkt bliebe.
+Mehrere gültige Slots desselben Originalpfads sind Varianten: die jüngste ist
+bevorzugt und hält den Pfad (`RecoveryPending`); ältere Varianten werden getrennt
+vom Pfad wiederhergestellt und überschreiben die Originaldatei nie.
 
 ## Lokal zuletzt verwendeter Ersteller
 

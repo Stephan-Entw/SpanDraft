@@ -44,26 +44,20 @@ public sealed record SetupRecoverySnapshot(ProjectSetupDraft Draft, DateTimeOffs
 public sealed class ProjectSetupRecovery
 {
     private readonly DebouncedSlot<SetupRecoverySnapshot> _slot;
-    private readonly IProjectFileStore _files;
+    private readonly IRecoveryStorage _storage;
     private readonly Func<DateTimeOffset> _utcNow;
 
-    public ProjectSetupRecovery(IProjectFileStore files, string slotPath,
-        Func<TimeSpan, CancellationToken, Task>? delay = null, Func<DateTimeOffset>? utcNow = null,
-        Action? ensureDirectory = null)
+    public ProjectSetupRecovery(IRecoveryStorage storage, RecoverySlot slot,
+        Func<TimeSpan, CancellationToken, Task>? delay = null, Func<DateTimeOffset>? utcNow = null)
     {
-        _files = files;
+        if (slot.Kind != RecoverySlotKind.Setup) throw new ArgumentException("Expected a setup slot.", nameof(slot));
+        _storage = storage;
         _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
-        _slot = new(files, slotPath, Encode, delay, ensureDirectory);
+        _slot = new(storage, slot, Encode, delay);
         _slot.Failed += e => Failed?.Invoke(e);
     }
 
-    public static ProjectSetupRecovery Local(IProjectFileStore files)
-    {
-        var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SpanDraft");
-        return new(files, Path.Combine(directory, "setup-recovery.json"), ensureDirectory: () => Directory.CreateDirectory(directory));
-    }
-
-    public string SlotPath => _slot.SlotPath;
+    public RecoverySlot Slot => _slot.Slot;
     public event Action<Exception>? Failed;
 
     public void Schedule(ProjectSetupDraft draft) => _slot.Schedule(new(draft, _utcNow()));
@@ -74,8 +68,13 @@ public sealed class ProjectSetupRecovery
 
     public async Task<SetupRecoverySnapshot?> ReadAsync()
     {
-        var bytes = await _files.ReadAsync(SlotPath);
-        if (bytes is null) return null;
+        var bytes = await _storage.ReadAsync(Slot);
+        return bytes is null ? null : Decode(bytes);
+    }
+
+    /// <summary>Validates and reads one slot's bytes; every defect is a <see cref="ProjectFormatException"/>.</summary>
+    public static SetupRecoverySnapshot Decode(byte[] bytes)
+    {
         try
         {
             var envelope = JsonSerializer.Deserialize<SetupRecoveryEnvelope>(bytes, ProjectFileCodec.JsonOptions)

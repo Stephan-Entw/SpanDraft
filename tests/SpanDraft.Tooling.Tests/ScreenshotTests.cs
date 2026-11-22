@@ -480,9 +480,8 @@ public sealed class DesktopIsolatedStartupTests
         {
             window.Show(); Dispatcher.UIThread.RunJobs();
             Assert.True(window.Initialization.IsCompletedSuccessfully);
-            // The shared services load during bootstrap, before the window recovers its own slots.
-            Assert.Equal(new[] { stores.Materials.FilePath, stores.Sections.FilePath, stores.Recents.FilePath,
-                stores.Recovery.SlotPath, stores.SetupRecovery.SlotPath }, reads);
+            // The shared services load during bootstrap; recovery has its own storage and never goes through the file store.
+            Assert.Equal(new[] { stores.Materials.FilePath, stores.Sections.FilePath, stores.Recents.FilePath }, reads);
             var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
             Assert.Equal("Neutral author", main.Setup.AuthorInput.ConfirmedValue);
             Assert.True(await main.OpenAsync(fixture));

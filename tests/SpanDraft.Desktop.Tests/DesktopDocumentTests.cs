@@ -144,10 +144,6 @@ public sealed class DesktopDocumentTests
         var files = new Files();
         var host = TestHosts.Initialized(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default)));
         var main = host.Workspaces.CreateInitial().Window;
-        files.BeforeRead = async path =>
-        {
-            if (path == host.StateStores.Recovery.SlotPath) await Dispatcher.Yield();
-        };
         DesktopControlEnvironment.RunOnDispatcher(CheckDocumentsAsync);
 
         async Task CheckDocumentsAsync()

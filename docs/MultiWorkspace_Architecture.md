@@ -344,6 +344,18 @@ Wird das CreateSetup abgebrochen:
 
 Nach erfolgreicher Projekterstellung verliert die CreationReason ihre Bedeutung.
 
+## Übergangsregel bis Phase 9
+
+Solange „Neu“ aus einem Projekt noch nicht in einem eigenen Workspace läuft, wird es im Workspace des Projekts gestartet. Für „Neu“ aus einem dirty Projekt im selben Workspace gilt bis Phase 9:
+
+- Der Workspace behält ausschließlich seine bestehende `ProjectRecovery`; er besitzt nie zugleich Projekt- und Setup-Slot.
+- Vor dem Wechsel in `CreateSetup` wird der aktuelle dirty Projektstand geflusht. Gelingt das nicht, startet „Neu“ nicht und das ungespeicherte Projekt bleibt unverändert.
+- Für den neuen Draft wird bewusst kein zusätzlicher Setup-Recovery-Slot angelegt.
+- Das bestehende ungespeicherte Projekt bleibt crashgeschützt; der noch nicht bestätigte neue Draft ist in dieser Übergangsphase nicht separat crash-recoverable.
+- Ein Abbruch kehrt zum Editor mit demselben `ProjectRecoveryContext` (gleiche `RecoveryId`, gleicher Slot) zurück.
+- Über einem Projekt ohne Recovery (clean) besitzt der Draft den Kontext wie jedes `CreateSetup`.
+- Mit Phase 9 entfällt die Einschränkung: „Neu“ aus einem Projekt erhält gemäß diesem Abschnitt einen eigenen Workspace mit eigener Setup-Recovery.
+
 ---
 
 # 13. EditSetup

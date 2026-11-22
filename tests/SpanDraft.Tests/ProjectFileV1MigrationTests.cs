@@ -151,20 +151,20 @@ public sealed class ProjectFileV1MigrationTests
     [InlineData(4)]
     public async Task HistoricalRecoveryUsesTheGeneralReaderAndSubsequentRecoveryWritesTheCurrentVersion(int kind)
     {
-        var files = new Files(); var path = TestPath("historical-recovery.json");
-        files.Data[path] = Encoding.UTF8.GetBytes(new JsonObject
+        var storage = new TestRecoveryStorage(); var slot = RecoverySlot.Project(RecoveryId.New());
+        var recovery = new ProjectRecovery(storage, slot);
+        storage.Put(slot, Encoding.UTF8.GetBytes(new JsonObject
         {
             ["recoveryVersion"] = 1, ["originalFilePath"] = TestPath("old.spandraft"),
             ["writtenAtUtc"] = Now, ["project"] = JsonNode.Parse(HistoricalBytes(kind))
-        }.ToJsonString());
-        var recovery = new ProjectRecovery(files, path);
-        var snapshot = (await recovery.ReadAsync())!;
+        }.ToJsonString()));
+        var snapshot = ProjectRecovery.Decode(storage.Data[slot]);
         Assert.True(ProjectFileCodec.Deserialize(HistoricalBytes(kind)).ContentEquals(snapshot.State));
-        Assert.Empty(files.Writes);
+        Assert.Empty(storage.Writes);
         var session = ProjectSession.Restore(snapshot.State, snapshot.OriginalFilePath);
         Assert.True(session.IsDirty);
         await recovery.FlushAsync(session.CurrentRevision.State, session.FilePath);
-        var root = JsonNode.Parse(files.Data[path])!;
+        var root = JsonNode.Parse(storage.Data[slot])!;
         Assert.Equal(1, root["recoveryVersion"]!.GetValue<int>());
         Assert.Equal(5, root["project"]!["formatVersion"]!.GetValue<int>());
         Assert.True(snapshot.State.ContentEquals((await recovery.ReadAsync())!.State));

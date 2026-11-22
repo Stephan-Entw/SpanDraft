@@ -24,7 +24,8 @@ public sealed class DesktopApplicationHost
         ProjectOpen = new(Files, ProjectIdentities, ProjectPaths);
         Workspaces = new(this);
         var settingsStore = startup?.SettingsStore ?? LocalSettingsStore.Local(Files);
-        StateStores = startup?.StateStores ?? DesktopStateStores.Local(Files);
+        StateStores = startup?.StateStores ?? DesktopStateStores.Isolated(Files);
+        Recovery = new(StateStores.Recovery, Files, ProjectIdentities, ProjectPaths);
         UserNameProvider = startup?.UserNameProvider ?? (static () => OperatingSystem.IsWindows() ? Environment.UserName : null);
         // The only place the shared services are created: exactly one instance of each per Primary process.
         Services = SharedServices.Create(settingsStore,
@@ -33,12 +34,16 @@ public sealed class DesktopApplicationHost
     }
 
     public IProjectFileStore Files { get; }
+    /// <summary>A fresh recovery context for one workspace; every workspace owns its own, all share the one storage.</summary>
+    internal WorkspaceRecoveryContext CreateRecoveryContext() => new(StateStores.Recovery);
     internal IProjectIdentityResolver ProjectIdentities { get; }
     internal ProjectPathRegistry ProjectPaths { get; } = new();
+    /// <summary>The one list of undecided recovery candidates of the process; it never holds the host back from being Ready.</summary>
+    public RecoveryCatalog Recovery { get; }
     internal ProjectOpenCoordinator ProjectOpen { get; }
     /// <summary>The one workspace/window registry of the process.</summary>
     internal WorkspaceWindowManager Workspaces { get; }
-    /// <summary>The persistence bundle the services were built from; recovery stores are still used directly.</summary>
+    /// <summary>The persistence bundle the services were built from; the recovery storage is shared by the catalog and all workspaces.</summary>
     public DesktopStateStores StateStores { get; }
     public SharedServices Services { get; }
     public SettingsService Settings => Services.Settings;
@@ -55,7 +60,7 @@ public sealed class DesktopApplicationHost
 
     /// <summary>
     /// Broker decision: only a Ready host owns requests (Accepted); otherwise the Secondary keeps ownership.
-    /// Legacy startup recovery keeps the host Starting, so no request is lost by cancelling it.
+    /// Undecided recovery never keeps the host Starting; only an unreadable recovery area as a whole does.
     /// </summary>
     public BrokerStatus HandleBrokerRequest(LaunchRequest request)
     {
@@ -83,13 +88,15 @@ public sealed class DesktopApplicationHost
     {
         await InitializeServicesAsync();
         Settings.EstablishProcessCulture(systemCulture, systemUiCulture);
+        // An unreadable recovery area is not an exception here: the catalog stays unavailable and the startup window asks.
+        await Recovery.InitializeAsync();
     }
 
     public void AttachBroker(BrokerServer broker) => broker.Handler = HandleBrokerRequest;
 
     /// <summary>
     /// Entry for platform activations (macOS file/URI/reopen). They have no external owner that could redeliver
-    /// them, so they are queued in every state before a committed shutdown, including legacy startup recovery.
+    /// them, so they are queued in every state before a committed shutdown, including the failed startup of the recovery area.
     /// Returns false once the shutdown is committed; nothing is accepted then.
     /// </summary>
     public bool SubmitPlatformActivation(LaunchRequest request)

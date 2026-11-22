@@ -97,7 +97,7 @@ public sealed class DesktopResultPresentationTests
         var dirty = session.IsDirty;
         var bytes = ProjectFileCodec.Serialize(revision.State);
         var writes = app.Files.Writes.ToArray();
-        var recovery = app.Files.Data[App.Slot].ToArray();
+        var recovery = app.RecoveryBytes;
         int waiters = app.Delay.Waiters.Count, analyses = app.Analyses, changed = 0, applied = 0;
         var inputRows = editor.Overview.Forces.Concat(editor.Overview.Moments).Concat(editor.Overview.DistributedLoads).ToArray();
         var notifications = new List<string?>();
@@ -126,7 +126,7 @@ public sealed class DesktopResultPresentationTests
             Assert.Equal("unfinished", editor.DimensionLength.Text);
             Assert.Equal(inputRows.Select(r => r.Id), editor.Overview.Forces.Concat(editor.Overview.Moments).Concat(editor.Overview.DistributedLoads).Select(r => r.Id));
             Assert.Equal(writes, app.Files.Writes);
-            Assert.Equal(recovery, app.Files.Data[App.Slot]);
+            Assert.Equal(recovery, app.RecoveryBytes);
             Assert.Equal(waiters, app.Delay.Waiters.Count);
             Assert.Equal(analyses, app.Analyses);
         }
@@ -183,8 +183,7 @@ public sealed class DesktopResultPresentationTests
         Assert.Equal(app.Main.ResultPresentation, app.Main.Editor!.ResultPresentation);
         var restored = new App(create: false);
         restored.Main.SetResultPresentation(PresentationTestProfiles.Mixed, 5);
-        restored.Files.Data[App.Slot] = ProjectRecovery.Encode(new(LoadedState(), app.Dialogs.OpenPath, Now));
-        Assert.True(await restored.Main.InitializeRecoveryAsync());
+        restored.Restore(new(LoadedState(), app.Dialogs.OpenPath, Now));
         Assert.Equal(restored.Main.ResultPresentation, restored.Main.Editor!.ResultPresentation);
         Assert.NotNull(restored.Main.Editor.Presentation.Result);
         app.Delay.ReleaseAll(); restored.Delay.ReleaseAll();

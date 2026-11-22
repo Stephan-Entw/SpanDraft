@@ -122,13 +122,12 @@ public sealed class MaterialStrengthTests : MaterialStrengthTestSupport
         var files = new Files();
         foreach (var state in new[] { WithMaterial(Typed(type)), ProjectFileCodec.Deserialize(LegacyProject()) })
         {
-            var recovery = new ProjectRecovery(files, "project-recovery");
+            var recovery = new ProjectRecovery(new TestRecoveryStorage(), RecoverySlot.Project(RecoveryId.New()));
             await recovery.FlushAsync(state, null);
             Assert.True(state.ContentEquals((await recovery.ReadAsync())!.State));
             var draft = new ProjectSetupDraft(Material: state.Document.Material);
-            files.Data["setup-recovery"] = ProjectSetupRecovery.Encode(new(draft, Now));
-            var setup = await new ProjectSetupRecovery(files, "setup-recovery").ReadAsync();
-            Assert.True(draft.ContentEquals(setup!.Draft));
+            var setup = ProjectSetupRecovery.Decode(ProjectSetupRecovery.Encode(new(draft, Now)));
+            Assert.True(draft.ContentEquals(setup.Draft));
         }
     }
 }

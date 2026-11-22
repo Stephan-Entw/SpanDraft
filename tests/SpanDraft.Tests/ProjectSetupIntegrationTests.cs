@@ -345,12 +345,12 @@ public sealed class ProjectSetupIntegrationTests
     {
         var app = new App(); app.ChangeLength(); app.Delay.ReleaseAll(); await app.Recovery.DrainAsync();
         var session = app.Main.Session!; var editor = app.Main.Editor!; var revision = session.CurrentRevision;
-        var recovery = app.Files.Data[App.Slot].ToArray(); var analysis = editor.Presentation;
+        var recovery = app.RecoveryBytes; var analysis = editor.Presentation;
         editor.DimensionLength.Begin(); editor.DimensionLength.Text = "2500";
         Assert.True(await app.Main.NewAsync()); Assert.Equal(0, app.Dialogs.LeaveQuestions);
         Assert.Same(session, app.Main.Session); Assert.True(app.Main.Setup.CanCancel);
         editor.DimensionLength.LoseFocus(); Assert.Equal("2500", editor.DimensionLength.Text); Assert.Same(revision, session.CurrentRevision);
-        Assert.Equal(recovery, app.Files.Data[App.Slot]); app.Main.Setup.CancelCommand.Execute(null);
+        Assert.Equal(recovery, app.RecoveryBytes); app.Main.Setup.CancelCommand.Execute(null);
         Assert.Same(editor, app.Main.Editor); Assert.Same(analysis, editor.Presentation); Assert.Same(revision, session.CurrentRevision);
         Assert.True(await app.Main.NewAsync()); CompleteSetup(app.Main);
         Assert.False(await app.Main.Setup.ConfirmAsync()); Assert.Same(session, app.Main.Session);
@@ -418,7 +418,7 @@ public sealed class ProjectSetupIntegrationTests
         var d = state.Document;
         foreach (var copy in new[] { d.WithSupports(d.Supports), d.WithLoads(d.Loads), d.WithDistributedLoads(d.DistributedLoads), d.WithSection(d.Section, d.BendingAxis), d.WithBendingAxis(d.BendingAxis), d with { Length = M(2) } })
             Assert.Equal(name, copy.SectionDisplayName);
-        var files = new Files(); var recovery = new ProjectRecovery(files, TestPath("named-recovery.json"));
+        var recovery = new ProjectRecovery(new TestRecoveryStorage(), RecoverySlot.Project(RecoveryId.New()));
         await recovery.FlushAsync(state, null); Assert.True(state.ContentEquals((await recovery.ReadAsync())!.State));
         foreach (string invalid in new[] { "", " ", " HEB 200 " })
         {
@@ -451,7 +451,7 @@ public sealed class ProjectSetupIntegrationTests
         setup.ReferenceInput.Text = "Drawing 3"; Assert.True(await setup.ConfirmAsync());
         Assert.Equal(calls, app.Analyses); Assert.Equal(2, session.UndoHistory.Count);
         app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
-        Assert.Equal(session.CurrentRevision.State.Info, (await app.Recovery.ReadAsync())!.State.Info);
+        Assert.Equal(session.CurrentRevision.State.Info, app.ProjectSnapshot()!.State.Info);
         Assert.True(app.Main.Undo()); Assert.True(app.Main.Redo()); Assert.Equal(calls, app.Analyses);
     }
 
@@ -576,17 +576,17 @@ public sealed class ProjectSetupIntegrationTests
     [InlineData(false, true)] [InlineData(true, true)]
     public async Task LastAuthorPersistenceFailureKeepsTheCreatedSessionAndItsNormalRecovery(bool unauthorized, bool withoutAuthor)
     {
-        var files = new Files(); var dialogs = new Dialogs(); var delay = new Delay();
-        var recovery = new ProjectRecovery(files, "project-recovery", delay.Wait, () => Now);
-        var setupRecovery = new ProjectSetupRecovery(files, "setup-recovery", delay.Wait, () => Now);
+        var files = new Files(); var dialogs = new Dialogs(); var delay = new Delay(); var storage = new TestRecoveryStorage();
+        var recovery = new WorkspaceRecoveryContext(storage, delay.Wait, () => Now);
         var store = new LocalSettingsStore(files, "settings", () =>
         {
             if (unauthorized) throw new UnauthorizedAccessException("Injected");
         });
         var main = new MainWindowViewModel(files: files, dialogs: dialogs,
-            recovery: recovery, setupRecovery: setupRecovery, services: TestServices.Create(settingsStore: store, settings: UserSettings.Default with { LastAuthor = "Previous author" }));
+            recovery: recovery, services: TestServices.Create(settingsStore: store, settings: UserSettings.Default with { LastAuthor = "Previous author" }));
         Assert.True(await main.NewAsync()); CompleteSetup(main);
-        delay.ReleaseAll(); await WaitFor(setupRecovery.DrainAsync());
+        delay.ReleaseAll(); await WaitFor(recovery.DrainAsync());
+        Assert.NotNull(await recovery.ReadSetupAsync());
         if (!unauthorized) files.FailWritePath = "settings";
         main.Setup.AuthorInput.Text = withoutAuthor ? " " : " New author ";
         Assert.True(await main.Setup.ConfirmAsync());
@@ -595,7 +595,7 @@ public sealed class ProjectSetupIntegrationTests
         string? expected = withoutAuthor ? null : "New author";
         Assert.Equal(expected, session.CurrentRevision.State.Info!.Author);
         Assert.Equal(expected, main.Settings.LastAuthor); Assert.Empty(dialogs.Errors);
-        Assert.Null(await setupRecovery.ReadAsync()); Assert.False(files.Data.ContainsKey("settings"));
+        Assert.Empty(storage.Slots(RecoverySlotKind.Setup)); Assert.False(files.Data.ContainsKey("settings"));
         delay.ReleaseAll(); await WaitFor(recovery.DrainAsync());
         Assert.True(session.CurrentRevision.State.ContentEquals((await recovery.ReadAsync())!.State));
         Assert.True(await main.NewAsync()); Assert.Equal(expected ?? "", main.Setup.AuthorInput.Text);
@@ -625,10 +625,9 @@ public sealed class ProjectSetupIntegrationTests
         var files = new Files();
         var info = hasInfo ? new ProjectInfo("Recovered beam", null, null, "Recovered author") : null;
         var state = State() with { Info = info };
-        files.Data["project-recovery"] = ProjectRecovery.Encode(new(state, null, Now));
         var main = new MainWindowViewModel(files: files, projectIdentities: Identities, dialogs: new Dialogs(),
-            recovery: new(files, "project-recovery"), services: TestServices.Create(settingsStore: new(files, "settings"), settings: UserSettings.Default with { LastAuthor = "Local author" }));
-        Assert.True(await main.InitializeRecoveryAsync());
+            recovery: new(new TestRecoveryStorage()), services: TestServices.Create(settingsStore: new(files, "settings"), settings: UserSettings.Default with { LastAuthor = "Local author" }));
+        main.RestoreProject(new(state, null, Now), RecoverySlot.Project(RecoveryId.New()), null);
         Assert.Equal(info, main.Session!.CurrentRevision.State.Info);
         Assert.Equal("Local author", main.Settings.LastAuthor);
         Assert.False(files.Data.ContainsKey("settings"));
@@ -706,12 +705,11 @@ public sealed class ProjectSetupIntegrationTests
         var state = State() with { Info = info };
         var path = TestPath("existing.spandraft");
         files.Data[path] = ProjectFileCodec.Serialize(state);
-        var recovery = new ProjectRecovery(files, "project-recovery");
-        if (recover) files.Data["project-recovery"] = ProjectRecovery.Encode(new(state, path, Now));
         if (recover) files.Data.TryRemove(path, out _);
-        var main = new MainWindowViewModel(files: files, projectIdentities: Identities, dialogs: dialogs, recovery: recovery,
+        var main = new MainWindowViewModel(files: files, projectIdentities: Identities, dialogs: dialogs, recovery: new(new TestRecoveryStorage()),
             userNameProvider: () => "windows.user");
-        Assert.True(recover ? await main.InitializeRecoveryAsync() : await main.OpenAsync(path));
+        if (recover) main.RestoreProject(new(state, path, Now), RecoverySlot.Project(RecoveryId.New()), null);
+        else Assert.True(await main.OpenAsync(path));
         Assert.Equal(info, main.Session!.CurrentRevision.State.Info);
         main.EditProject(); Assert.Equal(info?.Author ?? "", main.Setup.AuthorInput.Text);
         Assert.True(await main.CancelSetupAsync()); Assert.True(await main.SaveAsync());

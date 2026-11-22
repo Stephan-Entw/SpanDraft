@@ -14,16 +14,9 @@ internal static class DialogChoices
          new(Strings.DontSave, LeaveDecision.Discard, DialogRole.Destructive),
          new(Strings.Cancel, LeaveDecision.Cancel, DialogRole.Cancel)];
 
-    /// <summary>Discarding deletes the saved draft, so it is destructive; closing the dialog leaves it untouched, as Cancel does.</summary>
-    public static DialogChoice<RecoveryDecision>[] Recovery() =>
-        [new(Strings.Restore, RecoveryDecision.Restore, DialogRole.Primary),
-         new(Strings.Discard, RecoveryDecision.Discard, DialogRole.Destructive),
-         new(Strings.Cancel, RecoveryDecision.Cancel, DialogRole.Cancel)];
-
-    /// <summary>An unreadable recovery file can only be discarded or kept: there is no primary answer, and none replaces the destructive one.</summary>
-    public static DialogChoice<RecoveryDecision>[] DamagedRecovery() =>
-        [new(Strings.Discard, RecoveryDecision.Discard, DialogRole.Destructive),
-         new(Strings.Cancel, RecoveryDecision.Cancel, DialogRole.Cancel)];
+    /// <summary>Starting without knowing about unsaved work is not offered: the answers are trying again or leaving.</summary>
+    public static DialogChoice<bool>[] RecoveryUnavailable() =>
+        [new(Strings.Retry, true, DialogRole.Primary), new(Strings.Quit, false, DialogRole.Cancel)];
 
     public static DialogChoice<bool>[] Acknowledge() => [new(Strings.OK, true, DialogRole.Primary)];
 

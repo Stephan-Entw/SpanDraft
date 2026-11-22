@@ -108,11 +108,24 @@
   <data name="LocalFilesOnly" xml:space="preserve"><value>Bitte eine lokale Projektdatei auswählen.</value></data>
   <data name="LeaveQuestion" xml:space="preserve"><value>Änderungen an „{0}“ vor dem Verlassen speichern?</value></data>
   <data name="DontSave" xml:space="preserve"><value>Nicht speichern</value></data>
-  <data name="SetupRecoveryQuestion" xml:space="preserve"><value>Ein Entwurf für ein neues Projekt vom {0} ist verfügbar. Wiederherstellen?</value></data>
-  <data name="RecoveryQuestion" xml:space="preserve"><value>Ein ungespeichertes Projekt vom {0} ist verfügbar. Wiederherstellen?</value></data>
-  <data name="RecoveryDamaged" xml:space="preserve"><value>Die Wiederherstellungsdatei konnte nicht gelesen werden. Die Anwendung kann weiter verwendet werden.</value></data>
-  <data name="RecoveryDiscardQuestion" xml:space="preserve"><value>Die nicht lesbare Wiederherstellungsdatei verwerfen?</value></data>
   <data name="RecoveryError" xml:space="preserve"><value>Die Wiederherstellung konnte nicht aktualisiert werden. Ihr Projekt bleibt in diesem Fenster erhalten.</value></data>
+  <data name="RecoveryCenter" xml:space="preserve"><value>Wiederherstellung</value></data>
+  <data name="RecoveryMenuItem" xml:space="preserve"><value>Wiederherstellung…</value></data>
+  <data name="RecoveryHintOne" xml:space="preserve"><value>Ein nicht gespeichertes Element kann wiederhergestellt werden.</value></data>
+  <data name="RecoveryHintMany" xml:space="preserve"><value>{0} nicht gespeicherte Elemente können wiederhergestellt werden.</value></data>
+  <data name="RecoveryReview" xml:space="preserve"><value>Ansehen…</value></data>
+  <data name="RecoveryRestoreAll" xml:space="preserve"><value>Alle wiederherstellen</value></data>
+  <data name="RecoveryDiscardUnreadable" xml:space="preserve"><value>Nicht lesbare verwerfen</value></data>
+  <data name="RecoveryBack" xml:space="preserve"><value>Zurück</value></data>
+  <data name="RecoveryKindProject" xml:space="preserve"><value>Nicht gespeichertes Projekt</value></data>
+  <data name="RecoveryKindOlder" xml:space="preserve"><value>Ältere Version derselben Datei</value></data>
+  <data name="RecoveryKindDraft" xml:space="preserve"><value>Entwurf für ein neues Projekt</value></data>
+  <data name="RecoveryKindUnreadable" xml:space="preserve"><value>Nicht lesbare Wiederherstellungsdatei</value></data>
+  <data name="RecoverySavedAt" xml:space="preserve"><value>Gesichert {0}</value></data>
+  <data name="RecoveryNothing" xml:space="preserve"><value>Es gibt nichts mehr wiederherzustellen.</value></data>
+  <data name="RecoveryActionError" xml:space="preserve"><value>Die Wiederherstellung konnte nicht abgeschlossen werden.</value></data>
+  <data name="RecoveryUnavailable" xml:space="preserve"><value>Der Wiederherstellungsbereich konnte nicht gelesen werden; ungespeicherte Arbeit kann deshalb nicht geprüft werden. Erneut versuchen?</value></data>
+  <data name="Retry" xml:space="preserve"><value>Erneut versuchen</value></data>
   <data name="Restore" xml:space="preserve"><value>Wiederherstellen</value></data>
   <data name="Discard" xml:space="preserve"><value>Verwerfen</value></data>
   <data name="RectangleSectionName" xml:space="preserve"><value>Rechteck {0} × {1} {2}</value></data>

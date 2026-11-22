@@ -449,8 +449,7 @@ public sealed class ResultDiagramControlTests : DesktopResultDiagramControlTestS
         Assert.All(Diagrams(view), d => Assert.Null(d.Projection));
 
         var restored = new ProjectTestSupport.App(create: false);
-        await restored.Recovery.FlushAsync(new(Document(), new()), ProjectTestSupport.TestPath("recovered.spandraft"));
-        Assert.True(await restored.Main.InitializeRecoveryAsync());
+        restored.Restore(new(new(Document(), new()), ProjectTestSupport.TestPath("recovered.spandraft"), ProjectTestSupport.Now));
         view.DataContext = restored.Main.Editor; Arrange(window);
         Assert.Equal(1, restored.Analyses);
         Assert.All(Diagrams(view), d => { Assert.NotNull(d.Projection); Assert.Same(restored.Main.Editor!.Presentation, d.Presentation); });

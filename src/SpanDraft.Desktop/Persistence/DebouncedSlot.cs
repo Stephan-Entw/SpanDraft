@@ -9,26 +9,24 @@ namespace SpanDraft.Desktop.Persistence;
 /// </summary>
 internal sealed class DebouncedSlot<TSnapshot>
 {
-    private readonly IProjectFileStore _files;
+    private readonly IRecoveryStorage _storage;
     private readonly Func<TSnapshot, byte[]> _encode;
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
-    private readonly Action? _ensureDirectory;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private CancellationTokenSource? _cancellation;
     private long _generation;
     private Task _pending = Task.CompletedTask;
 
-    public DebouncedSlot(IProjectFileStore files, string slotPath, Func<TSnapshot, byte[]> encode,
-        Func<TimeSpan, CancellationToken, Task>? delay, Action? ensureDirectory)
+    public DebouncedSlot(IRecoveryStorage storage, RecoverySlot slot, Func<TSnapshot, byte[]> encode,
+        Func<TimeSpan, CancellationToken, Task>? delay)
     {
-        _files = files;
-        SlotPath = slotPath;
+        _storage = storage;
+        Slot = slot;
         _encode = encode;
         _delay = delay ?? Task.Delay;
-        _ensureDirectory = ensureDirectory;
     }
 
-    public string SlotPath { get; }
+    public RecoverySlot Slot { get; }
     public event Action<Exception>? Failed;
 
     /// <summary>Writes the snapshot after the debounce unless a later call supersedes it.</summary>
@@ -93,8 +91,7 @@ internal sealed class DebouncedSlot<TSnapshot>
         {
             if (supersedable && generation != _generation) return;
             token.ThrowIfCancellationRequested();
-            _ensureDirectory?.Invoke();
-            await _files.WriteAtomicAsync(SlotPath, _encode(snapshot), token);
+            await _storage.WriteAtomicAsync(Slot, _encode(snapshot), token);
         }
         finally { _gate.Release(); }
     }
@@ -102,7 +99,7 @@ internal sealed class DebouncedSlot<TSnapshot>
     private async Task DeleteGenerationAsync(long generation)
     {
         await _gate.WaitAsync();
-        try { if (generation == _generation) await _files.DeleteAsync(SlotPath); }
+        try { if (generation == _generation) await _storage.DeleteAsync(Slot); }
         finally { _gate.Release(); }
     }
 }

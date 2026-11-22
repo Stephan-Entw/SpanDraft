@@ -87,13 +87,11 @@ public sealed class MaterialNoteTests
         if (!translated) Assert.DoesNotContain("translations", Encoding.UTF8.GetString(projectBytes));
 
         var files = new Files();
-        files.Data["project"] = ProjectRecovery.Encode(new(state, null, Now));
-        var recovered = await new ProjectRecovery(files, "project").ReadAsync();
-        Assert.True(state.ContentEquals(recovered!.State));
+        var recovered = ProjectRecovery.Decode(ProjectRecovery.Encode(new(state, null, Now)));
+        Assert.True(state.ContentEquals(recovered.State));
         var draft = new ProjectSetupDraft(Material: state.Document.Material);
-        files.Data["setup"] = ProjectSetupRecovery.Encode(new(draft, Now));
-        var recoveredDraft = await new ProjectSetupRecovery(files, "setup").ReadAsync();
-        Assert.True(draft.ContentEquals(recoveredDraft!.Draft));
+        var recoveredDraft = ProjectSetupRecovery.Decode(ProjectSetupRecovery.Encode(new(draft, Now)));
+        Assert.True(draft.ContentEquals(recoveredDraft.Draft));
     }
 
     [Fact]

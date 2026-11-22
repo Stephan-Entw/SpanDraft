@@ -61,9 +61,23 @@
           </StackPanel>
         </Button>
       </StackPanel>
-      <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="{StaticResource Space16}">
-        <TextBlock Text="{x:Static resources:Strings.RecentProjects}" Classes="sectionTitle" />
-        <Border Grid.Row="1" VerticalAlignment="Top" Background="{DynamicResource Surface}"
+      <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*" RowSpacing="{StaticResource Space16}">
+        <Border x:Name="RecoveryNotice" IsVisible="{Binding HasRecovery}" Background="{DynamicResource Surface}"
+                BorderBrush="{DynamicResource Border}" BorderThickness="{DynamicResource BorderWidth}"
+                CornerRadius="{DynamicResource RadiusXS}" Padding="12,8">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}">
+            <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Info}"
+                Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+            <TextBlock x:Name="RecoveryNoticeText" Grid.Column="1" Text="{Binding RecoveryHint}" VerticalAlignment="Center" TextWrapping="Wrap" />
+            <Button x:Name="RecoveryReviewButton" Grid.Column="2" Command="{Binding ShowRecoveryCommand}" Classes="secondary"
+                    Height="{DynamicResource StandardControl}" VerticalAlignment="Center"
+                    AutomationProperties.Name="{x:Static resources:Strings.RecoveryReview}">
+              <TextBlock Text="{x:Static resources:Strings.RecoveryReview}" />
+            </Button>
+          </Grid>
+        </Border>
+        <TextBlock Grid.Row="1" Text="{x:Static resources:Strings.RecentProjects}" Classes="sectionTitle" />
+        <Border Grid.Row="2" VerticalAlignment="Top" Background="{DynamicResource Surface}"
                 BorderBrush="{DynamicResource Border}" BorderThickness="{DynamicResource BorderWidth}"
                 CornerRadius="{DynamicResource RadiusXS}" ClipToBounds="True">
           <Grid RowDefinitions="Auto,*">

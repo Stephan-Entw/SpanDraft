@@ -17,31 +17,25 @@ public sealed record RecoverySnapshot(ProjectState State, string? OriginalFilePa
 public sealed class ProjectRecovery
 {
     private readonly DebouncedSlot<RecoverySnapshot> _slot;
-    private readonly IProjectFileStore _files;
+    private readonly IRecoveryStorage _storage;
     private readonly Func<DateTimeOffset> _utcNow;
 
-    public ProjectRecovery(IProjectFileStore files, string slotPath,
-        Func<TimeSpan, CancellationToken, Task>? delay = null, Func<DateTimeOffset>? utcNow = null,
-        Action? ensureDirectory = null)
+    public ProjectRecovery(IRecoveryStorage storage, RecoverySlot slot,
+        Func<TimeSpan, CancellationToken, Task>? delay = null, Func<DateTimeOffset>? utcNow = null)
     {
-        _files = files;
+        if (slot.Kind != RecoverySlotKind.Project) throw new ArgumentException("Expected a project slot.", nameof(slot));
+        _storage = storage;
         _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
-        _slot = new(files, slotPath, Encode, delay, ensureDirectory);
+        _slot = new(storage, slot, Encode, delay);
         _slot.Failed += e => Failed?.Invoke(e);
     }
 
-    public static ProjectRecovery Local(IProjectFileStore files)
-    {
-        var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SpanDraft");
-        return new(files, Path.Combine(directory, "recovery.json"), ensureDirectory: () => Directory.CreateDirectory(directory));
-    }
-
-    public string SlotPath => _slot.SlotPath;
+    public RecoverySlot Slot => _slot.Slot;
     public event Action<Exception>? Failed;
 
     public void Schedule(ProjectSession session)
     {
-        if (session.IsDirty) _slot.Schedule(new(session.CurrentRevision.State, session.FilePath, _utcNow()));
+        if (session.IsDirty) _slot.Schedule(new(session.CurrentRevision.State, session.FilePath ?? session.RecoveryOriginPath, _utcNow()));
         else _slot.ScheduleDelete();
     }
 
@@ -54,8 +48,13 @@ public sealed class ProjectRecovery
 
     public async Task<RecoverySnapshot?> ReadAsync()
     {
-        var bytes = await _files.ReadAsync(SlotPath);
-        if (bytes is null) return null;
+        var bytes = await _storage.ReadAsync(Slot);
+        return bytes is null ? null : Decode(bytes);
+    }
+
+    /// <summary>Validates and reads one slot's bytes; every defect is a <see cref="ProjectFormatException"/>.</summary>
+    public static RecoverySnapshot Decode(byte[] bytes)
+    {
         try
         {
             var envelope = JsonSerializer.Deserialize<RecoveryEnvelopeV1>(bytes, ProjectFileCodec.JsonOptions)

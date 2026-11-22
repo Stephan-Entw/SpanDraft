@@ -66,7 +66,7 @@ public sealed class ProjectSectionStateTests
         var recovered = (await app.Recovery.ReadAsync())!;
         Assert.True(after.ContentEquals(recovered.State));
         Assert.Equal(path, recovered.OriginalFilePath);
-        Assert.Equal(5, JsonNode.Parse(app.Files.Data[App.Slot])!["project"]!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(5, JsonNode.Parse(app.RecoveryBytes)!["project"]!["formatVersion"]!.GetValue<int>());
         Assert.True(ProjectSession.Restore(recovered.State, recovered.OriginalFilePath).IsDirty);
         Assert.True(await app.Main.SaveAsync(saveAs: true));
         var savedPath = app.Dialogs.SavePath!;

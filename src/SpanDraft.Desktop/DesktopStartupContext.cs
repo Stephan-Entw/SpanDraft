@@ -16,24 +16,28 @@ public sealed record DesktopStartupContext(IProjectFileStore Files, LocalSetting
     public static async Task<DesktopStartupContext> LoadAsync(IProjectFileStore files, LocalSettingsStore settingsStore)
     {
         var load = await settingsStore.LoadDetailedAsync();
-        return new(files, settingsStore, load.Settings) { SettingsLoad = load };
+        return new(files, settingsStore, load.Settings) { SettingsLoad = load, StateStores = DesktopStateStores.Local(files) };
     }
 }
 
 /// <summary>The remaining local stores can be supplied together by an embedding host.</summary>
-public sealed record DesktopStateStores(ProjectRecovery Recovery, ProjectSetupRecovery SetupRecovery,
+public sealed record DesktopStateStores(IRecoveryStorage Recovery,
     MaterialLibraryStore Materials, SectionLibraryStore Sections, RecentProjectsStore Recents)
 {
-    public static DesktopStateStores Local(IProjectFileStore files) => new(ProjectRecovery.Local(files),
-        ProjectSetupRecovery.Local(files), MaterialLibraryStore.Local(files), SectionLibraryStore.Local(files),
-        RecentProjectsStore.Local(files));
+    public static DesktopStateStores Local(IProjectFileStore files) => new(FileRecoveryStorage.Local(),
+        MaterialLibraryStore.Local(files), SectionLibraryStore.Local(files), RecentProjectsStore.Local(files));
+
+    /// <summary>
+    /// The default of every composition that is not the production root (designer, tests, harnesses): the file-based
+    /// stores keep going through <paramref name="files"/>, recovery stays in memory and never touches the user profile.
+    /// </summary>
+    public static DesktopStateStores Isolated(IProjectFileStore files) => Local(files) with { Recovery = new InMemoryRecoveryStorage() };
 
     public static DesktopStateStores InDirectory(IProjectFileStore files, string directory)
     {
         directory = Path.GetFullPath(directory);
         Action ensureDirectory = () => Directory.CreateDirectory(directory);
-        return new(new(files, Path.Combine(directory, "recovery.json"), ensureDirectory: ensureDirectory),
-            new(files, Path.Combine(directory, "setup-recovery.json"), ensureDirectory: ensureDirectory),
+        return new(new FileRecoveryStorage(directory),
             new(files, Path.Combine(directory, "material-library.json"), ensureDirectory),
             new(files, Path.Combine(directory, "section-library.json"), ensureDirectory),
             new(files, Path.Combine(directory, "recent-projects.json"), ensureDirectory: ensureDirectory));

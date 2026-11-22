@@ -22,7 +22,7 @@ public sealed class DesktopShellCommandTests
     [Theory]
     [InlineData("none")] [InlineData("empty")] [InlineData("other")] [InlineData("multiple")]
     [InlineData("valid")] [InlineData("uppercase")]
-    public void StartupOpensOnlyOneProjectArgumentAfterLibrariesRecoveryAndRecents(string arguments)
+    public void StartupOpensOnlyOneProjectArgumentAfterLibrariesAndRecents(string arguments)
     {
         using var environment = new DesktopControlEnvironment();
         var files = new Files();
@@ -41,10 +41,9 @@ public sealed class DesktopShellCommandTests
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
         var expectedReads = new List<string>
         {
-            // Shared services (libraries, recents) load during bootstrap, before any window; recovery follows in the window.
+            // Shared services (libraries, recents) load during bootstrap, before any window. Recovery has its own storage.
             MaterialLibraryStore.Local(files).FilePath, SectionLibraryStore.Local(files).FilePath,
-            RecentProjectsStore.Local(files).FilePath,
-            ProjectRecovery.Local(files).SlotPath, ProjectSetupRecovery.Local(files).SlotPath
+            RecentProjectsStore.Local(files).FilePath
         };
         if (arguments is "valid" or "uppercase")
         {
@@ -62,79 +61,51 @@ public sealed class DesktopShellCommandTests
 
     [Theory]
     [InlineData(false)] [InlineData(true)]
-    public void RestoredSetupDraftTakesPrecedenceOverStartupFileWithOrWithoutRestoredSession(bool restoreProject)
+    public void PendingRecoveryNeverChangesTheStartupFileOpenAndStaysUntouched(bool withProjectRecovery)
     {
         using var environment = new DesktopControlEnvironment();
         var files = new Files();
-        string target = TestPath("shell.spandraft"), setupSlot = ProjectSetupRecovery.Local(files).SlotPath;
-        string projectSlot = ProjectRecovery.Local(files).SlotPath, recents = RecentProjectsStore.Local(files).FilePath;
-        var draft = new ProjectSetupDraft(Length: M(3));
-        var setupBytes = ProjectSetupRecovery.Encode(new(draft, Now));
+        string target = TestPath("shell.spandraft");
+        var storage = new TestRecoveryStorage();
+        var setupBytes = ProjectSetupRecovery.Encode(new(new ProjectSetupDraft(Length: M(3)), Now));
         var projectBytes = ProjectRecovery.Encode(new(State(), null, Now));
-        files.Data[setupSlot] = setupBytes;
-        if (restoreProject) files.Data[projectSlot] = projectBytes;
+        var setupSlot = RecoverySlot.Setup(RecoveryId.New());
+        storage.Put(setupSlot, setupBytes);
+        var projectSlot = RecoverySlot.Project(RecoveryId.New());
+        if (withProjectRecovery) storage.Put(projectSlot, projectBytes);
         files.Data[target] = ProjectFileCodec.Serialize(State(4));
-        var reads = new List<string>();
-        files.BeforeRead = path => { reads.Add(path); return Task.CompletedTask; };
-        // Restoring a dirty session schedules recovery; hold its debounce while inspecting startup.
-        var delay = new Delay();
-        var recovery = new ProjectRecovery(files, projectSlot, delay.Wait, () => Now);
         var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default)
         {
-            StateStores = DesktopStateStores.Local(files) with { Recovery = recovery }
+            StateStores = DesktopStateStores.Local(files) with { Recovery = storage }
         };
-        var window = (HostWithLaunchArguments(startup, [target])).Workspaces.CreateInitial().Window;
-        window.Show(); Dispatcher.UIThread.RunJobs();
-        if (restoreProject) { Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs(); }
-        Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs();
+        var host = HostWithLaunchArguments(startup, [target]);
+        var window = host.Workspaces.CreateInitial().Window;
+        DesktopControlEnvironment.ShowInitialized(window);
+        Dispatcher.UIThread.RunJobs();
 
+        // Recovery never asks and never restores by itself: the launch file opens as if nothing were pending.
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
-        Assert.Equal(MainViewMode.ProjectSetup, main.Mode);
-        Assert.True(draft.ContentEquals(main.Setup.Draft));
-        Assert.Equal(restoreProject, main.Session is not null);
-        if (restoreProject)
-        {
-            Assert.True(State().ContentEquals(main.Session!.CurrentRevision.State));
-            Assert.Equal(projectBytes, files.Data[projectSlot]);
-        }
-        Assert.Equal(setupBytes, files.Data[setupSlot]); Assert.Empty(files.Writes);
-        Assert.DoesNotContain(target, reads);
-        // Recents belong to the shared services: read once during bootstrap, before the recovery slots.
-        Assert.Equal(1, reads.Count(r => r == recents));
-        Assert.True(reads.IndexOf(recents) < reads.IndexOf(setupSlot));
         Assert.Empty(window.OwnedWindows);
-        if (restoreProject)
-        {
-            Assert.Single(delay.Waiters);
-            Assert.False(recovery.DrainAsync().IsCompleted);
-        }
-        else Assert.Empty(delay.Waiters);
-        // Dispose the test window without starting another modal leave workflow.
-        typeof(MainWindow).GetField("_closeApproved", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, true);
+        Assert.Equal(target, main.Session!.FilePath);
+        Assert.True(State(4).ContentEquals(main.Session.CurrentRevision.State));
+        Assert.Equal(withProjectRecovery ? 2 : 1, host.Recovery.Candidates.Count);
+        Assert.True(host.Recovery.HasUndecided);
+        Assert.Equal(setupBytes, storage.Data[setupSlot]);
+        if (withProjectRecovery) Assert.Equal(projectBytes, storage.Data[projectSlot]);
+        Assert.Empty(storage.Writes);
         window.Close(); Dispatcher.UIThread.RunJobs();
-        delay.ReleaseAll(); Dispatcher.UIThread.RunJobs();
-        Assert.True(recovery.DrainAsync().IsCompletedSuccessfully);
-        if (restoreProject)
-        {
-            Assert.Equal(projectSlot, Assert.Single(files.Writes));
-            Assert.Equal(projectBytes, files.Data[projectSlot]);
-        }
-        else Assert.Empty(files.Writes);
     }
 
     [Theory]
-    [InlineData(false, "escape")] [InlineData(false, "close")]
-    [InlineData(true, "escape")] [InlineData(true, "close")] [InlineData(true, "cancel")]
-    public void CancelRecoveryClosesStartupWithoutNormalCloseAndOffersTheSameFileAgain(bool damaged, string action)
+    [InlineData("escape")] [InlineData("close")] [InlineData("quit")]
+    public void UnreadableRecoveryAreaClosesStartupWithoutNormalCloseAndOffersTheSameFileAgain(string action)
     {
         using var environment = new DesktopControlEnvironment();
         var files = new Files();
-        string slot = ProjectRecovery.Local(files).SlotPath;
         string recentPath = RecentProjectsStore.Local(files).FilePath;
         string target = TestPath("startup.spandraft");
         files.Data[target] = ProjectFileCodec.Serialize(State(4));
-        var bytes = damaged ? System.Text.Encoding.UTF8.GetBytes("{") : ProjectRecovery.Encode(new(State(), null, Now));
-        files.Data[slot] = bytes.ToArray();
+        var storage = new TestRecoveryStorage { FailEnumerate = new IOException("Injected enumeration failure.") };
         int recentReads = 0, targetReads = 0;
         files.BeforeRead = path =>
         {
@@ -142,32 +113,30 @@ public sealed class DesktopShellCommandTests
             if (path == target) targetReads++;
             return Task.CompletedTask;
         };
-        var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, TestPath("settings.json")), UserSettings.Default);
+        var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, TestPath("settings.json")), UserSettings.Default)
+        {
+            StateStores = DesktopStateStores.Local(files) with { Recovery = storage }
+        };
         for (int attempt = 0; attempt < 2; attempt++)
         {
             var window = (HostWithLaunchArguments(startup, [target])).Workspaces.CreateInitial().Window;
+            int bootstrapRecentReads = recentReads;
             bool closed = false;
             window.Closed += (_, _) => closed = true;
             window.Show(); Dispatcher.UIThread.RunJobs();
-            if (damaged)
-            {
-                var error = Assert.Single(window.OwnedWindows);
-                Click(error, Strings.OK); Dispatcher.UIThread.RunJobs();
-            }
             var dialog = Assert.Single(window.OwnedWindows);
-            var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
-            Assert.Null(main.Session); Assert.True(main.IsWorkspaceBusy);
-            Assert.False(window.FindControl<MenuItem>("QuitMenuItem")!.Command!.CanExecute(null));
+            // Nothing of the workspace is usable before the recovery situation is known.
+            Assert.Null(window.DataContext);
             if (action == "escape")
                 dialog.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
-            else if (action == "cancel") Click(dialog, Strings.Cancel);
+            else if (action == "quit") Click(dialog, Strings.Quit);
             else dialog.Close();
             Dispatcher.UIThread.RunJobs();
 
-            Assert.True(closed); Assert.False(window.IsVisible); Assert.Null(main.Session);
-            Assert.Equal(bytes, files.Data[slot]); Assert.Empty(files.Writes);
-            // One shared recents read per host (bootstrap); cancelling the recovery never reads it again nor the startup file.
-            Assert.Equal(attempt + 1, recentReads); Assert.Equal(0, targetReads);
+            Assert.True(closed); Assert.False(window.IsVisible);
+            Assert.Empty(files.Writes);
+            // The shared recents belong to the bootstrap; quitting never reads them again nor the startup file.
+            Assert.Equal(bootstrapRecentReads, recentReads); Assert.Equal(0, targetReads);
         }
     }
 

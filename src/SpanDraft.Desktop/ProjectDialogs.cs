@@ -39,15 +39,8 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
     public Task<LeaveDecision> ConfirmLeaveAsync(string projectFileName) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.LeaveQuestion, projectFileName), DialogChoices.Leave());
 
-    public Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc) => damaged
-        ? ShowAsync(Strings.RecoveryDiscardQuestion, DialogChoices.DamagedRecovery())
-        : ShowAsync(string.Format(CultureInfo.CurrentUICulture, Strings.RecoveryQuestion,
-            writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)), DialogChoices.Recovery());
-
-    public Task<RecoveryDecision> ConfirmSetupRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc) => damaged
-        ? ConfirmRecoveryAsync(true, null)
-        : ShowAsync(string.Format(CultureInfo.CurrentUICulture, Strings.SetupRecoveryQuestion,
-            writtenAtUtc!.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)), DialogChoices.Recovery());
+    public Task<bool> ConfirmRecoveryRetryAsync(string reason) => ShowAsync(
+        Strings.RecoveryUnavailable + "\n\n" + reason, DialogChoices.RecoveryUnavailable());
 
     public async Task ShowErrorAsync(string message) => await ShowAsync(message, DialogChoices.Acknowledge());
 

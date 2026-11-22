@@ -470,23 +470,21 @@ public sealed class WorkspaceWindowManagerTests
     }
 
     [Fact]
-    public void OnlyTheInitialWorkspaceUsesTheLegacyRecoverySlot()
+    public void EveryWorkspaceWritesItsOwnIdentifiedRecoverySlotAndNeverTheLegacyOne()
     {
         using var environment = new DesktopControlEnvironment();
-        var files = new Files();
-        var host = Host(files);
+        var host = Host(new Files());
         var a = Start(host);
         CreateProject(a);
         var b = Run(() => host.Workspaces.RequestNewProjectAsync(a))!;
         Assert.True(a.IsInitial);
         Assert.False(b.IsInitial);
-        // The legacy slot is touched only by the initial workspace; remove it and let the second workspace work.
-        string slot = host.StateStores.Recovery.SlotPath, setupSlot = host.StateStores.SetupRecovery.SlotPath;
-        files.Data.TryRemove(slot, out _); files.Data.TryRemove(setupSlot, out _);
         CreateProject(b);
         Flush();
-        Assert.False(files.Data.ContainsKey(slot));
-        Assert.False(files.Data.ContainsKey(setupSlot));
+        var slots = Run(() => host.StateStores.Recovery.EnumerateAsync());
+        Assert.Equal(2, slots.Count(s => s.Kind == RecoverySlotKind.Project));
+        Assert.All(slots, slot => Assert.False(slot.IsLegacy));
+        Assert.Equal(slots.Count, slots.Distinct().Count());
         Assert.Equal(DesktopApplicationState.Ready, host.State);
     }
 }

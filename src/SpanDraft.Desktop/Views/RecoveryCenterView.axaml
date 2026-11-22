@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SpanDraft.Desktop.ViewModels"
+             xmlns:controls="clr-namespace:SpanDraft.Desktop.Controls"
+             xmlns:resources="clr-namespace:SpanDraft.Desktop.Resources"
+             x:Class="SpanDraft.Desktop.Views.RecoveryCenterView" x:DataType="vm:RecoveryCenterViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.recoveryRow">
+      <Setter Property="MinHeight" Value="56" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+      <Setter Property="BorderThickness" Value="{DynamicResource BottomBorder}" />
+      <Setter Property="Padding" Value="12,4" />
+    </Style>
+    <Style Selector="Border.recoveryRow.focused">
+      <Setter Property="Background" Value="{DynamicResource SurfaceSubtle}" />
+    </Style>
+  </UserControl.Styles>
+  <Grid Background="{DynamicResource AppBackground}" RowDefinitions="Auto,*">
+    <Border x:Name="RecoveryHeader" Classes="workspaceHeader">
+      <TextBlock x:Name="RecoveryTitle" Text="{x:Static resources:Strings.RecoveryCenter}" Classes="pageTitle"
+                 Foreground="{DynamicResource TextPrimary}" />
+    </Border>
+    <Grid Grid.Row="1" Margin="{StaticResource Padding24}" ColumnDefinitions="280,48,720" HorizontalAlignment="Left">
+      <StackPanel Spacing="{StaticResource Space16}">
+        <StackPanel Spacing="{StaticResource Space8}">
+          <Button x:Name="RestoreAllButton" Command="{Binding RestoreAllCommand}" Classes="primary"
+                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                  AutomationProperties.Name="{x:Static resources:Strings.RecoveryRestoreAll}">
+            <TextBlock Text="{x:Static resources:Strings.RecoveryRestoreAll}" VerticalAlignment="Center" />
+          </Button>
+          <Button x:Name="DiscardUnreadableButton" Command="{Binding DiscardUnreadableCommand}" Classes="secondary"
+                  Height="{DynamicResource StandardControl}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                  IsVisible="{Binding HasUnreadable}"
+                  AutomationProperties.Name="{x:Static resources:Strings.RecoveryDiscardUnreadable}">
+            <TextBlock Text="{x:Static resources:Strings.RecoveryDiscardUnreadable}" VerticalAlignment="Center" />
+          </Button>
+        </StackPanel>
+        <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" />
+        <Button x:Name="RecoveryBackButton" Command="{Binding BackCommand}" Classes="ghost"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                AutomationProperties.Name="{x:Static resources:Strings.RecoveryBack}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
+            <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ChevronLeft}"
+                Foreground="{Binding Foreground, ElementName=RecoveryBackButton}" VerticalAlignment="Center" />
+            <TextBlock Text="{x:Static resources:Strings.RecoveryBack}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+      <Border Grid.Column="2" VerticalAlignment="Top" Background="{DynamicResource Surface}"
+              BorderBrush="{DynamicResource Border}" BorderThickness="{DynamicResource BorderWidth}"
+              CornerRadius="{DynamicResource RadiusXS}" ClipToBounds="True">
+        <Grid MinHeight="112">
+          <TextBlock x:Name="NothingToRecover" Text="{x:Static resources:Strings.RecoveryNothing}"
+                     IsVisible="{Binding IsEmpty}" Classes="secondary" Margin="12,16" VerticalAlignment="Top" />
+          <ScrollViewer IsVisible="{Binding !IsEmpty}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="RecoveryList" ItemsSource="{Binding Items}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:RecoveryItemViewModel">
+                  <Border Classes="recoveryRow" Classes.focused="{Binding IsFocused}" AutomationProperties.Name="{Binding AutomationName}">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource Space12}">
+                      <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.Document}"
+                          Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                      <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto" RowSpacing="{StaticResource Space4}" VerticalAlignment="Center">
+                        <controls:TechnicalTextBlock Text="{Binding Title}" Classes="bodyStrong" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Row="1" Text="{Binding Kind}" Classes="caption" TextTrimming="CharacterEllipsis" />
+                        <controls:TechnicalTextBlock Grid.Row="2" Text="{Binding Detail}" IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                            Classes="caption" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detail}" />
+                      </Grid>
+                      <TextBlock Grid.Column="2" Text="{Binding SavedLabel}" Classes="secondary" VerticalAlignment="Center" TextAlignment="Right" />
+                      <Button Grid.Column="3" Classes="secondary" Command="{Binding RestoreCommand}" Height="{DynamicResource StandardControl}"
+                              VerticalAlignment="Center" AutomationProperties.Name="{x:Static resources:Strings.Restore}">
+                        <TextBlock Text="{x:Static resources:Strings.Restore}" />
+                      </Button>
+                      <Button Grid.Column="4" Classes="ghost" Command="{Binding DiscardCommand}" VerticalAlignment="Center"
+                              AutomationProperties.Name="{x:Static resources:Strings.Discard}">
+                        <TextBlock Text="{x:Static resources:Strings.Discard}" />
+                      </Button>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

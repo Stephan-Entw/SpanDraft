@@ -223,7 +223,7 @@ public sealed class ProjectFileSpringSupportTests
     public async Task RecoveryRoundtripKeepsSpringSupports()
     {
         var files = new ProjectTestSupport.Files();
-        var recovery = new ProjectRecovery(files, "project-recovery");
+        var recovery = new ProjectRecovery(new TestRecoveryStorage(), RecoverySlot.Project(RecoveryId.New()));
         var state = WithSprings();
         await recovery.FlushAsync(state, null);
         Assert.True(state.ContentEquals((await recovery.ReadAsync())!.State));

@@ -21,12 +21,17 @@
     <DataTemplate DataType="{x:Type vm:ReportPreviewViewModel}">
       <views:ReportPreviewView />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:RecoveryCenterViewModel}">
+      <views:RecoveryCenterView />
+    </DataTemplate>
   </Window.DataTemplates>
   <Grid RowDefinitions="Auto,*">
     <Menu x:Name="MainMenu" KeyboardNavigation.TabNavigation="None" KeyboardNavigation.IsTabStop="False">
       <MenuItem Header="{x:Static resources:Strings.File}">
         <MenuItem x:Name="NewMenuItem" Header="{x:Static resources:Strings.NewProject}" Command="{Binding NewCommand}" />
         <MenuItem x:Name="OpenMenuItem" Header="{x:Static resources:Strings.Open}" Command="{Binding OpenCommand}" />
+        <MenuItem x:Name="RecoveryMenuItem" Header="{x:Static resources:Strings.RecoveryMenuItem}" Command="{Binding ShowRecoveryCommand}"
+                  IsVisible="{Binding HasRecovery}" />
         <Separator />
         <MenuItem x:Name="SaveMenuItem" Header="{x:Static resources:Strings.Save}" Command="{Binding SaveCommand}" />
         <MenuItem x:Name="SaveAsMenuItem" Header="{x:Static resources:Strings.SaveAs}" Command="{Binding SaveAsCommand}" />

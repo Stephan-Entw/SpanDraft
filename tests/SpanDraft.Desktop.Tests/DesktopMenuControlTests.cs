@@ -40,6 +40,9 @@ public sealed class DesktopMenuControlTests
         Assert.True(project.IsEffectivelyVisible); AssertChrome(project, width);
         Assert.Same(main.NewCommand, shell.FindControl<MenuItem>("NewMenuItem")!.Command);
         Assert.Same(main.OpenCommand, shell.FindControl<MenuItem>("OpenMenuItem")!.Command);
+        var recovery = shell.FindControl<MenuItem>("RecoveryMenuItem")!;
+        Assert.Same(main.ShowRecoveryCommand, recovery.Command);
+        Assert.False(recovery.IsVisible);
         Assert.Same(main.SaveCommand, shell.FindControl<MenuItem>("SaveMenuItem")!.Command);
         var report = shell.FindControl<MenuItem>("ReportMenuItem")!;
         Assert.Same(main.ReportCommand, report.Command);
@@ -49,7 +52,7 @@ public sealed class DesktopMenuControlTests
         Assert.Null(closeProject.InputGesture);
         var file = project.Items.OfType<MenuItem>().Single(i => Equals(i.Header, Strings.File));
         Assert.Single(file.GetVisualDescendants().OfType<Popup>()).ShouldUseOverlayLayer = true;
-        Assert.Equal(new object?[] { Strings.NewProject, Strings.Open, null, Strings.Save, Strings.SaveAs,
+        Assert.Equal(new object?[] { Strings.NewProject, Strings.Open, Strings.RecoveryMenuItem, null, Strings.Save, Strings.SaveAs,
             Strings.ReportCommand, Strings.CloseProject, null, Strings.Quit }, file.Items.Select(i => i is MenuItem item ? item.Header : null));
         Assert.Same(main.UndoCommand, shell.FindControl<MenuItem>("UndoMenuItem")!.Command);
         var primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;

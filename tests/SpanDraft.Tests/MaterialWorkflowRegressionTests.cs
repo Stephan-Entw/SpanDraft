@@ -428,7 +428,7 @@ public sealed class MaterialWorkflowRegressionTests
         Assert.True(f.Main.Redo()); Assert.True(changed.ContentEquals(f.Main.Session.CurrentRevision.State));
         Assert.Equal(MaterialDisplay.Format(changed.Document.Material), f.Main.Editor.Overview.Material);
         Assert.Equal(analyses, f.Analyses);
-        var recovery = new ProjectRecovery(f.Files, "metadata-recovery"); await recovery.FlushAsync(changed, null);
+        var recovery = new ProjectRecovery(new TestRecoveryStorage(), RecoverySlot.Project(RecoveryId.New())); await recovery.FlushAsync(changed, null);
         Assert.True(changed.ContentEquals((await recovery.ReadAsync())!.State));
     }
 
@@ -445,11 +445,10 @@ public sealed class MaterialWorkflowRegressionTests
         Assert.Equal(MaterialCategory.Other, loaded.Document.Material.Category);
         Assert.Null(loaded.Document.Material.MaterialNumber); Assert.Empty(loaded.Document.Material.OtherStandards);
         Assert.Null(loaded.Document.Material.StrengthType);
-        var f = new Fixture(); await f.Load(); var recovery = new ProjectRecovery(f.Files, "legacy-metadata");
+        var f = new Fixture(); await f.Load(); var recovery = new ProjectRecovery(new TestRecoveryStorage(), RecoverySlot.Project(RecoveryId.New()));
         await recovery.FlushAsync(loaded, null); Assert.True(loaded.ContentEquals((await recovery.ReadAsync())!.State));
         var draft = new ProjectSetupDraft(Material: loaded.Document.Material);
-        f.Files.Data["setup-legacy"] = ProjectSetupRecovery.Encode(new(draft, Now));
-        Assert.True(draft.ContentEquals((await new ProjectSetupRecovery(f.Files, "setup-legacy").ReadAsync())!.Draft));
+        Assert.True(draft.ContentEquals(ProjectSetupRecovery.Decode(ProjectSetupRecovery.Encode(new(draft, Now))).Draft));
     }
 
     [Theory]
@@ -463,8 +462,7 @@ public sealed class MaterialWorkflowRegressionTests
         Assert.Throws<ProjectFormatException>(() => ProjectFileCodec.Deserialize(Encoding.UTF8.GetBytes(project.ToJsonString())));
         var setup = JsonNode.Parse(ProjectSetupRecovery.Encode(new(new(Material: state.Document.Material), Now)))!;
         setup["draft"]!["material"] = material.DeepClone();
-        var files = new Files(); files.Data["invalid-setup"] = Encoding.UTF8.GetBytes(setup.ToJsonString());
-        await Assert.ThrowsAsync<ProjectFormatException>(() => new ProjectSetupRecovery(files, "invalid-setup").ReadAsync());
+        Assert.Throws<ProjectFormatException>(() => ProjectSetupRecovery.Decode(Encoding.UTF8.GetBytes(setup.ToJsonString())));
     }
 
     [Theory]
@@ -560,10 +558,10 @@ public sealed class MaterialWorkflowRegressionTests
         var bytes = ProjectFileCodec.Serialize(state); var wire = JsonNode.Parse(bytes)!["document"]!["material"]!;
         Assert.Equal("stainlessSteel", wire["category"]!.GetValue<string>()); Assert.Equal("1.4567", wire["materialNumber"]!.GetValue<string>());
         Assert.Equal(2, wire["otherStandards"]!.AsArray().Count); Assert.True(state.ContentEquals(ProjectFileCodec.Deserialize(bytes)));
-        var recovery = new ProjectRecovery(f.Files, "project-recovery"); await recovery.FlushAsync(state, null);
+        var recovery = new ProjectRecovery(new TestRecoveryStorage(), RecoverySlot.Project(RecoveryId.New())); await recovery.FlushAsync(state, null);
         Assert.True(state.ContentEquals((await recovery.ReadAsync())!.State));
-        var draft = new ProjectSetupDraft(Material: state.Document.Material); f.Files.Data["setup-recovery"] = ProjectSetupRecovery.Encode(new(draft, Now));
-        Assert.True(draft.ContentEquals((await new ProjectSetupRecovery(f.Files, "setup-recovery").ReadAsync())!.Draft));
+        var draft = new ProjectSetupDraft(Material: state.Document.Material);
+        Assert.True(draft.ContentEquals(ProjectSetupRecovery.Decode(ProjectSetupRecovery.Encode(new(draft, Now))).Draft));
         await f.Main.SaveMaterialAsync(MaterialTestEntries.Entry("Renamed", MaterialCategory.Other), f.Main.UserMaterials.Find(MaterialTestEntries.Entry().Name));
         Assert.Equal(bytes, ProjectFileCodec.Serialize(state));
         foreach (var key in new[] { "libraryId", "source", "provenance" }) Assert.DoesNotContain("\"" + key + "\"", Encoding.UTF8.GetString(bytes));

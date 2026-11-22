@@ -68,7 +68,7 @@ public sealed class DialogConventionTests
     /// <summary>Every dialog of the application, as declared: the same rules for each, whatever its content.</summary>
     public static IEnumerable<object[]> Dialogs() =>
         from culture in new[] { "de-DE", "en-US" }
-        from dialog in new[] { "leave", "recovery", "damaged recovery", "error", "missing recent", "delete", "replace material", "name conflict" }
+        from dialog in new[] { "leave", "recovery unavailable", "error", "missing recent", "delete", "replace material", "name conflict" }
         select new object[] { culture, dialog };
 
     [Theory]
@@ -79,8 +79,7 @@ public sealed class DialogConventionTests
         switch (dialog)
         {
             case "leave": Check(DialogChoices.Leave(), [Strings.DontSave, Strings.Cancel, Strings.Save], Strings.Save); break;
-            case "recovery": Check(DialogChoices.Recovery(), [Strings.Discard, Strings.Cancel, Strings.Restore], Strings.Restore); break;
-            case "damaged recovery": Check(DialogChoices.DamagedRecovery(), [Strings.Cancel, Strings.Discard], null); break;
+            case "recovery unavailable": Check(DialogChoices.RecoveryUnavailable(), [Strings.Quit, Strings.Retry], Strings.Retry); break;
             case "error": Check(DialogChoices.Acknowledge(), [Strings.OK], Strings.OK); break;
             case "missing recent": Check(DialogChoices.RemoveMissingRecent(), [Strings.Cancel, Strings.RemoveFromRecent], Strings.RemoveFromRecent); break;
             case "delete": Check(DialogChoices.Delete(), [Strings.Cancel, Strings.Delete], null); break;

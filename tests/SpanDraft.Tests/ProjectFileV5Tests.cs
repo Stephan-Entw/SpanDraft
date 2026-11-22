@@ -159,11 +159,11 @@ public sealed class ProjectFileV5Tests
     [Fact]
     public async Task RecoveryRoundtripKeepsLinearLoadsAndDoesNotRewriteTheEnvelopeVersion()
     {
-        var files = new ProjectTestSupport.Files();
-        var recovery = new ProjectRecovery(files, "project-recovery");
+        var storage = new TestRecoveryStorage(); var slot = RecoverySlot.Project(RecoveryId.New());
+        var recovery = new ProjectRecovery(storage, slot);
         var state = Linear();
         await recovery.FlushAsync(state, null);
-        var root = JsonNode.Parse(files.Data["project-recovery"])!;
+        var root = JsonNode.Parse(storage.Data[slot])!;
         Assert.Equal(1, root["recoveryVersion"]!.GetValue<int>());
         Assert.Equal(5, root["project"]!["formatVersion"]!.GetValue<int>());
         Assert.True(state.ContentEquals((await recovery.ReadAsync())!.State));

@@ -117,7 +117,7 @@ public sealed class ProjectFileMomentReleaseTests
     public async Task RecoveryRoundtripKeepsReleasesAndTheirCounter()
     {
         var files = new ProjectTestSupport.Files();
-        var recovery = new ProjectRecovery(files, "project-recovery");
+        var recovery = new ProjectRecovery(new TestRecoveryStorage(), RecoverySlot.Project(RecoveryId.New()));
         var state = ProjectFileCodec.Deserialize(Fixture("V5", "moment-releases"));
         await recovery.FlushAsync(state, null);
         var restored = (await recovery.ReadAsync())!.State;

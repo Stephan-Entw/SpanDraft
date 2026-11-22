@@ -108,11 +108,24 @@
   <data name="LocalFilesOnly" xml:space="preserve"><value>Please choose a local project file.</value></data>
   <data name="LeaveQuestion" xml:space="preserve"><value>Save changes to “{0}” before leaving?</value></data>
   <data name="DontSave" xml:space="preserve"><value>Don’t Save</value></data>
-  <data name="SetupRecoveryQuestion" xml:space="preserve"><value>A new project draft from {0} is available. Restore it?</value></data>
-  <data name="RecoveryQuestion" xml:space="preserve"><value>An unsaved project from {0} is available. Restore it?</value></data>
-  <data name="RecoveryDamaged" xml:space="preserve"><value>The recovery file could not be read. The application can continue.</value></data>
-  <data name="RecoveryDiscardQuestion" xml:space="preserve"><value>Discard the unreadable recovery file?</value></data>
   <data name="RecoveryError" xml:space="preserve"><value>Recovery could not be updated. Your project remains available in this window.</value></data>
+  <data name="RecoveryCenter" xml:space="preserve"><value>Recovery</value></data>
+  <data name="RecoveryMenuItem" xml:space="preserve"><value>Recovery…</value></data>
+  <data name="RecoveryHintOne" xml:space="preserve"><value>One unsaved item can be recovered.</value></data>
+  <data name="RecoveryHintMany" xml:space="preserve"><value>{0} unsaved items can be recovered.</value></data>
+  <data name="RecoveryReview" xml:space="preserve"><value>Review…</value></data>
+  <data name="RecoveryRestoreAll" xml:space="preserve"><value>Restore all</value></data>
+  <data name="RecoveryDiscardUnreadable" xml:space="preserve"><value>Discard unreadable</value></data>
+  <data name="RecoveryBack" xml:space="preserve"><value>Back</value></data>
+  <data name="RecoveryKindProject" xml:space="preserve"><value>Unsaved project</value></data>
+  <data name="RecoveryKindOlder" xml:space="preserve"><value>Older version of the same file</value></data>
+  <data name="RecoveryKindDraft" xml:space="preserve"><value>New project draft</value></data>
+  <data name="RecoveryKindUnreadable" xml:space="preserve"><value>Unreadable recovery file</value></data>
+  <data name="RecoverySavedAt" xml:space="preserve"><value>Saved {0}</value></data>
+  <data name="RecoveryNothing" xml:space="preserve"><value>There is nothing left to recover.</value></data>
+  <data name="RecoveryActionError" xml:space="preserve"><value>The recovery could not be completed.</value></data>
+  <data name="RecoveryUnavailable" xml:space="preserve"><value>The recovery area could not be read, so unsaved work cannot be checked. Try again?</value></data>
+  <data name="Retry" xml:space="preserve"><value>Try again</value></data>
   <data name="Restore" xml:space="preserve"><value>Restore</value></data>
   <data name="Discard" xml:space="preserve"><value>Discard</value></data>
   <data name="RectangleSectionName" xml:space="preserve"><value>Rectangle {0} × {1} {2}</value></data>

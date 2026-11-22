@@ -9,10 +9,11 @@ public sealed class ProjectSession
     private readonly List<ProjectRevision> _undo = [];
     private readonly List<ProjectRevision> _redo = [];
 
-    private ProjectSession(ProjectState state, string? filePath, bool saved)
+    private ProjectSession(ProjectState state, string? filePath, bool saved, string? recoveryOriginPath = null)
     {
         CurrentRevision = new(Guid.NewGuid(), state);
         FilePath = filePath;
+        RecoveryOriginPath = recoveryOriginPath;
         SavedRevisionId = saved ? CurrentRevision.RevisionId : null;
         UndoHistory = _undo.AsReadOnly();
         RedoHistory = _redo.AsReadOnly();
@@ -22,11 +23,23 @@ public sealed class ProjectSession
     public static ProjectSession FromTemplate(ProjectState state) => new(state, null, true);
     public static ProjectSession Open(ProjectState state, string filePath) => new(state, filePath, true);
     public static ProjectSession Restore(ProjectState state, string? originalFilePath) => new(state, originalFilePath, false);
+
+    /// <summary>
+    /// Restores an older recovery variant of a project without claiming its path: <see cref="FilePath"/> stays null and the
+    /// original is only remembered as <see cref="RecoveryOriginPath"/>.
+    /// </summary>
+    public static ProjectSession RestoreDetached(ProjectState state, string? recoveryOriginPath) => new(state, null, false, recoveryOriginPath);
     public ProjectRevision CurrentRevision { get; private set; }
     public IReadOnlyList<ProjectRevision> UndoHistory { get; }
     public IReadOnlyList<ProjectRevision> RedoHistory { get; }
     public Guid? SavedRevisionId { get; private set; }
     public string? FilePath { get; private set; }
+
+    /// <summary>
+    /// The path a detached recovery variant came from; it is kept in later recovery writes but is never a save target and
+    /// never turns into <see cref="FilePath"/> on its own. Saving to a path ends the detachment.
+    /// </summary>
+    public string? RecoveryOriginPath { get; private set; }
     public bool IsDirty => CurrentRevision.RevisionId != SavedRevisionId;
     private bool _busy, _frozen;
     internal bool IsFrozen => _frozen;
@@ -95,6 +108,7 @@ public sealed class ProjectSession
         internal void MarkSaved()
         {
             session.FilePath = path;
+            session.RecoveryOriginPath = null;
             session.SavedRevisionId = revisionId;
         }
     }

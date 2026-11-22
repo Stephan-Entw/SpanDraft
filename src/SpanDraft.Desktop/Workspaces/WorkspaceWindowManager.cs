@@ -15,6 +15,7 @@ internal sealed class WorkspaceWindowManager
     private readonly List<WorkspaceWindowHandle> _handles = [];
     private WorkspaceWindowHandle? _initial, _active;
     private bool _activationEnabled, _initialCreated;
+    private RecoveryRestoreCoordinator? _restore;
 
     internal WorkspaceWindowManager(DesktopApplicationHost host)
     {
@@ -36,7 +37,7 @@ internal sealed class WorkspaceWindowManager
 
     public WorkspaceWindowHandle? Find(WindowId id) => _handles.FirstOrDefault(h => h.WindowId == id);
 
-    /// <summary>Creates the initial workspace; the only one that runs legacy startup and recovery.</summary>
+    /// <summary>Creates the initial workspace; the only one that makes the host Ready.</summary>
     public WorkspaceWindowHandle CreateInitial()
     {
         // One-shot for the whole process lifetime: the legacy startup/recovery owner must never be created twice.
@@ -65,6 +66,7 @@ internal sealed class WorkspaceWindowManager
         handle.BindModel(model);
         model.SessionActivated += handle.Neutralize;
         model.SetupCancelled += () => OnSetupCancelled(handle);
+        model.RecoveryCenterLeft += () => OnRecoveryCenterLeft(handle);
         model.ProjectClosing = () => OnProjectClosing(handle);
     }
 
@@ -130,8 +132,8 @@ internal sealed class WorkspaceWindowManager
 
     private void OnSetupCancelled(WorkspaceWindowHandle handle)
     {
-        // A workspace created for New disappears; one that came from the start page just shows it again.
-        if (handle.Reason != WorkspaceCreationReason.NewProject) return;
+        // A workspace created for New or for a restored draft disappears; one that came from the start page just shows it again.
+        if (handle.Reason is not (WorkspaceCreationReason.NewProject or WorkspaceCreationReason.Restore)) return;
         handle.IsClosing = true;
         Dispatcher.UIThread.Post(() => CloseInternal(handle));
     }
@@ -142,6 +144,96 @@ internal sealed class WorkspaceWindowManager
         if (!_handles.Any(h => !ReferenceEquals(h, handle) && h.HoldsStartSlot)) return;
         handle.IsClosing = true;
         Dispatcher.UIThread.Post(() => CloseInternal(handle));
+    }
+
+    // ---- Recovery ---------------------------------------------------------------------------------------------
+
+    /// <summary>A workspace that shows the start page and nothing else: it takes a restore without further ado.</summary>
+    private bool IsIdleStart(WorkspaceWindowHandle handle) =>
+        IsReady(handle) && handle.HoldsStartSlot && handle.Model is { Mode: MainViewMode.Start, IsWorkspaceBusy: false };
+
+    /// <summary>
+    /// Shows the Recovery Center from a UI hook (menu, start page, a refused open): fire and forget, failures surface on the
+    /// dispatcher like any other unhandled UI error.
+    /// </summary>
+    internal void RequestRecoveryCenter(WorkspaceWindowHandle source, Guid? focus) => Dispatcher.UIThread.Post(async () =>
+    {
+        try { await ShowRecoveryCenterAsync(source, focus); }
+        catch (Exception error) { Dispatcher.UIThread.Post(() => System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error)); }
+    });
+
+    /// <summary>
+    /// The Recovery Center is a workspace mode, not a dialog: an existing one is shown again; otherwise an idle start
+    /// workspace navigates to it and keeps its start slot; otherwise a workspace of its own is created, which holds no slot.
+    /// The requesting workspace is never changed (it may show an editor or a setup).
+    /// </summary>
+    internal async Task<WorkspaceWindowHandle?> ShowRecoveryCenterAsync(WorkspaceWindowHandle? source, Guid? focus)
+    {
+        var existing = _handles.FirstOrDefault(h => IsReady(h) && h.Model!.Mode == MainViewMode.RecoveryCenter);
+        if (existing is not null)
+        {
+            existing.Model!.EnterRecoveryCenter(focus);
+            Activate(existing.WindowId);
+            return existing;
+        }
+        var start = source is not null && IsIdleStart(source) ? source : _handles.FirstOrDefault(IsIdleStart);
+        if (start is not null && start.Model!.EnterRecoveryCenter(focus))
+        {
+            Activate(start.WindowId);
+            return start;
+        }
+        var handle = Create(WorkspaceCreationReason.RecoveryCenter, isInitial: false);
+        handle.Window.Show();
+        try
+        {
+            await handle.Window.Initialization;
+            if (handle.Model!.EnterRecoveryCenter(focus)) { Activate(handle.WindowId); return handle; }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception error)
+        {
+            CloseInternal(handle);
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
+        }
+        CloseInternal(handle);
+        return null;
+    }
+
+    private void OnRecoveryCenterLeft(WorkspaceWindowHandle handle)
+    {
+        // Only a workspace created for the Recovery Center is affected; a start workspace just shows its start page again.
+        if (handle.Reason != WorkspaceCreationReason.RecoveryCenter || handle.Model?.HasProject == true) return;
+        if (_handles.Any(h => !ReferenceEquals(h, handle) && h.HoldsStartSlot))
+        {
+            handle.IsClosing = true;
+            Dispatcher.UIThread.Post(() => CloseInternal(handle));
+        }
+        else handle.Neutralize();   // it becomes the start workspace and takes over the start slot
+    }
+
+    /// <summary>Restores a candidate for the Recovery Center of <paramref name="source"/>; see <see cref="RecoveryRestoreCoordinator"/>.</summary>
+    internal Task<bool> RestoreRecoveryAsync(Guid candidateId, WorkspaceWindowHandle source) =>
+        (_restore ??= new(_host.Recovery, this)).RestoreAsync(candidateId, source);
+
+    /// <summary>
+    /// The workspace that receives a restore: another idle start workspace; the Recovery Center's own start workspace if this
+    /// is the last undecided candidate; otherwise a new one that holds no start slot.
+    /// </summary>
+    internal async Task<(WorkspaceWindowHandle Handle, bool IsNew)> AcquireRestoreTargetAsync(WorkspaceWindowHandle source, bool lastUndecided)
+    {
+        var idle = _handles.FirstOrDefault(h => !ReferenceEquals(h, source) && IsIdleStart(h));
+        if (idle is not null) return (idle, false);
+        if (lastUndecided && source.HoldsStartSlot && source.Model is { Mode: MainViewMode.RecoveryCenter })
+            return (source, false);
+        var handle = Create(WorkspaceCreationReason.Restore, isInitial: false);
+        handle.Window.Show();
+        try { await handle.Window.Initialization; }
+        catch
+        {
+            CloseInternal(handle);
+            throw;
+        }
+        return (handle, true);
     }
 
     // ---- Activation ------------------------------------------------------------------------------------------
@@ -186,7 +278,7 @@ internal sealed class WorkspaceWindowManager
 
     private void SurfaceForRetry()
     {
-        // While the host still starts, the initial workspace owns the blocking recovery dialog.
+        // While the host still starts, the initial workspace owns the (rare) blocking startup dialog.
         var target = _host.State == DesktopApplicationState.Starting ? _initial ?? Active : Active;
         target?.Window.Surface(target.Window.RetryTarget);
     }

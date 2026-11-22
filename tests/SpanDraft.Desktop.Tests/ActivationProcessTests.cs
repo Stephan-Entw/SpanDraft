@@ -112,7 +112,7 @@ public sealed class ActivationProcessTests : IDisposable
         Assert.False(s1.IsPrimary || s2.IsPrimary || s1.HasExited || s2.HasExited);
         AssertElectionLockHeldElsewhere();
 
-        // The Primary ends without ever becoming Ready (like a cancelled legacy recovery) and frees the lock.
+        // The Primary ends without ever becoming Ready (like a quit from the unreadable-recovery question) and frees the lock.
         first.Send("exit");
         Assert.Equal(0, await first.WaitForExitAsync());
         Assert.DoesNotContain(first.Lines, static l => l.StartsWith("handled"));

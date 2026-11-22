@@ -80,7 +80,7 @@ public sealed class ProjectFilePositionReferenceTests
     [Fact]
     public async Task RecoveryKeepsTheReferences()
     {
-        var recovery = new ProjectRecovery(new ProjectTestSupport.Files(), "project-recovery");
+        var recovery = new ProjectRecovery(new TestRecoveryStorage(), RecoverySlot.Project(RecoveryId.New()));
         var state = ProjectFileCodec.Deserialize(Fixture());
         await recovery.FlushAsync(state, null);
         var read = (await recovery.ReadAsync())!.State;

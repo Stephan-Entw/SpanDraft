@@ -374,8 +374,7 @@ public sealed class DesktopSettingsTests
     public async Task PreferencePublicationLeavesProjectHistoryAnalysisAndRecoveryUntouched()
     {
         var files = new Files(); var delay = new Delay();
-        string recoveryPath = Path.Combine(Path.GetTempPath(), "phase3-recovery.json");
-        var recovery = new ProjectRecovery(files, recoveryPath, delay.Wait, () => Now);
+        var recoveryStorage = new TestRecoveryStorage(); var recovery = new WorkspaceRecoveryContext(recoveryStorage, delay.Wait, () => Now);
         var store = new LocalSettingsStore(files, "settings");
         int analyses = 0;
         var main = new MainWindowViewModel(b => { analyses++; return SpanDraft.Analysis.BeamAnalysis.Analyze(b); },
@@ -388,7 +387,7 @@ public sealed class DesktopSettingsTests
         delay.ReleaseAll(); await recovery.DrainAsync();
         var revision = session.CurrentRevision; var saved = session.SavedRevisionId;
         var undo = session.UndoHistory.ToArray(); var redo = session.RedoHistory.ToArray();
-        var bytes = ProjectFileCodec.Serialize(revision.State); var recoveryBytes = files.Data[recoveryPath].ToArray();
+        var bytes = ProjectFileCodec.Serialize(revision.State); var recoveryBytes = recoveryStorage.Data[recoveryStorage.OnlySlot(RecoverySlotKind.Project)].ToArray();
         var result = editor.Presentation.Result; int count = analyses, changes = 0;
         session.Changed += () => changes++;
         var settings = UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Foot) with { SignificantDigits = 5 };
@@ -396,7 +395,7 @@ public sealed class DesktopSettingsTests
         Assert.Same(revision, session.CurrentRevision); Assert.Equal(saved, session.SavedRevisionId);
         Assert.Equal(undo, session.UndoHistory); Assert.Equal(redo, session.RedoHistory);
         Assert.True(session.IsDirty); Assert.Equal(bytes, ProjectFileCodec.Serialize(session.CurrentRevision.State));
-        Assert.Equal(recoveryBytes, files.Data[recoveryPath]); Assert.Equal(count, analyses); Assert.Equal(0, changes);
+        Assert.Equal(recoveryBytes, recoveryStorage.Data[recoveryStorage.OnlySlot(RecoverySlotKind.Project)]); Assert.Equal(count, analyses); Assert.Equal(0, changes);
         Assert.Same(result, editor.Presentation.Result);
         Assert.True(editor.Undo()); Assert.True(editor.Redo());
         Assert.True(UserSettings.SameUnits(settings.Profile, editor.ResultPresentation.Profile));

@@ -511,12 +511,11 @@ public sealed class DesktopProjectSetupWorkflowTests
     [Fact]
     public async Task CatalogAndUserLibraryFailuresDoNotPreventRecovery()
     {
-        var files = new Files(); var dialogs = new Dialogs(); var slot = TestPath("phase7-recovery.json");
+        var files = new Files(); var dialogs = new Dialogs();
         var state = State(2) with { Document = State(2).Document with { Length = M(1) } };
-        files.Data[slot] = ProjectRecovery.Encode(new(state, null, Now));
         files.Data["materials"] = Encoding.UTF8.GetBytes("{"); files.Data["sections"] = Encoding.UTF8.GetBytes("{");
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, recovery: new(files, slot), services: TestServices.Create(materialStore: new(files, "materials"), sectionStore: new(files, "sections"), catalogLoader: () => throw new LibraryFormatException("Injected"))); main.NewCommand.Execute(null);
-        await main.Services.InitializeAsync(); Assert.True(await main.InitializeRecoveryAsync());
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, recovery: new(new TestRecoveryStorage()), services: TestServices.Create(materialStore: new(files, "materials"), sectionStore: new(files, "sections"), catalogLoader: () => throw new LibraryFormatException("Injected"))); main.NewCommand.Execute(null);
+        await main.Services.InitializeAsync(); main.RestoreProject(new(state, null, Now), RecoverySlot.Project(RecoveryId.New()), null);
         Assert.True(state.ContentEquals(main.Session!.CurrentRevision.State)); Assert.True(main.Editor!.Presentation.IsSuccess);
         Assert.NotNull(main.BuiltInError); Assert.NotNull(main.MaterialLibraryError); Assert.NotNull(main.SectionLibraryError);
         Assert.Equal("{", Encoding.UTF8.GetString(files.Data["materials"])); Assert.Equal("{", Encoding.UTF8.GetString(files.Data["sections"]));

@@ -39,7 +39,10 @@ public sealed class DesktopCultureTests
         // Changing the file now must not affect the already loaded startup preferences.
         files.Data["settings"] = SettingsCodec.Serialize(UserSettings.Default);
         var lifetime = new ClassicDesktopStyleApplicationLifetime();
-        var app = new SpanDraft.Desktop.App(TestHosts.Initialized(new DesktopApplicationHost(startup))) { ApplicationLifetime = lifetime };
+        // LoadAsync wires the local recovery folder; the test keeps recovery in memory instead of touching the user profile.
+        var isolated = new DesktopStartupContext(startup.Files, startup.SettingsStore, startup.Settings)
+            { SettingsLoad = startup.SettingsLoad, StateStores = DesktopStateStores.Isolated(files) };
+        var app = new SpanDraft.Desktop.App(TestHosts.Initialized(new DesktopApplicationHost(isolated))) { ApplicationLifetime = lifetime };
         app.OnFrameworkInitializationCompleted();
         var window = Assert.IsType<MainWindow>(lifetime.MainWindow);
         Assert.Equal(expectedFile, window.FindControl<Menu>("MainMenu")!.Items.OfType<MenuItem>().First().Header);
@@ -54,56 +57,39 @@ public sealed class DesktopCultureTests
     }
 
     [Theory]
-    [InlineData("en-US", "de-DE", false)]
-    [InlineData("de-DE", "en-US", false)]
-    [InlineData("en-US", "de-DE", true)]
-    [InlineData("de-DE", "en-US", true)]
-    public async Task RecoveryPromptUsesTheRegionalDateInsideTheSelectedUiLanguage(string uiCulture, string culture, bool setup)
+    [InlineData("en-US", "de-DE")]
+    [InlineData("de-DE", "en-US")]
+    public async Task RecoveryCenterUsesTheRegionalDateInsideTheSelectedUiLanguage(string uiCulture, string culture)
+    {
+        using var scope = new ProcessCultureScope(culture, uiCulture);
+        var storage = new TestRecoveryStorage();
+        var time = new DateTimeOffset(2026, 10, 16, 15, 42, 0, TimeSpan.Zero);
+        storage.Put(RecoverySlot.Project(RecoveryId.New()), ProjectRecovery.Encode(new(State(), null, time)));
+        var catalog = new RecoveryCatalog(storage, new Files(), Identities, new ProjectPathRegistry());
+        Assert.True(await catalog.InitializeAsync(TestContext.Current.CancellationToken));
+        using var center = new RecoveryCenterViewModel(catalog, _ => Task.FromResult(true), () => { }, _ => Task.CompletedTask);
+        var item = Assert.Single(center.Items);
+        Assert.Equal(string.Format(CultureInfo.CurrentUICulture, Strings.RecoverySavedAt,
+            time.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)), item.SavedLabel);
+        Assert.Contains(uiCulture == "de-DE" ? "Gesichert" : "Saved", item.SavedLabel);
+    }
+
+    [Theory]
+    [InlineData("en-US", "de-DE")]
+    [InlineData("de-DE", "en-US")]
+    public async Task UnavailableRecoveryDialogFollowsTheSelectedUiLanguage(string uiCulture, string culture)
     {
         using var environment = new DesktopControlEnvironment();
         using var scope = new ProcessCultureScope(culture, uiCulture);
         var owner = new Window(); owner.Show();
         var type = typeof(MainWindow).Assembly.GetType("SpanDraft.Desktop.ProjectDialogs")!;
         var dialogs = (IProjectDialogs)Activator.CreateInstance(type, [owner])!;
-        var time = new DateTimeOffset(2026, 10, 16, 15, 42, 0, TimeSpan.Zero);
-        var pending = setup ? dialogs.ConfirmSetupRecoveryAsync(false, time) : dialogs.ConfirmRecoveryAsync(false, time);
+        var pending = dialogs.ConfirmRecoveryRetryAsync("The folder cannot be read.");
         var dialog = Assert.Single(owner.OwnedWindows);
-        var text = Assert.Single(dialog.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.Contains("2026") == true);
-        Assert.Equal(string.Format(CultureInfo.CurrentCulture, setup ? Strings.SetupRecoveryQuestion : Strings.RecoveryQuestion,
-            time.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)), text.Text);
-        dialog.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Strings.Discard))
+        Assert.Single(dialog.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == Strings.RecoveryUnavailable + "\n\n" + "The folder cannot be read.");
+        dialog.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, Strings.Quit))
             .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Assert.Equal(RecoveryDecision.Discard, await WaitFor(pending));
+        Assert.False(await WaitFor(pending));
         owner.Close();
-    }
-
-    [Theory]
-    [InlineData(false, false)] [InlineData(false, true)]
-    [InlineData(true, false)] [InlineData(true, true)]
-    public async Task SetupRecoveryEscapeAbortsWindowStartupWithoutDeletingEitherSlot(bool restoreProject, bool damaged)
-    {
-        using var environment = new DesktopControlEnvironment();
-        var files = new Files(); var setupSlot = ProjectSetupRecovery.Local(files).SlotPath;
-        var setupBytes = damaged ? System.Text.Encoding.UTF8.GetBytes("{")
-            : ProjectSetupRecovery.Encode(new(new(Length: M(1.2345678901234567)), Now));
-        files.Data[setupSlot] = setupBytes;
-        var projectSlot = ProjectRecovery.Local(files).SlotPath;
-        if (restoreProject) files.Data[projectSlot] = ProjectRecovery.Encode(new(State(), null, Now));
-        var window = (TestHosts.Initialized(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default)))).Workspaces.CreateInitial().Window;
-        window.Show(); Dispatcher.UIThread.RunJobs();
-        if (restoreProject)
-        {
-            Click(Strings.Restore); Dispatcher.UIThread.RunJobs();
-            Assert.NotNull(Assert.IsType<MainWindowViewModel>(window.DataContext).Session);
-        }
-        if (damaged) { Click(Strings.OK); Dispatcher.UIThread.RunJobs(); }
-        var dialog = Assert.Single(window.OwnedWindows);
-        dialog.RaiseEvent(new KeyEventArgs { RoutedEvent = Avalonia.Input.InputElement.KeyDownEvent, Key = Key.Escape });
-        Dispatcher.UIThread.RunJobs();
-        Assert.False(window.IsVisible); Assert.Equal(setupBytes, files.Data[setupSlot]);
-        if (restoreProject) Assert.True(files.Data.ContainsKey(projectSlot));
-
-        void Click(string label) => Assert.Single(window.OwnedWindows).GetVisualDescendants().OfType<Button>()
-            .Single(b => Equals(b.Content, label)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
     }
 }

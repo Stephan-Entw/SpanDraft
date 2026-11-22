@@ -8,6 +8,7 @@ using SpanDraft.Desktop;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
+using Xunit;
 
 namespace SpanDraft.Tests;
 
@@ -172,15 +173,14 @@ internal static class ProjectTestSupport
         public string? OpenPath { get; set; }
         public string? SavePath { get; set; } = TestPath("Beam01.spandraft");
         public LeaveDecision Leave { get; set; } = LeaveDecision.Cancel;
-        public RecoveryDecision Recovery { get; set; } = RecoveryDecision.Restore;
-        public RecoveryDecision DamagedRecovery { get; set; } = RecoveryDecision.Discard;
+        public bool RetryRecovery { get; set; }
+        public List<string> RecoveryRetryReasons { get; } = [];
         public List<string> Errors { get; } = [];
         public int LeaveQuestions { get; private set; }
         public bool RemoveMissingRecent { get; set; }
         public List<string> MissingRecentPaths { get; } = [];
         public Task<bool> ConfirmRemoveMissingRecentAsync(string path)
         { MissingRecentPaths.Add(path); return Task.FromResult(RemoveMissingRecent); }
-        public int RecoveryQuestions { get; private set; }
         public int SaveQuestions { get; private set; }
         public Func<Task<LeaveDecision>>? LeaveHook { get; set; }
         public Func<Task<string?>>? SaveHook { get; set; }
@@ -193,13 +193,8 @@ internal static class ProjectTestSupport
         }
         public Task<LeaveDecision> ConfirmLeaveAsync(string projectFileName)
         { LeaveQuestions++; return LeaveHook?.Invoke() ?? Task.FromResult(Leave); }
-        public Task<RecoveryDecision> ConfirmRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc)
-        { RecoveryOrder.Add("project"); RecoveryQuestions++; return Task.FromResult(damaged ? DamagedRecovery : Recovery); }
-        public RecoveryDecision SetupRecovery { get; set; } = RecoveryDecision.Restore;
-        public RecoveryDecision DamagedSetupRecovery { get; set; } = RecoveryDecision.Discard;
-        public List<string> RecoveryOrder { get; } = [];
-        public Task<RecoveryDecision> ConfirmSetupRecoveryAsync(bool damaged, DateTimeOffset? writtenAtUtc)
-        { RecoveryOrder.Add("setup"); return Task.FromResult(damaged ? DamagedSetupRecovery : SetupRecovery); }
+        public Task<bool> ConfirmRecoveryRetryAsync(string reason)
+        { RecoveryRetryReasons.Add(reason); return Task.FromResult(RetryRecovery); }
         public Task ShowErrorAsync(string message) { Errors.Add(message); return Task.CompletedTask; }
         public bool ConfirmLibraryDelete { get; set; } = true;
         public Func<MaterialEditorViewModel, Task>? MaterialEditorHook { get; set; }
@@ -222,19 +217,45 @@ internal static class ProjectTestSupport
 
     public sealed class App
     {
-        public static readonly string Slot = TestPath("recovery.json");
         public Files Files { get; } = new();
+        public TestRecoveryStorage Storage { get; } = new();
         public Dialogs Dialogs { get; } = new();
         public Delay Delay { get; } = new();
-        public ProjectRecovery Recovery { get; }
+        public WorkspaceRecoveryContext Recovery { get; }
+        public ProjectPathRegistry Registry { get; } = new();
+        /// <summary>The project slot of the workspace; it exists as soon as the workspace has a project recovery.</summary>
+        public RecoverySlot Slot => RecoverySlot.Project(Recovery.ProjectRecoveryId!.Value);
+        public bool HasRecovery => Storage.Slots(RecoverySlotKind.Project).Count > 0;
+        public byte[] RecoveryBytes => Storage.Data[Storage.OnlySlot(RecoverySlotKind.Project)].ToArray();
+        /// <summary>The decoded content of the stored project slot, or null while there is none.</summary>
+        public RecoverySnapshot? ProjectSnapshot() =>
+            HasRecovery ? ProjectRecovery.Decode(Storage.Data[Storage.OnlySlot(RecoverySlotKind.Project)]) : null;
         public MainWindowViewModel Main { get; }
         public int Analyses { get; private set; }
         public App(bool create = true)
         {
-            Recovery = new(Files, Slot, Delay.Wait, () => Now);
-            Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, Files, Dialogs, Recovery, projectIdentities: Identities);
+            Recovery = new(Storage, Delay.Wait, () => Now);
+            Main = new(WindowId.Create(), Registry, Identities, analyze: b => { Analyses++; return BeamAnalysis.Analyze(b); },
+                files: Files, dialogs: Dialogs, recovery: Recovery);
             if (create) { Main.NewCommand.Execute(null); CompleteSetup(Main); Main.Setup.ApplyCommand.Execute(null); }
         }
+        /// <summary>
+        /// Restores a snapshot like the restore transaction does: a preferred restore first publishes RecoveryPending for the
+        /// original path, a detached one never touches the registry.
+        /// </summary>
+        public RecoverySlot Restore(RecoverySnapshot snapshot, bool detached = false, RecoverySlot? slot = null)
+        {
+            var target = slot ?? RecoverySlot.Project(RecoveryId.New());
+            Guid? candidate = null;
+            if (!detached && snapshot.OriginalFilePath is { } path)
+            {
+                candidate = Guid.NewGuid();
+                Assert.True(Registry.UpdateRecovery(Identities.Resolve(path), null, candidate));
+            }
+            Main.RestoreProject(snapshot, target, candidate);
+            return target;
+        }
+
         public void ChangeLength(double meters = 1.5)
         {
             var input = Main.Editor!.DimensionLength;

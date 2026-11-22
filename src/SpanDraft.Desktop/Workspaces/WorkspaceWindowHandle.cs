@@ -4,11 +4,14 @@ using SpanDraft.Desktop.ViewModels;
 
 namespace SpanDraft.Desktop.Workspaces;
 
-/// <summary>Why a workspace exists; only the states Phase 5 needs.</summary>
-internal enum WorkspaceCreationReason { None, NewProject }
+/// <summary>
+/// Why a workspace exists. Only <see cref="None"/> workspaces reserve the single start slot; the others were created for
+/// one purpose (a New draft, the Recovery Center or a restore) and lose that reason once it is fulfilled.
+/// </summary>
+internal enum WorkspaceCreationReason { None, NewProject, RecoveryCenter, Restore }
 
 /// <summary>Explicit workspace classification; see <see cref="WorkspaceWindowHandle.Kind"/>.</summary>
-internal enum WorkspaceKind { StartOnly, CreateSetup, Project }
+internal enum WorkspaceKind { StartOnly, CreateSetup, Project, RecoveryCenter }
 
 /// <summary>
 /// The unique assignment of one workspace: its <see cref="WindowId"/>, window and view model. Session, editor, undo,
@@ -70,11 +73,13 @@ internal sealed class WorkspaceWindowHandle
     internal bool CanRoute => !IsClosing && !IsCloseRequested;
 
     /// <summary>
-    /// What the workspace currently shows: <see cref="WorkspaceKind.StartOnly"/> means the start page only; a New
-    /// workspace is never counted as StartOnly, not even before its model exists.
+    /// What the workspace currently shows: <see cref="WorkspaceKind.StartOnly"/> means the start page only; a workspace
+    /// created for New or a restore is never counted as StartOnly, not even before its model exists.
     /// </summary>
     internal WorkspaceKind Kind => Model?.HasProject == true ? WorkspaceKind.Project
-        : Reason == WorkspaceCreationReason.NewProject || Model?.Mode == MainViewMode.ProjectSetup ? WorkspaceKind.CreateSetup
+        : Reason == WorkspaceCreationReason.RecoveryCenter || Model?.Mode == MainViewMode.RecoveryCenter ? WorkspaceKind.RecoveryCenter
+        : Reason is WorkspaceCreationReason.NewProject or WorkspaceCreationReason.Restore || Model?.Mode == MainViewMode.ProjectSetup
+            ? WorkspaceKind.CreateSetup
         : WorkspaceKind.StartOnly;
 
     /// <summary>Couples a workspace-owned modeless window to this workspace.</summary>

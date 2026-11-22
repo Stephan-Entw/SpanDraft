@@ -43,13 +43,37 @@ internal sealed class ProjectPathRegistry
     }
 
     private readonly object _gate = new();
+    private Func<ProjectIdentity, Guid?>? _recoverySuccessor;
     private readonly Dictionary<ProjectIdentity, Entry> _paths = [];
     private readonly Dictionary<WindowId, ProjectIdentity> _owned = [];
     private readonly Dictionary<WindowId, Saving> _saves = [];
 
+    /// <summary>
+    /// Names the recovery candidate that takes over a path as soon as its current entry (Opening, Open, SaveTargetReserved)
+    /// disappears, so that the path goes straight to RecoveryPending without a Free window in between. It is called under
+    /// the registry lock and must therefore only read an immutable snapshot and never call back into the registry.
+    /// </summary>
+    internal Func<ProjectIdentity, Guid?>? RecoverySuccessor
+    {
+        set { lock (_gate) _recoverySuccessor = value; }
+    }
+
+    /// <summary>Removes the entry of a path that is no longer held, or hands it to its successor recovery candidate.</summary>
+    private void Vacate(ProjectIdentity identity)
+    {
+        if (_recoverySuccessor?.Invoke(identity) is { } candidate) _paths[identity] = new Recovery(candidate);
+        else _paths.Remove(identity);
+    }
+
     internal ProjectPathState StateOf(ProjectIdentity identity)
     {
         lock (_gate) return _paths.GetValueOrDefault(identity)?.State ?? ProjectPathState.Free;
+    }
+
+    /// <summary>The recovery candidate currently holding the path (RecoveryPending), or null.</summary>
+    internal Guid? RecoveryCandidateOf(ProjectIdentity identity)
+    {
+        lock (_gate) return _paths.GetValueOrDefault(identity) is Recovery recovery ? recovery.Candidate : null;
     }
 
     internal ProjectIdentity? IdentityOwnedBy(WindowId window)
@@ -92,7 +116,7 @@ internal sealed class ProjectPathRegistry
         lock (_gate)
         {
             if (_paths.GetValueOrDefault(token.Identity) is not Opening opening || !ReferenceEquals(opening.Token, token)) return false;
-            _paths.Remove(token.Identity);
+            Vacate(token.Identity);
             opening.Completion.SetResult(outcome);
             return true;
         }
@@ -125,7 +149,7 @@ internal sealed class ProjectPathRegistry
             save.MarkSaved();
             _paths[token.Identity] = new Open(token.WindowId);
             _owned[token.WindowId] = token.Identity;
-            if (token.PreviousIdentity is { } previous) _paths.Remove(previous);
+            if (token.PreviousIdentity is { } previous) Vacate(previous);
             _saves.Remove(token.WindowId);
             saving.Completion.SetResult();
             return true;
@@ -137,7 +161,7 @@ internal sealed class ProjectPathRegistry
         lock (_gate)
         {
             if (!OwnsSave(token, out var saving)) return false;
-            _paths.Remove(token.Identity);
+            Vacate(token.Identity);
             _saves.Remove(token.WindowId);
             saving.Completion.SetResult();
             return true;
@@ -155,7 +179,7 @@ internal sealed class ProjectPathRegistry
         lock (_gate)
         {
             if (_saves.ContainsKey(window) || !_owned.Remove(window, out var identity)) return false;
-            _paths.Remove(identity);
+            Vacate(identity);
             return true;
         }
     }
@@ -186,8 +210,8 @@ internal sealed class ProjectPathRegistry
 
     private void SetOwner(ProjectIdentity identity, WindowId window)
     {
-        if (_owned.TryGetValue(window, out var previous)) _paths.Remove(previous);
         _paths[identity] = new Open(window);
+        if (_owned.TryGetValue(window, out var previous) && !previous.Equals(identity)) Vacate(previous);
         _owned[window] = identity;
     }
 }

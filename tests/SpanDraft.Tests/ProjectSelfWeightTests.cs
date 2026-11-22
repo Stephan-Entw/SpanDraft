@@ -93,7 +93,7 @@ public sealed class ProjectSelfWeightTests
         app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
         var recovered = Assert.IsType<RecoverySnapshot>(await app.Recovery.ReadAsync());
         Assert.True(state.ContentEquals(recovered.State));
-        Assert.Equal(5, JsonNode.Parse(app.Files.Data[ProjectTestSupport.App.Slot])!["project"]!["formatVersion"]!.GetValue<int>());
+        Assert.Equal(5, JsonNode.Parse(app.RecoveryBytes)!["project"]!["formatVersion"]!.GetValue<int>());
         Assert.True(ProjectSession.Restore(recovered.State, recovered.OriginalFilePath).IsDirty);
     }
 }

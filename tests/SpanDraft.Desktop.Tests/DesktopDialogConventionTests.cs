@@ -22,7 +22,6 @@ namespace SpanDraft.Tests;
 [Collection("Avalonia")]
 public sealed class DesktopDialogConventionTests
 {
-    private static readonly DateTimeOffset Time = new(2026, 10, 16, 15, 42, 0, TimeSpan.Zero);
 
     /// <summary>Name, how to open it, the buttons from left to right, the Enter default (or null) and what Cancel answers.</summary>
     private sealed record Case(string Name, Func<IProjectDialogs, Task> Open, string[] Order, string? Default, object CancelResult, object? EnterResult);
@@ -30,10 +29,7 @@ public sealed class DesktopDialogConventionTests
     private static Case[] Cases() =>
     [
         new("leave", d => d.ConfirmLeaveAsync("Project.spandraft"), [Strings.DontSave, Strings.Cancel, Strings.Save], Strings.Save, LeaveDecision.Cancel, LeaveDecision.Save),
-        new("recovery", d => d.ConfirmRecoveryAsync(false, Time), [Strings.Discard, Strings.Cancel, Strings.Restore], Strings.Restore, RecoveryDecision.Cancel, RecoveryDecision.Restore),
-        new("recovery damaged", d => d.ConfirmRecoveryAsync(true, null), [Strings.Cancel, Strings.Discard], null, RecoveryDecision.Cancel, null),
-        new("setup recovery", d => d.ConfirmSetupRecoveryAsync(false, Time), [Strings.Discard, Strings.Cancel, Strings.Restore], Strings.Restore, RecoveryDecision.Cancel, RecoveryDecision.Restore),
-        new("setup recovery damaged", d => d.ConfirmSetupRecoveryAsync(true, null), [Strings.Cancel, Strings.Discard], null, RecoveryDecision.Cancel, null),
+        new("recovery unavailable", d => d.ConfirmRecoveryRetryAsync("The recovery folder cannot be read."), [Strings.Quit, Strings.Retry], Strings.Retry, false, true),
         new("error", d => d.ShowErrorAsync("The file could not be saved."), [Strings.OK], Strings.OK, true, true),
         new("missing recent", d => d.ConfirmRemoveMissingRecentAsync(TestPath("old.spandraft")), [Strings.Cancel, Strings.RemoveFromRecent], Strings.RemoveFromRecent, false, true),
         new("material delete", d => d.ConfirmMaterialDeleteAsync("S355"), [Strings.Cancel, Strings.Delete], null, false, null),
@@ -106,12 +102,12 @@ public sealed class DesktopDialogConventionTests
             foreach (var button in buttons)
             {
                 bool destructive = (string)button.Content! == Strings.Delete || (string)button.Content! == Strings.DontSave
-                    || (string)button.Content! == Strings.ReplaceMaterial || (name.StartsWith("recovery") || name.StartsWith("setup recovery")) && (string)button.Content! == Strings.Discard;
+                    || (string)button.Content! == Strings.ReplaceMaterial;
                 Assert.Equal(destructive, button.Classes.Contains("destructive"));
                 if (destructive) { Assert.False(button.IsDefault); Assert.Equal(error, ((ISolidColorBrush)button.Foreground!).Color); Assert.Equal(error, ((ISolidColorBrush)button.BorderBrush!).Color); }
                 Assert.Equal(button.IsDefault, button.Classes.Contains("primary"));
             }
-            Assert.Equal(test.Name == "error" ? new[] { Strings.OK } : new[] { Strings.Cancel }, buttons.Where(b => b.IsCancel).Select(b => (string)b.Content!));
+            Assert.Equal(test.Name == "error" ? new[] { Strings.OK } : test.Name == "recovery unavailable" ? new[] { Strings.Quit } : new[] { Strings.Cancel }, buttons.Where(b => b.IsCancel).Select(b => (string)b.Content!));
             // Enter answers only a default; otherwise the dialog stays and nothing else takes over.
             Press(dialog, Key.Enter); Dispatcher.UIThread.RunJobs();
             if (test.Default is null)

@@ -14,7 +14,6 @@ public sealed class ProjectWorkflowTests
         var app = new App(create: false);
         Assert.Null(app.Main.Session); Assert.Equal(0, app.Analyses);
         Assert.False(app.Main.SaveCommand.CanExecute(null));
-        Assert.True(await app.Main.InitializeRecoveryAsync());
         Assert.Equal(MainViewMode.Start, app.Main.Mode);
         Assert.Empty(app.Files.Writes); Assert.Empty(app.Files.Data); Assert.Empty(app.Delay.Waiters);
         Assert.True(await app.Main.NewAsync());
@@ -39,7 +38,7 @@ public sealed class ProjectWorkflowTests
         Assert.Single(app.Main.Session.UndoHistory); Assert.False(app.Main.Session.IsDirty);
         Assert.Same(draft, editor.SupportDraft); Assert.Equal("-", draft.PositionText);
         Assert.True(revision.State.ContentEquals(ProjectFileCodec.Deserialize(app.Files.Data[app.Dialogs.SavePath!])));
-        Assert.False(app.Files.Data.ContainsKey(App.Slot));
+        Assert.False(app.HasRecovery);
         Assert.Equal("Beam01.spandraft — SpanDraft", app.Main.WindowTitle);
         Assert.True(app.Main.Undo()); Assert.True(app.Main.Session.IsDirty);
         Assert.True(app.Main.Redo()); Assert.False(app.Main.Session.IsDirty);
@@ -84,7 +83,7 @@ public sealed class ProjectWorkflowTests
     {
         var app = new App(); app.ChangeLength();
         app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
-        var recovery = app.Files.Data[App.Slot].ToArray();
+        var recovery = app.RecoveryBytes;
         var session = app.Main.Session; var revision = session!.CurrentRevision;
         app.Main.Editor!.DimensionLength.Begin(); app.Main.Editor.DimensionLength.Text = "-";
         app.Dialogs.OpenPath = TestPath("invalid.spandraft");
@@ -92,7 +91,7 @@ public sealed class ProjectWorkflowTests
         app.Dialogs.Leave = LeaveDecision.Discard;
         Assert.False(await app.Main.OpenAsync());
         Assert.Equal(0, app.Dialogs.LeaveQuestions); Assert.Same(session, app.Main.Session); Assert.Same(revision, session.CurrentRevision);
-        Assert.Equal(recovery, app.Files.Data[App.Slot]); Assert.Equal("-", app.Main.Editor.DimensionLength.Text);
+        Assert.Equal(recovery, app.RecoveryBytes); Assert.Equal("-", app.Main.Editor.DimensionLength.Text);
         Assert.True(app.Main.Editor.DimensionLength.IsEditing); Assert.Equal(2, app.Analyses);
     }
 
@@ -110,7 +109,7 @@ public sealed class ProjectWorkflowTests
         Assert.Equal(app.Main.Session.CurrentRevision.RevisionId, app.Main.Session.SavedRevisionId);
         Assert.Equal(app.Dialogs.OpenPath, app.Main.Session.FilePath);
         Assert.True(State(4).ContentEquals(app.Main.Session.CurrentRevision.State));
-        Assert.False(app.Files.Data.ContainsKey(App.Slot)); Assert.Equal(3, app.Analyses);
+        Assert.False(app.HasRecovery); Assert.Equal(3, app.Analyses);
     }
 
     [Theory]
@@ -121,7 +120,7 @@ public sealed class ProjectWorkflowTests
     {
         var app = new App();
         app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
-        var session = app.Main.Session; var recovery = app.Files.Data[App.Slot].ToArray();
+        var session = app.Main.Session; var recovery = app.RecoveryBytes;
         app.Main.Editor!.DimensionLength.Begin(); app.Main.Editor.DimensionLength.Text = "bad draft";
         app.Dialogs.OpenPath = TestPath("target.spandraft"); app.Files.Data[app.Dialogs.OpenPath] = ProjectFileCodec.Serialize(State());
         if (action == "new") { Assert.True(await app.Main.NewAsync()); CompleteSetup(app.Main); }
@@ -131,7 +130,7 @@ public sealed class ProjectWorkflowTests
         Assert.False(await Leave());
         Assert.Same(session, app.Main.Session); Assert.True(session!.IsDirty);
         Assert.Equal("bad draft", app.Main.Editor.DimensionLength.Text); Assert.True(app.Main.Editor.DimensionLength.IsEditing);
-        Assert.Equal(recovery, app.Files.Data[App.Slot]); Assert.Equal(1, app.Analyses);
+        Assert.Equal(recovery, app.RecoveryBytes); Assert.Equal(1, app.Analyses);
     }
 
     [Theory]
@@ -145,11 +144,12 @@ public sealed class ProjectWorkflowTests
         app.Dialogs.Leave = save ? LeaveDecision.Save : LeaveDecision.Discard;
         if (action == "new") { Assert.True(await app.Main.NewAsync()); CompleteSetup(app.Main); }
         bool result = action == "new" ? await app.Main.Setup.ConfirmAsync() : await app.Main.RequestCloseAsync();
-        Assert.True(result); Assert.False(app.Files.Data.ContainsKey(App.Slot));
+        // A created project publishes its complete recovery at once; a left or closed one has none.
+        Assert.True(result); Assert.Equal(action == "new", app.HasRecovery);
         Assert.Equal(save, app.Files.Data.ContainsKey(app.Dialogs.SavePath!));
         if (action == "new") { Assert.Null(app.Main.Session!.FilePath); Assert.True(app.Main.Session.IsDirty); Assert.Equal(MainViewMode.Editor, app.Main.Mode); }
         app.Delay.ReleaseAll(); await WaitFor(app.Recovery.DrainAsync());
-        Assert.Equal(action == "new", app.Files.Data.ContainsKey(App.Slot));
+        Assert.Equal(action == "new", app.HasRecovery);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class ProjectWorkflowTests
         app.Files.FailWritePath = app.Dialogs.SavePath;
         Assert.True(await app.Main.NewAsync()); CompleteSetup(app.Main); Assert.False(await app.Main.Setup.ConfirmAsync());
         Assert.NotNull(app.Main.Session); Assert.True(app.Main.Session!.IsDirty);
-        app.Files.FailWritePath = App.Slot;
+        app.Storage.FailWrite = _ => true;
         Assert.False(await app.Main.SaveAsync());
         Assert.False(app.Files.Data.ContainsKey(app.Dialogs.SavePath!)); Assert.Null(app.Main.Session.FilePath);
     }
@@ -215,8 +215,8 @@ public sealed class ProjectWorkflowTests
             await WaitFor(saving);
         }
         Assert.True(await saving);
-        Assert.Equal(new[] { App.Slot, app.Dialogs.SavePath }, app.Files.Writes.ToArray());
-        Assert.False(app.Files.Data.ContainsKey(App.Slot)); Assert.False(app.Main.Session.IsDirty);
+        Assert.Equal(new[] { app.Dialogs.SavePath }, app.Files.Writes.ToArray()); Assert.NotEmpty(app.Storage.Writes);
+        Assert.False(app.HasRecovery); Assert.False(app.Main.Session.IsDirty);
     }
 
     [Fact]

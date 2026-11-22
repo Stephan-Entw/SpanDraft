@@ -106,43 +106,37 @@ public partial class MainWindow : Window
                 _dialogs = new ProjectDialogs(this);
                 _frameProbe = new(this, WorkspaceContent);
                 _performance = new(_frameProbe);
-                var stores = host.StateStores;
-                // Only the initial workspace owns the legacy recovery slots; further workspaces get none until Phase 6.
-                bool legacy = _handle.IsInitial;
-                // The shared services were initialized by the bootstrap; this window only adapts them.
-                _model = new(performance: _performance, files: files, dialogs: _dialogs, recovery: legacy ? stores.Recovery : null,
-                    setupRecovery: legacy ? stores.SetupRecovery : null, services: host.Services, openUserManual: OpenUserManualAsync,
+                // The shared services and the recovery catalog were initialized by the bootstrap; this window only adapts them.
+                _model = new(performance: _performance, files: files, dialogs: _dialogs, recovery: host.CreateRecoveryContext(),
+                    services: host.Services, openUserManual: OpenUserManualAsync,
                     userNameProvider: host.UserNameProvider, windowId: WindowId, projectIdentities: host.ProjectIdentities,
                     projectPaths: host.ProjectPaths, projectOpen: host.ProjectOpen,
                     activateWorkspace: id => host.Workspaces.Activate(id),
-                    ownerProjectPath: id => host.Workspaces.Find(id)?.Model?.Session?.FilePath);
+                    ownerProjectPath: id => host.Workspaces.Find(id)?.Model?.Session?.FilePath,
+                    recoveryCatalog: host.Recovery,
+                    showRecoveryCenter: focus => host.Workspaces.RequestRecoveryCenter(_handle, focus),
+                    restoreRecovery: id => host.Workspaces.RestoreRecoveryAsync(id, _handle));
                 host.Workspaces.BindModel(_handle, _model);
                 await _model.ReportStartupErrorsAsync();
-                DataContext = _model;
-                if (!legacy)
+                // Not knowing about unsaved work is the one thing that holds the startup back: ask until it is known or the user leaves.
+                if (_handle.IsInitial && !await EnsureRecoveryKnownAsync())
                 {
-                    _initializing = false;
-                    quitCommand.Refresh();
+                    _initialization.TrySetCanceled();
+                    _closeApproved = true;
+                    Dispatcher.UIThread.Post(Close);
+                    return;
+                }
+                DataContext = _model;
+                _initializing = false;
+                quitCommand.Refresh();
+                if (!_handle.IsInitial)
+                {
                     _model.PropertyChanged += (_, _) => host.Workspaces.PostPump();
                     _initialization.TrySetResult();
                     return;
                 }
-                var discardConfirmed = new HashSet<LaunchRequest>(ReferenceEqualityComparer.Instance);
-                while (!await _model.InitializeRecoveryAsync())
-                {
-                    // Platform activations queued meanwhile have no external owner to redeliver them: leaving needs an
-                    // explicit decision. Declining returns to the unchanged recovery decision.
-                    if (!await ConfirmAndCommitShutdownAsync(discardConfirmed)) continue;
-                    // An unresolved recovery must bypass the normal leave workflow, which deletes its slot.
-                    _closeApproved = true;
-                    _initialization.TrySetCanceled();
-                    Close();
-                    return;
-                }
-                _initializing = false;
-                quitCommand.Refresh();
+                // Undecided recovery candidates never hold the host back: requests wait in the host queue from here on.
                 host.MarkReady();
-                // Requests wait in the host queue; a restored setup draft keeps the workspace unavailable for opens.
                 host.Workspaces.EnableActivation();
                 _model.PropertyChanged += (_, _) => PostPump();
                 await host.Activation.PumpAsync();
@@ -183,7 +177,20 @@ public partial class MainWindow : Window
         };
     }
 
-    /// <summary>The TopLevel currently blocking the shell (e.g. the recovery dialog), otherwise this window.</summary>
+    /// <summary>
+    /// The recovery catalog is loaded at bootstrap; if its area could not be listed it is tried again here, with a visible
+    /// question. Undecided candidates are never a reason to wait: only an unknown recovery situation is.
+    /// </summary>
+    private async Task<bool> EnsureRecoveryKnownAsync()
+    {
+        while (!await _host.Recovery.InitializeAsync())
+        {
+            if (!await _dialogs.ConfirmRecoveryRetryAsync(_host.Recovery.Error?.Message ?? "")) return false;
+        }
+        return true;
+    }
+
+    /// <summary>The TopLevel currently blocking the shell (e.g. the startup question), otherwise this window.</summary>
     internal Window RetryTarget => OwnedWindows.LastOrDefault(static w => w.IsVisible) ?? this;
 
     private LaunchRequest? _lastBlockedRequest;

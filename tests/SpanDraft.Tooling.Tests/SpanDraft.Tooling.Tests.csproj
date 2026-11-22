@@ -18,6 +18,7 @@
     <Compile Include="../Support/DesktopControlEnvironment.cs" Link="Support/DesktopControlEnvironment.cs" />
     <Compile Include="../Support/DesktopIconTestSupport.cs" Link="Support/DesktopIconTestSupport.cs" />
     <Compile Include="../Support/ProjectTestSupport.cs" Link="Support/ProjectTestSupport.cs" />
+    <Compile Include="../Support/TestRecoveryStorage.cs" Link="Support/TestRecoveryStorage.cs" />
     <Compile Include="../Support/SharedServicesTestSupport.cs" Link="Support/SharedServicesTestSupport.cs" />
   </ItemGroup>
   <ItemGroup>

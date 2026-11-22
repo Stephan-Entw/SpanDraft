@@ -13,12 +13,13 @@ public sealed class CloseProjectTests
         public Dialogs Dialogs { get; } = new();
         public Delay Delay { get; } = new();
         public RecentProjectsStore Recents { get; }
-        public ProjectRecovery Recovery { get; }
+        public TestRecoveryStorage Storage { get; } = new();
+        public WorkspaceRecoveryContext Recovery { get; }
         public MainWindowViewModel Main { get; }
         public Fixture()
         {
             Recents = new(Files, "recents", () => Now);
-            Recovery = new(Files, "recovery", Delay.Wait, () => Now);
+            Recovery = new(Storage, Delay.Wait, () => Now);
             Main = new(files: Files, projectIdentities: Identities, dialogs: Dialogs, recovery: Recovery, services: TestServices.Create(recentStore: Recents));
         }
         public async Task Open()
@@ -131,7 +132,7 @@ public sealed class CloseProjectTests
         var f = new Fixture(); await f.Create();
         var editor = f.Main.Editor!; var session = f.Main.Session!; var revision = session.CurrentRevision;
         await f.Recovery.FlushAsync(revision.State, session.FilePath);
-        byte[] recovery = f.Files.Data["recovery"].ToArray();
+        var recoverySlot = f.Storage.OnlySlot(RecoverySlotKind.Project); byte[] recovery = f.Storage.Data[recoverySlot].ToArray();
         editor.DimensionLength.Begin(); editor.DimensionLength.Text = "bad draft";
         f.Dialogs.Leave = scenario == "cancel" ? LeaveDecision.Cancel : LeaveDecision.Save;
         if (scenario == "save-cancel") f.Dialogs.SavePath = null;
@@ -142,7 +143,7 @@ public sealed class CloseProjectTests
         Assert.Same(session, f.Main.Session); Assert.Same(revision, session.CurrentRevision);
         Assert.True(session.IsDirty); Assert.False(session.IsBusy);
         Assert.True(editor.DimensionLength.IsEditing); Assert.Equal("bad draft", editor.DimensionLength.Text);
-        Assert.Equal(recovery, f.Files.Data["recovery"]); Assert.Empty(f.Recents.Entries);
+        Assert.Equal(recovery, f.Storage.Data[recoverySlot]); Assert.Empty(f.Recents.Entries);
         Assert.Equal(scenario == "save-error" ? 1 : 0, f.Dialogs.Errors.Count);
     }
 

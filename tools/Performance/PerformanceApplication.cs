@@ -50,7 +50,7 @@ internal sealed class PerformanceApplication(MeasureOptions options, MemoryProje
         {
             ProjectIdentities = new ReferenceIdentityResolver(),
             UserNameProvider = static () => null,
-            StateStores = new(new(files, At("recovery.json")), new(files, At("setup-recovery.json")),
+            StateStores = new(new InMemoryRecoveryStorage(),
                 new(files, At("materials.json")), new(files, At("sections.json")), new(files, At("recents.json")))
         };
         CultureConfigurator.Apply(CultureConfigurator.Resolve(settings, CultureInfo.InvariantCulture, CultureInfo.InvariantCulture));

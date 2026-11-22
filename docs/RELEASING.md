@@ -270,7 +270,8 @@ account. The automated smoke test uninstalls its package, so it is a separate ru
 - Change settings, add material and section library entries, open another project,
   then restart. Verify settings, both libraries and recent projects persist.
 - Make unsaved project changes, allow recovery to be written, terminate the test
-  process and restart. Verify recovery; repeat for an unfinished setup draft.
+  process and restart. Verify the recovery notice on the start page and restore
+  it from the Recovery Center; repeat for an unfinished setup draft.
 - Generate a PDF report, save it outside the package, reopen the PDF and print
   manually. Exercise Windows file dialogs and ordinary user document paths.
 - Before an update, create recognizable settings/library entries and saved project
