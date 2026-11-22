@@ -1,4 +1,6 @@
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop;
 using SpanDraft.Desktop.Activation;
 using SpanDraft.Desktop.Persistence;
@@ -60,7 +62,7 @@ public sealed class WorkspaceWindowManagerTests
         Assert.Same(handle, Assert.Single(host.Workspaces.Handles));
         Assert.Same(handle, host.Workspaces.Initial);
         Assert.Same(handle, host.Workspaces.Active);
-        Assert.Equal(1, host.Workspaces.StartOnlyWorkspaceCount);
+        Assert.Equal(1, host.Workspaces.StartSlotCount);
         Assert.Equal(WorkspaceKind.StartOnly, handle.Kind);
         Assert.Equal(handle.WindowId, handle.Window.WindowId);
         Assert.Equal(handle.WindowId, handle.Model!.WindowId);
@@ -120,7 +122,7 @@ public sealed class WorkspaceWindowManagerTests
         Assert.Single(host.Workspaces.Handles);
         Assert.Equal(WorkspaceKind.CreateSetup, start.Kind);
         // The start slot stays reserved while its CreateSetup is open.
-        Assert.Equal(1, host.Workspaces.StartOnlyWorkspaceCount);
+        Assert.Equal(1, host.Workspaces.StartSlotCount);
         Assert.True(Run(() => start.Model!.CancelSetupAsync())); Flush();
         Assert.Single(host.Workspaces.Handles);
         Assert.True(start.Window.IsVisible);
@@ -135,13 +137,13 @@ public sealed class WorkspaceWindowManagerTests
         var host = Host(new Files());
         var a = Start(host);
         CreateProject(a);
-        Assert.Equal(0, host.Workspaces.StartOnlyWorkspaceCount);
+        Assert.Equal(0, host.Workspaces.StartSlotCount);
         var b = Run(() => host.Workspaces.RequestNewProjectAsync(a))!;
         Assert.NotSame(a, b);
         Assert.Equal(WorkspaceCreationReason.NewProject, b.Reason);
         Assert.Equal(WorkspaceKind.CreateSetup, b.Kind);
         Assert.Equal(MainViewMode.ProjectSetup, b.Model!.Mode);
-        Assert.Equal(0, host.Workspaces.StartOnlyWorkspaceCount);
+        Assert.Equal(0, host.Workspaces.StartSlotCount);
         Assert.Equal(2, host.Workspaces.Handles.Count);
         Assert.Equal(WorkspaceKind.Project, a.Kind);
     }
@@ -189,7 +191,7 @@ public sealed class WorkspaceWindowManagerTests
         Assert.Equal(WorkspaceCreationReason.None, b.Reason);
         Assert.Equal(WorkspaceKind.Project, b.Kind);
         Assert.Equal(2, host.Workspaces.Handles.Count);
-        Assert.Equal(0, host.Workspaces.StartOnlyWorkspaceCount);
+        Assert.Equal(0, host.Workspaces.StartSlotCount);
     }
 
     [Fact]
@@ -205,13 +207,13 @@ public sealed class WorkspaceWindowManagerTests
         // Project B in a separate workspace: first open one in the start workspace, then create a start workspace again.
         string path = Project(files, "reuse.spandraft");
         Assert.True(Run(() => start.Model!.OpenAsync(path)));
-        Assert.Equal(0, host.Workspaces.StartOnlyWorkspaceCount);
+        Assert.Equal(0, host.Workspaces.StartSlotCount);
         var b = Run(() => host.Workspaces.RequestNewProjectAsync(start))!;
         Assert.Equal(WorkspaceCreationReason.NewProject, b.Reason);
         // Closing the project of `start` while b holds no start slot makes `start` the start page again (§14).
         Assert.True(Run(() => start.Model!.CloseProjectAsync()));
         Assert.Equal(WorkspaceKind.StartOnly, start.Kind);
-        Assert.Equal(1, host.Workspaces.StartOnlyWorkspaceCount);
+        Assert.Equal(1, host.Workspaces.StartSlotCount);
         Assert.Equal(2, host.Workspaces.Handles.Count);
         // A New request from the other workspace reuses that start workspace instead of creating a third one.
         CreateProject(b);
@@ -240,7 +242,7 @@ public sealed class WorkspaceWindowManagerTests
         Assert.True(Run(() => b.Model!.CloseProjectAsync())); Flush();
         Assert.Same(a, Assert.Single(host.Workspaces.Handles));
         Assert.False(b.Window.IsVisible);
-        Assert.Equal(1, host.Workspaces.StartOnlyWorkspaceCount);
+        Assert.Equal(1, host.Workspaces.StartSlotCount);
     }
 
     [Fact]
@@ -260,7 +262,7 @@ public sealed class WorkspaceWindowManagerTests
         Assert.Same(model, a.Model);
         Assert.Same(session, model.Session);
         Assert.Equal(WorkspaceKind.Project, a.Kind);
-        Assert.Equal(0, host.Workspaces.StartOnlyWorkspaceCount);
+        Assert.Equal(0, host.Workspaces.StartSlotCount);
         Assert.True(Run(() => model.CancelSetupAsync())); Flush();
         Assert.Same(session, model.Session);
         Assert.Same(a, Assert.Single(host.Workspaces.Handles));
@@ -328,19 +330,132 @@ public sealed class WorkspaceWindowManagerTests
         Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.Activate));
     }
 
-    [Fact]
-    public void OpenRequestsSkipAClosingWorkspace()
+    private static void WithUiContext(Action action)
     {
-        using var environment = new DesktopControlEnvironment();
-        var files = new Files();
+        var previous = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(new AvaloniaSynchronizationContext());
+        try { action(); } finally { SynchronizationContext.SetSynchronizationContext(previous); }
+    }
+
+    private static void Click(Avalonia.Controls.Window dialog, string label) => dialog.GetVisualDescendants()
+        .OfType<Avalonia.Controls.Button>().Single(b => Equals(b.Content, label))
+        .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+
+    /// <summary>Two workspaces; <c>a</c> owns a dirty project, so closing it really opens the leave dialog.</summary>
+    private static (DesktopApplicationHost Host, WorkspaceWindowHandle A, WorkspaceWindowHandle B) TwoWorkspaces(Files files)
+    {
         var host = Host(files);
         var a = Start(host);
-        a.IsClosing = true;
-        host.Activation.Enqueue(LaunchRequest.OpenProject(Project(files, "queued.spandraft")));
-        Flush();
-        // No ready target: the request stays queued instead of being routed to a window that is going away.
-        Assert.Equal(1, host.Activation.Count);
-        Assert.Null(a.Model!.Session);
+        CreateProject(a);
+        var b = Run(() => host.Workspaces.RequestNewProjectAsync(a))!;
+        return (host, a, b);
+    }
+
+    [Fact]
+    public void ARealWindowCloseTakesTheWorkspaceOutOfRoutingUntilItIsCancelled()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var (host, a, b) = TwoWorkspaces(new Files());
+            Assert.True(host.Workspaces.Activate(a.WindowId));
+            Assert.Same(a, host.Workspaces.Active);
+
+            a.Window.Close(); Flush();
+            // The leave dialog is open: the close attempt is running and may still be cancelled.
+            var dialog = Assert.Single(a.Window.OwnedWindows);
+            Assert.True(a.IsCloseRequested);
+            Assert.False(a.CanRoute);
+            Assert.NotSame(a, host.Workspaces.Active);
+            Assert.False(host.Workspaces.Activate(a.WindowId));
+
+            Click(dialog, Strings.Cancel); Flush();
+            Assert.False(a.IsCloseRequested);
+            Assert.True(a.CanRoute);
+            Assert.True(host.Workspaces.Activate(a.WindowId));
+            Assert.Same(a, host.Workspaces.Active);
+            Assert.Equal(DesktopApplicationState.Ready, host.State);
+        });
+    }
+
+    [Fact]
+    public void ARequestedCloseDoesNotReleaseTheStartSlot()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var files = new Files();
+            var host = Host(files);
+            var a = Start(host);
+            // A clean (opened) project closes without a leave dialog.
+            Assert.True(Run(() => a.Model!.OpenAsync(Project(files, "clean.spandraft"))));
+            var b = Run(() => host.Workspaces.RequestNewProjectAsync(a))!;
+            Assert.True(Run(() => a.Model!.CloseProjectAsync()));
+            Flush();
+            Assert.Equal(WorkspaceKind.StartOnly, a.Kind);
+            Assert.Equal(1, host.Workspaces.StartSlotCount);
+
+            // A project-less close needs no dialog, so observe the slot from inside the running close attempt.
+            var seen = new List<(bool Requested, bool Holds, int Slots)>();
+            a.Model!.PropertyChanged += (_, _) => seen.Add((a.IsCloseRequested, a.HoldsStartSlot, host.Workspaces.StartSlotCount));
+            a.Window.Close(); Flush();
+            Assert.Contains(seen, x => x.Requested);
+            Assert.All(seen.Where(x => x.Requested), x => { Assert.True(x.Holds); Assert.Equal(1, x.Slots); });
+            Assert.DoesNotContain(a, host.Workspaces.Handles);
+            Assert.Equal(0, host.Workspaces.StartSlotCount);
+            Assert.Contains(b, host.Workspaces.Handles);
+        });
+    }
+
+    [Fact]
+    public void AnOpenRequestWaitsWhileItsOwnerCloses_AndIsProcessedAfterTheFinalCleanup()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var files = new Files();
+            var host = Host(files);
+            var a = Start(host);
+            string path = Project(files, "owned-by-a.spandraft");
+            Assert.True(Run(() => a.Model!.OpenAsync(path)));
+            Assert.True(a.Model!.Session!.Commit(State(7)));
+            Assert.True(a.Model.Session.IsDirty);
+            Assert.NotNull(host.ProjectPaths.IdentityOwnedBy(a.WindowId));
+            var b = Run(() => host.Workspaces.RequestNewProjectAsync(a))!;
+            // b becomes a clean project workspace that could take the request.
+            Assert.True(Run(() => b.Model!.OpenAsync(Project(files, "other.spandraft"))));
+
+            a.Window.Close(); Flush();
+            var dialog = Assert.Single(a.Window.OwnedWindows);
+            host.Activation.Enqueue(LaunchRequest.OpenProject(path));
+            Flush();
+            // The owner is closing and still holds the identity: the request is neither consumed nor routed.
+            Assert.Equal(1, host.Activation.Count);
+            Assert.Equal(Identities.Resolve(Project(files, "other.spandraft")).CanonicalPath, b.Model!.Session!.FilePath);
+
+            Click(dialog, Strings.DontSave); Flush(); Flush();
+            // Final cleanup released the ownership, a deregistered, the queue was pumped again.
+            Assert.DoesNotContain(a, host.Workspaces.Handles);
+            Assert.Null(host.ProjectPaths.IdentityOwnedBy(a.WindowId));
+            Assert.Equal(0, host.Activation.Count);
+            Assert.Equal(Identities.Resolve(path).CanonicalPath, b.Model.Session!.FilePath);
+        });
+    }
+
+    [Fact]
+    public void InitialWorkspaceCanBeCreatedOnlyOnceEvenAfterItWasClosed()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var host = Host(new Files());
+        var a = Start(host);
+        CreateProject(a);
+        var b = Run(() => host.Workspaces.RequestNewProjectAsync(a))!;
+        a.Window.CloseApproved(); Flush();
+        Assert.DoesNotContain(a, host.Workspaces.Handles);
+        Assert.Null(host.Workspaces.Initial);
+        Assert.Throws<InvalidOperationException>(() => host.Workspaces.CreateInitial());
+        Assert.False(b.IsInitial);
+        Assert.Single(host.Workspaces.Handles);
     }
 
     [Fact]

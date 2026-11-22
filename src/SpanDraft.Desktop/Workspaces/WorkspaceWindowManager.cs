@@ -7,14 +7,14 @@ namespace SpanDraft.Desktop.Workspaces;
 
 /// <summary>
 /// The central workspace/window registry: creates, registers, looks up and activates workspaces and enforces
-/// <c>StartOnlyWorkspaceCount &lt;= 1</c>. It reads no project files, decides no identity and saves nothing.
+/// <c>StartSlotCount &lt;= 1</c>. It reads no project files, decides no identity and saves nothing.
 /// </summary>
 internal sealed class WorkspaceWindowManager
 {
     private readonly DesktopApplicationHost _host;
     private readonly List<WorkspaceWindowHandle> _handles = [];
     private WorkspaceWindowHandle? _initial, _active;
-    private bool _activationEnabled;
+    private bool _activationEnabled, _initialCreated;
 
     internal WorkspaceWindowManager(DesktopApplicationHost host)
     {
@@ -25,10 +25,11 @@ internal sealed class WorkspaceWindowManager
     public IReadOnlyList<WorkspaceWindowHandle> Handles => _handles;
     public WorkspaceWindowHandle? Initial => _initial;
     public WorkspaceWindowHandle? Active => _active is { } active && IsReady(active) ? active : _handles.FirstOrDefault(IsReady);
-    public int StartOnlyWorkspaceCount => _handles.Count(static h => h.HoldsStartSlot);
+    /// <summary>Workspaces reserving the single start slot (not necessarily showing the start page).</summary>
+    public int StartSlotCount => _handles.Count(static h => h.HoldsStartSlot);
 
-    /// <summary>A workspace that can take launch requests: registered, model bound and not about to close.</summary>
-    private bool IsReady(WorkspaceWindowHandle handle) => !handle.IsClosing && handle.Model is not null && _handles.Contains(handle);
+    /// <summary>A workspace that can take launch requests: registered, model bound and not closing or about to close.</summary>
+    private bool IsReady(WorkspaceWindowHandle handle) => handle.CanRoute && handle.Model is not null && _handles.Contains(handle);
 
     /// <summary>True when this is the only registered workspace, i.e. closing it ends the application.</summary>
     internal bool IsLast(WorkspaceWindowHandle handle) => _handles.Count == 1 && _handles[0] == handle;
@@ -38,15 +39,18 @@ internal sealed class WorkspaceWindowManager
     /// <summary>Creates the initial workspace; the only one that runs legacy startup and recovery.</summary>
     public WorkspaceWindowHandle CreateInitial()
     {
-        if (_initial is not null) throw new InvalidOperationException("The initial workspace already exists.");
-        return _initial = Create(WorkspaceCreationReason.None, isInitial: true);
+        // One-shot for the whole process lifetime: the legacy startup/recovery owner must never be created twice.
+        if (_initialCreated) throw new InvalidOperationException("The initial workspace was already created.");
+        var handle = Create(WorkspaceCreationReason.None, isInitial: true);
+        _initialCreated = true;
+        return _initial = handle;
     }
 
     /// <summary>The one regular creation path of workspace windows.</summary>
     private WorkspaceWindowHandle Create(WorkspaceCreationReason reason, bool isInitial)
     {
-        if (reason == WorkspaceCreationReason.None && !isInitial && StartOnlyWorkspaceCount >= 1)
-            throw new InvalidOperationException("At most one StartOnly workspace may exist.");
+        if (reason == WorkspaceCreationReason.None && !isInitial && StartSlotCount >= 1)
+            throw new InvalidOperationException("At most one workspace may hold the start slot.");
         var handle = new WorkspaceWindowHandle(WindowId.Create(), reason, isInitial);
         handle.AttachWindow(new MainWindow(_host, handle));
         _handles.Add(handle);
@@ -76,7 +80,7 @@ internal sealed class WorkspaceWindowManager
     /// <summary>Brings the workspace with this id to the front; false for an unknown id.</summary>
     public bool Activate(WindowId id)
     {
-        if (Find(id) is not { } handle) return false;
+        if (Find(id) is not { } handle || !IsReady(handle)) return false;
         _active = handle;
         handle.Window.Surface(handle.Window.RetryTarget);
         return true;
@@ -167,6 +171,12 @@ internal sealed class WorkspaceWindowManager
 
     private Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
     {
+        // Temporary conservative Phase-5 rule (finer handling is Phase 7): while a workspace that still owns a project
+        // identity is closing or about to close, external opens wait in the queue. Its ownership is released by the final
+        // cleanup, after which the request is evaluated normally again. The manager resolves no identity itself.
+        if (request.Type == LaunchRequestType.OpenProject
+            && _handles.Any(h => !h.CanRoute && _host.ProjectPaths.IdentityOwnedBy(h.WindowId) is not null))
+            return Task.FromResult(false);
         // Open requests prefer the start workspace; everything else the active one.
         var target = request.Type == LaunchRequestType.OpenProject
             ? _handles.FirstOrDefault(h => IsReady(h) && h.HoldsStartSlot) ?? Active

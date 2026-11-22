@@ -50,13 +50,29 @@ internal sealed class WorkspaceWindowHandle
     /// <summary>After the project was created or opened the creation reason has no meaning any more.</summary>
     internal void Neutralize() => Reason = WorkspaceCreationReason.None;
 
-    /// <summary>True while this workspace occupies the single start slot: no project and not a dedicated New workspace.</summary>
+    /// <summary>
+    /// True while this workspace reserves the single start slot: no project and not a dedicated New workspace. This is
+    /// independent of <see cref="Kind"/>: a start workspace that currently shows CreateSetup still holds the slot,
+    /// but is classified as <see cref="WorkspaceKind.CreateSetup"/>. A merely requested (still cancellable) close keeps it.
+    /// </summary>
     internal bool HoldsStartSlot => !IsClosing && Reason == WorkspaceCreationReason.None && Model?.HasProject != true;
 
-    /// <summary>Set synchronously when the owner has decided to close the window, so it no longer counts as a start workspace.</summary>
+    /// <summary>The close is decided and cannot be cancelled any more; the workspace gives up its start slot.</summary>
     internal bool IsClosing { get; set; }
 
-    /// <summary>Explicit classification; a New workspace is never counted as StartOnly, not even before its model exists.</summary>
+    /// <summary>
+    /// A window close attempt is running (e.g. leave dialogs are open) and may still be cancelled. The workspace takes
+    /// no new activation or open requests meanwhile, but keeps its start slot.
+    /// </summary>
+    internal bool IsCloseRequested { get; set; }
+
+    /// <summary>False while the workspace is closing or about to; such a workspace must not be chosen for requests.</summary>
+    internal bool CanRoute => !IsClosing && !IsCloseRequested;
+
+    /// <summary>
+    /// What the workspace currently shows: <see cref="WorkspaceKind.StartOnly"/> means the start page only; a New
+    /// workspace is never counted as StartOnly, not even before its model exists.
+    /// </summary>
     internal WorkspaceKind Kind => Model?.HasProject == true ? WorkspaceKind.Project
         : Reason == WorkspaceCreationReason.NewProject || Model?.Mode == MainViewMode.ProjectSetup ? WorkspaceKind.CreateSetup
         : WorkspaceKind.StartOnly;

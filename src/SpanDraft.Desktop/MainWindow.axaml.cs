@@ -166,11 +166,16 @@ public partial class MainWindow : Window
                 host.Workspaces.DisableActivation();
                 host.BeginShutdown();
             }
-            else if (_handle.IsInitial && host.State == DesktopApplicationState.Starting)
+            else
             {
-                // The initial workspace left before it made the host Ready; another workspace must not stay unreachable.
-                host.MarkReady();
-                host.Workspaces.EnableActivation();
+                if (_handle.IsInitial && host.State == DesktopApplicationState.Starting)
+                {
+                    // The initial workspace left before it made the host Ready; another workspace must not stay unreachable.
+                    host.MarkReady();
+                    host.Workspaces.EnableActivation();
+                }
+                // Its project ownership is released and it is deregistered: requests held back for it are evaluated anew.
+                host.Workspaces.PostPump();
             }
             _performance?.CancelPending();
             _frameProbe?.Dispose();
@@ -353,8 +358,10 @@ public partial class MainWindow : Window
         e.Cancel = true;
         if (_initializing || _closing || _model.IsWorkspaceBusy || _settingsWindow is not null) return;
         _closing = true;
+        // Synchronously out of request routing for the whole attempt; it keeps its start slot until the close is committed.
+        _handle.IsCloseRequested = true;
         // App-wide quit state belongs to the last workspace only; closing one of several windows must not touch the host.
-        // (Quitting all workspaces at once is the application quit's job, Phase 9.)
+        // (Quitting all workspaces at once is the application quit's job, Phase 8.)
         bool quitting = false;
         void CancelQuit() { if (quitting) _host.CancelQuit(); }
         if (_host.Workspaces.IsLast(_handle)) { _host.BeginQuit(); quitting = true; }
@@ -369,6 +376,7 @@ public partial class MainWindow : Window
             // Requests accepted while the close dialogs were open (e.g. macOS file activations) are asked about too.
             if (quitting && !await ConfirmAndCommitShutdownAsync(confirmed)) { CancelQuit(); return; }
             committed = true;
+            _handle.IsClosing = true;
             _closeApproved = true;
             IsEnabled = false;
             // Even a synchronously completed guard must finish the current Closing event first.
@@ -378,6 +386,8 @@ public partial class MainWindow : Window
         finally
         {
             _closing = false;
+            // A cancelled or failed close makes the workspace routable again; a committed one stays out until Closed.
+            if (!committed) _handle.IsCloseRequested = false;
             // Requests that arrived while the quit was pending resume after a cancelled quit; a committed shutdown pumps nothing.
             if (!committed) PostPump();
         }
