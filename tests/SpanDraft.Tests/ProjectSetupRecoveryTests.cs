@@ -352,6 +352,52 @@ public sealed class ProjectSetupRecoveryTests
     }
 
     [Fact]
+    public async Task NewOverAProjectThatBecameCleanAgainOwnsADraftSlotOfItsOwn()
+    {
+        using var culture = new UiCultureScope("en-US");
+        var f = new Fixture(); f.Start(); string path = TestPath("clean.spandraft"); f.Files.Data[path] = ProjectFileCodec.Serialize(State());
+        Assert.True(await f.Main.OpenAsync(path)); Assert.Equal(WorkspaceRecoveryState.None, f.Context.State);
+        var length = f.Main.Editor!.DimensionLength; length.Begin(); length.Text = "2000"; Assert.True(length.Confirm()); await f.Publish();
+        Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State); Assert.Single(f.Storage.Slots(RecoverySlotKind.Project));
+        // Undo back to the savepoint: the recovery file is removed, so the project is clean without any recovery.
+        Assert.True(f.Main.Undo()); await f.Publish();
+        Assert.False(f.Main.Session!.IsDirty); Assert.Empty(f.Storage.Slots());
+
+        Assert.True(await f.Main.NewAsync()); CompleteSetup(f.Main); await f.Publish();
+        // The draft owns the context like over any clean project; no old project slot can come back.
+        Assert.Equal(WorkspaceRecoveryState.CreateDraftRecovery, f.Context.State);
+        Assert.Equal(RecoverySlotKind.Setup, Assert.Single(f.Storage.Slots()).Kind); Assert.Null(f.ProjectSnapshot());
+    }
+
+    [Fact]
+    public async Task NewOverACleanProjectWhoseOldRecoveryCannotBeRemovedDoesNotStart()
+    {
+        using var culture = new UiCultureScope("en-US");
+        var f = new Fixture(); f.Start(); string path = TestPath("clean.spandraft"); f.Files.Data[path] = ProjectFileCodec.Serialize(State());
+        Assert.True(await f.Main.OpenAsync(path));
+        var length = f.Main.Editor!.DimensionLength; length.Begin(); length.Text = "2000"; Assert.True(length.Confirm()); await f.Publish();
+        f.Storage.FailDelete = _ => true; Assert.True(f.Main.Undo()); await f.Publish();
+        Assert.Single(f.Storage.Slots());                                    // the delete failed, the stale slot is still there
+        Assert.False(await f.Main.NewAsync());
+        Assert.Equal(MainViewMode.Editor, f.Main.Mode); Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State);
+        Assert.NotEmpty(f.Dialogs.Errors);
+    }
+
+    [Fact]
+    public async Task ADraftSlotThatCannotBeDeletedOnCancelIsNotTheActiveContextAndLaterProjectChangesGetProjectRecovery()
+    {
+        using var culture = new UiCultureScope("en-US");
+        var f = new Fixture(); f.Start(); Assert.True(await f.Main.NewAsync()); CompleteSetup(f.Main); await f.Publish();
+        var draftSlot = f.SetupSlot; f.Storage.FailDelete = _ => true;
+        Assert.True(await f.Main.CancelSetupAsync());
+        Assert.Equal(MainViewMode.Start, f.Main.Mode); Assert.Equal(WorkspaceRecoveryState.None, f.Context.State);
+        Assert.Equal(draftSlot, Assert.Single(f.Context.Remnants)); Assert.NotEmpty(f.Dialogs.Errors);
+        f.Storage.FailDelete = null;
+        f.RestoreProject(); var length = f.Main.Editor!.DimensionLength; length.Begin(); length.Text = "2500"; Assert.True(length.Confirm()); await f.Publish();
+        Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State); Assert.NotNull(f.ProjectSnapshot());
+    }
+
+    [Fact]
     public async Task OnlyConfirmedLengthMaterialAndSectionValuesScheduleRecovery()
     {
         using var culture = new UiCultureScope("en-US");

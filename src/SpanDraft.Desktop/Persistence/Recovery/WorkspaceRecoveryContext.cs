@@ -14,6 +14,10 @@ public enum WorkspaceRecoveryState { None, CreateDraftRecovery, ProjectRecovery 
 /// it can still be started over an open project: while that project has a recovery slot of its own, the unconfirmed
 /// Create draft is not written, so the unsaved project stays the single recovery of the workspace. Over a project without
 /// recovery (clean) the draft owns the context as usual.
+///
+/// Slots this workspace could not delete are not part of the active context: they are cleanup remnants, kept separately
+/// (<see cref="Remnants"/>) and retried at the next cleanup. A remnant draft whose id is the project's is that project's
+/// companion: the project slot is never deleted while it exists, or the draft would reappear as a valid old draft.
 /// </remarks>
 public sealed class WorkspaceRecoveryContext
 {
@@ -22,6 +26,8 @@ public sealed class WorkspaceRecoveryContext
     private readonly Func<DateTimeOffset>? _utcNow;
     private ProjectRecovery? _project;
     private ProjectSetupRecovery? _setup;
+    // Draft slots that are no longer the workspace's recovery but could not be deleted yet.
+    private readonly List<ProjectSetupRecovery> _remnants = [];
 
     public WorkspaceRecoveryContext(IRecoveryStorage storage, Func<TimeSpan, CancellationToken, Task>? delay = null,
         Func<DateTimeOffset>? utcNow = null)
@@ -41,6 +47,8 @@ public sealed class WorkspaceRecoveryContext
     public RecoveryId? SetupRecoveryId => _setup?.Slot.Id;
     /// <summary>The id of the workspace's current recovery: the project's, otherwise the draft's.</summary>
     public RecoveryId? CurrentRecoveryId => ProjectRecoveryId ?? SetupRecoveryId;
+    /// <summary>Slots still on disk that this context has given up as its recovery but could not remove yet.</summary>
+    public IReadOnlyList<RecoverySlot> Remnants => _remnants.Select(static r => r.Slot).ToArray();
 
     // ---- Create draft -----------------------------------------------------------------------------------------
 
@@ -53,13 +61,17 @@ public sealed class WorkspaceRecoveryContext
         _setup.Schedule(draft);
     }
 
-    /// <summary>The Create draft was cancelled or replaced by its project: its slot is removed.</summary>
+    /// <summary>
+    /// The Create draft was cancelled or replaced by its project: its slot is removed. The context is None afterwards in
+    /// every case; a slot that cannot be deleted becomes a cleanup remnant (and the failure is thrown), never an active draft.
+    /// </summary>
     public async Task SetupAbandonedAsync()
     {
-        // A failed delete keeps the writer: the stale slot stays this workspace's and the next attempt removes or overwrites it.
+        await RetryRemnantsAsync(except: null);
         if (_setup is not { } setup) return;
-        await setup.DeleteAsync();
         _setup = null;
+        try { await setup.DeleteAsync(); }
+        catch (Exception e) when (IsStorageError(e)) { _remnants.Add(setup); throw; }
     }
 
     // ---- Project ----------------------------------------------------------------------------------------------
@@ -91,12 +103,10 @@ public sealed class WorkspaceRecoveryContext
         if (published)
         {
             try { await setup.DeleteAsync(); }
-            catch (Exception e) when (IsStorageError(e)) { _leftoverSetup = setup; Failed?.Invoke(e); }
+            catch (Exception e) when (IsStorageError(e)) { _remnants.Add(setup); Failed?.Invoke(e); }
         }
-        else _leftoverSetup = setup;
+        else _remnants.Add(setup);
     }
-
-    private ProjectSetupRecovery? _leftoverSetup;
 
     /// <summary>The committed state of the project changed (or returned to its savepoint).</summary>
     public void ProjectChanged(ProjectSession session)
@@ -123,20 +133,42 @@ public sealed class WorkspaceRecoveryContext
     public void ScheduleProject(ProjectSession session) => ProjectChanged(session);
 
     /// <summary>
-    /// Removes the project slot (and a draft slot a failed hand-off left behind); the context returns to None. A failed
-    /// delete keeps the slot owned by this context so that a later attempt can repeat it.
+    /// Removes the project slot; the context returns to None. A draft slot with the project's id goes first: the project
+    /// slot is the one that keeps that draft superseded, so it must outlive it. A failed delete throws and keeps the
+    /// project slot owned by this context so that a later attempt can repeat it. Other remnants are retried best effort.
     /// </summary>
     public async Task DeleteAsync()
     {
         if (_project is { } project)
         {
+            foreach (var companion in _remnants.Where(r => r.Slot.Id == project.Slot.Id).ToList())
+            {
+                await companion.DeleteAsync();
+                _remnants.Remove(companion);
+            }
             await project.DeleteAsync();
             _project = null;
         }
-        if (_leftoverSetup is { } leftover)
+        await RetryRemnantsAsync(except: null);
+    }
+
+    /// <summary>
+    /// New over a project that became clean again (undone back to its savepoint): its slot is obsolete. It is removed first
+    /// (awaited, so it cannot reappear) and the context returns to None, which lets the Create draft own it as over any
+    /// clean project. If the slot cannot be removed the failure is thrown and the context stays with that project.
+    /// </summary>
+    public async Task ReleaseCleanProjectAsync(ProjectSession session)
+    {
+        if (_project is null || session.IsDirty) return;
+        await DeleteAsync();
+    }
+
+    private async Task RetryRemnantsAsync(ProjectSetupRecovery? except)
+    {
+        foreach (var remnant in _remnants.Where(r => !ReferenceEquals(r, except) && r.Slot.Id != _project?.Slot.Id).ToList())
         {
-            await leftover.DeleteAsync();
-            _leftoverSetup = null;
+            try { await remnant.DeleteAsync(); _remnants.Remove(remnant); }
+            catch (Exception e) when (IsStorageError(e)) { /* stays a remnant; it was reported when it first failed */ }
         }
     }
 
@@ -145,6 +177,13 @@ public sealed class WorkspaceRecoveryContext
     {
         if (_project is not null || _setup is not null) throw new InvalidOperationException("The workspace already has a recovery.");
         _project = NewProjectWriter(slot);
+    }
+
+    /// <summary>Gives a just adopted slot back without touching it (the restore failed before it was committed).</summary>
+    public void Unadopt(RecoverySlot slot)
+    {
+        if (_project?.Slot == slot) _project = null;
+        else if (_setup?.Slot == slot) _setup = null;
     }
 
     /// <summary>Takes over an existing Create draft slot (restore); the slot keeps its id.</summary>
@@ -180,5 +219,5 @@ public sealed class WorkspaceRecoveryContext
         return writer;
     }
 
-    private static bool IsStorageError(Exception e) => e is IOException or UnauthorizedAccessException;
+    private static bool IsStorageError(Exception e) => RecoveryErrors.IsStorage(e);
 }

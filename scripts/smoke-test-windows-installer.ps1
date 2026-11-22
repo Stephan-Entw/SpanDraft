@@ -32,10 +32,22 @@ foreach ($path in @($installDirectory, $startMenuShortcut) + $desktopShortcuts) 
     if (Test-Path -LiteralPath $path) { throw "Refusing to touch an existing installation or shortcut: $path" }
 }
 if (Get-Process -Name 'SpanDraft.Desktop' -ErrorAction SilentlyContinue) { throw 'Refusing to run while SpanDraft is already running.' }
-foreach ($name in @('recovery.json', 'setup-recovery.json')) {
-    $path = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) "SpanDraft/$name"
-    if (Test-Path -LiteralPath $path) { throw "Refusing to touch existing recovery data: $path" }
-}
+# Active recovery slots are the two legacy files next to the data and project-/setup-<id>.json directly in Recovery\.
+# Only file names are inspected: the smoke test never reads, moves or deletes recovery data. Recovery\Discarded alone is no active slot.
+$dataDirectory = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'SpanDraft'
+$recoveryDirectory = Join-Path $dataDirectory 'Recovery'
+$activeRecovery = @(
+    foreach ($name in @('recovery.json', 'setup-recovery.json')) {
+        $path = Join-Path $dataDirectory $name
+        if (Test-Path -LiteralPath $path) { $path }
+    }
+    if (Test-Path -LiteralPath $recoveryDirectory -PathType Container) {
+        Get-ChildItem -LiteralPath $recoveryDirectory -File |
+            Where-Object { $_.Name -cmatch '^(project|setup)-[0-9a-f]{32}\.json$' } |
+            ForEach-Object FullName
+    }
+)
+if ($activeRecovery.Count -gt 0) { throw "Refusing to touch existing recovery data: $($activeRecovery -join ', ')" }
 # Inno can reuse a previously registered custom directory instead of its default.
 foreach ($hive in @([Microsoft.Win32.RegistryHive]::CurrentUser, [Microsoft.Win32.RegistryHive]::LocalMachine)) {
     foreach ($view in @([Microsoft.Win32.RegistryView]::Registry32, [Microsoft.Win32.RegistryView]::Registry64)) {

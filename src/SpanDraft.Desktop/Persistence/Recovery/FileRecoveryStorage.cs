@@ -18,8 +18,10 @@ public sealed class FileRecoveryStorage(string dataDirectory) : IRecoveryStorage
     public Task<IReadOnlyList<RecoverySlot>> EnumerateAsync(CancellationToken cancellationToken = default) => Task.Run(() =>
     {
         var slots = new List<RecoverySlot>();
-        foreach (var legacy in new[] { RecoverySlot.LegacyProject, RecoverySlot.LegacySetup })
-            if (File.Exists(PathOf(legacy))) slots.Add(legacy);
+        // Listing (not File.Exists, which answers false for any error) so that an area that cannot be read fails as a whole.
+        if (Directory.Exists(_root))
+            foreach (string file in Directory.EnumerateFiles(_root))
+                if (RecoverySlot.TryParse(Path.GetFileName(file), out var legacy) && legacy.IsLegacy) slots.Add(legacy);
         if (Directory.Exists(RecoveryDirectory))
             foreach (string file in Directory.EnumerateFiles(RecoveryDirectory))
                 if (RecoverySlot.TryParse(Path.GetFileName(file), out var slot) && !slot.IsLegacy) slots.Add(slot);
@@ -55,7 +57,7 @@ public sealed class FileRecoveryStorage(string dataDirectory) : IRecoveryStorage
         finally
         {
             try { File.Delete(temporary); }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+            catch (Exception e) when (RecoveryErrors.IsStorage(e)) { }
         }
     }, cancellationToken);
 

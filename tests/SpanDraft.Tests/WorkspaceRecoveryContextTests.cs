@@ -196,4 +196,79 @@ public sealed class WorkspaceRecoveryContextTests
         var snapshot = (await f.Context.ReadAsync())!;
         Assert.Equal(TestPath("origin.spandraft"), snapshot.OriginalFilePath); Assert.Null(session.FilePath);
     }
+
+    // ---- cleanup remnants are never the active context ------------------------------------------------------------
+
+    [Fact]
+    public async Task ADraftSlotThatCannotBeDeletedBecomesARemnantAndNeverAnActiveDraft()
+    {
+        var f = new Fixture(); f.Context.SetupDraftChanged(new()); await f.Publish();
+        var stale = Assert.Single(f.Storage.Slots()); f.Storage.FailDelete = _ => true;
+        await Assert.ThrowsAsync<IOException>(f.Context.SetupAbandonedAsync);
+        Assert.Equal(WorkspaceRecoveryState.None, f.Context.State); Assert.Null(f.Context.SetupRecoveryId);
+        Assert.Equal(stale, Assert.Single(f.Context.Remnants));
+        // Later project changes get ProjectRecovery again; they are not ignored because of the old draft.
+        var session = Dirty(); f.Context.ProjectChanged(session); f.Storage.FailDelete = null; await f.Publish();
+        Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State);
+        Assert.Equal(2, f.Storage.Slots().Count); Assert.NotEqual(stale.Id, f.Context.ProjectRecoveryId);
+        // The next cleanup removes the remnant; it never touches the active project slot.
+        await f.Context.SetupAbandonedAsync();
+        Assert.Empty(f.Context.Remnants); Assert.Equal(RecoverySlot.Project(f.Context.ProjectRecoveryId!.Value), Assert.Single(f.Storage.Slots()));
+    }
+
+    [Fact]
+    public async Task ANewDraftAfterAFailedAbandonGetsItsOwnIdAndTheRemnantStaysSeparate()
+    {
+        var f = new Fixture(); f.Context.SetupDraftChanged(new()); await f.Publish(); var old = f.Context.SetupRecoveryId;
+        f.Storage.FailDelete = _ => true; await Assert.ThrowsAsync<IOException>(f.Context.SetupAbandonedAsync); f.Storage.FailDelete = null;
+        f.Context.SetupDraftChanged(new()); await f.Publish();
+        Assert.Equal(WorkspaceRecoveryState.CreateDraftRecovery, f.Context.State); Assert.NotEqual(old, f.Context.SetupRecoveryId);
+        Assert.Equal(old, Assert.Single(f.Context.Remnants).Id);
+    }
+
+    [Fact]
+    public async Task TheProjectSlotOutlivesItsRemnantDraftSoThatTheDraftNeverReappearsAsAnOldDraft()
+    {
+        var f = new Fixture(); f.Context.SetupDraftChanged(new()); await f.Publish();
+        f.Storage.FailDelete = slot => slot.Kind == RecoverySlotKind.Setup;
+        var session = ProjectSession.Create(State()); await f.Context.ProjectCreatedAsync(session);
+        var id = f.Context.ProjectRecoveryId!.Value;
+        Assert.Equal([RecoverySlot.Setup(id)], f.Context.Remnants); Assert.Contains(RecoverySlot.Project(id), f.Storage.Slots());
+        // Save/cleanup: the draft cannot be deleted again, so the project slot must not be deleted either.
+        await Assert.ThrowsAsync<IOException>(f.Context.DeleteAsync);
+        Assert.Contains(RecoverySlot.Project(id), f.Storage.Slots()); Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State);
+        // A restart now sees the valid project with its superseded draft: no old draft is offered.
+        var catalog = new RecoveryCatalog(f.Storage, new Files(), Identities, new ProjectPathRegistry());
+        Assert.True(await catalog.InitializeAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(RecoverySlotKind.Project, Assert.Single(catalog.Candidates).Kind);
+        // Once the draft can be deleted the cleanup completes in the right order.
+        f.Storage.FailDelete = null; await f.Context.DeleteAsync();
+        Assert.Empty(f.Storage.Slots()); Assert.Empty(f.Context.Remnants); Assert.Equal(WorkspaceRecoveryState.None, f.Context.State);
+    }
+
+    [Fact]
+    public async Task AProjectThatBecameCleanReleasesItsSlotBeforeTheDraftOwnsTheContext()
+    {
+        var f = new Fixture(); var session = Dirty();
+        f.Context.ProjectChanged(session); await f.Publish();
+        session.Undo(); f.Context.ProjectChanged(session);                 // the delete is only scheduled, not yet run
+        Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State);
+        await f.Context.ReleaseCleanProjectAsync(session);
+        Assert.Equal(WorkspaceRecoveryState.None, f.Context.State); Assert.Empty(f.Storage.Slots());
+        f.Context.SetupDraftChanged(new()); await f.Publish();
+        Assert.Equal(WorkspaceRecoveryState.CreateDraftRecovery, f.Context.State); Assert.Equal(RecoverySlotKind.Setup, Assert.Single(f.Storage.Slots()).Kind);
+    }
+
+    [Fact]
+    public async Task AProjectThatCannotReleaseItsSlotKeepsTheContextAndNoDraftIsWritten()
+    {
+        var f = new Fixture(); var session = Dirty();
+        f.Context.ProjectChanged(session); await f.Publish();
+        session.Undo(); f.Storage.FailDelete = _ => true; f.Context.ProjectChanged(session); await f.Publish();   // the scheduled delete fails
+        Assert.Equal(RecoverySlotKind.Project, Assert.Single(f.Storage.Slots()).Kind);
+        await Assert.ThrowsAsync<IOException>(() => f.Context.ReleaseCleanProjectAsync(session));
+        Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State);
+        f.Context.SetupDraftChanged(new()); await f.Publish();
+        Assert.Equal(RecoverySlotKind.Project, Assert.Single(f.Storage.Slots()).Kind);
+    }
 }

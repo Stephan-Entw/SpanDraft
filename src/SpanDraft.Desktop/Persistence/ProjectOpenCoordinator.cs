@@ -21,6 +21,7 @@ internal sealed class ProjectOpenCoordinator(IProjectFileStore files, IProjectId
 {
     internal async Task<ProjectOpenResult> OpenAsync(string path, IProjectOpenWorkspace workspace)
     {
+        await registry.SettleRecoveryAsync();
         var identity = identities.Resolve(Path.GetFullPath(path));
         bool afterSave = false;
         while (true)

@@ -288,7 +288,12 @@ vollständig geschrieben, erst danach `setup-{RecoveryId}.json` entfernt. Existi
 nach einem Absturz beide, gewinnt das gültige Projekt und der Draft gilt als ersetzt.
 Bewusstes Abbrechen des Drafts, erfolgreiches Öffnen eines anderen Projekts,
 normales Beenden und erfolgreiche Projekterstellung entfernen die Setup-Recovery;
-eine abgebrochene oder fehlgeschlagene Erstellung erhält sie.
+eine abgebrochene oder fehlgeschlagene Erstellung erhält sie. Lässt sich ein Slot nicht
+löschen, ist er ein Aufräumrest des Workspaces und nie dessen aktive Recovery; ein Draft-Rest
+mit der Id des Projekts bleibt bestehen, solange der Projekt-Slot existiert, und der Projekt-Slot
+wird nie vor ihm gelöscht (sonst erschiene der Draft beim nächsten Start als gültiger alter Draft).
+Beim Wiederherstellen eines Projekt-Slots wird sein ersetzter Draft zuerst entfernt; teilt sich
+ein Draft die Id mit einem beschädigten Projekt-Slot, wird er unter einer neuen Id übernommen.
 
 Die bisherigen Einzelslots `recovery.json` und `setup-recovery.json` werden weiterhin
 erkannt. Sie werden erst beim Wiederherstellen in einen Slot mit `RecoveryId`
@@ -302,7 +307,11 @@ Recovery-Bereich als Ganzes nicht gelesen werden kann, fragt die Anwendung nach
 (Erneut versuchen / Beenden), weil ungespeicherte Arbeit sonst unbemerkt bliebe.
 Mehrere gültige Slots desselben Originalpfads sind Varianten: die jüngste ist
 bevorzugt und hält den Pfad (`RecoveryPending`); ältere Varianten werden getrennt
-vom Pfad wiederhergestellt und überschreiben die Originaldatei nie.
+vom Pfad wiederhergestellt und überschreiben die Originaldatei nie. Lässt sich der
+Originalpfad beim Laden nicht auflösen, bleibt die Recovery gültig und ungeklärt ohne
+Pfadanspruch; Öffnen und Speichern unter prüfen die Auflösung erneut, bevor sie den Pfad
+arbitrieren. Der Redundanzvergleich mit dem Original ist pro Datei zeitlich begrenzt
+(langsame oder nicht erreichbare Originale behalten ihre Recovery).
 
 ## Lokal zuletzt verwendeter Ersteller
 

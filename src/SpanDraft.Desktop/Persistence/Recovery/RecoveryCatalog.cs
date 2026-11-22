@@ -24,8 +24,6 @@ public sealed class RecoveryCatalog
     // Both replaced as a whole under the gate, read without it.
     private volatile IReadOnlyList<RecoveryCandidate> _candidates = [];
     private volatile IReadOnlyDictionary<ProjectIdentity, Guid> _successors = new Dictionary<ProjectIdentity, Guid>();
-    // What this catalog has published to the registry: identity -> candidate.
-    private readonly Dictionary<ProjectIdentity, Guid> _published = [];
 
     internal RecoveryCatalog(IRecoveryStorage storage, IProjectFileStore files, IProjectIdentityResolver identities,
         ProjectPathRegistry registry)
@@ -35,9 +33,13 @@ public sealed class RecoveryCatalog
         _identities = identities;
         _registry = registry;
         registry.RecoverySuccessor = PreferredSuccessor;
+        registry.RecoverySettler = ResolveLateAsync;
     }
 
     public event Action? Changed;
+
+    /// <summary>How long the startup redundancy check waits for one original file; slower originals keep their recovery.</summary>
+    internal TimeSpan RedundancyTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
     public RecoveryCatalogState State { get; private set; }
     /// <summary>Why the recovery situation is unknown (State is Unavailable).</summary>
@@ -72,7 +74,7 @@ public sealed class RecoveryCatalog
             if (State == RecoveryCatalogState.Loaded) return true;
             IReadOnlyList<RecoverySlot> slots;
             try { slots = await _storage.EnumerateAsync(cancellationToken); }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            catch (Exception e) when (RecoveryErrors.IsStorage(e))
             {
                 Error = e;
                 State = RecoveryCatalogState.Unavailable;
@@ -103,7 +105,7 @@ public sealed class RecoveryCatalog
             }
             return candidate with { Setup = ProjectSetupRecovery.Decode(bytes) };
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ProjectFormatException or System.Text.Json.JsonException)
+        catch (Exception e) when (RecoveryErrors.IsCandidateDefect(e))
         {
             return candidate with { ValidationError = e.Message };
         }
@@ -113,7 +115,7 @@ public sealed class RecoveryCatalog
     {
         if (path is null) return null;
         try { return _identities.Resolve(path); }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
+        catch (Exception e) when (RecoveryErrors.IsCandidateDefect(e)) { return null; }
     }
 
     private async Task<List<RecoveryCandidate>> ResolveCompanionsAndRedundancyAsync(List<RecoveryCandidate> loaded)
@@ -124,16 +126,23 @@ public sealed class RecoveryCatalog
         for (int i = 0; i < loaded.Count; i++)
             if (loaded[i] is { Kind: RecoverySlotKind.Setup, Slot.Id: { } id } setup && projectIds.Contains(id))
                 loaded[i] = setup with { State = RecoveryCandidateState.Superseded };
-        // Identical to the original file (read, parsed and equal in full content): nothing to recover any more.
+        // Identical to the original file (read, parsed and equal in full content): nothing to recover any more. The originals
+        // are checked concurrently and each read is bounded, so an unreachable volume delays the start by at most the timeout.
+        var checks = new Dictionary<int, Task<bool>>();
         for (int i = 0; i < loaded.Count; i++)
+            if (loaded[i] is { Kind: RecoverySlotKind.Project, IsDamaged: false, Project: { OriginalFilePath: { } original } snapshot })
+                checks[i] = IsRedundantAsync(snapshot, original);
+        await Task.WhenAll(checks.Values);
+        foreach (var (i, check) in checks)
         {
+            if (!await check) continue;
             var candidate = loaded[i];
-            if (candidate is not { Kind: RecoverySlotKind.Project, IsDamaged: false, Project: { OriginalFilePath: { } original } snapshot }) continue;
-            if (!await IsRedundantAsync(snapshot, original)) continue;
             loaded[i] = candidate with { State = RecoveryCandidateState.Redundant };
+            // The project slot keeps its draft superseded, so the draft goes first; if that fails the project slot stays
+            // (hidden) as well and the next start checks again.
+            if (candidate.Slot.Id is { } id && !await TryRemoveCompanionAsync(loaded, id, markRedundant: true)) continue;
             try { await _storage.DeleteAsync(candidate.Slot); }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* stays hidden; the next start checks again */ }
-            if (candidate.Slot.Id is { } id) await RemoveCompanionAsync(loaded, id, markRedundant: true);
+            catch (Exception e) when (RecoveryErrors.IsStorage(e)) { /* stays hidden; the next start checks again */ }
         }
         return loaded;
     }
@@ -142,13 +151,41 @@ public sealed class RecoveryCatalog
     {
         try
         {
-            var bytes = await _files.ReadAsync(original);
+            var bytes = await _files.ReadAsync(original).WaitAsync(RedundancyTimeout);
             return bytes is not null && snapshot.State.ContentEquals(ProjectFileCodec.Deserialize(bytes));
         }
-        // A missing, unreadable or invalid original never makes the recovery redundant.
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ProjectFormatException or System.Text.Json.JsonException)
+        // A missing, unreadable, unreachable (timed out) or invalid original never makes the recovery redundant.
+        catch (Exception e) when (RecoveryErrors.IsCandidateDefect(e) || e is TimeoutException)
         { return false; }
     }
+
+    /// <summary>
+    /// A valid candidate whose original path could not be resolved at load stays undecided without a path claim. Every file
+    /// operation settles the registry first, which retries the resolution here; once it succeeds the candidate takes part
+    /// in grouping and holds its path like any other, before the caller arbitrates.
+    /// </summary>
+    private async Task ResolveLateAsync()
+    {
+        if (!_candidates.Any(IsUnresolved)) return;
+        bool changed = false;
+        await _gate.WaitAsync();
+        try
+        {
+            var all = _candidates.ToList();
+            for (int i = 0; i < all.Count; i++)
+                if (IsUnresolved(all[i]) && Resolve(all[i].Project!.OriginalFilePath) is { } identity)
+                {
+                    all[i] = all[i] with { Identity = identity };
+                    changed = true;
+                }
+            if (changed) Apply(all);
+        }
+        finally { _gate.Release(); }
+        if (changed) Changed?.Invoke();
+    }
+
+    private static bool IsUnresolved(RecoveryCandidate c) => c is { Kind: RecoverySlotKind.Project, IsDamaged: false, State: RecoveryCandidateState.Orphaned,
+        Identity: null, Project.OriginalFilePath: not null };
 
     // ---- grouping and registry publication --------------------------------------------------------------------
 
@@ -172,25 +209,20 @@ public sealed class RecoveryCatalog
             bool preferred = all[i].Identity is { } identity && preferredHolders.TryGetValue(identity, out var id) && id == all[i].CandidateId;
             if (all[i].IsPreferred != preferred) all[i] = all[i] with { IsPreferred = preferred };
         }
+        var previous = _candidates;
         _candidates = all;
         _successors = preferredOrphaned;
-        Publish(preferredHolders);
+        Publish(previous, all, preferredHolders);
     }
 
-    private void Publish(Dictionary<ProjectIdentity, Guid> wanted)
+    /// <summary>
+    /// Brings the registry's recovery entries in line with the new list. It reconciles against the registry (never against
+    /// what an earlier call published), so an entry that came into being through a path hand-over is corrected too.
+    /// </summary>
+    private void Publish(IReadOnlyList<RecoveryCandidate> previous, List<RecoveryCandidate> next, Dictionary<ProjectIdentity, Guid> wanted)
     {
-        foreach (var (identity, current) in _published.ToList())
-        {
-            bool wantsOne = wanted.TryGetValue(identity, out var next);
-            if (wantsOne && next == current) continue;
-            // The path may meanwhile be owned by a restored window or already be gone; the update then simply does not apply.
-            bool applied = _registry.UpdateRecovery(identity, current, wantsOne ? next : null);
-            _published.Remove(identity);
-            if (applied && wantsOne) _published[identity] = next;
-        }
-        foreach (var (identity, candidate) in wanted)
-            if (!_published.ContainsKey(identity) && _registry.UpdateRecovery(identity, null, candidate))
-                _published[identity] = candidate;
+        var identities = previous.Concat(next).Select(static c => c.Identity).OfType<ProjectIdentity>().ToHashSet();
+        foreach (var identity in identities) _registry.SetRecovery(identity, wanted.TryGetValue(identity, out var id) ? id : null);
     }
 
     // ---- claim ------------------------------------------------------------------------------------------------
@@ -208,7 +240,20 @@ public sealed class RecoveryCatalog
             var all = _candidates.ToList();
             int index = all.FindIndex(c => c.CandidateId == candidateId);
             if (index < 0 || all[index] is not { State: RecoveryCandidateState.Orphaned, IsDamaged: false } candidate) return null;
-            if (candidate.IsLegacy)
+            // The workspace's slot must be one nothing else in the catalog refers to. A project slot's draft companion is deleted
+            // first (afterwards only the project slot keeps it superseded, and the workspace may delete that at any time); if
+            // that fails the restore is refused and the candidate stays undecided.
+            if (candidate.Slot is { Kind: RecoverySlotKind.Project, Id: { } projectId })
+            {
+                await RemoveCompanionAsync(all, projectId, markRedundant: false);
+                _candidates = all.ToList();
+                index = all.FindIndex(c => c.CandidateId == candidateId);
+            }
+            // A legacy slot has no id; a draft whose id is also the id of a (damaged) project slot would share its identity with
+            // that candidate, which could later be discarded under the restored workspace. Both get a fresh id by an atomic move.
+            bool sharesId = candidate.Slot is { Kind: RecoverySlotKind.Setup, Id: { } draftId }
+                && all.Any(c => c.Slot.Kind == RecoverySlotKind.Project && c.Slot.Id == draftId);
+            if (candidate.IsLegacy || sharesId)
             {
                 var target = candidate.Slot.WithId(RecoveryId.New());
                 await _storage.MoveAsync(candidate.Slot, target);
@@ -233,26 +278,30 @@ public sealed class RecoveryCatalog
             if (index < 0) return;
             var candidate = all[index];
             all[index] = candidate with { State = committed ? RecoveryCandidateState.Claimed : RecoveryCandidateState.Orphaned };
-            if (committed && candidate.Slot is { Kind: RecoverySlotKind.Project, Id: { } id })
-                await RemoveCompanionAsync(all, id, markRedundant: false);
             Apply(all);
         }
         finally { _gate.Release(); }
         Changed?.Invoke();
     }
 
-    /// <summary>Deletes the superseded draft of a project; best effort, a leftover stays hidden and is retried at the next start.</summary>
+    /// <summary>
+    /// Deletes the superseded draft of a project slot. False when it exists but cannot be deleted (it then stays in the
+    /// list, hidden); true when there was none or it is gone.
+    /// </summary>
+    private async Task<bool> TryRemoveCompanionAsync(List<RecoveryCandidate> all, RecoveryId id, bool markRedundant)
+    {
+        try { await RemoveCompanionAsync(all, id, markRedundant); return true; }
+        catch (Exception e) when (RecoveryErrors.IsStorage(e)) { return false; }
+    }
+
+    /// <summary>Deletes the superseded draft of a project slot, if there is one; a failed delete is thrown and leaves it listed.</summary>
     private async Task RemoveCompanionAsync(List<RecoveryCandidate> all, RecoveryId id, bool markRedundant)
     {
         int index = all.FindIndex(c => c.State == RecoveryCandidateState.Superseded && c.Slot == RecoverySlot.Setup(id));
         if (index < 0) return;
-        try
-        {
-            await _storage.DeleteAsync(all[index].Slot);
-            if (markRedundant) all[index] = all[index] with { State = RecoveryCandidateState.Redundant };
-            else all.RemoveAt(index);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        await _storage.DeleteAsync(all[index].Slot);
+        if (markRedundant) all[index] = all[index] with { State = RecoveryCandidateState.Redundant };
+        else all.RemoveAt(index);
     }
 
     // ---- discard ----------------------------------------------------------------------------------------------

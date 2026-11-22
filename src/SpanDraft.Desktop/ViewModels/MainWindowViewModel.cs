@@ -525,12 +525,17 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         // Transitional rule until New gets its own workspace (Phase 9): over unsaved work this workspace keeps its project
         // recovery as the only one and the draft gets no slot. So the current state must be in that slot before the
         // CreateSetup is shown; if that is not possible the unsaved project stays as it is and New does not start.
-        if (_recovery is not null && Session is { IsDirty: true } session)
+        if (_recovery is not null && Session is { } session)
         {
-            try { await _recovery.FlushAsync(session.CurrentRevision.State, session.FilePath ?? session.RecoveryOriginPath); }
+            try
+            {
+                if (session.IsDirty) await _recovery.FlushAsync(session.CurrentRevision.State, session.FilePath ?? session.RecoveryOriginPath);
+                // Back at its savepoint the project has no recovery any more: the slot must be gone before the draft owns the context.
+                else await _recovery.ReleaseCleanProjectAsync(session);
+            }
             catch (Exception e) when (IsFileError(e))
             {
-                _recovery.ScheduleProject(session);
+                if (session.IsDirty) _recovery.ScheduleProject(session);
                 await ShowErrorAsync(Strings.RecoveryError, e);
                 return false;
             }
@@ -661,6 +666,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
             path = EnsureProjectExtension(path);
         }
         string? previousPath = session.FilePath;
+        await _projectPaths.SettleRecoveryAsync();
         var identity = !saveAs && previousPath is not null && _projectPaths.IdentityOwnedBy(WindowId) is { } owned
             ? owned : _projectIdentities.Resolve(path);
         var decision = _projectPaths.ArbitrateSave(identity, WindowId, out var reservation);
@@ -765,12 +771,15 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         AttachEditor(editor);
         try
         {
+            // The recovery slot is adopted first and the path commit is the last step that can fail, so a failure never
+            // leaves registry ownership behind; if anything after the commit were to fail it is released again.
+            _recovery.AdoptProject(slot);
             if (identity is not null && !_projectPaths.TryCommitRecovery(identity, candidate!.Value, WindowId))
                 throw new InvalidOperationException("The recovery candidate lost ownership of the original path during restore.");
-            _recovery.AdoptProject(slot);
         }
         catch
         {
+            _recovery.Unadopt(slot);
             DetachSession();
             _editor = null;
             Navigate(MainViewMode.Start);
@@ -785,8 +794,18 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         if (_disposed || Session is not null || IsWorkspaceBusy || _recovery is null || Mode != MainViewMode.Start)
             throw new InvalidOperationException("The workspace cannot take a restored draft.");
         _recovery.AdoptCreateDraft(slot);
-        _setupReturnMode = Mode;
-        _setup = NewSetup(snapshot.Draft);
+        var previous = _setup;
+        try
+        {
+            _setupReturnMode = Mode;
+            _setup = NewSetup(snapshot.Draft);
+        }
+        catch
+        {
+            _recovery.Unadopt(slot);
+            _setup = previous;
+            throw;
+        }
         Navigate(MainViewMode.ProjectSetup);
     }
 

@@ -16,7 +16,8 @@ public sealed class RecoveryCatalogTests
         public Dialogs Dialogs { get; } = new();
         public ProjectPathRegistry Registry { get; } = new();
         public RecoveryCatalog Catalog { get; }
-        public Fixture() { Catalog = new(Storage, Files, Identities, Registry); }
+        public IProjectIdentityResolver Resolver { get; }
+        public Fixture(IProjectIdentityResolver? resolver = null) { Resolver = resolver ?? Identities; Catalog = new(Storage, Files, Resolver, Registry); }
 
         public RecoverySlot Project(string? original, int minute = 0, ProjectState? state = null, RecoveryId? id = null, bool legacy = false)
         {
@@ -295,13 +296,107 @@ public sealed class RecoveryCatalogTests
     }
 
     [Fact]
-    public async Task CommittingTheProjectRemovesItsSupersededDraft()
+    public async Task ClaimingTheProjectRemovesItsSupersededDraftBeforeTheWorkspaceOwnsTheSlot()
     {
         var f = new Fixture(); var id = RecoveryId.New(); var project = f.Project(null, id: id); var draft = f.Setup(id: id); await f.Load();
         var claim = (await f.Catalog.TryBeginClaimAsync(f.Of(project).CandidateId))!;
-        Assert.True(f.Storage.Data.ContainsKey(draft));
+        // Afterwards the project slot is the workspace's to delete at any time, so no draft may be left that it keeps superseded.
+        Assert.False(f.Storage.Data.ContainsKey(draft)); Assert.True(f.Storage.Data.ContainsKey(project));
         await claim.CommitAsync();
         Assert.False(f.Storage.Data.ContainsKey(draft)); Assert.True(f.Storage.Data.ContainsKey(project));
+    }
+
+    [Fact]
+    public async Task AProjectWhoseSupersededDraftCannotBeDeletedIsNotRestoredAndStaysUndecided()
+    {
+        var f = new Fixture(); var id = RecoveryId.New(); var project = f.Project(null, id: id); var draft = f.Setup(id: id); await f.Load();
+        f.Storage.FailDelete = slot => slot == draft;
+        await Assert.ThrowsAsync<IOException>(() => f.Catalog.TryBeginClaimAsync(f.Of(project).CandidateId));
+        Assert.Equal(RecoveryCandidateState.Orphaned, f.Of(project).State); Assert.True(f.Storage.Data.ContainsKey(draft));
+        f.Storage.FailDelete = null;
+        Assert.NotNull(await f.Catalog.TryBeginClaimAsync(f.Of(project).CandidateId)); Assert.False(f.Storage.Data.ContainsKey(draft));
+    }
+
+    [Fact]
+    public async Task ARedundantProjectKeepsItsSlotWhileItsSupersededDraftCannotBeDeleted()
+    {
+        var f = new Fixture(); var state = State(3); string path = TestPath("same.spandraft"); var id = RecoveryId.New();
+        f.Files.Data[path] = ProjectFileCodec.Serialize(state);
+        var project = f.Project("same.spandraft", state: state, id: id); var draft = f.Setup(id: id);
+        f.Storage.FailDelete = slot => slot == draft;
+        await f.Load();
+        // Nothing is offered, but the project slot stays so that the draft cannot become a valid old draft by itself.
+        Assert.Empty(f.Catalog.Candidates); Assert.True(f.Storage.Data.ContainsKey(project)); Assert.True(f.Storage.Data.ContainsKey(draft));
+        var restart = new Fixture { }; restart.Storage.Put(project, f.Storage.Data[project]); restart.Storage.Put(draft, f.Storage.Data[draft]);
+        restart.Files.Data[path] = f.Files.Data[path];
+        await restart.Load();
+        Assert.Empty(restart.Catalog.Candidates); Assert.False(restart.Storage.Data.ContainsKey(project)); Assert.False(restart.Storage.Data.ContainsKey(draft));
+    }
+
+    [Fact]
+    public async Task ADraftSharingItsIdWithADamagedProjectIsRestoredUnderAFreshIdSoDiscardingTheDamagedOneCannotTouchIt()
+    {
+        var f = new Fixture(); var id = RecoveryId.New();
+        var damaged = new RecoverySlot(RecoverySlotKind.Project, id); f.Storage.Put(damaged, Encoding.UTF8.GetBytes("{"));
+        var draft = f.Setup(id: id); await f.Load();
+        var claim = (await f.Catalog.TryBeginClaimAsync(f.Of(draft).CandidateId))!;
+        Assert.NotEqual(id, claim.Slot.Id); Assert.Equal(RecoverySlotKind.Setup, claim.Slot.Kind);
+        var main = new MainWindowViewModel(WindowId.Create(), f.Registry, f.Resolver, files: f.Files, dialogs: f.Dialogs, recovery: new(f.Storage, utcNow: () => Now));
+        main.RestoreSetup(claim.Candidate.Setup!, claim.Slot); await claim.CommitAsync();
+        CompleteSetup(main); Assert.True(await main.Setup.ConfirmAsync());
+        // The confirmed draft became a project under the new id; the damaged candidate is a different slot.
+        var created = RecoverySlot.Project(claim.Slot.Id!.Value);
+        Assert.True(f.Storage.Data.ContainsKey(created)); Assert.Equal("{", Encoding.UTF8.GetString(f.Storage.Data[damaged]));
+        Assert.True(await f.Catalog.DiscardAsync(f.Of(damaged).CandidateId));
+        Assert.True(f.Storage.Data.ContainsKey(created)); Assert.False(f.Storage.Data.ContainsKey(damaged));
+    }
+
+    [Fact]
+    public async Task ARestoreThatFailsWhileAdoptingTheSlotLeavesNoRegistryOwnershipBehind()
+    {
+        var f = new Fixture(); var identity = f.Identity("a.spandraft"); var slot = f.Project("a.spandraft"); await f.Load();
+        var context = new WorkspaceRecoveryContext(f.Storage); context.SetupDraftChanged(new());   // the workspace already has a recovery
+        var main = new MainWindowViewModel(WindowId.Create(), f.Registry, f.Resolver, files: f.Files, dialogs: f.Dialogs, recovery: context);
+        var claim = (await f.Catalog.TryBeginClaimAsync(f.Of(slot).CandidateId))!;
+        Assert.Throws<InvalidOperationException>(() => main.RestoreProject(claim.Candidate.Project!, claim.Slot, claim.Candidate.CandidateId));
+        Assert.Null(main.Session); Assert.Null(f.Registry.IdentityOwnedBy(main.WindowId)); Assert.Equal(WorkspaceRecoveryState.CreateDraftRecovery, context.State);
+        await claim.AbortAsync();
+        Assert.Equal(ProjectPathState.RecoveryPending, f.Registry.StateOf(identity)); Assert.Equal(RecoveryCandidateState.Orphaned, f.Of(slot).State);
+    }
+
+    [Fact]
+    public async Task AnOriginalThatDoesNotAnswerInTimeKeepsItsRecoveryAndDoesNotHoldBackTheStart()
+    {
+        var f = new Fixture(); var state = State(3);
+        var slow = f.Project("slow.spandraft", state: state); var fast = f.Project("fast.spandraft", state: state);
+        f.Files.Data[TestPath("fast.spandraft")] = ProjectFileCodec.Serialize(state);
+        f.Files.BeforeRead = path => path == TestPath("slow.spandraft") ? new TaskCompletionSource().Task : Task.CompletedTask;
+        f.Catalog.RedundancyTimeout = TimeSpan.FromMilliseconds(100);
+        await WaitFor(f.Load());
+        Assert.False(f.Of(slow).IsDamaged); Assert.True(f.Storage.Data.ContainsKey(slow));
+        Assert.DoesNotContain(f.Catalog.Candidates, c => c.Slot == fast);
+    }
+
+    // ---- error classification -----------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ASecurityErrorOnOneSlotDamagesOnlyThatCandidateAndOnTheAreaItFailsClosed()
+    {
+        var f = new Fixture(); var good = f.Project("a.spandraft"); var locked = f.Project("b.spandraft");
+        f.Storage.FailRead = slot => slot == locked; f.Storage.FailureFactory = _ => new System.Security.SecurityException("denied");
+        await f.Load();
+        Assert.False(f.Of(good).IsDamaged); Assert.True(f.Of(locked).IsDamaged);
+
+        var g = new Fixture(); g.Project("a.spandraft"); g.Storage.FailEnumerate = new System.Security.SecurityException("denied");
+        Assert.False(await g.Catalog.InitializeAsync(TestContext.Current.CancellationToken)); Assert.Equal(RecoveryCatalogState.Unavailable, g.Catalog.State);
+    }
+
+    [Fact]
+    public async Task AnOriginalPathTheResolverRejectsKeepsTheValidCandidateUnresolved()
+    {
+        var resolver = new TestIdentityResolver(p => throw new NotSupportedException("bad path format"));
+        var f = new Fixture(resolver); var slot = f.Project("a.spandraft"); await f.Load();
+        Assert.False(f.Of(slot).IsDamaged); Assert.Null(f.Of(slot).Identity); Assert.True(f.Catalog.HasUndecided);
     }
 
     // ---- discard ----------------------------------------------------------------------------------------------
@@ -348,8 +443,8 @@ public sealed class RecoveryCatalogTests
 
     // ---- restore through the workspace and the registry -------------------------------------------------------
 
-    private static MainWindowViewModel Workspace(Fixture f, TestRecoveryStorage? storage = null) =>
-        new(WindowId.Create(), f.Registry, Identities, files: f.Files, dialogs: f.Dialogs, recovery: new(storage ?? f.Storage));
+    private static MainWindowViewModel Workspace(Fixture f, TestRecoveryStorage? storage = null, Action<Guid?>? showRecoveryCenter = null) =>
+        new(WindowId.Create(), f.Registry, f.Resolver, showRecoveryCenter: showRecoveryCenter, files: f.Files, dialogs: f.Dialogs, recovery: new(storage ?? f.Storage));
 
     [Fact]
     public async Task RestoringThePreferredVariantOwnsThePathAndTheOlderVariantTakesOverWhenItIsReleased()
@@ -397,6 +492,77 @@ public sealed class RecoveryCatalogTests
         f.Dialogs.SavePath = TestPath("elsewhere.spandraft");
         Assert.True(await main.SaveAsync(saveAs: true));
         Assert.Equal(ProjectPathState.RecoveryPending, f.Registry.StateOf(identity)); Assert.Equal(secondId, f.Registry.ArbitrateOpen(identity).RecoveryCandidate);
+    }
+
+    [Fact]
+    public async Task ADiscardAfterTheOwnerLeftFreesThePathThatTheHandOverHadMadePending()
+    {
+        var f = new Fixture(); var identity = f.Identity("a.spandraft"); var second = f.Project("a.spandraft", minute: 1); var first = f.Project("a.spandraft", minute: 2); await f.Load();
+        var main = Workspace(f); var claim = (await f.Catalog.TryBeginClaimAsync(f.Of(first).CandidateId))!;
+        main.RestoreProject(claim.Candidate.Project!, claim.Slot, claim.Candidate.CandidateId); await claim.CommitAsync();
+        Assert.True(f.Registry.ReleaseOwner(main.WindowId));
+        Assert.Equal(ProjectPathState.RecoveryPending, f.Registry.StateOf(identity));
+        Assert.True(await f.Catalog.DiscardAsync(f.Of(second).CandidateId));
+        Assert.Equal(ProjectPathState.Free, f.Registry.StateOf(identity));
+        Assert.Null(f.Registry.RecoveryCandidateOf(identity));
+    }
+
+    [Fact]
+    public async Task ADiscardAfterSaveAsMovedAwayFreesThePathThatTheHandOverHadMadePending()
+    {
+        var f = new Fixture(); var identity = f.Identity("a.spandraft"); var second = f.Project("a.spandraft", minute: 1); var first = f.Project("a.spandraft", minute: 2); await f.Load();
+        var main = Workspace(f); var claim = (await f.Catalog.TryBeginClaimAsync(f.Of(first).CandidateId))!;
+        main.RestoreProject(claim.Candidate.Project!, claim.Slot, claim.Candidate.CandidateId); await claim.CommitAsync();
+        f.Dialogs.SavePath = TestPath("elsewhere.spandraft");
+        Assert.True(await main.SaveAsync(saveAs: true));
+        Assert.Equal(ProjectPathState.RecoveryPending, f.Registry.StateOf(identity));
+        Assert.True(await f.Catalog.DiscardAsync(f.Of(second).CandidateId));
+        Assert.Equal(ProjectPathState.Free, f.Registry.StateOf(identity));
+    }
+
+    [Fact]
+    public async Task ADiscardWhileAWindowStillOwnsThePathLetsItFallFreeOnRelease()
+    {
+        var f = new Fixture(); var identity = f.Identity("a.spandraft"); var second = f.Project("a.spandraft", minute: 1); var first = f.Project("a.spandraft", minute: 2); await f.Load();
+        var main = Workspace(f); var claim = (await f.Catalog.TryBeginClaimAsync(f.Of(first).CandidateId))!;
+        main.RestoreProject(claim.Candidate.Project!, claim.Slot, claim.Candidate.CandidateId); await claim.CommitAsync();
+        Assert.True(await f.Catalog.DiscardAsync(f.Of(second).CandidateId));
+        Assert.Equal(ProjectPathState.Open, f.Registry.StateOf(identity));
+        Assert.True(f.Registry.ReleaseOwner(main.WindowId));
+        Assert.Equal(ProjectPathState.Free, f.Registry.StateOf(identity));
+    }
+
+    [Fact]
+    public async Task AnOriginalThatBecomesResolvableAfterLoadStillClaimsItsPathBeforeOpenAndSaveAs()
+    {
+        bool online = false;
+        var resolver = new TestIdentityResolver(p => online ? new(p, caseSensitive: true) : throw new IOException("volume not available"));
+        var f = new Fixture(resolver); var slot = f.Project("a.spandraft"); await f.Load();
+        Assert.Null(f.Of(slot).Identity); Assert.True(f.Catalog.HasUndecided);        // kept and undecided, but without a path claim
+        online = true;
+        var identity = resolver.Resolve(TestPath("a.spandraft"));
+        f.Files.Data[TestPath("a.spandraft")] = ProjectFileCodec.Serialize(State(7));
+
+        // Open on the original path leads to the recovery, not to the file on disk.
+        Guid? shown = null; var opener = Workspace(f, showRecoveryCenter: id => shown = id);
+        Assert.False(await opener.OpenAsync(TestPath("a.spandraft")));
+        Assert.Equal(f.Of(slot).CandidateId, shown); Assert.Null(opener.Session);
+        Assert.Equal(f.Of(slot).Identity, identity); Assert.Equal(ProjectPathState.RecoveryPending, f.Registry.StateOf(identity));
+    }
+
+    [Fact]
+    public async Task SaveAsOntoAnOriginalThatBecomesResolvableAfterLoadIsRejectedWhileItsRecoveryIsPending()
+    {
+        bool online = false;
+        var resolver = new TestIdentityResolver(p => online ? new(p, caseSensitive: true) : throw new IOException("volume not available"));
+        var f = new Fixture(resolver); var slot = f.Project("a.spandraft"); await f.Load();
+        online = true;
+        var main = Workspace(f);
+        main.NewCommand.Execute(null); CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
+        f.Dialogs.SavePath = TestPath("a.spandraft");
+        Assert.False(await main.SaveAsync(saveAs: true));
+        Assert.Equal(ProjectPathState.RecoveryPending, f.Registry.StateOf(resolver.Resolve(TestPath("a.spandraft"))));
+        Assert.False(f.Files.Data.ContainsKey(TestPath("a.spandraft")));
     }
 
     [Fact]

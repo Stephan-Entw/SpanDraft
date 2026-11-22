@@ -74,7 +74,7 @@ internal sealed class DebouncedSlot<TSnapshot>
     {
         try { await task; }
         catch (OperationCanceledException) { }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ProjectFormatException or JsonException)
+        catch (Exception e) when (RecoveryErrors.IsStorage(e) || e is ProjectFormatException or JsonException)
         { Failed?.Invoke(e); }
     }
 

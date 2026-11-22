@@ -58,6 +58,25 @@ internal sealed class ProjectPathRegistry
         set { lock (_gate) _recoverySuccessor = value; }
     }
 
+    private Func<Task>? _recoverySettler;
+
+    /// <summary>
+    /// Lets the recovery catalog finish what it could not decide earlier (an original path that could not be resolved at
+    /// load) before a caller arbitrates a path. Async because the catalog's own serialization is async.
+    /// </summary>
+    internal Func<Task>? RecoverySettler
+    {
+        set { lock (_gate) _recoverySettler = value; }
+    }
+
+    /// <summary>Call immediately before resolving and arbitrating a path; completes at once when nothing is pending.</summary>
+    internal Task SettleRecoveryAsync()
+    {
+        Func<Task>? settler;
+        lock (_gate) settler = _recoverySettler;
+        return settler?.Invoke() ?? Task.CompletedTask;
+    }
+
     /// <summary>Removes the entry of a path that is no longer held, or hands it to its successor recovery candidate.</summary>
     private void Vacate(ProjectIdentity identity)
     {
@@ -194,6 +213,22 @@ internal sealed class ProjectPathRegistry
             if (preferred is { } candidate) _paths[identity] = new Recovery(candidate);
             else _paths.Remove(identity);
             return true;
+        }
+    }
+
+    /// <summary>
+    /// Makes the path's recovery entry match <paramref name="preferred"/> (null: none): it is created, replaced or removed
+    /// only where the path is free or already RecoveryPending. A path held by a window or an operation keeps its entry; the
+    /// successor provider hands it over when that entry goes away. Idempotent, so the catalog can reconcile at any time.
+    /// </summary>
+    internal void SetRecovery(ProjectIdentity identity, Guid? preferred)
+    {
+        lock (_gate)
+        {
+            var entry = _paths.GetValueOrDefault(identity);
+            if (entry is not null and not Recovery) return;
+            if (preferred is { } candidate) _paths[identity] = new Recovery(candidate);
+            else _paths.Remove(identity);
         }
     }
 

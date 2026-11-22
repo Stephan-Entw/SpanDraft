@@ -17,6 +17,9 @@ internal sealed class TestRecoveryStorage : IRecoveryStorage
     public Func<RecoverySlot, RecoverySlot?, bool>? FailMove { get; set; }
     public Func<RecoverySlot, bool>? FailDiscard { get; set; }
     public Exception? FailEnumerate { get; set; }
+    /// <summary>The exception the injected failures throw; an <see cref="IOException"/> unless set.</summary>
+    public Func<string, Exception>? FailureFactory { get; set; }
+    private Exception Failure(string operation) => FailureFactory?.Invoke(operation) ?? new IOException($"Injected {operation} failure.");
     public bool HonorWriteCancellation { get; set; } = true;
 
     public IReadOnlyList<RecoverySlot> Slots(RecoverySlotKind? kind = null) =>
@@ -33,7 +36,7 @@ internal sealed class TestRecoveryStorage : IRecoveryStorage
     public async Task<byte[]?> ReadAsync(RecoverySlot slot)
     {
         if (BeforeRead is not null) await BeforeRead(slot);
-        if (FailRead?.Invoke(slot) == true) throw new IOException("Injected read failure.");
+        if (FailRead?.Invoke(slot) == true) throw Failure("read");
         return Data.TryGetValue(slot, out var bytes) ? bytes.ToArray() : null;
     }
 
@@ -41,21 +44,21 @@ internal sealed class TestRecoveryStorage : IRecoveryStorage
     {
         if (BeforeWrite is not null) await BeforeWrite(slot, bytes, cancellationToken);
         if (HonorWriteCancellation) cancellationToken.ThrowIfCancellationRequested();
-        if (FailWrite?.Invoke(slot) == true) throw new IOException("Injected write failure.");
+        if (FailWrite?.Invoke(slot) == true) throw Failure("write");
         Data[slot] = bytes.ToArray();
         Writes.Enqueue(slot);
     }
 
     public Task DeleteAsync(RecoverySlot slot)
     {
-        if (FailDelete?.Invoke(slot) == true) throw new IOException("Injected delete failure.");
+        if (FailDelete?.Invoke(slot) == true) throw Failure("delete");
         Data.TryRemove(slot, out _);
         return Task.CompletedTask;
     }
 
     public Task MoveAsync(RecoverySlot source, RecoverySlot target)
     {
-        if (FailMove?.Invoke(source, target) == true) throw new IOException("Injected move failure.");
+        if (FailMove?.Invoke(source, target) == true) throw Failure("move");
         if (!Data.TryGetValue(source, out var bytes)) throw new FileNotFoundException("Missing slot.", source.FileName);
         if (!Data.TryAdd(target, bytes)) throw new IOException("The target slot exists.");
         Data.TryRemove(source, out _);
@@ -64,7 +67,7 @@ internal sealed class TestRecoveryStorage : IRecoveryStorage
 
     public Task DiscardAsync(RecoverySlot slot)
     {
-        if (FailDiscard?.Invoke(slot) == true) throw new IOException("Injected discard failure.");
+        if (FailDiscard?.Invoke(slot) == true) throw Failure("discard");
         if (!Data.TryRemove(slot, out _)) throw new FileNotFoundException("Missing slot.", slot.FileName);
         Discarded.Enqueue(slot.FileName);
         return Task.CompletedTask;
