@@ -21,7 +21,7 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow(_host);
+            desktop.MainWindow = _host.Workspaces.CreateInitial().Window;
             if (OperatingSystem.IsMacOS()) MacActivationSource.Attach(this, _host);
         }
 

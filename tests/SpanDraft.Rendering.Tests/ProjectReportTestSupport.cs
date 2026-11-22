@@ -101,8 +101,8 @@ public abstract class ProjectReportTestSupport : IDisposable
 
     private protected static (MainWindow Window, ReportPreviewView View) ShowReportWorkspace(MainWindowViewModel main, Files files, int width = 1250, int height = 800)
     {
-        var window = new MainWindow(TestHosts.Initialized(new DesktopApplicationHost(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default))))
-            { Width = width, Height = height };
+        var window = (TestHosts.Initialized(new DesktopApplicationHost(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default)))).Workspaces.CreateInitial().Window;
+        window.Width = width; window.Height = height;
         window.Show(); Dispatcher.UIThread.RunJobs();
         typeof(MainWindow).GetField("_model", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, main);
         window.DataContext = main;

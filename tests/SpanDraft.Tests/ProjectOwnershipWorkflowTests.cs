@@ -27,7 +27,7 @@ public sealed class ProjectOwnershipWorkflowTests
             Files = files ?? new();
             Resolver = resolver ?? Identities;
             Recovery = new(Files, Slot, Delay.Wait, () => Now);
-            Main = new(WindowId.Create(), Registry, Resolver, surfaceProject: () => Activations++,
+            Main = new(WindowId.Create(), Registry, Resolver, activateWorkspace: _ => Activations++,
                 analyze: beam => { Analyses++; return BeamAnalysis.Analyze(beam); }, files: Files, dialogs: Dialogs, recovery: Recovery);
         }
 

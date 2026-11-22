@@ -2,6 +2,7 @@ using SpanDraft.Desktop.Activation;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Services;
+using SpanDraft.Desktop.Workspaces;
 
 namespace SpanDraft.Desktop;
 
@@ -21,6 +22,7 @@ public sealed class DesktopApplicationHost
         Files = startup?.Files ?? new ProjectFileStore();
         ProjectIdentities = startup?.ProjectIdentities ?? new ProjectIdentityResolver();
         ProjectOpen = new(Files, ProjectIdentities, ProjectPaths);
+        Workspaces = new(this);
         var settingsStore = startup?.SettingsStore ?? LocalSettingsStore.Local(Files);
         StateStores = startup?.StateStores ?? DesktopStateStores.Local(Files);
         UserNameProvider = startup?.UserNameProvider ?? (static () => OperatingSystem.IsWindows() ? Environment.UserName : null);
@@ -34,6 +36,8 @@ public sealed class DesktopApplicationHost
     internal IProjectIdentityResolver ProjectIdentities { get; }
     internal ProjectPathRegistry ProjectPaths { get; } = new();
     internal ProjectOpenCoordinator ProjectOpen { get; }
+    /// <summary>The one workspace/window registry of the process.</summary>
+    internal WorkspaceWindowManager Workspaces { get; }
     /// <summary>The persistence bundle the services were built from; recovery stores are still used directly.</summary>
     public DesktopStateStores StateStores { get; }
     public SharedServices Services { get; }

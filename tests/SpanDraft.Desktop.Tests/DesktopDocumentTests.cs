@@ -143,7 +143,7 @@ public sealed class DesktopDocumentTests
         using var scope = new UiCultureScope(culture);
         var files = new Files();
         var host = TestHosts.Initialized(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default)));
-        var main = new MainWindow(host);
+        var main = host.Workspaces.CreateInitial().Window;
         files.BeforeRead = async path =>
         {
             if (path == host.StateStores.Recovery.SlotPath) await Dispatcher.Yield();

@@ -33,7 +33,7 @@ public sealed class DesktopWindowLifecycleTests
     {
         using var environment = new DesktopControlEnvironment();
         var host = Host(new Files());
-        var window = new MainWindow(host);
+        var window = host.Workspaces.CreateInitial().Window;
         Assert.Equal(DesktopApplicationState.Starting, host.State);
         DesktopControlEnvironment.ShowInitialized(window);
         Assert.Equal(DesktopApplicationState.Ready, host.State);
@@ -47,7 +47,7 @@ public sealed class DesktopWindowLifecycleTests
         using var environment = new DesktopControlEnvironment();
         var delay = new Delay();
         var host = Host(new Files(), delay, withRecovery: true);
-        var window = new MainWindow(host);
+        var window = host.Workspaces.CreateInitial().Window;
         window.Show(); Dispatcher.UIThread.RunJobs();
         var dialog = Assert.Single(window.OwnedWindows);
         Assert.Equal(DesktopApplicationState.Starting, host.State);
@@ -63,7 +63,7 @@ public sealed class DesktopWindowLifecycleTests
     {
         using var environment = new DesktopControlEnvironment();
         var host = Host(new Files(), withRecovery: true);
-        var window = new MainWindow(host);
+        var window = host.Workspaces.CreateInitial().Window;
         window.Show(); Dispatcher.UIThread.RunJobs();
         Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
         Assert.False(window.IsVisible);
@@ -83,7 +83,7 @@ public sealed class DesktopWindowLifecycleTests
     private static void QuitCore()
     {
         var host = Host(new Files(), withRecovery: true);
-        var window = new MainWindow(host);
+        var window = host.Workspaces.CreateInitial().Window;
         window.Show(); Dispatcher.UIThread.RunJobs();
         Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs();
         Assert.Equal(DesktopApplicationState.Ready, host.State);
@@ -116,7 +116,7 @@ public sealed class DesktopWindowLifecycleTests
             var recents = RecentProjectsStore.Local(files).FilePath;
             int recentReads = 0;
             files.BeforeRead = p => { if (p == recents) recentReads++; return Task.CompletedTask; };
-            var window = new MainWindow(host);
+            var window = host.Workspaces.CreateInitial().Window;
             window.Show(); Dispatcher.UIThread.RunJobs();
             Assert.Equal(DesktopApplicationState.Starting, host.State);
 
@@ -143,7 +143,7 @@ public sealed class DesktopWindowLifecycleTests
         files.BeforeRead = p => { reads.Add(p); return Task.CompletedTask; };
         // The bootstrap (here the test) loads the shared services from the host's stores; the window only adapts them.
         TestHosts.Initialized(host);
-        var window = new MainWindow(host);
+        var window = host.Workspaces.CreateInitial().Window;
         DesktopControlEnvironment.ShowInitialized(window);
         Assert.Contains(MaterialLibraryStore.Local(files).FilePath, reads);
         Assert.Contains(RecentProjectsStore.Local(files).FilePath, reads);

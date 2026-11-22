@@ -92,7 +92,7 @@ public sealed class DesktopDiagnosticsControlTests
         files.Data[path] = ProjectFileCodec.Serialize(State(4));
         var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default);
         using var culture = new UiCultureScope("en-US");
-        var main = new MainWindow(HostWithLaunchArguments(startup, [path]));
+        var main = (HostWithLaunchArguments(startup, [path])).Workspaces.CreateInitial().Window;
         DesktopControlEnvironment.ShowInitialized(main);
         var model = Assert.IsType<MainWindowViewModel>(main.DataContext);
         var editor = Assert.IsType<EditorViewModel>(model.Editor);

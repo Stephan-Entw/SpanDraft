@@ -44,7 +44,7 @@ public sealed class DesktopActivationWindowTests
         {
             var files = new Files();
             var host = Host(files);
-            var window = new MainWindow(host);
+            var window = host.Workspaces.CreateInitial().Window;
             string path = TestPath("activate-owned.spandraft");
             files.Data[path] = ProjectFileCodec.Serialize(State(3));
             int reads = 0, surfaced = 0;
@@ -80,7 +80,7 @@ public sealed class DesktopActivationWindowTests
             files.Data[a] = ProjectFileCodec.Serialize(State(1));
             files.Data[b] = ProjectFileCodec.Serialize(State(4));
             var host = Host(files);
-            var window = new MainWindow(host);
+            var window = host.Workspaces.CreateInitial().Window;
             DesktopControlEnvironment.ShowInitialized(window);
             var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
 
@@ -111,7 +111,7 @@ public sealed class DesktopActivationWindowTests
         files.Data[a] = ProjectFileCodec.Serialize(State(1));
         files.Data[target] = ProjectFileCodec.Serialize(State(4));
         host = Host(files);
-        window = new MainWindow(host);
+        window = host.Workspaces.CreateInitial().Window;
         DesktopControlEnvironment.ShowInitialized(window);
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
         host.HandleBrokerRequest(LaunchRequest.OpenProject(a)); Dispatcher.UIThread.RunJobs();
@@ -132,7 +132,7 @@ public sealed class DesktopActivationWindowTests
             files.Data[a] = ProjectFileCodec.Serialize(State(1));
             files.Data[b] = ProjectFileCodec.Serialize(State(4));
             var host = Host(files);
-            var window = new MainWindow(host);
+            var window = host.Workspaces.CreateInitial().Window;
             DesktopControlEnvironment.ShowInitialized(window);
             var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
             host.HandleBrokerRequest(LaunchRequest.OpenProject(a)); Dispatcher.UIThread.RunJobs();
@@ -221,7 +221,7 @@ public sealed class DesktopActivationWindowTests
         WithUiContext(() =>
         {
             var host = Host(new Files());
-            var window = new MainWindow(host);
+            var window = host.Workspaces.CreateInitial().Window;
             DesktopControlEnvironment.ShowInitialized(window);
             Assert.Empty(host.Activation.PendingOpenRequests());
             host.Activation.Enqueue(LaunchRequest.Activate);
@@ -244,7 +244,7 @@ public sealed class DesktopActivationWindowTests
             string target = TestPath("during-recovery.spandraft");
             files.Data[target] = ProjectFileCodec.Serialize(State(4));
             var host = Host(files, withRecovery: true);
-            var window = new MainWindow(host);
+            var window = host.Workspaces.CreateInitial().Window;
             window.Show(); Dispatcher.UIThread.RunJobs();
             var dialog = Assert.Single(window.OwnedWindows);
             var request = LaunchRequest.OpenProject(target);
@@ -274,7 +274,7 @@ public sealed class DesktopActivationWindowTests
     {
         using var environment = new DesktopControlEnvironment();
         var host = Host(new Files(), withRecovery: true);
-        var window = new MainWindow(host);
+        var window = host.Workspaces.CreateInitial().Window;
         window.Show(); Dispatcher.UIThread.RunJobs();
         var request = LaunchRequest.OpenProject(TestPath("lost.spandraft"));
         Assert.Equal(BrokerStatus.Retry, host.HandleBrokerRequest(request));
@@ -305,7 +305,7 @@ public sealed class DesktopActivationWindowTests
             using var broker = BrokerServer.Start(primary.Metadata);
             var host = Host(new Files(), withRecovery: true);
             host.AttachBroker(broker);
-            var window = new MainWindow(host);
+            var window = host.Workspaces.CreateInitial().Window;
             window.Show(); Dispatcher.UIThread.RunJobs();
             var request = LaunchRequest.Activate;
             var retry = BrokerClient.SendAsync(primary.Metadata, request, TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
@@ -362,7 +362,7 @@ public sealed class DesktopActivationWindowTests
         var files = new Files();
         foreach (var (path, index) in projects.Select((p, i) => (p, i))) files.Data[path] = ProjectFileCodec.Serialize(State(index + 2));
         var host = Host(files, withRecovery: true);
-        return (host, new MainWindow(host), files, ProjectRecovery.Local(files).SlotPath);
+        return (host, host.Workspaces.CreateInitial().Window, files, ProjectRecovery.Local(files).SlotPath);
     }
 
     [Fact]

@@ -89,7 +89,7 @@ public sealed class DesktopCultureTests
         files.Data[setupSlot] = setupBytes;
         var projectSlot = ProjectRecovery.Local(files).SlotPath;
         if (restoreProject) files.Data[projectSlot] = ProjectRecovery.Encode(new(State(), null, Now));
-        var window = new MainWindow(TestHosts.Initialized(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default))));
+        var window = (TestHosts.Initialized(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default)))).Workspaces.CreateInitial().Window;
         window.Show(); Dispatcher.UIThread.RunJobs();
         if (restoreProject)
         {

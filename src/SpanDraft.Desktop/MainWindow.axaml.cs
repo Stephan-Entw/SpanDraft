@@ -10,6 +10,7 @@ using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.ViewModels;
+using SpanDraft.Desktop.Workspaces;
 
 namespace SpanDraft.Desktop;
 
@@ -21,7 +22,8 @@ public partial class MainWindow : Window
     private readonly KeyModifiers _primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
     private ProjectDialogs _dialogs = null!;
     private readonly DesktopApplicationHost _host;
-    internal WindowId WindowId { get; } = WindowId.Create();
+    private readonly WorkspaceWindowHandle _handle;
+    internal WindowId WindowId => _handle.WindowId;
     private bool _closing;
     private bool _closeApproved;
     private AboutWindow? _aboutWindow;
@@ -46,13 +48,14 @@ public partial class MainWindow : Window
         return await _frameProbe.ObserveNextFrameAsync(TimeProvider.System, cancellationToken) is not null;
     }
 
-    public MainWindow() : this(new DesktopApplicationHost()) { }
+    /// <summary>Designer/XAML-loader entry only; workspaces are created through the <see cref="WorkspaceWindowManager"/>.</summary>
+    public MainWindow() : this(new DesktopApplicationHost(), new WorkspaceWindowHandle(WindowId.Create(), WorkspaceCreationReason.None, isInitial: false)) { }
 
-    public MainWindow(DesktopApplicationHost host)
+    internal MainWindow(DesktopApplicationHost host, WorkspaceWindowHandle handle)
     {
         InitializeComponent();
         _host = host;
-        host.RetryServed += () => Dispatcher.UIThread.Post(() => Surface(RetryTarget));
+        _handle = handle;
         var files = host.Files;
         NewMenuItem.InputGesture = new(Key.N, _primary);
         OpenMenuItem.InputGesture = new(Key.O, _primary);
@@ -104,13 +107,26 @@ public partial class MainWindow : Window
                 _frameProbe = new(this, WorkspaceContent);
                 _performance = new(_frameProbe);
                 var stores = host.StateStores;
+                // Only the initial workspace owns the legacy recovery slots; further workspaces get none until Phase 6.
+                bool legacy = _handle.IsInitial;
                 // The shared services were initialized by the bootstrap; this window only adapts them.
-                _model = new(performance: _performance, files: files, dialogs: _dialogs, recovery: stores.Recovery,
-                    setupRecovery: stores.SetupRecovery, services: host.Services, openUserManual: OpenUserManualAsync,
+                _model = new(performance: _performance, files: files, dialogs: _dialogs, recovery: legacy ? stores.Recovery : null,
+                    setupRecovery: legacy ? stores.SetupRecovery : null, services: host.Services, openUserManual: OpenUserManualAsync,
                     userNameProvider: host.UserNameProvider, windowId: WindowId, projectIdentities: host.ProjectIdentities,
-                    projectPaths: host.ProjectPaths, projectOpen: host.ProjectOpen, surfaceProject: () => Surface(this));
+                    projectPaths: host.ProjectPaths, projectOpen: host.ProjectOpen,
+                    activateWorkspace: id => host.Workspaces.Activate(id),
+                    ownerProjectPath: id => host.Workspaces.Find(id)?.Model?.Session?.FilePath);
+                host.Workspaces.BindModel(_handle, _model);
                 await _model.ReportStartupErrorsAsync();
                 DataContext = _model;
+                if (!legacy)
+                {
+                    _initializing = false;
+                    quitCommand.Refresh();
+                    _model.PropertyChanged += (_, _) => host.Workspaces.PostPump();
+                    _initialization.TrySetResult();
+                    return;
+                }
                 var discardConfirmed = new HashSet<LaunchRequest>(ReferenceEqualityComparer.Instance);
                 while (!await _model.InitializeRecoveryAsync())
                 {
@@ -127,8 +143,7 @@ public partial class MainWindow : Window
                 quitCommand.Refresh();
                 host.MarkReady();
                 // Requests wait in the host queue; a restored setup draft keeps the workspace unavailable for opens.
-                host.Activation.SetConsumer(HandleLaunchRequestAsync);
-                host.Activation.Enqueued += PostPump;
+                host.Workspaces.EnableActivation();
                 _model.PropertyChanged += (_, _) => PostPump();
                 await host.Activation.PumpAsync();
                 _initialization.TrySetResult();
@@ -143,10 +158,20 @@ public partial class MainWindow : Window
         Closing += WindowClosing;
         Closed += (_, _) =>
         {
+            // The one final cleanup of this workspace; appwide infrastructure ends only with the last workspace.
+            _handle.CloseOwnedWindows();
             _model?.Dispose();
-            host.Activation.SetConsumer(null);
-            host.Activation.Enqueued -= PostPump;
-            host.BeginShutdown();
+            if (host.Workspaces.Deregister(_handle))
+            {
+                host.Workspaces.DisableActivation();
+                host.BeginShutdown();
+            }
+            else if (_handle.IsInitial && host.State == DesktopApplicationState.Starting)
+            {
+                // The initial workspace left before it made the host Ready; another workspace must not stay unreachable.
+                host.MarkReady();
+                host.Workspaces.EnableActivation();
+            }
             _performance?.CancelPending();
             _frameProbe?.Dispose();
             _model?.ReleaseReport();
@@ -165,13 +190,16 @@ public partial class MainWindow : Window
         target.Activate();
     };
 
-    private void PostPump() => Dispatcher.UIThread.Post(async () =>
-    {
-        try { await _host.Activation.PumpAsync(); }
-        catch (Exception error) { Dispatcher.UIThread.Post(() => System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error)); }
-    });
+    private void PostPump() => _host.Workspaces.PostPump();
 
-    private async Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
+    /// <summary>Closes the window without the leave workflow; only the workspace manager's internal close uses it.</summary>
+    internal void CloseApproved()
+    {
+        _closeApproved = true;
+        Close();
+    }
+
+    internal async Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
     {
         if (_initializing || _closing || _host.State == DesktopApplicationState.ShuttingDown) return false;
         if (request.Type == LaunchRequestType.OpenProject)
@@ -215,6 +243,7 @@ public partial class MainWindow : Window
         if (_diagnosticsWindow is not null) { _diagnosticsWindow.Activate(); return; }
         var window = new DiagnosticsWindow(new(_performance)) { Icon = Icon };
         _diagnosticsWindow = window;
+        _handle.AttachOwnedWindow(window);
         window.Closed += (_, _) => _diagnosticsWindow = null;
         window.Show(this);
     }
@@ -324,22 +353,28 @@ public partial class MainWindow : Window
         e.Cancel = true;
         if (_initializing || _closing || _model.IsWorkspaceBusy || _settingsWindow is not null) return;
         _closing = true;
-        _host.BeginQuit();
+        // App-wide quit state belongs to the last workspace only; closing one of several windows must not touch the host.
+        // (Quitting all workspaces at once is the application quit's job, Phase 9.)
+        bool quitting = false;
+        void CancelQuit() { if (quitting) _host.CancelQuit(); }
+        if (_host.Workspaces.IsLast(_handle)) { _host.BeginQuit(); quitting = true; }
         bool committed = false;
         try
         {
             var confirmed = new HashSet<LaunchRequest>(ReferenceEqualityComparer.Instance);
-            if (!await ConfirmDiscardPendingRequestsAsync(confirmed)) { _host.CancelQuit(); return; }
-            if (!await _model.RequestCloseAsync()) { _host.CancelQuit(); return; }
+            if (quitting && !await ConfirmDiscardPendingRequestsAsync(confirmed)) { CancelQuit(); return; }
+            if (!await _model.RequestCloseAsync()) { CancelQuit(); return; }
+            // Another workspace may have gone away while the leave dialogs were open.
+            if (!quitting && _host.Workspaces.IsLast(_handle)) { _host.BeginQuit(); quitting = true; }
             // Requests accepted while the close dialogs were open (e.g. macOS file activations) are asked about too.
-            if (!await ConfirmAndCommitShutdownAsync(confirmed)) { _host.CancelQuit(); return; }
+            if (quitting && !await ConfirmAndCommitShutdownAsync(confirmed)) { CancelQuit(); return; }
             committed = true;
             _closeApproved = true;
             IsEnabled = false;
             // Even a synchronously completed guard must finish the current Closing event first.
             Dispatcher.UIThread.Post(Close, DispatcherPriority.Send);
         }
-        catch { _host.CancelQuit(); throw; }
+        catch { CancelQuit(); throw; }
         finally
         {
             _closing = false;

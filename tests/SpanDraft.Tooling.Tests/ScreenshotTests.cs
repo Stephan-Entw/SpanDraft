@@ -446,7 +446,7 @@ public sealed class DesktopIsolatedStartupTests
             Assert.Empty(host.Recents.Entries);
             gate.SetResult();
             Complete(services);
-            window = new MainWindow(host);
+            window = host.Workspaces.CreateInitial().Window;
             window.Show(); Dispatcher.UIThread.RunJobs();
             Assert.True(window.Initialization.IsCompletedSuccessfully);
             var model = Assert.IsType<MainWindowViewModel>(window.DataContext);
@@ -474,7 +474,7 @@ public sealed class DesktopIsolatedStartupTests
         var settings = new LocalSettingsStore(files, Path.Combine(root, "settings.json"));
         var startup = new DesktopStartupContext(files, settings, UserSettings.Default)
             { StateStores = stores, UserNameProvider = static () => "Neutral author" };
-        var window = new MainWindow(TestHosts.Initialized(new DesktopApplicationHost(startup)));
+        var window = (TestHosts.Initialized(new DesktopApplicationHost(startup))).Workspaces.CreateInitial().Window;
         Assert.False(window.Initialization.IsCompleted);
         try
         {

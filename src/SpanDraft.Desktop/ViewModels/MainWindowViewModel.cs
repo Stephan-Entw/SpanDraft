@@ -23,7 +23,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     private readonly IProjectIdentityResolver _projectIdentities;
     private readonly ProjectPathRegistry _projectPaths;
     private readonly ProjectOpenCoordinator _projectOpen;
-    private readonly Action? _surfaceProject;
+    private readonly Action<WindowId>? _activateWorkspace;
+    private readonly Func<WindowId, string?>? _ownerProjectPath;
     internal WindowId WindowId { get; }
     private readonly IProjectDialogs? _dialogs;
     private readonly ProjectRecovery? _recovery;
@@ -55,7 +56,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
             setupRecovery: setupRecovery, userNameProvider: userNameProvider, performance: performance) { }
 
     internal MainWindowViewModel(WindowId windowId, ProjectPathRegistry projectPaths, IProjectIdentityResolver projectIdentities,
-        ProjectOpenCoordinator? projectOpen = null, Action? surfaceProject = null,
+        ProjectOpenCoordinator? projectOpen = null, Action<WindowId>? activateWorkspace = null,
+        Func<WindowId, string?>? ownerProjectPath = null,
         Func<BeamModel, BeamAnalysisOutcome>? analyze = null, IProjectFileStore? files = null,
         IProjectDialogs? dialogs = null, ProjectRecovery? recovery = null, SharedServices? services = null,
         Func<Task>? openUserManual = null, ProjectSetupRecovery? setupRecovery = null, Func<string?>? userNameProvider = null,
@@ -68,7 +70,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         _projectIdentities = projectIdentities;
         _projectPaths = projectPaths;
         _projectOpen = projectOpen ?? new(_files, projectIdentities, projectPaths);
-        _surfaceProject = surfaceProject;
+        _activateWorkspace = activateWorkspace;
+        _ownerProjectPath = ownerProjectPath;
         _dialogs = dialogs;
         _recovery = recovery;
         _setupRecovery = setupRecovery;
@@ -204,6 +207,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         Notify(nameof(ResultPresentation));
     }
     public ProjectSession? Session => Editor?.Session;
+    internal bool HasProject => Session is not null;
+
+    // Workspace ownership hooks; the WorkspaceWindowManager wires them, the view model never knows other workspaces.
+    internal event Action? SessionActivated;
+    internal event Action? SetupCancelled;
+    /// <summary>Raised while the project is closed, before the start page is shown; the owner decides start page or close (§14).</summary>
+    internal Action? ProjectClosing { get; set; }
     public bool IsBusy => _busy || _libraryBusy || _settingsSaving || ReportPreview?.IsBusy == true;
     /// <summary>An operation is running anywhere in this workspace (an open editor alone is not one).</summary>
     private bool HasRunningOperation => IsBusy || Mode == MainViewMode.ProjectSetup
@@ -392,6 +402,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         bool create = Setup.Mode == ProjectSetupMode.Create;
         Navigate(_setupReturnMode);
         if (create) await DeleteSetupRecoveryAsync();
+        if (create && Session is null) SetupCancelled?.Invoke();
         return true;
     });
 
@@ -418,6 +429,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         session.Changed += SessionChanged;
         session.StateApplied += CommittedStateChanged;
         Navigate(MainViewMode.Editor);
+        SessionActivated?.Invoke();
     }
 
     private void DetachSession()
@@ -470,8 +482,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         try
         {
             var result = await _projectOpen.OpenAsync(path, new SingleWindowOpen(this, path, fromRecent));
-            if (result.Status == ProjectOpenStatus.AlreadyOpen && CanOpenProject && Session?.FilePath is { } existingPath)
-                await RunOperationAsync(async () => { await RecordRecentAsync(existingPath); return true; });
+            if (result.Status == ProjectOpenStatus.AlreadyOpen && CanOpenProject)
+            {
+                // The project belongs to the owning workspace; this request records the canonical target, not its own session.
+                var target = result.Owner is { } owner ? _ownerProjectPath?.Invoke(owner) : null;
+                target ??= _projectIdentities.Resolve(Path.GetFullPath(path)).CanonicalPath;
+                await RunOperationAsync(async () => { await RecordRecentAsync(target); return true; });
+            }
             return result.Status is ProjectOpenStatus.Opened or ProjectOpenStatus.AlreadyOpen;
         }
         catch (Exception e) when (IsFileError(e))
@@ -528,7 +545,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
         public void ActivateExisting(WindowId owner)
         {
-            if (owner == WindowId) model._surfaceProject?.Invoke();
+            model._activateWorkspace?.Invoke(owner);
         }
 
         // Legacy recovery is decided before startup becomes Ready; Phase 6 supplies this surface.
@@ -545,6 +562,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         DetachSession();
         _projectPaths.ReleaseOwner(WindowId);
         _editor = null;
+        // Without another start workspace this one becomes the start page; otherwise its owner closes the window (§14).
+        // The model shows the start page either way, so its state stays consistent until the window is gone.
+        ProjectClosing?.Invoke();
         Navigate(MainViewMode.Start);
         return true;
     });

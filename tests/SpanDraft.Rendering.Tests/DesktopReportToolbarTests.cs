@@ -338,7 +338,7 @@ public sealed class DesktopReportToolbarTests
         var files = new Files(); string path = TestPath("toolbar.spandraft");
         var state = State();
         files.Data[path] = ProjectFileCodec.Serialize(state with { Document = state.Document with { Length = M(1) } });
-        var window = new MainWindow(TestHosts.Initialized(new DesktopApplicationHost(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default))));
+        var window = (TestHosts.Initialized(new DesktopApplicationHost(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default)))).Workspaces.CreateInitial().Window;
         window.Show(); Dispatcher.UIThread.RunJobs();
         var main = new MainWindowViewModel(files: files, projectIdentities: ProjectTestSupport.Identities);
         Assert.True(main.OpenAsync(path).GetAwaiter().GetResult());
