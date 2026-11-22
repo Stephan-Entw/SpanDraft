@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Test-only helper: one real OS process taking part in the Single-Instance election (see ActivationProcessTests). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/SpanDraft.Desktop/SpanDraft.Desktop.csproj" />
+  </ItemGroup>
+</Project>

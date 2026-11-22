@@ -6,6 +6,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/SpanDraft.Desktop/SpanDraft.Desktop.csproj" />
+    <!-- Built and copied next to the tests; ActivationProcessTests start it as separate OS processes. -->
+    <ProjectReference Include="../SpanDraft.Activation.ProcessHost/SpanDraft.Activation.ProcessHost.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.1" />
