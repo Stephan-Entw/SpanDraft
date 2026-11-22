@@ -258,7 +258,7 @@ public sealed class SectionDefinitionHistoryTests
         public bool ContainsName(string name) => Items.Any(i => i.Name == name);
         public async Task<string?> SaveAsync(SectionLibraryEntry entry)
         { if (Completion is not null) await Completion.Task; Items.Add(entry); return null; }
-        public Task<string?> DeleteAsync(string name)
-        { Items.RemoveAll(e => e.Name == name); return Task.FromResult<string?>(null); }
+        public Task<string?> DeleteAsync(SectionLibraryEntry entry)
+        { Items.RemoveAll(e => e.Name == entry.Name); return Task.FromResult<string?>(null); }
     }
 }

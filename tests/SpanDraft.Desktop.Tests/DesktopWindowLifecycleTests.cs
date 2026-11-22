@@ -5,6 +5,7 @@ using Avalonia.VisualTree;
 using SpanDraft.Desktop;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Desktop.Services;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
@@ -101,7 +102,7 @@ public sealed class DesktopWindowLifecycleTests
     }
 
     [Fact]
-    public void CancelledQuitDuringStartupKeepsStartingUntilRecentsAreRead()
+    public void RestoringTheRecoveryMakesTheHostReadyWithoutReadingTheSharedServicesAgain()
     {
         using var environment = new DesktopControlEnvironment();
         var previous = SynchronizationContext.Current;
@@ -110,21 +111,22 @@ public sealed class DesktopWindowLifecycleTests
         {
             var files = new Files();
             var host = Host(files, withRecovery: true);
-            var gate = new TaskCompletionSource();
+            // Libraries and recents are shared services, loaded during bootstrap before any window exists.
+            TestHosts.Initialized(host);
             var recents = RecentProjectsStore.Local(files).FilePath;
-            files.BeforeRead = p => p == recents ? gate.Task : Task.CompletedTask;
+            int recentReads = 0;
+            files.BeforeRead = p => { if (p == recents) recentReads++; return Task.CompletedTask; };
             var window = new MainWindow(host);
             window.Show(); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(DesktopApplicationState.Starting, host.State);
+
+            // The cancelled quit during the open recovery restores Starting; Ready follows only with the restore.
+            host.BeginQuit(); Assert.Equal(DesktopApplicationState.QuitInProgress, host.State);
+            host.CancelQuit(); Assert.Equal(DesktopApplicationState.Starting, host.State);
+
             Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs();
-            Assert.Equal(DesktopApplicationState.Starting, host.State);
-
-            window.FindControl<MenuItem>("QuitMenuItem")!.Command!.Execute(null); Dispatcher.UIThread.RunJobs();
-            Assert.Equal(DesktopApplicationState.QuitInProgress, host.State);
-            Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
-            Assert.Equal(DesktopApplicationState.Starting, host.State);
-
-            gate.SetResult(); Dispatcher.UIThread.RunJobs();
             Assert.Equal(DesktopApplicationState.Ready, host.State);
+            Assert.Equal(0, recentReads);
         }
         finally { SynchronizationContext.SetSynchronizationContext(previous); }
     }
@@ -139,6 +141,8 @@ public sealed class DesktopWindowLifecycleTests
         { StateStores = DesktopStateStores.Local(files) });
         var reads = new List<string>();
         files.BeforeRead = p => { reads.Add(p); return Task.CompletedTask; };
+        // The bootstrap (here the test) loads the shared services from the host's stores; the window only adapts them.
+        TestHosts.Initialized(host);
         var window = new MainWindow(host);
         window.Show(); Dispatcher.UIThread.RunJobs();
         Assert.True(window.Initialization.IsCompletedSuccessfully);
@@ -147,7 +151,7 @@ public sealed class DesktopWindowLifecycleTests
         Assert.Contains(ProjectRecovery.Local(files).SlotPath, reads);
 
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
-        var apply = main.ApplySettingsAsync(UserSettings.Default with { SignificantDigits = 5 });
+        var apply = main.ApplySettingsAsync(SettingsPatch.From(UserSettings.Default with { SignificantDigits = 5 }));
         Dispatcher.UIThread.RunJobs();
         Assert.True(apply.IsCompletedSuccessfully);
         Assert.Contains(settingsPath, files.Writes);

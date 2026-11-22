@@ -27,11 +27,11 @@ public abstract class SectionDefinitionRedesignTestSupport
             if (error is null) Source.Add(entry);
             return error;
         }
-        public async Task<string?> DeleteAsync(string name)
+        public async Task<string?> DeleteAsync(SectionLibraryEntry entry)
         {
             DeleteCalls++;
             string? error = DeleteCompletion is null ? DeleteError : await DeleteCompletion.Task;
-            if (error is null && !CancelDelete) Source.Remove(name);
+            if (error is null && !CancelDelete) Source.Remove(entry.Name);
             return error;
         }
     }

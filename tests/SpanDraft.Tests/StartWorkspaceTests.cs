@@ -22,7 +22,7 @@ public sealed class StartWorkspaceTests
         public Fixture()
         {
             Store = new(Files, Slot, () => Time);
-            Main = new(files: Files, dialogs: Dialogs, recentStore: Store);
+            Main = new(files: Files, dialogs: Dialogs, services: TestServices.Create(recentStore: Store, load: false));
         }
         public async Task Create()
         { Assert.True(await Main.NewAsync()); ProjectTestSupport.CompleteSetup(Main); Assert.True(await Main.Setup.ConfirmAsync()); }
@@ -88,8 +88,8 @@ public sealed class StartWorkspaceTests
             return Task.CompletedTask;
         };
         Assert.True(await f.Main.OpenAsync()); Assert.Equal(path, Assert.Single(f.Store.Entries).Path);
-        var fresh = new MainWindowViewModel(files: f.Files, dialogs: f.Dialogs, recentStore: f.Store);
-        await fresh.InitializeRecentProjectsAsync();
+        var fresh = new MainWindowViewModel(files: f.Files, dialogs: f.Dialogs, services: TestServices.Create(recentStore: f.Store, load: false));
+        await fresh.Services.InitializeAsync();
         f.Files.BeforeWrite = null; f.Dialogs.OpenPath = TestPath("picker-must-not-be-used.spandraft");
         Assert.Single(fresh.StartPage.RecentProjects).OpenCommand.Execute(null);
         Assert.Equal(MainViewMode.Editor, fresh.Mode); Assert.Equal(path, fresh.Session!.FilePath);
@@ -102,7 +102,7 @@ public sealed class StartWorkspaceTests
     {
         var f = new Fixture(); string path = TestPath("missing.spandraft"), other = TestPath("other.spandraft");
         await f.Store.RecordUseAsync(other); await f.Store.RecordUseAsync(path);
-        await f.Main.InitializeRecentProjectsAsync();
+        await f.Main.Services.InitializeAsync();
         var otherEntry = f.Store.Entries.Single(e => e.Path == other);
         int writes = f.Files.Writes.Count;
         f.Dialogs.RemoveMissingRecent = remove;
@@ -123,7 +123,7 @@ public sealed class StartWorkspaceTests
     {
         var f = new Fixture(); await f.Create();
         string path = TestPath("missing.spandraft");
-        await f.Store.RecordUseAsync(path); await f.Main.InitializeRecentProjectsAsync();
+        await f.Store.RecordUseAsync(path); await f.Main.Services.InitializeAsync();
         var session = f.Main.Session; var editor = f.Main.Editor; var revision = session!.CurrentRevision;
         f.Dialogs.RemoveMissingRecent = remove;
         Assert.False(await f.Main.OpenRecentAsync(path));
@@ -139,7 +139,7 @@ public sealed class StartWorkspaceTests
     public async Task InvalidOrUnreadableRecentKeepsEntryAndReportsExistingProjectError(string failure)
     {
         var f = new Fixture(); string path = TestPath("unavailable.spandraft");
-        await f.Store.RecordUseAsync(path); await f.Main.InitializeRecentProjectsAsync();
+        await f.Store.RecordUseAsync(path); await f.Main.Services.InitializeAsync();
         f.Files.Data[path] = Encoding.UTF8.GetBytes("{}");
         f.Files.BeforeRead = p => p != path || failure == "invalid" ? Task.CompletedTask
             : throw (failure == "access" ? new UnauthorizedAccessException("Denied") : new IOException("Unreadable"));
@@ -158,7 +158,7 @@ public sealed class StartWorkspaceTests
     public async Task MissingDirectOpenKeepsRecentsAndUsesExistingError(bool picker)
     {
         var f = new Fixture(); string path = TestPath("missing.spandraft");
-        await f.Store.RecordUseAsync(path); await f.Main.InitializeRecentProjectsAsync();
+        await f.Store.RecordUseAsync(path); await f.Main.Services.InitializeAsync();
         var entries = f.Store.Entries; int writes = f.Files.Writes.Count;
         f.Dialogs.OpenPath = path; f.Dialogs.RemoveMissingRecent = true;
         Assert.False(picker ? await f.Main.OpenAsync() : await f.Main.OpenAsync(path));
@@ -171,7 +171,7 @@ public sealed class StartWorkspaceTests
     public async Task MissingRecentRemovalSurvivesPersistenceFailure()
     {
         var f = new Fixture(); string path = TestPath("missing.spandraft");
-        await f.Store.RecordUseAsync(path); await f.Main.InitializeRecentProjectsAsync();
+        await f.Store.RecordUseAsync(path); await f.Main.Services.InitializeAsync();
         f.Files.FailWritePath = Fixture.Slot; f.Dialogs.RemoveMissingRecent = true;
         Assert.False(await f.Main.OpenRecentAsync(path));
         Assert.Empty(f.Store.Entries); Assert.True(f.Main.StartPage.IsEmpty);
@@ -249,7 +249,7 @@ public sealed class StartWorkspaceTests
     {
         var f = new Fixture(); var entered = new TaskCompletionSource(); var release = new TaskCompletionSource();
         f.Files.BeforeRead = async _ => { entered.SetResult(); await WaitFor(release.Task); };
-        var load = f.Main.InitializeRecentProjectsAsync(); await WaitForCheckpoint(entered.Task, load);
+        var load = f.Main.Services.InitializeAsync(); await WaitForCheckpoint(entered.Task, load);
         Assert.Equal(MainViewMode.Start, f.Main.Mode); Assert.False(f.Main.IsWorkspaceBusy);
         Assert.True(f.Main.NewCommand.CanExecute(null)); Assert.True(await f.Main.NewAsync());
         release.SetResult(); await WaitFor(load); Assert.Equal(MainViewMode.ProjectSetup, f.Main.Mode);

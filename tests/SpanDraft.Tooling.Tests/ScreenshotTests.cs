@@ -419,8 +419,11 @@ public sealed class ScreenshotTests
 [Collection("Avalonia")]
 public sealed class DesktopIsolatedStartupTests
 {
+    // The window environment owns the test thread's dispatcher, so the test stays synchronous.
+    private static void Complete(Task task) => task.GetAwaiter().GetResult();
+
     [Fact]
-    public void InitializationWaitsForRecentsAndShellOpenBeforeSignalingReadiness()
+    public void ReadinessWaitsForTheSharedServicesBeforeTheWindowOpensTheStartupFile()
     {
         using var environment = new DesktopControlEnvironment();
         var files = new Files();
@@ -430,22 +433,30 @@ public sealed class DesktopIsolatedStartupTests
         var gate = new TaskCompletionSource();
         files.BeforeRead = path => path == stores.Recents.FilePath ? gate.Task : Task.CompletedTask;
         files.Data[fixture] = File.ReadAllBytes(fixture);
-        var window = new MainWindow(HostWithLaunchArguments(new(files, new(files, Path.Combine(root, "settings.json")), UserSettings.Default)
-            { StateStores = stores, UserNameProvider = static () => null }, [fixture]));
+        var host = new DesktopApplicationHost(new(files, new(files, Path.Combine(root, "settings.json")), UserSettings.Default)
+            { StateStores = stores, UserNameProvider = static () => null });
+        host.SetInitialRequest(SpanDraft.Desktop.Activation.LaunchRequest.FromArguments([fixture]));
+        // The bootstrap loads the shared services before any window exists; the pending recents read holds it back.
+        var services = host.InitializeServicesAsync();
+        MainWindow? window = null;
         try
         {
+            Assert.False(services.IsCompleted);
+            Assert.Equal(DesktopApplicationState.Starting, host.State);
+            Assert.Empty(host.Recents.Entries);
+            gate.SetResult();
+            Complete(services);
+            window = new MainWindow(host);
             window.Show(); Dispatcher.UIThread.RunJobs();
-            Assert.False(window.Initialization.IsCompleted);
-            var model = Assert.IsType<MainWindowViewModel>(window.DataContext); Assert.Null(model.Session);
-            Assert.Null(model.Setup.AuthorInput.ConfirmedValue);
-            gate.SetResult(); Dispatcher.UIThread.RunJobs();
             Assert.True(window.Initialization.IsCompletedSuccessfully);
+            var model = Assert.IsType<MainWindowViewModel>(window.DataContext);
             Assert.Equal(fixture, model.Session!.FilePath);
             Assert.Equal(fixture, Assert.Single(model.StartPage.RecentProjects).FilePath);
         }
         finally
         {
-            gate.TrySetResult(); window.Close(); Dispatcher.UIThread.RunJobs();
+            gate.TrySetResult();
+            if (window is not null) { window.Close(); Dispatcher.UIThread.RunJobs(); }
             if (Directory.Exists(root)) Directory.Delete(root);
         }
     }
@@ -463,14 +474,15 @@ public sealed class DesktopIsolatedStartupTests
         var settings = new LocalSettingsStore(files, Path.Combine(root, "settings.json"));
         var startup = new DesktopStartupContext(files, settings, UserSettings.Default)
             { StateStores = stores, UserNameProvider = static () => "Neutral author" };
-        var window = new MainWindow(new DesktopApplicationHost(startup));
+        var window = new MainWindow(TestHosts.Initialized(new DesktopApplicationHost(startup)));
         Assert.False(window.Initialization.IsCompleted);
         try
         {
             window.Show(); Dispatcher.UIThread.RunJobs();
             Assert.True(window.Initialization.IsCompletedSuccessfully);
-            Assert.Equal(new[] { stores.Materials.FilePath, stores.Sections.FilePath, stores.Recovery.SlotPath,
-                stores.SetupRecovery.SlotPath, stores.Recents.FilePath }, reads);
+            // The shared services load during bootstrap, before the window recovers its own slots.
+            Assert.Equal(new[] { stores.Materials.FilePath, stores.Sections.FilePath, stores.Recents.FilePath,
+                stores.Recovery.SlotPath, stores.SetupRecovery.SlotPath }, reads);
             var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
             Assert.Equal("Neutral author", main.Setup.AuthorInput.ConfirmedValue);
             Assert.True(await main.OpenAsync(fixture));

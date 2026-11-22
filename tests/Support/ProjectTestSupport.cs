@@ -16,7 +16,7 @@ internal static class ProjectTestSupport
     /// <summary>A host that holds the initial request exactly as Program hands it over.</summary>
     public static DesktopApplicationHost HostWithLaunchArguments(DesktopStartupContext startup, string[]? args)
     {
-        var host = new DesktopApplicationHost(startup);
+        var host = TestHosts.Initialized(new DesktopApplicationHost(startup));
         host.SetInitialRequest(SpanDraft.Desktop.Activation.LaunchRequest.FromArguments(args));
         return host;
     }

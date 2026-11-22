@@ -41,9 +41,10 @@ public sealed class DesktopShellCommandTests
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
         var expectedReads = new List<string>
         {
+            // Shared services (libraries, recents) load during bootstrap, before any window; recovery follows in the window.
             MaterialLibraryStore.Local(files).FilePath, SectionLibraryStore.Local(files).FilePath,
-            ProjectRecovery.Local(files).SlotPath, ProjectSetupRecovery.Local(files).SlotPath,
-            RecentProjectsStore.Local(files).FilePath
+            RecentProjectsStore.Local(files).FilePath,
+            ProjectRecovery.Local(files).SlotPath, ProjectSetupRecovery.Local(files).SlotPath
         };
         if (arguments is "valid" or "uppercase")
         {
@@ -97,7 +98,10 @@ public sealed class DesktopShellCommandTests
             Assert.Equal(projectBytes, files.Data[projectSlot]);
         }
         Assert.Equal(setupBytes, files.Data[setupSlot]); Assert.Empty(files.Writes);
-        Assert.DoesNotContain(target, reads); Assert.Equal(recents, reads[^1]);
+        Assert.DoesNotContain(target, reads);
+        // Recents belong to the shared services: read once during bootstrap, before the recovery slots.
+        Assert.Equal(1, reads.Count(r => r == recents));
+        Assert.True(reads.IndexOf(recents) < reads.IndexOf(setupSlot));
         Assert.Empty(window.OwnedWindows);
         if (restoreProject)
         {
@@ -162,7 +166,8 @@ public sealed class DesktopShellCommandTests
 
             Assert.True(closed); Assert.False(window.IsVisible); Assert.Null(main.Session);
             Assert.Equal(bytes, files.Data[slot]); Assert.Empty(files.Writes);
-            Assert.Equal(0, recentReads); Assert.Equal(0, targetReads);
+            // One shared recents read per host (bootstrap); cancelling the recovery never reads it again nor the startup file.
+            Assert.Equal(attempt + 1, recentReads); Assert.Equal(0, targetReads);
         }
     }
 

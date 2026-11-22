@@ -72,7 +72,7 @@ public sealed class ProcessCultureTests
         var culture = CultureInfo.CurrentCulture; var uiCulture = CultureInfo.CurrentUICulture;
         var files = new Files(); var store = new LocalSettingsStore(files, "settings");
         await store.SaveAsync(UserSettings.Default);
-        var main = new MainWindowViewModel(files: files, settingsStore: store);
+        var main = new MainWindowViewModel(files: files, services: TestServices.Create(settingsStore: store));
         var dialog = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
         dialog.SelectedUiLanguage = UiLanguagePreference.English;
         dialog.SelectedRegionalFormat = RegionalFormatPreference.EnglishUnitedStates;
@@ -90,7 +90,7 @@ public sealed class ProcessCultureTests
             Assert.True(UserSettings.Default.ContentEquals(await store.LoadAsync()));
             return;
         }
-        Assert.Same(pending, main.Settings); Assert.False(dialog.HasChanges);
+        Assert.True(pending.ContentEquals(main.Settings)); Assert.False(dialog.HasChanges);
         Assert.Same(UnitProfile.UnitedStates, main.ResultPresentation.Profile);
         Assert.Equal(5, main.ResultPresentation.SignificantDigits);
         var reopened = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);

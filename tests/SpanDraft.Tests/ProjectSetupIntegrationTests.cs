@@ -60,14 +60,15 @@ public sealed class ProjectSetupIntegrationTests
     [Fact]
     public async Task CompleteCreateDraftIsBlockedOnSubpagesAndWhileLibrariesAreBusy()
     {
-        var files = new Files(); var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials"));
+        var files = new Files(); var main = new MainWindowViewModel(files: files, services: TestServices.Create(materialStore: new(files, "materials")));
         Assert.True(await main.NewAsync()); CompleteSetup(main); var setup = main.Setup;
         Assert.True(setup.CanApply);
         setup.ShowMaterials(); Assert.False(setup.CanApply); setup.Escape(); Assert.True(setup.CanApply);
         setup.ShowSections(); Assert.False(setup.CanApply); setup.Escape(); Assert.True(setup.CanApply);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        files.BeforeRead = _ => release.Task;
-        var loading = main.InitializeLibrariesAsync();
+        // A running library operation (here a held write) makes the workspace busy; loading is no workspace state any more.
+        files.BeforeWrite = (_, _, _) => release.Task;
+        var loading = main.SaveMaterialAsync(MaterialTestEntries.Entry("Busy"));
         try
         {
             Assert.True(setup.IsBusy); Assert.False(setup.CanApply); Assert.False(setup.ApplyCommand.CanExecute(null));
@@ -78,9 +79,9 @@ public sealed class ProjectSetupIntegrationTests
     }
 
     [Fact]
-    public async Task EveryBusyDependentSetupCommandLearnsWhenTheLibrariesStartAndFinishLoading()
+    public async Task EveryBusyDependentSetupCommandLearnsWhenALibraryOperationStartsAndFinishes()
     {
-        var files = new Files(); var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials"));
+        var files = new Files(); var main = new MainWindowViewModel(files: files, services: TestServices.Create(materialStore: new(files, "materials")));
         Assert.True(await main.NewAsync()); var setup = main.Setup;
         setup.AddSegmentCommand.Execute(null); Assert.Equal(2, setup.Cards.Count);
         var commands = new List<(string Name, System.Windows.Input.ICommand Command)>
@@ -99,8 +100,8 @@ public sealed class ProjectSetupIntegrationTests
         foreach (var entry in commands) entry.Command.CanExecuteChanged += (_, _) => raised[entry]++;
         Assert.All(commands, c => Assert.True(c.Command.CanExecute(null), c.Name));
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        files.BeforeRead = _ => release.Task;
-        var loading = main.InitializeLibrariesAsync();
+        files.BeforeWrite = (_, _, _) => release.Task;
+        var loading = main.SaveMaterialAsync(MaterialTestEntries.Entry("Busy"));
         try
         {
             Assert.True(setup.IsBusy);
@@ -110,7 +111,7 @@ public sealed class ProjectSetupIntegrationTests
         }
         finally { release.TrySetResult(); await loading; }
         Assert.False(setup.IsBusy);
-        Assert.All(commands, c => { Assert.True(c.Command.CanExecute(null), c.Name); Assert.True(raised[c] > 0, c.Name + " was not told that loading finished"); });
+        Assert.All(commands, c => { Assert.True(c.Command.CanExecute(null), c.Name); Assert.True(raised[c] > 0, c.Name + " was not told that the library operation finished"); });
     }
 
     [Fact]
@@ -360,8 +361,8 @@ public sealed class ProjectSetupIntegrationTests
     [Fact]
     public async Task SectionWorkspaceBlocksGlobalActionsButKeepsLibrarySavingFunctional()
     {
-        var files = new Files(); var main = new MainWindowViewModel(files: files, sectionStore: new(files, "sections")); main.NewCommand.Execute(null);
-        await main.InitializeLibrariesAsync(); CompleteSetup(main); Assert.True(await main.Setup.ConfirmAsync()); main.EditProject(); main.Setup.ShowSections();
+        var files = new Files(); var main = new MainWindowViewModel(files: files, services: TestServices.Create(sectionStore: new(files, "sections"))); main.NewCommand.Execute(null);
+        await main.Services.InitializeAsync(); CompleteSetup(main); Assert.True(await main.Setup.ConfirmAsync()); main.EditProject(); main.Setup.ShowSections();
         Assert.True(main.IsSectionWorkspace); Assert.False(main.NewCommand.CanExecute(null)); Assert.False(main.SaveCommand.CanExecute(null));
         Assert.False(main.OpenCommand.CanExecute(null)); Assert.False(main.UndoCommand.CanExecute(null));
         Assert.False(await main.SaveAsync()); Assert.False(await main.NewAsync()); Assert.False(await main.OpenAsync());
@@ -377,8 +378,8 @@ public sealed class ProjectSetupIntegrationTests
         var files = new Files();
         var ih = new ISectionGeometry(M(.2), M(.1), M(.005), M(.01), M(0));
         files.Data["sections"] = SectionLibraryCodec.Serialize(new([new("HEB 200", ih)]));
-        var main = new MainWindowViewModel(files: files, sectionStore: new(files, "sections")); main.NewCommand.Execute(null);
-        await main.InitializeLibrariesAsync(); main.Setup.SelectedSection = ih; main.Setup.BendingAxis = SectionAxisDesignation.Z;
+        var main = new MainWindowViewModel(files: files, services: TestServices.Create(sectionStore: new(files, "sections"))); main.NewCommand.Execute(null);
+        await main.Services.InitializeAsync(); main.Setup.SelectedSection = ih; main.Setup.BendingAxis = SectionAxisDesignation.Z;
         CompleteSetup(main); Assert.True(await main.Setup.ConfirmAsync());
         main.EditProject(); main.Setup.ShowSections(); var vm = main.Setup.Definition!;
         if (fromLibrary) vm.LoadPreset(main.UserSections.All.Single());
@@ -497,7 +498,7 @@ public sealed class ProjectSetupIntegrationTests
     {
         var files = new Files(); var store = new LocalSettingsStore(files, "settings");
         var dialogs = new Dialogs { Leave = LeaveDecision.Discard };
-        var main = new MainWindowViewModel(files: files, settingsStore: store, dialogs: dialogs);
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, services: TestServices.Create(settingsStore: store));
         Assert.True(await main.NewAsync()); Assert.Empty(main.Setup.AuthorInput.Text);
         CompleteSetup(main); main.Setup.AuthorInput.Text = " First author ";
         Assert.Null(main.Settings.LastAuthor); Assert.True(await main.Setup.ConfirmAsync());
@@ -519,10 +520,9 @@ public sealed class ProjectSetupIntegrationTests
     {
         using var scope = new ResultCultureScope(culture, culture);
         var files = new Files(); var store = new LocalSettingsStore(files, "settings");
-        var main = new MainWindowViewModel(files: files, settingsStore: store,
+        var main = new MainWindowViewModel(files: files,
             dialogs: new Dialogs { Leave = LeaveDecision.Discard },
-            settings: UserSettings.Default with { LastAuthor = "Previous author" },
-            userNameProvider: () => "windows.user");
+            userNameProvider: () => "windows.user", services: TestServices.Create(settingsStore: store, settings: UserSettings.Default with { LastAuthor = "Previous author" }));
         Assert.True(await main.NewAsync()); Assert.Equal("Previous author", main.Setup.AuthorInput.Text);
         CompleteSetup(main); main.Setup.AuthorInput.Text = author;
         Assert.True(main.Setup.CanApply); Assert.True(await main.Setup.ConfirmAsync());
@@ -559,8 +559,7 @@ public sealed class ProjectSetupIntegrationTests
     public async Task AuthorInputConfirmationInvalidCreationAndCancelDoNotRememberTheAuthor()
     {
         var files = new Files();
-        var main = new MainWindowViewModel(files: files, settingsStore: new(files, "settings"),
-            settings: UserSettings.Default with { LastAuthor = "Previous author" });
+        var main = new MainWindowViewModel(files: files, services: TestServices.Create(settingsStore: new(files, "settings"), settings: UserSettings.Default with { LastAuthor = "Previous author" }));
         Assert.True(await main.NewAsync());
         var setup = main.Setup; setup.AuthorInput.Begin(); setup.AuthorInput.Text = " Changed author ";
         Assert.Equal("Previous author", main.Settings.LastAuthor);
@@ -584,8 +583,8 @@ public sealed class ProjectSetupIntegrationTests
         {
             if (unauthorized) throw new UnauthorizedAccessException("Injected");
         });
-        var main = new MainWindowViewModel(files: files, settingsStore: store, dialogs: dialogs,
-            recovery: recovery, setupRecovery: setupRecovery, settings: UserSettings.Default with { LastAuthor = "Previous author" });
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs,
+            recovery: recovery, setupRecovery: setupRecovery, services: TestServices.Create(settingsStore: store, settings: UserSettings.Default with { LastAuthor = "Previous author" }));
         Assert.True(await main.NewAsync()); CompleteSetup(main);
         delay.ReleaseAll(); await WaitFor(setupRecovery.DrainAsync());
         if (!unauthorized) files.FailWritePath = "settings";
@@ -607,8 +606,7 @@ public sealed class ProjectSetupIntegrationTests
     {
         var files = new Files(); var dialogs = new Dialogs();
         var store = new LocalSettingsStore(files, "settings");
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, settingsStore: store,
-            settings: UserSettings.Default with { LastAuthor = "Local author" });
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, services: TestServices.Create(settingsStore: store, settings: UserSettings.Default with { LastAuthor = "Local author" }));
         var path = TestPath("foreign.spandraft");
         files.Data[path] = ProjectFileCodec.Serialize(State() with { Info = new("Foreign beam", null, null, "Foreign author") });
         Assert.True(await main.OpenAsync(path)); Assert.Equal("Local author", main.Settings.LastAuthor);
@@ -629,8 +627,7 @@ public sealed class ProjectSetupIntegrationTests
         var state = State() with { Info = info };
         files.Data["project-recovery"] = ProjectRecovery.Encode(new(state, null, Now));
         var main = new MainWindowViewModel(files: files, dialogs: new Dialogs(),
-            recovery: new(files, "project-recovery"), settingsStore: new(files, "settings"),
-            settings: UserSettings.Default with { LastAuthor = "Local author" });
+            recovery: new(files, "project-recovery"), services: TestServices.Create(settingsStore: new(files, "settings"), settings: UserSettings.Default with { LastAuthor = "Local author" }));
         Assert.True(await main.InitializeRecoveryAsync());
         Assert.Equal(info, main.Session!.CurrentRevision.State.Info);
         Assert.Equal("Local author", main.Settings.LastAuthor);
@@ -643,8 +640,8 @@ public sealed class ProjectSetupIntegrationTests
     {
         var files = new Files(); var store = new LocalSettingsStore(files, "settings");
         string windowsUserName = " windows.user ";
-        var main = new MainWindowViewModel(files: files, settingsStore: store,
-            dialogs: new Dialogs { Leave = LeaveDecision.Discard }, userNameProvider: () => windowsUserName);
+        var main = new MainWindowViewModel(files: files,
+            dialogs: new Dialogs { Leave = LeaveDecision.Discard }, userNameProvider: () => windowsUserName, services: TestServices.Create(settingsStore: store));
         Assert.True(await main.NewAsync());
         Assert.Equal("windows.user", main.Setup.AuthorInput.Text);
         Assert.Equal("windows.user", main.Setup.Draft.Author);
@@ -669,8 +666,7 @@ public sealed class ProjectSetupIntegrationTests
     public async Task LastAuthorHasPriorityWithoutReadingTheWindowsUserName()
     {
         int lookups = 0;
-        var main = new MainWindowViewModel(settings: UserSettings.Default with { LastAuthor = "Local author" },
-            userNameProvider: () => { lookups++; return "windows.user"; });
+        var main = new MainWindowViewModel(userNameProvider: () => { lookups++; return "windows.user"; }, services: TestServices.Create(settings: UserSettings.Default with { LastAuthor = "Local author" }));
         Assert.True(await main.NewAsync());
         Assert.Equal("Local author", main.Setup.AuthorInput.Text); Assert.Equal(0, lookups);
     }

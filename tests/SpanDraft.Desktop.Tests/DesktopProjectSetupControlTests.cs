@@ -30,11 +30,11 @@ public sealed class DesktopProjectSetupControlTests
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
         var files = new Files(); var dialogs = new Dialogs();
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, materialStore: new(files, "materials"), sectionStore: new(files, "sections")); main.NewCommand.Execute(null);
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, services: TestServices.Create(materialStore: new(files, "materials"), sectionStore: new(files, "sections"), load: false)); main.NewCommand.Execute(null);
         var builtin = main.BuiltInMaterials!.Find("X5CrNi18-10")!;
         files.Data["materials"] = MaterialLibraryCodec.Serialize(new([LibraryTestSupport.WithMetadata(builtin, builtin.Category, builtin.MaterialNumber, ["AISI 304", "UNS S30400"])]));
         files.Data["sections"] = SectionLibraryCodec.Serialize(new([new("My custom angle", new AngleSectionGeometry(M(.1), M(.2), M(.005), M(0)))]));
-        await main.InitializeLibrariesAsync();
+        await main.Services.InitializeAsync();
         // Use the production shell and its menu in an inert window, without starting local file/recovery I/O.
         var shell = new MainWindow(); var content = shell.Content; shell.Content = null;
         var window = new Window { DataContext = main, Content = content, Width = width, Height = height };
@@ -136,9 +136,8 @@ public sealed class DesktopProjectSetupControlTests
         main.Setup.ShowMaterials(); Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep).NewCommand.Execute(null);
         Capture("material-new-invalid");
         files.Data["materials"] = [123]; files.Data["sections"] = [123];
-        main = new MainWindowViewModel(files: files, dialogs: dialogs, materialStore: new(files, "materials"), sectionStore: new(files, "sections"),
-            catalogLoader: () => throw new LibraryFormatException("Injected")); main.NewCommand.Execute(null);
-        await main.InitializeLibrariesAsync(); window.DataContext = main; Capture("create-unavailable");
+        main = new MainWindowViewModel(files: files, dialogs: dialogs, services: TestServices.Create(materialStore: new(files, "materials"), sectionStore: new(files, "sections"), catalogLoader: () => throw new LibraryFormatException("Injected"))); main.NewCommand.Execute(null);
+        await main.Services.InitializeAsync(); window.DataContext = main; Capture("create-unavailable");
         main.Setup.ShowMaterials(); Capture("materials-unavailable");
         Assert.IsType<MaterialSelectionViewModel>(main.Setup.CurrentStep).NewCommand.Execute(null); Capture("material-oneoff-unavailable");
         main.Setup.ShowSections(); Capture("sections-unavailable");
@@ -219,7 +218,7 @@ public sealed class DesktopProjectSetupControlTests
     {
         using var environment = new DesktopControlEnvironment();
         var files = new Files(); var dialogs = new Dialogs();
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, materialStore: new(files, "materials")); main.NewCommand.Execute(null);
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, services: TestServices.Create(materialStore: new(files, "materials"))); main.NewCommand.Execute(null);
         var view = new ProjectSetupView { DataContext = main.Setup }; var window = new Window { Content = view, Width = 1100, Height = 650 };
         dialogs.MaterialEditorHook = model => new MaterialEditorWindow(model).ShowDialog(window);
         window.Show(); main.Setup.ShowMaterials(); var selection = (MaterialSelectionViewModel)main.Setup.CurrentStep!;

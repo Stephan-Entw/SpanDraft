@@ -159,8 +159,8 @@ public sealed class MaterialWorkflowControlTests
     }
     private static (Window Window, MainWindowViewModel Main, MaterialSelectionViewModel Selection, MaterialSelectionView View) Open(Files files, Dialogs dialogs, double width = 1100, double height = 650)
     {
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, materialStore: new(files, "materials")); main.NewCommand.Execute(null);
-        main.InitializeLibrariesAsync().GetAwaiter().GetResult();
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, services: TestServices.Create(materialStore: new(files, "materials"))); main.NewCommand.Execute(null);
+        main.Services.InitializeAsync().GetAwaiter().GetResult();
         main.Setup.SelectedMaterial = new("Project", Pressure.FromPascals(70e9), Pressure.FromMegapascals(150), MaterialStrengthType.Rp02);
         var window = new Window { Content = new ProjectSetupView { DataContext = main.Setup }, Width = width, Height = height };
         dialogs.MaterialEditorHook = model => new MaterialEditorWindow(model).ShowDialog(window);

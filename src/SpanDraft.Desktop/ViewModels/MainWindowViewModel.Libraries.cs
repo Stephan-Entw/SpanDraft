@@ -1,44 +1,32 @@
 using SpanDraft.Core.Materials;
-using System.Text.Json;
 using SpanDraft.Desktop.Libraries;
-using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Desktop.Services;
 
 namespace SpanDraft.Desktop.ViewModels;
 
+/// <summary>
+/// Library access of one workspace: it shows the shared libraries, translates their technical states into the existing UI
+/// texts and forwards edits to the services. It owns neither snapshots nor persistence.
+/// </summary>
 public sealed partial class MainWindowViewModel
 {
-    private readonly MaterialLibraryStore? _materialStore;
-    private readonly SectionLibraryStore? _sectionStore;
+    private static readonly UserMaterialLibrary NoMaterials = new();
+    private static readonly UserSectionLibrary NoSections = new();
     private bool _libraryBusy;
-    public BuiltInMaterialCatalog? BuiltInMaterials { get; private set; }
-    public UserMaterialLibrary UserMaterials { get; private set; } = new();
-    public UserSectionLibrary UserSections { get; private set; } = new();
-    public string? BuiltInError { get; private set; }
-    public string? MaterialLibraryError { get; private set; }
-    public string? SectionLibraryError { get; private set; }
-    public bool CanSaveMaterials => _materialStore is not null && MaterialLibraryError is null;
-    public bool CanSaveSections => _sectionStore is not null && SectionLibraryError is null;
+    public BuiltInMaterialCatalog? BuiltInMaterials => _services.Materials.BuiltIns;
+    public UserMaterialLibrary UserMaterials => _services.Materials.State.Snapshot ?? NoMaterials;
+    public UserSectionLibrary UserSections => _services.Sections.State.Snapshot ?? NoSections;
+    public string? BuiltInError => _services.Materials.BuiltInFailure is null ? null : Strings.BuiltInUnavailable;
+    public string? MaterialLibraryError => _services.Materials.State.Failure is null ? null : Strings.MaterialLibraryUnavailable;
+    public string? SectionLibraryError => _services.Sections.State.Failure is null ? null : Strings.SectionLibraryUnavailable;
+    public bool CanSaveMaterials => _services.Materials.CanMutate;
+    public bool CanSaveSections => _services.Sections.CanMutate;
 
-    public async Task InitializeLibrariesAsync()
+    /// <summary>Tells the user about a built-in catalog that could not be loaded at startup.</summary>
+    public async Task ReportStartupErrorsAsync()
     {
-        _libraryBusy = true;
-        NotifySession();
-        try
-        {
-            if (_materialStore is not null)
-            {
-                try { UserMaterials = await _materialStore.LoadAsync(); }
-                catch (Exception e) when (IsLibraryError(e)) { MaterialLibraryError = Strings.MaterialLibraryUnavailable; }
-            }
-            if (_sectionStore is not null)
-            {
-                try { UserSections = await _sectionStore.LoadAsync(); }
-                catch (Exception e) when (IsLibraryError(e)) { SectionLibraryError = Strings.SectionLibraryUnavailable; }
-            }
-        }
-        finally { _libraryBusy = false; NotifySession(); }
         if (BuiltInError is { } error && _dialogs is not null) await _dialogs.ShowErrorAsync(error);
     }
 
@@ -48,50 +36,49 @@ public sealed partial class MainWindowViewModel
     internal Task<bool> ConfirmMaterialReplaceAsync(Material material) =>
         _dialogs?.ConfirmMaterialReplaceAsync(MaterialDisplay.Format(material)) ?? Task.FromResult(false);
 
-    public Task<string?> SaveMaterialAsync(Material entry, string? oldName = null) => LibraryOperationAsync(async () =>
+    /// <summary>Adds the entry, or replaces <paramref name="expectedOriginal"/>, the entry the editor started from.</summary>
+    public Task<string?> SaveMaterialAsync(Material entry, Material? expectedOriginal = null) => LibraryOperationAsync(async () =>
     {
         if (!CanSaveMaterials) return Strings.MaterialLibraryUnavailable;
         if (entry.StrengthType is null) return Strings.MaterialStrengthRequired;
-        var next = new UserMaterialLibrary(UserMaterials.All);
-        if (oldName is null) next.Add(entry); else next.Replace(oldName, entry);
-        await _materialStore!.SaveAsync(next);
-        UserMaterials = next;
-        return null;
+        var result = expectedOriginal is null ? await _services.Materials.AddAsync(entry)
+            : await _services.Materials.ReplaceAsync(expectedOriginal, entry);
+        return Describe(result, Strings.MaterialLibraryUnavailable);
     });
 
-    public Task<string?> SaveSectionAsync(SectionLibraryEntry entry, string? oldName = null) => LibraryOperationAsync(async () =>
+    public Task<string?> SaveSectionAsync(SectionLibraryEntry entry, SectionLibraryEntry? expectedOriginal = null) => LibraryOperationAsync(async () =>
     {
         if (!CanSaveSections) return Strings.SectionLibraryUnavailable;
-        var next = new UserSectionLibrary(UserSections.All);
-        if (oldName is null) next.Add(entry); else next.Replace(oldName, entry);
-        await _sectionStore!.SaveAsync(next);
-        UserSections = next;
-        return null;
+        var result = expectedOriginal is null ? await _services.Sections.AddAsync(entry)
+            : await _services.Sections.ReplaceAsync(expectedOriginal, entry);
+        return Describe(result, Strings.SectionLibraryUnavailable);
     });
 
-    public Task<string?> DeleteMaterialAsync(string name) => LibraryOperationAsync(async () =>
+    public Task<string?> DeleteMaterialAsync(Material expectedOriginal) => LibraryOperationAsync(async () =>
     {
         if (!CanSaveMaterials) return Strings.MaterialLibraryUnavailable;
-        var material = UserMaterials.Find(name);
-        if (material is null) return Strings.LibraryEntryMissing;
-        if (_dialogs is null || !await _dialogs.ConfirmMaterialDeleteAsync(MaterialDisplay.Format(material))) return null;
-        var next = new UserMaterialLibrary(UserMaterials.All);
-        if (!next.Remove(name)) return Strings.LibraryEntryMissing;
-        await _materialStore!.SaveAsync(next);
-        UserMaterials = next;
-        return null;
+        if (UserMaterials.Find(expectedOriginal.Name) is null) return Strings.LibraryEntryMissing;
+        if (_dialogs is null || !await _dialogs.ConfirmMaterialDeleteAsync(MaterialDisplay.Format(expectedOriginal))) return null;
+        return Describe(await _services.Materials.DeleteAsync(expectedOriginal), Strings.MaterialLibraryUnavailable);
     });
 
-    public Task<string?> DeleteSectionAsync(string name) => LibraryOperationAsync(async () =>
+    public Task<string?> DeleteSectionAsync(SectionLibraryEntry expectedOriginal) => LibraryOperationAsync(async () =>
     {
         if (!CanSaveSections) return Strings.SectionLibraryUnavailable;
-        if (_dialogs is null || !await _dialogs.ConfirmSectionDeleteAsync(name)) return null;
-        var next = new UserSectionLibrary(UserSections.All);
-        if (!next.Remove(name)) return Strings.LibraryEntryMissing;
-        await _sectionStore!.SaveAsync(next);
-        UserSections = next;
-        return null;
+        if (_dialogs is null || !await _dialogs.ConfirmSectionDeleteAsync(expectedOriginal.Name)) return null;
+        return Describe(await _services.Sections.DeleteAsync(expectedOriginal), Strings.SectionLibraryUnavailable);
     });
+
+    // The services report technical outcomes; the existing messages are chosen here.
+    private static string? Describe(LibraryMutationResult result, string unavailable) => result.Outcome switch
+    {
+        LibraryMutationOutcome.Committed => null,
+        LibraryMutationOutcome.Unavailable => unavailable,
+        LibraryMutationOutcome.Conflict => result.Conflict is LibraryConflictKind.AlreadyExists or LibraryConflictKind.TargetNameTaken
+            ? Strings.LibraryNameConflict : Strings.LibraryEntryMissing,
+        LibraryMutationOutcome.Invalid => result.Failure is KeyNotFoundException ? Strings.LibraryEntryMissing : Strings.LibraryNameConflict,
+        _ => Strings.LibrarySaveFailed
+    };
 
     private async Task<string?> LibraryOperationAsync(Func<Task<string?>> action)
     {
@@ -100,9 +87,6 @@ public sealed partial class MainWindowViewModel
         Session?.SetBusy(true);
         NotifySession();
         try { return await action(); }
-        catch (ArgumentException) { return Strings.LibraryNameConflict; }
-        catch (KeyNotFoundException) { return Strings.LibraryEntryMissing; }
-        catch (Exception e) when (IsLibraryError(e)) { return Strings.LibrarySaveFailed; }
         finally
         {
             _libraryBusy = false;
@@ -112,7 +96,4 @@ public sealed partial class MainWindowViewModel
             { _pendingRecoveryError = null; await ReportRecoveryErrorAsync(error); }
         }
     }
-
-    private static bool IsLibraryError(Exception e) => e is IOException or UnauthorizedAccessException
-        or LibraryFormatException or JsonException or ArgumentException or NotSupportedException or OverflowException;
 }

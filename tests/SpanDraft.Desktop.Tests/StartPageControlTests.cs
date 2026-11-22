@@ -29,7 +29,7 @@ public sealed class StartPageControlTests
     {
         using var environment = new DesktopControlEnvironment(); using var scope = new UiCultureScope(culture);
         var files = new Files(); var store = new RecentProjectsStore(files, "recents", () => Now);
-        var main = new MainWindowViewModel(files: files, recentStore: store);
+        var main = new MainWindowViewModel(files: files, services: TestServices.Create(recentStore: store));
         var shell = new MainWindow(); var content = shell.Content; shell.Content = null;
         var window = new Window { Content = content, DataContext = main, Width = width, Height = height };
         foreach (var template in shell.DataTemplates) window.DataTemplates.Add(template);
@@ -53,7 +53,7 @@ public sealed class StartPageControlTests
 
         string longName = new('W', 180);
         for (int i = 0; i < 10; i++) await store.RecordUseAsync(TestPath(longName + i + ".spandraft"));
-        await main.InitializeRecentProjectsAsync(); Arrange(window, width, height);
+        await main.Services.InitializeAsync(); Arrange(window, width, height);
         Assert.False(view.FindControl<TextBlock>("EmptyRecentProjects")!.IsEffectivelyVisible);
         var rows = view.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("recentProject")).ToArray();
         Assert.Equal(10, rows.Length);
@@ -92,9 +92,9 @@ public sealed class StartPageControlTests
         var files = new Files(); var dialogs = new Dialogs(); int calls = 0;
         string path = TestPath("keyboard.spandraft"); files.Data[path] = ProjectFileCodec.Serialize(State());
         var store = new RecentProjectsStore(files, "recents", () => Now); await store.RecordUseAsync(path);
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, recentStore: store,
-            openUserManual: () => { calls++; return Task.CompletedTask; });
-        await main.InitializeRecentProjectsAsync();
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs,
+            openUserManual: () => { calls++; return Task.CompletedTask; }, services: TestServices.Create(recentStore: store));
+        await main.Services.InitializeAsync();
         var view = new StartPageView { DataContext = main.StartPage };
         var window = new Window { Content = view, Width = 1250, Height = 800 }; window.Show(); Arrange(window, 1250, 800);
         Activate(view.FindControl<Button>("UserManualButton")!, key); Assert.Equal(1, calls);
@@ -163,8 +163,8 @@ public sealed class StartPageControlTests
         var files = new Files(); var store = new RecentProjectsStore(files, "recents", () => Now);
         string path = TestPath("missing.spandraft"); await store.RecordUseAsync(path);
         var dialogs = new Dialogs { RemoveMissingRecent = remove };
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, recentStore: store);
-        await main.InitializeRecentProjectsAsync();
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, services: TestServices.Create(recentStore: store));
+        await main.Services.InitializeAsync();
         var view = new StartPageView { DataContext = main.StartPage };
         var window = new Window { Content = view, Width = 1100, Height = 650 }; window.Show();
         try

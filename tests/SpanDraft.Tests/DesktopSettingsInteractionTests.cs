@@ -2,6 +2,7 @@ using SpanDraft.Core.Supports;
 using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Desktop.Services;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
@@ -30,7 +31,7 @@ public sealed class DesktopSettingsInteractionTests
             "region" => main.Settings with { RegionalFormat = RegionalFormatPreference.GermanGermany },
             _ => main.Settings with { SignificantDigits = 5 }
         };
-        Assert.Null(await main.ApplySettingsAsync(next));
+        Assert.Null(await main.ApplySettingsAsync(SettingsPatch.From(next)));
         Assert.True(next.ContentEquals(SettingsCodec.Deserialize(files.Data["settings"])));
         Assert.Same(support, editor.SupportDraft); Assert.Same(point, editor.LoadDraft); Assert.Same(distributed, editor.DistributedLoadDraft);
         Assert.Equal(text, editor.DimensionLength.Text); Assert.Same(revision, editor.Session.CurrentRevision);
@@ -42,7 +43,7 @@ public sealed class DesktopSettingsInteractionTests
     public async Task LocaleAndModeSavesPreserveSetupDraftsWhileChangedInputUnitsRemainBlocked(bool section)
     {
         var files = new Files();
-        var main = new MainWindowViewModel(files: files, settingsStore: new(files, "settings"));
+        var main = new MainWindowViewModel(files: files, services: TestServices.Create(settingsStore: new(files, "settings")));
         main.NewCommand.Execute(null);
         SectionDefinitionInput? input = null;
         if (section)
@@ -53,10 +54,10 @@ public sealed class DesktopSettingsInteractionTests
         else { main.Setup.LengthInput.Begin(); main.Setup.LengthInput.Text = "unfinished"; }
         var next = main.Settings with { UiLanguage = UiLanguagePreference.English,
             RegionalFormat = RegionalFormatPreference.GermanGermany, SignificantDigits = 5 };
-        Assert.Null(await main.ApplySettingsAsync(next));
+        Assert.Null(await main.ApplySettingsAsync(SettingsPatch.From(next)));
         Assert.Equal("unfinished", input?.PendingText ?? main.Setup.LengthInput.Text);
-        Assert.NotNull(await main.ApplySettingsAsync(next.Select(UnitProfileKind.UnitedStates)));
-        Assert.Same(next, main.Settings);
+        Assert.NotNull(await main.ApplySettingsAsync(SettingsPatch.From(next.Select(UnitProfileKind.UnitedStates))));
+        Assert.True(next.ContentEquals(main.Settings));
         Assert.Equal("unfinished", input?.PendingText ?? main.Setup.LengthInput.Text);
     }
 
@@ -70,10 +71,10 @@ public sealed class DesktopSettingsInteractionTests
         var editor = Assert.IsType<MaterialEditorViewModel>(selection.Editor);
         editor.Inputs[0].Text = "unfinished";
         var settings = main.Settings with { SignificantDigits = 4, Notation = EngineeringNotation.Off };
-        Assert.Null(await main.ApplySettingsAsync(settings));
+        Assert.Null(await main.ApplySettingsAsync(SettingsPatch.From(settings)));
         Assert.Equal("unfinished", editor.Inputs[0].Text);
         var writes = files.Writes.ToArray();
-        Assert.NotNull(await main.ApplySettingsAsync(settings.WithUnit(QuantityKind.YoungsModulus, UnitCatalog.Ksi)));
+        Assert.NotNull(await main.ApplySettingsAsync(SettingsPatch.From(settings.WithUnit(QuantityKind.YoungsModulus, UnitCatalog.Ksi))));
         Assert.Equal(writes, files.Writes);
         Assert.Same(editor, selection.Editor); Assert.Equal("unfinished", editor.Inputs[0].Text);
         Assert.Same(UnitCatalog.Gigapascal, editor.Inputs[0].Unit);
@@ -81,7 +82,7 @@ public sealed class DesktopSettingsInteractionTests
 
     private static MainWindowViewModel CreateMain(Files? files = null)
     {
-        var main = new MainWindowViewModel(files: files, settingsStore: files is null ? null : new(files, "settings")); main.NewCommand.Execute(null);
+        var main = new MainWindowViewModel(files: files, services: TestServices.Create(settingsStore: files is null ? null : new(files, "settings"))); main.NewCommand.Execute(null);
         ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
         var document = new EditorDocument(M(1), ProjectTemplates.Material, ProjectTemplates.Section,
             [new(SupportId, M(.1), SupportType.Fixed, "A")],

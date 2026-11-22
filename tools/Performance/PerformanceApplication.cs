@@ -49,7 +49,14 @@ internal sealed class PerformanceApplication(MeasureOptions options, MemoryProje
         };
         CultureConfigurator.Apply(CultureConfigurator.Resolve(settings, CultureInfo.InvariantCulture, CultureInfo.InvariantCulture));
         var host = new PerformanceApplication(options, files);
-        return AppBuilder.Configure(() => new App(new DesktopApplicationHost(startup))).UsePlatformDetect().StartWithClassicDesktopLifetime([], host.Start);
+        return AppBuilder.Configure(() => new App(Initialized(new DesktopApplicationHost(startup)))).UsePlatformDetect().StartWithClassicDesktopLifetime([], host.Start);
+    }
+
+    // Like the bootstrap, the tool starts the shared services before the first window; the window never loads them.
+    private static DesktopApplicationHost Initialized(DesktopApplicationHost host)
+    {
+        host.InitializeServicesAsync().GetAwaiter().GetResult();
+        return host;
     }
 
     private void Start(IClassicDesktopStyleApplicationLifetime lifetime)

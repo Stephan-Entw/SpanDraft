@@ -8,6 +8,7 @@ using Avalonia.VisualTree;
 using SpanDraft.Desktop;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Desktop.Services;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
@@ -38,7 +39,7 @@ public sealed class DesktopCultureTests
         // Changing the file now must not affect the already loaded startup preferences.
         files.Data["settings"] = SettingsCodec.Serialize(UserSettings.Default);
         var lifetime = new ClassicDesktopStyleApplicationLifetime();
-        var app = new SpanDraft.Desktop.App(new DesktopApplicationHost(startup)) { ApplicationLifetime = lifetime };
+        var app = new SpanDraft.Desktop.App(TestHosts.Initialized(new DesktopApplicationHost(startup))) { ApplicationLifetime = lifetime };
         app.OnFrameworkInitializationCompleted();
         var window = Assert.IsType<MainWindow>(lifetime.MainWindow);
         Assert.Equal(expectedFile, window.FindControl<Menu>("MainMenu")!.Items.OfType<MenuItem>().First().Header);
@@ -47,7 +48,7 @@ public sealed class DesktopCultureTests
         Assert.Same(startup.Settings, main.Settings); Assert.Equal(1, reads);
         Assert.NotNull(main.BuiltInMaterials); Assert.Null(main.MaterialLibraryError); Assert.Null(main.SectionLibraryError);
         var next = main.Settings with { SignificantDigits = 5 };
-        Assert.Null(await main.ApplySettingsAsync(next));
+        Assert.Null(await main.ApplySettingsAsync(SettingsPatch.From(next)));
         Assert.True(next.ContentEquals(SettingsCodec.Deserialize(files.Data["settings"])));
         window.Close(); Dispatcher.UIThread.RunJobs();
     }
@@ -88,7 +89,7 @@ public sealed class DesktopCultureTests
         files.Data[setupSlot] = setupBytes;
         var projectSlot = ProjectRecovery.Local(files).SlotPath;
         if (restoreProject) files.Data[projectSlot] = ProjectRecovery.Encode(new(State(), null, Now));
-        var window = new MainWindow(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default)));
+        var window = new MainWindow(TestHosts.Initialized(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default))));
         window.Show(); Dispatcher.UIThread.RunJobs();
         if (restoreProject)
         {

@@ -29,8 +29,9 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp(DesktopStartupContext startup, CultureInfo systemCulture,
         CultureInfo systemUiCulture, BrokerServer? broker = null, LaunchRequest? initial = null)
     {
-        CultureConfigurator.Apply(CultureConfigurator.Resolve(startup.Settings, systemCulture, systemUiCulture));
         var host = new DesktopApplicationHost(startup);
+        // Shared services, then the process culture; both complete before Avalonia creates any XAML.
+        host.InitializeAsync(systemCulture, systemUiCulture).GetAwaiter().GetResult();
         if (broker is not null) host.AttachBroker(broker);
         if (initial is not null) host.SetInitialRequest(initial);
         return AppBuilder.Configure(() => new App(host))

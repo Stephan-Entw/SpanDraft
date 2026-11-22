@@ -15,6 +15,7 @@ using SpanDraft.Core.Units;
 using SpanDraft.Desktop;
 using SpanDraft.Desktop.Controls;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Desktop.Services;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
@@ -429,7 +430,7 @@ public sealed class DesktopSettingsControlTests
     public void OkSavesChangesAndClosesTheWindow()
     {
         using var environment = new DesktopControlEnvironment();
-        UserSettings? published = null;
+        SettingsPatch? published = null;
         var model = new SettingsViewModel(UserSettings.Default, settings =>
         { published = settings; return Task.FromResult<string?>(null); });
         var window = new SettingsWindow(model);
@@ -489,8 +490,7 @@ public sealed class DesktopSettingsControlTests
         using var environment = new DesktopControlEnvironment();
         var files = new ProjectTestSupport.Files();
         if (!activeDraft) files.FailWritePath = "settings";
-        var main = new MainWindowViewModel(files: files,
-            settingsStore: new SpanDraft.Desktop.Persistence.LocalSettingsStore(files, "settings")); main.NewCommand.Execute(null);
+        var main = new MainWindowViewModel(files: files, services: TestServices.Create(settingsStore: new SpanDraft.Desktop.Persistence.LocalSettingsStore(files, "settings"))); main.NewCommand.Execute(null);
         if (activeDraft)
         {
             ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);

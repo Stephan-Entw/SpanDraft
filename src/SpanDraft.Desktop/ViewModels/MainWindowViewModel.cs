@@ -6,6 +6,7 @@ using SpanDraft.Desktop.Diagnostics;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Desktop.Services;
 using SpanDraft.Desktop.Reporting;
 using SpanDraft.Desktop.State;
 
@@ -14,7 +15,7 @@ namespace SpanDraft.Desktop.ViewModels;
 public enum MainViewMode { ProjectSetup, Editor, Start, ReportPreview }
 public enum MainWorkspaceKind { ProjectSetup, MaterialSelection, SectionDefinition, BeamEditor, Start, ReportPreview }
 
-public sealed partial class MainWindowViewModel : ObservableObject
+public sealed partial class MainWindowViewModel : ObservableObject, ISettingsParticipant, IDisposable
 {
     private readonly Func<BeamModel, BeamAnalysisOutcome>? _analyze;
     private readonly InteractionPerformance? _performance;
@@ -24,26 +25,23 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly ProjectSetupRecovery? _setupRecovery;
     private MainViewMode _mode = MainViewMode.Start;
     private MainViewMode _setupReturnMode = MainViewMode.Start;
-    private readonly RecentProjectsStore? _recentStore;
+    private readonly SharedServices _services;
+    private readonly IDisposable _settingsRegistration;
+    private bool _disposed;
     private ProjectSetupViewModel _setup;
     private EditorViewModel? _editor;
     private bool _busy;
     private bool _mainMenuOpen;
     private Exception? _pendingRecoveryError;
     private ResultPresentationOptions _resultPresentation = ResultPresentationOptions.Default;
-    private readonly LocalSettingsStore? _settingsStore;
     private readonly Func<string?>? _userNameProvider;
     private bool _settingsSaving;
     private bool _settingsDialogOpen;
     private ReportPreviewViewModel? _reportPreview;
-    private UserSettings _settings = UserSettings.Default;
 
     public MainWindowViewModel(Func<BeamModel, BeamAnalysisOutcome>? analyze = null,
         IProjectFileStore? files = null, IProjectDialogs? dialogs = null, ProjectRecovery? recovery = null,
-        LocalSettingsStore? settingsStore = null, UserSettings? settings = null,
-        MaterialLibraryStore? materialStore = null, SectionLibraryStore? sectionStore = null,
-        Func<SpanDraft.Desktop.Libraries.BuiltInMaterialCatalog>? catalogLoader = null,
-        RecentProjectsStore? recentStore = null, Func<Task>? openUserManual = null,
+        SharedServices? services = null, Func<Task>? openUserManual = null,
         ProjectSetupRecovery? setupRecovery = null, Func<string?>? userNameProvider = null,
         InteractionPerformance? performance = null)
     {
@@ -53,19 +51,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _dialogs = dialogs;
         _recovery = recovery;
         _setupRecovery = setupRecovery;
-        _recentStore = recentStore;
-        _settingsStore = settingsStore;
         _userNameProvider = userNameProvider;
-        _settings = settings ?? UserSettings.Default;
-        _resultPresentation = _settings.Presentation;
-        _materialStore = materialStore;
-        _sectionStore = sectionStore;
-        try
-        {
-            BuiltInMaterials = (catalogLoader ?? MaterialCatalogCodec.LoadBuiltIn)();
-            if (BuiltInMaterials.Find("S235JR") is null) throw new LibraryFormatException("Missing S235JR.");
-        }
-        catch (Exception e) when (IsLibraryError(e)) { BuiltInError = Strings.BuiltInUnavailable; BuiltInMaterials = null; }
+        // The services own all global state; this view model mirrors it for display and applies it to its workspace.
+        _services = services ?? SharedServices.Transient();
+        _resultPresentation = _services.Settings.CurrentSettings.Presentation;
         if (_recovery is not null) _recovery.Failed += RecoveryFailed;
         if (_setupRecovery is not null) _setupRecovery.Failed += RecoveryFailed;
         _setup = NewSetup();
@@ -79,7 +68,29 @@ public sealed partial class MainWindowViewModel : ObservableObject
         RedoCommand = new(() => Redo(), () => CanRedo);
         UserManualCommand = new(async () => { if (openUserManual is not null) await openUserManual(); return true; }, () => true);
         StartPage = new(NewCommand, OpenCommand, UserManualCommand, OpenRecentAsync, () => CanOpenProject);
+        StartPage.SetRecentProjects(_services.Recents.Entries);
+        _settingsRegistration = _services.SettingsCoordinator.Register(this);
+        _services.Settings.Changed += SettingsChanged;
+        _services.Materials.Changed += LibraryChanged;
+        _services.Sections.Changed += LibraryChanged;
+        _services.Recents.Changed += RecentsChanged;
     }
+
+    /// <summary>Ends the participation in the shared services; a closed workspace must not stay registered or subscribed.</summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _settingsRegistration.Dispose();
+        _services.Settings.Changed -= SettingsChanged;
+        _services.Materials.Changed -= LibraryChanged;
+        _services.Sections.Changed -= LibraryChanged;
+        _services.Recents.Changed -= RecentsChanged;
+    }
+
+    private void SettingsChanged() => Notify(nameof(Settings));
+    private void LibraryChanged(LibraryChangedEventArgs _) => RefreshWorkspaceState();
+    private void RecentsChanged() => StartPage.SetRecentProjects(_services.Recents.Entries);
 
     public MainViewMode Mode => _mode;
     public ProjectSetupViewModel Setup => _setup;
@@ -87,21 +98,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public EditorViewModel? Editor => _editor;
     public ReportPreviewViewModel? ReportPreview => _reportPreview;
     public ResultPresentationOptions ResultPresentation => _resultPresentation;
-    public UserSettings Settings => _settings;
+    public UserSettings Settings => _services.Settings.CurrentSettings;
+    public SharedServices Services => _services;
 
-    public async Task InitializeRecentProjectsAsync()
-    {
-        if (_recentStore is null) return;
-        await _recentStore.LoadAsync();
-        StartPage.SetRecentProjects(_recentStore.Entries);
-    }
-
-    private async Task RecordRecentAsync(string path, string? replacedPath = null)
-    {
-        if (_recentStore is null) return;
-        await _recentStore.RecordUseAsync(path, replacedPath);
-        StartPage.SetRecentProjects(_recentStore.Entries);
-    }
+    private Task RecordRecentAsync(string path, string? replacedPath = null) => _services.Recents.RecordUseAsync(path, replacedPath);
 
     public void SetSettingsDialogOpen(bool open)
     {
@@ -110,31 +110,39 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
     internal bool PreserveSetupInputs => _mainMenuOpen || _settingsDialogOpen;
 
-    public async Task<string?> ApplySettingsAsync(UserSettings settings)
+    /// <summary>The settings dialog's apply: the coordinator owns the transaction, this only translates its outcome.</summary>
+    public async Task<string?> ApplySettingsAsync(SettingsPatch patch)
     {
-        if (_settingsSaving || IsBusy) return Strings.ProjectBusy;
-        if (settings.LastAuthor != Settings.LastAuthor) settings = settings with { LastAuthor = Settings.LastAuthor };
-        bool unitsChanged = !UserSettings.SameUnits(_settings.Profile, settings.Profile);
-        if (unitsChanged && (Editor?.CanApplyInputUnits(settings.Profile) == false || !Setup.CanApplyInputUnits(settings.Profile)))
-            return Strings.SettingsDraftBlocked;
-        _settingsSaving = true;
-        try
+        var result = await _services.SettingsCoordinator.ApplyAsync(patch);
+        return result.Outcome switch
         {
-            if (_settingsStore is not null) await _settingsStore.SaveAsync(settings);
-            ActivateSettings(settings);
-            return null;
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
-        { return Strings.SettingsSaveError + "\n" + e.Message; }
-        finally { _settingsSaving = false; }
+            SettingsApplyOutcome.Applied => null,
+            SettingsApplyOutcome.DraftBlocked => Strings.SettingsDraftBlocked,
+            SettingsApplyOutcome.PersistFailed => Strings.SettingsSaveError + "\n" + result.Failure!.Message,
+            _ => Strings.ProjectBusy
+        };
     }
 
-    private void ActivateSettings(UserSettings settings)
+    bool ISettingsParticipant.TryFreezeForSettings()
     {
-        _settings = settings;
-        SetPresentation(settings.Presentation);
+        if (_settingsSaving || IsBusy) return false;
+        _settingsSaving = true;
+        return true;
+    }
+
+    // The units are checked against the drafts as they are right now, not as they were when the dialog was opened.
+    SettingsCheck ISettingsParticipant.ValidateSettings(UserSettings candidate) =>
+        !UserSettings.SameUnits(Settings.Profile, candidate.Profile)
+            && (Editor?.CanApplyInputUnits(candidate.Profile) == false || !Setup.CanApplyInputUnits(candidate.Profile))
+            ? SettingsCheck.DraftBlocked : SettingsCheck.Ok;
+
+    void ISettingsParticipant.ApplySettings(UserSettings committed)
+    {
+        SetPresentation(committed.Presentation);
         Notify(nameof(Settings));
     }
+
+    void ISettingsParticipant.ReleaseSettingsFreeze() => _settingsSaving = false;
 
     /// <summary>Changes presentation only; affected open input sessions reject unit changes.</summary>
     public bool SetResultPresentation(UnitProfile profile, int significantDigits = ResultPresentationOptions.DefaultSignificantDigits,
@@ -142,13 +150,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(profile);
         var options = new ResultPresentationOptions(profile, significantDigits, notation);
-        bool unitsChanged = !UserSettings.SameUnits(_settings.Profile, profile);
+        bool unitsChanged = !UserSettings.SameUnits(Settings.Profile, profile);
         if (_settingsSaving || IsBusy || unitsChanged && (Editor?.CanApplyInputUnits(profile) == false || !Setup.CanApplyInputUnits(profile))) return false;
         profile = UserSettings.Recognize(profile);
         options = new(profile, significantDigits, notation);
-        _settings = _settings with { Profile = profile, SignificantDigits = significantDigits, Notation = notation,
-            CustomProfile = profile.Kind == UnitProfileKind.Custom ? profile : _settings.CustomProfile,
-            LastStandardProfile = profile.Kind == UnitProfileKind.Custom ? _settings.LastStandardProfile : profile.Kind };
+        _services.Settings.ApplyRuntimePresentation(profile, significantDigits, notation);
         SetPresentation(options);
         return true;
     }
@@ -328,13 +334,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             if (!await CanLeaveAsync()) return false;
             await CompleteLeaveAsync();
             Activate(ProjectSession.Create(new(document, new(), setup.Info)));
-            ActivateSettings(Settings with { LastAuthor = Session!.CurrentRevision.State.Info!.Author });
-            try
-            {
-                if (_settingsStore is not null) await _settingsStore.SaveAsync(Settings);
-            }
-            catch (Exception e) when (IsFileError(e))
-            { /* Remembering the author is best-effort; creation has already succeeded. */ }
+            // The author is current at once; remembering it on disk is best effort and never replaces damaged settings.
+            await _services.Settings.UpdateLastAuthorAsync(Session!.CurrentRevision.State.Info!.Author);
             await DeleteSetupRecoveryAsync();
             return true;
         });
@@ -419,12 +420,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (bytes is null)
         {
             if (!fromRecent) throw new IOException(Strings.ProjectFileMissing);
-            if (_dialogs is not null && await _dialogs.ConfirmRemoveMissingRecentAsync(Path.GetFullPath(path))
-                && _recentStore is not null)
-            {
-                await _recentStore.RemoveAsync(path);
-                StartPage.SetRecentProjects(_recentStore.Entries);
-            }
+            if (_dialogs is not null && await _dialogs.ConfirmRemoveMissingRecentAsync(Path.GetFullPath(path)))
+                await _services.Recents.RemoveAsync(path);
             return false;
         }
         var state = ProjectFileCodec.Deserialize(bytes);

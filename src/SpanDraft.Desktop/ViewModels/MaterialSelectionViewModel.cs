@@ -181,10 +181,11 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
     private void BeginEdit(Material? material, SetupEditorMode mode, bool keepProjectSelection = false)
     {
         if (!CanBrowse) return;
-        var originalName = mode == SetupEditorMode.UserLibraryEdit ? material?.Name : null;
+        // The editor keeps the entry it started from; the save is checked against it, not against whatever the library holds later.
+        var originalEntry = mode == SetupEditorMode.UserLibraryEdit ? material : null;
         var editor = new MaterialEditorViewModel(Setup, material, mode,
             result => mode == SetupEditorMode.ProjectDraft ? Task.FromResult(Setup.ValidateProjectMaterial(result))
-                : Setup.Libraries!.SaveMaterialAsync(result, originalName),
+                : Setup.Libraries!.SaveMaterialAsync(result, originalEntry),
             showNameConflict: mode == SetupEditorMode.UserLibraryCreate && material is not null);
         _editor = editor;
         editor.CloseRequested += Finish;
@@ -254,7 +255,7 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
                 else
                 {
                     if (!await main.ConfirmMaterialReplaceAsync(existing)) return false;
-                    _error = await main.SaveMaterialAsync(librarySnapshot, existing.Name);
+                    _error = await main.SaveMaterialAsync(librarySnapshot, existing);
                 }
             }
             else _error = await main.SaveMaterialAsync(librarySnapshot);
@@ -270,7 +271,7 @@ public sealed class MaterialSelectionViewModel : SetupStepViewModel
     {
         if (!CanDeleteSelected || SelectedEntry is not { } selected) return false;
         int index = _filtered.ToList().IndexOf(selected);
-        _error = await Setup.Libraries!.DeleteMaterialAsync(selected.Name);
+        _error = await Setup.Libraries!.DeleteMaterialAsync(selected.Material);
         Refresh();
         if (_error is null && !_filtered.Contains(selected))
             SelectedEntry = _filtered.FirstOrDefault(e => e.IsProject) ?? _filtered.ElementAtOrDefault(Math.Min(index, _filtered.Count - 1));

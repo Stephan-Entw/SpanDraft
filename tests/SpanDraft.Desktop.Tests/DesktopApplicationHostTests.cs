@@ -1,7 +1,10 @@
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Activation;
+using SpanDraft.Desktop.Services;
+using SpanDraft.Tests;
 using Xunit;
+using static SpanDraft.Tests.ProjectTestSupport;
 
 namespace SpanDraft.Desktop.Tests;
 
@@ -41,15 +44,67 @@ public sealed class DesktopApplicationHostTests
     }
 
     [Fact]
-    public void HostExposesInjectedStartupServices()
+    public void HostOwnsExactlyOneInstanceOfEachSharedServiceBuiltFromTheInjectedStores()
     {
         var files = new ProjectFileStore();
         var settings = new LocalSettingsStore(files, "settings");
         var stores = DesktopStateStores.Local(files);
         var host = new DesktopApplicationHost(new DesktopStartupContext(files, settings, UserSettings.Default) { StateStores = stores });
         Assert.Same(files, host.Files);
-        Assert.Same(settings, host.SettingsStore);
         Assert.Same(stores, host.StateStores);
+        Assert.Same(host.Services.Settings, host.Settings);
+        Assert.Same(host.Services.SettingsCoordinator, host.SettingsCoordinator);
+        Assert.Same(host.Settings, host.SettingsCoordinator.Settings);
+        Assert.Same(host.Services.Materials, host.Materials);
+        Assert.Same(host.Services.Sections, host.Sections);
+        Assert.Same(host.Services.Recents, host.Recents);
+        // Another host is another process in the model: it owns its own instances.
+        Assert.NotSame(host.Settings, new DesktopApplicationHost().Settings);
+    }
+
+    [Fact]
+    public async Task ServicesAreInitializedOnceAndInitializationNeverTouchesTheProcessCulture()
+    {
+        var files = new Files(); int reads = 0;
+        files.BeforeRead = _ => { reads++; return Task.CompletedTask; };
+        var host = new DesktopApplicationHost(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default)
+        { StateStores = DesktopStateStores.InDirectory(files, TestPath("state")) });
+        Assert.False(host.Materials.State.IsAvailable);
+        await Task.WhenAll(host.InitializeServicesAsync(), host.InitializeServicesAsync());
+        int afterFirst = reads;
+        await host.InitializeServicesAsync();
+        Assert.Equal(afterFirst, reads);
+        Assert.Equal(3, reads);   // material library, section library, recents: once each
+        Assert.True(host.Materials.State.IsAvailable); Assert.True(host.Sections.State.IsAvailable);
+        Assert.Null(host.Settings.ProcessCulture);
+    }
+
+    [Fact]
+    public void ANewHostBuiltFromTheSameStoresReadsNothingUntilItIsInitialized()
+    {
+        var files = new Files(); int reads = 0;
+        files.BeforeRead = _ => { reads++; return Task.CompletedTask; };
+        _ = new DesktopApplicationHost(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default)
+        { StateStores = DesktopStateStores.InDirectory(files, TestPath("state")) });
+        Assert.Equal(0, reads);
+    }
+
+    [Fact]
+    public void ADisposedWindowModelNoLongerReceivesSettingsOrLibraryEvents()
+    {
+        var services = TestServices.Create();
+        var main = new SpanDraft.Desktop.ViewModels.MainWindowViewModel(services: services);
+        var changed = new List<string?>();
+        main.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        services.Settings.ApplyRuntimePresentation(UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Inch).Profile, 4, EngineeringNotation.Off);
+        Assert.NotEmpty(changed);
+        main.Dispose();
+        changed.Clear();
+        services.Settings.ApplyRuntimePresentation(UserSettings.Default.Profile, 4, EngineeringNotation.Off);
+        Assert.Empty(changed);
+        Assert.Equal(SettingsApplyOutcome.Applied, services.SettingsCoordinator.ApplyAsync(SettingsPatch.From(services.Settings.CurrentSettings) with { SignificantDigits = 5 })
+            .GetAwaiter().GetResult().Outcome);
+        Assert.Empty(changed);
     }
 
     private static LaunchRequest Open(string name) => LaunchRequest.OpenProject(Path.Combine(Path.GetTempPath(), name));

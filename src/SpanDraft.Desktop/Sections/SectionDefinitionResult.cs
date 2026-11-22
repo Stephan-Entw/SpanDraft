@@ -18,7 +18,7 @@ public interface ISectionDefinitionLibrary
     string? Error { get; }
     bool ContainsName(string name);
     Task<string?> SaveAsync(SectionLibraryEntry entry);
-    Task<string?> DeleteAsync(string name);
+    Task<string?> DeleteAsync(SectionLibraryEntry entry);
 }
 
 internal sealed class SectionDefinitionLibrary(MainWindowViewModel main) : ISectionDefinitionLibrary
@@ -28,5 +28,5 @@ internal sealed class SectionDefinitionLibrary(MainWindowViewModel main) : ISect
     public string? Error => main.SectionLibraryError;
     public bool ContainsName(string name) => main.UserSections.Find(name) is not null;
     public Task<string?> SaveAsync(SectionLibraryEntry entry) => main.SaveSectionAsync(entry);
-    public Task<string?> DeleteAsync(string name) => main.DeleteSectionAsync(name);
+    public Task<string?> DeleteAsync(SectionLibraryEntry entry) => main.DeleteSectionAsync(entry);
 }

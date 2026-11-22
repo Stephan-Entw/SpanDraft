@@ -352,8 +352,8 @@ public sealed class ProjectRecoveryTests
         Assert.True(state.ContentEquals(snapshot.State)); Assert.Equal(Now, snapshot.WrittenAtUtc);
         Assert.Equal(TestPath("original.spandraft"), snapshot.OriginalFilePath);
         var main = new MainWindowViewModel(files: files, recovery: recovery,
-            dialogs: new Dialogs(), settings: UserSettings.Default with { LastAuthor = "Local author" },
-            userNameProvider: () => "windows.user");
+            dialogs: new Dialogs(),
+            userNameProvider: () => "windows.user", services: TestServices.Create(settings: UserSettings.Default with { LastAuthor = "Local author" }));
         Assert.True(await main.InitializeRecoveryAsync()); Assert.True(main.Session!.IsDirty);
         Assert.True(state.ContentEquals(main.Session.CurrentRevision.State));
         Assert.Equal("Local author", main.Settings.LastAuthor);

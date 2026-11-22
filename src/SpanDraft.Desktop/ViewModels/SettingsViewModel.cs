@@ -1,6 +1,7 @@
 using System.Globalization;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Desktop.Services;
 using SpanDraft.Reporting.Notation;
 
 namespace SpanDraft.Desktop.ViewModels;
@@ -35,13 +36,13 @@ public sealed record UnitSettingGroup(string Title, IReadOnlyList<UnitSettingVie
 /// <summary>Independent dialog transaction; rejected saves retain the pending edits.</summary>
 public sealed class SettingsViewModel : ObservableObject
 {
-    private readonly Func<UserSettings, Task<string?>> _apply;
+    private readonly Func<SettingsPatch, Task<string?>> _apply;
     private UserSettings _applied;
     private UserSettings _pending;
     private bool _saving;
     private string? _error;
 
-    public SettingsViewModel(UserSettings settings, Func<UserSettings, Task<string?>> apply)
+    public SettingsViewModel(UserSettings settings, Func<SettingsPatch, Task<string?>> apply)
     {
         _applied = _pending = settings; _apply = apply;
         // Grouped by engineering topic, so a unit is found where the quantity belongs instead of in a list of 18 rows.
@@ -185,7 +186,8 @@ public sealed class SettingsViewModel : ObservableObject
         _saving = true; _error = null; Refresh();
         try
         {
-            _error = await _apply(_pending);
+            // Only the editable preferences leave the dialog; fields it does not own are never written back.
+            _error = await _apply(SettingsPatch.From(_pending));
             if (_error is not null) return false;
             _applied = _pending;
             return true;

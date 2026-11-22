@@ -262,7 +262,7 @@ public sealed class SectionDefinitionControlTests : SectionDefinitionPrototypeTe
     public async Task SectionCardUsesExistingWindowAndOnlyUpdatesTheDraftOnAcceptance(bool accept, double width, double height)
     {
         using var environment=new DesktopControlEnvironment();
-        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); main.NewCommand.Execute(null); await main.InitializeLibrariesAsync();
+        var files=new Files(); var main=new MainWindowViewModel(services: TestServices.Create(sectionStore: new(files,"sections"))); main.NewCommand.Execute(null); await main.Services.InitializeAsync();
         var setup=main.Setup; var original=setup.SelectedSection; var axis=setup.BendingAxis;
         var view=new ProjectSetupView{DataContext=setup}; var owner=new Window{Content=view}; owner.Show(); ArrangeSection(owner,width,height);
         var decorations=owner.WindowDecorations; var position=owner.Position;
@@ -285,7 +285,7 @@ public sealed class SectionDefinitionControlTests : SectionDefinitionPrototypeTe
     public async Task HostedDefinitionProtectsActiveLibrarySaveAndReturnsToSetup()
     {
         using var environment=new DesktopControlEnvironment();
-        var files=new Files(); var main=new MainWindowViewModel(sectionStore:new(files,"sections")); main.NewCommand.Execute(null); await main.InitializeLibrariesAsync();
+        var files=new Files(); var main=new MainWindowViewModel(services: TestServices.Create(sectionStore: new(files,"sections"))); main.NewCommand.Execute(null); await main.Services.InitializeAsync();
         var setup=new ProjectSetupView { DataContext=main.Setup }; var owner=new Window { Content=setup }; owner.Show(); ArrangeSection(owner);
         main.Setup.ShowSections(); var vm=main.Setup.Definition!; vm.SelectForm(SectionEditorType.Circle); Fill(vm);
         var release=new TaskCompletionSource(); var reached=new TaskCompletionSource();

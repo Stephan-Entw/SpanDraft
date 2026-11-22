@@ -155,8 +155,8 @@ public sealed class DesktopPageLayoutTests
     private static async Task<(Window Window, MainWindowViewModel Main)> Shell(int width, int height)
     {
         var files = new Files();
-        var main = new MainWindowViewModel(files: files, materialStore: new(files, "materials"), sectionStore: new(files, "sections"));
-        await main.InitializeLibrariesAsync();
+        var main = new MainWindowViewModel(files: files, services: TestServices.Create(materialStore: new(files, "materials"), sectionStore: new(files, "sections")));
+        await main.Services.InitializeAsync();
         var shell = new MainWindow(); var content = shell.Content; shell.Content = null;
         var window = new Window { Content = content, DataContext = main, Width = width, Height = height };
         foreach (var template in shell.DataTemplates) window.DataTemplates.Add(template);

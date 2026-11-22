@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using SpanDraft.Desktop;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Desktop.Services;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
@@ -235,7 +236,7 @@ public sealed class DesktopSettingsTests
     [Fact]
     public async Task ApplyEstablishesANewBaselineAndCancelDiscardsOnlyLaterChanges()
     {
-        UserSettings? published = null;
+        SettingsPatch? published = null;
         var model = new SettingsViewModel(UserSettings.Default, settings =>
         { published = settings; return Task.FromResult<string?>(null); });
         Assert.False(model.CanApply);
@@ -344,7 +345,7 @@ public sealed class DesktopSettingsTests
         var expected = UserSettings.Default.Select(UnitProfileKind.UnitedStates) with { SignificantDigits = 5 };
         await store.SaveAsync(expected);
         var startup = await DesktopStartupContext.LoadAsync(files, store);
-        var main = new MainWindowViewModel(files: startup.Files, settingsStore: startup.SettingsStore, settings: startup.Settings);
+        var main = new MainWindowViewModel(files: startup.Files, services: TestServices.Create(settingsStore: startup.SettingsStore, settings: startup.Settings));
         main.NewCommand.Execute(null);
         Assert.True(expected.ContentEquals(main.Settings));
         ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
@@ -359,7 +360,7 @@ public sealed class DesktopSettingsTests
         await store.SaveAsync(UserSettings.Default);
         var bytes = files.Data["settings"].ToArray();
         files.FailWritePath = "settings";
-        var main = new MainWindowViewModel(files: files, settingsStore: store); main.NewCommand.Execute(null);
+        var main = new MainWindowViewModel(files: files, services: TestServices.Create(settingsStore: store)); main.NewCommand.Execute(null);
         var dialog = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
         dialog.Select(UnitProfileKind.UnitedStates);
         Assert.False(await dialog.ApplyAsync());
@@ -378,7 +379,7 @@ public sealed class DesktopSettingsTests
         var store = new LocalSettingsStore(files, "settings");
         int analyses = 0;
         var main = new MainWindowViewModel(b => { analyses++; return SpanDraft.Analysis.BeamAnalysis.Analyze(b); },
-            files: files, recovery: recovery, settingsStore: store); main.NewCommand.Execute(null);
+            files: files, recovery: recovery, services: TestServices.Create(settingsStore: store)); main.NewCommand.Execute(null);
         ProjectTestSupport.CompleteSetup(main); main.Setup.ApplyCommand.Execute(null);
         var editor = main.Editor!; var session = editor.Session;
         session.MarkSaved(session.CurrentRevision, Path.Combine(Path.GetTempPath(), "phase3.spandraft"));
@@ -391,7 +392,7 @@ public sealed class DesktopSettingsTests
         var result = editor.Presentation.Result; int count = analyses, changes = 0;
         session.Changed += () => changes++;
         var settings = UserSettings.Default.WithUnit(QuantityKind.BeamLength, UnitCatalog.Foot) with { SignificantDigits = 5 };
-        Assert.Null(await main.ApplySettingsAsync(settings));
+        Assert.Null(await main.ApplySettingsAsync(SettingsPatch.From(settings)));
         Assert.Same(revision, session.CurrentRevision); Assert.Equal(saved, session.SavedRevisionId);
         Assert.Equal(undo, session.UndoHistory); Assert.Equal(redo, session.RedoHistory);
         Assert.True(session.IsDirty); Assert.Equal(bytes, ProjectFileCodec.Serialize(session.CurrentRevision.State));
@@ -449,14 +450,13 @@ public sealed class DesktopSettingsTests
     public async Task VisibleSettingsTransactionPreservesTheInternalLastAuthor()
     {
         var files = new Files(); var store = new LocalSettingsStore(files, "settings");
-        var main = new MainWindowViewModel(files: files, settingsStore: store,
-            settings: UserSettings.Default with { LastAuthor = "Local author" });
+        var main = new MainWindowViewModel(files: files, services: TestServices.Create(settingsStore: store, settings: UserSettings.Default with { LastAuthor = "Local author" }));
         var model = new SettingsViewModel(main.Settings, main.ApplySettingsAsync);
         model.SignificantDigits = 5;
         Assert.True(await model.ApplyAsync());
         Assert.Equal("Local author", main.Settings.LastAuthor);
         Assert.Equal("Local author", (await store.LoadAsync()).LastAuthor);
-        Assert.Null(await main.ApplySettingsAsync(main.Settings with { LastAuthor = "Stale snapshot" }));
+        Assert.Null(await main.ApplySettingsAsync(SettingsPatch.From(main.Settings with { LastAuthor = "Stale snapshot" })));
         Assert.Equal("Local author", main.Settings.LastAuthor);
     }
 

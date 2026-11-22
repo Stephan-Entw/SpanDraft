@@ -23,12 +23,10 @@ public sealed class DesktopProjectSetupWorkflowTests
         public int Analyses { get; private set; }
         public Fixture(bool brokenCatalog = false)
         {
-            Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, Files, Dialogs,
-                materialStore: new(Files, "materials"), sectionStore: new(Files, "sections"),
-                catalogLoader: brokenCatalog ? () => throw new LibraryFormatException("Injected") : null);
+            Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, Files, Dialogs, services: TestServices.Create(materialStore: new(Files, "materials"), sectionStore: new(Files, "sections"), catalogLoader: brokenCatalog ? () => throw new LibraryFormatException("Injected") : null, load: false));
             Main.NewCommand.Execute(null);
         }
-        public async Task Load() => await Main.InitializeLibrariesAsync();
+        public async Task Load() => await Main.Services.InitializeAsync();
         public void Create() => Main.Setup.ApplyCommand.Execute(null);
     }
     private static Material Entry(string name = "Mine") => new Material(name, Pressure.FromPascals(210e9), Pressure.FromMegapascals(355), MaterialStrengthType.Re,
@@ -240,13 +238,13 @@ public sealed class DesktopProjectSetupWorkflowTests
         string? error = material ? operation switch
         {
             "add" => await f.Main.SaveMaterialAsync(Entry("Added")),
-            "replace" => await f.Main.SaveMaterialAsync(Entry("Renamed"), "Mine"),
-            _ => await f.Main.DeleteMaterialAsync("Mine")
+            "replace" => await f.Main.SaveMaterialAsync(Entry("Renamed"), f.Main.UserMaterials.Find("Mine")),
+            _ => await f.Main.DeleteMaterialAsync(f.Main.UserMaterials.Find("Mine")!)
         } : operation switch
         {
             "add" => await f.Main.SaveSectionAsync(new("Added", Rectangle())),
-            "replace" => await f.Main.SaveSectionAsync(new("Renamed", Rectangle()), "Mine"),
-            _ => await f.Main.DeleteSectionAsync("Mine")
+            "replace" => await f.Main.SaveSectionAsync(new("Renamed", Rectangle()), f.Main.UserSections.Find("Mine")),
+            _ => await f.Main.DeleteSectionAsync(f.Main.UserSections.Find("Mine")!)
         };
         Assert.NotNull(error); Assert.Same(oldMaterials, f.Main.UserMaterials); Assert.Same(oldSections, f.Main.UserSections);
         Assert.Equal(bytes, f.Files.Data[path]); Assert.Empty(f.Files.Writes); Assert.False(f.Main.IsBusy);
@@ -517,10 +515,8 @@ public sealed class DesktopProjectSetupWorkflowTests
         var state = State(2) with { Document = State(2).Document with { Length = M(1) } };
         files.Data[slot] = ProjectRecovery.Encode(new(state, null, Now));
         files.Data["materials"] = Encoding.UTF8.GetBytes("{"); files.Data["sections"] = Encoding.UTF8.GetBytes("{");
-        var main = new MainWindowViewModel(files: files, dialogs: dialogs, recovery: new(files, slot),
-            materialStore: new(files, "materials"), sectionStore: new(files, "sections"),
-            catalogLoader: () => throw new LibraryFormatException("Injected")); main.NewCommand.Execute(null);
-        await main.InitializeLibrariesAsync(); Assert.True(await main.InitializeRecoveryAsync());
+        var main = new MainWindowViewModel(files: files, dialogs: dialogs, recovery: new(files, slot), services: TestServices.Create(materialStore: new(files, "materials"), sectionStore: new(files, "sections"), catalogLoader: () => throw new LibraryFormatException("Injected"))); main.NewCommand.Execute(null);
+        await main.Services.InitializeAsync(); Assert.True(await main.InitializeRecoveryAsync());
         Assert.True(state.ContentEquals(main.Session!.CurrentRevision.State)); Assert.True(main.Editor!.Presentation.IsSuccess);
         Assert.NotNull(main.BuiltInError); Assert.NotNull(main.MaterialLibraryError); Assert.NotNull(main.SectionLibraryError);
         Assert.Equal("{", Encoding.UTF8.GetString(files.Data["materials"])); Assert.Equal("{", Encoding.UTF8.GetString(files.Data["sections"]));

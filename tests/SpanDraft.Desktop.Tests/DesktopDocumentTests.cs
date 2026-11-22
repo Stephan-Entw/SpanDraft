@@ -142,7 +142,7 @@ public sealed class DesktopDocumentTests
         using var environment = new DesktopControlEnvironment();
         using var scope = new UiCultureScope(culture);
         var files = new Files();
-        var main = new MainWindow(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default)));
+        var main = new MainWindow(TestHosts.Initialized(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default))));
         main.Show();
         Dispatcher.UIThread.RunJobs();
         try

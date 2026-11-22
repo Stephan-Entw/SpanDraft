@@ -32,6 +32,7 @@
     <Compile Include="../Support/SectionTestShapes.cs" Link="Support/SectionTestShapes.cs" />
     <Compile Include="../Support/ProjectTemplates.cs" Link="Support/ProjectTemplates.cs" />
     <Compile Include="../Support/ProjectTestSupport.cs" Link="Support/ProjectTestSupport.cs" />
+    <Compile Include="../Support/SharedServicesTestSupport.cs" Link="Support/SharedServicesTestSupport.cs" />
     <Compile Include="../Support/ReportTestProjects.cs" Link="Support/ReportTestProjects.cs" />
     <Compile Include="../Support/ResultCultureScope.cs" Link="Support/ResultCultureScope.cs" />
     <Compile Include="../Support/SectionDefinitionPrototypeTestSupport.cs" Link="Support/SectionDefinitionPrototypeTestSupport.cs" />

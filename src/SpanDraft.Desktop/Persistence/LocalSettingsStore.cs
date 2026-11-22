@@ -4,6 +4,25 @@ using SpanDraft.Desktop.Presentation;
 
 namespace SpanDraft.Desktop.Persistence;
 
+/// <summary>Why the settings of a process are what they are; the file is only called damaged when it was read and rejected.</summary>
+public enum SettingsLoadState
+{
+    /// <summary>The file does not exist; defaults are in use and nothing needs protection.</summary>
+    Missing,
+    /// <summary>The file was read and is valid.</summary>
+    Valid,
+    /// <summary>The file was read, but its content or format is invalid; defaults are in use and the file is kept.</summary>
+    RecoveredFromInvalidSettings,
+    /// <summary>The file could not be read (transient or technical failure); its content is unknown, not damaged.</summary>
+    Unreadable
+}
+
+/// <summary>The outcome of one settings load. <see cref="InvalidContent"/> keeps the rejected bytes for a diagnostic backup.</summary>
+public sealed record SettingsLoadResult(SettingsLoadState State, UserSettings Settings, byte[]? InvalidContent = null)
+{
+    public static SettingsLoadResult Loaded(UserSettings settings) => new(SettingsLoadState.Valid, settings);
+}
+
 public sealed class LocalSettingsStore(IProjectFileStore files, string path, Action? ensureDirectory = null)
 {
     private readonly object _queueLock = new();
@@ -16,15 +35,41 @@ public sealed class LocalSettingsStore(IProjectFileStore files, string path, Act
         return new(files, Path.Combine(directory, "settings.json"), () => Directory.CreateDirectory(directory));
     }
 
-    public async Task<UserSettings> LoadAsync()
+    public async Task<UserSettings> LoadAsync() => (await LoadDetailedAsync()).Settings;
+
+    /// <summary>Never throws for file or content problems: SpanDraft starts with defaults and says why.</summary>
+    public async Task<SettingsLoadResult> LoadDetailedAsync()
+    {
+        byte[]? bytes;
+        try { bytes = await files.ReadAsync(FilePath); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        { return new(SettingsLoadState.Unreadable, UserSettings.Default); }
+        if (bytes is null) return new(SettingsLoadState.Missing, UserSettings.Default);
+        try { return SettingsLoadResult.Loaded(SettingsCodec.Deserialize(bytes)); }
+        catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException)
+        { return new(SettingsLoadState.RecoveredFromInvalidSettings, UserSettings.Default, bytes); }
+    }
+
+    /// <summary>
+    /// Keeps the rejected original under a diagnostic name next to the settings file, never replacing an existing backup.
+    /// Best effort: returns the path, or null when no backup could be made.
+    /// </summary>
+    public async Task<string?> BackupInvalidAsync(byte[] original, CancellationToken cancellationToken = default)
     {
         try
         {
-            var bytes = await files.ReadAsync(FilePath);
-            return bytes is null ? UserSettings.Default : SettingsCodec.Deserialize(bytes);
+            ensureDirectory?.Invoke();
+            string directory = Path.GetDirectoryName(FilePath) ?? "";
+            string name = Path.GetFileNameWithoutExtension(FilePath), extension = Path.GetExtension(FilePath);
+            for (int i = 0; i < 100; i++)
+            {
+                string candidate = Path.Combine(directory, i == 0 ? $"{name}.invalid{extension}" : $"{name}.invalid.{i}{extension}");
+                if (await files.TryWriteNewAtomicAsync(candidate, original, cancellationToken)) return candidate;
+            }
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException or InvalidOperationException)
-        { return UserSettings.Default; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or NotSupportedException
+            or System.Security.SecurityException) { }
+        return null;
     }
 
     public Task SaveAsync(UserSettings settings)

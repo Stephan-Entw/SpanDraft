@@ -507,7 +507,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         _saveError = _library.CanSave ? null : _library.Error ?? Strings.SectionLibraryUnavailable;
         if (_saveError is not null) { Refresh(); return; }
         _busy = true; Refresh();
-        try { _saveError = await _library.DeleteAsync(entry.Name); }
+        try { _saveError = await _library.DeleteAsync(entry); }
         finally { _busy = false; Refresh(); }
     }
     public void LoadPreset(SectionLibraryEntry entry)

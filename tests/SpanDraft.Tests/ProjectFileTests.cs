@@ -220,6 +220,22 @@ public sealed class ProjectFileTests
     }
 
     [Fact]
+    public async Task CreateNewWriteNeverOverwritesAnExistingFileAndLeavesNoTemporaryFile()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "SpanDraft-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var store = new ProjectFileStore(); var path = Path.Combine(directory, "backup.json");
+            Assert.True(await store.TryWriteNewAtomicAsync(path, [1, 2, 3], TestContext.Current.CancellationToken));
+            Assert.False(await store.TryWriteNewAtomicAsync(path, [9, 9], TestContext.Current.CancellationToken));
+            Assert.Equal(new byte[] { 1, 2, 3 }, await store.ReadAsync(path));
+            Assert.Equal([path], Directory.GetFiles(directory));
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    [Fact]
     public async Task PhysicalAtomicStoreReplacesCompleteFilesAndCleansTemporaryFilesOnFailure()
     {
         string directory = Path.Combine(Path.GetTempPath(), "SpanDraft-tests-" + Guid.NewGuid().ToString("N"));

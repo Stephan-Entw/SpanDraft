@@ -107,15 +107,13 @@ public sealed class MaterialWorkflowRegressionTests
         public int Analyses { get; private set; }
         public Fixture(bool brokenCatalog = false, bool store = true)
         {
-            Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, files: Files, dialogs: Dialogs,
-                materialStore: store ? new(Files, "materials") : null,
-                catalogLoader: brokenCatalog ? () => throw new LibraryFormatException("Injected") : null);
+            Main = new(b => { Analyses++; return BeamAnalysis.Analyze(b); }, files: Files, dialogs: Dialogs, services: TestServices.Create(materialStore: store ? new(Files, "materials") : null, catalogLoader: brokenCatalog ? () => throw new LibraryFormatException("Injected") : null, load: false));
             Main.NewCommand.Execute(null);
         }
         public async Task Load(params Material[] entries)
         {
             Files.Data["materials"] = MaterialLibraryCodec.Serialize(new(entries));
-            await Main.InitializeLibrariesAsync();
+            await Main.Services.InitializeAsync();
         }
         public MaterialSelectionViewModel Select()
         { Main.Setup.ShowMaterials(); return Assert.IsType<MaterialSelectionViewModel>(Main.Setup.CurrentStep); }
@@ -547,7 +545,7 @@ public sealed class MaterialWorkflowRegressionTests
     public async Task MissingOrDamagedLibraryStillAllowsProjectEditingAndBuiltInUse(bool damaged)
     {
         var f = new Fixture(store: damaged);
-        if (damaged) { f.Files.Data["materials"] = [123]; await f.Main.InitializeLibrariesAsync(); }
+        if (damaged) { f.Files.Data["materials"] = [123]; await f.Main.Services.InitializeAsync(); }
         f.Main.Setup.SelectedMaterial = MaterialTestEntries.Entry(); var selection = f.Select(); Assert.False(selection.NewCommand.CanExecute(null));
         Assert.False(selection.CanSaveSelected); selection.EditSelectedCommand.Execute(null); selection.Editor!.Name = "Project only";
         Assert.True(await selection.Editor.ConfirmAsync()); selection.UseSelected(); Assert.Equal("Project only", f.Main.Setup.SelectedMaterial!.Name);
@@ -566,7 +564,7 @@ public sealed class MaterialWorkflowRegressionTests
         Assert.True(state.ContentEquals((await recovery.ReadAsync())!.State));
         var draft = new ProjectSetupDraft(Material: state.Document.Material); f.Files.Data["setup-recovery"] = ProjectSetupRecovery.Encode(new(draft, Now));
         Assert.True(draft.ContentEquals((await new ProjectSetupRecovery(f.Files, "setup-recovery").ReadAsync())!.Draft));
-        await f.Main.SaveMaterialAsync(MaterialTestEntries.Entry("Renamed", MaterialCategory.Other), MaterialTestEntries.Entry().Name);
+        await f.Main.SaveMaterialAsync(MaterialTestEntries.Entry("Renamed", MaterialCategory.Other), f.Main.UserMaterials.Find(MaterialTestEntries.Entry().Name));
         Assert.Equal(bytes, ProjectFileCodec.Serialize(state));
         foreach (var key in new[] { "libraryId", "source", "provenance" }) Assert.DoesNotContain("\"" + key + "\"", Encoding.UTF8.GetString(bytes));
     }

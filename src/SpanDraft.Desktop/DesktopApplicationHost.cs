@@ -1,6 +1,7 @@
 using SpanDraft.Desktop.Activation;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
+using SpanDraft.Desktop.Services;
 
 namespace SpanDraft.Desktop;
 
@@ -18,16 +19,24 @@ public sealed class DesktopApplicationHost
     public DesktopApplicationHost(DesktopStartupContext? startup = null)
     {
         Files = startup?.Files ?? new ProjectFileStore();
-        SettingsStore = startup?.SettingsStore ?? LocalSettingsStore.Local(Files);
-        Settings = startup?.Settings ?? UserSettings.Default;
+        var settingsStore = startup?.SettingsStore ?? LocalSettingsStore.Local(Files);
         StateStores = startup?.StateStores ?? DesktopStateStores.Local(Files);
         UserNameProvider = startup?.UserNameProvider ?? (static () => OperatingSystem.IsWindows() ? Environment.UserName : null);
+        // The only place the shared services are created: exactly one instance of each per Primary process.
+        Services = SharedServices.Create(settingsStore,
+            startup?.SettingsLoad ?? SettingsLoadResult.Loaded(startup?.Settings ?? UserSettings.Default),
+            StateStores, startup?.BuiltInLoader);
     }
 
     public IProjectFileStore Files { get; }
-    public LocalSettingsStore SettingsStore { get; }
-    public UserSettings Settings { get; }
+    /// <summary>The persistence bundle the services were built from; recovery stores are still used directly.</summary>
     public DesktopStateStores StateStores { get; }
+    public SharedServices Services { get; }
+    public SettingsService Settings => Services.Settings;
+    public SettingsCoordinator SettingsCoordinator => Services.SettingsCoordinator;
+    public MaterialLibraryService Materials => Services.Materials;
+    public SectionLibraryService Sections => Services.Sections;
+    public RecentProjectsService Recents => Services.Recents;
     public Func<string?> UserNameProvider { get; }
     public DesktopApplicationState State => _state;
     public ActivationDispatcher Activation { get; } = new();
@@ -52,6 +61,19 @@ public sealed class DesktopApplicationHost
         if (accepted) { Activation.NotifyEnqueued(); return BrokerStatus.Accepted; }
         RetryServed?.Invoke();
         return BrokerStatus.Retry;
+    }
+
+    /// <summary>Loads the libraries, the built-in catalog and the recent projects once. Never touches the process culture.</summary>
+    public Task InitializeServicesAsync() => Services.InitializeAsync();
+
+    /// <summary>
+    /// Startup initialization, before Avalonia and any XAML: shared services first, then the process culture is derived
+    /// from the loaded settings and fixed for the rest of the process.
+    /// </summary>
+    public async Task InitializeAsync(System.Globalization.CultureInfo systemCulture, System.Globalization.CultureInfo systemUiCulture)
+    {
+        await InitializeServicesAsync();
+        Settings.EstablishProcessCulture(systemCulture, systemUiCulture);
     }
 
     public void AttachBroker(BrokerServer broker) => broker.Handler = HandleBrokerRequest;

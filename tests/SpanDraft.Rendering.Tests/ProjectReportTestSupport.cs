@@ -43,10 +43,10 @@ public abstract class ProjectReportTestSupport : IDisposable
     {
         var files = new Files();
         string path = Path.GetFullPath("report-input.spandraft"); files.Data[path] = ProjectFileCodec.Serialize(state);
-        var main = new MainWindowViewModel(files: files, settings: UserSettings.Default with
+        var main = new MainWindowViewModel(files: files,
+            analyze: beam => { analyzed?.Invoke(); return BeamAnalysis.Analyze(beam); }, services: TestServices.Create(settings: UserSettings.Default with
             { Profile = presentation?.Profile ?? UnitProfile.Default, SignificantDigits = presentation?.SignificantDigits ?? 3,
-              Notation = presentation?.Notation ?? EngineeringNotation.Automatic },
-            analyze: beam => { analyzed?.Invoke(); return BeamAnalysis.Analyze(beam); });
+              Notation = presentation?.Notation ?? EngineeringNotation.Automatic }));
         Assert.True(main.OpenAsync(path).GetAwaiter().GetResult());
         return (main, files);
     }
@@ -101,7 +101,7 @@ public abstract class ProjectReportTestSupport : IDisposable
 
     private protected static (MainWindow Window, ReportPreviewView View) ShowReportWorkspace(MainWindowViewModel main, Files files, int width = 1250, int height = 800)
     {
-        var window = new MainWindow(new DesktopApplicationHost(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default)))
+        var window = new MainWindow(TestHosts.Initialized(new DesktopApplicationHost(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default))))
             { Width = width, Height = height };
         window.Show(); Dispatcher.UIThread.RunJobs();
         typeof(MainWindow).GetField("_model", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, main);

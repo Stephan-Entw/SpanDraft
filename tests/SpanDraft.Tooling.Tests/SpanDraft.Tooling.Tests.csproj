@@ -18,6 +18,7 @@
     <Compile Include="../Support/DesktopControlEnvironment.cs" Link="Support/DesktopControlEnvironment.cs" />
     <Compile Include="../Support/DesktopIconTestSupport.cs" Link="Support/DesktopIconTestSupport.cs" />
     <Compile Include="../Support/ProjectTestSupport.cs" Link="Support/ProjectTestSupport.cs" />
+    <Compile Include="../Support/SharedServicesTestSupport.cs" Link="Support/SharedServicesTestSupport.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../../tools/Screenshots/Fixtures/Crane Beam.spandraft" Link="Fixtures/Screenshots/Crane Beam.spandraft" CopyToOutputDirectory="PreserveNewest" />

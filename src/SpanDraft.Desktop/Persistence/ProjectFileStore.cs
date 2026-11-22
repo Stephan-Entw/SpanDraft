@@ -6,6 +6,17 @@ public interface IProjectFileStore
     Task<byte[]?> ReadAsync(string path);
     Task WriteAtomicAsync(string path, byte[] bytes, CancellationToken cancellationToken = default);
     Task DeleteAsync(string path);
+
+    /// <summary>
+    /// Publishes a new file only when the destination does not exist; returns false and leaves it untouched otherwise.
+    /// The default is a check followed by an atomic write; <see cref="ProjectFileStore"/> makes the creation itself atomic.
+    /// </summary>
+    async Task<bool> TryWriteNewAtomicAsync(string path, byte[] bytes, CancellationToken cancellationToken = default)
+    {
+        if (await ReadAsync(path) is not null) return false;
+        await WriteAtomicAsync(path, bytes, cancellationToken);
+        return true;
+    }
 }
 
 public sealed class ProjectFileStore : IProjectFileStore
@@ -34,6 +45,32 @@ public sealed class ProjectFileStore : IProjectFileStore
             cancellationToken.ThrowIfCancellationRequested();
             // Same-directory rename publishes a complete file. Failure preserves the old destination.
             File.Move(temporary, destination, overwrite: true);
+        }
+        finally
+        {
+            try { File.Delete(temporary); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        }
+    }, cancellationToken);
+
+    public Task<bool> TryWriteNewAtomicAsync(string path, byte[] bytes, CancellationToken cancellationToken = default) => Task.Run(async () =>
+    {
+        string destination = Path.GetFullPath(path);
+        string directory = Path.GetDirectoryName(destination)!;
+        string temporary = Path.Combine(directory, "." + Path.GetFileName(destination) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+        try
+        {
+            await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                4096, FileOptions.Asynchronous))
+            {
+                await stream.WriteAsync(bytes, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+                stream.Flush(flushToDisk: true);
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            // overwrite: false makes the publication itself the existence check, so a concurrent creator can never be replaced.
+            try { File.Move(temporary, destination, overwrite: false); return true; }
+            catch (IOException) when (File.Exists(destination)) { return false; }
         }
         finally
         {

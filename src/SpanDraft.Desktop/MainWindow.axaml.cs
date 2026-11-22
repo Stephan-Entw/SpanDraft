@@ -103,13 +103,11 @@ public partial class MainWindow : Window
                 _frameProbe = new(this, WorkspaceContent);
                 _performance = new(_frameProbe);
                 var stores = host.StateStores;
+                // The shared services were initialized by the bootstrap; this window only adapts them.
                 _model = new(performance: _performance, files: files, dialogs: _dialogs, recovery: stores.Recovery,
-                    setupRecovery: stores.SetupRecovery,
-                    settingsStore: host.SettingsStore, settings: host.Settings,
-                    materialStore: stores.Materials, sectionStore: stores.Sections,
-                    recentStore: stores.Recents, openUserManual: OpenUserManualAsync,
+                    setupRecovery: stores.SetupRecovery, services: host.Services, openUserManual: OpenUserManualAsync,
                     userNameProvider: host.UserNameProvider);
-                await _model.InitializeLibrariesAsync();
+                await _model.ReportStartupErrorsAsync();
                 DataContext = _model;
                 var discardConfirmed = new HashSet<LaunchRequest>(ReferenceEqualityComparer.Instance);
                 while (!await _model.InitializeRecoveryAsync())
@@ -125,7 +123,6 @@ public partial class MainWindow : Window
                 }
                 _initializing = false;
                 quitCommand.Refresh();
-                await _model.InitializeRecentProjectsAsync();
                 host.MarkReady();
                 // Requests wait in the host queue; a restored setup draft keeps the workspace unavailable for opens.
                 host.Activation.SetConsumer(HandleLaunchRequestAsync);
@@ -144,6 +141,7 @@ public partial class MainWindow : Window
         Closing += WindowClosing;
         Closed += (_, _) =>
         {
+            _model?.Dispose();
             host.Activation.SetConsumer(null);
             host.Activation.Enqueued -= PostPump;
             host.BeginShutdown();
