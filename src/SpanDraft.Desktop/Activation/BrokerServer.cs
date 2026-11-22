@@ -54,7 +54,7 @@ public sealed class BrokerServer : IDisposable
                 string? line = await BrokerProtocol.ReadLineAsync(pipe, timeout.Token);
                 var request = line is null ? null : BrokerProtocol.DecodeRequest(line, _metadata.DataScopeId);
                 var status = request is null ? BrokerStatus.Rejected : _handler(request);
-                await BrokerProtocol.WriteLineAsync(pipe, BrokerProtocol.EncodeResponse(status), timeout.Token);
+                await BrokerProtocol.WriteLineAsync(pipe, BrokerProtocol.EncodeResponse(status, _metadata.DataScopeId), timeout.Token);
             }
             catch (Exception error) when (error is OperationCanceledException or IOException or ObjectDisposedException) { }
         }
@@ -84,7 +84,7 @@ public static class BrokerClient
             await pipe.ConnectAsync(linked.Token);
             await BrokerProtocol.WriteLineAsync(pipe, BrokerProtocol.EncodeRequest(metadata.DataScopeId, request), linked.Token);
             string? line = await BrokerProtocol.ReadLineAsync(pipe, linked.Token);
-            return line is null ? null : BrokerProtocol.DecodeResponse(line);
+            return line is null ? null : BrokerProtocol.DecodeResponse(line, metadata.DataScopeId);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { return null; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return null; }

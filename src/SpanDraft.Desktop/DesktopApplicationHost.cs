@@ -11,6 +11,8 @@ public sealed class DesktopApplicationHost
 {
     private volatile DesktopApplicationState _state = DesktopApplicationState.Starting;
     private volatile DesktopApplicationState _stateBeforeQuit;
+    // State checks and enqueue of external requests are atomic against every lifecycle transition.
+    private readonly object _gate = new();
 
     public DesktopApplicationHost(DesktopStartupContext? startup = null)
     {
@@ -38,13 +40,17 @@ public sealed class DesktopApplicationHost
     /// </summary>
     public BrokerStatus HandleBrokerRequest(LaunchRequest request)
     {
-        if (_state != DesktopApplicationState.Ready)
+        lock (_gate)
         {
-            RetryServed?.Invoke();
-            return BrokerStatus.Retry;
+            // Accepted means the request is fully queued before any later BeginQuit/BeginShutdown can run.
+            if (_state == DesktopApplicationState.Ready)
+            {
+                Activation.Enqueue(request);
+                return BrokerStatus.Accepted;
+            }
         }
-        Activation.Enqueue(request);
-        return BrokerStatus.Accepted;
+        RetryServed?.Invoke();
+        return BrokerStatus.Retry;
     }
 
     public void AttachBroker(BrokerServer broker) => broker.Handler = HandleBrokerRequest;
@@ -52,23 +58,29 @@ public sealed class DesktopApplicationHost
     /// <summary>Global services are initialized and requests can be processed; only valid from Starting.</summary>
     public void MarkReady()
     {
-        if (_state == DesktopApplicationState.Starting) _state = DesktopApplicationState.Ready;
-        else if (_state == DesktopApplicationState.QuitInProgress) _stateBeforeQuit = DesktopApplicationState.Ready;
+        lock (_gate)
+        {
+            if (_state == DesktopApplicationState.Starting) _state = DesktopApplicationState.Ready;
+            else if (_state == DesktopApplicationState.QuitInProgress) _stateBeforeQuit = DesktopApplicationState.Ready;
+        }
     }
 
     public void BeginQuit()
     {
-        if (_state is DesktopApplicationState.Starting or DesktopApplicationState.Ready)
+        lock (_gate)
         {
-            _stateBeforeQuit = _state;
-            _state = DesktopApplicationState.QuitInProgress;
+            if (_state is DesktopApplicationState.Starting or DesktopApplicationState.Ready)
+            {
+                _stateBeforeQuit = _state;
+                _state = DesktopApplicationState.QuitInProgress;
+            }
         }
     }
 
     public void CancelQuit()
     {
-        if (_state == DesktopApplicationState.QuitInProgress) _state = _stateBeforeQuit;
+        lock (_gate) { if (_state == DesktopApplicationState.QuitInProgress) _state = _stateBeforeQuit; }
     }
 
-    public void BeginShutdown() => _state = DesktopApplicationState.ShuttingDown;
+    public void BeginShutdown() { lock (_gate) _state = DesktopApplicationState.ShuttingDown; }
 }

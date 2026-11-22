@@ -11,7 +11,7 @@ internal static class BrokerProtocol
     public const int MaxMessageBytes = 16 * 1024;
 
     private sealed record RequestWire(int V, string? Scope, string? Type, string? Value);
-    private sealed record ResponseWire(string? Status);
+    private sealed record ResponseWire(string? Status, string? Scope);
 
     public static string EncodeRequest(string dataScopeId, LaunchRequest request) =>
         JsonSerializer.Serialize(new RequestWire(Version, dataScopeId, request.Type.ToString(), request.Value));
@@ -30,14 +30,16 @@ internal static class BrokerProtocol
         catch (JsonException) { return null; }
     }
 
-    public static string EncodeResponse(BrokerStatus status) =>
-        JsonSerializer.Serialize(new ResponseWire(status.ToString()));
+    /// <summary>The response carries the Primary's DataScopeId so the client can verify the handshake.</summary>
+    public static string EncodeResponse(BrokerStatus status, string dataScopeId) =>
+        JsonSerializer.Serialize(new ResponseWire(status.ToString(), dataScopeId));
 
-    public static BrokerStatus? DecodeResponse(string line)
+    /// <summary>Null for nonsense or when the answering endpoint confirms a different DataScopeId.</summary>
+    public static BrokerStatus? DecodeResponse(string line, string expectedScope)
     {
         try
         {
-            return JsonSerializer.Deserialize<ResponseWire>(line) is { Status: { } text }
+            return JsonSerializer.Deserialize<ResponseWire>(line) is { Status: { } text } wire && wire.Scope == expectedScope
                 && Enum.TryParse<BrokerStatus>(text, out var status) && Enum.IsDefined(status) ? status : null;
         }
         catch (JsonException) { return null; }

@@ -47,12 +47,11 @@ public partial class MainWindow : Window
 
     public MainWindow() : this(new DesktopApplicationHost()) { }
 
-    public MainWindow(DesktopApplicationHost host, string[]? args = null)
+    public MainWindow(DesktopApplicationHost host)
     {
         InitializeComponent();
         _host = host;
-        if (LaunchRequest.FromArguments(args) is { Type: not LaunchRequestType.Activate } initial) host.Activation.Enqueue(initial);
-        host.RetryServed += () => Dispatcher.UIThread.Post(Activate);
+        host.RetryServed += () => Dispatcher.UIThread.Post(() => RetryTarget.Activate());
         var files = host.Files;
         NewMenuItem.InputGesture = new(Key.N, _primary);
         OpenMenuItem.InputGesture = new(Key.O, _primary);
@@ -150,6 +149,9 @@ public partial class MainWindow : Window
         };
     }
 
+    /// <summary>The TopLevel currently blocking the shell (e.g. the recovery dialog), otherwise this window.</summary>
+    internal Window RetryTarget => OwnedWindows.LastOrDefault(static w => w.IsVisible) ?? this;
+
     private void PostPump() => Dispatcher.UIThread.Post(async () =>
     {
         try { await _host.Activation.PumpAsync(); }
@@ -161,7 +163,8 @@ public partial class MainWindow : Window
         if (_initializing || _closing) return false;
         if (request.Type == LaunchRequestType.OpenProject)
         {
-            if (!_model.CanOpenProject) return false;
+            // A setup draft in progress keeps precedence over external opens; the request waits in the queue.
+            if (!_model.CanOpenProject || _model.Mode == MainViewMode.ProjectSetup) return false;
             Activate();
             await _model.OpenAsync(request.Value!);
             return true;
@@ -289,6 +292,11 @@ public partial class MainWindow : Window
             Dispatcher.UIThread.Post(Close, DispatcherPriority.Send);
         }
         catch { _host.CancelQuit(); throw; }
-        finally { _closing = false; }
+        finally
+        {
+            _closing = false;
+            // Requests that arrived while the quit was pending resume after a cancelled quit.
+            PostPump();
+        }
     }
 }
