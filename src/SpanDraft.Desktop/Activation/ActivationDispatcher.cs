@@ -7,7 +7,7 @@ namespace SpanDraft.Desktop.Activation;
 public sealed class ActivationDispatcher
 {
     private readonly object _gate = new();
-    private readonly Queue<LaunchRequest> _queue = new();
+    private readonly LinkedList<LaunchRequest> _queue = new();
     private Func<LaunchRequest, Task<bool>>? _consumer;
     private bool _pumping, _repump;
 
@@ -24,9 +24,39 @@ public sealed class ActivationDispatcher
 
     public void Enqueue(LaunchRequest request)
     {
+        EnqueueSilently(request);
+        NotifyEnqueued();
+    }
+
+    /// <summary>Queues without raising <see cref="Enqueued"/>, so callers holding their own lock can notify after releasing it.</summary>
+    internal void EnqueueSilently(LaunchRequest request)
+    {
+        Validate(request);
+        lock (_gate) _queue.AddLast(request);
+    }
+
+    /// <summary>Puts a request ahead of everything already waiting, without notification.</summary>
+    internal void EnqueueFirstSilently(LaunchRequest request)
+    {
+        Validate(request);
+        lock (_gate) _queue.AddFirst(request);
+    }
+
+    internal void NotifyEnqueued() => Enqueued?.Invoke();
+
+    /// <summary>Drops every waiting request and the consumer; used once a shutdown is committed.</summary>
+    internal void Close()
+    {
+        lock (_gate)
+        {
+            _queue.Clear();
+            _consumer = null;
+        }
+    }
+
+    private static void Validate(LaunchRequest request)
+    {
         if (!request.IsValid) throw new ArgumentException("Invalid launch request.", nameof(request));
-        lock (_gate) _queue.Enqueue(request);
-        Enqueued?.Invoke();
     }
 
     /// <summary>The consumer returns false when it cannot process the request right now.</summary>
@@ -49,18 +79,25 @@ public sealed class ActivationDispatcher
             lock (_gate)
             {
                 consumer = _consumer;
-                request = consumer is not null && _queue.TryPeek(out var head) ? head : null;
+                request = consumer is not null ? _queue.First?.Value : null;
                 if (request is null) { _pumping = _repump = false; return; }
                 _repump = false;
             }
             bool handled;
             try { handled = await consumer!(request); }
-            catch { lock (_gate) { _queue.TryDequeue(out _); _pumping = _repump = false; } throw; }
+            catch { lock (_gate) { Remove(request); _pumping = _repump = false; } throw; }
             lock (_gate)
             {
-                if (handled) _queue.TryDequeue(out _);
+                if (handled) Remove(request);
                 else if (!_repump) { _pumping = false; return; }
             }
         }
+    }
+
+    // The head may have changed while the consumer ran (EnqueueFirst or Close), so remove this exact instance.
+    private void Remove(LaunchRequest request)
+    {
+        for (var node = _queue.First; node is not null; node = node.Next)
+            if (ReferenceEquals(node.Value, request)) { _queue.Remove(node); return; }
     }
 }

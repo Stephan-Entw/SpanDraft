@@ -168,7 +168,7 @@ public sealed class DesktopActivationWindowTests
             Assert.Equal(DesktopApplicationState.QuitInProgress, host.State);
             Click(Assert.Single(window.OwnedWindows), Strings.Discard);
             // Simulates a macOS file activation that bypasses the broker while the quit is still pending.
-            host.Activation.Enqueue(LaunchRequest.OpenProject(TestPath("quit-late.spandraft")));
+            Assert.True(host.SubmitPlatformActivation(LaunchRequest.OpenProject(TestPath("quit-late.spandraft"))));
             Dispatcher.UIThread.RunJobs();
             Assert.False(closed);
             // Only the late request is asked about; the already confirmed one is not asked again.
@@ -252,8 +252,15 @@ public sealed class DesktopActivationWindowTests
         Assert.Equal(BrokerStatus.Retry, host.HandleBrokerRequest(request));
     }
 
+    private static void PumpUntil(Task task)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+        while (!task.IsCompleted && DateTime.UtcNow < deadline) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
+        Assert.True(task.IsCompleted);
+    }
+
     [Fact]
-    public async Task RealBrokerEndpointAnswersRetryDuringRecoveryAndAcceptedAfterRestore()
+    public void RealBrokerEndpointAnswersRetryDuringRecoveryAndAcceptedAfterRestore()
     {
         using var environment = new DesktopControlEnvironment();
         string root = Path.Combine(Path.GetTempPath(), "spandraft-activation-win-" + Guid.NewGuid().ToString("N"));
@@ -267,15 +274,16 @@ public sealed class DesktopActivationWindowTests
             window.Show(); Dispatcher.UIThread.RunJobs();
             var request = LaunchRequest.Activate;
             var retry = BrokerClient.SendAsync(primary.Metadata, request, TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-            while (!retry.IsCompleted) { Dispatcher.UIThread.RunJobs(); await Task.Delay(10, TestContext.Current.CancellationToken); }
-            Assert.Equal(BrokerStatus.Retry, await retry);
+            // Wait without await: the window and its dispatcher must stay on this thread.
+            PumpUntil(retry);
+            Assert.Equal(BrokerStatus.Retry, retry.Result);
             Assert.Equal(0, host.Activation.Count);
             Assert.NotEqual(DesktopApplicationState.Ready, host.State);
 
             Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs();
             var accepted = BrokerClient.SendAsync(primary.Metadata, request, TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-            while (!accepted.IsCompleted) { Dispatcher.UIThread.RunJobs(); await Task.Delay(10, TestContext.Current.CancellationToken); }
-            Assert.Equal(BrokerStatus.Accepted, await accepted);
+            PumpUntil(accepted);
+            Assert.Equal(BrokerStatus.Accepted, accepted.Result);
             typeof(MainWindow).GetField("_closeApproved", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, true);
             window.Close(); Dispatcher.UIThread.RunJobs();
         }
@@ -299,11 +307,161 @@ public sealed class DesktopActivationWindowTests
             var requests = MacActivationSource.ToRequests(new FileActivatedEventArgs(items));
             Assert.Equal([LaunchRequest.OpenProject(good), LaunchRequest.OpenProject(upper)], requests);
 
-            var dispatcher = new ActivationDispatcher();
-            foreach (var request in requests) dispatcher.Enqueue(request);
-            Assert.Equal(2, dispatcher.Count);
+            var host = new DesktopApplicationHost();
+            foreach (var request in requests) Assert.True(host.SubmitPlatformActivation(request));
+            Assert.Equal(2, host.Activation.Count);
             Assert.Empty(MacActivationSource.ToRequests(new FileActivatedEventArgs([items[1]])));
         }
         finally { Directory.Delete(root, true); }
+    }
+
+    private static bool IsRecoveryDialog(Window dialog) =>
+        dialog.GetVisualDescendants().OfType<Button>().Any(b => Equals(b.Content, Strings.Restore));
+
+    private static void ApproveClose(MainWindow window)
+    {
+        typeof(MainWindow).GetField("_closeApproved", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, true);
+        window.Close(); Dispatcher.UIThread.RunJobs();
+    }
+
+    private static (DesktopApplicationHost Host, MainWindow Window, Files Files, string Slot) ShowWithLegacyRecovery(params string[] projects)
+    {
+        var files = new Files();
+        foreach (var (path, index) in projects.Select((p, i) => (p, i))) files.Data[path] = ProjectFileCodec.Serialize(State(index + 2));
+        var host = Host(files, withRecovery: true);
+        return (host, new MainWindow(host), files, ProjectRecovery.Local(files).SlotPath);
+    }
+
+    [Fact]
+    public void MacOpenDuringLegacyRecoveryIsNotSilentlyLostByCancel()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            string target = TestPath("mac-during-recovery.spandraft");
+            var (host, window, files, slot) = ShowWithLegacyRecovery(target);
+            bool closed = false; window.Closed += (_, _) => closed = true;
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            Assert.True(host.SubmitPlatformActivation(LaunchRequest.OpenProject(target)));
+            Assert.Equal(DesktopApplicationState.Starting, host.State);
+
+            Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
+            Assert.False(closed);
+            Assert.False(IsRecoveryDialog(Assert.Single(window.OwnedWindows)));
+            Assert.Equal(1, host.Activation.Count);
+            Assert.Equal(DesktopApplicationState.Starting, host.State);
+            Assert.True(files.Data.ContainsKey(slot));
+            ApproveClose(window);
+        });
+    }
+
+    [Fact]
+    public void ConfirmedDiscardOfPlatformActivationsAfterRecoveryCancelExitsAndKeepsTheSlot()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            string first = TestPath("mac-discard-a.spandraft"), late = TestPath("mac-discard-b.spandraft");
+            var (host, window, files, slot) = ShowWithLegacyRecovery(first, late);
+            bool closed = false; window.Closed += (_, _) => closed = true;
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            host.SubmitPlatformActivation(LaunchRequest.OpenProject(first));
+            Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
+
+            // An activation arriving while the discard question is open wins against the commit and is asked about too.
+            var question = Assert.Single(window.OwnedWindows);
+            Assert.True(host.SubmitPlatformActivation(LaunchRequest.OpenProject(late)));
+            Click(question, Strings.Discard); Dispatcher.UIThread.RunJobs();
+            Assert.False(closed);
+            Assert.False(IsRecoveryDialog(Assert.Single(window.OwnedWindows)));
+
+            Click(Assert.Single(window.OwnedWindows), Strings.Discard); Dispatcher.UIThread.RunJobs();
+            Assert.True(closed);
+            Assert.Equal(DesktopApplicationState.ShuttingDown, host.State);
+            Assert.Equal(0, host.Activation.Count);
+            Assert.True(files.Data.ContainsKey(slot));
+            // A committed shutdown is final: nothing is accepted or processed afterwards.
+            Assert.False(host.SubmitPlatformActivation(LaunchRequest.OpenProject(first)));
+            Assert.Equal(BrokerStatus.Retry, host.HandleBrokerRequest(LaunchRequest.OpenProject(first)));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, host.Activation.Count);
+        });
+    }
+
+    [Fact]
+    public void DecliningTheDiscardKeepsSpanDraftRunningAndTheRecoveryCanBeDecidedAgain()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            string target = TestPath("mac-keep.spandraft");
+            var (host, window, files, slot) = ShowWithLegacyRecovery(target);
+            bool closed = false; window.Closed += (_, _) => closed = true;
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            host.SubmitPlatformActivation(LaunchRequest.OpenProject(target));
+            Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
+            Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
+
+            Assert.False(closed);
+            Assert.True(IsRecoveryDialog(Assert.Single(window.OwnedWindows)));
+            Assert.Equal(DesktopApplicationState.Starting, host.State);
+            Assert.True(files.Data.ContainsKey(slot));
+            Assert.Equal(1, host.Activation.Count);
+            Assert.Equal(BrokerStatus.Retry, host.HandleBrokerRequest(LaunchRequest.Activate));
+
+            Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(DesktopApplicationState.Ready, host.State);
+            // The restored session is dirty, so the existing Save/Discard/Cancel question comes first.
+            Click(Assert.Single(window.OwnedWindows), Strings.DontSave); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, host.Activation.Count);
+            Assert.Equal(target, Assert.IsType<MainWindowViewModel>(window.DataContext).Session!.FilePath);
+            ApproveClose(window);
+        });
+    }
+
+    [Fact]
+    public void ActivateOnlyDuringLegacyRecoveryNeedsNoDiscardQuestion()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var (host, window, files, slot) = ShowWithLegacyRecovery();
+            bool closed = false; window.Closed += (_, _) => closed = true;
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            Assert.True(host.SubmitPlatformActivation(LaunchRequest.Activate));
+            Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
+            Assert.True(closed);
+            Assert.True(files.Data.ContainsKey(slot));
+        });
+    }
+
+    [Fact]
+    public void InitialRequestFollowsTheStartupCancelSilentlyAndOtherwiseRunsFirst()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            string initial = TestPath("initial-a.spandraft"), later = TestPath("initial-b.spandraft");
+            // Cancelling the startup drops its own request without an extra question (§70.1).
+            var (host, window, _, _) = ShowWithLegacyRecovery(initial);
+            host.SetInitialRequest(LaunchRequest.OpenProject(initial));
+            bool closed = false; window.Closed += (_, _) => closed = true;
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, host.Activation.Count);
+            Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
+            Assert.True(closed);
+
+            // After a successful recovery decision the initial request precedes platform requests received meanwhile.
+            (host, window, _, _) = ShowWithLegacyRecovery(initial, later);
+            host.SetInitialRequest(LaunchRequest.OpenProject(initial));
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            host.SubmitPlatformActivation(LaunchRequest.OpenProject(later));
+            Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs();
+            Click(Assert.Single(window.OwnedWindows), Strings.DontSave); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, host.Activation.Count);
+            // Had the later request run first, the initial one would have replaced it.
+            Assert.Equal(later, Assert.IsType<MainWindowViewModel>(window.DataContext).Session!.FilePath);
+            ApproveClose(window);
+        });
     }
 }

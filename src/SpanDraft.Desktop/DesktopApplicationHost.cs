@@ -13,6 +13,7 @@ public sealed class DesktopApplicationHost
     private volatile DesktopApplicationState _stateBeforeQuit;
     // State checks and enqueue of external requests are atomic against every lifecycle transition.
     private readonly object _gate = new();
+    private LaunchRequest? _initialRequest;
 
     public DesktopApplicationHost(DesktopStartupContext? startup = null)
     {
@@ -40,29 +41,63 @@ public sealed class DesktopApplicationHost
     /// </summary>
     public BrokerStatus HandleBrokerRequest(LaunchRequest request)
     {
+        bool accepted;
         lock (_gate)
         {
             // Accepted means the request is fully queued before any later BeginQuit/BeginShutdown can run.
-            if (_state == DesktopApplicationState.Ready)
-            {
-                Activation.Enqueue(request);
-                return BrokerStatus.Accepted;
-            }
+            accepted = _state == DesktopApplicationState.Ready;
+            if (accepted) Activation.EnqueueSilently(request);
         }
+        // Subscribers are notified outside the lifecycle gate.
+        if (accepted) { Activation.NotifyEnqueued(); return BrokerStatus.Accepted; }
         RetryServed?.Invoke();
         return BrokerStatus.Retry;
     }
 
     public void AttachBroker(BrokerServer broker) => broker.Handler = HandleBrokerRequest;
 
-    /// <summary>Global services are initialized and requests can be processed; only valid from Starting.</summary>
-    public void MarkReady()
+    /// <summary>
+    /// Entry for platform activations (macOS file/URI/reopen). They have no external owner that could redeliver
+    /// them, so they are queued in every state before a committed shutdown, including legacy startup recovery.
+    /// Returns false once the shutdown is committed; nothing is accepted then.
+    /// </summary>
+    public bool SubmitPlatformActivation(LaunchRequest request)
     {
         lock (_gate)
         {
-            if (_state == DesktopApplicationState.Starting) _state = DesktopApplicationState.Ready;
+            if (_state == DesktopApplicationState.ShuttingDown) return false;
+            Activation.EnqueueSilently(request);
+        }
+        Activation.NotifyEnqueued();
+        return true;
+    }
+
+    /// <summary>
+    /// The startup's own request (command line or a Secondary that became Primary). It is held apart from the queue
+    /// and joins it, ahead of everything else, only when the host actually becomes Ready; a cancelled startup drops it.
+    /// </summary>
+    public void SetInitialRequest(LaunchRequest request)
+    {
+        if (!request.IsValid) throw new ArgumentException("Invalid launch request.", nameof(request));
+        if (request.Type == LaunchRequestType.Activate) return;
+        lock (_gate)
+        {
+            if (_state != DesktopApplicationState.Starting) throw new InvalidOperationException("The initial request belongs to the startup.");
+            _initialRequest = request;
+        }
+    }
+
+    /// <summary>Global services are initialized and requests can be processed; only valid from Starting.</summary>
+    public void MarkReady()
+    {
+        bool queued;
+        lock (_gate)
+        {
+            queued = false;
+            if (_state == DesktopApplicationState.Starting) queued = EnterReadyLocked();
             else if (_state == DesktopApplicationState.QuitInProgress) _stateBeforeQuit = DesktopApplicationState.Ready;
         }
+        if (queued) Activation.NotifyEnqueued();
     }
 
     public void BeginQuit()
@@ -79,8 +114,54 @@ public sealed class DesktopApplicationHost
 
     public void CancelQuit()
     {
-        lock (_gate) { if (_state == DesktopApplicationState.QuitInProgress) _state = _stateBeforeQuit; }
+        bool queued = false;
+        lock (_gate)
+        {
+            if (_state != DesktopApplicationState.QuitInProgress) return;
+            if (_stateBeforeQuit == DesktopApplicationState.Ready) queued = EnterReadyLocked();
+            else _state = _stateBeforeQuit;
+        }
+        if (queued) Activation.NotifyEnqueued();
     }
 
-    public void BeginShutdown() { lock (_gate) _state = DesktopApplicationState.ShuttingDown; }
+    /// <summary>
+    /// Commits the shutdown atomically against new activations: succeeds only if every waiting open request was
+    /// explicitly confirmed for discarding. Then the queue and the initial request are dropped, no consumer remains
+    /// and nothing is accepted afterwards. Fails without any change if an unconfirmed request is waiting.
+    /// </summary>
+    public bool TryCommitShutdown(IReadOnlySet<LaunchRequest> discardConfirmed)
+    {
+        lock (_gate)
+        {
+            if (Activation.PendingOpenRequests().Any(r => !discardConfirmed.Contains(r))) return false;
+            Activation.Close();
+            _initialRequest = null;
+            _state = DesktopApplicationState.ShuttingDown;
+            return true;
+        }
+    }
+
+    public void BeginShutdown()
+    {
+        lock (_gate)
+        {
+            Activation.Close();
+            _initialRequest = null;
+            _state = DesktopApplicationState.ShuttingDown;
+        }
+    }
+
+    // Queue insertion happens before the state change so no Accepted broker request can overtake the initial one.
+    private bool EnterReadyLocked()
+    {
+        bool queued = false;
+        if (_initialRequest is { } initial)
+        {
+            Activation.EnqueueFirstSilently(initial);
+            _initialRequest = null;
+            queued = true;
+        }
+        _state = DesktopApplicationState.Ready;
+        return queued;
+    }
 }

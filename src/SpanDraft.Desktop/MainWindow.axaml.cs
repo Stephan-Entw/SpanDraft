@@ -111,8 +111,12 @@ public partial class MainWindow : Window
                     userNameProvider: host.UserNameProvider);
                 await _model.InitializeLibrariesAsync();
                 DataContext = _model;
-                if (!await _model.InitializeRecoveryAsync())
+                var discardConfirmed = new HashSet<LaunchRequest>(ReferenceEqualityComparer.Instance);
+                while (!await _model.InitializeRecoveryAsync())
                 {
+                    // Platform activations queued meanwhile have no external owner to redeliver them: leaving needs an
+                    // explicit decision. Declining returns to the unchanged recovery decision.
+                    if (!await ConfirmAndCommitShutdownAsync(discardConfirmed)) continue;
                     // An unresolved recovery must bypass the normal leave workflow, which deletes its slot.
                     _closeApproved = true;
                     _initialization.TrySetCanceled();
@@ -169,7 +173,7 @@ public partial class MainWindow : Window
 
     private async Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
     {
-        if (_initializing || _closing) return false;
+        if (_initializing || _closing || _host.State == DesktopApplicationState.ShuttingDown) return false;
         if (request.Type == LaunchRequestType.OpenProject)
         {
             // A setup draft in progress keeps precedence over external opens; the request waits in the queue.
@@ -301,6 +305,19 @@ public partial class MainWindow : Window
         return true;
     }
 
+    /// <summary>
+    /// Asks about waiting open requests and commits the shutdown atomically against new activations; an activation
+    /// that wins the race is asked about in the next round. False when the user keeps a request.
+    /// </summary>
+    private async Task<bool> ConfirmAndCommitShutdownAsync(HashSet<LaunchRequest> confirmed)
+    {
+        while (true)
+        {
+            if (!await ConfirmDiscardPendingRequestsAsync(confirmed)) return false;
+            if (_host.TryCommitShutdown(confirmed)) return true;
+        }
+    }
+
     private async void WindowClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_closeApproved) return;
@@ -308,13 +325,15 @@ public partial class MainWindow : Window
         if (_initializing || _closing || _model.IsWorkspaceBusy || _settingsWindow is not null) return;
         _closing = true;
         _host.BeginQuit();
+        bool committed = false;
         try
         {
             var confirmed = new HashSet<LaunchRequest>(ReferenceEqualityComparer.Instance);
             if (!await ConfirmDiscardPendingRequestsAsync(confirmed)) { _host.CancelQuit(); return; }
             if (!await _model.RequestCloseAsync()) { _host.CancelQuit(); return; }
             // Requests accepted while the close dialogs were open (e.g. macOS file activations) are asked about too.
-            if (!await ConfirmDiscardPendingRequestsAsync(confirmed)) { _host.CancelQuit(); return; }
+            if (!await ConfirmAndCommitShutdownAsync(confirmed)) { _host.CancelQuit(); return; }
+            committed = true;
             _closeApproved = true;
             IsEnabled = false;
             // Even a synchronously completed guard must finish the current Closing event first.
@@ -324,8 +343,8 @@ public partial class MainWindow : Window
         finally
         {
             _closing = false;
-            // Requests that arrived while the quit was pending resume after a cancelled quit.
-            PostPump();
+            // Requests that arrived while the quit was pending resume after a cancelled quit; a committed shutdown pumps nothing.
+            if (!committed) PostPump();
         }
     }
 }

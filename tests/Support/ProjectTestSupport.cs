@@ -13,12 +13,11 @@ namespace SpanDraft.Tests;
 
 internal static class ProjectTestSupport
 {
-    /// <summary>A host whose queue holds the initial request exactly as Program enqueues it.</summary>
+    /// <summary>A host that holds the initial request exactly as Program hands it over.</summary>
     public static DesktopApplicationHost HostWithLaunchArguments(DesktopStartupContext startup, string[]? args)
     {
         var host = new DesktopApplicationHost(startup);
-        if (SpanDraft.Desktop.Activation.LaunchRequest.FromArguments(args) is { Type: not SpanDraft.Desktop.Activation.LaunchRequestType.Activate } initial)
-            host.Activation.Enqueue(initial);
+        host.SetInitialRequest(SpanDraft.Desktop.Activation.LaunchRequest.FromArguments(args));
         return host;
     }
 

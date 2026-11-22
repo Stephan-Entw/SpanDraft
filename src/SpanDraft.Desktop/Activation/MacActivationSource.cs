@@ -21,12 +21,13 @@ public static class MacActivationSource
         }
     }
 
-    public static void Attach(Avalonia.Application application, ActivationDispatcher dispatcher)
+    /// <summary>Platform activations pass the host's lifecycle gate; none is accepted once a shutdown is committed.</summary>
+    public static void Attach(Avalonia.Application application, DesktopApplicationHost host)
     {
         if (application.TryGetFeature(typeof(IActivatableLifetime)) is not IActivatableLifetime lifetime) return;
         lifetime.Activated += (_, args) =>
         {
-            foreach (var request in ToRequests(args)) dispatcher.Enqueue(request);
+            foreach (var request in ToRequests(args)) host.SubmitPlatformActivation(request);
         };
     }
 }

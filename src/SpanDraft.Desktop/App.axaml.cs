@@ -22,7 +22,7 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow(_host);
-            if (OperatingSystem.IsMacOS()) MacActivationSource.Attach(this, _host.Activation);
+            if (OperatingSystem.IsMacOS()) MacActivationSource.Attach(this, _host);
         }
 
         base.OnFrameworkInitializationCompleted();

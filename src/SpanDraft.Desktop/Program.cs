@@ -32,7 +32,7 @@ internal static class Program
         CultureConfigurator.Apply(CultureConfigurator.Resolve(startup.Settings, systemCulture, systemUiCulture));
         var host = new DesktopApplicationHost(startup);
         if (broker is not null) host.AttachBroker(broker);
-        if (initial is { Type: not LaunchRequestType.Activate }) host.Activation.Enqueue(initial);
+        if (initial is not null) host.SetInitialRequest(initial);
         return AppBuilder.Configure(() => new App(host))
             .UsePlatformDetect()
             .LogToTrace();
