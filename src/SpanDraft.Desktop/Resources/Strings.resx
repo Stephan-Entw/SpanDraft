@@ -319,6 +319,8 @@
   <data name="UserManual" xml:space="preserve"><value>User Manual</value></data>
   <data name="WhatsNew" xml:space="preserve"><value>What's new</value></data>
   <data name="WhatsNewOpenError" xml:space="preserve"><value>The release notes could not be opened.</value></data>
+  <data name="InstanceRequestRejected" xml:space="preserve"><value>The request could not be handled by the running SpanDraft instance.</value></data>
+  <data name="InstanceNotReachable" xml:space="preserve"><value>The running SpanDraft instance does not respond.</value></data>
   <data name="UserManualOpenError" xml:space="preserve"><value>The user manual could not be opened.</value></data>
   <data name="Start" xml:space="preserve"><value>Start</value></data>
   <data name="Project" xml:space="preserve"><value>Project</value></data>

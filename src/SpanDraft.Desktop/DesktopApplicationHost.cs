@@ -1,3 +1,4 @@
+using SpanDraft.Desktop.Activation;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 
@@ -8,8 +9,8 @@ public enum DesktopApplicationState { Starting, Ready, QuitInProgress, ShuttingD
 /// <summary>Owns the application-global services and lifecycle state; windows receive it by constructor injection.</summary>
 public sealed class DesktopApplicationHost
 {
-    private DesktopApplicationState _state = DesktopApplicationState.Starting;
-    private DesktopApplicationState _stateBeforeQuit;
+    private volatile DesktopApplicationState _state = DesktopApplicationState.Starting;
+    private volatile DesktopApplicationState _stateBeforeQuit;
 
     public DesktopApplicationHost(DesktopStartupContext? startup = null)
     {
@@ -26,6 +27,27 @@ public sealed class DesktopApplicationHost
     public DesktopStateStores StateStores { get; }
     public Func<string?> UserNameProvider { get; }
     public DesktopApplicationState State => _state;
+    public ActivationDispatcher Activation { get; } = new();
+
+    /// <summary>Raised when an external request was answered with Retry, so a window can surface itself best-effort.</summary>
+    public event Action? RetryServed;
+
+    /// <summary>
+    /// Broker decision: only a Ready host owns requests (Accepted); otherwise the Secondary keeps ownership.
+    /// Legacy startup recovery keeps the host Starting, so no request is lost by cancelling it.
+    /// </summary>
+    public BrokerStatus HandleBrokerRequest(LaunchRequest request)
+    {
+        if (_state != DesktopApplicationState.Ready)
+        {
+            RetryServed?.Invoke();
+            return BrokerStatus.Retry;
+        }
+        Activation.Enqueue(request);
+        return BrokerStatus.Accepted;
+    }
+
+    public void AttachBroker(BrokerServer broker) => broker.Handler = HandleBrokerRequest;
 
     /// <summary>Global services are initialized and requests can be processed; only valid from Starting.</summary>
     public void MarkReady()

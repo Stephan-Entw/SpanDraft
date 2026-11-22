@@ -55,6 +55,8 @@ public static class Strings
     public static string Yesterday => Get(nameof(Yesterday));
 
     public static string UserManual => Get(nameof(UserManual));
+    public static string InstanceRequestRejected => Get(nameof(InstanceRequestRejected));
+    public static string InstanceNotReachable => Get(nameof(InstanceNotReachable));
     public static string UserManualOpenError => Get(nameof(UserManualOpenError));
     public static string WhatsNew => Get(nameof(WhatsNew));
     public static string WhatsNewOpenError => Get(nameof(WhatsNewOpenError));

@@ -1,3 +1,4 @@
+using SpanDraft.Desktop.Activation;
 using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -50,6 +51,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _host = host;
+        if (LaunchRequest.FromArguments(args) is { Type: not LaunchRequestType.Activate } initial) host.Activation.Enqueue(initial);
+        host.RetryServed += () => Dispatcher.UIThread.Post(Activate);
         var files = host.Files;
         NewMenuItem.InputGesture = new(Key.N, _primary);
         OpenMenuItem.InputGesture = new(Key.O, _primary);
@@ -121,10 +124,11 @@ public partial class MainWindow : Window
                 quitCommand.Refresh();
                 await _model.InitializeRecentProjectsAsync();
                 host.MarkReady();
-                // A restored setup draft takes precedence over the shell's open request.
-                if (_model.Mode != MainViewMode.ProjectSetup && args is [var path]
-                    && string.Equals(Path.GetExtension(path), ".spandraft", StringComparison.OrdinalIgnoreCase))
-                    await _model.OpenAsync(path);
+                // Requests wait in the host queue; a restored setup draft keeps the workspace unavailable for opens.
+                host.Activation.SetConsumer(HandleLaunchRequestAsync);
+                host.Activation.Enqueued += PostPump;
+                _model.PropertyChanged += (_, _) => PostPump();
+                await host.Activation.PumpAsync();
                 _initialization.TrySetResult();
             }
             catch (Exception error)
@@ -137,11 +141,35 @@ public partial class MainWindow : Window
         Closing += WindowClosing;
         Closed += (_, _) =>
         {
+            host.Activation.SetConsumer(null);
+            host.Activation.Enqueued -= PostPump;
             host.BeginShutdown();
             _performance?.CancelPending();
             _frameProbe?.Dispose();
             _model?.ReleaseReport();
         };
+    }
+
+    private void PostPump() => Dispatcher.UIThread.Post(async () =>
+    {
+        try { await _host.Activation.PumpAsync(); }
+        catch (Exception error) { Dispatcher.UIThread.Post(() => System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error)); }
+    });
+
+    private async Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
+    {
+        if (_initializing || _closing) return false;
+        if (request.Type == LaunchRequestType.OpenProject)
+        {
+            if (!_model.CanOpenProject) return false;
+            Activate();
+            await _model.OpenAsync(request.Value!);
+            return true;
+        }
+        // Activate and OpenUri only bring the window forward; URI semantics are not defined by this phase.
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+        return true;
     }
 
     private async void ShowSettings(object? sender, RoutedEventArgs e)
