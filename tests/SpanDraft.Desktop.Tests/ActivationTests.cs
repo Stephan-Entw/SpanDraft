@@ -136,6 +136,63 @@ public sealed class ActivationTests : IDisposable
     }
 
     [Fact]
+    public async Task TwoWaitingSecondariesYieldOnePrimaryAndOneForwardedRequestAfterTheOldPrimaryEnds()
+    {
+        var scope = Scope();
+        var old = PrimaryInstance.TryAcquire(scope)!;
+        var oldBroker = BrokerServer.Start(old.Metadata);
+        var r1 = LaunchRequest.OpenProject(Path.Combine(_root, "w1.spandraft"));
+        var r2 = LaunchRequest.OpenProject(Path.Combine(_root, "w2.spandraft"));
+        var w1 = InstanceCoordinator.ResolveAsync(scope, r1, Fast, TestContext.Current.CancellationToken);
+        var w2 = InstanceCoordinator.ResolveAsync(scope, r2, Fast, TestContext.Current.CancellationToken);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        Assert.False(w1.IsCompleted || w2.IsCompleted);
+        oldBroker.Dispose(); old.Dispose();
+
+        var winner = await Task.WhenAny(w1, w2).WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var winnerOutcome = await winner;
+        Assert.Equal(InstanceOutcomeKind.Primary, winnerOutcome.Kind);
+        Track(winnerOutcome.Primary!);
+        var received = new List<LaunchRequest>();
+        var broker = Track(BrokerServer.Start(winnerOutcome.Primary!.Metadata));
+        broker.Handler = r => { lock (received) received.Add(r); return BrokerStatus.Accepted; };
+
+        var loser = await (winner == w1 ? w2 : w1).WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        Assert.Equal(InstanceOutcomeKind.Forwarded, loser.Kind);
+        Assert.Equal(winner == w1 ? r2 : r1, Assert.Single(received));
+    }
+
+    [Fact]
+    public void ElectionAndEndpointExistBeforeSettingsAreLoadedAndASecondaryLoadsNone()
+    {
+        var scope = Scope();
+        var request = LaunchRequest.OpenProject(Path.Combine(_root, "boot.spandraft"));
+        BrokerStatus? statusWhileLoading = null;
+        bool lockHeldWhileLoading = false, started = false;
+        var files = new SpanDraft.Tests.ProjectTestSupport.Files();
+        var context = new DesktopStartupContext(files, new SpanDraft.Desktop.Persistence.LocalSettingsStore(files, "settings"), SpanDraft.Desktop.Presentation.UserSettings.Default);
+        int exit = DesktopBootstrap.Run(scope, request, () =>
+        {
+            lockHeldWhileLoading = PrimaryInstance.TryAcquire(scope) is null;
+            var metadata = InstanceMetadata.TryRead(scope)!;
+            statusWhileLoading = BrokerClient.SendAsync(metadata, request, TimeSpan.FromSeconds(2), CancellationToken.None).GetAwaiter().GetResult();
+            return context;
+        }, (startup, broker) => { started = ReferenceEquals(startup, context); return 0; }, Fast);
+        Assert.Equal(0, exit);
+        Assert.True(started);
+        Assert.True(lockHeldWhileLoading);
+        Assert.Equal(BrokerStatus.Retry, statusWhileLoading);
+
+        var primary = Track(PrimaryInstance.TryAcquire(scope)!);
+        var live = Track(BrokerServer.Start(primary.Metadata));
+        live.Handler = _ => BrokerStatus.Accepted;
+        bool loaded = false;
+        int secondary = DesktopBootstrap.Run(scope, request, () => { loaded = true; return context; }, (_, _) => 99, Fast);
+        Assert.Equal(0, secondary);
+        Assert.False(loaded);
+    }
+
+    [Fact]
     public async Task RejectedEndsTheAttemptWithoutBecomingPrimary()
     {
         var scope = Scope();
