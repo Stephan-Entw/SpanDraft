@@ -307,12 +307,18 @@ Er liest keine Projektdateien und implementiert kein Save As.
 Es gilt:
 
 ```text
-StartOnlyWorkspaceCount <= 1
+StartSlotCount <= 1
 ```
 
 Beim normalen Start ohne Projekt existiert genau ein Startfenster.
 
 `Neu` oder `Öffnen` aus diesem Fenster verwendet denselben Workspace weiter.
+
+`WorkspaceKind` und die Reservierung des Start-Slots sind getrennt:
+
+- `WorkspaceKind.StartOnly` bedeutet, dass der Workspace tatsächlich die Startseite zeigt.
+- Ein aus dem Start-Workspace gestartetes `CreateSetup` hat `WorkspaceKind.CreateSetup`, reserviert aber weiterhin denselben Start-Slot. Dadurch kann während dieses CreateSetups kein zweiter Start-Workspace entstehen.
+- Ein eigens durch „New aus Projekt“ erzeugter `NewProject`-Workspace reserviert den Start-Slot nicht.
 
 ---
 
