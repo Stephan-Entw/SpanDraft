@@ -11,11 +11,12 @@ public sealed class SectionDefinitionInput : ObservableObject
     internal event Action? BeforeCommittedValueChange;
     private readonly Action<SectionDefinitionInput, bool> _changed;
     private readonly bool _nonnegative;
+    private readonly Func<bool>? _isBusy;
     private string _pendingText = "", _committedText = "";
     private string? _error;
     private bool _parseError;
-    public SectionDefinitionInput(string key, UnitDefinition unit, Action<SectionDefinitionInput, bool> changed, bool nonnegative = false, TechnicalText? displayLabel = null)
-    { Key = key; Unit = unit; _changed = changed; _nonnegative = nonnegative; DisplayText = displayLabel ?? TechnicalSymbols.SectionInput(key); }
+    public SectionDefinitionInput(string key, UnitDefinition unit, Action<SectionDefinitionInput, bool> changed, bool nonnegative = false, TechnicalText? displayLabel = null, Func<bool>? isBusy = null)
+    { Key = key; Unit = unit; _changed = changed; _nonnegative = nonnegative; _isBusy = isBusy; DisplayText = displayLabel ?? TechnicalSymbols.SectionInput(key); }
     public string Key { get; }
     public UnitDefinition Unit { get; }
     public string Symbol => TechnicalSymbols.SectionInput(Key).PlainText;
@@ -27,7 +28,7 @@ public sealed class SectionDefinitionInput : ObservableObject
     public string PendingText
     {
         get => _pendingText;
-        set { if (Set(ref _pendingText, value)) { Notify(nameof(IsPending)); _changed(this, false); } }
+        set { if (_isBusy?.Invoke() != true && Set(ref _pendingText, value)) { Notify(nameof(IsPending)); _changed(this, false); } }
     }
     public double? ConfirmedValue { get; private set; }
     public bool IsPending => PendingText != _committedText;
@@ -61,6 +62,7 @@ public sealed class SectionDefinitionInput : ObservableObject
     }
     public bool Commit()
     {
+        if (_isBusy?.Invoke() == true) return false;
         if (HasInteracted && !IsPending) return !HasError;
         LastCommitChangedValue = false;
         var previousValue = ConfirmedValue;

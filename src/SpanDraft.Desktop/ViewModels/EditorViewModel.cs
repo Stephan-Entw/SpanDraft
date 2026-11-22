@@ -52,16 +52,18 @@ public sealed partial class EditorViewModel : ObservableObject
             Document.MomentReleases.Count > 0);
         _overview = ProjectOverviewState.From(Document, _presentation);
         DimensionLength = new(() => Document.Length, ChangeLength, () => PreserveDrafts,
-            () => ResultPresentation.Profile[QuantityKind.BeamLength], readPresentation: () => ResultPresentation, performance: _performance);
+            () => ResultPresentation.Profile[QuantityKind.BeamLength], readPresentation: () => ResultPresentation,
+            performance: _performance, isBlocked: () => Session.IsFrozen);
         Session.StateApplied += ApplyState;
-        Session.Changed += () => { Notify(nameof(IsBusy)); RefreshResultProbeAvailability(); };
+        Session.Changed += RefreshBusyState;
+        Session.FreezeChanged += RefreshBusyState;
         DimensionLength.BufferChanged += text =>
         {
             if (ConstraintConflict is not null)
                 UpdateConstraintConflict(DimensionLength.TryGetLength(out var length) ? length : null);
         };
         DimensionLength.EditCancelled += () => UpdateConstraintConflict(null);
-        ChangeProjectCommand = new(() => { CancelEditorInteraction(); changeProject(); });
+        ChangeProjectCommand = new(() => { if (!IsBusy) { CancelEditorInteraction(); changeProject(); } });
         ForceToolCommand = new(() => ToggleLoadTool(PointLoadKind.Force));
         MomentToolCommand = new(() => ToggleLoadTool(PointLoadKind.Moment));
         ConfirmLoadCommand = new(() => ConfirmLoad());
@@ -87,6 +89,12 @@ public sealed partial class EditorViewModel : ObservableObject
         ConfirmSupportCommand = new(() => ConfirmSupport());
         CancelSupportCommand = new(CancelSupportInteraction);
         DeleteSupportCommand = new(DeleteSupport);
+    }
+
+    private void RefreshBusyState()
+    {
+        Notify(nameof(IsBusy));
+        RefreshResultProbeAvailability();
     }
 
     public ProjectSession Session { get; }
@@ -198,6 +206,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     private void ActivateTool(SupportType type, SpringKind? kind)
     {
+        if (IsBusy) return;
         bool deactivate = PlacementTool == type && _springTool == kind;
         CancelEditorInteraction();
         if (deactivate) return;
@@ -209,6 +218,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public void HoverPlacement(Length? position)
     {
+        if (IsBusy) return;
         if (Interaction != SupportInteraction.Placement) return;
         var type = PlacementTool!.Value;
         var spring = _springTool switch
@@ -224,6 +234,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public bool PlaceSupport()
     {
+        if (IsBusy) return false;
         if (Interaction != SupportInteraction.Placement || Preview is not { IsInvalid: false } preview
             || !CanSupportAt(preview.Position, preview.Type, preview.Spring)) return false;
         OpenDraft(null, preview.Type, preview.Position, preview.Spring, _springTool);
@@ -232,6 +243,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public void HoverSupport(Guid? id)
     {
+        if (IsBusy) return;
         if (!IsEditorNeutral) return;
         if (_hoveredSupportId == id) return;
         _hoveredSupportId = id;
@@ -241,6 +253,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public bool EditSupport(Guid id)
     {
+        if (IsBusy) return false;
         if (Interaction == SupportInteraction.EditDraft && _draft?.OriginalId == id) return true;
         if (!IsEditorNeutral) return false;
         var support = Document.Supports.FirstOrDefault(s => s.Id == id);
@@ -251,6 +264,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public bool BeginSupportDrag(Guid id)
     {
+        if (IsBusy) return false;
         bool editing = Interaction == SupportInteraction.EditDraft && _draft?.OriginalId == id;
         if ((Interaction != SupportInteraction.Neutral && !editing) || LoadState != LoadInteraction.Neutral
             || DistributedLoadState != DistributedLoadInteraction.Neutral
@@ -267,6 +281,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public void UpdateSupportDrag(Length? position)
     {
+        if (IsBusy) return;
         if (Interaction != SupportInteraction.Drag || _dragSupport is null) return;
         _dragValid = position is { } p && CanSupportAt(p, _dragSupport.Type, _dragSupport.Spring, _dragSupport.Id);
         _supportFeedback = _dragValid ? null : position is { } invalid
@@ -277,6 +292,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public bool EndSupportDrag()
     {
+        if (IsBusy) return false;
         if (Interaction != SupportInteraction.Drag || _dragSupport is null) return false;
         if (!_dragValid)
         {
@@ -347,6 +363,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public void CancelSupportInteraction()
     {
+        if (Session.IsFrozen) return;
         if (_draft is not null) _draft.PropertyChanged -= DraftChanged;
         _draft = null;
         _dragSupport = null;
@@ -388,7 +405,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     private void OpenDraft(Guid? id, SupportType type, Length position, SpringData? spring = null, SpringKind? kind = null)
     {
-        _draft = new(() => Document, id, type, position, ResultPresentation.Profile, spring, kind);
+        _draft = new(() => Document, id, type, position, ResultPresentation.Profile, spring, kind, () => Session.IsFrozen);
         _draft.PropertyChanged += DraftChanged;
         _preview = _draft.Preview;
         _hoveredSupportId = null;
@@ -506,6 +523,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public void ClearAnnotationPreview()
     {
+        if (Session.IsFrozen) return;
         if (_annotationPreview is null) return;
         _annotationPreview = null;
         Notify(nameof(RenderPresentation));

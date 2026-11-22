@@ -87,40 +87,149 @@ public sealed class DesktopSettingsInteractionTests
         var files = new Files(); var services = TestServices.Create(settingsStore: new(files, "settings"));
         var applying = CreateMain(files, services); var editing = CreateMain(files, services);
         var setup = new MainWindowViewModel(files: files, services: services); setup.NewCommand.Execute(null);
+        var editor = editing.Editor!;
+        var activeEditor = applying.Editor!;
+        var editorBusyChanges = new List<bool>();
+        editor.PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName == nameof(EditorViewModel.IsBusy)) editorBusyChanges.Add(editor.IsBusy);
+        };
+        Assert.True(activeEditor.EditLoad(LoadId));
+        var activeDraft = activeEditor.LoadDraft!;
+        activeDraft.ValueText = "-125";
+        Assert.True(activeEditor.BeginLoadDrag(LoadId));
+        var dragPreview = activeEditor.LoadPreview;
+        setup.Setup.LengthInput.Begin();
+        setup.Setup.LengthInput.Text = "1234";
         var committing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         files.BeforeWrite = async (path, _, _) => { if (path != "settings") return; committing.TrySetResult(); await release.Task; };
 
         // An open settings dialog alone locks nothing: the other workspaces stay usable.
         applying.SetSettingsDialogOpen(true);
-        Assert.False(editing.IsWorkspaceBusy); Assert.True(editing.CanSaveProject); Assert.False(editing.Editor!.PreserveDrafts);
+        Assert.False(editing.IsWorkspaceBusy); Assert.True(editing.CanSaveProject); Assert.False(editor.PreserveDrafts);
         Assert.False(setup.IsWorkspaceBusy); Assert.True(setup.Setup.AddSegmentCommand.CanExecute(null));
 
-        var apply = applying.ApplySettingsAsync(SettingsPatch.From(applying.Settings with { SignificantDigits = 5 }));
-        await committing.Task;
-        foreach (var workspace in new[] { applying, editing, setup })
+        var revision = editor.Session.CurrentRevision;
+        var longer = revision.State with { Document = editor.Document with { Length = M(2) } };
+        var momentId = editor.Document.Loads[1].Id;
+        var next = applying.Settings.WithUnit(QuantityKind.Moment, UnitCatalog.KilonewtonMeter) with { SignificantDigits = 5 };
+        var apply = applying.ApplySettingsAsync(SettingsPatch.From(next));
+        var entering = await Task.WhenAny(committing.Task, apply);
+        Assert.Same(committing.Task, entering);
+        try
         {
-            Assert.True(workspace.IsBusy); Assert.True(workspace.IsWorkspaceBusy);
-            Assert.False(workspace.CanNewProject); Assert.False(workspace.CanOpenProject);
-            Assert.False(workspace.CanSaveProject); Assert.False(workspace.CanReport);
-            Assert.False(workspace.SetResultPresentation(UnitProfile.StructuralEngineering, 3));
-        }
-        var revision = editing.Session!.CurrentRevision; var writes = files.Writes.ToArray();
-        Assert.False(await editing.NewAsync()); Assert.False(await editing.OpenAsync()); Assert.False(await editing.SaveAsync(saveAs: true));
-        Assert.False(await editing.CloseProjectAsync()); Assert.False(await editing.ReportAsync());
-        Assert.True(editing.Editor.PreserveDrafts); Assert.True(editing.Session.IsBusy);
-        var longer = editing.Session.CurrentRevision.State with { Document = editing.Editor.Document with { Length = M(2) } };
-        Assert.False(editing.Session.Commit(longer));
-        Assert.False(setup.Setup.AddSegmentCommand.CanExecute(null)); Assert.True(setup.Setup.IsBusy);
-        Assert.Same(revision, editing.Session.CurrentRevision); Assert.Equal(writes, files.Writes.ToArray());
+            foreach (var workspace in new[] { applying, editing, setup })
+            {
+                Assert.True(workspace.IsBusy); Assert.True(workspace.IsWorkspaceBusy);
+                Assert.False(workspace.CanNewProject); Assert.False(workspace.CanOpenProject);
+                Assert.False(workspace.CanSaveProject); Assert.False(workspace.CanReport);
+                Assert.False(workspace.SetResultPresentation(UnitProfile.StructuralEngineering, 3));
+            }
+            var writes = files.Writes.ToArray();
+            Assert.False(await editing.NewAsync()); Assert.False(await editing.OpenAsync()); Assert.False(await editing.SaveAsync(saveAs: true));
+            Assert.False(await editing.CloseProjectAsync()); Assert.False(await editing.ReportAsync());
+            Assert.True(editor.PreserveDrafts); Assert.True(editor.Session.IsBusy);
+            Assert.False(editor.Session.Commit(longer));
+            Assert.False(setup.Setup.AddSegmentCommand.CanExecute(null)); Assert.True(setup.Setup.IsBusy);
+            Assert.Same(revision, editor.Session.CurrentRevision); Assert.Equal(writes, files.Writes.ToArray());
 
-        release.SetResult();
+            editor.MomentToolCommand.Execute(null);
+            Assert.Null(editor.LoadTool);
+            Assert.False(editor.EditLoad(momentId));
+            Assert.False(editor.BeginLoadDrag(momentId));
+            editor.DimensionLength.Begin();
+            Assert.False(editor.DimensionLength.IsEditing);
+
+            activeDraft.ValueText = "-250";
+            activeEditor.UpdateLoadDrag(M(.5));
+            Assert.False(activeEditor.EndLoadDrag());
+            Assert.False(activeEditor.ConfirmLoad());
+            activeEditor.CancelEditorInteraction();
+            Assert.Equal(LoadInteraction.Drag, activeEditor.LoadState);
+            Assert.Same(dragPreview, activeEditor.LoadPreview);
+            Assert.Same(activeDraft, activeEditor.LoadDraft);
+            Assert.Equal("-125", activeDraft.ValueText);
+
+            setup.Setup.LengthInput.Text = "2000";
+            Assert.False(setup.Setup.LengthInput.Confirm());
+            Assert.True(setup.Setup.LengthInput.IsEditing);
+            Assert.Equal("1234", setup.Setup.LengthInput.Text);
+        }
+        finally { release.TrySetResult(); }
         Assert.Null(await apply);
         foreach (var workspace in new[] { applying, editing, setup }) { Assert.False(workspace.IsBusy); Assert.False(workspace.IsWorkspaceBusy); }
-        Assert.True(editing.CanSaveProject); Assert.False(editing.Editor.PreserveDrafts); Assert.False(editing.Session.IsBusy);
+        Assert.True(editing.CanSaveProject); Assert.False(editor.PreserveDrafts); Assert.False(editor.Session.IsBusy);
         Assert.True(setup.Setup.AddSegmentCommand.CanExecute(null));
         Assert.Equal(5, editing.Settings.SignificantDigits);
-        Assert.True(editing.CanNewProject); Assert.True(editing.Session.Commit(longer));
+        Assert.Equal(new[] { true, false }, editorBusyChanges);
+        Assert.True(editing.CanNewProject); Assert.True(editor.Session.Commit(longer));
+        Assert.True(editor.EditLoad(momentId));
+        Assert.Equal(UnitCatalog.KilonewtonMeter.Symbol, editor.LoadDraft!.Unit);
+        Assert.Same(activeDraft, activeEditor.LoadDraft);
+        Assert.Equal("-125", activeDraft.ValueText);
+        Assert.True(activeEditor.EndLoadDrag());
+        Assert.True(activeEditor.ConfirmLoad());
+        Assert.Equal("1234", setup.Setup.LengthInput.Text);
+        Assert.True(setup.Setup.LengthInput.Confirm());
+    }
+
+    [Fact]
+    public async Task AnOpenSectionDefinitionPreservesPendingInputsUntilTheSettingsFreezeIsReleased()
+    {
+        var files = new Files();
+        var services = TestServices.Create(settingsStore: new(files, "settings"));
+        var applying = CreateMain(files, services);
+        var setup = new MainWindowViewModel(files: files, services: services);
+        setup.NewCommand.Execute(null);
+        setup.Setup.ShowSections();
+        var definition = setup.Setup.Definition!;
+        definition.SelectForm(SectionEditorType.Circle);
+        var diameter = Assert.Single(definition.Parameters);
+        diameter.PendingText = "100";
+        Assert.True(diameter.Commit());
+        var confirmed = diameter.ConfirmedValue;
+        var section = definition.Section;
+        diameter.PendingText = "120";
+
+        var persisting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        files.BeforeWrite = async (path, _, _) =>
+        {
+            if (path != "settings") return;
+            persisting.TrySetResult();
+            await release.Task;
+        };
+        var apply = applying.ApplySettingsAsync(SettingsPatch.From(applying.Settings with { SignificantDigits = 5 }));
+        Assert.Same(persisting.Task, await Task.WhenAny(persisting.Task, apply));
+        try
+        {
+            Assert.True(definition.IsBusy);
+            Assert.False(definition.ChangeFormCommand.CanExecute(null));
+            definition.SelectForm(SectionEditorType.Rectangle);
+            diameter.PendingText = "150";
+            Assert.False(diameter.Commit());
+            Assert.False(await definition.ConfirmAsync());
+            Assert.Same(definition, setup.Setup.Definition);
+            Assert.Equal(SectionEditorType.Circle, definition.Type);
+            Assert.Same(section, definition.Section);
+            Assert.Equal(confirmed, diameter.ConfirmedValue);
+            Assert.Equal("120", diameter.PendingText);
+            Assert.True(diameter.IsPending);
+        }
+        finally { release.TrySetResult(); }
+
+        Assert.Null(await apply);
+        Assert.False(definition.IsBusy);
+        Assert.True(definition.ChangeFormCommand.CanExecute(null));
+        Assert.Equal("120", diameter.PendingText);
+        Assert.Equal(confirmed, diameter.ConfirmedValue);
+        diameter.PendingText = "150";
+        Assert.Equal("150", diameter.PendingText);
+        Assert.True(diameter.Commit());
+        Assert.NotEqual(confirmed, diameter.ConfirmedValue);
+        Assert.False(diameter.IsPending);
+        Assert.True(await definition.ConfirmAsync());
     }
 
     [Fact]

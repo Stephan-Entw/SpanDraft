@@ -20,15 +20,17 @@ public sealed class PositionReferenceDraft : ObservableObject
 {
     private readonly Func<EditorDocument> _read;
     private readonly UnitDefinition _unit;
+    private readonly Func<bool>? _isFrozen;
     private PositionRef _current;
     private Length _position;
     private IReadOnlyList<PositionReferenceOption> _options;
 
     /// <param name="reference">The reference the position has now; null for a position that is set freshly.</param>
     /// <param name="position">The position that reference belongs to.</param>
-    public PositionReferenceDraft(Func<EditorDocument> read, PositionRef? reference, Length position, UnitDefinition? unit = null)
+    public PositionReferenceDraft(Func<EditorDocument> read, PositionRef? reference, Length position, UnitDefinition? unit = null, Func<bool>? isFrozen = null)
     {
         _read = read;
+        _isFrozen = isFrozen;
         _unit = unit ?? UnitCatalog.Millimeter;
         _position = position;
         _current = reference ?? PositionReferences.ForNewPosition(read(), position);
@@ -87,7 +89,7 @@ public sealed class PositionReferenceDraft : ObservableObject
         get => Options.FirstOrDefault(option => option.Segment == _current.SegmentId);
         set
         {
-            if (value is null || value.Segment == _current.SegmentId) return;
+            if (_isFrozen?.Invoke() == true || value is null || value.Segment == _current.SegmentId) return;
             var document = _read();
             if (value.Segment is { } id)
             {
@@ -110,6 +112,7 @@ public sealed class PositionReferenceDraft : ObservableObject
         get => _current is PositionRef.AtSegmentEnd;
         set
         {
+            if (_isFrozen?.Invoke() == true) return;
             var document = _read();
             if (value && _current is not PositionRef.AtSegmentEnd && PositionReferences.EndingSegmentIndex(document, _position) is { } ending)
                 _current = PositionReferences.AtEndOf(document, ending);
@@ -144,7 +147,7 @@ public sealed class PositionReferenceDraft : ObservableObject
     /// </summary>
     public bool TrySetDistance(Length distance)
     {
-        if (distance.Meters > MaxDistance.Meters) return false;
+        if (_isFrozen?.Invoke() == true || distance.Meters > MaxDistance.Meters) return false;
         var document = _read();
         var next = _current;
         switch (_current)

@@ -35,6 +35,7 @@ public sealed partial class EditorViewModel
 
     public void ToggleMomentReleaseTool()
     {
+        if (IsBusy) return;
         bool deactivate = IsMomentReleaseTool;
         CancelEditorInteraction();
         if (deactivate) return;
@@ -44,6 +45,7 @@ public sealed partial class EditorViewModel
 
     public void HoverMomentReleasePlacement(Length? position)
     {
+        if (IsBusy) return;
         if (MomentReleaseState != MomentReleaseInteraction.Placement) return;
         var conflict = position is { } p ? MomentReleaseRules.Conflict(Document, p) : MomentReleaseConflict.None;
         _releasePreview = position is { } at ? new(at, conflict != MomentReleaseConflict.None) : null;
@@ -53,6 +55,7 @@ public sealed partial class EditorViewModel
 
     public bool PlaceMomentRelease()
     {
+        if (IsBusy) return false;
         if (MomentReleaseState != MomentReleaseInteraction.Placement || MomentReleasePreview is not { IsInvalid: false } preview
             || MomentReleaseRules.Conflict(Document, preview.Position) != MomentReleaseConflict.None) return false;
         OpenMomentReleaseDraft(null, preview.Position);
@@ -61,6 +64,7 @@ public sealed partial class EditorViewModel
 
     public void HoverMomentRelease(Guid? id)
     {
+        if (IsBusy) return;
         if (!IsEditorNeutral || _hoveredReleaseId == id) return;
         _hoveredReleaseId = id;
         _releaseFeedback = null;
@@ -69,6 +73,7 @@ public sealed partial class EditorViewModel
 
     public bool EditMomentRelease(Guid id)
     {
+        if (IsBusy) return false;
         if (MomentReleaseState == MomentReleaseInteraction.EditDraft && MomentReleaseDraft?.OriginalId == id) return true;
         if (!IsEditorNeutral) return false;
         var release = Document.MomentReleases.FirstOrDefault(r => r.Id == id);
@@ -79,6 +84,7 @@ public sealed partial class EditorViewModel
 
     public bool BeginMomentReleaseDrag(Guid id)
     {
+        if (IsBusy) return false;
         bool editing = MomentReleaseState == MomentReleaseInteraction.EditDraft && MomentReleaseDraft?.OriginalId == id;
         if (Interaction != SupportInteraction.Neutral || LoadState != LoadInteraction.Neutral
             || DistributedLoadState != DistributedLoadInteraction.Neutral
@@ -95,6 +101,7 @@ public sealed partial class EditorViewModel
 
     public void UpdateMomentReleaseDrag(Length? position)
     {
+        if (IsBusy) return;
         if (MomentReleaseState != MomentReleaseInteraction.Drag || _dragRelease is null) return;
         var conflict = position is { } p ? MomentReleaseRules.Conflict(Document, p, _dragRelease.Id) : MomentReleaseConflict.NotInsideBeam;
         _releaseDragValid = conflict == MomentReleaseConflict.None;
@@ -105,6 +112,7 @@ public sealed partial class EditorViewModel
 
     public bool EndMomentReleaseDrag()
     {
+        if (IsBusy) return false;
         if (MomentReleaseState != MomentReleaseInteraction.Drag || _dragRelease is null) return false;
         if (!_releaseDragValid)
         {
@@ -173,6 +181,7 @@ public sealed partial class EditorViewModel
 
     public void CancelMomentReleaseInteraction()
     {
+        if (Session.IsFrozen) return;
         if (_releaseDraft is not null) _releaseDraft.PropertyChanged -= MomentReleaseDraftChanged;
         _releaseDraft = null;
         _releasePreview = null;
@@ -201,7 +210,7 @@ public sealed partial class EditorViewModel
 
     private void OpenMomentReleaseDraft(Guid? id, Length position)
     {
-        _releaseDraft = new(() => Document, id, position, ResultPresentation.Profile);
+        _releaseDraft = new(() => Document, id, position, ResultPresentation.Profile, () => Session.IsFrozen);
         _releaseDraft.PropertyChanged += MomentReleaseDraftChanged;
         _releasePreview = _releaseDraft.Preview;
         _hoveredReleaseId = null;

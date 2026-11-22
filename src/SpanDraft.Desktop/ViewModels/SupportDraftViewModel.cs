@@ -28,6 +28,7 @@ public sealed record SupportTypeOption(SupportType Type, SpringKind? Kind = null
 public sealed class SupportDraftViewModel : ObservableObject
 {
     private readonly Func<EditorDocument> _read;
+    private readonly Func<bool>? _isFrozen;
     private readonly UnitDefinition _positionUnit, _translationalUnit, _rotationalUnit;
     private SpringKind _kind;
     private bool _rigidTranslation;
@@ -47,9 +48,10 @@ public sealed class SupportDraftViewModel : ObservableObject
     private SupportPreview _preview;
 
     public SupportDraftViewModel(Func<EditorDocument> read, Guid? originalId, SupportType type, Length position,
-        UnitProfile? profile = null, SpringData? spring = null, SpringKind? kind = null)
+        UnitProfile? profile = null, SpringData? spring = null, SpringKind? kind = null, Func<bool>? isFrozen = null)
     {
         _read = read;
+        _isFrozen = isFrozen;
         profile ??= UnitProfile.Default;
         _positionUnit = profile[QuantityKind.BeamLength];
         _translationalUnit = profile[QuantityKind.TranslationalStiffness];
@@ -79,7 +81,7 @@ public sealed class SupportDraftViewModel : ObservableObject
         _type = type;
         _preview = new(position, type, false, null);
         var entity = originalId is null ? null : document.Supports.FirstOrDefault(s => s.Id == originalId);
-        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position, _positionUnit);
+        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position, _positionUnit, isFrozen);
         // A move that happened before the draft opened (a drag of an existing support) is applied to the reference first.
         Reference.PositionChanged(position);
         _bufferReferencePosition = Reference.Distance;
@@ -118,7 +120,7 @@ public sealed class SupportDraftViewModel : ObservableObject
     public string NameText
     {
         get => _nameText;
-        set { if (Set(ref _nameText, value)) Validate(); }
+        set { if (_isFrozen?.Invoke() != true && Set(ref _nameText, value)) Validate(); }
     }
     public string? NameError => _nameError;
     public bool HasNameError => NameError is not null;
@@ -126,14 +128,14 @@ public sealed class SupportDraftViewModel : ObservableObject
     public string PositionText
     {
         get => _positionText;
-        set { if (Set(ref _positionText, value)) Validate(); }
+        set { if (_isFrozen?.Invoke() != true && Set(ref _positionText, value)) Validate(); }
     }
     public SupportType Type
     {
         get => _type;
         set
         {
-            if (!Set(ref _type, value)) return;
+            if (_isFrozen?.Invoke() == true || !Set(ref _type, value)) return;
             Notify(nameof(SelectedType));
             Notify(nameof(IsSpring));
             Validate();
@@ -146,7 +148,7 @@ public sealed class SupportDraftViewModel : ObservableObject
         get => Types.FirstOrDefault(t => t.Type == Type && (Type != SupportType.Spring || t.Kind == _kind));
         set
         {
-            if (value is null) return;
+            if (_isFrozen?.Invoke() == true || value is null) return;
             if (value.Kind is { } kind) SetKind(kind);
             Type = value.Type;
         }
@@ -171,7 +173,7 @@ public sealed class SupportDraftViewModel : ObservableObject
     public bool RigidTranslation
     {
         get => _rigidTranslation;
-        set { if (value ? CanRigidTranslation : true) { if (Set(ref _rigidTranslation, value)) Validate(); } }
+        set { if (_isFrozen?.Invoke() != true && (!value || CanRigidTranslation) && Set(ref _rigidTranslation, value)) Validate(); }
     }
     /// <summary>The translation is rigid only for a rotational spring, and not where a translational spring stands at the same position.</summary>
     public bool CanRigidTranslation => _kind == SpringKind.Rotational && !TranslationalSpringHere();
@@ -181,12 +183,12 @@ public sealed class SupportDraftViewModel : ObservableObject
     public string TranslationalText
     {
         get => _translationalText;
-        set { if (Set(ref _translationalText, value)) Validate(); }
+        set { if (_isFrozen?.Invoke() != true && Set(ref _translationalText, value)) Validate(); }
     }
     public string RotationalText
     {
         get => _rotationalText;
-        set { if (Set(ref _rotationalText, value)) Validate(); }
+        set { if (_isFrozen?.Invoke() != true && Set(ref _rotationalText, value)) Validate(); }
     }
     public string? TranslationalError => _translationalError;
     public bool HasTranslationalError => _translationalError is not null;

@@ -20,7 +20,7 @@ public sealed class ProjectInfoInput : ObservableObject
         get => _text;
         set
         {
-            if (!Set(ref _text, value)) return;
+            if (_owner.IsBusy || !Set(ref _text, value)) return;
             IsEditing = true; HasError = false;
             _owner.RefreshInfo();
         }

@@ -236,7 +236,7 @@ public sealed class ProjectSetupViewModel : ObservableObject
         var card = new SetupSegmentCard(this, id, new LengthInputViewModel(() => _segments.FirstOrDefault(g => g.Id == id)?.Length,
             length => CommitSegmentLength(id, length), () => IsBusy || Libraries?.PreserveSetupInputs == true,
             () => ResultPresentation.Profile[QuantityKind.BeamLength], retainRejectedOnBlur: true,
-            readPresentation: () => ResultPresentation));
+            readPresentation: () => ResultPresentation, isBlocked: () => IsBusy));
         card.LengthInput.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(LengthInputViewModel.Text) or nameof(LengthInputViewModel.IsEditing)
@@ -442,7 +442,8 @@ public sealed class ProjectSetupViewModel : ObservableObject
         var library = Libraries is { } main ? new SectionDefinitionLibrary(main) : null;
         var definition = new SectionDefinitionViewModel(ResultPresentation, library,
             initialState: SelectedSection is { } section ? new(section, BendingAxis, SectionDisplayName) : null,
-            preserveInputs: () => Libraries?.PreserveSetupInputs == true);
+            preserveInputs: () => Libraries?.PreserveSetupInputs == true,
+            isWorkspaceBusy: () => Libraries?.IsBusy == true);
         definition.CloseRequested += FinishDefinition;
         definition.PropertyChanged += DefinitionChanged;
         Navigate(ProjectSetupPage.SectionDefinition, definition);

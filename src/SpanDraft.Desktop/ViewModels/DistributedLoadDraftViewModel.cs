@@ -10,6 +10,7 @@ namespace SpanDraft.Desktop.ViewModels;
 public sealed class DistributedLoadDraftViewModel : ObservableObject
 {
     private readonly Func<EditorDocument> _read;
+    private readonly Func<bool>? _isFrozen;
     private readonly UnitDefinition _positionUnit, _intensityUnit;
     private Length _referenceStart, _referenceEnd;
     private string _referenceStartText, _referenceEndText;
@@ -30,11 +31,12 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
     }
 
     public DistributedLoadDraftViewModel(Func<EditorDocument> read, Guid? originalId,
-        Length start, Length end, double startIntensity, double endIntensity, UnitProfile? profile = null)
+        Length start, Length end, double startIntensity, double endIntensity, UnitProfile? profile = null, Func<bool>? isFrozen = null)
     {
         if (!double.IsFinite(startIntensity)) throw new ArgumentOutOfRangeException(nameof(startIntensity));
         if (!double.IsFinite(endIntensity)) throw new ArgumentOutOfRangeException(nameof(endIntensity));
         _read = read;
+        _isFrozen = isFrozen;
         profile ??= UnitProfile.Default;
         _positionUnit = profile[QuantityKind.BeamLength];
         _intensityUnit = profile[QuantityKind.DistributedLoad];
@@ -49,8 +51,8 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         _endIntensityFollowsStart = startIntensity == endIntensity;
         _preview = new(start, end, startIntensity, endIntensity);
         var entity = originalId is null ? null : read().DistributedLoads.FirstOrDefault(l => l.Id == originalId);
-        StartReference = new(read, entity?.EffectiveStartReference, entity?.StartPosition ?? start, _positionUnit);
-        EndReference = new(read, entity?.EffectiveEndReference, entity?.EndPosition ?? end, _positionUnit);
+        StartReference = new(read, entity?.EffectiveStartReference, entity?.StartPosition ?? start, _positionUnit, isFrozen);
+        EndReference = new(read, entity?.EffectiveEndReference, entity?.EndPosition ?? end, _positionUnit, isFrozen);
         // A move that happened before the draft opened (a drag of an endpoint) is applied to the references first.
         StartReference.PositionChanged(start);
         EndReference.PositionChanged(end);
@@ -98,15 +100,15 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
     public string IntensityUnit => _intensityUnit.Symbol;
     public bool IsExisting => OriginalId.HasValue;
     public AutoNameCandidate? AutoCandidate { get; }
-    public string NameText { get => _nameText; set { if (Set(ref _nameText, value)) Validate(); } }
-    public string StartText { get => _startText; set { if (Set(ref _startText, value)) Validate(); } }
-    public string EndText { get => _endText; set { if (Set(ref _endText, value)) Validate(); } }
+    public string NameText { get => _nameText; set { if (_isFrozen?.Invoke() != true && Set(ref _nameText, value)) Validate(); } }
+    public string StartText { get => _startText; set { if (_isFrozen?.Invoke() != true && Set(ref _startText, value)) Validate(); } }
+    public string EndText { get => _endText; set { if (_isFrozen?.Invoke() != true && Set(ref _endText, value)) Validate(); } }
     public string StartIntensityText
     {
         get => _startIntensityText;
         set
         {
-            if (!Set(ref _startIntensityText, value)) return;
+            if (_isFrozen?.Invoke() == true || !Set(ref _startIntensityText, value)) return;
             if (_endIntensityFollowsStart) Set(ref _endIntensityText, value, nameof(EndIntensityText));
             Validate();
         }
@@ -117,6 +119,7 @@ public sealed class DistributedLoadDraftViewModel : ObservableObject
         get => _endIntensityText;
         set
         {
+            if (_isFrozen?.Invoke() == true) return;
             _endIntensityFollowsStart = false;
             if (Set(ref _endIntensityText, value)) Validate();
         }

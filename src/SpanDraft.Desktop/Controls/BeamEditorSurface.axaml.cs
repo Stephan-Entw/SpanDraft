@@ -32,6 +32,7 @@ public partial class BeamEditorSurface : UserControl
     private SupportDragGesture? _gesture;
     private Length? _placementClick;
     private IPointer? _pointer;
+    private bool _pointerInterruptedByFreeze;
     private static readonly Cursor PlacementCursor = new(StandardCursorType.Cross);
     private static readonly Cursor EditCursor = new(StandardCursorType.Hand);
     private static readonly Cursor DragCursor = new(StandardCursorType.SizeWestEast);
@@ -67,6 +68,7 @@ public partial class BeamEditorSurface : UserControl
             SetAndRaise(StationLayoutProperty, ref _stationLayout, null);
             SelectionPopup.IsOpen = false;
             _editor = null;
+            _pointerInterruptedByFreeze = false;
             SupportPopup.IsOpen = false;
             _shownDraft = null;
             MomentReleasePopup.IsOpen = false;
@@ -91,6 +93,7 @@ public partial class BeamEditorSurface : UserControl
             _editor.InteractionsCancelling -= CancelSurfaceInteractions;
         }
         _editor = DataContext as EditorViewModel;
+        _pointerInterruptedByFreeze = false;
         if (_editor is not null)
         {
             _editor.PropertyChanged += EditorChanged;
@@ -180,10 +183,21 @@ public partial class BeamEditorSurface : UserControl
     private void EditorChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(EditorViewModel.ResultProbeRows)) SynchronizeResultProbe();
-        if (e.PropertyName == nameof(EditorViewModel.IsBusy) && _editor!.IsBusy)
+        if (e.PropertyName == nameof(EditorViewModel.IsBusy))
         {
-            ReleaseGesture();
-            _editor.CancelPointerDrag();
+            if (_editor!.Session.IsFrozen)
+            {
+                // A released capture cannot resume after the freeze. Keep its editor state until thaw.
+                _pointerInterruptedByFreeze |= _pointer is not null;
+                ReleaseGesture();
+            }
+            else if (_pointerInterruptedByFreeze || _editor.IsBusy)
+            {
+                ReleaseGesture();
+                bool preserveDraft = _pointerInterruptedByFreeze;
+                _pointerInterruptedByFreeze = false;
+                _editor.CancelPointerDrag(preserveDraft);
+            }
         }
         if (_labelGesture is { } label && (e.PropertyName == nameof(EditorViewModel.Document)
             && label.EntityIds.Any(id => !_editor!.Document.EntityIds.Contains(id))

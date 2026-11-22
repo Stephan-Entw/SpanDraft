@@ -36,6 +36,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     }
     private readonly Dictionary<SectionEditorType, FormDraft> _drafts = [];
     private readonly ISectionDefinitionLibrary? _library;
+    private readonly Func<bool>? _isWorkspaceBusy;
     private ResultPresentationOptions _presentation;
     private SectionEditorType? _type;
     private bool _choosing = true, _busy, _editingName;
@@ -50,10 +51,12 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     private IReadOnlyList<SectionDefinitionPreset> _libraryEntries = [];
 
     public SectionDefinitionViewModel(ResultPresentationOptions? presentation = null, ISectionDefinitionLibrary? library = null,
-        bool showLibraryOption = true, SectionDefinitionInitialState? initialState = null, Func<bool>? preserveInputs = null)
+        bool showLibraryOption = true, SectionDefinitionInitialState? initialState = null, Func<bool>? preserveInputs = null,
+        Func<bool>? isWorkspaceBusy = null)
     {
         _presentation = presentation ?? ResultPresentationOptions.Default; _library = library;
         _preserveInputs = preserveInputs;
+        _isWorkspaceBusy = isWorkspaceBusy;
         ShowLibraryOption = showLibraryOption;
         Forms = new[]
         {
@@ -130,7 +133,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     public bool HasPreview => ShowPreview && Preview is not null;
     public string ValuesTitle => IsManual ? Strings.SectionDefinitionManualProperties : Strings.SectionDefinitionProperties;
     public string SelectedFormName => IsManual ? Strings.SectionDefinitionManualChoice : Forms.FirstOrDefault(f => f.Value == _type)?.Label ?? "";
-    public bool IsBusy => _busy;
+    public bool IsBusy => _busy || _isWorkspaceBusy?.Invoke() == true;
     public bool IsEditingName => _editingName;
     public string DisplayName => _type is null ? Strings.SectionDefinitionTitle : Current.CustomName ?? _draftName ?? Current.AutomaticName;
     public string PendingName
@@ -138,7 +141,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         get => _pendingName;
         set
         {
-            if (!Set(ref _pendingName, value)) return;
+            if (IsBusy || !Set(ref _pendingName, value)) return;
             _nameError = null; Notify(nameof(NameError)); Notify(nameof(HasNameError));
             _saveError = null; Notify(nameof(LibraryError)); Notify(nameof(HasLibraryError));
             RefreshLibraryAction();
@@ -309,7 +312,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
             if (Current.Inputs.ContainsKey(key)) continue;
             var quantity = !IsManual ? QuantityKind.SectionDimension : key == "A" ? QuantityKind.Area
                 : key.StartsWith('I') ? QuantityKind.SecondMomentOfArea : QuantityKind.SectionModulus;
-            Current.Inputs[key] = new(key, Presentation.Profile[quantity], InputChanged, key == "r", InputLabel(key));
+            Current.Inputs[key] = new(key, Presentation.Profile[quantity], InputChanged, key == "r", InputLabel(key), () => IsBusy);
             Current.Inputs[key].BeforeCommittedValueChange += () => _beforeInputChange = CaptureHistory();
         }
     }
@@ -462,6 +465,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
     public void BeginNameEdit() { if (!HasDefinition || IsBusy) return; _pendingName = DisplayName; _editingName = true; _nameError = null; Refresh(); }
     public bool CommitName()
     {
+        if (IsBusy) return false;
         if (!IsEditingName) return true;
         string name = PendingName.Trim();
         if (string.IsNullOrWhiteSpace(name)) { _nameError = Strings.SectionDefinitionNameRequired; Refresh(); return false; }
@@ -469,7 +473,7 @@ public sealed partial class SectionDefinitionViewModel : ObservableObject
         if (!string.Equals(name, DisplayName, StringComparison.Ordinal)) Current.CustomName = name;
         _editingName = false; _nameError = null; _saveError = null; Refresh(); RecordHistory(before); return true;
     }
-    public void CancelNameEdit() { _editingName = false; _nameError = null; Refresh(); }
+    public void CancelNameEdit() { if (IsBusy) return; _editingName = false; _nameError = null; Refresh(); }
     public void ResetName()
     {
         if (!HasDefinition || IsBusy) return;

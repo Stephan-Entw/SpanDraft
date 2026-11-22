@@ -43,6 +43,7 @@ public sealed partial class EditorViewModel
 
     public void ToggleDistributedLoadTool()
     {
+        if (IsBusy) return;
         bool deactivate = _distributedLoadTool;
         CancelEditorInteraction();
         if (deactivate) return;
@@ -53,6 +54,7 @@ public sealed partial class EditorViewModel
 
     public void HoverDistributedLoadPlacement(Length? position)
     {
+        if (IsBusy) return;
         if (DistributedLoadState != DistributedLoadInteraction.Placement) return;
         _distributedPointerPosition = position;
         _distributedLoadPreview = _distributedFirstEndpoint is { } first && position is { } second
@@ -64,6 +66,7 @@ public sealed partial class EditorViewModel
 
     public bool PlaceDistributedLoadEndpoint()
     {
+        if (IsBusy) return false;
         if (DistributedLoadState != DistributedLoadInteraction.Placement || _distributedPointerPosition is not { } position
             || !CanLoadPosition(position.Meters)) return false;
         if (_distributedFirstEndpoint is null)
@@ -79,6 +82,7 @@ public sealed partial class EditorViewModel
 
     public void HoverDistributedLoad(Guid? id)
     {
+        if (IsBusy) return;
         if (!IsEditorNeutral || _hoveredDistributedLoadId == id) return;
         _hoveredDistributedLoadId = id;
         NotifyDistributedLoadState();
@@ -86,6 +90,7 @@ public sealed partial class EditorViewModel
 
     public bool EditDistributedLoad(Guid id)
     {
+        if (IsBusy) return false;
         if (DistributedLoadState == DistributedLoadInteraction.EditDraft && DistributedLoadDraft?.OriginalId == id) return true;
         if (!IsEditorNeutral) return false;
         var load = Document.DistributedLoads.FirstOrDefault(l => l.Id == id);
@@ -97,6 +102,7 @@ public sealed partial class EditorViewModel
 
     public bool BeginDistributedLoadDrag(Guid? id, DistributedLoadEndpoint endpoint)
     {
+        if (IsBusy) return false;
         if (!Enum.IsDefined(endpoint) || Interaction != SupportInteraction.Neutral || LoadState != LoadInteraction.Neutral
             || MomentReleaseState != MomentReleaseInteraction.Neutral) return false;
         bool editing = IsDistributedLoadFlyoutVisible && DistributedLoadDraft?.OriginalId == id;
@@ -118,6 +124,7 @@ public sealed partial class EditorViewModel
 
     public void UpdateDistributedLoadDrag(Length? position)
     {
+        if (IsBusy) return;
         if (DistributedLoadState != DistributedLoadInteraction.Drag || DistributedLoadDraft is not { } draft) return;
         var candidate = position is { } p ? _distributedDragEndpoint == DistributedLoadEndpoint.Start
             ? draft.Preview with { StartPosition = p } : draft.Preview with { EndPosition = p } : null;
@@ -132,6 +139,7 @@ public sealed partial class EditorViewModel
 
     public bool EndDistributedLoadDrag()
     {
+        if (IsBusy) return false;
         if (DistributedLoadState != DistributedLoadInteraction.Drag || DistributedLoadDraft is not { } draft) return false;
         bool valid = _distributedDragValid && _distributedDragPosition is not null;
         if (!valid && _distributedDragFromNeutral)
@@ -192,6 +200,7 @@ public sealed partial class EditorViewModel
 
     public void CancelDistributedLoadInteraction()
     {
+        if (Session.IsFrozen) return;
         if (_distributedLoadDraft is not null) _distributedLoadDraft.PropertyChanged -= DistributedLoadDraftChanged;
         _distributedLoadDraft = null;
         _distributedLoadPreview = null;
@@ -205,7 +214,7 @@ public sealed partial class EditorViewModel
 
     private void OpenDistributedLoadDraft(Guid? id, Length start, Length end, double startIntensity, double endIntensity)
     {
-        _distributedLoadDraft = new(() => Document, id, start, end, startIntensity, endIntensity, ResultPresentation.Profile);
+        _distributedLoadDraft = new(() => Document, id, start, end, startIntensity, endIntensity, ResultPresentation.Profile, () => Session.IsFrozen);
         _distributedLoadDraft.PropertyChanged += DistributedLoadDraftChanged;
         _distributedLoadPreview = _distributedLoadDraft.Preview;
         _distributedPointerPosition = null;

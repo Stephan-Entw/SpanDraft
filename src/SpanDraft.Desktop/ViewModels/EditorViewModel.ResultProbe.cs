@@ -46,6 +46,7 @@ public sealed partial class EditorViewModel
 
     public void CancelResultProbe()
     {
+        if (Session.IsFrozen) return;
         if (!IsResultProbeTool) return;
         _isResultProbeTool = _isResultProbeFixed = _probeAtStation = false;
         _resultProbePosition = null;

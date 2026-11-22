@@ -38,6 +38,7 @@ public sealed partial class EditorViewModel
 
     public void CancelEditorInteraction()
     {
+        if (Session.IsFrozen) return;
         InteractionsCancelling?.Invoke();
         CancelResultProbe();
         ClearAnnotationPreview();
@@ -50,8 +51,9 @@ public sealed partial class EditorViewModel
     }
 
     /// <summary>Native dialogs may take pointer capture. Restore a gesture's draft without discarding its buffers.</summary>
-    public void CancelPointerDrag()
+    public void CancelPointerDrag(bool preserveDraft = false)
     {
+        if (Session.IsFrozen) return;
         ClearAnnotationPreview();
         if (Interaction == SupportInteraction.Drag)
         {
@@ -82,7 +84,7 @@ public sealed partial class EditorViewModel
         CancelMomentReleaseDrag();
         if (DistributedLoadState == DistributedLoadInteraction.Drag)
         {
-            if (_distributedDragFromNeutral) CancelDistributedLoadInteraction();
+            if (_distributedDragFromNeutral && !preserveDraft) CancelDistributedLoadInteraction();
             else
             {
                 _distributedLoadState = _distributedLoadDraft!.IsExisting
@@ -98,6 +100,7 @@ public sealed partial class EditorViewModel
 
     public void ToggleLoadTool(PointLoadKind kind)
     {
+        if (IsBusy) return;
         if (!Enum.IsDefined(kind)) throw new ArgumentOutOfRangeException(nameof(kind));
         bool deactivate = LoadTool == kind;
         CancelEditorInteraction();
@@ -118,6 +121,7 @@ public sealed partial class EditorViewModel
 
     public void HoverLoadPlacement(Length? position)
     {
+        if (IsBusy) return;
         if (LoadState != LoadInteraction.Placement) return;
         var kind = LoadTool!.Value;
         _loadPreview = position is { } p
@@ -128,6 +132,7 @@ public sealed partial class EditorViewModel
 
     public bool PlaceLoad()
     {
+        if (IsBusy) return false;
         if (LoadState != LoadInteraction.Placement || LoadPreview is not { IsInvalid: false } p
             || !CanLoadPosition(p.Position.Meters, p.Kind)) return false;
         OpenLoadDraft(null, p.Kind, p.Position, p.Value);
@@ -136,6 +141,7 @@ public sealed partial class EditorViewModel
 
     public void HoverLoad(Guid? id)
     {
+        if (IsBusy) return;
         if (!IsEditorNeutral || _hoveredLoadId == id) return;
         _hoveredLoadId = id;
         _loadFeedback = null;
@@ -144,6 +150,7 @@ public sealed partial class EditorViewModel
 
     public bool EditLoad(Guid id)
     {
+        if (IsBusy) return false;
         if (LoadState == LoadInteraction.EditDraft && LoadDraft?.OriginalId == id) return true;
         if (!IsEditorNeutral) return false;
         var load = Document.Loads.FirstOrDefault(l => l.Id == id);
@@ -154,6 +161,7 @@ public sealed partial class EditorViewModel
 
     public bool BeginLoadDrag(Guid id)
     {
+        if (IsBusy) return false;
         bool editing = LoadState == LoadInteraction.EditDraft && LoadDraft?.OriginalId == id;
         if (Interaction != SupportInteraction.Neutral || (LoadState != LoadInteraction.Neutral && !editing)
             || DistributedLoadState != DistributedLoadInteraction.Neutral
@@ -170,6 +178,7 @@ public sealed partial class EditorViewModel
 
     public void UpdateLoadDrag(Length? position)
     {
+        if (IsBusy) return;
         if (LoadState != LoadInteraction.Drag || _dragLoad is null) return;
         _loadDragValid = position is { } p && CanLoadPosition(p.Meters, _dragLoad.Kind);
         _loadFeedback = _loadDragValid ? null : position is { } invalid ? LoadPositionError(invalid.Meters, _dragLoad.Kind) : Strings.PositionInsideBeam;
@@ -180,6 +189,7 @@ public sealed partial class EditorViewModel
 
     public bool EndLoadDrag()
     {
+        if (IsBusy) return false;
         if (LoadState != LoadInteraction.Drag || _dragLoad is null) return false;
         if (!_loadDragValid)
         {
@@ -249,6 +259,7 @@ public sealed partial class EditorViewModel
 
     public void CancelLoadInteraction()
     {
+        if (Session.IsFrozen) return;
         if (_loadDraft is not null) _loadDraft.PropertyChanged -= LoadDraftChanged;
         _loadDraft = null;
         _loadPreview = null;
@@ -263,7 +274,7 @@ public sealed partial class EditorViewModel
 
     private void OpenLoadDraft(Guid? id, PointLoadKind kind, Length position, double value)
     {
-        _loadDraft = new(() => Document, id, kind, position, value, ResultPresentation.Profile);
+        _loadDraft = new(() => Document, id, kind, position, value, ResultPresentation.Profile, () => Session.IsFrozen);
         _loadDraft.PropertyChanged += LoadDraftChanged;
         _loadPreview = _loadDraft.Preview;
         _hoveredLoadId = null;

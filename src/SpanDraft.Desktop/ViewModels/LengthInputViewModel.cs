@@ -14,7 +14,7 @@ public readonly record struct LengthCommitResult(bool Accepted, string? ErrorTex
 public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, LengthCommitResult> commit,
     Func<bool>? preserveBuffer = null, Func<UnitDefinition>? readUnit = null,
     bool retainRejectedOnBlur = false, Func<ResultPresentationOptions>? readPresentation = null,
-    InteractionPerformance? performance = null) : ObservableObject
+    InteractionPerformance? performance = null, Func<bool>? isBlocked = null) : ObservableObject
 {
     private string _text = Format(read(), readUnit?.Invoke() ?? UnitCatalog.Millimeter);
     private UnitDefinition _editUnit = UnitCatalog.Millimeter;
@@ -33,11 +33,18 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
         get => _text;
         set
         {
-            if (!Set(ref _text, value)) return;
-            ClearError();
-            if (IsEditing) BufferChanged?.Invoke(value);
+            if (isBlocked?.Invoke() == true) return;
+            SetText(value);
         }
     }
+
+    private void SetText(string value)
+    {
+        if (!Set(ref _text, value, nameof(Text))) return;
+        ClearError();
+        if (IsEditing) BufferChanged?.Invoke(value);
+    }
+
     public bool IsEditing { get => _isEditing; private set { if (Set(ref _isEditing, value)) Notify(nameof(IsDisplay)); } }
     public bool IsDisplay => !IsEditing;
     public bool HasError { get => _hasError; private set => Set(ref _hasError, value); }
@@ -56,7 +63,7 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
 
     public void Begin()
     {
-        if (IsEditing) return;
+        if (IsEditing || isBlocked?.Invoke() == true) return;
         _editUnit = readUnit?.Invoke() ?? UnitCatalog.Millimeter;
         _referenceLength = read();
         Text = _referenceText = Format(_referenceLength, _editUnit);
@@ -68,6 +75,7 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
 
     public bool Confirm()
     {
+        if (isBlocked?.Invoke() == true) return false;
         if (!IsEditing || _isConfirming) return true;
         using var measurement = InteractionPerformance.Measure(performance, InteractionAction.BeamGeometry);
         if (read() is null && string.IsNullOrWhiteSpace(Text))
@@ -102,6 +110,7 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
 
     public void Cancel()
     {
+        if (isBlocked?.Invoke() == true) return;
         Restore();
         EditCancelled?.Invoke();
     }
@@ -121,7 +130,7 @@ public sealed class LengthInputViewModel(Func<Length?> read, Func<Length, Length
 
     public void Refresh(bool preserveError = false)
     {
-        if (!IsEditing) Text = Format(read(), CurrentUnit);
+        if (!IsEditing) SetText(Format(read(), CurrentUnit));
         if (!preserveError) ClearError();
         Notify(nameof(DisplayText));
         Notify(nameof(Unit));

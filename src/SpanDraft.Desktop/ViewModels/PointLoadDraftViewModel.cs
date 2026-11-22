@@ -10,6 +10,7 @@ namespace SpanDraft.Desktop.ViewModels;
 public sealed class PointLoadDraftViewModel : ObservableObject
 {
     private readonly Func<EditorDocument> _read;
+    private readonly Func<bool>? _isFrozen;
     private readonly UnitDefinition _positionUnit, _valueUnit;
     private Length _referencePosition;
     private string _referencePositionText;
@@ -26,11 +27,12 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     private PointLoadPreview _preview;
 
     public PointLoadDraftViewModel(Func<EditorDocument> read, Guid? originalId,
-        PointLoadKind kind, Length position, double value, UnitProfile? profile = null)
+        PointLoadKind kind, Length position, double value, UnitProfile? profile = null, Func<bool>? isFrozen = null)
     {
         if (!Enum.IsDefined(kind)) throw new ArgumentOutOfRangeException(nameof(kind));
         if (!double.IsFinite(value)) throw new ArgumentOutOfRangeException(nameof(value));
         _read = read;
+        _isFrozen = isFrozen;
         profile ??= UnitProfile.Default;
         _positionUnit = profile[QuantityKind.BeamLength];
         _valueUnit = profile[kind == PointLoadKind.Force ? QuantityKind.TransverseForce : QuantityKind.Moment];
@@ -44,7 +46,7 @@ public sealed class PointLoadDraftViewModel : ObservableObject
         _valueText = _referenceValueText = InputQuantityFormatter.FormatExact(value, _valueUnit);
         _preview = new(position, kind, value);
         var entity = originalId is null ? null : document.Loads.FirstOrDefault(l => l.Id == originalId);
-        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position, _positionUnit);
+        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position, _positionUnit, isFrozen);
         // A move that happened before the draft opened (a drag of an existing load) is applied to the reference first.
         Reference.PositionChanged(position);
         _referencePosition = Reference.Distance;
@@ -72,7 +74,7 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     public string NameText
     {
         get => _nameText;
-        set { if (Set(ref _nameText, value)) Validate(); }
+        set { if (_isFrozen?.Invoke() != true && Set(ref _nameText, value)) Validate(); }
     }
     public string? NameError => _nameError;
     public bool HasNameError => NameError is not null;
@@ -86,12 +88,12 @@ public sealed class PointLoadDraftViewModel : ObservableObject
     public string PositionText
     {
         get => _positionText;
-        set { if (Set(ref _positionText, value)) Validate(); }
+        set { if (_isFrozen?.Invoke() != true && Set(ref _positionText, value)) Validate(); }
     }
     public string ValueText
     {
         get => _valueText;
-        set { if (Set(ref _valueText, value)) Validate(); }
+        set { if (_isFrozen?.Invoke() != true && Set(ref _valueText, value)) Validate(); }
     }
     public string? PositionError => _positionError;
     public string? ValueError => _valueError;

@@ -10,6 +10,7 @@ namespace SpanDraft.Desktop.ViewModels;
 public sealed class MomentReleaseDraftViewModel : ObservableObject
 {
     private readonly Func<EditorDocument> _read;
+    private readonly Func<bool>? _isFrozen;
     private readonly UnitDefinition _positionUnit;
     private Length _referencePosition;
     private string _referenceText;
@@ -20,9 +21,10 @@ public sealed class MomentReleaseDraftViewModel : ObservableObject
     private string? _positionError;
     private MomentReleasePreview _preview;
 
-    public MomentReleaseDraftViewModel(Func<EditorDocument> read, Guid? originalId, Length position, UnitProfile? profile = null)
+    public MomentReleaseDraftViewModel(Func<EditorDocument> read, Guid? originalId, Length position, UnitProfile? profile = null, Func<bool>? isFrozen = null)
     {
         _read = read;
+        _isFrozen = isFrozen;
         _positionUnit = (profile ?? UnitProfile.Default)[QuantityKind.BeamLength];
         OriginalId = originalId;
         var document = read();
@@ -30,7 +32,7 @@ public sealed class MomentReleaseDraftViewModel : ObservableObject
         _nameText = AutoCandidate?.Name ?? document.MomentReleases.First(r => r.Id == originalId).Name;
         _preview = new(position);
         var entity = originalId is null ? null : document.MomentReleases.FirstOrDefault(r => r.Id == originalId);
-        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position, _positionUnit);
+        Reference = new(read, entity?.EffectiveReference, entity?.Position ?? position, _positionUnit, isFrozen);
         // A move that happened before the draft opened (a drag of an existing release) is applied to the reference first.
         Reference.PositionChanged(position);
         _referencePosition = Reference.Distance;
@@ -58,7 +60,7 @@ public sealed class MomentReleaseDraftViewModel : ObservableObject
     public string NameText
     {
         get => _nameText;
-        set { if (Set(ref _nameText, value)) Validate(); }
+        set { if (_isFrozen?.Invoke() != true && Set(ref _nameText, value)) Validate(); }
     }
     public string? NameError => _nameError;
     public bool HasNameError => _nameError is not null;
@@ -69,7 +71,7 @@ public sealed class MomentReleaseDraftViewModel : ObservableObject
     public string PositionText
     {
         get => _positionText;
-        set { if (Set(ref _positionText, value)) Validate(); }
+        set { if (_isFrozen?.Invoke() != true && Set(ref _positionText, value)) Validate(); }
     }
     public string? ErrorText => _positionError;
     public bool HasError => _positionError is not null;

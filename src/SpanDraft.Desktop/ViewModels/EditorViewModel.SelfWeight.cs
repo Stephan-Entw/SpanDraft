@@ -75,6 +75,7 @@ public sealed partial class EditorViewModel
 
     public void CancelSelfWeightInteraction()
     {
+        if (Session.IsFrozen) return;
         _selfWeightFlyout = false;
         _selfWeightFeedback = null;
         NotifySelfWeightState();
