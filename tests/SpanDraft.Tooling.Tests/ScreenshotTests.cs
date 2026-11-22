@@ -430,8 +430,8 @@ public sealed class DesktopIsolatedStartupTests
         var gate = new TaskCompletionSource();
         files.BeforeRead = path => path == stores.Recents.FilePath ? gate.Task : Task.CompletedTask;
         files.Data[fixture] = File.ReadAllBytes(fixture);
-        var window = new MainWindow(new(files, new(files, Path.Combine(root, "settings.json")), UserSettings.Default)
-            { StateStores = stores, UserNameProvider = static () => null }, [fixture]);
+        var window = new MainWindow(new DesktopApplicationHost(new(files, new(files, Path.Combine(root, "settings.json")), UserSettings.Default)
+            { StateStores = stores, UserNameProvider = static () => null }), [fixture]);
         try
         {
             window.Show(); Dispatcher.UIThread.RunJobs();
@@ -463,7 +463,7 @@ public sealed class DesktopIsolatedStartupTests
         var settings = new LocalSettingsStore(files, Path.Combine(root, "settings.json"));
         var startup = new DesktopStartupContext(files, settings, UserSettings.Default)
             { StateStores = stores, UserNameProvider = static () => "Neutral author" };
-        var window = new MainWindow(startup);
+        var window = new MainWindow(new DesktopApplicationHost(startup));
         Assert.False(window.Initialization.IsCompleted);
         try
         {

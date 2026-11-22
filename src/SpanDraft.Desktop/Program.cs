@@ -19,7 +19,7 @@ internal static class Program
         var files = new ProjectFileStore();
         var startup = DesktopStartupContext.LoadAsync(files, LocalSettingsStore.Local(files)).GetAwaiter().GetResult();
         CultureConfigurator.Apply(CultureConfigurator.Resolve(startup.Settings, systemCulture, systemUiCulture));
-        return AppBuilder.Configure(() => new App(startup))
+        return AppBuilder.Configure(() => new App(new DesktopApplicationHost(startup)))
             .UsePlatformDetect()
             .LogToTrace();
     }

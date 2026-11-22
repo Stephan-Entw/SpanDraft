@@ -38,7 +38,7 @@ public sealed class DesktopCultureTests
         // Changing the file now must not affect the already loaded startup preferences.
         files.Data["settings"] = SettingsCodec.Serialize(UserSettings.Default);
         var lifetime = new ClassicDesktopStyleApplicationLifetime();
-        var app = new SpanDraft.Desktop.App(startup) { ApplicationLifetime = lifetime };
+        var app = new SpanDraft.Desktop.App(new DesktopApplicationHost(startup)) { ApplicationLifetime = lifetime };
         app.OnFrameworkInitializationCompleted();
         var window = Assert.IsType<MainWindow>(lifetime.MainWindow);
         Assert.Equal(expectedFile, window.FindControl<Menu>("MainMenu")!.Items.OfType<MenuItem>().First().Header);
@@ -88,7 +88,7 @@ public sealed class DesktopCultureTests
         files.Data[setupSlot] = setupBytes;
         var projectSlot = ProjectRecovery.Local(files).SlotPath;
         if (restoreProject) files.Data[projectSlot] = ProjectRecovery.Encode(new(State(), null, Now));
-        var window = new MainWindow(new(files, new(files, "settings"), UserSettings.Default));
+        var window = new MainWindow(new DesktopApplicationHost(new(files, new(files, "settings"), UserSettings.Default)));
         window.Show(); Dispatcher.UIThread.RunJobs();
         if (restoreProject)
         {

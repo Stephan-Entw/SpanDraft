@@ -43,14 +43,12 @@ public partial class MainWindow : Window
         return await _frameProbe.ObserveNextFrameAsync(TimeProvider.System, cancellationToken) is not null;
     }
 
-    public MainWindow() : this(null) { }
+    public MainWindow() : this(new DesktopApplicationHost()) { }
 
-    public MainWindow(DesktopStartupContext? startup, string[]? args = null)
+    public MainWindow(DesktopApplicationHost host, string[]? args = null)
     {
         InitializeComponent();
-        var files = startup?.Files ?? new ProjectFileStore();
-        var settingsStore = startup?.SettingsStore ?? LocalSettingsStore.Local(files);
-        var settings = startup?.Settings ?? UserSettings.Default;
+        var files = host.Files;
         NewMenuItem.InputGesture = new(Key.N, _primary);
         OpenMenuItem.InputGesture = new(Key.O, _primary);
         SaveMenuItem.InputGesture = new(Key.S, _primary);
@@ -100,13 +98,13 @@ public partial class MainWindow : Window
                 _dialogs = new ProjectDialogs(this);
                 _frameProbe = new(this, WorkspaceContent);
                 _performance = new(_frameProbe);
-                var stores = startup?.StateStores ?? DesktopStateStores.Local(files);
+                var stores = host.StateStores;
                 _model = new(performance: _performance, files: files, dialogs: _dialogs, recovery: stores.Recovery,
                     setupRecovery: stores.SetupRecovery,
-                    settingsStore: settingsStore, settings: settings,
+                    settingsStore: host.SettingsStore, settings: host.Settings,
                     materialStore: stores.Materials, sectionStore: stores.Sections,
                     recentStore: stores.Recents, openUserManual: OpenUserManualAsync,
-                    userNameProvider: startup?.UserNameProvider ?? (static () => OperatingSystem.IsWindows() ? Environment.UserName : null));
+                    userNameProvider: host.UserNameProvider);
                 await _model.InitializeLibrariesAsync();
                 DataContext = _model;
                 if (!await _model.InitializeRecoveryAsync())
@@ -120,6 +118,7 @@ public partial class MainWindow : Window
                 _initializing = false;
                 quitCommand.Refresh();
                 await _model.InitializeRecentProjectsAsync();
+                host.MarkReady();
                 // A restored setup draft takes precedence over the shell's open request.
                 if (_model.Mode != MainViewMode.ProjectSetup && args is [var path]
                     && string.Equals(Path.GetExtension(path), ".spandraft", StringComparison.OrdinalIgnoreCase))
@@ -136,6 +135,7 @@ public partial class MainWindow : Window
         Closing += WindowClosing;
         Closed += (_, _) =>
         {
+            host.BeginShutdown();
             _performance?.CancelPending();
             _frameProbe?.Dispose();
             _model?.ReleaseReport();

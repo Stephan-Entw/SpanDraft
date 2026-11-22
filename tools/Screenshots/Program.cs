@@ -251,7 +251,7 @@ internal static class Program
             .GetAwaiter().GetResult();
         CultureConfigurator.Apply(CultureConfigurator.Resolve(settings, CultureInfo.GetCultureInfo("de-DE"), CultureInfo.GetCultureInfo(request.Language)));
         var capture = new CaptureApplication(request, files, project, projectHash, recents);
-        return AppBuilder.Configure(() => new App(startup)).UsePlatformDetect().LogToTrace()
+        return AppBuilder.Configure(() => new App(new DesktopApplicationHost(startup))).UsePlatformDetect().LogToTrace()
             .StartWithClassicDesktopLifetime([], capture.Start);
     }
 }

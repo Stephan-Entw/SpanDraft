@@ -36,7 +36,7 @@ public sealed class DesktopShellCommandTests
         var reads = new List<string>();
         files.BeforeRead = p => { reads.Add(p); return Task.CompletedTask; };
         var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default);
-        var window = new MainWindow(startup, args);
+        var window = new MainWindow(new DesktopApplicationHost(startup), args);
         window.Show(); Dispatcher.UIThread.RunJobs();
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
         var expectedReads = new List<string>
@@ -82,7 +82,7 @@ public sealed class DesktopShellCommandTests
         {
             StateStores = DesktopStateStores.Local(files) with { Recovery = recovery }
         };
-        var window = new MainWindow(startup, [target]);
+        var window = new MainWindow(new DesktopApplicationHost(startup), [target]);
         window.Show(); Dispatcher.UIThread.RunJobs();
         if (restoreProject) { Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs(); }
         Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs();
@@ -141,7 +141,7 @@ public sealed class DesktopShellCommandTests
         var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, TestPath("settings.json")), UserSettings.Default);
         for (int attempt = 0; attempt < 2; attempt++)
         {
-            var window = new MainWindow(startup, [target]);
+            var window = new MainWindow(new DesktopApplicationHost(startup), [target]);
             bool closed = false;
             window.Closed += (_, _) => closed = true;
             window.Show(); Dispatcher.UIThread.RunJobs();

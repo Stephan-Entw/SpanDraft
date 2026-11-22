@@ -49,7 +49,7 @@ internal sealed class PerformanceApplication(MeasureOptions options, MemoryProje
         };
         CultureConfigurator.Apply(CultureConfigurator.Resolve(settings, CultureInfo.InvariantCulture, CultureInfo.InvariantCulture));
         var host = new PerformanceApplication(options, files);
-        return AppBuilder.Configure(() => new App(startup)).UsePlatformDetect().StartWithClassicDesktopLifetime([], host.Start);
+        return AppBuilder.Configure(() => new App(new DesktopApplicationHost(startup))).UsePlatformDetect().StartWithClassicDesktopLifetime([], host.Start);
     }
 
     private void Start(IClassicDesktopStyleApplicationLifetime lifetime)

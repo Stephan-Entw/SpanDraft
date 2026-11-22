@@ -6,10 +6,10 @@ namespace SpanDraft.Desktop;
 
 public partial class App : Application
 {
-    private readonly DesktopStartupContext? _startup;
+    private readonly DesktopApplicationHost _host;
 
-    public App() : this(null) { }
-    public App(DesktopStartupContext? startup) => _startup = startup;
+    public App() : this(new DesktopApplicationHost()) { }
+    public App(DesktopApplicationHost host) => _host = host;
 
     public override void Initialize()
     {
@@ -20,7 +20,7 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow(_startup, desktop.Args);
+            desktop.MainWindow = new MainWindow(_host, desktop.Args);
         }
 
         base.OnFrameworkInitializationCompleted();
