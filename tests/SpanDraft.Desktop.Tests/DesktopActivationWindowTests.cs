@@ -157,6 +157,31 @@ public sealed class DesktopActivationWindowTests
     }
 
     [Fact]
+    public void RequestArrivingWhileQuitIsPendingIsAskedAboutBeforeClosingAndDeclinedReturnsToReady()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            SetupBlockedWithQueuedOpen(out var host, out var window, out _);
+            bool closed = false; window.Closed += (_, _) => closed = true;
+            window.Close(); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(DesktopApplicationState.QuitInProgress, host.State);
+            Click(Assert.Single(window.OwnedWindows), Strings.Discard);
+            // Simulates a macOS file activation that bypasses the broker while the quit is still pending.
+            host.Activation.Enqueue(LaunchRequest.OpenProject(TestPath("quit-late.spandraft")));
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(closed);
+            // Only the late request is asked about; the already confirmed one is not asked again.
+            Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
+            Assert.False(closed);
+            Assert.Equal(DesktopApplicationState.Ready, host.State);
+            Assert.Equal(2, host.Activation.Count);
+            typeof(MainWindow).GetField("_closeApproved", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, true);
+            window.Close(); Dispatcher.UIThread.RunJobs();
+        });
+    }
+
+    [Fact]
     public void QuitWithEmptyQueueOrOnlyActivateAsksNothingExtra()
     {
         using var environment = new DesktopControlEnvironment();

@@ -291,12 +291,14 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Confirmed requests still in the queue are only dropped by an explicit user decision.</summary>
-    private async Task<bool> ConfirmDiscardPendingRequestsAsync()
+    private async Task<bool> ConfirmDiscardPendingRequestsAsync(HashSet<LaunchRequest> confirmed)
     {
-        var pending = _host.Activation.PendingOpenRequests();
+        var pending = _host.Activation.PendingOpenRequests().Where(r => !confirmed.Contains(r)).ToList();
         if (pending.Count == 0) return true;
         string? name = pending is [{ Type: LaunchRequestType.OpenProject, Value: { } path }] ? Path.GetFileName(path) : null;
-        return await _dialogs.ConfirmDiscardPendingRequestsAsync(name, pending.Count);
+        if (!await _dialogs.ConfirmDiscardPendingRequestsAsync(name, pending.Count)) return false;
+        confirmed.UnionWith(pending);
+        return true;
     }
 
     private async void WindowClosing(object? sender, WindowClosingEventArgs e)
@@ -308,8 +310,11 @@ public partial class MainWindow : Window
         _host.BeginQuit();
         try
         {
-            if (!await ConfirmDiscardPendingRequestsAsync()) { _host.CancelQuit(); return; }
+            var confirmed = new HashSet<LaunchRequest>(ReferenceEqualityComparer.Instance);
+            if (!await ConfirmDiscardPendingRequestsAsync(confirmed)) { _host.CancelQuit(); return; }
             if (!await _model.RequestCloseAsync()) { _host.CancelQuit(); return; }
+            // Requests accepted while the close dialogs were open (e.g. macOS file activations) are asked about too.
+            if (!await ConfirmDiscardPendingRequestsAsync(confirmed)) { _host.CancelQuit(); return; }
             _closeApproved = true;
             IsEnabled = false;
             // Even a synchronously completed guard must finish the current Closing event first.
