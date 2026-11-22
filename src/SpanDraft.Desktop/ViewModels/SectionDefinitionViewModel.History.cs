@@ -67,7 +67,7 @@ public sealed partial class SectionDefinitionViewModel
                 {
                     if (!draft.Inputs.TryGetValue(key, out var field))
                     {
-                        field = new(key, Presentation.Profile[QuantityOf(key)], InputChanged, key == "r", InputLabel(key));
+                        field = new(key, Presentation.Profile[QuantityOf(key)], InputChanged, key == "r", InputLabel(key), () => IsBusy);
                         field.BeforeCommittedValueChange += () => _beforeInputChange = CaptureHistory();
                         draft.Inputs.Add(key, field);
                     }

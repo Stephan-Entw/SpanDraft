@@ -4,6 +4,7 @@ using SpanDraft.Core.Units;
 using SpanDraft.Desktop.Libraries;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Sections;
+using SpanDraft.Desktop.Services;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using Xunit;
@@ -160,6 +161,50 @@ public sealed class SectionDefinitionHistoryTests
         Assert.Equal(SectionAxisDesignation.V, vm.SelectedAxis); Assert.Equal(3e-6, Input(vm, "IV").ConfirmedValue);
         Assert.True(vm.Redo()); Assert.Equal(ManualAxisConfiguration.YZ, vm.Configuration.Value);
         Assert.Equal(SectionAxisDesignation.Z, vm.SelectedAxis); Assert.Equal(2e-6, Input(vm, "IZ").ConfirmedValue);
+    }
+    [Fact]
+    public void ReactivatedManualInputRestoredByHistoryHonorsTheSettingsFreeze()
+    {
+        var main = new MainWindowViewModel(services: TestServices.Create());
+        main.NewCommand.Execute(null);
+        main.Setup.ShowSections();
+        var vm = Assert.IsType<SectionDefinitionViewModel>(main.Setup.Definition);
+        vm.SelectForm(SectionEditorType.Manual);
+        var y = vm.Configurations.Single(c => c.Value == ManualAxisConfiguration.Y);
+        var z = vm.Configurations.Single(c => c.Value == ManualAxisConfiguration.Z);
+        vm.Configuration = y;
+        Fill(vm);
+        var original = Input(vm, "IY");
+        vm.Configuration = z;
+        Fill(vm);
+
+        Assert.True(vm.Undo());
+        Assert.True(vm.Redo());
+        Assert.Equal(z, vm.Configuration);
+        Assert.DoesNotContain(vm.Parameters, input => input.Key == "IY");
+        vm.Configuration = y;
+        var restored = Input(vm, "IY");
+        Assert.NotSame(original, restored);
+        Assert.Equal(1e-6, restored.ConfirmedValue);
+        restored.PendingText = "2000000";
+
+        var participant = (ISettingsParticipant)main;
+        Assert.True(participant.TryFreezeForSettings());
+        try
+        {
+            restored.PendingText = "3000000";
+            Assert.Equal("2000000", restored.PendingText);
+            Assert.False(restored.Commit());
+            Assert.Equal(1e-6, restored.ConfirmedValue);
+            Assert.True(restored.IsPending);
+        }
+        finally { participant.ReleaseSettingsFreeze(); }
+
+        restored.PendingText = "3000000";
+        Assert.Equal("3000000", restored.PendingText);
+        Assert.True(restored.Commit());
+        Assert.Equal(3e-6, restored.ConfirmedValue);
+        Assert.False(restored.IsPending);
     }
     [Fact]
     public void NamesAndResetEachProduceOneStepButUnchangedConfirmationDoesNot()
