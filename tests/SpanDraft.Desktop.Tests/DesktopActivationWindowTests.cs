@@ -252,15 +252,17 @@ public sealed class DesktopActivationWindowTests
         Assert.Equal(BrokerStatus.Retry, host.HandleBrokerRequest(request));
     }
 
-    private static void PumpUntil(Task task)
+    // Pumps the UI dispatcher on this thread until the task is done; awaiting it then continues inline, without a thread switch.
+    private static async Task<T> PumpUntilAsync<T>(Task<T> task)
     {
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
         while (!task.IsCompleted && DateTime.UtcNow < deadline) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
         Assert.True(task.IsCompleted);
+        return await task;
     }
 
     [Fact]
-    public void RealBrokerEndpointAnswersRetryDuringRecoveryAndAcceptedAfterRestore()
+    public async Task RealBrokerEndpointAnswersRetryDuringRecoveryAndAcceptedAfterRestore()
     {
         using var environment = new DesktopControlEnvironment();
         string root = Path.Combine(Path.GetTempPath(), "spandraft-activation-win-" + Guid.NewGuid().ToString("N"));
@@ -274,16 +276,14 @@ public sealed class DesktopActivationWindowTests
             window.Show(); Dispatcher.UIThread.RunJobs();
             var request = LaunchRequest.Activate;
             var retry = BrokerClient.SendAsync(primary.Metadata, request, TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-            // Wait without await: the window and its dispatcher must stay on this thread.
-            PumpUntil(retry);
-            Assert.Equal(BrokerStatus.Retry, retry.Result);
+            // Pump before awaiting: the window and its dispatcher must stay on this thread.
+            Assert.Equal(BrokerStatus.Retry, await PumpUntilAsync(retry));
             Assert.Equal(0, host.Activation.Count);
             Assert.NotEqual(DesktopApplicationState.Ready, host.State);
 
             Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs();
             var accepted = BrokerClient.SendAsync(primary.Metadata, request, TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-            PumpUntil(accepted);
-            Assert.Equal(BrokerStatus.Accepted, accepted.Result);
+            Assert.Equal(BrokerStatus.Accepted, await PumpUntilAsync(accepted));
             typeof(MainWindow).GetField("_closeApproved", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, true);
             window.Close(); Dispatcher.UIThread.RunJobs();
         }
