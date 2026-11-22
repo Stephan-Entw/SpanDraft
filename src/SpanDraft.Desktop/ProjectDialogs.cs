@@ -54,6 +54,12 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
     public Task<bool> ConfirmRemoveMissingRecentAsync(string path) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.MissingRecentQuestion, path), DialogChoices.RemoveMissingRecent());
 
+    public Task<bool> ConfirmDiscardPendingRequestsAsync(string? singleFileName, int count) => ShowAsync(
+        singleFileName is not null
+            ? string.Format(CultureInfo.CurrentUICulture, Strings.PendingRequestOneQuestion, singleFileName)
+            : string.Format(CultureInfo.CurrentUICulture, Strings.PendingRequestManyQuestion, count),
+        DialogChoices.DiscardPendingRequests());
+
     public Task<bool> ConfirmMaterialDeleteAsync(string displayName) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.DeleteMaterialQuestion, displayName), DialogChoices.Delete());
     public Task<bool> ConfirmSectionDeleteAsync(string name) => ShowAsync(

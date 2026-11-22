@@ -71,6 +71,111 @@ public sealed class DesktopActivationWindowTests
         });
     }
 
+    private static void SetupBlockedWithQueuedOpen(out DesktopApplicationHost host, out MainWindow window, out string target)
+    {
+        var files = new Files();
+        string a = TestPath("quit-a.spandraft"); target = TestPath("quit-b.spandraft");
+        files.Data[a] = ProjectFileCodec.Serialize(State(1));
+        files.Data[target] = ProjectFileCodec.Serialize(State(4));
+        host = Host(files);
+        window = new MainWindow(host);
+        window.Show(); Dispatcher.UIThread.RunJobs();
+        var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
+        host.HandleBrokerRequest(LaunchRequest.OpenProject(a)); Dispatcher.UIThread.RunJobs();
+        Assert.True(main.NewAsync().IsCompletedSuccessfully); Dispatcher.UIThread.RunJobs();
+        Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(target)));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(1, host.Activation.Count);
+    }
+
+    [Fact]
+    public void BlockedOpenRequestSurfacesTheBlockingTargetOnceAndStaysQueued()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var files = new Files();
+            string a = TestPath("surf-a.spandraft"), b = TestPath("surf-b.spandraft");
+            files.Data[a] = ProjectFileCodec.Serialize(State(1));
+            files.Data[b] = ProjectFileCodec.Serialize(State(4));
+            var host = Host(files);
+            var window = new MainWindow(host);
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
+            host.HandleBrokerRequest(LaunchRequest.OpenProject(a)); Dispatcher.UIThread.RunJobs();
+            Assert.True(main.NewAsync().IsCompletedSuccessfully); Dispatcher.UIThread.RunJobs();
+            var surfaced = new List<Window>();
+            window.Surface = surfaced.Add;
+
+            host.HandleBrokerRequest(LaunchRequest.OpenProject(b)); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(1, host.Activation.Count);
+            Assert.Same(window.RetryTarget, Assert.Single(surfaced));
+            Assert.Equal(a, main.Session!.FilePath);
+            window.Surface = static _ => { };
+            typeof(MainWindow).GetField("_closeApproved", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, true);
+            window.Close(); Dispatcher.UIThread.RunJobs();
+        });
+    }
+
+    [Fact]
+    public void QuitWithQueuedOpenRequestAsksAndConfirmingQuits()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            SetupBlockedWithQueuedOpen(out var host, out var window, out _);
+            bool closed = false; window.Closed += (_, _) => closed = true;
+            window.Close(); Dispatcher.UIThread.RunJobs();
+            Assert.False(closed);
+            Click(Assert.Single(window.OwnedWindows), Strings.Discard); Dispatcher.UIThread.RunJobs();
+            // The existing leave question for the setup draft may follow; answer it if present.
+            if (window.OwnedWindows.Count > 0) Click(window.OwnedWindows[0], Strings.Discard);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(closed);
+        });
+    }
+
+    [Fact]
+    public void QuitWithQueuedOpenRequestCancelledReturnsToReadyAndOpensTheRequest()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            SetupBlockedWithQueuedOpen(out var host, out var window, out var target);
+            var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
+            window.Close(); Dispatcher.UIThread.RunJobs();
+            Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(DesktopApplicationState.Ready, host.State);
+            Assert.Equal(1, host.Activation.Count);
+
+            Assert.True(main.CancelSetupAsync().IsCompletedSuccessfully); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, host.Activation.Count);
+            Assert.Equal(target, main.Session!.FilePath);
+            typeof(MainWindow).GetField("_closeApproved", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, true);
+            window.Close(); Dispatcher.UIThread.RunJobs();
+        });
+    }
+
+    [Fact]
+    public void QuitWithEmptyQueueOrOnlyActivateAsksNothingExtra()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var host = Host(new Files());
+            var window = new MainWindow(host);
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            Assert.Empty(host.Activation.PendingOpenRequests());
+            host.Activation.Enqueue(LaunchRequest.Activate);
+            Assert.Empty(host.Activation.PendingOpenRequests());
+            host.Activation.SetConsumer(_ => Task.FromResult(false));
+            bool closed = false; window.Closed += (_, _) => closed = true;
+            window.Close(); Dispatcher.UIThread.RunJobs();
+            Assert.Empty(window.OwnedWindows);
+            Assert.True(closed);
+        });
+    }
+
     [Fact]
     public void OpenLegacyRecoveryAnswersRetryKeepsTheQueueEmptyAndActivatesTheDialog()
     {

@@ -484,4 +484,6 @@ Remove the entry from Recent projects?</value></data>
   <data name="ModelUnstable" xml:space="preserve"><value>Model is unstable</value></data>
   <data name="AnalysisAccuracyUnavailable" xml:space="preserve"><value>A numerically reliable result could not be obtained for this model. Check support spacing and stiffness values.</value></data>
   <data name="AnalysisNumericalFailure" xml:space="preserve"><value>The calculation could not be completed. Check the model and input values.</value></data>
+  <data name="PendingRequestOneQuestion" xml:space="preserve"><value>“{0}” was requested to be opened and has not been opened yet. Quit anyway and discard the request?</value></data>
+  <data name="PendingRequestManyQuestion" xml:space="preserve"><value>{0} projects were requested to be opened and have not been opened yet. Quit anyway and discard the requests?</value></data>
 </root>

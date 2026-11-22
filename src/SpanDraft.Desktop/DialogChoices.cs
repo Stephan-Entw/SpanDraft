@@ -34,6 +34,10 @@ internal static class DialogChoices
     public static DialogChoice<bool>[] Delete() =>
         [new(Strings.Delete, true, DialogRole.Destructive), new(Strings.Cancel, false, DialogRole.Cancel)];
 
+    /// <summary>Quitting with confirmed but unopened requests is the user's explicit decision to drop them.</summary>
+    public static DialogChoice<bool>[] DiscardPendingRequests() =>
+        [new(Strings.Discard, true, DialogRole.Destructive), new(Strings.Cancel, false, DialogRole.Cancel)];
+
     public static DialogChoice<bool>[] ReplaceMaterial() =>
         [new(Strings.ReplaceMaterial, true, DialogRole.Destructive), new(Strings.Cancel, false, DialogRole.Cancel)];
 

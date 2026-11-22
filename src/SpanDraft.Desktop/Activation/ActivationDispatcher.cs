@@ -16,6 +16,12 @@ public sealed class ActivationDispatcher
 
     public int Count { get { lock (_gate) return _queue.Count; } }
 
+    /// <summary>Confirmed requests that still wait and would open something (Activate-only requests are not listed).</summary>
+    public IReadOnlyList<LaunchRequest> PendingOpenRequests()
+    {
+        lock (_gate) return _queue.Where(static r => r.Type != LaunchRequestType.Activate).ToList();
+    }
+
     public void Enqueue(LaunchRequest request)
     {
         if (!request.IsValid) throw new ArgumentException("Invalid launch request.", nameof(request));

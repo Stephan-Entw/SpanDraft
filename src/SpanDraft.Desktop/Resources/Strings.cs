@@ -497,4 +497,6 @@ public static class Strings
     public static string DiagnosticsPresentationHint => Get(nameof(DiagnosticsPresentationHint));
     public static string DiagnosticsUiHint => Get(nameof(DiagnosticsUiHint));
     public static string DiagnosticsTotalHint => Get(nameof(DiagnosticsTotalHint));
+    public static string PendingRequestOneQuestion => Get(nameof(PendingRequestOneQuestion));
+    public static string PendingRequestManyQuestion => Get(nameof(PendingRequestManyQuestion));
 }

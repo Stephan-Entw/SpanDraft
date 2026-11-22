@@ -51,7 +51,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _host = host;
-        host.RetryServed += () => Dispatcher.UIThread.Post(() => RetryTarget.Activate());
+        host.RetryServed += () => Dispatcher.UIThread.Post(() => Surface(RetryTarget));
         var files = host.Files;
         NewMenuItem.InputGesture = new(Key.N, _primary);
         OpenMenuItem.InputGesture = new(Key.O, _primary);
@@ -152,6 +152,15 @@ public partial class MainWindow : Window
     /// <summary>The TopLevel currently blocking the shell (e.g. the recovery dialog), otherwise this window.</summary>
     internal Window RetryTarget => OwnedWindows.LastOrDefault(static w => w.IsVisible) ?? this;
 
+    private LaunchRequest? _lastBlockedRequest;
+
+    /// <summary>Test seam: the best-effort activation of the window or blocking dialog.</summary>
+    internal Action<Window> Surface { get; set; } = static target =>
+    {
+        if (target.WindowState == WindowState.Minimized) target.WindowState = WindowState.Normal;
+        target.Activate();
+    };
+
     private void PostPump() => Dispatcher.UIThread.Post(async () =>
     {
         try { await _host.Activation.PumpAsync(); }
@@ -164,7 +173,12 @@ public partial class MainWindow : Window
         if (request.Type == LaunchRequestType.OpenProject)
         {
             // A setup draft in progress keeps precedence over external opens; the request waits in the queue.
-            if (!_model.CanOpenProject || _model.Mode == MainViewMode.ProjectSetup) return false;
+            if (!_model.CanOpenProject || _model.Mode == MainViewMode.ProjectSetup)
+            {
+                // Not a seemingly dead double click: surface the window or the blocking dialog; the request stays queued.
+                if (!ReferenceEquals(_lastBlockedRequest, request)) { _lastBlockedRequest = request; Surface(RetryTarget); }
+                return false;
+            }
             Activate();
             await _model.OpenAsync(request.Value!);
             return true;
@@ -276,6 +290,15 @@ public partial class MainWindow : Window
         if (!await manual.OpenAsync()) await _dialogs.ShowErrorAsync(SpanDraft.Desktop.Resources.Strings.UserManualOpenError);
     }
 
+    /// <summary>Confirmed requests still in the queue are only dropped by an explicit user decision.</summary>
+    private async Task<bool> ConfirmDiscardPendingRequestsAsync()
+    {
+        var pending = _host.Activation.PendingOpenRequests();
+        if (pending.Count == 0) return true;
+        string? name = pending is [{ Type: LaunchRequestType.OpenProject, Value: { } path }] ? Path.GetFileName(path) : null;
+        return await _dialogs.ConfirmDiscardPendingRequestsAsync(name, pending.Count);
+    }
+
     private async void WindowClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_closeApproved) return;
@@ -285,6 +308,7 @@ public partial class MainWindow : Window
         _host.BeginQuit();
         try
         {
+            if (!await ConfirmDiscardPendingRequestsAsync()) { _host.CancelQuit(); return; }
             if (!await _model.RequestCloseAsync()) { _host.CancelQuit(); return; }
             _closeApproved = true;
             IsEnabled = false;

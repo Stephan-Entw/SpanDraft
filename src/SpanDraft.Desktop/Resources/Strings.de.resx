@@ -484,4 +484,6 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="ModelUnstable" xml:space="preserve"><value>Modell nicht stabil</value></data>
   <data name="AnalysisAccuracyUnavailable" xml:space="preserve"><value>Für dieses Modell konnte kein numerisch verlässliches Ergebnis ermittelt werden. Prüfe Lagerabstände und Steifigkeiten.</value></data>
   <data name="AnalysisNumericalFailure" xml:space="preserve"><value>Die Berechnung konnte nicht abgeschlossen werden. Prüfe das Modell und die Eingabewerte.</value></data>
+  <data name="PendingRequestOneQuestion" xml:space="preserve"><value>„{0}“ sollte geöffnet werden und wurde noch nicht geöffnet. Trotzdem beenden und die Anforderung verwerfen?</value></data>
+  <data name="PendingRequestManyQuestion" xml:space="preserve"><value>{0} Projekte sollten geöffnet werden und wurden noch nicht geöffnet. Trotzdem beenden und die Anforderungen verwerfen?</value></data>
 </root>
