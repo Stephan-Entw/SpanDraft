@@ -101,6 +101,35 @@ public sealed class DesktopWindowLifecycleTests
     }
 
     [Fact]
+    public void CancelledQuitDuringStartupKeepsStartingUntilRecentsAreRead()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var previous = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(new AvaloniaSynchronizationContext());
+        try
+        {
+            var files = new Files();
+            var host = Host(files, withRecovery: true);
+            var gate = new TaskCompletionSource();
+            var recents = RecentProjectsStore.Local(files).FilePath;
+            files.BeforeRead = p => p == recents ? gate.Task : Task.CompletedTask;
+            var window = new MainWindow(host);
+            window.Show(); Dispatcher.UIThread.RunJobs();
+            Click(Assert.Single(window.OwnedWindows), Strings.Restore); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(DesktopApplicationState.Starting, host.State);
+
+            window.FindControl<MenuItem>("QuitMenuItem")!.Command!.Execute(null); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(DesktopApplicationState.QuitInProgress, host.State);
+            Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(DesktopApplicationState.Starting, host.State);
+
+            gate.SetResult(); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(DesktopApplicationState.Ready, host.State);
+        }
+        finally { SynchronizationContext.SetSynchronizationContext(previous); }
+    }
+
+    [Fact]
     public void WindowUsesTheStoresOfTheHostInsteadOfCreatingItsOwn()
     {
         using var environment = new DesktopControlEnvironment();

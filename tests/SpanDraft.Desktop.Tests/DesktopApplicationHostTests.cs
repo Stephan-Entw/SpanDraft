@@ -25,6 +25,21 @@ public sealed class DesktopApplicationHostTests
     }
 
     [Fact]
+    public void CancelQuitRestoresStartingAndKeepsMarkReadyDuringQuit()
+    {
+        var host = new DesktopApplicationHost();
+        host.BeginQuit();
+        host.CancelQuit();
+        Assert.Equal(DesktopApplicationState.Starting, host.State);
+
+        host.BeginQuit();
+        host.MarkReady();
+        Assert.Equal(DesktopApplicationState.QuitInProgress, host.State);
+        host.CancelQuit();
+        Assert.Equal(DesktopApplicationState.Ready, host.State);
+    }
+
+    [Fact]
     public void HostExposesInjectedStartupServices()
     {
         var files = new ProjectFileStore();

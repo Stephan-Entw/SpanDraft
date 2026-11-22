@@ -9,6 +9,7 @@ public enum DesktopApplicationState { Starting, Ready, QuitInProgress, ShuttingD
 public sealed class DesktopApplicationHost
 {
     private DesktopApplicationState _state = DesktopApplicationState.Starting;
+    private DesktopApplicationState _stateBeforeQuit;
 
     public DesktopApplicationHost(DesktopStartupContext? startup = null)
     {
@@ -30,17 +31,21 @@ public sealed class DesktopApplicationHost
     public void MarkReady()
     {
         if (_state == DesktopApplicationState.Starting) _state = DesktopApplicationState.Ready;
+        else if (_state == DesktopApplicationState.QuitInProgress) _stateBeforeQuit = DesktopApplicationState.Ready;
     }
 
     public void BeginQuit()
     {
         if (_state is DesktopApplicationState.Starting or DesktopApplicationState.Ready)
+        {
+            _stateBeforeQuit = _state;
             _state = DesktopApplicationState.QuitInProgress;
+        }
     }
 
     public void CancelQuit()
     {
-        if (_state == DesktopApplicationState.QuitInProgress) _state = DesktopApplicationState.Ready;
+        if (_state == DesktopApplicationState.QuitInProgress) _state = _stateBeforeQuit;
     }
 
     public void BeginShutdown() => _state = DesktopApplicationState.ShuttingDown;
