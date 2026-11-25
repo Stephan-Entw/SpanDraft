@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 
 from scripts import bitwarden_secrets as bitwarden
-from scripts import microsoft_store_draft as store
+from scripts import submit_microsoft_store_release as store
 
 
 TOKEN = "0.token-value:key"

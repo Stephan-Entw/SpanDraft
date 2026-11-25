@@ -1,14 +1,14 @@
 <#
 .SYNOPSIS
-Creates everything for a Microsoft Store draft of a release tag and optionally uploads it.
+Creates all Microsoft Store release artifacts of a release tag locally. Changes nothing in the Store.
 
 .DESCRIPTION
 Run on Windows from your normal checkout; its tooling is used and it is never switched.
 The application comes from a temporary Git worktree of the tag (a sibling of the checkout):
   - from the tag: native screenshots (capture-screenshots.ps1) and the submission MSIX
     (package-microsoft-store.ps1), so nothing of the current development state gets in;
-  - from this checkout: hero image, "What's new" export (of the tag's release notes), assembly
-    and upload.
+  - from this checkout: hero image, "What's new" export (of the tag's release notes) and
+    assembly.
 The result is one folder artifacts/store-release/<version>_<UTC timestamp>/ (git-ignored):
   screenshots/<culture>/01-hero.png ... 06-start.png   (Store order)
   whats-new/<culture>.txt
@@ -16,16 +16,15 @@ The result is one folder artifacts/store-release/<version>_<UTC timestamp>/ (git
   release.json                                          (version, commits, hash, order)
 The capture run is kept under artifacts/screenshots/<version>_<timestamp>/.
 
-With -Upload the folder is then uploaded as a Partner Center draft (never submitted).
+Review the folder, then submit it with scripts/submit_microsoft_store_release.py.
 The worktree is removed after success and kept for diagnosis after a failure.
 
 .EXAMPLE
-pwsh ./scripts/prepare-microsoft-store-release.ps1 -Tag v1.2.0 -Upload
+pwsh ./scripts/prepare-microsoft-store-release.ps1 -Tag v1.2.0
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][ValidatePattern('^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$')][string] $Tag,
-    [switch] $Upload,
     [switch] $KeepWorktree
 )
 $ErrorActionPreference = 'Stop'
@@ -52,7 +51,6 @@ try {
         $python = Get-Command python -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source
     }
     if (-not $python) { throw 'Python 3 was not found (help/.venv or PATH).' }
-    if ($Upload) { Invoke-Checked 'Store credential check' { & $python scripts/microsoft_store_draft.py --check-credentials } }
     # The worktree has no help/.venv of its own; packaging accepts Zensical from PATH.
     $helpScripts = Join-Path $repoRoot 'help/.venv/Scripts'
     if (Test-Path -LiteralPath (Join-Path $helpScripts 'zensical.exe') -PathType Leaf) {
@@ -161,7 +159,7 @@ try {
         whatsNew = [ordered]@{ 'de-DE' = 'whats-new/de-DE.txt'; 'en-US' = 'whats-new/en-US.txt' }
         screenshots = $screenshots
     } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $staging 'release.json') -Encoding utf8NoBOM
-    Invoke-Checked 'Release folder validation' { & $python scripts/microsoft_store_draft.py $staging --check }
+    Invoke-Checked 'Release folder validation' { & $python scripts/submit_microsoft_store_release.py $staging --check }
     Move-Item -LiteralPath $staging -Destination $release
     $staging = $null
     Write-Host "Store release folder: $release"
@@ -176,12 +174,8 @@ try {
     }
     $worktreeCreated = $false
 
-    if ($Upload) {
-        & $python scripts/microsoft_store_draft.py $release
-        if ($LASTEXITCODE -ne 0) { throw "Upload failed. Retry without rebuilding: python scripts/microsoft_store_draft.py `"$release`"" }
-    } else {
-        Write-Host "Upload as draft: python scripts/microsoft_store_draft.py `"$release`""
-    }
+    Write-Host "Review the screenshots, whats-new and the MSIX. Then submit for certification:"
+    Write-Host "python scripts/submit_microsoft_store_release.py `"$release`""
 } catch {
     [Console]::Error.WriteLine($_.Exception.Message)
     if ($worktreeCreated) { [Console]::Error.WriteLine("Worktree kept for diagnosis. Remove it with: git worktree remove --force `"$worktree`"") }
