@@ -90,6 +90,10 @@ STAGES = UNCLEAR | {"delete-requested", "created", "uploaded", "committed"}
 SERVER_FIELDS = ("id", "status", "statusDetails", "fileUploadUrl", "friendlyName")
 IGNORED_LISTING_FIELDS = ("privacyPolicy", "supportContact", "websiteUrl")
 PACKAGE_FIELDS = ("fileName", "fileStatus", "minimumDirectXVersion", "minimumSystemRam")
+# Observed in the first real run (1.2.0): the Store returns these differently without any real change.
+IGNORED_PRICING_FIELDS = ("sales", "isAdvancedPricingModel")  # sales: unsupported; the other: read-only.
+IGNORED_REPLACED_PACKAGE_FIELDS = ("targetPlatform",)  # Dropped from packages marked PendingDelete.
+TRIMMED_LISTING_TEXTS = ("releaseNotes", "licenseTerms")  # Line breaks and outer whitespace only.
 
 
 class Release:
@@ -250,12 +254,14 @@ def _comparable(submission):
     """A copy without what Partner Center assigns or ignores; nothing else is normalized.
 
     Missing and null stay different except for 'description' of new screenshots, which we never send.
+    The IGNORED_* and TRIMMED_* lists name every other exception.
     """
     value = json.loads(json.dumps(submission))
     for key in SERVER_FIELDS:
         value.pop(key, None)
     if isinstance(value.get("pricing"), dict):
-        value["pricing"].pop("sales", None)  # No longer supported: read empty, ignored on update.
+        for key in IGNORED_PRICING_FIELDS:
+            value["pricing"].pop(key, None)
     rollout = (value.get("packageDeliveryOptions") or {}).get("packageRollout")
     if isinstance(rollout, dict):
         rollout.pop("packageRolloutStatus", None)  # Assigned by Partner Center.
@@ -266,6 +272,8 @@ def _comparable(submission):
         if package.get("fileStatus") == "PendingUpload":
             # Partner Center populates every other field of a new package.
             package = {key: package[key] for key in PACKAGE_FIELDS if key in package}
+        elif package.get("fileStatus") == "PendingDelete":
+            package = {key: item for key, item in package.items() if key not in IGNORED_REPLACED_PACKAGE_FIELDS}
         packages[name if name not in packages else f"{name} (duplicate)"] = package
     if "applicationPackages" in value:
         value["applicationPackages"] = packages
@@ -275,8 +283,9 @@ def _comparable(submission):
             continue
         for key in IGNORED_LISTING_FIELDS:
             base.pop(key, None)
-        if isinstance(base.get("releaseNotes"), str):
-            base["releaseNotes"] = base["releaseNotes"].replace("\r\n", "\n").strip()
+        for key in TRIMMED_LISTING_TEXTS:
+            if isinstance(base.get(key), str):
+                base[key] = base[key].replace("\r\n", "\n").strip()
         if "images" in base:
             new, others = [], []
             for image in base["images"] or []:

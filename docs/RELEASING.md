@@ -356,12 +356,15 @@ The script uses the Microsoft Store submission API, in this order:
 
 The verification ignores only what Partner Center assigns or ignores according to
 the API documentation: `id`, `status`, `statusDetails`, `fileUploadUrl`,
-`friendlyName`, `pricing.sales`,
+`friendlyName`, `pricing.sales`, the read-only `pricing.isAdvancedPricingModel`,
 `packageDeliveryOptions.packageRollout.packageRolloutStatus` and
 `.fallbackSubmissionId`, the obsolete listing fields `privacyPolicy`,
 `supportContact` and `websiteUrl`, the fields of the new package other than
-`fileName`, `fileStatus`, `minimumDirectXVersion` and `minimumSystemRam`, and
-`id` plus an empty `description` of new screenshots. A missing field and `null`
+`fileName`, `fileStatus`, `minimumDirectXVersion` and `minimumSystemRam`,
+`targetPlatform` of the package being replaced (`PendingDelete`), and `id` plus
+an empty `description` of new screenshots. `releaseNotes` and `licenseTerms` are
+compared with normalized line breaks and without outer whitespace. The first real
+run (1.2.0) showed the last three normalizations. A missing field and `null`
 are not treated as equal. If Microsoft normalizes another field, the run stops
 before the commit and names the field.
 

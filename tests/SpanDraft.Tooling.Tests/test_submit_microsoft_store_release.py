@@ -76,7 +76,7 @@ class ReleaseFolder:
 def published_submission():
     def listing(language):
         return {"baseListing": {"description": f"Beschreibung {language}", "releaseNotes": "alt", "keywords": ["statik"],
-                                "privacyPolicy": "", "images": [
+                                "privacyPolicy": "", "licenseTerms": "https://spandraft.test/license\n", "images": [
             {"fileName": "old/hero.png", "fileStatus": "Uploaded", "imageType": "Screenshot", "id": "1",
              "description": None},
             {"fileName": "old/tile.png", "fileStatus": "Uploaded", "imageType": "PromotionalArt16x9", "id": "2"},
@@ -86,7 +86,7 @@ def published_submission():
         "statusDetails": {"errors": [], "certificationReports": [{"reportUrl": "https://reports.test/r?sig=SECRET"}]},
         "targetPublishMode": "Immediate", "targetPublishDate": "1601-01-01T00:00:00Z", "visibility": "Public",
         "applicationCategory": "Tools", "pricing": {"priceId": "Free", "trialPeriod": "NoFreeTrial", "sales": [],
-                                                    "marketSpecificPricings": {}},
+                                                    "marketSpecificPricings": {}, "isAdvancedPricingModel": True},
         "hardwarePreferences": [], "automaticBackupEnabled": False, "canInstallOnRemovableMedia": True,
         "isGameDvrEnabled": False, "gamingOptions": [], "hasExternalInAppProducts": False,
         "meetAccessibilityGuidelines": True, "notesForCertification": "",
@@ -99,11 +99,21 @@ def published_submission():
         "trailers": [],
         "applicationPackages": [
             {"fileName": OLD, "fileStatus": "Uploaded", "id": "p1", "version": "1.2.0.0", "architecture": "X64",
-             "minimumDirectXVersion": "None", "minimumSystemRam": "Memory2GB"},
-            {"fileName": "Other.appx", "fileStatus": "Uploaded", "id": "p2"},
+             "minimumDirectXVersion": "None", "minimumSystemRam": "Memory2GB", "targetPlatform": "Windows10"},
+            {"fileName": "Other.appx", "fileStatus": "Uploaded", "id": "p2", "targetPlatform": "Windows10"},
         ],
         "listings": {"de-de": listing("de"), "en-us": listing("en")},
     }
+
+
+def microsoft_normalizes(stored):
+    """What the Store returned after the PUT in the first real run (1.2.0), with no real change."""
+    for package in stored["applicationPackages"]:
+        if package["fileStatus"] == "PendingDelete":
+            package.pop("targetPlatform", None)
+    for listing in stored["listings"].values():
+        listing["baseListing"]["licenseTerms"] = listing["baseListing"]["licenseTerms"].rstrip("\n")
+    stored["pricing"]["isAdvancedPricingModel"] = False
 
 
 def copy(value):
@@ -712,6 +722,66 @@ class SubmitStoreReleaseTests(unittest.TestCase):
 
         fake.tamper = tamper
         self.written(fake, [C, U("draft-1"), B, K("draft-1")])
+
+    def test_the_normalizations_observed_in_the_first_real_run_do_not_stop_the_commit(self):
+        fake = FakeStore()
+        fake.tamper = microsoft_normalizes
+        self.written(fake, [C, U("draft-1"), B, K("draft-1")])
+
+    def test_an_uploaded_submission_stopped_by_these_normalizations_is_continued(self):
+        # As with 1.2.0: uploaded, then stopped by the verification of the earlier version of this tool.
+        fake = FakeStore()
+        fake.tamper = microsoft_normalizes
+        earlier = {"IGNORED_PRICING_FIELDS": ("sales",), "IGNORED_REPLACED_PACKAGE_FIELDS": (),
+                   "TRIMMED_LISTING_TEXTS": ("releaseNotes",)}
+        with patch.multiple(store, **earlier):
+            text = None
+            try:
+                self.submit(fake)
+            except RuntimeError as error:
+                text = str(error)
+        self.assertEqual(fake.writes(), [C, U("draft-1"), B])
+        for path in (f"applicationPackages.{OLD}.targetPlatform is missing", "licenseTerms differs",
+                     "pricing.isAdvancedPricingModel differs"):
+            self.assertIn(path, text)
+        self.assertEqual(self.stage(), "uploaded")
+        self.written(fake, [U("draft-1"), B, K("draft-1")])
+        self.assertEqual(self.stage(), "committed")
+
+    def test_real_license_and_pricing_changes_still_stop_the_commit(self):
+        def license_terms(value):
+            return lambda s: s["listings"]["en-us"]["baseListing"].update(licenseTerms=value)
+
+        def other_package(s):
+            return s["applicationPackages"][1]
+
+        faults = {
+            "licenseTerms differs": license_terms("https://other.test/license"),
+            "licenseTerms differs ": license_terms("https://spandraft.test/lic ense"),
+            "Other.appx.targetPlatform differs": lambda s: other_package(s).update(targetPlatform="Windows8"),
+            "Other.appx.targetPlatform is missing": lambda s: other_package(s).pop("targetPlatform"),
+            "pricing.priceId differs": lambda s: s["pricing"].update(priceId="Tier2"),
+            "pricing.trialPeriod differs": lambda s: s["pricing"].update(trialPeriod="SevenDays"),
+            "pricing.marketSpecificPricings.DE is unexpected":
+                lambda s: s["pricing"]["marketSpecificPricings"].update(DE="Tier2"),
+            "pricing.isFree is unexpected": lambda s: s["pricing"].update(isFree=False),
+        }
+        for message, change in faults.items():
+            with self.subTest(message):
+                self.journal.path.unlink(missing_ok=True)
+                fake = FakeStore()
+                fake.tamper = lambda s, change=change: (microsoft_normalizes(s), change(s))
+                self.written(fake, [C, U("draft-1"), B], message=f"Not committed.*{re.escape(message.strip())}")
+
+    def test_the_published_submission_stays_the_reference_for_a_continued_draft(self):
+        fake = FakeStore()
+        fake.faults["upload"] = 500
+        self.written(fake, [C, U("draft-1"), B], message="File upload failed")
+        fake.faults.pop("upload")
+        record = self.journal.load()
+        record["baseline"]["listings"]["de-de"]["baseListing"]["licenseTerms"] = "https://other.test/license"
+        self.journal.save(record)
+        self.refused(fake, "differs from the published submission.*licenseTerms differs")
 
     def test_the_publish_mode_is_watched_after_the_commit(self):
         fake = FakeStore()
