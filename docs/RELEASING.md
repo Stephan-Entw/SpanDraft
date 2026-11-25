@@ -349,24 +349,71 @@ The script uses the Microsoft Store submission API, in this order:
 
 | Stage | What happens |
 | --- | --- |
-| Check | Validates the folder and reads the Store state. Nothing is written if anything is wrong. |
-| Upload | Creates a draft from the last published submission, sets publish mode `Manual`, marks the previous `SpanDraft-*.0-x64.msix` for removal and adds the new one, replaces "What's new" and the screenshots, uploads the ZIP. Descriptions, logos, pricing, availability and other packages stay. |
-| Verify | Reads the saved submission back. Any difference, including a publish mode other than `Manual`, stops before the commit. |
+| Check | Validates the folder, reads the Store state and builds and checks the upload ZIP. Nothing is written if anything is wrong, including a version that is not newer than the published one. |
+| Update | Creates a submission (a copy of the last published one) and checks that it equals the published one. Then sets publish mode `Manual`, marks the previous `SpanDraft-*.0-x64.msix` and the old screenshots `PendingDelete`, adds the new ones as `PendingUpload` (as in Microsoft's `AppSubmissionUpdateSample`), replaces "What's new" and uploads the ZIP. |
+| Verify | Reads the saved submission back and compares it field by field with the intended change. Any other difference, such as delivery options, mandatory update, licensing, device families, trailers, pricing, availability, descriptions, logos or other packages, stops before the commit. |
 | Commit | Submits for certification. Waits until Microsoft has processed the commit. |
+
+The verification ignores only what Partner Center assigns or ignores according to
+the API documentation: `id`, `status`, `statusDetails`, `fileUploadUrl`,
+`friendlyName`, `pricing.sales`,
+`packageDeliveryOptions.packageRollout.packageRolloutStatus` and
+`.fallbackSubmissionId`, the obsolete listing fields `privacyPolicy`,
+`supportContact` and `websiteUrl`, the fields of the new package other than
+`fileName`, `fileStatus`, `minimumDirectXVersion` and `minimumSystemRam`, and
+`id` plus an empty `description` of new screenshots. A missing field and `null`
+are not treated as equal. If Microsoft normalizes another field, the run stops
+before the commit and names the field.
 
 **4. Publish** yourself: after certification, review the submission in Partner
 Center and choose **Publish now**. No script publishes.
 
-An open unpublished draft is never deleted silently. The script stops and prints
-its ID; add `--replace-draft <ID>` to delete and replace it. Submissions already
-committed, in certification or certified are never deleted.
+#### Interruptions and recovery
+
+The script keeps one journal per app on this computer,
+`%LOCALAPPDATA%\SpanDraft\store-9NVWB1M86PDZ.json`. It holds the stage, the
+submission ID, the copied submission and the hashes of everything uploaded
+(package, screenshots in order, "What's new", tag and commit). It never holds
+upload URLs or credentials. A lock next to it refuses a second run at the same
+time. Finished journals move to `history/` once the submission is published.
 
 After an interruption or error, run the same command again. It reads the Store
-first: an uncommitted draft of this folder is continued and uploaded again; a
-committed one is only reported. The progress is stored in
-`<folder>/submission.json` (IDs only). A commit is never repeated automatically.
-Do not edit an API-created draft in Partner Center before the commit; the API can
-then no longer change or commit it.
+and the journal first, whatever folder it is started from:
+
+| Journal | Next run |
+| --- | --- |
+| Draft created or uploaded, same content | Continues: update, upload, verify, commit. |
+| Draft of other content (files changed, other folder) | Stops. `--replace-draft <ID>` deletes it and starts again with this folder. |
+| Create requested, answer missing | Only reads, also if no draft is visible: Microsoft may still create it. |
+| Commit requested, answer missing | Only reads. Waits up to 20 minutes for the status to change. A commit is never sent twice. |
+| Committed | Only reads and reports. |
+| Submission gone or status unknown | Only reads and stops. |
+
+When a run only reads and stops, check the actual state in Partner Center first.
+Then archive the journal with the token the message names (a submission ID, or
+`create`):
+
+```powershell
+python scripts/submit_microsoft_store_release.py --clear-state <token>
+```
+
+This archives only the local journal. It confirms nothing in the Store. A draft
+that still exists then needs `--replace-draft <ID>` again. If a commit stays
+unconfirmed and the submission is still a draft, archive the journal and start
+over with `--replace-draft <ID>`.
+
+`--replace-draft <ID>` deletes only the pending draft with exactly this ID and
+only in `PendingCommit` or `CommitFailed`. Both are checked again right before
+deleting. Submissions that are committed, in certification, certified or
+published are never deleted. The flag is refused while a request is unclear.
+
+The journal exists only on this computer. A second computer sees only what the
+Store shows, not an unclear request. Submit from one computer (the VM) only.
+
+Do not edit an API-created draft in Partner Center before the commit. The API
+can then no longer change or commit it. HTTP 409 can have this cause, but
+also others (the state of the submission or app, or a Partner Center feature
+that the API does not support).
 
 "What's new" is the plain-text section `## X.Y.Z` of `release-notes/en.md` and
 `de.md` (`release_notes.py export-store`). Sections over the Store limit of
