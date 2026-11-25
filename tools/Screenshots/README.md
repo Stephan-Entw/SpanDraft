@@ -171,7 +171,9 @@ and Start 05. The capture sequence still prepares Start before opening the proje
 After a successful run, the runner opens the timestamped output directory in
 Explorer. It also prints the absolute directory and `result.json` paths to the
 terminal. If opening Explorer fails, the saved screenshots remain successful
-and the printed path can be opened manually.
+and the printed path can be opened manually. Setting
+`SPANDRAFT_SCREENSHOTS_NO_OPEN=1` skips opening it; the Store release script does
+this because its run lives in a temporary worktree.
 
 The runner stages every requested PNG under its GUID-owned `.runs/` directory.
 Worker state is removed, then fixture preservation, display restoration and the

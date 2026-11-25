@@ -53,7 +53,7 @@ try {
     }
     if (-not $python) { throw 'Python 3 was not found (help/.venv or PATH).' }
     if ($Upload) {
-        foreach ($name in @('MSSTORE_TENANT_ID', 'MSSTORE_CLIENT_ID', 'MSSTORE_CLIENT_SECRET')) {
+        foreach ($name in @('MS_STORE_TENANT_ID', 'MS_STORE_CLIENT_ID', 'MS_STORE_CLIENT_SECRET')) {
             if (-not [Environment]::GetEnvironmentVariable($name)) { throw "-Upload requires the environment variable $name." }
         }
     }
@@ -97,7 +97,13 @@ try {
     finally { Pop-Location }
 
     # 2. Native screenshots of the tagged application.
-    Invoke-Checked 'Screenshot capture' { pwsh -NoProfile -File (Join-Path $worktree 'tools/Screenshots/capture-screenshots.ps1') }
+    # The run lives in the temporary worktree, so the tool must not open it in Explorer.
+    # Tags up to v1.2.0 predate this switch and still open it.
+    $previousNoOpen = $env:SPANDRAFT_SCREENSHOTS_NO_OPEN
+    try {
+        $env:SPANDRAFT_SCREENSHOTS_NO_OPEN = '1'
+        Invoke-Checked 'Screenshot capture' { pwsh -NoProfile -File (Join-Path $worktree 'tools/Screenshots/capture-screenshots.ps1') }
+    } finally { $env:SPANDRAFT_SCREENSHOTS_NO_OPEN = $previousNoOpen }
     # Older tags name runs without the version, so the run is identified by being the only one in the new worktree.
     $runs = @(Get-ChildItem -LiteralPath (Join-Path $worktree 'artifacts/screenshots') -Directory |
         Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'result.json') -PathType Leaf })

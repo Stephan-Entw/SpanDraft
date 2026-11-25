@@ -14,7 +14,7 @@ Microsoft Store submission API (https://manage.devcenter.microsoft.com):
 It never commits the draft. Review and submit it in Partner Center.
 
 Credentials (Partner Center > Account settings > User management > Microsoft Entra applications,
-role Manager) come from the environment: MSSTORE_TENANT_ID, MSSTORE_CLIENT_ID, MSSTORE_CLIENT_SECRET.
+role Manager) come from the environment: MS_STORE_TENANT_ID, MS_STORE_CLIENT_ID, MS_STORE_CLIENT_SECRET.
 --check only validates the folder and contacts nothing.
 """
 
@@ -170,11 +170,11 @@ def _send(method, url, headers, data):
 
 
 def _token(send):
-    tenant = os.environ.get("MSSTORE_TENANT_ID")
-    client = os.environ.get("MSSTORE_CLIENT_ID")
-    secret = os.environ.get("MSSTORE_CLIENT_SECRET")
+    tenant = os.environ.get("MS_STORE_TENANT_ID")
+    client = os.environ.get("MS_STORE_CLIENT_ID")
+    secret = os.environ.get("MS_STORE_CLIENT_SECRET")
     if not (tenant and client and secret):
-        raise ValueError("Set MSSTORE_TENANT_ID, MSSTORE_CLIENT_ID and MSSTORE_CLIENT_SECRET.")
+        raise ValueError("Set MS_STORE_TENANT_ID, MS_STORE_CLIENT_ID and MS_STORE_CLIENT_SECRET.")
     form = urllib.parse.urlencode({
         "grant_type": "client_credentials", "client_id": client, "client_secret": secret,
         "resource": "https://manage.devcenter.microsoft.com",

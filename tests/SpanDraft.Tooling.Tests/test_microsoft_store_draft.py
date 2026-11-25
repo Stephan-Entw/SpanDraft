@@ -98,7 +98,7 @@ class MicrosoftStoreDraftTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
         self.folder = ReleaseFolder(self.root)
-        env = patch.dict("os.environ", {"MSSTORE_TENANT_ID": "t", "MSSTORE_CLIENT_ID": "c", "MSSTORE_CLIENT_SECRET": "s"})
+        env = patch.dict("os.environ", {"MS_STORE_TENANT_ID": "t", "MS_STORE_CLIENT_ID": "c", "MS_STORE_CLIENT_SECRET": "s"})
         env.start()
         self.addCleanup(env.stop)
 

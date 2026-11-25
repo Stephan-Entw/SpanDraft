@@ -170,6 +170,7 @@ internal static class Program
         }
         if (failure is not null) { Console.Error.WriteLine(Sanitize(failure, repo)); return 1; }
         Console.WriteLine("Direct HWND capture complete; all selected images published together.");
+        if (Environment.GetEnvironmentVariable("SPANDRAFT_SCREENSHOTS_NO_OPEN") == "1") return 0;
         try
         {
             using var explorer = Process.Start(new ProcessStartInfo(destination) { UseShellExecute = true });

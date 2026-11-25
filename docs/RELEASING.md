@@ -354,6 +354,6 @@ if even that is too long, preparation stops before capturing.
 
 One-time API access: in Partner Center, add a Microsoft Entra application with
 the **Manager** role (Account settings > User management > Microsoft Entra
-applications) and provide its values on the VM as `MSSTORE_TENANT_ID`,
-`MSSTORE_CLIENT_ID` and `MSSTORE_CLIENT_SECRET`. The app must already have its
+applications) and provide its values on the VM as `MS_STORE_TENANT_ID`,
+`MS_STORE_CLIENT_ID` and `MS_STORE_CLIENT_SECRET`. The app must already have its
 first submission completed in Partner Center, which is the case for SpanDraft.
