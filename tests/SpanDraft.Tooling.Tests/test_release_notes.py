@@ -59,6 +59,36 @@ class ReleaseNotesTests(unittest.TestCase):
         subprocess.run([sys.executable, str(SCRIPT), "export-en", VERSION, str(output)], cwd=self.root, check=True)
         self.assertEqual(output.read_bytes(), b"\r\n### New\r\n\r\n- English release only\r\n\r\n")
 
+    def write_notes(self, path, body):
+        path.write_text(f"# Notes\n\n## {VERSION}\n\n{body}\n## 1.1.0\n\n- Older\n", encoding="utf-8")
+
+    def test_store_text_is_the_plain_section_when_it_fits(self):
+        self.write_notes(self.english, (
+            "Intro line one\ncontinues here.\n\n### New\n\n- **Add hinges.** Model `Gerber` beams, see [help](https://x.test).\n"
+            "- Plain bullet\n  wrapped.\n\n**Compatibility:** Older projects open.\n"))
+        self.assertEqual(release_notes.store_text(self.english, VERSION), (
+            "Intro line one continues here.\n\nNew\n• Add hinges. Model Gerber beams, see help.\n• Plain bullet wrapped.\n\n"
+            "Compatibility: Older projects open."))
+
+    def test_store_text_falls_back_to_bullet_titles_and_fails_beyond_the_limit(self):
+        long = "x" * 400
+        self.write_notes(self.english, "Intro.\n\n### New\n\n" + "".join(f"- **Title {i}.** {long}\n" for i in range(4)))
+        compact = release_notes.store_text(self.english, VERSION)
+        self.assertEqual(compact, "Intro.\n\nNew\n" + "\n".join(f"• Title {i}." for i in range(4)))
+        self.write_notes(self.english, "Intro.\n\n### New\n\n- **Title.** text\n- untitled " + long * 4 + "\n")
+        with self.assertRaisesRegex(ValueError, "without a bold title"):
+            release_notes.store_text(self.english, VERSION)
+        self.write_notes(self.english, "x" * (release_notes.STORE_LIMIT + 1) + "\n")
+        with self.assertRaisesRegex(ValueError, "even as titles only"):
+            release_notes.store_text(self.english, VERSION)
+
+    def test_export_store_writes_one_plain_text_file_per_culture(self):
+        output = self.root / "store"
+        subprocess.run([sys.executable, str(SCRIPT), "export-store", VERSION, str(output)], cwd=self.root, check=True)
+        self.assertEqual(sorted(p.name for p in output.iterdir()), ["de-DE.txt", "en-US.txt"])
+        self.assertEqual((output / "en-US.txt").read_text(encoding="utf-8"), "New\n• English release only\n")
+        self.assertEqual((output / "de-DE.txt").read_text(encoding="utf-8"), "• Deutsche Version\n")
+
 
 if __name__ == "__main__":
     unittest.main()

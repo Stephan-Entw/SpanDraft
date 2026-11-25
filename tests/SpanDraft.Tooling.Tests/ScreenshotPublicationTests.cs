@@ -14,7 +14,7 @@ public sealed class ScreenshotPublicationTests
             var batches = CaptureBatch.Select("All", "All", "All", 250, 200);
             string staging = Path.Combine(root, ".runs", Guid.NewGuid().ToString("N"));
             var captures = StageImages(staging, batches);
-            string destination = CapturePublication.Destination(root, DateTimeOffset.UtcNow);
+            string destination = CapturePublication.Destination(root, "1.2.0", DateTimeOffset.UtcNow);
             Assert.False(Directory.Exists(destination));
             CapturePublication.ValidateImages(staging, batches, captures);
             CaptureFiles.Write(Path.Combine(staging, "result.json"), new { success = true });
@@ -70,7 +70,7 @@ public sealed class ScreenshotPublicationTests
         WithDirectory(root =>
         {
             var started = new DateTimeOffset(2026, 11, 6, 18, 22, 31, TimeSpan.Zero);
-            string earlier = CapturePublication.Destination(root, started.AddMinutes(-1));
+            string earlier = CapturePublication.Destination(root, "1.2.0", started.AddMinutes(-1));
             Directory.CreateDirectory(earlier);
             string keep = Path.Combine(earlier, "previous.png");
             File.WriteAllText(keep, "previous successful run");
@@ -78,7 +78,7 @@ public sealed class ScreenshotPublicationTests
             string runs = Path.Combine(root, ".runs"), staging = Path.Combine(runs, Guid.NewGuid().ToString("N"));
             var captures = StageImages(staging, batches);
             string first = Path.Combine(staging, batches[0].RelativeFiles[0]);
-            string destination = CapturePublication.Destination(root, started);
+            string destination = CapturePublication.Destination(root, "1.2.0", started);
             switch (fault)
             {
                 case "missing-image": File.Delete(first); break;
@@ -110,20 +110,31 @@ public sealed class ScreenshotPublicationTests
     }
 
     [Fact]
+    public void RunNamesUseTheCapturedApplicationsProductVersion()
+    {
+        // Both assemblies take their version from Directory.Build.props; the run name must not carry build metadata.
+        Assert.Equal(CapturePublication.ReadProductVersion(typeof(ScreenshotPublicationTests).Assembly), CapturePublication.ProductVersion);
+        Assert.DoesNotContain('+', CapturePublication.ProductVersion);
+    }
+
+    [Fact]
     public void RunNamesUseUtcSortChronologicallyAndNeverReuseAnExistingDirectoryOrFile()
     {
         WithDirectory(root =>
         {
             var local = new DateTimeOffset(2026, 11, 6, 19, 22, 31, TimeSpan.FromHours(1));
-            string first = CapturePublication.Destination(root, local);
-            Assert.Equal("2026-11-06_18-22-31.0000000Z", Path.GetFileName(first));
-            Assert.Equal(first, CapturePublication.Destination(root, local.ToUniversalTime()));
+            string first = CapturePublication.Destination(root, "1.2.0", local);
+            Assert.Equal("1.2.0_2026-11-06_18-22-31.0000000Z", Path.GetFileName(first));
+            Assert.NotEqual(first, CapturePublication.Destination(root, "1.3.0", local));
+            foreach (string invalid in new[] { "", "1.2", "1.2.0.0", "01.2.0", "1.2.0-rc.1", "../1.2.0" })
+                Assert.Throws<ArgumentException>(() => CapturePublication.Destination(root, invalid, local));
+            Assert.Equal(first, CapturePublication.Destination(root, "1.2.0", local.ToUniversalTime()));
             Directory.CreateDirectory(first);
-            string collision = CapturePublication.Destination(root, local);
+            string collision = CapturePublication.Destination(root, "1.2.0", local);
             Assert.EndsWith("Z-01", collision);
             File.WriteAllText(collision, "occupied");
-            Assert.EndsWith("Z-02", CapturePublication.Destination(root, local));
-            Assert.True(StringComparer.Ordinal.Compare(first, CapturePublication.Destination(root, local.AddSeconds(1))) < 0);
+            Assert.EndsWith("Z-02", CapturePublication.Destination(root, "1.2.0", local));
+            Assert.True(StringComparer.Ordinal.Compare(first, CapturePublication.Destination(root, "1.2.0", local.AddSeconds(1))) < 0);
             var staging = Path.Combine(root, "staging"); Directory.CreateDirectory(staging);
             CaptureFiles.Write(Path.Combine(staging, "result.json"), new { success = false });
             Assert.ThrowsAny<IOException>(() => CapturePublication.Publish(staging, first, []));

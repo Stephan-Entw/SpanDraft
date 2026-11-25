@@ -140,9 +140,10 @@ GUI behavior; product and calculation logic remains covered by the existing test
 
 ## Independent Microsoft Store release (MSIX)
 
-The Store route is local and manual, independent of GitHub/Inno Setup. Neither
-route invokes or requires the other. There is no Store GitHub Action or Partner
-Center upload automation. Both can use the same released source commit.
+The Store route is local, independent of GitHub/Inno Setup. Neither route invokes
+or requires the other. There is no Store GitHub Action. Both can use the same
+released source commit. The usual way is the [automated Store draft](#automated-store-draft);
+the steps below describe the package build it uses and the manual checks.
 
 Submission builds require a clean published tag containing the MSIX tooling.
 Use `-Development` for local checks on dirty or untagged checkouts.
@@ -297,5 +298,62 @@ publication remains a manual Partner Center action.
 
 For Store listing images, the independent
 [general native screenshot workflow](../tools/Screenshots/README.md) captures the
-current application in German and English for Store and Penpot. Store listing
-screenshots remain a separate manual workflow, not a packaging or release gate.
+current application in German and English for Store and Penpot.
+
+### Automated Store draft
+
+One command prepares a complete Partner Center draft: package, "What's new" and
+screenshots. Nothing is submitted; review and submission stay manual. Run it on
+the Windows VM from the checkout that holds the current tooling:
+
+```powershell
+git fetch --tags
+pwsh ./scripts/prepare-microsoft-store-release.ps1 -Tag vX.Y.Z -Upload
+```
+
+The checkout is never switched. The script creates a temporary worktree of the
+tag beside it (`<checkout>-release-vX.Y.Z`), so no development state reaches the
+application:
+
+- from the tag: `capture-screenshots.ps1` and `package-microsoft-store.ps1`;
+- from the current checkout: hero image, "What's new" export of the tag's
+  release notes, assembly and upload. Fixes to this tooling never require a new
+  tag, and tags older than it (from `v1.2.0`) work.
+
+The result is `artifacts/store-release/<version>_<UTC timestamp>/` (git-ignored)
+with the MSIX, `whats-new/<culture>.txt`, `screenshots/<culture>/` in Store order
+(hero image first, then Project, Section, Materials, Report and Start) and
+`release.json` (version, tag and tooling commits, package hash, order). The
+capture run is kept under `artifacts/screenshots/<version>_<timestamp>/`.
+
+The worktree is removed after success. After a failure it is kept for diagnosis;
+remove it with the printed `git worktree remove --force` command before retrying.
+`-KeepWorktree` keeps it on success. Without `-Upload` only the folder is created.
+A failed upload can be repeated without rebuilding:
+
+```powershell
+python scripts/microsoft_store_draft.py artifacts/store-release/<folder>
+```
+
+Prerequisites: those of both tag scripts (checkout outside the user profile, e.g.
+`C:\dev\SpanDraft`; Zensical in this checkout's `help/.venv` or on PATH) plus
+Node.js for the hero renderer.
+
+The upload uses the Microsoft Store submission API: it replaces an existing
+unpublished draft, creates a new one from the last published submission, adds the
+MSIX, sets "What's new" per language and replaces the screenshots in the folder's
+order. Description and all other fields stay as published. It never commits;
+published submissions cannot be deleted through the API. The draft link is
+printed at the end. Final corrections can be made by hand in Partner Center; a
+later upload run replaces the draft including them.
+
+"What's new" is the plain-text section `## X.Y.Z` of `release-notes/en.md` and
+`de.md` (`release_notes.py export-store`). Sections over the Store limit of
+1500 characters keep their structure with bullets reduced to their bold titles;
+if even that is too long, preparation stops before capturing.
+
+One-time API access: in Partner Center, add a Microsoft Entra application with
+the **Manager** role (Account settings > User management > Microsoft Entra
+applications) and provide its values on the VM as `MSSTORE_TENANT_ID`,
+`MSSTORE_CLIENT_ID` and `MSSTORE_CLIENT_SECRET`. The app must already have its
+first submission completed in Partner Center, which is the case for SpanDraft.

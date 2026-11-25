@@ -1,12 +1,26 @@
 using System.Globalization;
+using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace SpanDraft.Screenshots;
 
-public static class CapturePublication
+public static partial class CapturePublication
 {
-    public static string Destination(string output, DateTimeOffset started)
+    /// <summary>Product version X.Y.Z of the captured application build, as used for the run directory.</summary>
+    public static string ProductVersion { get; } = ReadProductVersion(typeof(SpanDraft.Desktop.App).Assembly);
+
+    public static string ReadProductVersion(Assembly assembly)
     {
-        string name = started.UtcDateTime.ToString("yyyy-MM-dd_HH-mm-ss.fffffff'Z'", CultureInfo.InvariantCulture);
+        string? informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        string version = informational?.Split('+')[0] ?? "";
+        if (!VersionPattern().IsMatch(version)) throw new InvalidDataException($"Unexpected product version '{version}'.");
+        return version;
+    }
+
+    public static string Destination(string output, string version, DateTimeOffset started)
+    {
+        if (!VersionPattern().IsMatch(version)) throw new ArgumentException($"Unexpected product version '{version}'.", nameof(version));
+        string name = version + "_" + started.UtcDateTime.ToString("yyyy-MM-dd_HH-mm-ss.fffffff'Z'", CultureInfo.InvariantCulture);
         string path = Path.Combine(output, name);
         for (int suffix = 1; Directory.Exists(path) || File.Exists(path); suffix++)
             path = Path.Combine(output, name + "-" + suffix.ToString("D2", CultureInfo.InvariantCulture));
@@ -87,4 +101,7 @@ public static class CapturePublication
             if ((attributes & FileAttributes.Directory) != 0) CheckChildren(path);
         }
     }
+
+    [GeneratedRegex(@"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")]
+    private static partial Regex VersionPattern();
 }

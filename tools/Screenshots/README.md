@@ -137,7 +137,7 @@ artifacts/screenshots/
 ├── build/
 ├── .runs/
 ├── .capture.lock
-└── 2026-11-06_18-22-31.0000000Z/
+└── 1.2.0_2026-11-06_18-22-31.0000000Z/
     ├── store/
     │   ├── DE/
     │   │   ├── 01-project-de-DE.png
@@ -154,11 +154,14 @@ artifacts/screenshots/
     ├── penpot/
     │   ├── hero-project-de-DE.png
     │   └── hero-project-en-US.png
+    ├── hero/                      (only with -Hero)
     └── result.json
 ```
 
 The runner creates one UTC timestamp for the whole run after acquiring its lock.
-Names use `yyyy-MM-dd_HH-mm-ss.fffffffZ`, sort chronologically, and receive a
+Names use `<version>_yyyy-MM-dd_HH-mm-ss.fffffffZ`, where `<version>` is the
+captured build's product version (also recorded as `productVersion` in
+`result.json`). Within a version they sort chronologically and receive a
 numeric suffix if a name is already occupied. Existing runs are never overwritten.
 `CaptureFiles.FileName` centrally defines Store's `{index}-{scene}-{culture}.png`
 and Penpot's `hero-project-{culture}.png` schema. Store files are grouped under
@@ -192,6 +195,27 @@ profile/language/motif,
 requested scale and actual native measurements, process provenance, relative
 state-access paths and verified scene state. Diagnostic paths are repo-relative;
 error messages redact checkout and user-profile paths.
+
+## Store hero image (HTML template)
+
+`Hero/` renders the first Microsoft Store image (3840 × 2160 px) from `hero.html` with
+headless Chromium (Playwright), replacing the manual Penpot composition. Layout values come
+from the Penpot SVG export; all language-dependent text lives in `Hero/texts/<culture>.json`
+and appears in the template as `{{placeholders}}`. The logo is the app icon source SVG, the
+fonts (Oxanium 600, Golos Text 400/500, SIL OFL) are in `Hero/fonts/`.
+
+The Penpot capture `penpot/hero-project-<culture>.png` is inserted 1:1 (natural size, no
+scaling; position and width as in the Penpot original, height read from the image). The
+renderer fails when the image is scaled, a placeholder stays unfilled or a text line wraps.
+
+```bash
+cd tools/Screenshots/Hero && npm ci && npx playwright install chromium && node render-hero.mjs
+# optional: --shots <dir with hero-project-*.png> --out <dir> --lang de-DE|en-US
+```
+
+Without `--shots` the newest run under `artifacts/screenshots/` is used. Output goes to
+`hero/` inside that run (git-ignored). `capture-screenshots.ps1 -Hero` runs it after a
+capture that includes the Penpot Project motif.
 
 ## Fixture and isolation
 

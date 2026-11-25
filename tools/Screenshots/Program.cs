@@ -39,7 +39,7 @@ internal static class Program
         IsolatedFileStore.EnsureNoReparsePoints(lockPath);
         using var runLock = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         var started = DateTimeOffset.UtcNow;
-        string destination = CapturePublication.Destination(output, started);
+        string destination = CapturePublication.Destination(output, CapturePublication.ProductVersion, started);
         string runs = Path.Combine(output, ".runs");
         IsolatedFileStore.EnsureNoReparsePoints(runs);
         Directory.CreateDirectory(runs);
@@ -182,7 +182,7 @@ internal static class Program
 
         object Manifest(bool success) => new
         {
-            success, startedUtc = started, finishedUtc = DateTimeOffset.UtcNow, error = Sanitize(failure, repo),
+            success, productVersion = CapturePublication.ProductVersion, startedUtc = started, finishedUtc = DateTimeOffset.UtcNow, error = Sanitize(failure, repo),
             fixtureUnchanged, fixture = "tools/Screenshots/Fixtures/Crane Beam.spandraft", fixtureSha256 = CaptureFiles.FixtureHash,
             displaysBefore = before, displaysAfter = after,
             scalingRestored = scaling?.Restored ?? (before is not null && after is not null && before.SequenceEqual(after)),
