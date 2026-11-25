@@ -15,9 +15,9 @@ public enum WorkspaceRecoveryState { None, CreateDraftRecovery, ProjectRecovery 
 /// Create draft is not written, so the unsaved project stays the single recovery of the workspace. Over a project without
 /// recovery (clean) the draft owns the context as usual.
 ///
-/// Slots this workspace could not delete are not part of the active context: they are cleanup remnants, kept separately
-/// (<see cref="Remnants"/>) and retried at the next cleanup. A remnant draft whose id is the project's is that project's
-/// companion: the project slot is never deleted while it exists, or the draft would reappear as a valid old draft.
+/// Detached draft slots awaiting cleanup are kept separately (<see cref="Remnants"/>) and retried at the next cleanup.
+/// A remnant draft whose id is the project's is that project's companion: the project slot is never deleted while it
+/// exists, or the draft would reappear as a valid old draft.
 /// </remarks>
 public sealed class WorkspaceRecoveryContext
 {
@@ -47,7 +47,7 @@ public sealed class WorkspaceRecoveryContext
     public RecoveryId? SetupRecoveryId => _setup?.Slot.Id;
     /// <summary>The id of the workspace's current recovery: the project's, otherwise the draft's.</summary>
     public RecoveryId? CurrentRecoveryId => ProjectRecoveryId ?? SetupRecoveryId;
-    /// <summary>Slots still on disk that this context has given up as its recovery but could not remove yet.</summary>
+    /// <summary>Detached draft slots this context still needs to remove.</summary>
     public IReadOnlyList<RecoverySlot> Remnants => _remnants.Select(static r => r.Slot).ToArray();
 
     // ---- Create draft -----------------------------------------------------------------------------------------
@@ -87,25 +87,18 @@ public sealed class WorkspaceRecoveryContext
         var setup = _setup;
         _setup = null;
         var id = setup?.Slot.Id ?? RecoveryId.New();
-        var project = _project = NewProjectWriter(SlotOf(RecoverySlotKind.Project, id));
-        bool published = false;
+        if (setup is not null) _remnants.Add(setup);
+        var project = _project = NewProjectWriter(SlotOf(RecoverySlotKind.Project, id), setup);
         try
         {
-            await project.FlushAsync(session.CurrentRevision.State, session.FilePath ?? session.RecoveryOriginPath);
-            published = true;
+            await project.FlushAsync(session.CurrentRevision.State, session.FilePath ?? session.RecoveryOriginPath,
+                setup is null ? null : () => TryRemovePublishedCompanionAsync(setup));
         }
         catch (Exception e) when (IsStorageError(e))
         {
             project.Schedule(session);
             Failed?.Invoke(e);
         }
-        if (setup is null) return;
-        if (published)
-        {
-            try { await setup.DeleteAsync(); }
-            catch (Exception e) when (IsStorageError(e)) { _remnants.Add(setup); Failed?.Invoke(e); }
-        }
-        else _remnants.Add(setup);
     }
 
     /// <summary>The committed state of the project changed (or returned to its savepoint).</summary>
@@ -133,22 +126,14 @@ public sealed class WorkspaceRecoveryContext
     public void ScheduleProject(ProjectSession session) => ProjectChanged(session);
 
     /// <summary>
-    /// Removes the project slot; the context returns to None. A draft slot with the project's id goes first: the project
-    /// slot is the one that keeps that draft superseded, so it must outlive it. A failed delete throws and keeps the
-    /// project slot owned by this context so that a later attempt can repeat it. Other remnants are retried best effort.
+    /// Removes the project slot and releases the context if the delete has not been superseded by newer work. A draft
+    /// slot with the project's id goes first because the project slot keeps that draft superseded. A failed delete
+    /// throws and keeps the project slot owned so that a later attempt can repeat it. Other remnants are retried best effort.
     /// </summary>
     public async Task DeleteAsync()
     {
         if (_project is { } project)
-        {
-            foreach (var companion in _remnants.Where(r => r.Slot.Id == project.Slot.Id).ToList())
-            {
-                await companion.DeleteAsync();
-                _remnants.Remove(companion);
-            }
-            await project.DeleteAsync();
-            _project = null;
-        }
+            await project.DeleteAsync(() => { if (ReferenceEquals(_project, project)) _project = null; });
         await RetryRemnantsAsync(except: null);
     }
 
@@ -167,9 +152,22 @@ public sealed class WorkspaceRecoveryContext
     {
         foreach (var remnant in _remnants.Where(r => !ReferenceEquals(r, except) && r.Slot.Id != _project?.Slot.Id).ToList())
         {
-            try { await remnant.DeleteAsync(); _remnants.Remove(remnant); }
+            try { await RemoveRemnantAsync(remnant); }
             catch (Exception e) when (IsStorageError(e)) { /* stays a remnant; it was reported when it first failed */ }
         }
+    }
+
+    private async Task TryRemovePublishedCompanionAsync(ProjectSetupRecovery companion)
+    {
+        try { await RemoveRemnantAsync(companion); }
+        catch (Exception e) when (IsStorageError(e)) { Failed?.Invoke(e); }
+    }
+
+    private async Task RemoveRemnantAsync(ProjectSetupRecovery remnant)
+    {
+        if (!_remnants.Contains(remnant)) return;
+        await remnant.DeleteAsync();
+        _remnants.Remove(remnant);
     }
 
     /// <summary>Takes over an existing project slot (restore); the slot keeps its id.</summary>
@@ -205,9 +203,10 @@ public sealed class WorkspaceRecoveryContext
 
     private static RecoverySlot SlotOf(RecoverySlotKind kind, RecoveryId id) => new(kind, id);
 
-    private ProjectRecovery NewProjectWriter(RecoverySlot slot)
+    private ProjectRecovery NewProjectWriter(RecoverySlot slot, ProjectSetupRecovery? companion = null)
     {
-        var writer = new ProjectRecovery(_storage, slot, _delay, _utcNow);
+        var writer = new ProjectRecovery(_storage, slot, _delay, _utcNow,
+            companion is null ? null : () => RemoveRemnantAsync(companion));
         writer.Failed += e => Failed?.Invoke(e);
         return writer;
     }

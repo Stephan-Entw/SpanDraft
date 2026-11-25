@@ -83,6 +83,128 @@ public sealed class RecoveryCatalogTests
     }
 
     [Fact]
+    public async Task MissingFileStorageDirectoriesAreEmptyAndLegacySlotsStillLoad()
+    {
+        var temp = Directory.CreateTempSubdirectory();
+        try
+        {
+            var storage = new FileRecoveryStorage(Path.Combine(temp.FullName, "Data"));
+            var cancellation = TestContext.Current.CancellationToken;
+            var catalog = new RecoveryCatalog(storage, new Files(), Identities, new ProjectPathRegistry());
+            Assert.True(await catalog.InitializeAsync(cancellation));
+            Assert.Empty(catalog.Candidates);
+
+            await storage.WriteAtomicAsync(RecoverySlot.LegacyProject, ProjectRecovery.Encode(new(State(), null, Now)), cancellation);
+            catalog = new(storage, new Files(), Identities, new ProjectPathRegistry());
+            Assert.True(await catalog.InitializeAsync(cancellation));
+            Assert.Equal(RecoverySlot.LegacyProject, Assert.Single(catalog.Undecided).Slot);
+        }
+        finally { temp.Delete(recursive: true); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AnUnreadableFileStorageAreaPreventsCatalogLoadUntilAccessReturns(bool denyAncestor)
+    {
+        if (OperatingSystem.IsWindows()) { Assert.Skip("This test denies access with Unix directory permissions."); return; }
+        var temp = Directory.CreateTempSubdirectory();
+        string root = Path.Combine(temp.FullName, "Data");
+        var storage = new FileRecoveryStorage(root);
+        var slot = RecoverySlot.Project(RecoveryId.New());
+        string denied = denyAncestor ? temp.FullName : Path.GetDirectoryName(storage.PathOf(slot))!;
+        var cancellation = TestContext.Current.CancellationToken;
+        UnixFileMode? originalMode = null;
+        try
+        {
+            var bytes = ProjectRecovery.Encode(new(State(), null, Now));
+            await storage.WriteAtomicAsync(RecoverySlot.LegacyProject, bytes, cancellation);
+            await storage.WriteAtomicAsync(slot, bytes, cancellation);
+            originalMode = File.GetUnixFileMode(denied);
+            File.SetUnixFileMode(denied, UnixFileMode.None);
+            string inaccessible = denyAncestor ? root : denied;
+            var accessError = Record.Exception(() => { Directory.GetFiles(inaccessible); });
+            Assert.SkipWhen(accessError is null, "The test process bypasses Unix permissions.");
+            Assert.IsType<UnauthorizedAccessException>(accessError);
+
+            var catalog = new RecoveryCatalog(storage, new Files(), Identities, new ProjectPathRegistry());
+            Assert.False(await catalog.InitializeAsync(cancellation));
+            Assert.Equal(RecoveryCatalogState.Unavailable, catalog.State);
+            Assert.IsType<UnauthorizedAccessException>(catalog.Error);
+            Assert.Empty(catalog.Candidates);
+
+            File.SetUnixFileMode(denied, originalMode.Value);
+            Assert.True(await catalog.InitializeAsync(cancellation));
+            Assert.Null(catalog.Error);
+            Assert.Equivalent(new[] { RecoverySlot.LegacyProject, slot }, catalog.Undecided.Select(candidate => candidate.Slot));
+        }
+        finally
+        {
+            if (originalMode is { } mode) File.SetUnixFileMode(denied, mode);
+            temp.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task AFileAtTheRecoveryDirectoryPathPreventsCatalogLoad()
+    {
+        var temp = Directory.CreateTempSubdirectory();
+        try
+        {
+            var cancellation = TestContext.Current.CancellationToken;
+            await File.WriteAllTextAsync(Path.Combine(temp.FullName, "Recovery"), "occupied", cancellation);
+            var catalog = new RecoveryCatalog(new FileRecoveryStorage(temp.FullName), new Files(), Identities, new ProjectPathRegistry());
+            Assert.False(await catalog.InitializeAsync(cancellation));
+            Assert.Equal(RecoveryCatalogState.Unavailable, catalog.State);
+            Assert.IsAssignableFrom<IOException>(catalog.Error);
+        }
+        finally { temp.Delete(recursive: true); }
+    }
+
+    [Fact]
+    public async Task AnUnreadableFileMakesOnlyItsSlotDamaged()
+    {
+        var temp = Directory.CreateTempSubdirectory();
+        var storage = new FileRecoveryStorage(temp.FullName);
+        var good = RecoverySlot.Project(RecoveryId.New());
+        var unreadable = RecoverySlot.Project(RecoveryId.New());
+        string path = storage.PathOf(unreadable);
+        var cancellation = TestContext.Current.CancellationToken;
+        UnixFileMode? originalMode = null;
+        FileStream? exclusive = null;
+        try
+        {
+            var bytes = ProjectRecovery.Encode(new(State(), null, Now));
+            await storage.WriteAtomicAsync(good, bytes, cancellation);
+            await storage.WriteAtomicAsync(unreadable, bytes, cancellation);
+            if (OperatingSystem.IsWindows())
+                exclusive = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None);
+            else
+            {
+                originalMode = File.GetUnixFileMode(path);
+                File.SetUnixFileMode(path, UnixFileMode.None);
+                var accessError = await Record.ExceptionAsync(() => File.ReadAllBytesAsync(path, cancellation));
+                Assert.SkipWhen(accessError is null, "The test process bypasses Unix permissions.");
+                Assert.IsType<UnauthorizedAccessException>(accessError);
+            }
+
+            var catalog = new RecoveryCatalog(storage, new Files(), Identities, new ProjectPathRegistry());
+            Assert.True(await catalog.InitializeAsync(cancellation));
+            Assert.Equal(RecoveryCatalogState.Loaded, catalog.State);
+            Assert.False(Assert.Single(catalog.Undecided, candidate => candidate.Slot == good).IsDamaged);
+            var damaged = Assert.Single(catalog.Undecided, candidate => candidate.Slot == unreadable);
+            Assert.True(damaged.IsDamaged);
+            Assert.NotNull(damaged.ValidationError);
+        }
+        finally
+        {
+            exclusive?.Dispose();
+            if (!OperatingSystem.IsWindows() && originalMode is { } mode) File.SetUnixFileMode(path, mode);
+            temp.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task LoadingTwiceDoesNotReadAgainOrDuplicate()
     {
         var f = new Fixture(); f.Project("a.spandraft"); await f.Load(); await f.Load();

@@ -12,18 +12,20 @@ internal sealed class DebouncedSlot<TSnapshot>
     private readonly IRecoveryStorage _storage;
     private readonly Func<TSnapshot, byte[]> _encode;
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
+    private readonly Func<Task>? _beforeDelete;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private CancellationTokenSource? _cancellation;
     private long _generation;
     private Task _pending = Task.CompletedTask;
 
     public DebouncedSlot(IRecoveryStorage storage, RecoverySlot slot, Func<TSnapshot, byte[]> encode,
-        Func<TimeSpan, CancellationToken, Task>? delay)
+        Func<TimeSpan, CancellationToken, Task>? delay, Func<Task>? beforeDelete = null)
     {
         _storage = storage;
         Slot = slot;
         _encode = encode;
         _delay = delay ?? Task.Delay;
+        _beforeDelete = beforeDelete;
     }
 
     public RecoverySlot Slot { get; }
@@ -47,17 +49,17 @@ internal sealed class DebouncedSlot<TSnapshot>
     /// Publishes the snapshot now. A flush is an explicit request, so a later call neither cancels it nor turns it into
     /// a no-op; the writes of later generations follow it through the gate.
     /// </summary>
-    public async Task FlushAsync(TSnapshot snapshot)
+    public async Task FlushAsync(TSnapshot snapshot, Func<Task>? afterPublish = null)
     {
         var (generation, _) = Invalidate();
         // Gate acquisition also drains any write which was already publishing.
-        await WriteGenerationAsync(snapshot, generation, CancellationToken.None, supersedable: false);
+        await WriteGenerationAsync(snapshot, generation, CancellationToken.None, supersedable: false, afterPublish);
     }
 
-    public async Task DeleteAsync()
+    public async Task DeleteAsync(Action? onDeleted = null)
     {
         var (generation, _) = Invalidate();
-        await DeleteGenerationAsync(generation);
+        await DeleteGenerationAsync(generation, onDeleted);
     }
 
     public Task DrainAsync() => _pending;
@@ -84,7 +86,8 @@ internal sealed class DebouncedSlot<TSnapshot>
         await WriteGenerationAsync(snapshot, generation, token, supersedable: true);
     }
 
-    private async Task WriteGenerationAsync(TSnapshot snapshot, long generation, CancellationToken token, bool supersedable)
+    private async Task WriteGenerationAsync(TSnapshot snapshot, long generation, CancellationToken token, bool supersedable,
+        Func<Task>? afterPublish = null)
     {
         await _gate.WaitAsync(token);
         try
@@ -92,14 +95,23 @@ internal sealed class DebouncedSlot<TSnapshot>
             if (supersedable && generation != _generation) return;
             token.ThrowIfCancellationRequested();
             await _storage.WriteAtomicAsync(Slot, _encode(snapshot), token);
+            if (afterPublish is not null) await afterPublish();
         }
         finally { _gate.Release(); }
     }
 
-    private async Task DeleteGenerationAsync(long generation)
+    private async Task DeleteGenerationAsync(long generation, Action? onDeleted = null)
     {
         await _gate.WaitAsync();
-        try { if (generation == _generation) await _storage.DeleteAsync(Slot); }
+        try
+        {
+            if (generation != _generation) return;
+            if (_beforeDelete is not null) await _beforeDelete();
+            // Companion cleanup may have yielded to an edit that still needs this slot.
+            if (generation != _generation) return;
+            await _storage.DeleteAsync(Slot);
+            if (generation == _generation) onDeleted?.Invoke();
+        }
         finally { _gate.Release(); }
     }
 }

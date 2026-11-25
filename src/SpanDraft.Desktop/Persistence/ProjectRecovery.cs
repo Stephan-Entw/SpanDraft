@@ -22,11 +22,15 @@ public sealed class ProjectRecovery
 
     public ProjectRecovery(IRecoveryStorage storage, RecoverySlot slot,
         Func<TimeSpan, CancellationToken, Task>? delay = null, Func<DateTimeOffset>? utcNow = null)
+        : this(storage, slot, delay, utcNow, beforeDelete: null) { }
+
+    internal ProjectRecovery(IRecoveryStorage storage, RecoverySlot slot,
+        Func<TimeSpan, CancellationToken, Task>? delay, Func<DateTimeOffset>? utcNow, Func<Task>? beforeDelete)
     {
         if (slot.Kind != RecoverySlotKind.Project) throw new ArgumentException("Expected a project slot.", nameof(slot));
         _storage = storage;
         _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
-        _slot = new(storage, slot, Encode, delay);
+        _slot = new(storage, slot, Encode, delay, beforeDelete);
         _slot.Failed += e => Failed?.Invoke(e);
     }
 
@@ -40,9 +44,14 @@ public sealed class ProjectRecovery
     }
 
     public Task FlushAsync(ProjectState state, string? originalFilePath) =>
-        _slot.FlushAsync(new(state, originalFilePath, _utcNow()));
+        FlushAsync(state, originalFilePath, afterPublish: null);
+
+    internal Task FlushAsync(ProjectState state, string? originalFilePath, Func<Task>? afterPublish) =>
+        _slot.FlushAsync(new(state, originalFilePath, _utcNow()), afterPublish);
 
     public Task DeleteAsync() => _slot.DeleteAsync();
+
+    internal Task DeleteAsync(Action onDeleted) => _slot.DeleteAsync(onDeleted);
 
     public Task DrainAsync() => _slot.DrainAsync();
 

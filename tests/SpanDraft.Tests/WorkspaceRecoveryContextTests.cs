@@ -246,6 +246,72 @@ public sealed class WorkspaceRecoveryContextTests
         Assert.Empty(f.Storage.Slots()); Assert.Empty(f.Context.Remnants); Assert.Equal(WorkspaceRecoveryState.None, f.Context.State);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ANewWriteSupersedesAProjectDeleteWaitingForItsCompanion(bool explicitDelete)
+    {
+        var f = new Fixture();
+        f.Context.SetupDraftChanged(new());
+        await f.Publish();
+        var draft = Assert.Single(f.Storage.Slots());
+        f.Storage.FailDelete = slot => slot == draft;
+        var session = ProjectSession.Create(State());
+        await f.Context.ProjectCreatedAsync(session);
+        f.Storage.FailDelete = null;
+        var project = RecoverySlot.Project(draft.Id!.Value);
+        session.MarkSaved(session.CurrentRevision, TestPath("saved.spandraft"));
+
+        var writing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseWrite = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var deletingCompanion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCompanion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        f.Storage.HonorWriteCancellation = false;
+        f.Storage.BeforeWrite = (_, _, _) => { writing.SetResult(); return WaitFor(releaseWrite.Task); };
+        bool projectDeleted = false;
+        f.Storage.BeforeDelete = slot =>
+        {
+            if (slot == project) { projectDeleted = true; return Task.CompletedTask; }
+            deletingCompanion.SetResult();
+            return WaitFor(releaseCompanion.Task);
+        };
+        session.Commit(State(2));
+        f.Context.ProjectChanged(session);
+        f.Delay.ReleaseAll();
+        var write = f.Context.DrainAsync();
+        Task? delete = null;
+        try
+        {
+            await WaitForCheckpoint(writing.Task, write);
+            f.Storage.BeforeWrite = null;
+            Assert.True(session.Undo());
+            if (explicitDelete) delete = f.Context.DeleteAsync();
+            else
+            {
+                f.Context.ProjectChanged(session);
+                delete = f.Context.DrainAsync();
+            }
+            Assert.False(deletingCompanion.Task.IsCompleted);
+            releaseWrite.SetResult();
+            await WaitForCheckpoint(deletingCompanion.Task, delete);
+            Assert.True(session.Redo());
+            f.Context.ProjectChanged(session);
+        }
+        finally
+        {
+            releaseWrite.TrySetResult();
+            releaseCompanion.TrySetResult();
+            await WaitFor(write);
+            if (delete is not null) await WaitFor(delete);
+            await f.Publish();
+        }
+        Assert.False(projectDeleted);
+        Assert.Equal(project, Assert.Single(f.Storage.Slots()));
+        Assert.Empty(f.Context.Remnants);
+        Assert.Equal(project.Id, f.Context.ProjectRecoveryId);
+        Assert.True(session.CurrentRevision.State.ContentEquals((await f.Context.ReadAsync())!.State));
+    }
+
     [Fact]
     public async Task AProjectThatBecameCleanReleasesItsSlotBeforeTheDraftOwnsTheContext()
     {

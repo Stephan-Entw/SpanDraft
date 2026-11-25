@@ -11,6 +11,7 @@ internal sealed class TestRecoveryStorage : IRecoveryStorage
     public ConcurrentQueue<string> Discarded { get; } = new();
     public Func<RecoverySlot, byte[], CancellationToken, Task>? BeforeWrite { get; set; }
     public Func<RecoverySlot, Task>? BeforeRead { get; set; }
+    public Func<RecoverySlot, Task>? BeforeDelete { get; set; }
     public Func<RecoverySlot, bool>? FailWrite { get; set; }
     public Func<RecoverySlot, bool>? FailDelete { get; set; }
     public Func<RecoverySlot, bool>? FailRead { get; set; }
@@ -49,11 +50,11 @@ internal sealed class TestRecoveryStorage : IRecoveryStorage
         Writes.Enqueue(slot);
     }
 
-    public Task DeleteAsync(RecoverySlot slot)
+    public async Task DeleteAsync(RecoverySlot slot)
     {
+        if (BeforeDelete is not null) await BeforeDelete(slot);
         if (FailDelete?.Invoke(slot) == true) throw Failure("delete");
         Data.TryRemove(slot, out _);
-        return Task.CompletedTask;
     }
 
     public Task MoveAsync(RecoverySlot source, RecoverySlot target)

@@ -18,15 +18,24 @@ public sealed class FileRecoveryStorage(string dataDirectory) : IRecoveryStorage
     public Task<IReadOnlyList<RecoverySlot>> EnumerateAsync(CancellationToken cancellationToken = default) => Task.Run(() =>
     {
         var slots = new List<RecoverySlot>();
-        // Listing (not File.Exists, which answers false for any error) so that an area that cannot be read fails as a whole.
-        if (Directory.Exists(_root))
-            foreach (string file in Directory.EnumerateFiles(_root))
-                if (RecoverySlot.TryParse(Path.GetFileName(file), out var legacy) && legacy.IsLegacy) slots.Add(legacy);
-        if (Directory.Exists(RecoveryDirectory))
-            foreach (string file in Directory.EnumerateFiles(RecoveryDirectory))
-                if (RecoverySlot.TryParse(Path.GetFileName(file), out var slot) && !slot.IsLegacy) slots.Add(slot);
+        foreach (string file in EnumerateDirectory(_root))
+            if (RecoverySlot.TryParse(Path.GetFileName(file), out var legacy) && legacy.IsLegacy) slots.Add(legacy);
+        foreach (string file in EnumerateDirectory(RecoveryDirectory))
+            if (RecoverySlot.TryParse(Path.GetFileName(file), out var slot) && !slot.IsLegacy) slots.Add(slot);
         return (IReadOnlyList<RecoverySlot>)slots;
     }, cancellationToken);
+
+    private static IEnumerable<string> EnumerateDirectory(string directory)
+    {
+        // An existence check hides access errors, and listing a file can report that the directory is missing.
+        FileAttributes attributes;
+        try { attributes = File.GetAttributes(directory); }
+        catch (FileNotFoundException) { return []; }
+        catch (DirectoryNotFoundException) { return []; }
+        if ((attributes & FileAttributes.Directory) == 0)
+            throw new IOException($"Expected a recovery directory at '{directory}'.");
+        return Directory.EnumerateFiles(directory);
+    }
 
     public async Task<byte[]?> ReadAsync(RecoverySlot slot)
     {

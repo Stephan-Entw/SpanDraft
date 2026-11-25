@@ -78,6 +78,48 @@ public sealed class ProjectRecoveryTests
     }
 
     [Fact]
+    public async Task UndoAfterSaveDoesNotExposeACompanionThatCouldNotBeDeleted()
+    {
+        var app = new App(create: false);
+        Assert.True(await app.Main.NewAsync());
+        CompleteSetup(app.Main);
+        app.Delay.ReleaseAll();
+        await WaitFor(app.Recovery.DrainAsync());
+        var draft = Assert.Single(app.Storage.Slots());
+        Assert.Equal(RecoverySlotKind.Setup, draft.Kind);
+
+        var deleted = new List<RecoverySlot>();
+        bool failCompanion = true;
+        app.Storage.FailDelete = slot => { deleted.Add(slot); return slot == draft && failCompanion; };
+        Assert.True(await app.Main.Setup.ConfirmAsync());
+        var project = app.Slot;
+        Assert.Equal(draft.Id, project.Id);
+        Assert.True(await app.Main.SaveAsync());
+        Assert.False(app.Main.Session!.IsDirty);
+        Assert.Equal(new[] { draft, draft }, deleted);
+
+        app.ChangeLength();
+        app.Delay.ReleaseAll();
+        await WaitFor(app.Recovery.DrainAsync());
+        Assert.True(app.Main.Undo());
+        await WaitFor(app.Recovery.DrainAsync());
+        Assert.False(app.Main.Session.IsDirty);
+
+        var restarted = new RecoveryCatalog(app.Storage, app.Files, Identities, new ProjectPathRegistry());
+        Assert.True(await restarted.InitializeAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(project, Assert.Single(restarted.Undecided).Slot);
+        Assert.Equal(new[] { draft, draft, draft }, deleted);
+        Assert.Equal(3, app.Dialogs.Errors.Count);
+
+        failCompanion = false;
+        await WaitFor(app.Recovery.DeleteAsync());
+        Assert.Equal(new[] { draft, project }, deleted.TakeLast(2));
+        restarted = new(app.Storage, app.Files, Identities, new ProjectPathRegistry());
+        Assert.True(await restarted.InitializeAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(restarted.Candidates);
+    }
+
+    [Fact]
     public async Task IgnoredDelayCancellationCannotRecreateRecoveryAfterSaveOrLeave()
     {
         var storage = new TestRecoveryStorage(); var delay = new Delay(honorCancellation: false);
