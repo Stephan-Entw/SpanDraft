@@ -80,6 +80,19 @@ PROCESSING = {"CommitStarted", "PreProcessing", "Certification", "Release", "Pen
 FAILED = {"CommitFailed", "PreProcessingFailed", "CertificationFailed", "ReleaseFailed", "PublishFailed", "Canceled"}
 KNOWN = DELETABLE | PROCESSING | FAILED | {"Published"}
 SUBMITTED = (PROCESSING - {"CommitStarted"}) | {"Published"}
+# Final message per SUBMITTED status (publish mode Manual is confirmed before): submitted, certified, published.
+_CERTIFICATION_PENDING = ("NOT published. Certification is still pending: Microsoft is preparing the submission. "
+                          "Publishing stays your decision in Partner Center.")
+_WAIT_FOR_CERTIFICATION = "NOT published. Certification is running; publishing stays your decision in Partner Center."
+_READY_TO_PUBLISH = 'NOT published. Certification passed: select "Publish now" in Partner Center when you are ready.'
+OUTCOMES = {
+    "PreProcessing": ("Submitted for certification", _CERTIFICATION_PENDING),
+    "Certification": ("In certification", _WAIT_FOR_CERTIFICATION),
+    "Release": ("Certified, not published", "NOT published. Check the release status in Partner Center."),
+    "PendingPublication": ("Certified, not published", _READY_TO_PUBLISH),
+    "Publishing": ("Publishing (started in Partner Center)", None),
+    "Published": ("Published", None),
+}
 MISSING = "<missing>"  # The submission does not exist (HTTP 404).
 
 # Journal stages. After an unclear request, only reading is allowed until --clear-state.
@@ -204,6 +217,9 @@ def prepare_submission(submission, release):
     """
     body = json.loads(json.dumps(submission))
     body["targetPublishMode"] = "Manual"
+    if isinstance(body.get("pricing"), dict):
+        # The Sale resource is no longer supported; sending it causes SalesUnsupportedWarning.
+        body["pricing"].pop("sales", None)
     new = release.package.name
     version = _package_version(new)
     if version is None:
@@ -563,8 +579,8 @@ class Submission:
     def path(self, submission_id, suffix=""):
         return f"{self.app}/submissions/{submission_id}{suffix}"
 
-    def say(self, text):
-        print(text, file=self.steps.stream, flush=True)
+    def say(self, text, tone=None):
+        self.steps.say(text, tone)  # Output errors never reach the workflow.
 
     def save(self, **changes):
         self.record = dict(self.record or {}, **changes)
@@ -605,15 +621,15 @@ class Submission:
 
     def report(self, submission):
         submission_id = submission["id"]
-        self.say(f"Version:      {self.release.version}")
-        self.say(f"Submission:   {submission_id}")
-        self.say(f"Status:       {submission.get('status')}")
-        self.say(f"Publish mode: {submission.get('targetPublishMode')}")
-        self.say(f"Partner Center: {_link(submission_id)}")
+        for label, value in (("Version", self.release.version), ("Submission", submission_id),
+                             ("Status", submission.get("status")),
+                             ("Publish mode", submission.get("targetPublishMode")),
+                             ("Partner Center", _link(submission_id))):
+            self.say(f"{label + ':':<16}{value}")
         details = submission.get("statusDetails") or {}
-        for kind in ("errors", "warnings"):
+        for kind, tone in (("errors", "error"), ("warnings", "warning")):
             for item in details.get(kind) or []:
-                self.say(f"  {kind[:-1]}: {item.get('code')} {redact(str(item.get('details')))}")
+                self.say(f"  {kind[:-1]}: {item.get('code')} {redact(str(item.get('details')))}", tone)
 
     # Deciding ----------------------------------------------------------------------------------
     def decide(self, replace_draft, pending, published):
@@ -835,7 +851,7 @@ class Submission:
         if status >= 300:
             raise Stop(f"File upload failed with HTTP {status}. Not committed; run the same command again to "
                        "continue.")
-        self.steps.detail = f"{size / 1e6:.0f} MB received"
+        self.steps.detail = f"{size / 1e6:.0f} MB received by Microsoft"  # Only after HTTP < 300.
 
     def commit(self, submission_id):
         with self.steps.step("Committing: submit for certification"):
@@ -859,6 +875,7 @@ class Submission:
             deadline = self.clock() + POLL_TIMEOUT
             status = None
             while True:
+                self.steps.checking()
                 try:
                     status = self.status_of(submission_id)
                 except StoreError:
@@ -870,30 +887,40 @@ class Submission:
                     break
                 if self.clock() >= deadline:
                     break
-                self.steps.status(status or "no answer yet")
-                self.sleep(POLL_SECONDS)
+                self.steps.waiting(status or "no answer yet")
+                self.steps.countdown(POLL_SECONDS, self.sleep)  # Display only: still POLL_SECONDS in total.
             if status == MISSING or (status is not None and status not in KNOWN):
                 raise Stop(f"Submission {submission_id} has the status {status!r}. Only reading. Check Partner "
                            f"Center, then: --clear-state {submission_id}")
             final = self.get_submission(submission_id)
             status = final.get("status")
             self.steps.detail = str(status)
-        self.report(final)
+        problem = None
         if self.record["stage"] != "committed" or status == "PendingCommit":
-            raise Stop(f"The commit of {submission_id} is not confirmed (status {status}). Nothing more is sent. "
+            problem = (f"The commit of {submission_id} is not confirmed (status {status}). Nothing more is sent. "
                        "Run the same command again later; it only reads. If it stays a draft, check Partner Center, "
                        f"then: --clear-state {submission_id} and, to start over, --replace-draft {submission_id}")
-        if final.get("targetPublishMode") != "Manual":
-            raise Stop("WARNING: the publish mode is no longer 'Manual'. Check Partner Center now.")
-        if status == "CommitStarted":
-            raise Stop("Committed, but Microsoft has not finished processing the commit. Run the same command again "
+        elif final.get("targetPublishMode") != "Manual":
+            problem = "WARNING: the publish mode is no longer 'Manual'. Check Partner Center now."
+        elif status == "CommitStarted":
+            problem = ("Committed, but Microsoft has not finished processing the commit. Run the same command again "
                        "later to see the status.")
-        if status not in SUBMITTED:
+        elif status not in SUBMITTED:
             again = f" To start over with a new submission, add: --replace-draft {submission_id}" \
                 if status == "CommitFailed" else ""
-            raise Stop(f"The submission ended with status {status}. See the details above and Partner Center.{again}")
-        self.say("Submitted for certification. NOT published: after certification, review it in Partner Center "
-                 "and choose 'Publish now'.")
+            problem = f"The submission ended with status {status}. See the details above and Partner Center.{again}"
+        if problem:
+            self.report(final)
+            raise Stop(problem)
+        # Reached only when committed, in a SUBMITTED status and with publish mode Manual confirmed.
+        headline, note = OUTCOMES[status]
+        self.steps.say()
+        self.steps.success(headline)
+        self.steps.say()
+        self.report(final)
+        if note:
+            self.steps.say()
+            self.steps.say(note, "warning")
         return final
 
 
@@ -917,7 +944,7 @@ def check_credentials(send=_send, steps=None):
     client = StoreClient(_sign_in(send, steps), send)
     with steps.step("Reading the app from the Store"):
         client.call("GET", f"/applications/{APPLICATION_ID}")
-    print("Store credentials work.", file=steps.stream)
+    steps.success("Store credentials work.")
 
 
 def parse_arguments(argv=None):

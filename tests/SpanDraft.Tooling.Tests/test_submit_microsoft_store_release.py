@@ -132,7 +132,7 @@ class FakeStore:
     """
 
     def __init__(self, pending_status=None):
-        self.calls, self.uploads, self.logins = [], [], 0
+        self.calls, self.uploads, self.logins, self.put_bodies = [], [], 0, []
         self.published, self.pending = "published-1", None
         self.submissions = {"published-1": published_submission()}
         self.created = 0
@@ -251,6 +251,7 @@ class FakeStore:
         if method == "PUT":
             if self.faults.get("put"):
                 return reply({"code": "InvalidState"}, self.faults["put"])
+            self.put_bodies.append(json.loads(data))
             stored = self._put(submission_id, json.loads(data))
             return reply(dict(stored, id="draft-9") if self.faults.get("put-other-id") else stored)
         if action == "commit":
@@ -435,8 +436,8 @@ class SubmitStoreReleaseTests(unittest.TestCase):
             self.assertEqual(set(opened.namelist()),
                              {PACKAGE} | {f for files in self.folder.manifest["screenshots"].values() for f in files})
         output = self.output.getvalue()
-        for expected in (VERSION, "draft-1", "PreProcessing", "Publish mode: Manual", store._link("draft-1"),
-                         "NOT published"):
+        for expected in (VERSION, "draft-1", "Status:         PreProcessing", "Publish mode:   Manual",
+                         store._link("draft-1"), "Submitted for certification", "NOT published"):
             self.assertIn(expected, output)
 
         self.written(fake, [])  # Still processing: report only.
@@ -884,20 +885,124 @@ class SubmitStoreReleaseTests(unittest.TestCase):
         self.assertNotIn("SECRET", str(caught.exception))
 
     def test_every_step_is_announced_and_a_failure_names_its_step(self):
-        terminal = io.StringIO()
-        terminal.isatty = lambda: True
-        store.Submission(store.Release(self.root), send=FakeStore(), steps=Steps(10, stream=terminal),
+        redirected = io.StringIO()
+        store.Submission(store.Release(self.root), send=FakeStore(), steps=Steps(10, stream=redirected, mode="log"),
                          sleep=lambda _: None, journal=self.journal).run()
-        output = terminal.getvalue()
-        self.assertEqual([line[:6] for line in output.split("\n") if line.startswith("[")],
-                         [f"[{n}/10]"[:6] for n in range(1, 10)])
-        self.assertIn("100 %", output)
+        results = [line for line in redirected.getvalue().split("\n") if line.startswith("[") and ": ok" in line]
+        self.assertEqual([line[:7] for line in results], [f"[{n:>2}/10]" for n in range(1, 10)])
+        self.assertIn("100%", redirected.getvalue())
         self.journal.path.unlink()
         failing = Steps(10, stream=io.StringIO())
         with self.assertRaises(RuntimeError):
             store.Submission(store.Release(self.root), send=FakeStore(pending_status="Certification"),
                              steps=failing, journal=self.journal).run()
         self.assertEqual(failing.failed, 3)
+
+    # Request body and output -----------------------------------------------------------------------
+    def test_the_put_body_has_no_sales_and_keeps_every_other_price_setting(self):
+        fake = FakeStore()
+        self.written(fake, [C, U("draft-1"), B, K("draft-1")])
+        baseline = self.journal.load()["baseline"]["pricing"]
+        self.assertIn("sales", baseline)  # The journal keeps what Microsoft returned.
+        (body,) = fake.put_bodies
+        self.assertNotIn("sales", body["pricing"])
+        self.assertEqual(body["pricing"], {key: value for key, value in baseline.items() if key != "sales"})
+        self.assertEqual(body["pricing"], {"priceId": "Free", "trialPeriod": "NoFreeTrial", "marketSpecificPricings": {},
+                                           "isAdvancedPricingModel": True})
+        release = store.Release(self.root)
+        self.assertEqual(store.prepare_submission(store.prepare_submission(published_submission(), release), release),
+                         store.prepare_submission(published_submission(), release))
+
+    def test_the_final_message_matches_the_confirmed_store_status(self):
+        cases = {
+            "PreProcessing": ("Submitted for certification", "Certification is still pending"),
+            "Certification": ("In certification", "Certification is running"),
+            "Release": ("Certified, not published", "Check the release status"),
+            "PendingPublication": ("Certified, not published", 'select "Publish now"'),
+            "Published": ("Published", None),
+        }
+        for status, (headline, note) in cases.items():
+            with self.subTest(status):
+                self.journal.path.unlink(missing_ok=True)
+                self.output = io.StringIO()
+                fake = FakeStore()
+                fake.after_commit = ["CommitStarted", status]
+                self.submit(fake)
+                output = self.output.getvalue()
+                self.assertIn(f"OK {headline}\n", output)
+                if note:
+                    self.assertIn(note, output)
+                    self.assertIn("NOT published", output)
+                else:
+                    self.assertNotIn("NOT published", output)
+                self.assertEqual("Publish now" in output, status == "PendingPublication")
+
+    def test_stopped_runs_show_no_success_and_no_request_to_publish(self):
+        scenarios = [
+            ("commit", "not-received", None),  # Unconfirmed commit.
+            ("mode-after-commit", "Immediate", None),
+            (None, None, ["CommitStarted"]),  # Still processing.
+            (None, None, ["CommitStarted", "CommitFailed"]),
+        ]
+        for fault, value, after in scenarios:
+            with self.subTest(fault=fault, after=after):
+                self.journal.path.unlink(missing_ok=True)
+                self.output = io.StringIO()
+                fake = FakeStore()
+                if fault:
+                    fake.faults[fault] = value
+                if after:
+                    fake.after_commit = after
+                with self.assertRaises(RuntimeError):
+                    self.submit(fake)
+                for unwanted in ("OK Submitted", "Certified", "Publish now", "OK In certification"):
+                    self.assertNotIn(unwanted, self.output.getvalue())
+
+    def test_a_failing_terminal_changes_nothing_in_the_workflow(self):
+        class Broken(io.StringIO):
+            def __init__(self, after):
+                super().__init__()
+                self.after = after
+
+            def write(self, text):
+                self.after -= 1
+                if self.after < 0:
+                    raise OSError("the console is gone")
+                return super().write(text)
+
+            def isatty(self):
+                return True
+
+        for after in (0, 3, 20, 60):
+            with self.subTest(after=after):
+                self.journal.path.unlink(missing_ok=True)
+                fake = FakeStore()
+                for mode in ("live", "log"):
+                    steps = Steps(10, stream=Broken(after), mode=mode, tick=None)
+                    store.Submission(store.Release(self.root), send=fake, steps=steps, sleep=lambda _: None,
+                                     journal=self.journal).run()
+                    if after == 0:
+                        self.assertTrue(steps.broken)
+                self.assertEqual(fake.writes(), [C, U("draft-1"), B, K("draft-1")])
+                self.assertEqual(self.stage(), "committed")
+
+    def test_the_countdown_keeps_the_poll_interval_and_timeout(self):
+        fake = FakeStore()
+        fake.after_commit = ["CommitStarted"]
+        slept, now = [], [0]
+
+        def sleep(seconds):
+            slept.append(seconds)
+            now[0] += seconds
+
+        submission = store.Submission(store.Release(self.root), send=fake, steps=quiet(), clock=lambda: now[0],
+                                      sleep=sleep, journal=self.journal)
+        with self.assertRaisesRegex(RuntimeError, "not finished"):
+            submission.run()
+        reads = fake.calls.count(("GET", "/submissions/draft-1/status"))
+        self.assertEqual(reads, store.POLL_TIMEOUT // store.POLL_SECONDS + 1)
+        self.assertEqual((sum(slept), now[0]), (store.POLL_TIMEOUT, store.POLL_TIMEOUT))
+        self.assertEqual(set(slept), {1})
 
 
 class contextlib_null:
