@@ -1,0 +1,12 @@
+{
+  "name": "spandraft-hero-render",
+  "private": true,
+  "type": "module",
+  "description": "Renders the Microsoft Store hero image from hero.html with headless Chromium.",
+  "scripts": {
+    "render": "node render-hero.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.64.1"
+  }
+}

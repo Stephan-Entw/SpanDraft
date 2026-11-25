@@ -214,7 +214,7 @@ check_ignored_sources() {
             while IFS= read -r -d '' path; do
                 case "$path" in
                     */[Bb]in/*|*/[Oo]bj/*|*/[Dd]ebug/*|*/[Rr]elease/*|*/artifacts/*|*/.artifacts/*|*/publish/*|\
-                    */[Tt]est[Rr]esult*/*|*/"Generated Files"/*|*/Generated_Code/*|*/.venv/*|*/__pycache__/*) continue ;;
+                    */[Tt]est[Rr]esult*/*|*/"Generated Files"/*|*/Generated_Code/*|*/.venv/*|*/__pycache__/*|*/node_modules/*) continue ;;
                 esac
                 case "$path" in
                     *.cs|*.fs|*.csproj|*.fsproj|*.sln|*.slnx|*.props|*.targets|*.axaml|*.resx|*.svg|*.png|*.ico|*.icns|*.ttf|\

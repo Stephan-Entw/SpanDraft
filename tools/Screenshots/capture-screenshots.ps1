@@ -4,13 +4,17 @@ param(
     [ValidateSet('All', 'Start', 'Project', 'Section', 'Report', 'Materials')][string]$Scene = 'All',
     [ValidateSet('All', 'Store', 'Penpot')][string]$Target = 'All',
     [ValidateRange(1, [int]::MaxValue)][int]$ScalePercent = 250,
-    [ValidateRange(1, [int]::MaxValue)][int]$PenpotScalePercent = 200
+    [ValidateRange(1, [int]::MaxValue)][int]$PenpotScalePercent = 200,
+    [switch]$Hero
 )
 $ErrorActionPreference = 'Stop'
 try {
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'Native screenshots require Windows.' }
     if ($Target -ne 'Store' -and $Scene -notin @('All', 'Project')) {
         throw 'Penpot supports only Project. Use -Target Store for other individual scenes.'
+    }
+    if ($Hero -and ($Target -eq 'Store' -or $Scene -notin @('All', 'Project'))) {
+        throw '-Hero renders the Store hero image from the Penpot Project screenshots. Use -Target All or Penpot with -Scene All or Project.'
     }
     $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
     $winapp = Get-Command winapp.exe -CommandType Application -ErrorAction Stop | Select-Object -First 1
@@ -33,6 +37,20 @@ try {
         '--build-finished-utc', $buildFinished)
     & $executable @arguments
     if ($LASTEXITCODE -ne 0) { throw "Screenshot run failed (exit code $LASTEXITCODE). See the run-specific result path printed above, if available." }
+    if ($Hero) {
+        # Renders hero/hero-<culture>.png inside the run just published, from its penpot/ screenshots.
+        $heroDirectory = Join-Path $PSScriptRoot 'Hero'
+        Push-Location $heroDirectory
+        try {
+            if (-not (Test-Path 'node_modules')) { npm ci; if ($LASTEXITCODE -ne 0) { throw 'npm ci failed for the hero renderer.' } }
+            npx --no-install playwright install chromium
+            if ($LASTEXITCODE -ne 0) { throw 'Chromium installation for the hero renderer failed.' }
+            $heroArguments = @('render-hero.mjs')
+            if ($Language -ne 'All') { $heroArguments += @('--lang', $Language) }
+            node @heroArguments
+            if ($LASTEXITCODE -ne 0) { throw "Hero rendering failed (exit code $LASTEXITCODE)." }
+        } finally { Pop-Location }
+    }
 } catch {
     [Console]::Error.WriteLine($_.Exception.Message)
     exit 1
