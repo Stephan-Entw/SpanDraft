@@ -52,11 +52,7 @@ try {
         $python = Get-Command python -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source
     }
     if (-not $python) { throw 'Python 3 was not found (help/.venv or PATH).' }
-    if ($Upload) {
-        foreach ($name in @('MS_STORE_TENANT_ID', 'MS_STORE_CLIENT_ID', 'MS_STORE_CLIENT_SECRET')) {
-            if (-not [Environment]::GetEnvironmentVariable($name)) { throw "-Upload requires the environment variable $name." }
-        }
-    }
+    if ($Upload) { Invoke-Checked 'Store credential check' { & $python scripts/microsoft_store_draft.py --check-credentials } }
     # The worktree has no help/.venv of its own; packaging accepts Zensical from PATH.
     $helpScripts = Join-Path $repoRoot 'help/.venv/Scripts'
     if (Test-Path -LiteralPath (Join-Path $helpScripts 'zensical.exe') -PathType Leaf) {

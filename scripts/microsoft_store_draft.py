@@ -2,6 +2,7 @@
 
 Usage (from main, any OS):
     python scripts/microsoft_store_draft.py artifacts/store-release/<version>_<timestamp> [--check]
+    python scripts/microsoft_store_draft.py --check-credentials
 
 The folder comes from scripts/prepare-microsoft-store-release.ps1. The script uses the official
 Microsoft Store submission API (https://manage.devcenter.microsoft.com):
@@ -14,14 +15,18 @@ Microsoft Store submission API (https://manage.devcenter.microsoft.com):
 It never commits the draft. Review and submit it in Partner Center.
 
 Credentials (Partner Center > Account settings > User management > Microsoft Entra applications,
-role Manager) come from the environment: MS_STORE_TENANT_ID, MS_STORE_CLIENT_ID, MS_STORE_CLIENT_SECRET.
+role Manager) are MS_STORE_TENANT_ID, MS_STORE_CLIENT_ID and MS_STORE_CLIENT_SECRET. On Windows they
+are read from Bitwarden Secrets Manager (see bitwarden_secrets.py); if all three are set as
+environment variables, those are used instead.
 --check only validates the folder and contacts nothing.
+--check-credentials signs in and reads the app from the Store; it changes nothing.
 """
 
 import argparse
 import hashlib
 import json
 import os
+import re
 import struct
 import sys
 import tempfile
@@ -31,7 +36,14 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
+if __package__:
+    from . import bitwarden_secrets
+else:
+    import bitwarden_secrets
 
+
+BITWARDEN_PROJECT = "SpanDraft"
+CREDENTIAL_NAMES = ("MS_STORE_TENANT_ID", "MS_STORE_CLIENT_ID", "MS_STORE_CLIENT_SECRET")
 APPLICATION_ID = "9NVWB1M86PDZ"
 API = "https://manage.devcenter.microsoft.com/v1.0/my"
 CULTURES = ("de-DE", "en-US")
@@ -169,12 +181,21 @@ def _send(method, url, headers, data):
         return error.code, error.read()
 
 
+def load_credentials(environ=os.environ, read_secrets=bitwarden_secrets.read_secrets):
+    """Return (tenant, client, secret) from the environment or else from Bitwarden."""
+    values = {name: environ.get(name) for name in CREDENTIAL_NAMES}
+    if not all(values.values()):
+        values = read_secrets(BITWARDEN_PROJECT, CREDENTIAL_NAMES)
+    tenant, client, secret = (values[name] for name in CREDENTIAL_NAMES)
+    # Both end up in the sign-in request; reject mix-ups before they can appear in an error message.
+    for name, value in zip(CREDENTIAL_NAMES, (tenant, client)):
+        if not re.fullmatch(r"[A-Za-z0-9.\-]+", value):
+            raise ValueError(f"{name} is not a valid ID.")
+    return tenant, client, secret
+
+
 def _token(send):
-    tenant = os.environ.get("MS_STORE_TENANT_ID")
-    client = os.environ.get("MS_STORE_CLIENT_ID")
-    secret = os.environ.get("MS_STORE_CLIENT_SECRET")
-    if not (tenant and client and secret):
-        raise ValueError("Set MS_STORE_TENANT_ID, MS_STORE_CLIENT_ID and MS_STORE_CLIENT_SECRET.")
+    tenant, client, secret = load_credentials()
     form = urllib.parse.urlencode({
         "grant_type": "client_credentials", "client_id": client, "client_secret": secret,
         "resource": "https://manage.devcenter.microsoft.com",
@@ -215,12 +236,25 @@ def create_draft(release, send=_send, log=print):
     return submission_id
 
 
+def check_credentials(send=_send, log=print):
+    StoreClient(_token(send), send).call("GET", f"/applications/{APPLICATION_ID}")
+    log("Store credentials work.")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("release", type=Path, help="artifacts/store-release/<version>_<timestamp>")
+    parser.add_argument("release", type=Path, nargs="?", help="artifacts/store-release/<version>_<timestamp>")
     parser.add_argument("--check", action="store_true", help="validate the folder only")
+    parser.add_argument("--check-credentials", action="store_true", help="sign in to the Store, change nothing")
     args = parser.parse_args()
+    if args.release is None and not args.check_credentials:
+        parser.error("the release folder is required")
+    if args.check_credentials and (args.release or args.check):
+        parser.error("--check-credentials takes no other arguments")
     try:
+        if args.check_credentials:
+            check_credentials()
+            return
         release = Release(args.release)
         if args.check:
             print(f"Release folder for {release.version} is valid.")

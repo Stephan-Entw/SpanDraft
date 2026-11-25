@@ -354,6 +354,24 @@ if even that is too long, preparation stops before capturing.
 
 One-time API access: in Partner Center, add a Microsoft Entra application with
 the **Manager** role (Account settings > User management > Microsoft Entra
-applications) and provide its values on the VM as `MS_STORE_TENANT_ID`,
-`MS_STORE_CLIENT_ID` and `MS_STORE_CLIENT_SECRET`. The app must already have its
-first submission completed in Partner Center, which is the case for SpanDraft.
+applications). The app must already have its first submission completed in
+Partner Center, which is the case for SpanDraft.
+
+Store its values as `MS_STORE_TENANT_ID`, `MS_STORE_CLIENT_ID` and
+`MS_STORE_CLIENT_SECRET` in the Bitwarden Secrets Manager project `SpanDraft`
+(EU server) with a machine account that can read it. On the VM:
+
+- install the `bws` CLI on PATH or in `%LOCALAPPDATA%\Programs\Bitwarden`;
+- add a generic Windows credential `BitwardenSecretsManager` (user
+  `DevelopmentAutomation`) with the machine account's access token as password.
+
+The upload reads the token from Credential Manager, hands it only to the `bws`
+process and keeps the values in memory. `bws` itself keeps an encrypted session
+state in `%USERPROFILE%\.config\bws` unless its configuration opts out. If all
+three names are set as environment variables, they are used instead.
+
+Test the access without changing anything in the Store:
+
+```powershell
+python scripts/microsoft_store_draft.py --check-credentials
+```
