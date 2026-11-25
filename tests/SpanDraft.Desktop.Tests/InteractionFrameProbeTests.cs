@@ -39,6 +39,8 @@ public sealed class InteractionFrameProbeTests
         using var probe = new AvaloniaInteractionFrameProbe(window, visual);
         var clock = new Clock { Timestamp = 10 };
         var recorder = new InteractionPerformance(probe, clock);
+        var finished = new TaskCompletionSource<InteractionPerformanceEntry?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        recorder.MeasurementFinished += finished.SetResult;
         using (recorder.Begin(InteractionAction.AnnotationOffset))
         { recorder.PresentationStarting(); recorder.Committed(); }
         var observation = probe.ObserveNextFrameAsync(clock, CancellationToken.None);
@@ -61,10 +63,11 @@ public sealed class InteractionFrameProbeTests
         clock.Timestamp = 999;
         Assert.Equal(25, await observation);
         Assert.Equal(25, await secondObservation);
-        // The recorder continues on its own thread once the frame completes.
-        for (int i = 0; i < 500 && recorder.GetEntries().Count == 0; i++) await Task.Delay(10, TestContext.Current.CancellationToken);
-        Assert.Single(recorder.GetEntries());
+        // Close while still on the window's owning thread: the recorder finishes on its own thread,
+        // and awaiting it may resume this test on another one.
         window.Close();
+        var entry = await ProjectTestSupport.WaitFor(finished.Task);
+        Assert.Same(Assert.Single(recorder.GetEntries()), entry);
     }
 
     [Fact]
