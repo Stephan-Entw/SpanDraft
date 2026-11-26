@@ -124,6 +124,9 @@
   <data name="RecoverySavedAt" xml:space="preserve"><value>Gesichert {0}</value></data>
   <data name="RecoveryNothing" xml:space="preserve"><value>Es gibt nichts mehr wiederherzustellen.</value></data>
   <data name="RecoveryActionError" xml:space="preserve"><value>Die Wiederherstellung konnte nicht abgeschlossen werden.</value></data>
+  <data name="RecoveryFaultedNotice" xml:space="preserve"><value>Diese Arbeit ist nicht durch Wiederherstellungsdaten geschützt. Die Bearbeitung ist gesperrt, bis die Wiederherstellungsdaten erneut gesichert oder das Projekt gespeichert wurde.</value></data>
+  <data name="RecoveryFaultedRetry" xml:space="preserve"><value>Wiederherstellung erneut sichern</value></data>
+  <data name="RecoveryFaultedError" xml:space="preserve"><value>Das Fenster konnte nicht geschlossen und die Wiederherstellungsdaten konnten nicht wiederhergestellt werden. Die Bearbeitung ist gesperrt, bis die Wiederherstellungsdaten erneut gesichert oder das Projekt gespeichert wurde.</value></data>
   <data name="RecoveryUnavailable" xml:space="preserve"><value>Der Wiederherstellungsbereich konnte nicht gelesen werden; ungespeicherte Arbeit kann deshalb nicht geprüft werden. Erneut versuchen?</value></data>
   <data name="Retry" xml:space="preserve"><value>Erneut versuchen</value></data>
   <data name="Restore" xml:space="preserve"><value>Wiederherstellen</value></data>

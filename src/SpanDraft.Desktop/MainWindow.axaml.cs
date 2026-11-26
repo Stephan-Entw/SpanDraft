@@ -24,7 +24,8 @@ public partial class MainWindow : Window
     private readonly DesktopApplicationHost _host;
     private readonly WorkspaceWindowHandle _handle;
     internal WindowId WindowId => _handle.WindowId;
-    private bool _closing;
+    // The workspace's close is running or committed; the close itself belongs to its WorkspaceCloseTransaction.
+    private bool IsWorkspaceClosing => !_handle.CanRoute;
     private bool _closeApproved;
     private AboutWindow? _aboutWindow;
     private DocumentWindow? _releaseNotesWindow;
@@ -62,7 +63,7 @@ public partial class MainWindow : Window
         SaveMenuItem.InputGesture = new(Key.S, _primary);
         SaveAsMenuItem.InputGesture = new(Key.S, _primary | KeyModifiers.Shift);
         ReportMenuItem.InputGesture = new(Key.P, _primary);
-        var quitCommand = new ActionCommand(Close, () => !_initializing && !_model.IsWorkspaceBusy && !_closing);
+        var quitCommand = new ActionCommand(Close, () => !_initializing && !_model.IsWorkspaceBusy && !IsWorkspaceClosing);
         QuitMenuItem.Command = quitCommand;
         QuitMenuItem.InputGesture = new(Key.Q, _primary);
         UndoMenuItem.InputGesture = new(Key.Z, _primary);
@@ -153,27 +154,9 @@ public partial class MainWindow : Window
         Closed += (_, _) =>
         {
             // The one final cleanup of this workspace; appwide infrastructure ends only with the last workspace.
-            _handle.CloseOwnedWindows();
-            _model?.Dispose();
-            if (host.Workspaces.Deregister(_handle))
-            {
-                host.Workspaces.DisableActivation();
-                host.BeginShutdown();
-            }
-            else
-            {
-                if (_handle.IsInitial && host.State == DesktopApplicationState.Starting)
-                {
-                    // The initial workspace left before it made the host Ready; another workspace must not stay unreachable.
-                    host.MarkReady();
-                    host.Workspaces.EnableActivation();
-                }
-                // Its project ownership is released and it is deregistered: requests held back for it are evaluated anew.
-                host.Workspaces.PostPump();
-            }
+            host.Workspaces.FinalizeClosed(_handle);
             _performance?.CancelPending();
             _frameProbe?.Dispose();
-            _model?.ReleaseReport();
         };
     }
 
@@ -204,16 +187,26 @@ public partial class MainWindow : Window
 
     private void PostPump() => _host.Workspaces.PostPump();
 
-    /// <summary>Closes the window without the leave workflow; only the workspace manager's internal close uses it.</summary>
-    internal void CloseApproved()
+    /// <summary>
+    /// Closes the window after its close was committed (or for a provably empty workspace); only the workspace manager calls
+    /// it. Posted, so that a close committed from within the Closing event finishes that event first.
+    /// </summary>
+    internal void CloseCommitted()
     {
         _closeApproved = true;
-        Close();
+        IsEnabled = false;
+        Dispatcher.UIThread.Post(Close, DispatcherPriority.Send);
     }
+
+    /// <summary>
+    /// Window part of the close preflight: initialized and no dialog open that cannot be interrupted safely (settings,
+    /// about, release notes). Busy operations and native pickers are refused by the view model's reservation.
+    /// </summary>
+    internal bool CanBeginClose => !_initializing && _settingsWindow is null && _aboutWindow is null && _releaseNotesWindow is null;
 
     internal async Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
     {
-        if (_initializing || _closing || _host.State == DesktopApplicationState.ShuttingDown) return false;
+        if (_initializing || IsWorkspaceClosing || _host.State == DesktopApplicationState.ShuttingDown) return false;
         if (request.Type == LaunchRequestType.OpenProject)
         {
             // A setup draft in progress keeps precedence over external opens; the request waits in the queue.
@@ -224,8 +217,8 @@ public partial class MainWindow : Window
                 return false;
             }
             Activate();
-            await _model.OpenAsync(request.Value!);
-            return true;
+            // Unprocessed (the workspace closed or became unable meanwhile) leaves the request queued; any real outcome consumes it.
+            return await _model.HandleOpenRequestAsync(request.Value!);
         }
         // Activate and OpenUri only bring the window forward; URI semantics are not defined by this phase.
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
@@ -235,7 +228,7 @@ public partial class MainWindow : Window
 
     private async void ShowSettings(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || _model.IsWorkspaceBusy || _closing || _settingsWindow is not null) return;
+        if (_initializing || _model.IsWorkspaceBusy || IsWorkspaceClosing || _settingsWindow is not null) return;
         var dialog = new SettingsWindow(new(_model.Settings, _model.ApplySettingsAsync)) { Icon = Icon };
         _settingsWindow = dialog;
         _model.SetSettingsDialogOpen(true);
@@ -251,7 +244,7 @@ public partial class MainWindow : Window
     // Modeless, so interactions made while it is open appear live. Opening it is not a measured interaction.
     private void ShowDiagnostics(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || _closing || _performance is null) return;
+        if (_initializing || IsWorkspaceClosing || _performance is null) return;
         if (_diagnosticsWindow is not null) { _diagnosticsWindow.Activate(); return; }
         var window = new DiagnosticsWindow(new(_performance)) { Icon = Icon };
         _diagnosticsWindow = window;
@@ -262,7 +255,7 @@ public partial class MainWindow : Window
 
     private async void ShowWhatsNew(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || _closing || _releaseNotesWindow is not null) return;
+        if (_initializing || IsWorkspaceClosing || _releaseNotesWindow is not null) return;
         try
         {
             _releaseNotesWindow = new DocumentWindow(Strings.WhatsNew, ApplicationDocuments.ReadReleaseNotes()) { Icon = Icon };
@@ -277,7 +270,7 @@ public partial class MainWindow : Window
 
     private async void ShowAbout(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || _model.IsWorkspaceBusy || _closing || _aboutWindow is not null || _settingsWindow is not null) return;
+        if (_initializing || _model.IsWorkspaceBusy || IsWorkspaceClosing || _aboutWindow is not null || _settingsWindow is not null) return;
         var dialog = new AboutWindow { Icon = Icon };
         _aboutWindow = dialog;
         try { await dialog.ShowDialog(this); }
@@ -330,13 +323,13 @@ public partial class MainWindow : Window
 
     private async Task OpenUserManualAsync()
     {
-        if (_initializing || _closing) return;
+        if (_initializing || IsWorkspaceClosing) return;
         var manual = new UserManualLauncher(Launcher.LaunchUriAsync);
         if (!await manual.OpenAsync()) await _dialogs.ShowErrorAsync(SpanDraft.Desktop.Resources.Strings.UserManualOpenError);
     }
 
     /// <summary>Confirmed requests still in the queue are only dropped by an explicit user decision.</summary>
-    private async Task<bool> ConfirmDiscardPendingRequestsAsync(HashSet<LaunchRequest> confirmed)
+    internal async Task<bool> ConfirmDiscardPendingRequestsAsync(HashSet<LaunchRequest> confirmed)
     {
         var pending = _host.Activation.PendingOpenRequests().Where(r => !confirmed.Contains(r)).ToList();
         if (pending.Count == 0) return true;
@@ -346,57 +339,11 @@ public partial class MainWindow : Window
         return true;
     }
 
-    /// <summary>
-    /// Asks about waiting open requests and commits the shutdown atomically against new activations; an activation
-    /// that wins the race is asked about in the next round. False when the user keeps a request.
-    /// </summary>
-    private async Task<bool> ConfirmAndCommitShutdownAsync(HashSet<LaunchRequest> confirmed)
-    {
-        while (true)
-        {
-            if (!await ConfirmDiscardPendingRequestsAsync(confirmed)) return false;
-            if (_host.TryCommitShutdown(confirmed)) return true;
-        }
-    }
-
     private async void WindowClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_closeApproved) return;
         e.Cancel = true;
-        if (_initializing || _closing || _model.IsWorkspaceBusy || _settingsWindow is not null) return;
-        _closing = true;
-        // Synchronously out of request routing for the whole attempt; it keeps its start slot until the close is committed.
-        _handle.IsCloseRequested = true;
-        // App-wide quit state belongs to the last workspace only; closing one of several windows must not touch the host.
-        // (Quitting all workspaces at once is the application quit's job, Phase 8.)
-        bool quitting = false;
-        void CancelQuit() { if (quitting) _host.CancelQuit(); }
-        if (_host.Workspaces.IsLast(_handle)) { _host.BeginQuit(); quitting = true; }
-        bool committed = false;
-        try
-        {
-            var confirmed = new HashSet<LaunchRequest>(ReferenceEqualityComparer.Instance);
-            if (quitting && !await ConfirmDiscardPendingRequestsAsync(confirmed)) { CancelQuit(); return; }
-            if (!await _model.RequestCloseAsync()) { CancelQuit(); return; }
-            // Another workspace may have gone away while the leave dialogs were open.
-            if (!quitting && _host.Workspaces.IsLast(_handle)) { _host.BeginQuit(); quitting = true; }
-            // Requests accepted while the close dialogs were open (e.g. macOS file activations) are asked about too.
-            if (quitting && !await ConfirmAndCommitShutdownAsync(confirmed)) { CancelQuit(); return; }
-            committed = true;
-            _handle.IsClosing = true;
-            _closeApproved = true;
-            IsEnabled = false;
-            // Even a synchronously completed guard must finish the current Closing event first.
-            Dispatcher.UIThread.Post(Close, DispatcherPriority.Send);
-        }
-        catch { CancelQuit(); throw; }
-        finally
-        {
-            _closing = false;
-            // A cancelled or failed close makes the workspace routable again; a committed one stays out until Closed.
-            if (!committed) _handle.IsCloseRequested = false;
-            // Requests that arrived while the quit was pending resume after a cancelled quit; a committed shutdown pumps nothing.
-            if (!committed) PostPump();
-        }
+        // The close of this workspace is its WorkspaceCloseTransaction; the reservation is taken before the first await.
+        await _host.Workspaces.CloseAsync(_handle, WorkspaceCloseReason.Window);
     }
 }

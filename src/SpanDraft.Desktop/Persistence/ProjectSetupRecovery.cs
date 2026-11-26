@@ -49,11 +49,15 @@ public sealed class ProjectSetupRecovery
 
     public ProjectSetupRecovery(IRecoveryStorage storage, RecoverySlot slot,
         Func<TimeSpan, CancellationToken, Task>? delay = null, Func<DateTimeOffset>? utcNow = null)
+        : this(storage, slot, delay, utcNow, published: false) { }
+
+    internal ProjectSetupRecovery(IRecoveryStorage storage, RecoverySlot slot,
+        Func<TimeSpan, CancellationToken, Task>? delay, Func<DateTimeOffset>? utcNow, bool published)
     {
         if (slot.Kind != RecoverySlotKind.Setup) throw new ArgumentException("Expected a setup slot.", nameof(slot));
         _storage = storage;
         _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
-        _slot = new(storage, slot, Encode, delay);
+        _slot = new(storage, slot, Encode, delay, published: published);
         _slot.Failed += e => Failed?.Invoke(e);
     }
 
@@ -63,6 +67,15 @@ public sealed class ProjectSetupRecovery
     public void Schedule(ProjectSetupDraft draft) => _slot.Schedule(new(draft, _utcNow()));
 
     public Task DeleteAsync() => _slot.DeleteAsync();
+
+    /// <summary>Publishes the draft now (no debounce), e.g. to restore its protection after an aborted discard.</summary>
+    internal Task FlushAsync(ProjectSetupDraft draft) => _slot.FlushAsync(new(draft, _utcNow()));
+
+    /// <inheritdoc cref="DebouncedSlot{TSnapshot}.DiscardAsync"/>
+    internal Task<SlotDiscardOutcome> DiscardAsync() => _slot.DiscardAsync();
+
+    /// <inheritdoc cref="DebouncedSlot{TSnapshot}.IsPublished"/>
+    internal bool IsPublished => _slot.IsPublished;
 
     public Task DrainAsync() => _slot.DrainAsync();
 

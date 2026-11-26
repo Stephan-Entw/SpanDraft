@@ -120,6 +120,43 @@ public sealed class RecoveryStorageTests
     });
 
     [Fact]
+    public async Task OnlyAMissingSourceSlotIsReportedAsMissingByTheDiscard() => await ForEachStorage(async (storage, list) =>
+    {
+        // No recovery area at all, and an area without the slot: both are a missing source.
+        var missing = RecoverySlot.Setup(RecoveryId.New());
+        var error = await Assert.ThrowsAnyAsync<IOException>(() => storage.DiscardAsync(missing));
+        Assert.True(RecoveryErrors.IsMissing(error));
+        await storage.WriteAtomicAsync(RecoverySlot.Project(RecoveryId.New()), Bytes("other"));
+        Assert.True(RecoveryErrors.IsMissing(await Assert.ThrowsAnyAsync<IOException>(() => storage.DiscardAsync(missing))));
+        Assert.True(RecoveryErrors.IsMissing(await Assert.ThrowsAnyAsync<IOException>(() => storage.DiscardAsync(RecoverySlot.LegacyProject))));
+    });
+
+    [Fact]
+    public async Task AnUnusableDiscardedAreaIsAStorageErrorAndNeverAMissingSlot()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "SpanDraft-storage-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var storage = new FileRecoveryStorage(directory);
+            var slot = RecoverySlot.Setup(RecoveryId.New());
+            await storage.WriteAtomicAsync(slot, Bytes("draft"));
+            // A file where the Discarded directory belongs: the target cannot be created, the source is untouched.
+            File.WriteAllText(Path.Combine(directory, "Recovery", "Discarded"), "in the way");
+            var error = await Assert.ThrowsAnyAsync<IOException>(() => storage.DiscardAsync(slot));
+            Assert.False(RecoveryErrors.IsMissing(error));
+            Assert.Equal(Bytes("draft"), await storage.ReadAsync(slot));
+            // A tombstone of the same name already exists: the discard picks a unique name instead of failing.
+            File.Delete(Path.Combine(directory, "Recovery", "Discarded"));
+            Directory.CreateDirectory(Path.Combine(directory, "Recovery", "Discarded"));
+            File.WriteAllText(Path.Combine(directory, "Recovery", "Discarded", slot.FileName), "older tombstone");
+            await storage.DiscardAsync(slot);
+            Assert.Null(await storage.ReadAsync(slot));
+            Assert.Equal(2, Directory.GetFiles(Path.Combine(directory, "Recovery", "Discarded")).Length);
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
+    }
+
+    [Fact]
     public async Task DiscardedAndForeignFilesAreNotEnumeratedAsActiveSlots()
     {
         string directory = Path.Combine(Path.GetTempPath(), "SpanDraft-storage-" + Guid.NewGuid().ToString("N"));

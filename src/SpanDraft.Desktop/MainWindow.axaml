@@ -25,7 +25,7 @@
       <views:RecoveryCenterView />
     </DataTemplate>
   </Window.DataTemplates>
-  <Grid RowDefinitions="Auto,*">
+  <Grid RowDefinitions="Auto,Auto,*">
     <Menu x:Name="MainMenu" KeyboardNavigation.TabNavigation="None" KeyboardNavigation.IsTabStop="False">
       <MenuItem Header="{x:Static resources:Strings.File}">
         <MenuItem x:Name="NewMenuItem" Header="{x:Static resources:Strings.NewProject}" Command="{Binding NewCommand}" />
@@ -54,6 +54,21 @@
         <MenuItem Header="{x:Static resources:Strings.About}" IsEnabled="{Binding !IsWorkspaceBusy}" Click="ShowAbout" />
       </MenuItem>
     </Menu>
-    <ContentControl x:Name="WorkspaceContent" Grid.Row="1" Content="{Binding CurrentViewModel}" IsEnabled="{Binding !IsWorkspaceBusy}" />
+    <!-- Only while the recovery of this workspace is faulted (§60); it cannot be dismissed and takes no space otherwise. -->
+    <Border x:Name="RecoveryFaultedNotice" Grid.Row="1" IsVisible="{Binding IsRecoveryFaulted}" Background="{DynamicResource ErrorSubtle}"
+            BorderBrush="{DynamicResource Error}" BorderThickness="0,0,0,1" Padding="12,8">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}">
+        <PathIcon Classes="fluentIcon" Data="{StaticResource FluentIcon.ErrorCircle}"
+            Foreground="{DynamicResource Error}" VerticalAlignment="Center" />
+        <TextBlock x:Name="RecoveryFaultedNoticeText" Grid.Column="1" Text="{x:Static resources:Strings.RecoveryFaultedNotice}"
+                   VerticalAlignment="Center" TextWrapping="Wrap" />
+        <Button x:Name="RecoveryFaultedRetryButton" Grid.Column="2" Command="{Binding RestoreRecoveryProtectionCommand}" Classes="secondary"
+                Height="{DynamicResource StandardControl}" VerticalAlignment="Center"
+                AutomationProperties.Name="{x:Static resources:Strings.RecoveryFaultedRetry}">
+          <TextBlock Text="{x:Static resources:Strings.RecoveryFaultedRetry}" />
+        </Button>
+      </Grid>
+    </Border>
+    <ContentControl x:Name="WorkspaceContent" Grid.Row="2" Content="{Binding CurrentViewModel}" IsEnabled="{Binding IsWorkspaceEditable}" />
   </Grid>
 </Window>

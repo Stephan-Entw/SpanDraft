@@ -85,7 +85,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         // The services own all global state; this view model mirrors it for display and applies it to its workspace.
         _services = services ?? SharedServices.Transient();
         _resultPresentation = _services.Settings.CurrentSettings.Presentation;
-        if (_recovery is not null) _recovery.Failed += RecoveryFailed;
+        if (_recovery is not null)
+        {
+            _recovery.Failed += RecoveryFailed;
+            _recovery.FaultChanged += RecoveryFaultChanged;
+        }
         _setup = NewSetup();
         NewCommand = new(() => NewAsync(), () => CanNewProject);
         OpenCommand = new(() => OpenAsync(), () => CanOpenProject);
@@ -97,6 +101,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         RedoCommand = new(() => Redo(), () => CanRedo);
         UserManualCommand = new(async () => { if (openUserManual is not null) await openUserManual(); return true; }, () => true);
         ShowRecoveryCommand = new(() => { _showRecoveryCenter?.Invoke(null); return Task.FromResult(true); }, () => CanShowRecovery);
+        RestoreRecoveryProtectionCommand = new(RestoreRecoveryProtectionAsync, () => CanRestoreRecoveryProtection);
         StartPage = new(NewCommand, OpenCommand, UserManualCommand, OpenRecentAsync, () => CanOpenProject, ShowRecoveryCommand);
         StartPage.SetRecentProjects(_services.Recents.Entries);
         _settingsRegistration = _services.SettingsCoordinator.Register(this);
@@ -115,7 +120,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         _disposed = true;
         _projectPaths.ReleaseOwner(WindowId);
         DetachSession();
-        if (_recovery is not null) _recovery.Failed -= RecoveryFailed;
+        if (_recovery is not null)
+        {
+            _recovery.Failed -= RecoveryFailed;
+            _recovery.FaultChanged -= RecoveryFaultChanged;
+        }
         _settingsRegistration.Dispose();
         _services.Settings.Changed -= SettingsChanged;
         _services.Materials.Changed -= LibraryChanged;
@@ -216,7 +225,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     {
         if (_settingsSaving || HasRunningOperation) return false;
         _settingsSaving = true;
-        Session?.SetFrozen(true);
+        ApplyFreeze();
         NotifySession();
         return true;
     }
@@ -237,7 +246,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     {
         if (!_settingsSaving) return;
         _settingsSaving = false;
-        Session?.SetFrozen(false);
+        ApplyFreeze();
         NotifySession();
         if (_pendingRecoveryError is { } error) { _pendingRecoveryError = null; RecoveryFailed(error); }
     }
@@ -271,9 +280,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     // Workspace ownership hooks; the WorkspaceWindowManager wires them, the view model never knows other workspaces.
     internal event Action? SessionActivated;
     internal event Action? SetupCancelled;
-    /// <summary>Raised while the project is closed, before the start page is shown; the owner decides start page or close (§14).</summary>
-    internal Action? ProjectClosing { get; set; }
-    public bool IsBusy => _busy || _libraryBusy || _settingsSaving || ReportPreview?.IsBusy == true;
+    /// <summary>
+    /// Close Project through the workspace owner (§14: start page or close, decided by its <c>WorkspaceCloseTransaction</c>).
+    /// Without an owner the same transaction runs here and always returns to the start page.
+    /// </summary>
+    internal Func<Task<bool>>? CloseWorkspaceHandler { get; set; }
+    /// <summary>The owner's lifecycle view: the workspace is registered, routable and the application is not shutting down.</summary>
+    internal Func<bool>? CanRouteHandler { get; set; }
+    public bool IsBusy => _busy || _leaveReserved || _libraryBusy || _settingsSaving || ReportPreview?.IsBusy == true;
     /// <summary>An operation is running anywhere in this workspace (an open editor alone is not one).</summary>
     private bool HasRunningOperation => IsBusy || _recoveryCenter?.IsBusy == true || Mode == MainViewMode.ProjectSetup
         && (Setup.IsBusy || Setup.CurrentStep is MaterialSelectionViewModel { IsActionBusy: true });
@@ -289,10 +303,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         _ => MainWorkspaceKind.ProjectSetup
     };
     public bool IsSectionWorkspace => Workspace == MainWorkspaceKind.SectionDefinition;
-    public bool CanNewProject => !IsWorkspaceBusy && Workspace is MainWorkspaceKind.Start or MainWorkspaceKind.BeamEditor;
-    public bool CanOpenProject => !IsWorkspaceBusy && (Workspace is MainWorkspaceKind.Start or MainWorkspaceKind.BeamEditor or MainWorkspaceKind.RecoveryCenter
+    public bool CanNewProject => !IsWorkspaceBusy && !IsRecoveryFaulted && Workspace is MainWorkspaceKind.Start or MainWorkspaceKind.BeamEditor;
+    public bool CanOpenProject => !IsWorkspaceBusy && !IsRecoveryFaulted && (Workspace is MainWorkspaceKind.Start or MainWorkspaceKind.BeamEditor or MainWorkspaceKind.RecoveryCenter
         || Workspace == MainWorkspaceKind.ProjectSetup && Session is null);
-    public bool CanSaveProject => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Session is not null;
+    /// <summary>Also from EditSetup or the report preview while the project's recovery is faulted: saving is its remediation.</summary>
+    public bool CanSaveProject => !IsWorkspaceBusy && Session is not null
+        && (Workspace == MainWorkspaceKind.BeamEditor || _recovery?.Fault == RecoveryFault.Project);
     public bool CanCloseProject => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Session is not null;
     public bool CanReport => !IsWorkspaceBusy && Workspace == MainWorkspaceKind.BeamEditor && Editor?.Presentation.IsSuccess == true;
     public Task<bool> ReportAsync() => !CanReport ? Task.FromResult(false) : RunOperationAsync(async () =>
@@ -340,13 +356,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         if (e.PropertyName != nameof(ReportPreviewViewModel.IsBusy)) return;
         Session?.SetBusy(IsBusy); NotifySession();
     }
-    public bool CanUndo => !IsWorkspaceBusy && (Workspace switch
+    public bool CanUndo => !IsWorkspaceBusy && !IsRecoveryFaulted && (Workspace switch
     {
         MainWorkspaceKind.BeamEditor => Session?.CanUndo == true,
         MainWorkspaceKind.SectionDefinition => Setup.Definition?.CanUndo == true,
         _ => false
     });
-    public bool CanRedo => !IsWorkspaceBusy && (Workspace switch
+    public bool CanRedo => !IsWorkspaceBusy && !IsRecoveryFaulted && (Workspace switch
     {
         MainWorkspaceKind.BeamEditor => Session?.CanRedo == true,
         MainWorkspaceKind.SectionDefinition => Setup.Definition?.CanRedo == true,
@@ -408,17 +424,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
             _recovery?.SetupDraftChanged(setup.Draft);
     }
 
-    private async Task DeleteSetupRecoveryAsync()
-    {
-        Setup.ConfirmedDraftChanged -= SetupDraftChanged;
-        if (_recovery is null) return;
-        try { await _recovery.SetupAbandonedAsync(); }
-        catch (Exception e) when (IsFileError(e)) { await ShowErrorAsync(Strings.RecoveryError, e); }
-    }
-
     public void EditProject()
     {
-        if (!CanSaveProject || Editor is null) return;
+        if (!CanSaveProject || IsRecoveryFaulted || Workspace != MainWorkspaceKind.BeamEditor || Editor is null) return;
         Editor.CancelEditorInteraction();
         _setupReturnMode = MainViewMode.Editor;
         var first = Editor.Document.Segments[0];
@@ -430,7 +438,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     private Task<bool> ApplySetupAsync(ProjectSetupViewModel setup)
     {
         if (Mode != MainViewMode.ProjectSetup || !ReferenceEquals(setup, Setup)
-            || IsWorkspaceBusy || !setup.CanApply)
+            || IsWorkspaceBusy || IsRecoveryFaulted || !setup.CanApply)
             return Task.FromResult(false);
         if (setup.Mode == ProjectSetupMode.Edit)
         {
@@ -442,8 +450,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         var document = new EditorDocument(setup.BuildSegments());
         return RunOperationAsync(async () =>
         {
-            if (!await CanLeaveAsync()) return false;
-            await PrepareLeaveAsync();
+            // Create over a project (transition until Phase 9): only the project is left; the draft hands its id over below.
+            var choice = await DecideLeaveAsync();
+            if (choice == LeaveChoice.Cancel) return false;
+            if (!await LeaveRecoveryAsync(Session is not null ? RecoveryLeaveScope.Project : null, choice)) return false;
+            Editor?.CancelEditorInteraction();
             setup.ConfirmedDraftChanged -= SetupDraftChanged;
             ActivatePathlessSession(ProjectSession.Create(new(document, new(), setup.Info)));
             // The project takes over the draft's recovery id: its slot is published completely before the draft slot goes.
@@ -464,8 +475,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     public Task<bool> CancelSetupAsync() => Mode != MainViewMode.ProjectSetup ? Task.FromResult(false) : RunOperationAsync(async () =>
     {
         bool create = Setup.Mode == ProjectSetupMode.Create;
+        // The draft is given up deliberately: its slot is moved to Discarded first; if that fails the setup stays as it is.
+        if (create && !await LeaveRecoveryAsync(RecoveryLeaveScope.Draft, LeaveChoice.Clean)) return false;
+        if (create) Setup.ConfirmedDraftChanged -= SetupDraftChanged;
         Navigate(_setupReturnMode);
-        if (create) await DeleteSetupRecoveryAsync();
         if (create && Session is null) SetupCancelled?.Invoke();
         return true;
     });
@@ -557,34 +570,54 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     public Task<bool> OpenAsync(string path) => OpenPathAsync(path);
     public Task<bool> OpenRecentAsync(string path) => OpenPathAsync(path, fromRecent: true);
 
-    private async Task<bool> OpenPathAsync(string path, bool fromRecent = false)
+    /// <summary>
+    /// An external open request: false only when this workspace cannot process it (any more), so the request stays queued;
+    /// every real outcome, including a cancel by the user or a shown failure, is true.
+    /// </summary>
+    internal async Task<bool> HandleOpenRequestAsync(string path) =>
+        (await OpenPathResultAsync(path, fromRecent: false)).Status != ProjectOpenStatus.Unavailable;
+
+    private async Task<bool> OpenPathAsync(string path, bool fromRecent = false) =>
+        (await OpenPathResultAsync(path, fromRecent)).Status is ProjectOpenStatus.Opened or ProjectOpenStatus.AlreadyOpen;
+
+    private async Task<ProjectOpenResult> OpenPathResultAsync(string path, bool fromRecent)
     {
-        if (_disposed || !CanOpenProject && _fileOperationCompletion is null) return false;
+        if (!CanContinueOpen || !CanOpenProject && _fileOperationCompletion is null) return ProjectOpenResult.Unavailable;
         try
         {
             var result = await _projectOpen.OpenAsync(path, new SingleWindowOpen(this, path, fromRecent));
-            if (result.Status == ProjectOpenStatus.AlreadyOpen && CanOpenProject)
+            if (result.Status == ProjectOpenStatus.AlreadyOpen && CanOpenProject && CanContinueOpen)
             {
                 // The project belongs to the owning workspace; this request records the canonical target, not its own session.
                 var target = result.Owner is { } owner ? _ownerProjectPath?.Invoke(owner) : null;
                 target ??= _projectIdentities.Resolve(Path.GetFullPath(path)).CanonicalPath;
                 await RunOperationAsync(async () => { await RecordRecentAsync(target); return true; });
             }
-            return result.Status is ProjectOpenStatus.Opened or ProjectOpenStatus.AlreadyOpen;
+            return result;
         }
         catch (Exception e) when (IsFileError(e))
         {
             var outcome = e is DirectoryNotFoundException or FileNotFoundException ? new(ProjectOpenStatus.Missing)
                 : new ProjectOpenResult(ProjectOpenStatus.Failed, Error: e);
-            return await RunOperationAsync(() => PresentOpenResultAsync(outcome, path, fromRecent));
+            await RunOperationAsync(() => PresentOpenResultAsync(outcome, path, fromRecent));
+            return outcome;
         }
     }
 
+    /// <summary>The workspace may still take an open: not disposed, no close reserved, routable for its owner.</summary>
+    private bool CanContinueOpen => !_disposed && !_leaveReserved && (CanRouteHandler?.Invoke() ?? true);
+
     private async Task<bool> ActivateOpenedProjectAsync(ProjectState state, string path)
     {
-        if (!await CanLeaveAsync()) return false;
+        var choice = await DecideLeaveAsync();
+        if (choice == LeaveChoice.Cancel) return false;
         var editor = CreateEditor(ProjectSession.Open(state, path));
-        await PrepareLeaveAsync();
+        // What this workspace leaves: its project, or a Create draft that is given up for the opened file.
+        bool draft = Session is null && Mode == MainViewMode.ProjectSetup && Setup.Mode == ProjectSetupMode.Create;
+        var scope = Session is not null ? RecoveryLeaveScope.Project : draft ? RecoveryLeaveScope.Draft : (RecoveryLeaveScope?)null;
+        if (!await LeaveRecoveryAsync(scope, choice)) return false;
+        Editor?.CancelEditorInteraction();
+        if (draft) Setup.ConfirmedDraftChanged -= SetupDraftChanged;
         AttachEditor(editor);
         return true;
     }
@@ -599,7 +632,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         }
         if (result.Error is { } error) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error);
         if (result.Status != ProjectOpenStatus.Opened) return false;
-        await DeleteSetupRecoveryAsync();
         await RecordRecentAsync(Session!.FilePath!);
         return true;
     }
@@ -607,11 +639,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     private sealed class SingleWindowOpen(MainWindowViewModel model, string path, bool fromRecent) : IProjectOpenWorkspace
     {
         public WindowId WindowId => model.WindowId;
+        public bool CanContinue => model.CanContinueOpen;
 
         public async Task<ProjectOpenResult> RunOpenAsync(Func<Task<ProjectOpenResult>> transaction, bool afterSave)
         {
             if (afterSave && model._fileOperationCompletion is { } fileOperation) await fileOperation.Task;
-            if (!model.CanOpenProject || model._disposed) return ProjectOpenResult.Cancelled;
+            // Not a decision of the user: the workspace cannot take the open right now (busy, closing, gone).
+            if (!model.CanContinueOpen || !model.CanOpenProject) return ProjectOpenResult.Unavailable;
             var outcome = ProjectOpenResult.Cancelled;
             await model.RunOperationAsync(async () =>
             {
@@ -626,29 +660,29 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
         public void ActivateExisting(WindowId owner)
         {
-            model._activateWorkspace?.Invoke(owner);
+            if (model.CanContinueOpen) model._activateWorkspace?.Invoke(owner);
         }
 
         // The path is held by a recovery candidate: the Recovery Center is shown instead of opening the file from disk.
-        public void ActivateRecovery(Guid candidate) => model._showRecoveryCenter?.Invoke(candidate);
+        public void ActivateRecovery(Guid candidate)
+        {
+            if (model.CanContinueOpen) model._showRecoveryCenter?.Invoke(candidate);
+        }
     }
 
     public Task<bool> SaveAsync(bool saveAs = false) => !CanSaveProject ? Task.FromResult(false)
         : RunOperationAsync(() => SaveCurrentAsync(saveAs), fileTransaction: true);
 
-    public Task<bool> CloseProjectAsync() => !CanCloseProject ? Task.FromResult(false) : RunOperationAsync(async () =>
+    /// <summary>
+    /// Close Project (§14) runs the workspace's <c>WorkspaceCloseTransaction</c>: through its owner, which also decides between
+    /// start page and window close, or here without an owner, ending on the start page.
+    /// </summary>
+    public async Task<bool> CloseProjectAsync()
     {
-        if (!await CanLeaveAsync(recordRecent: false)) return false;
-        await PrepareLeaveAsync();
-        DetachSession();
-        _projectPaths.ReleaseOwner(WindowId);
-        _editor = null;
-        // Without another start workspace this one becomes the start page; otherwise its owner closes the window (§14).
-        // The model shows the start page either way, so its state stays consistent until the window is gone.
-        ProjectClosing?.Invoke();
-        Navigate(MainViewMode.Start);
-        return true;
-    });
+        if (!CanCloseProject) return false;
+        if (CloseWorkspaceHandler is { } close) return await close();
+        return await Workspaces.WorkspaceCloseTransaction.RunAsync(this, closeWindow: false);
+    }
 
     private async Task<bool> SaveCurrentAsync(bool saveAs = false, bool recordRecent = true)
     {
@@ -678,13 +712,17 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
             var revision = session.CurrentRevision;
             var save = session.PrepareSave(revision, path);
             bool recoveryStarted = false;
+            // Saving is the remediation of a faulted project recovery: the protective flush is still tried, but its failure
+            // must not prevent the atomic file write (the protection is lost already).
+            bool faulted = _recovery?.Fault == RecoveryFault.Project;
             try
             {
                 var bytes = ProjectFileCodec.Serialize(revision.State);
                 if (_recovery is not null && (session.IsDirty || reservation is not null))
                 {
                     recoveryStarted = true;
-                    await _recovery.FlushAsync(revision.State, path);
+                    try { await _recovery.FlushAsync(revision.State, path); }
+                    catch (Exception e) when (faulted && IsFileError(e)) { }
                 }
                 await _files.WriteAtomicAsync(path, bytes);
             }
@@ -711,6 +749,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         {
             if (reservation is not null) _projectPaths.TryReleaseSave(reservation);
         }
+        _recovery?.ProjectSaved(session);
         if (recordRecent) await RecordRecentAsync(path, saveAs && reservation is not null ? previousPath : null);
         if (_recovery is not null)
         {
@@ -722,34 +761,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
     public static string EnsureProjectExtension(string path) => path.EndsWith(".spandraft", StringComparison.OrdinalIgnoreCase)
         ? path : path + ".spandraft";
-
-    private async Task<bool> CanLeaveAsync(bool recordRecent = true)
-    {
-        if (Session?.IsDirty != true) return true;
-        var decision = _dialogs is null ? LeaveDecision.Cancel : await _dialogs.ConfirmLeaveAsync(ProjectFileName);
-        return decision switch
-        {
-            LeaveDecision.Discard => true,
-            LeaveDecision.Save => await SaveCurrentAsync(recordRecent: recordRecent),
-            _ => false
-        };
-    }
-
-    private async Task PrepareLeaveAsync()
-    {
-        if (_recovery is not null) await _recovery.DeleteAsync();
-        Editor?.CancelEditorInteraction();
-    }
-
-    /// <summary>True only once the shared leave workflow has succeeded. The Window handles its one approved Close.</summary>
-    public Task<bool> RequestCloseAsync() => RunOperationAsync(async () =>
-    {
-        if (!await CanLeaveAsync()) return false;
-        ReleaseReport();
-        await PrepareLeaveAsync();
-        await DeleteSetupRecoveryAsync();
-        return true;
-    });
 
     /// <summary>
     /// Restores a project recovery snapshot into this projectless workspace. A preferred restore (<paramref name="candidate"/>
@@ -831,11 +842,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
                 _fileOperationCompletion = null;
                 Session?.SetBusy(false);
                 NotifySession();
-                if (_pendingRecoveryError is { } recoveryError)
-                {
-                    _pendingRecoveryError = null;
-                    await ReportRecoveryErrorAsync(recoveryError);
-                }
+                await ReportPendingRecoveryAsync();
             }
             finally { completion?.SetResult(); }
         }
@@ -883,6 +890,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         Notify(nameof(Session));
         Notify(nameof(IsBusy));
         Notify(nameof(IsWorkspaceBusy)); Notify(nameof(Workspace)); Notify(nameof(IsSectionWorkspace));
+        Notify(nameof(IsWorkspaceEditable)); Notify(nameof(IsRecoveryFaulted));
+        Notify(nameof(CanRestoreRecoveryProtection)); RestoreRecoveryProtectionCommand?.Refresh();
         Notify(nameof(CanShowRecovery)); ShowRecoveryCommand?.Refresh();
         Notify(nameof(CanNewProject)); Notify(nameof(CanOpenProject)); Notify(nameof(CanSaveProject)); Notify(nameof(CanCloseProject));
         Notify(nameof(CanUndo));

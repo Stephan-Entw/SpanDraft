@@ -48,7 +48,7 @@ public sealed class InMemoryRecoveryStorage : IRecoveryStorage
     {
         lock (_gate)
         {
-            if (!_slots.TryRemove(slot, out var bytes)) throw new FileNotFoundException("The recovery slot does not exist.", slot.FileName);
+            if (!_slots.TryRemove(slot, out var bytes)) throw new RecoverySlotMissingException(slot.FileName);
             string name = slot.IsLegacy ? "legacy-" + Path.GetFileNameWithoutExtension(slot.FileName) + "-" + Guid.NewGuid().ToString("N") + ".json" : slot.FileName;
             _discarded.Enqueue((name, bytes));
         }

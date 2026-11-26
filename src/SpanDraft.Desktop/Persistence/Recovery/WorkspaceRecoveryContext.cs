@@ -4,6 +4,15 @@ namespace SpanDraft.Desktop.Persistence;
 
 public enum WorkspaceRecoveryState { None, CreateDraftRecovery, ProjectRecovery }
 
+/// <summary>What a leave of the workspace gives up: the session's project slot, the Create draft, or everything (close).</summary>
+public enum RecoveryLeaveScope { Project, Draft, Workspace }
+
+/// <summary>
+/// Which protection is faulted (§60): only set when a close or discard already lifted the recovery protection, could not
+/// complete and the protection could not be restored. Normal recovery write failures never set it.
+/// </summary>
+public enum RecoveryFault { None, Project, Draft }
+
 /// <summary>
 /// The recovery of exactly one workspace: <see cref="WorkspaceRecoveryState.None"/>, the Create draft slot or the project
 /// slot. The view model only reports domain events; slot names and <see cref="RecoveryId"/>s live here. CreateSetup and the
@@ -15,7 +24,8 @@ public enum WorkspaceRecoveryState { None, CreateDraftRecovery, ProjectRecovery 
 /// Create draft is not written, so the unsaved project stays the single recovery of the workspace. Over a project without
 /// recovery (clean) the draft owns the context as usual.
 ///
-/// Detached draft slots awaiting cleanup are kept separately (<see cref="Remnants"/>) and retried at the next cleanup.
+/// Detached draft slots awaiting cleanup are kept separately (<see cref="Remnants"/>) and retried at the next cleanup;
+/// when the workspace closes they are moved to the Discarded area like any deliberately given up draft.
 /// A remnant draft whose id is the project's is that project's companion: the project slot is never deleted while it
 /// exists, or the draft would reappear as a valid old draft.
 /// </remarks>
@@ -28,6 +38,8 @@ public sealed class WorkspaceRecoveryContext
     private ProjectSetupRecovery? _setup;
     // Draft slots that are no longer the workspace's recovery but could not be deleted yet.
     private readonly List<ProjectSetupRecovery> _remnants = [];
+    // Set once the workspace committed its close: nothing is written for it any more.
+    private bool _retired;
 
     public WorkspaceRecoveryContext(IRecoveryStorage storage, Func<TimeSpan, CancellationToken, Task>? delay = null,
         Func<DateTimeOffset>? utcNow = null)
@@ -39,6 +51,18 @@ public sealed class WorkspaceRecoveryContext
 
     /// <summary>The single failure channel of normal recovery writes; it never faults the workspace.</summary>
     public event Action<Exception>? Failed;
+
+    /// <summary>Raised whenever <see cref="Fault"/> changes.</summary>
+    public event Action? FaultChanged;
+
+    /// <summary>The faulted protection, see <see cref="RecoveryFault"/>; <see cref="RecoveryFault.None"/> in normal operation.</summary>
+    public RecoveryFault Fault { get; private set; }
+
+    /// <summary>Why the protection could not be restored, while <see cref="Fault"/> is set.</summary>
+    public Exception? FaultError { get; private set; }
+
+    /// <summary>No recovery slot of any kind is held: neither project, draft nor a cleanup remnant, and nothing is faulted.</summary>
+    public bool IsEmpty => _project is null && _setup is null && _remnants.Count == 0 && Fault == RecoveryFault.None;
 
     public WorkspaceRecoveryState State => _project is not null ? WorkspaceRecoveryState.ProjectRecovery
         : _setup is not null ? WorkspaceRecoveryState.CreateDraftRecovery : WorkspaceRecoveryState.None;
@@ -56,22 +80,9 @@ public sealed class WorkspaceRecoveryContext
     public void SetupDraftChanged(ProjectSetupDraft draft)
     {
         // One recovery per workspace: unsaved project work (New over the open project) keeps the only slot.
-        if (_project is not null) return;
+        if (_retired || _project is not null) return;
         _setup ??= NewSetupWriter(SlotOf(RecoverySlotKind.Setup, RecoveryId.New()));
         _setup.Schedule(draft);
-    }
-
-    /// <summary>
-    /// The Create draft was cancelled or replaced by its project: its slot is removed. The context is None afterwards in
-    /// every case; a slot that cannot be deleted becomes a cleanup remnant (and the failure is thrown), never an active draft.
-    /// </summary>
-    public async Task SetupAbandonedAsync()
-    {
-        await RetryRemnantsAsync(except: null);
-        if (_setup is not { } setup) return;
-        _setup = null;
-        try { await setup.DeleteAsync(); }
-        catch (Exception e) when (IsStorageError(e)) { _remnants.Add(setup); throw; }
     }
 
     // ---- Project ----------------------------------------------------------------------------------------------
@@ -105,7 +116,7 @@ public sealed class WorkspaceRecoveryContext
     public void ProjectChanged(ProjectSession session)
     {
         // A Create draft shows no editable session; the project cannot change while it owns the context.
-        if (_setup is not null) return;
+        if (_retired || _setup is not null) return;
         if (_project is null)
         {
             // A cleanly opened project has no recovery; the first real change creates it.
@@ -174,7 +185,7 @@ public sealed class WorkspaceRecoveryContext
     public void AdoptProject(RecoverySlot slot)
     {
         if (_project is not null || _setup is not null) throw new InvalidOperationException("The workspace already has a recovery.");
-        _project = NewProjectWriter(slot);
+        _project = NewProjectWriter(slot, published: true);
     }
 
     /// <summary>Gives a just adopted slot back without touching it (the restore failed before it was committed).</summary>
@@ -188,7 +199,7 @@ public sealed class WorkspaceRecoveryContext
     public void AdoptCreateDraft(RecoverySlot slot)
     {
         if (_setup is not null || _project is not null) throw new InvalidOperationException("The workspace already has a recovery.");
-        _setup = NewSetupWriter(slot);
+        _setup = NewSetupWriter(slot, published: true);
     }
 
     public Task DrainAsync() => Task.WhenAll(_project?.DrainAsync() ?? Task.CompletedTask, _setup?.DrainAsync() ?? Task.CompletedTask);
@@ -199,21 +210,193 @@ public sealed class WorkspaceRecoveryContext
     /// <summary>The current content of the draft slot, or null.</summary>
     public Task<SetupRecoverySnapshot?> ReadSetupAsync() => _setup?.ReadAsync() ?? Task.FromResult<SetupRecoverySnapshot?>(null);
 
+    // ---- Leave (close, discard) --------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Prepares leaving the recovery of <paramref name="scope"/> without making anything visible: the project slot is moved to
+    /// the Discarded area when <paramref name="discardProject"/> (a deliberate Discard), otherwise removed as technical
+    /// cleanup (it is obsolete after Save or at the savepoint); the Create draft and, for a close, every cleanup remnant are
+    /// always moved, since they were given up deliberately. A companion draft goes before its project slot. Pending debounced
+    /// writes can never publish afterwards. The context keeps its writers until <see cref="RecoveryLeave.Commit"/>.
+    /// </summary>
+    /// <remarks>
+    /// On failure the storage transitions that really happened decide: if the previous protection was lifted (the active slot
+    /// was moved, or the companion that was the only crash fallback of a never published project slot) the current confirmed
+    /// state is published again, and if that fails too the context becomes faulted (§60). Otherwise the current state is only
+    /// scheduled again. The failure is thrown in either case.
+    /// </remarks>
+    public async Task<RecoveryLeave> PrepareLeaveAsync(RecoveryLeaveScope scope, bool discardProject, ProjectSession? session,
+        ProjectSetupDraft? draft)
+    {
+        if (_retired) throw new InvalidOperationException("The workspace recovery was already retired.");
+        var leave = new RecoveryLeave(this, scope, scope == RecoveryLeaveScope.Draft ? null : _project,
+            scope == RecoveryLeaveScope.Project ? null : _setup, session, draft, discardProject);
+        try { await leave.PrepareAsync(); }
+        catch (Exception e) when (IsStorageError(e))
+        {
+            await leave.RestoreAsync();
+            throw;
+        }
+        return leave;
+    }
+
+    /// <summary>
+    /// Remediation of a faulted context: publishes the current confirmed state of the faulted kind again and clears the fault
+    /// once that succeeded. A storage failure keeps the fault and is thrown. Without a fault it does nothing.
+    /// </summary>
+    public async Task RestoreProtectionAsync(ProjectSession? session, ProjectSetupDraft? draft)
+    {
+        switch (Fault)
+        {
+            case RecoveryFault.Project when _project is { } project && session is not null:
+                await project.FlushAsync(session.CurrentRevision.State, session.FilePath ?? session.RecoveryOriginPath);
+                break;
+            case RecoveryFault.Draft when _setup is { } setup && draft is not null:
+                await setup.FlushAsync(draft);
+                break;
+            default: return;
+        }
+        SetFault(RecoveryFault.None, null);
+    }
+
+    /// <summary>
+    /// A save completed. Only a project fault is cleared, and only when the session is clean now: the saved file is the
+    /// protection then. A draft fault is never touched by a save.
+    /// </summary>
+    public void ProjectSaved(ProjectSession session)
+    {
+        if (Fault == RecoveryFault.Project && !session.IsDirty) SetFault(RecoveryFault.None, null);
+    }
+
+    private void SetFault(RecoveryFault fault, Exception? error)
+    {
+        if (Fault == fault && ReferenceEquals(FaultError, error)) return;
+        Fault = fault;
+        FaultError = error;
+        FaultChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// One prepared leave of a <see cref="WorkspaceRecoveryContext"/>: it records which storage transitions happened, so that a
+    /// rollback knows whether the previous protection was lifted. Created only by <see cref="PrepareLeaveAsync"/>.
+    /// </summary>
+    public sealed class RecoveryLeave
+    {
+        private readonly WorkspaceRecoveryContext _context;
+        private readonly RecoveryLeaveScope _scope;
+        private readonly ProjectRecovery? _project;
+        private readonly ProjectSetupRecovery? _setup;
+        private readonly ProjectSession? _session;
+        private readonly ProjectSetupDraft? _draft;
+        private readonly bool _discardProject;
+        private bool _activeMoved, _companionMoved, _projectWasPublished, _finished;
+
+        internal RecoveryLeave(WorkspaceRecoveryContext context, RecoveryLeaveScope scope, ProjectRecovery? project,
+            ProjectSetupRecovery? setup, ProjectSession? session, ProjectSetupDraft? draft, bool discardProject)
+        {
+            _context = context;
+            _scope = scope;
+            _project = project;
+            _setup = setup;
+            _session = session;
+            _draft = draft;
+            _discardProject = discardProject;
+            _projectWasPublished = project?.IsPublished == true;
+        }
+
+        /// <summary>
+        /// True when the protection that existed before the leave is gone: the active slot was moved, or the companion draft
+        /// was moved while the project slot had never been published (the draft was its only crash fallback then).
+        /// </summary>
+        public bool ProtectionLifted => _activeMoved || _companionMoved && !_projectWasPublished;
+
+        internal async Task PrepareAsync()
+        {
+            var remnants = _context._remnants;
+            if (_scope == RecoveryLeaveScope.Workspace)
+                foreach (var remnant in remnants.Where(r => r.Slot.Id != _project?.Slot.Id).ToList())
+                {
+                    await remnant.DiscardAsync();
+                    remnants.Remove(remnant);
+                }
+            if (_project is not null)
+            {
+                if (_discardProject)
+                {
+                    if (remnants.FirstOrDefault(r => r.Slot.Id == _project.Slot.Id) is { } companion)
+                    {
+                        _companionMoved = await companion.DiscardAsync() == SlotDiscardOutcome.Moved;
+                        remnants.Remove(companion);
+                    }
+                    _activeMoved = await _project.DiscardAsync() == SlotDiscardOutcome.Moved;
+                }
+                // Technical cleanup: the slot is obsolete (saved or at its savepoint). Its companion goes first, as always.
+                else await _project.DeleteAsync();
+            }
+            if (_setup is not null) _activeMoved = await _setup.DiscardAsync() == SlotDiscardOutcome.Moved;
+        }
+
+        /// <summary>
+        /// Gives the leave up: if the previous protection was lifted, the current confirmed state is published again (a fault
+        /// if that fails); otherwise it is only scheduled again. True unless the context became faulted.
+        /// </summary>
+        public async Task<bool> RollbackAsync()
+        {
+            if (_finished) throw new InvalidOperationException("The recovery leave is already finished.");
+            _finished = true;
+            return await RestoreAsync();
+        }
+
+        internal async Task<bool> RestoreAsync()
+        {
+            bool lifted = ProtectionLifted;
+            var context = _context;
+            if (_project is not null && _session is { IsDirty: true } session)
+            {
+                if (!lifted) { _project.Schedule(session); return true; }
+                try { await _project.FlushAsync(session.CurrentRevision.State, session.FilePath ?? session.RecoveryOriginPath); }
+                catch (Exception e) when (IsStorageError(e)) { context.SetFault(RecoveryFault.Project, e); return false; }
+                return true;
+            }
+            if (_setup is not null && _draft is not null)
+            {
+                if (!lifted) { _setup.Schedule(_draft); return true; }
+                try { await _setup.FlushAsync(_draft); }
+                catch (Exception e) when (IsStorageError(e)) { context.SetFault(RecoveryFault.Draft, e); return false; }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Makes the leave final: the writers of the scope are dropped (a fault ends with them). <paramref name="retire"/> ends
+        /// the context for good, used when the workspace itself closes. Synchronous: nothing can fail any more.
+        /// </summary>
+        public void Commit(bool retire)
+        {
+            if (_finished) throw new InvalidOperationException("The recovery leave is already finished.");
+            _finished = true;
+            if (_scope != RecoveryLeaveScope.Draft && ReferenceEquals(_context._project, _project)) _context._project = null;
+            if (_scope != RecoveryLeaveScope.Project && ReferenceEquals(_context._setup, _setup)) _context._setup = null;
+            if (retire) _context._retired = true;
+            _context.SetFault(RecoveryFault.None, null);
+        }
+    }
+
     // ---- helpers ----------------------------------------------------------------------------------------------
 
     private static RecoverySlot SlotOf(RecoverySlotKind kind, RecoveryId id) => new(kind, id);
 
-    private ProjectRecovery NewProjectWriter(RecoverySlot slot, ProjectSetupRecovery? companion = null)
+    private ProjectRecovery NewProjectWriter(RecoverySlot slot, ProjectSetupRecovery? companion = null, bool published = false)
     {
         var writer = new ProjectRecovery(_storage, slot, _delay, _utcNow,
-            companion is null ? null : () => RemoveRemnantAsync(companion));
+            companion is null ? null : () => RemoveRemnantAsync(companion), published);
         writer.Failed += e => Failed?.Invoke(e);
         return writer;
     }
 
-    private ProjectSetupRecovery NewSetupWriter(RecoverySlot slot)
+    private ProjectSetupRecovery NewSetupWriter(RecoverySlot slot, bool published = false)
     {
-        var writer = new ProjectSetupRecovery(_storage, slot, _delay, _utcNow);
+        var writer = new ProjectSetupRecovery(_storage, slot, _delay, _utcNow, published);
         writer.Failed += e => Failed?.Invoke(e);
         return writer;
     }

@@ -72,6 +72,12 @@ internal sealed class WorkspaceWindowHandle
     /// <summary>False while the workspace is closing or about to; such a workspace must not be chosen for requests.</summary>
     internal bool CanRoute => !IsClosing && !IsCloseRequested;
 
+    /// <summary>The committed close transaction of this workspace; the final cleanup finishes it.</summary>
+    internal WorkspaceCloseTransaction? CloseTransaction { get; set; }
+
+    /// <summary>The one final cleanup of this workspace has run.</summary>
+    internal bool IsFinalized { get; set; }
+
     /// <summary>
     /// What the workspace currently shows: <see cref="WorkspaceKind.StartOnly"/> means the start page only; a workspace
     /// created for New or a restore is never counted as StartOnly, not even before its model exists.

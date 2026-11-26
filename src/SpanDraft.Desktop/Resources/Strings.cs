@@ -178,6 +178,9 @@ public static class Strings
     public static string RecoverySavedAt => Get(nameof(RecoverySavedAt));
     public static string RecoveryNothing => Get(nameof(RecoveryNothing));
     public static string RecoveryActionError => Get(nameof(RecoveryActionError));
+    public static string RecoveryFaultedNotice => Get(nameof(RecoveryFaultedNotice));
+    public static string RecoveryFaultedRetry => Get(nameof(RecoveryFaultedRetry));
+    public static string RecoveryFaultedError => Get(nameof(RecoveryFaultedError));
     public static string RecoveryUnavailable => Get(nameof(RecoveryUnavailable));
     public static string Retry => Get(nameof(Retry));
     public static string Restore => Get(nameof(Restore));

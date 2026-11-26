@@ -10,15 +10,22 @@ public sealed class WorkspaceRecoveryContextTests
     private sealed class Fixture
     {
         public TestRecoveryStorage Storage { get; } = new();
-        public Delay Delay { get; } = new();
+        public Delay Delay { get; }
         public WorkspaceRecoveryContext Context { get; }
         public List<Exception> Failures { get; } = [];
-        public Fixture()
+        public int FaultChanges { get; private set; }
+        // A delay that ignores cancellation lets a superseded debounce reach the storage: only the generation rule stops it.
+        public Fixture(bool honorCancellation = true)
         {
+            Delay = new(honorCancellation);
             Context = new(Storage, Delay.Wait, () => Now);
             Context.Failed += Failures.Add;
+            Context.FaultChanged += () => FaultChanges++;
         }
         public async Task Publish() { Delay.ReleaseAll(); await WaitFor(Context.DrainAsync()); }
+        /// <summary>The Create draft is given up deliberately (setup cancel): its slot goes to Discarded.</summary>
+        public async Task DiscardDraft(ProjectSetupDraft? draft = null) =>
+            (await Context.PrepareLeaveAsync(RecoveryLeaveScope.Draft, false, null, draft ?? new())).Commit(retire: false);
     }
 
     private static ProjectSession Dirty()
@@ -62,8 +69,10 @@ public sealed class WorkspaceRecoveryContextTests
         Assert.NotNull(a.Context.SetupRecoveryId); Assert.NotEqual(a.Context.SetupRecoveryId, b.Context.SetupRecoveryId);
         Assert.Equal(RecoverySlot.Setup(a.Context.SetupRecoveryId!.Value), Assert.Single(a.Storage.Slots()));
         Assert.Equal(a.Context.SetupRecoveryId, a.Context.CurrentRecoveryId);
-        await a.Context.SetupAbandonedAsync();
+        var slot = Assert.Single(a.Storage.Slots());
+        await a.DiscardDraft();
         Assert.Equal(WorkspaceRecoveryState.None, a.Context.State); Assert.Empty(a.Storage.Slots());
+        Assert.Equal(slot.FileName, Assert.Single(a.Storage.Discarded));
     }
 
     [Fact]
@@ -170,7 +179,7 @@ public sealed class WorkspaceRecoveryContextTests
         f.Context.SetupDraftChanged(new()); await f.Publish();
         Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State);
         Assert.Null(f.Context.SetupRecoveryId); Assert.Single(f.Storage.Slots());
-        await f.Context.SetupAbandonedAsync(); Assert.Single(f.Storage.Slots());
+        await f.DiscardDraft(); Assert.Single(f.Storage.Slots()); Assert.Empty(f.Storage.Discarded);
 
         // A draft over a project without recovery owns the context; project changes cannot take a second slot meanwhile.
         var other = new Fixture(); other.Context.SetupDraftChanged(new()); await other.Publish();
@@ -200,30 +209,28 @@ public sealed class WorkspaceRecoveryContextTests
     // ---- cleanup remnants are never the active context ------------------------------------------------------------
 
     [Fact]
-    public async Task ADraftSlotThatCannotBeDeletedBecomesARemnantAndNeverAnActiveDraft()
+    public async Task ADraftSlotThatCannotBeDiscardedStaysTheActiveDraftAndIsNeverARemnant()
     {
         var f = new Fixture(); f.Context.SetupDraftChanged(new()); await f.Publish();
-        var stale = Assert.Single(f.Storage.Slots()); f.Storage.FailDelete = _ => true;
-        await Assert.ThrowsAsync<IOException>(f.Context.SetupAbandonedAsync);
-        Assert.Equal(WorkspaceRecoveryState.None, f.Context.State); Assert.Null(f.Context.SetupRecoveryId);
-        Assert.Equal(stale, Assert.Single(f.Context.Remnants));
-        // Later project changes get ProjectRecovery again; they are not ignored because of the old draft.
-        var session = Dirty(); f.Context.ProjectChanged(session); f.Storage.FailDelete = null; await f.Publish();
-        Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State);
-        Assert.Equal(2, f.Storage.Slots().Count); Assert.NotEqual(stale.Id, f.Context.ProjectRecoveryId);
-        // The next cleanup removes the remnant; it never touches the active project slot.
-        await f.Context.SetupAbandonedAsync();
-        Assert.Empty(f.Context.Remnants); Assert.Equal(RecoverySlot.Project(f.Context.ProjectRecoveryId!.Value), Assert.Single(f.Storage.Slots()));
+        var slot = Assert.Single(f.Storage.Slots()); var id = f.Context.SetupRecoveryId;
+        f.Storage.FailDiscard = _ => true;
+        await Assert.ThrowsAsync<IOException>(() => f.DiscardDraft());
+        // Deliberately giving the draft up failed: it keeps its slot, its id and its protection; nothing is left behind.
+        Assert.Equal(WorkspaceRecoveryState.CreateDraftRecovery, f.Context.State); Assert.Equal(id, f.Context.SetupRecoveryId);
+        Assert.Empty(f.Context.Remnants); Assert.Equal(slot, Assert.Single(f.Storage.Slots())); Assert.Empty(f.Storage.Discarded);
+        Assert.Equal(RecoveryFault.None, f.Context.Fault);
+        f.Storage.FailDiscard = null; await f.DiscardDraft();
+        Assert.Empty(f.Storage.Slots()); Assert.Equal(slot.FileName, Assert.Single(f.Storage.Discarded));
     }
 
     [Fact]
-    public async Task ANewDraftAfterAFailedAbandonGetsItsOwnIdAndTheRemnantStaysSeparate()
+    public async Task ANewDraftAfterADiscardedDraftGetsItsOwnId()
     {
         var f = new Fixture(); f.Context.SetupDraftChanged(new()); await f.Publish(); var old = f.Context.SetupRecoveryId;
-        f.Storage.FailDelete = _ => true; await Assert.ThrowsAsync<IOException>(f.Context.SetupAbandonedAsync); f.Storage.FailDelete = null;
+        await f.DiscardDraft();
         f.Context.SetupDraftChanged(new()); await f.Publish();
         Assert.Equal(WorkspaceRecoveryState.CreateDraftRecovery, f.Context.State); Assert.NotEqual(old, f.Context.SetupRecoveryId);
-        Assert.Equal(old, Assert.Single(f.Context.Remnants).Id);
+        Assert.Empty(f.Context.Remnants);
     }
 
     [Fact]
@@ -336,5 +343,208 @@ public sealed class WorkspaceRecoveryContextTests
         Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State);
         f.Context.SetupDraftChanged(new()); await f.Publish();
         Assert.Equal(RecoverySlotKind.Project, Assert.Single(f.Storage.Slots()).Kind);
+    }
+
+    // ---- Phase 7: leave (PrepareDiscard, rollback, RecoveryFaulted) ---------------------------------------------
+
+    private static async Task<WorkspaceRecoveryContext.RecoveryLeave> Leave(Fixture f, RecoveryLeaveScope scope, bool discard,
+        ProjectSession? session = null, ProjectSetupDraft? draft = null) =>
+        await WaitFor(f.Context.PrepareLeaveAsync(scope, discard, session, draft));
+
+    [Fact]
+    public async Task DiscardTombstonesThePublishedSlotAndAPendingDebounceNeverRecreatesIt()
+    {
+        var f = new Fixture(honorCancellation: false); var session = Dirty();
+        f.Context.ProjectChanged(session); await f.Publish();
+        var slot = f.Storage.OnlySlot(RecoverySlotKind.Project);
+        Assert.True(session.Commit(State(1))); f.Context.ProjectChanged(session);   // a newer state waits in the debounce
+        var leave = await Leave(f, RecoveryLeaveScope.Workspace, discard: true, session);
+        Assert.True(leave.ProtectionLifted); Assert.Empty(f.Storage.Slots()); Assert.Equal(slot.FileName, Assert.Single(f.Storage.Discarded));
+        f.Delay.ReleaseAll(); await WaitFor(f.Context.DrainAsync());
+        leave.Commit(retire: true);
+        Assert.Empty(f.Storage.Slots()); Assert.Equal(WorkspaceRecoveryState.None, f.Context.State);
+        // A retired context writes nothing any more.
+        Assert.True(session.Commit(State(2))); f.Context.ProjectChanged(session); f.Context.SetupDraftChanged(new()); await f.Publish();
+        Assert.Empty(f.Storage.Slots());
+    }
+
+    [Fact]
+    public async Task AWriteThatIsPublishingCompletesBeforeTheSlotIsMovedAndNothingReappears()
+    {
+        // The write is past its point of no return (it ignores the cancellation of the invalidated debounce).
+        var f = new Fixture(); var session = Dirty(); f.Storage.HonorWriteCancellation = false;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        f.Storage.BeforeWrite = async (_, _, _) => { entered.TrySetResult(); await release.Task; };
+        f.Context.ProjectChanged(session); f.Delay.ReleaseAll();
+        await WaitFor(entered.Task);
+        var prepare = f.Context.PrepareLeaveAsync(RecoveryLeaveScope.Workspace, true, session, null);
+        Assert.False(prepare.IsCompleted);
+        release.SetResult(); f.Storage.BeforeWrite = null;
+        var leave = await WaitFor(prepare);
+        Assert.True(leave.ProtectionLifted); Assert.Empty(f.Storage.Slots()); Assert.Single(f.Storage.Discarded);
+        await WaitFor(f.Context.DrainAsync()); Assert.Empty(f.Storage.Slots());
+    }
+
+    [Fact]
+    public async Task AnExplicitFlushRequestedBeforeTheDiscardIsCompletedInOrderAndThenMoved()
+    {
+        var f = new Fixture(); var session = Dirty();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        f.Storage.BeforeWrite = async (_, _, _) => { entered.TrySetResult(); await release.Task; };
+        var flush = f.Context.FlushAsync(session.CurrentRevision.State, session.FilePath);
+        await WaitFor(entered.Task);
+        var prepare = f.Context.PrepareLeaveAsync(RecoveryLeaveScope.Workspace, true, session, null);
+        release.SetResult(); f.Storage.BeforeWrite = null;
+        // The flush keeps its Phase-6 semantics: it publishes and reports success; only then is the slot moved.
+        await WaitFor(flush); var leave = await WaitFor(prepare);
+        Assert.Single(f.Storage.Writes); Assert.True(leave.ProtectionLifted);
+        Assert.Empty(f.Storage.Slots()); Assert.Single(f.Storage.Discarded);
+    }
+
+    [Fact]
+    public async Task AnUnpublishedDraftIsMissingAndItsPendingWriteIsInvalidated()
+    {
+        var f = new Fixture(honorCancellation: false); var draft = new ProjectSetupDraft();
+        f.Context.SetupDraftChanged(draft);   // scheduled, not yet written
+        var leave = await Leave(f, RecoveryLeaveScope.Workspace, discard: false, draft: draft);
+        Assert.False(leave.ProtectionLifted); Assert.Empty(f.Storage.Discarded);
+        f.Delay.ReleaseAll(); await WaitFor(f.Context.DrainAsync());
+        Assert.Empty(f.Storage.Slots());
+        leave.Commit(retire: true); Assert.Equal(WorkspaceRecoveryState.None, f.Context.State);
+    }
+
+    [Fact]
+    public async Task AMissingSlotIsDistinguishedFromAnAccessErrorOfTheDiscard()
+    {
+        var f = new Fixture(); f.Context.SetupDraftChanged(new()); await f.Publish();
+        var slot = f.Storage.OnlySlot(RecoverySlotKind.Setup);
+        f.Storage.FailureFactory = _ => new UnauthorizedAccessException("Injected access failure.");
+        f.Storage.FailDiscard = _ => true;
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => f.Context.PrepareLeaveAsync(RecoveryLeaveScope.Draft, false, null, new()));
+        Assert.Equal(slot, Assert.Single(f.Storage.Slots())); Assert.Equal(WorkspaceRecoveryState.CreateDraftRecovery, f.Context.State);
+        // A slot that really is gone (e.g. removed outside) is not an error: there is nothing left to give up.
+        f.Storage.FailDiscard = null; f.Storage.Data.Clear();
+        var leave = await Leave(f, RecoveryLeaveScope.Draft, discard: false, draft: new());
+        Assert.False(leave.ProtectionLifted); Assert.Empty(f.Storage.Discarded);
+    }
+
+    [Fact]
+    public async Task TheTechnicalReleaseOfACleanProjectDeletesWithoutATombstone()
+    {
+        var f = new Fixture(); var session = Dirty(); f.Context.ProjectChanged(session); await f.Publish();
+        Assert.True(session.Undo()); // back at the savepoint; the delete is only scheduled
+        var leave = await Leave(f, RecoveryLeaveScope.Workspace, discard: false, session);
+        Assert.False(leave.ProtectionLifted); Assert.Empty(f.Storage.Slots()); Assert.Empty(f.Storage.Discarded);
+        Assert.True(await leave.RollbackAsync()); Assert.Empty(f.Storage.Slots()); Assert.Equal(RecoveryFault.None, f.Context.Fault);
+    }
+
+    [Fact]
+    public async Task TheCompanionDraftIsDiscardedBeforeItsProjectAndAFailedCompanionKeepsEverything()
+    {
+        var f = new Fixture(); f.Context.SetupDraftChanged(new()); await f.Publish();
+        f.Storage.FailDelete = slot => slot.Kind == RecoverySlotKind.Setup;
+        var session = ProjectSession.Create(State()); await f.Context.ProjectCreatedAsync(session);
+        var id = f.Context.ProjectRecoveryId!.Value; f.Storage.FailDelete = null;
+        Assert.Equal([RecoverySlot.Setup(id)], f.Context.Remnants);
+        f.Storage.FailDiscard = slot => slot.Kind == RecoverySlotKind.Setup;
+        await Assert.ThrowsAsync<IOException>(() => f.Context.PrepareLeaveAsync(RecoveryLeaveScope.Workspace, true, session, null));
+        Assert.Contains(RecoverySlot.Project(id), f.Storage.Slots()); Assert.Contains(RecoverySlot.Setup(id), f.Storage.Slots());
+        Assert.Equal(RecoveryFault.None, f.Context.Fault); Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State);
+        f.Storage.FailDiscard = null;
+        var leave = await Leave(f, RecoveryLeaveScope.Workspace, discard: true, session);
+        Assert.Equal([RecoverySlot.Setup(id).FileName, RecoverySlot.Project(id).FileName], f.Storage.Discarded.ToArray());
+        Assert.Empty(f.Storage.Slots()); leave.Commit(retire: true); Assert.Empty(f.Context.Remnants);
+    }
+
+    [Fact]
+    public async Task APublishedProjectWhoseMoveFailsAfterItsCompanionWasMovedKeepsItsProtection()
+    {
+        var f = new Fixture(); f.Context.SetupDraftChanged(new()); await f.Publish();
+        f.Storage.FailDelete = slot => slot.Kind == RecoverySlotKind.Setup;
+        var session = ProjectSession.Create(State()); await f.Context.ProjectCreatedAsync(session);
+        var id = f.Context.ProjectRecoveryId!.Value; f.Storage.FailDelete = null;
+        f.Storage.FailDiscard = slot => slot.Kind == RecoverySlotKind.Project; f.Storage.FailWrite = _ => true;
+        await Assert.ThrowsAsync<IOException>(() => f.Context.PrepareLeaveAsync(RecoveryLeaveScope.Workspace, true, session, null));
+        // The companion is gone, but the valid published project slot still protects the work: no fault.
+        Assert.Equal([RecoverySlot.Project(id)], f.Storage.Slots()); Assert.Equal(RecoveryFault.None, f.Context.Fault);
+        Assert.Empty(f.Context.Remnants);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ACompanionThatWasTheOnlyFallbackOfAnUnpublishedProjectIsRestoredOrFaults(bool republishFails)
+    {
+        var f = new Fixture(); f.Context.SetupDraftChanged(new()); await f.Publish();
+        // The project's first publication fails: its draft stays as the only crash fallback.
+        f.Storage.FailWrite = slot => slot.Kind == RecoverySlotKind.Project;
+        var session = ProjectSession.Create(State()); await f.Context.ProjectCreatedAsync(session);
+        var id = f.Context.ProjectRecoveryId!.Value;
+        Assert.Equal([RecoverySlot.Setup(id)], f.Storage.Slots()); Assert.Single(f.Failures);
+        if (!republishFails) f.Storage.FailWrite = null;
+        f.Storage.FailDiscard = slot => slot.Kind == RecoverySlotKind.Project;   // an access error, not a missing slot
+        await Assert.ThrowsAsync<IOException>(() => f.Context.PrepareLeaveAsync(RecoveryLeaveScope.Workspace, true, session, null));
+        Assert.DoesNotContain(RecoverySlot.Setup(id), f.Storage.Slots());
+        if (republishFails)
+        {
+            Assert.Equal(RecoveryFault.Project, f.Context.Fault); Assert.Equal(1, f.FaultChanges); Assert.NotNull(f.Context.FaultError);
+            Assert.Empty(f.Storage.Slots());
+        }
+        else
+        {
+            Assert.Equal(RecoveryFault.None, f.Context.Fault);
+            Assert.True(session.CurrentRevision.State.ContentEquals((await f.Context.ReadAsync())!.State));
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ARollbackAfterADiscardPublishesTheCurrentStateAgainOrFaults(bool republishFails)
+    {
+        var f = new Fixture(); var session = Dirty(); f.Context.ProjectChanged(session); await f.Publish();
+        var id = f.Context.ProjectRecoveryId; Assert.True(session.Commit(State(3)));   // newer than the slot (debounce lag)
+        f.Context.ProjectChanged(session);
+        var leave = await Leave(f, RecoveryLeaveScope.Workspace, discard: true, session);
+        if (republishFails) f.Storage.FailWrite = _ => true;
+        Assert.Equal(!republishFails, await leave.RollbackAsync());
+        Assert.Equal(id, f.Context.ProjectRecoveryId); Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State);
+        if (!republishFails)
+        {
+            Assert.True(State(3).ContentEquals((await f.Context.ReadAsync())!.State)); Assert.Equal(RecoveryFault.None, f.Context.Fault);
+            return;
+        }
+        Assert.Equal(RecoveryFault.Project, f.Context.Fault); Assert.Empty(f.Storage.Slots());
+        // Remediation: retrying fails while the storage fails, then restores the protection and clears the fault.
+        await Assert.ThrowsAsync<IOException>(() => f.Context.RestoreProtectionAsync(session, null));
+        Assert.Equal(RecoveryFault.Project, f.Context.Fault);
+        f.Storage.FailWrite = null; await WaitFor(f.Context.RestoreProtectionAsync(session, null));
+        Assert.Equal(RecoveryFault.None, f.Context.Fault); Assert.NotNull(await f.Context.ReadAsync());
+    }
+
+    [Fact]
+    public async Task ADraftFaultIsOnlyClearedByItsOwnRemediationNotByASave()
+    {
+        var f = new Fixture(); var draft = new ProjectSetupDraft(); f.Context.SetupDraftChanged(draft); await f.Publish();
+        var leave = await Leave(f, RecoveryLeaveScope.Workspace, discard: false, draft: draft);
+        f.Storage.FailWrite = _ => true;
+        Assert.False(await leave.RollbackAsync()); Assert.Equal(RecoveryFault.Draft, f.Context.Fault);
+        f.Context.ProjectSaved(ProjectSession.Open(State(), TestPath("clean.spandraft")));
+        Assert.Equal(RecoveryFault.Draft, f.Context.Fault);
+        f.Storage.FailWrite = null; await WaitFor(f.Context.RestoreProtectionAsync(null, draft));
+        Assert.Equal(RecoveryFault.None, f.Context.Fault); Assert.NotNull(await f.Context.ReadSetupAsync());
+    }
+
+    [Fact]
+    public async Task ANormalDebounceFailureNeverFaultsTheContext()
+    {
+        var f = new Fixture(); var session = Dirty(); f.Storage.FailWrite = _ => true;
+        f.Context.ProjectChanged(session); await f.Publish();
+        Assert.Single(f.Failures); Assert.Equal(RecoveryFault.None, f.Context.Fault); Assert.Equal(0, f.FaultChanges);
+        // Nothing was lifted by a close either: a failed protective rollback without a lifted protection is no fault.
+        var leave = await Leave(f, RecoveryLeaveScope.Workspace, discard: true, session);
+        Assert.False(leave.ProtectionLifted); Assert.True(await leave.RollbackAsync()); Assert.Equal(RecoveryFault.None, f.Context.Fault);
     }
 }

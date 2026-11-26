@@ -25,7 +25,20 @@ internal enum ProjectPathState { Free, RecoveryPending, Opening, Open, SaveTarge
 internal enum SaveTargetDecision { Reserved, SaveCurrent, Rejected }
 
 internal sealed record OpenDecision(ProjectPathState State, OpenReservation? Reservation = null,
-    Task<ProjectOpenResult>? Flight = null, WindowId? Owner = null, Guid? RecoveryCandidate = null, Task? SaveCompletion = null);
+    Task<ProjectOpenResult>? Flight = null, WindowId? Owner = null, Guid? RecoveryCandidate = null, Task? SaveCompletion = null,
+    Task? OwnerRelease = null);
+
+/// <summary>
+/// Held by a workspace close transaction while its window may give up whatever it owns. It belongs to the transaction, not
+/// to an identity: every path the window owns meanwhile (also one taken over by a Save As) is protected by it, and only
+/// <see cref="ProjectPathRegistry.EndOwnerRelease"/> ends it.
+/// </summary>
+internal sealed class OwnerReleaseToken(WindowId window)
+{
+    public WindowId Window { get; } = window;
+    internal TaskCompletionSource Signal { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal bool Ended { get; set; }
+}
 
 /// <summary>The process-wide arbiter for project paths. Its lock protects only in-memory transitions.</summary>
 internal sealed class ProjectPathRegistry
@@ -47,6 +60,7 @@ internal sealed class ProjectPathRegistry
     private readonly Dictionary<ProjectIdentity, Entry> _paths = [];
     private readonly Dictionary<WindowId, ProjectIdentity> _owned = [];
     private readonly Dictionary<WindowId, Saving> _saves = [];
+    private readonly Dictionary<WindowId, OwnerReleaseToken> _releases = [];
 
     /// <summary>
     /// Names the recovery candidate that takes over a path as soon as its current entry (Opening, Open, SaveTargetReserved)
@@ -108,6 +122,9 @@ internal sealed class ProjectPathRegistry
             {
                 case Recovery recovery: return new(ProjectPathState.RecoveryPending, RecoveryCandidate: recovery.Candidate);
                 case Opening opening: return new(ProjectPathState.Opening, Flight: opening.Completion.Task);
+                // The owner may be about to give the path up: wait for its decision instead of reporting it as open.
+                case Open open when _releases.TryGetValue(open.Window, out var release):
+                    return new(ProjectPathState.Open, Owner: open.Window, OwnerRelease: release.Signal.Task);
                 case Open open: return new(ProjectPathState.Open, Owner: open.Window);
                 case Saving saving: return new(ProjectPathState.SaveTargetReserved, SaveCompletion: saving.Completion.Task);
                 default:
@@ -171,6 +188,7 @@ internal sealed class ProjectPathRegistry
             if (token.PreviousIdentity is { } previous) Vacate(previous);
             _saves.Remove(token.WindowId);
             saving.Completion.SetResult();
+            Pulse(token.WindowId);
             return true;
         }
     }
@@ -199,6 +217,7 @@ internal sealed class ProjectPathRegistry
         {
             if (_saves.ContainsKey(window) || !_owned.Remove(window, out var identity)) return false;
             Vacate(identity);
+            Pulse(window);
             return true;
         }
     }
@@ -248,5 +267,51 @@ internal sealed class ProjectPathRegistry
         _paths[identity] = new Open(window);
         if (_owned.TryGetValue(window, out var previous) && !previous.Equals(identity)) Vacate(previous);
         _owned[window] = identity;
+        Pulse(window);
+    }
+
+    // ---- owner release (workspace close) ------------------------------------------------------------------------
+
+    /// <summary>
+    /// Marks that <paramref name="window"/> is deciding whether to give up what it owns (its close transaction is running).
+    /// Opens of a path it owns meanwhile wait for the outcome and are then arbitrated anew, instead of being told the path
+    /// is open in a workspace that may never take a request again. Null if a release of this window is already running.
+    /// </summary>
+    internal OwnerReleaseToken? BeginOwnerRelease(WindowId window)
+    {
+        lock (_gate)
+        {
+            if (_releases.ContainsKey(window)) return null;
+            var token = new OwnerReleaseToken(window);
+            _releases.Add(window, token);
+            return token;
+        }
+    }
+
+    /// <summary>Ends the release of its transaction (committed or rolled back); waiting opens arbitrate anew. Idempotent.</summary>
+    internal void EndOwnerRelease(OwnerReleaseToken token)
+    {
+        TaskCompletionSource signal;
+        lock (_gate)
+        {
+            if (token.Ended || !_releases.TryGetValue(token.Window, out var current) || !ReferenceEquals(current, token)) return;
+            token.Ended = true;
+            _releases.Remove(token.Window);
+            signal = token.Signal;
+        }
+        signal.TrySetResult();
+    }
+
+    /// <summary>
+    /// The window's ownership changed during its release (a Save As or the final release): waiters arbitrate anew, so a path
+    /// it no longer holds is served at once, while a path it now holds stays protected by the same, still running release.
+    /// </summary>
+    private void Pulse(WindowId window)
+    {
+        if (!_releases.TryGetValue(window, out var token)) return;
+        var signal = token.Signal;
+        token.Signal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        // Continuations run asynchronously, so nothing re-enters the registry under its own lock.
+        signal.TrySetResult();
     }
 }

@@ -384,15 +384,22 @@ public sealed class ProjectSetupRecoveryTests
     }
 
     [Fact]
-    public async Task ADraftSlotThatCannotBeDeletedOnCancelIsNotTheActiveContextAndLaterProjectChangesGetProjectRecovery()
+    public async Task ADraftSlotThatCannotBeDiscardedOnCancelKeepsTheSetupItsInputsAndItsRecovery()
     {
         using var culture = new UiCultureScope("en-US");
         var f = new Fixture(); f.Start(); Assert.True(await f.Main.NewAsync()); CompleteSetup(f.Main); await f.Publish();
-        var draftSlot = f.SetupSlot; f.Storage.FailDelete = _ => true;
+        var draftSlot = f.SetupSlot; var setup = f.Main.Setup; var draft = setup.Draft; f.Storage.FailDiscard = _ => true;
+        // Giving the draft up deliberately failed: nothing is left that could reappear, nothing of the draft is lost.
+        Assert.False(await f.Main.CancelSetupAsync());
+        Assert.Equal(MainViewMode.ProjectSetup, f.Main.Mode); Assert.Same(setup, f.Main.Setup); Assert.Equal(draft, setup.Draft);
+        Assert.Equal(WorkspaceRecoveryState.CreateDraftRecovery, f.Context.State); Assert.Empty(f.Context.Remnants);
+        Assert.Equal(draftSlot, Assert.Single(f.Storage.Slots())); Assert.Empty(f.Storage.Discarded); Assert.NotEmpty(f.Dialogs.Errors);
+        Assert.Equal(RecoveryFault.None, f.Context.Fault);
+        f.Storage.FailDiscard = null;
         Assert.True(await f.Main.CancelSetupAsync());
         Assert.Equal(MainViewMode.Start, f.Main.Mode); Assert.Equal(WorkspaceRecoveryState.None, f.Context.State);
-        Assert.Equal(draftSlot, Assert.Single(f.Context.Remnants)); Assert.NotEmpty(f.Dialogs.Errors);
-        f.Storage.FailDelete = null;
+        Assert.Empty(f.Storage.Slots()); Assert.Equal(draftSlot.FileName, Assert.Single(f.Storage.Discarded));
+        // Later project changes get a project recovery of their own.
         f.RestoreProject(); var length = f.Main.Editor!.DimensionLength; length.Begin(); length.Text = "2500"; Assert.True(length.Confirm()); await f.Publish();
         Assert.Equal(WorkspaceRecoveryState.ProjectRecovery, f.Context.State); Assert.NotNull(f.ProjectSnapshot());
     }
@@ -504,7 +511,8 @@ public sealed class ProjectSetupRecoveryTests
         f.Dialogs.Leave = failure == "leaveCancel" ? LeaveDecision.Cancel : LeaveDecision.Save;
         if (failure == "saveCancel") f.Dialogs.SavePath = null;
         if (failure == "saveFailure") f.Files.FailWritePath = f.Dialogs.SavePath;
-        if (failure == "leaveCleanupFailure") { f.Dialogs.Leave = LeaveDecision.Discard; f.Storage.FailDelete = _ => true; }
+        // A deliberate Discard tombstones the project slot; a failed move keeps the project and its recovery.
+        if (failure == "leaveCleanupFailure") { f.Dialogs.Leave = LeaveDecision.Discard; f.Storage.FailDiscard = _ => true; }
         Assert.False(await f.Main.Setup.ConfirmAsync()); Assert.Same(session, f.Main.Session);
         Assert.Equal("Local author", f.Main.Settings.LastAuthor);
         // The previous project keeps its recovery as the workspace's only one; the draft was never written.

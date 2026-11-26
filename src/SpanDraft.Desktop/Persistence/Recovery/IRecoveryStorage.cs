@@ -23,6 +23,10 @@ public interface IRecoveryStorage
     /// <summary>Atomically renames a slot inside the local data area; fails without change if the target exists.</summary>
     Task MoveAsync(RecoverySlot source, RecoverySlot target);
 
-    /// <summary>Atomically moves a slot to the Discarded area, so a deliberate discard never reappears as crash recovery.</summary>
+    /// <summary>
+    /// Atomically moves a slot to the Discarded area, so a deliberate discard never reappears as crash recovery. A missing
+    /// source slot, and only that, is reported as <see cref="RecoverySlotMissingException"/>; every failure of the
+    /// Discarded area itself is thrown as the storage error it is and leaves the source untouched.
+    /// </summary>
     Task DiscardAsync(RecoverySlot slot);
 }

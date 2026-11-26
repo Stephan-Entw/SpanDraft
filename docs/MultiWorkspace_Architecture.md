@@ -610,6 +610,8 @@ Alle Open- und Save-As-Konflikte werden an genau einer Stelle entschieden.
 
 Save As auf den eigenen bereits zugeordneten Pfad ist normales Save und kein Ownership-Wechsel.
 
+Läuft für den Besitzer einer `Open`-Identity gerade eine `WorkspaceCloseTransaction`, wartet ein Open auf deren Commit bzw. Rollback und wird danach neu arbitriert; es erhält kein `AlreadyOpen` für einen Workspace, der möglicherweise geschlossen wird. Save As auf diesen Pfad bleibt bis zur endgültigen Freigabe abgelehnt.
+
 `RecoveryCatalog`, Recent Projects, Shell-/Finder-Aktivierung und `ProjectOpenCoordinator` implementieren keine eigenen abweichenden Pfadkonfliktregeln. Sie liefern lediglich Kontext oder Requests an die Registry.
 
 Ändert sich die Recovery-Lage, wird auch der Registry-Zustand aktualisiert:

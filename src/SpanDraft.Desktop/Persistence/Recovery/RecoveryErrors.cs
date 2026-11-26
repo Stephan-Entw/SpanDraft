@@ -14,4 +14,15 @@ internal static class RecoveryErrors
 
     /// <summary>A defect of one slot or of one original path: that candidate is damaged or unresolved, the others are unaffected.</summary>
     public static bool IsCandidateDefect(Exception e) => IsStorage(e) || IsContent(e);
+
+    /// <summary>
+    /// The active source slot of a discard does not exist (it was never published or is already gone). Only the storage
+    /// reports this, and only after it established that the source itself is missing; a failure of the Discarded target
+    /// is never one.
+    /// </summary>
+    public static bool IsMissing(Exception e) => e is RecoverySlotMissingException;
 }
+
+/// <summary>The active source slot of a storage operation does not exist; see <see cref="RecoveryErrors.IsMissing"/>.</summary>
+public sealed class RecoverySlotMissingException(string fileName)
+    : FileNotFoundException("The recovery slot does not exist.", fileName);

@@ -337,6 +337,13 @@ public sealed class WorkspaceWindowManagerTests
         try { action(); } finally { SynchronizationContext.SetSynchronizationContext(previous); }
     }
 
+    /// <summary>A real window close of a workspace with unsaved work, answered with Don't Save.</summary>
+    private static void CloseDiscarding(WorkspaceWindowHandle handle) => WithUiContext(() =>
+    {
+        handle.Window.Close(); Flush();
+        Click(Assert.Single(handle.Window.OwnedWindows), Strings.DontSave); Flush(); Flush();
+    });
+
     private static void Click(Avalonia.Controls.Window dialog, string label) => dialog.GetVisualDescendants()
         .OfType<Avalonia.Controls.Button>().Single(b => Equals(b.Content, label))
         .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
@@ -450,7 +457,8 @@ public sealed class WorkspaceWindowManagerTests
         var a = Start(host);
         CreateProject(a);
         var b = Run(() => host.Workspaces.RequestNewProjectAsync(a))!;
-        a.Window.CloseApproved(); Flush();
+        // a has an unsaved project: its window close runs the close transaction, here answered with Don't Save.
+        CloseDiscarding(a); Flush();
         Assert.DoesNotContain(a, host.Workspaces.Handles);
         Assert.Null(host.Workspaces.Initial);
         Assert.Throws<InvalidOperationException>(() => host.Workspaces.CreateInitial());
@@ -464,7 +472,7 @@ public sealed class WorkspaceWindowManagerTests
         using var environment = new DesktopControlEnvironment();
         var host = Host(new Files());
         var a = Start(host);
-        a.Window.CloseApproved(); Flush();
+        a.Window.Close(); Flush();
         Assert.Empty(host.Workspaces.Handles);
         Assert.Equal(DesktopApplicationState.ShuttingDown, host.State);
     }

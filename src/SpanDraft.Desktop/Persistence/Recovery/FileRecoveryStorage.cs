@@ -85,16 +85,36 @@ public sealed class FileRecoveryStorage(string dataDirectory) : IRecoveryStorage
 
     public Task DiscardAsync(RecoverySlot slot) => Task.Run(() =>
     {
+        string source = PathOf(slot);
+        // Target failures (the area cannot be created or used) are thrown as they are: the source stays untouched.
         Directory.CreateDirectory(DiscardedDirectory);
         string name = slot.IsLegacy ? "legacy-" + Path.GetFileNameWithoutExtension(slot.FileName) + "-" + Guid.NewGuid().ToString("N") + ".json"
             : slot.FileName;
         for (int attempt = 0; ; attempt++)
         {
-            try { File.Move(PathOf(slot), Path.Combine(DiscardedDirectory, name), overwrite: false); return; }
-            catch (IOException) when (attempt < 3 && File.Exists(Path.Combine(DiscardedDirectory, name)) && File.Exists(PathOf(slot)))
+            string target = Path.Combine(DiscardedDirectory, name);
+            try { File.Move(source, target, overwrite: false); return; }
+            catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
+            {
+                // Either side can be reported as not found; only a probe of the source itself tells which one it was.
+                if (!Exists(source)) throw new RecoverySlotMissingException(slot.FileName);
+                throw;
+            }
+            catch (IOException) when (attempt < 3 && Exists(target) && Exists(source))
             {
                 name = Path.GetFileNameWithoutExtension(name) + "-" + Guid.NewGuid().ToString("N") + ".json";
             }
         }
     });
+
+    /// <summary>
+    /// Whether a path exists. Unlike <see cref="File.Exists(string)"/> it does not hide access errors: only a missing
+    /// file or directory means false, everything else is thrown.
+    /// </summary>
+    private static bool Exists(string path)
+    {
+        try { File.GetAttributes(path); return true; }
+        catch (FileNotFoundException) { return false; }
+        catch (DirectoryNotFoundException) { return false; }
+    }
 }

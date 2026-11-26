@@ -17,6 +17,7 @@ internal sealed class TestRecoveryStorage : IRecoveryStorage
     public Func<RecoverySlot, bool>? FailRead { get; set; }
     public Func<RecoverySlot, RecoverySlot?, bool>? FailMove { get; set; }
     public Func<RecoverySlot, bool>? FailDiscard { get; set; }
+    public Func<RecoverySlot, Task>? BeforeDiscard { get; set; }
     public Exception? FailEnumerate { get; set; }
     /// <summary>The exception the injected failures throw; an <see cref="IOException"/> unless set.</summary>
     public Func<string, Exception>? FailureFactory { get; set; }
@@ -66,12 +67,12 @@ internal sealed class TestRecoveryStorage : IRecoveryStorage
         return Task.CompletedTask;
     }
 
-    public Task DiscardAsync(RecoverySlot slot)
+    public async Task DiscardAsync(RecoverySlot slot)
     {
+        if (BeforeDiscard is not null) await BeforeDiscard(slot);
         if (FailDiscard?.Invoke(slot) == true) throw Failure("discard");
-        if (!Data.TryRemove(slot, out _)) throw new FileNotFoundException("Missing slot.", slot.FileName);
+        if (!Data.TryRemove(slot, out _)) throw new RecoverySlotMissingException(slot.FileName);
         Discarded.Enqueue(slot.FileName);
-        return Task.CompletedTask;
     }
 
     public void Put(RecoverySlot slot, byte[] bytes) => Data[slot] = bytes.ToArray();

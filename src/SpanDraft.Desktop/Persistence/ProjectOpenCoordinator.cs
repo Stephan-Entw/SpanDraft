@@ -2,15 +2,25 @@ using SpanDraft.Desktop.State;
 
 namespace SpanDraft.Desktop.Persistence;
 
-internal enum ProjectOpenStatus { Opened, AlreadyOpen, Cancelled, Missing, Failed, RecoveryPending }
+/// <remarks>
+/// <see cref="Unavailable"/> means the requesting workspace cannot process the open (any more): it is closing, closed or
+/// the application shuts down. Unlike <see cref="Cancelled"/> (a decision of the user) it leaves the request unhandled.
+/// </remarks>
+internal enum ProjectOpenStatus { Opened, AlreadyOpen, Cancelled, Missing, Failed, RecoveryPending, Unavailable }
 internal sealed record ProjectOpenResult(ProjectOpenStatus Status, WindowId? Owner = null, Exception? Error = null)
 {
     internal static ProjectOpenResult Cancelled { get; } = new(ProjectOpenStatus.Cancelled);
+    internal static ProjectOpenResult Unavailable { get; } = new(ProjectOpenStatus.Unavailable);
 }
 
 internal interface IProjectOpenWorkspace
 {
     WindowId WindowId { get; }
+    /// <summary>
+    /// The workspace can still process this open: not disposed, no leave or close running, routable, the application not
+    /// shutting down. Checked after every wait, so a waiting open never changes a workspace that went away meanwhile.
+    /// </summary>
+    bool CanContinue { get; }
     Task<ProjectOpenResult> RunOpenAsync(Func<Task<ProjectOpenResult>> transaction, bool afterSave);
     Task<bool> ActivateProjectAsync(ProjectState state, string path);
     void ActivateExisting(WindowId owner);
@@ -26,6 +36,7 @@ internal sealed class ProjectOpenCoordinator(IProjectFileStore files, IProjectId
         bool afterSave = false;
         while (true)
         {
+            if (!workspace.CanContinue) return ProjectOpenResult.Unavailable;
             var decision = registry.ArbitrateOpen(identity);
             switch (decision.State)
             {
@@ -36,8 +47,13 @@ internal sealed class ProjectOpenCoordinator(IProjectFileStore files, IProjectId
                     return new(ProjectOpenStatus.RecoveryPending);
                 case ProjectPathState.Opening:
                     var result = await decision.Flight!;
+                    if (!workspace.CanContinue) return ProjectOpenResult.Unavailable;
                     if (result.Owner is { } owner) workspace.ActivateExisting(owner);
                     return result;
+                case ProjectPathState.Open when decision.OwnerRelease is { } release:
+                    // Its owner is closing: no AlreadyOpen for a workspace that may be gone; decide again afterwards.
+                    await release;
+                    break;
                 case ProjectPathState.Open:
                     workspace.ActivateExisting(decision.Owner!.Value);
                     return new(ProjectOpenStatus.AlreadyOpen, Owner: decision.Owner);
