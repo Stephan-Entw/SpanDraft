@@ -287,7 +287,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     internal Func<Task<bool>>? CloseWorkspaceHandler { get; set; }
     /// <summary>The owner's lifecycle view: the workspace is registered, routable and the application is not shutting down.</summary>
     internal Func<bool>? CanRouteHandler { get; set; }
-    public bool IsBusy => _busy || _leaveReserved || _libraryBusy || _settingsSaving || ReportPreview?.IsBusy == true;
+    public bool IsBusy => IsOperationBusy || _leaveReserved;
+    // The workspace's own operations, without a close reservation.
+    private bool IsOperationBusy => _busy || _libraryBusy || _settingsSaving || ReportPreview?.IsBusy == true;
     /// <summary>An operation is running anywhere in this workspace (an open editor alone is not one).</summary>
     private bool HasRunningOperation => IsBusy || _recoveryCenter?.IsBusy == true || Mode == MainViewMode.ProjectSetup
         && (Setup.IsBusy || Setup.CurrentStep is MaterialSelectionViewModel { IsActionBusy: true });

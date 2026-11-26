@@ -22,6 +22,7 @@
     <Compile Include="../Support/DesktopHingedSupportTestSupport.cs" Link="Support/DesktopHingedSupportTestSupport.cs" />
     <Compile Include="../Support/DesktopLayoutFixture.cs" Link="Support/DesktopLayoutFixture.cs" />
     <Compile Include="../Support/LibraryTestSupport.cs" Link="Support/LibraryTestSupport.cs" />
+    <Compile Include="../Support/ManualSynchronizationContext.cs" Link="Support/ManualSynchronizationContext.cs" />
     <Compile Include="../Support/MaterialNoteTestSupport.cs" Link="Support/MaterialNoteTestSupport.cs" />
     <Compile Include="../Support/MaterialStrengthTestSupport.cs" Link="Support/MaterialStrengthTestSupport.cs" />
     <Compile Include="../Support/MaterialTestEntries.cs" Link="Support/MaterialTestEntries.cs" />

@@ -547,4 +547,46 @@ public sealed class WorkspaceRecoveryContextTests
         var leave = await Leave(f, RecoveryLeaveScope.Workspace, discard: true, session);
         Assert.False(leave.ProtectionLifted); Assert.True(await leave.RollbackAsync()); Assert.Equal(RecoveryFault.None, f.Context.Fault);
     }
+
+    [Fact]
+    public async Task APublicationThatCompletesDuringTheDiscardIsTheRemainingFallbackAndFaultsNothing()
+    {
+        var f = new Fixture(); f.Context.SetupDraftChanged(new()); await f.Publish();
+        // The project's first publication fails; its draft stays as companion and the snapshot is scheduled again.
+        f.Storage.FailWrite = slot => slot.Kind == RecoverySlotKind.Project;
+        var session = ProjectSession.Create(State()); await f.Context.ProjectCreatedAsync(session);
+        var id = f.Context.ProjectRecoveryId!.Value; var project = RecoverySlot.Project(id);
+        f.Storage.FailWrite = null; f.Storage.HonorWriteCancellation = false;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        f.Storage.BeforeWrite = async (slot, _, _) => { if (slot == project) { entered.TrySetResult(); await release.Task; } };
+        f.Delay.ReleaseAll(); await WaitFor(entered.Task);   // the scheduled publication is running now
+        f.Storage.FailDiscard = slot => slot == project;
+        var prepare = f.Context.PrepareLeaveAsync(RecoveryLeaveScope.Workspace, true, session, null);
+        Assert.False(prepare.IsCompleted);
+        release.SetResult();
+        await Assert.ThrowsAsync<IOException>(() => WaitFor(prepare));
+        // The companion is gone, but the project slot was published before its move failed: protected, no fault,
+        // and no needless republish.
+        Assert.Equal([project], f.Storage.Slots()); Assert.Equal(RecoveryFault.None, f.Context.Fault);
+        Assert.Single(f.Storage.Writes, w => w == project);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ACompanionMovedOverAProjectSlotThatIsMissingLiftsTheProtection(bool republishFails)
+    {
+        var f = new Fixture(); f.Context.SetupDraftChanged(new()); await f.Publish();
+        f.Storage.FailWrite = slot => slot.Kind == RecoverySlotKind.Project;
+        var session = ProjectSession.Create(State()); await f.Context.ProjectCreatedAsync(session);
+        var id = f.Context.ProjectRecoveryId!.Value;
+        if (!republishFails) f.Storage.FailWrite = null;
+        var leave = await Leave(f, RecoveryLeaveScope.Workspace, discard: true, session);
+        Assert.True(leave.ProtectionLifted); Assert.Empty(f.Storage.Slots());
+        Assert.Equal([RecoverySlot.Setup(id).FileName], f.Storage.Discarded.ToArray());
+        Assert.Equal(!republishFails, await leave.RollbackAsync());
+        Assert.Equal(republishFails ? RecoveryFault.Project : RecoveryFault.None, f.Context.Fault);
+        if (!republishFails) Assert.Equal([RecoverySlot.Project(id)], f.Storage.Slots());
+    }
 }

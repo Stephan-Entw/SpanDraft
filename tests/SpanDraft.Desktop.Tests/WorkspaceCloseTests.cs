@@ -447,4 +447,87 @@ public sealed class WorkspaceCloseTests
             Assert.Equal(DesktopApplicationState.Ready, app.Host.State); Assert.Equal(1, app.Host.Activation.Count);
         });
     }
+
+    // ---- internal closes ------------------------------------------------------------------------------------
+
+    [Fact]
+    public void ACancelledNewProjectWorkspaceIsOutOfRoutingBeforeAnAlreadyPostedRequestRuns()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var app = new App(); var a = app.StartWithProject("cancel-owner");
+            var b = Run(() => app.Host.Workspaces.RequestNewProjectAsync(a))!;
+            Assert.Equal(MainViewMode.ProjectSetup, b.Model!.Mode);
+            a.Model!.EditProject();                               // a takes no open request meanwhile
+            string requested = app.Project("posted-before-the-close");
+            DesktopControlEnvironment.RunOnDispatcher(async () =>
+            {
+                Assert.True(app.Host.Workspaces.Activate(b.WindowId));
+                // The pump for this request is posted before the cancel decides the close.
+                app.Host.Activation.Enqueue(LaunchRequest.OpenProject(requested));
+                Assert.True(await b.Model.CancelSetupAsync());
+                Assert.True(b.IsCloseRequested); Assert.True(b.Model.IsWorkspaceBusy); Assert.False(b.Model.CanOpenProject);
+            });
+            Flush();
+            Assert.DoesNotContain(b, app.Host.Workspaces.Handles); Assert.Null(b.Model.Session);
+            Assert.Equal(1, app.Host.Activation.Count);
+            // Once a can take it, the request is processed and not lost.
+            Assert.True(Run(() => a.Model.CancelSetupAsync())); Flush();
+            Assert.Equal(0, app.Host.Activation.Count);
+            Assert.Equal(Identities.Resolve(requested).CanonicalPath, a.Model.Session!.FilePath);
+        });
+    }
+
+    [Fact]
+    public void ALeftRecoveryCenterWorkspaceIsOutOfRoutingBeforeAnAlreadyPostedRequestRuns()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var app = new App(); var s = app.StartWithProject("center-start"); var b = app.Second(s, "center-editor");
+            Assert.True(Run(() => s.Model!.CloseProjectAsync())); Assert.True(Run(() => s.Model!.NewAsync())); CompleteSetup(s.Model!);
+            var c = Run(() => app.Host.Workspaces.ShowRecoveryCenterAsync(b, null))!;
+            Assert.Equal(WorkspaceCreationReason.RecoveryCenter, c.Reason);
+            // s still holds the start slot, but its close hangs in the draft discard: it takes no requests.
+            var gate = new TaskCompletionSource();
+            app.Storage.BeforeDiscard = _ => gate.Task;
+            s.Window.Close(); Flush();
+            Assert.True(s.HoldsStartSlot); Assert.False(s.CanRoute);
+            b.Model!.EditProject();
+            string requested = app.Project("posted-before-the-back");
+            DesktopControlEnvironment.RunOnDispatcher(() =>
+            {
+                Assert.True(app.Host.Workspaces.Activate(c.WindowId));
+                app.Host.Activation.Enqueue(LaunchRequest.OpenProject(requested));
+                c.Model!.LeaveRecoveryCenter();
+                Assert.True(c.IsCloseRequested); Assert.False(c.Model.CanOpenProject);
+                return Task.CompletedTask;
+            });
+            Flush();
+            Assert.DoesNotContain(c, app.Host.Workspaces.Handles); Assert.Null(c.Model!.Session);
+            Assert.Equal(1, app.Host.Activation.Count); Assert.Equal(1, app.Host.Workspaces.StartSlotCount);
+            gate.SetResult(); app.Storage.BeforeDiscard = null; Flush();
+            Assert.DoesNotContain(s, app.Host.Workspaces.Handles);
+        });
+    }
+
+    [Fact]
+    public void TheLastSurvivingWorkspaceIsNeverClosedInternallyAndIsReleasedAgain()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var app = new App(); var a = app.StartWithProject("internal-last");
+            var c = Run(() => app.Host.Workspaces.RequestNewProjectAsync(a))!;
+            a.Window.Close(); Flush();
+            Assert.Same(c, Assert.Single(app.Host.Workspaces.Handles)); Assert.Equal(0, app.Host.Workspaces.StartSlotCount);
+            Assert.True(Run(() => c.Model!.CancelSetupAsync())); Flush();
+            // It becomes the start page instead: reservation and routing are released, it holds the one start slot.
+            Assert.Same(c, Assert.Single(app.Host.Workspaces.Handles));
+            Assert.True(c.CanRoute); Assert.True(c.HoldsStartSlot); Assert.Equal(1, app.Host.Workspaces.StartSlotCount);
+            Assert.False(c.Model!.IsWorkspaceBusy); Assert.True(c.Model.CanOpenProject);
+            Assert.Equal(DesktopApplicationState.Ready, app.Host.State);
+        });
+    }
 }

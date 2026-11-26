@@ -126,6 +126,24 @@ public sealed partial class MainWindowViewModel
     }
 
     /// <summary>
+    /// Reserves an internal close (a dedicated workspace whose setup was cancelled or whose Recovery Center was left) at the
+    /// moment it is decided, also from within the operation that decided it: like a close reservation it stops requests,
+    /// waiting opens and local commands. Released with <see cref="ReleaseLeaveReservation"/>. False if already reserved.
+    /// </summary>
+    internal bool ReserveInternalClose()
+    {
+        if (_disposed || _leaveReserved) return false;
+        _leaveReserved = true;
+        NotifySession();
+        return true;
+    }
+
+    /// <summary>No operation runs in the workspace apart from a close reservation of its own.</summary>
+    internal bool IsOperationIdle => !IsOperationBusy && _recoveryCenter?.IsBusy != true
+        && !(Mode == MainViewMode.ProjectSetup && (Setup.Definition?.IsBusy == true
+            || Setup.CurrentStep is MaterialSelectionViewModel { IsActionBusy: true } or MaterialSelectionViewModel { IsEditing: true }));
+
+    /// <summary>
     /// Runs the close transaction of this workspace without a window: Save/Discard/Cancel, recovery preparation and commit.
     /// True once committed; the window of a real workspace closes through its owner instead.
     /// </summary>

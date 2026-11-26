@@ -289,7 +289,7 @@ public sealed class WorkspaceRecoveryContext
         private readonly ProjectSession? _session;
         private readonly ProjectSetupDraft? _draft;
         private readonly bool _discardProject;
-        private bool _activeMoved, _companionMoved, _projectWasPublished, _finished;
+        private bool _activeMoved, _companionMoved, _projectFallbackRemains, _finished;
 
         internal RecoveryLeave(WorkspaceRecoveryContext context, RecoveryLeaveScope scope, ProjectRecovery? project,
             ProjectSetupRecovery? setup, ProjectSession? session, ProjectSetupDraft? draft, bool discardProject)
@@ -301,14 +301,14 @@ public sealed class WorkspaceRecoveryContext
             _session = session;
             _draft = draft;
             _discardProject = discardProject;
-            _projectWasPublished = project?.IsPublished == true;
         }
 
         /// <summary>
         /// True when the protection that existed before the leave is gone: the active slot was moved, or the companion draft
-        /// was moved while the project slot had never been published (the draft was its only crash fallback then).
+        /// was moved while no published project slot remains (the draft was its only crash fallback then). Both are read
+        /// from the storage transitions that really happened, not from a state captured before them.
         /// </summary>
-        public bool ProtectionLifted => _activeMoved || _companionMoved && !_projectWasPublished;
+        public bool ProtectionLifted => _activeMoved || _companionMoved && !_projectFallbackRemains;
 
         internal async Task PrepareAsync()
         {
@@ -328,7 +328,10 @@ public sealed class WorkspaceRecoveryContext
                         _companionMoved = await companion.DiscardAsync() == SlotDiscardOutcome.Moved;
                         remnants.Remove(companion);
                     }
-                    _activeMoved = await _project.DiscardAsync() == SlotDiscardOutcome.Moved;
+                    try { _activeMoved = await _project.DiscardAsync() == SlotDiscardOutcome.Moved; }
+                    // Read after the attempt, under the slot's own ordering: a publication that was still running has
+                    // completed by now, and a failed move left the slot exactly as it was.
+                    finally { _projectFallbackRemains = _project.IsPublished; }
                 }
                 // Technical cleanup: the slot is obsolete (saved or at its savepoint). Its companion goes first, as always.
                 else await _project.DeleteAsync();

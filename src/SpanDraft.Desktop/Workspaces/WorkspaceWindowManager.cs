@@ -287,9 +287,49 @@ internal sealed class WorkspaceWindowManager
     private void OnSetupCancelled(WorkspaceWindowHandle handle)
     {
         // A workspace created for New or for a restored draft disappears; one that came from the start page just shows it again.
-        // Its draft was discarded before; the close itself runs after the cancel operation ended.
+        // Its draft was discarded before.
         if (handle.Reason is not (WorkspaceCreationReason.NewProject or WorkspaceCreationReason.Restore)) return;
-        Dispatcher.UIThread.Post(() => CloseInternal(handle));
+        ScheduleInternalClose(handle);
+    }
+
+    /// <summary>
+    /// Closes a dedicated workspace that has become empty. Reserved at once (it takes no request, waiting open or local
+    /// command from here on), executed only once no operation of its own runs any more: then, in one step, the reservation
+    /// is released and, if it is still empty and safe, it is closed (or, as the last workspace, becomes the start page);
+    /// otherwise it simply stays and takes requests again.
+    /// </summary>
+    private void ScheduleInternalClose(WorkspaceWindowHandle handle)
+    {
+        if (!_handles.Contains(handle) || !handle.CanRoute || handle.Model is not { } model || !model.ReserveInternalClose()) return;
+        handle.IsCloseRequested = true;
+        // Never inside the operation or navigation that decided it.
+        Dispatcher.UIThread.Post(() => RunWhenIdle(model, () =>
+        {
+            var report = model.ReleaseLeaveReservation();
+            handle.IsCloseRequested = false;
+            if (_handles.Contains(handle) && model.IsSafelyEmpty) CloseInternal(handle);
+            if (!handle.IsClosing) PostPump();
+            ObserveAsync(report);
+        }));
+    }
+
+    /// <summary>Runs <paramref name="action"/> once the model runs no operation besides its own reservation (event driven).</summary>
+    private static void RunWhenIdle(MainWindowViewModel model, Action action)
+    {
+        if (model.IsOperationIdle) { action(); return; }
+        void Changed(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (!model.IsOperationIdle) return;
+            model.PropertyChanged -= Changed;
+            Dispatcher.UIThread.Post(action);
+        }
+        model.PropertyChanged += Changed;
+    }
+
+    private static async void ObserveAsync(Task task)
+    {
+        try { await task; }
+        catch (Exception error) { Dispatcher.UIThread.Post(() => System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error)); }
     }
 
     // ---- Recovery ---------------------------------------------------------------------------------------------
@@ -351,7 +391,7 @@ internal sealed class WorkspaceWindowManager
         // Only a workspace created for the Recovery Center is affected; a start workspace just shows its start page again.
         if (handle.Reason != WorkspaceCreationReason.RecoveryCenter || handle.Model?.HasProject == true) return;
         if (_handles.Any(h => !ReferenceEquals(h, handle) && h.HoldsStartSlot))
-            Dispatcher.UIThread.Post(() => CloseInternal(handle));
+            ScheduleInternalClose(handle);
         else handle.Neutralize();   // it becomes the start workspace and takes over the start slot
     }
 

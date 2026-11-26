@@ -139,7 +139,7 @@ public sealed class RecoveryStorageTests
         {
             var storage = new FileRecoveryStorage(directory);
             var slot = RecoverySlot.Setup(RecoveryId.New());
-            await storage.WriteAtomicAsync(slot, Bytes("draft"));
+            await storage.WriteAtomicAsync(slot, Bytes("draft"), TestContext.Current.CancellationToken);
             // A file where the Discarded directory belongs: the target cannot be created, the source is untouched.
             File.WriteAllText(Path.Combine(directory, "Recovery", "Discarded"), "in the way");
             var error = await Assert.ThrowsAnyAsync<IOException>(() => storage.DiscardAsync(slot));

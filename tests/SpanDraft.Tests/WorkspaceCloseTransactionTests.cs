@@ -300,4 +300,98 @@ public sealed class WorkspaceCloseTransactionTests
         Assert.Null(registry.ArbitrateOpen(next).OwnerRelease);
         Assert.Equal(ProjectPathState.Open, registry.StateOf(next));
     }
+
+    // ---- open arbitration: joined flights and owners that close ------------------------------------------------
+
+    /// <summary>A workspace as the open coordinator sees it; what it does on activation is recorded.</summary>
+    private sealed class OpenTarget : IProjectOpenWorkspace
+    {
+        public WindowId WindowId { get; } = WindowId.Create();
+        public bool CanContinue { get; set; } = true;
+        public Func<Func<Task<ProjectOpenResult>>, Task<ProjectOpenResult>> Run { get; set; } = transaction => transaction();
+        public List<WindowId> Activated { get; } = [];
+        public List<Guid> Recoveries { get; } = [];
+        public Task<ProjectOpenResult> RunOpenAsync(Func<Task<ProjectOpenResult>> transaction, bool afterSave) => Run(transaction);
+        public Task<bool> ActivateProjectAsync(ProjectState state, string path) => Task.FromResult(true);
+        public void ActivateExisting(WindowId owner) => Activated.Add(owner);
+        public void ActivateRecovery(Guid candidate) => Recoveries.Add(candidate);
+    }
+
+    [Theory]
+    [InlineData("commit")]
+    [InlineData("successor")]
+    [InlineData("rollback")]
+    [InlineData("gone")]
+    public async Task AnOpenThatJoinedASuccessfulFlightDecidesOnTheCurrentOwnershipWhenTheOwnerStartsClosing(string outcome)
+    {
+        var files = new Files(); var registry = new ProjectPathRegistry(); var coordinator = new ProjectOpenCoordinator(files, Identities, registry);
+        string path = TestPath("joined-flight.spandraft"); files.Data[path] = ProjectFileCodec.Serialize(State());
+        var identity = Identities.Resolve(path); var candidate = Guid.NewGuid();
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var owner = new OpenTarget { Run = async transaction => { await gate.Task; return await transaction(); } };
+        var joiner = new OpenTarget(); var context = new ManualSynchronizationContext();
+        var first = coordinator.OpenAsync(path, owner);
+        var second = context.Start(() => coordinator.OpenAsync(path, joiner));
+        Assert.Equal(ProjectPathState.Opening, registry.StateOf(identity));
+        gate.SetResult();
+        Assert.Equal(ProjectOpenStatus.Opened, (await WaitFor(first)).Status);
+        // The flight succeeded, but before the joined open continues its owner begins to close.
+        var release = registry.BeginOwnerRelease(owner.WindowId)!;
+        if (outcome == "successor") registry.RecoverySuccessor = id => id.Equals(identity) ? candidate : null;
+        if (outcome == "gone") joiner.CanContinue = false;
+        context.RunUntil(second);
+        if (outcome != "gone")
+        {
+            Assert.False(second.IsCompleted); Assert.Empty(joiner.Activated);   // no activation of a closing owner
+            if (outcome != "rollback") Assert.True(registry.ReleaseOwner(owner.WindowId));
+            registry.EndOwnerRelease(release);
+            context.RunUntil(second);
+        }
+        var result = await WaitFor(second);
+        switch (outcome)
+        {
+            case "commit":
+                Assert.Equal(ProjectOpenStatus.Opened, result.Status); Assert.Equal(joiner.WindowId, result.Owner);
+                Assert.Equal(identity, registry.IdentityOwnedBy(joiner.WindowId)); Assert.Empty(joiner.Activated);
+                break;
+            case "successor":
+                Assert.Equal(ProjectOpenStatus.RecoveryPending, result.Status); Assert.Equal([candidate], joiner.Recoveries);
+                break;
+            case "rollback":
+                // The owner keeps the path: the single-flight result stands and the owner is activated.
+                Assert.Equal(ProjectOpenStatus.Opened, result.Status); Assert.Equal(owner.WindowId, result.Owner);
+                Assert.Equal([owner.WindowId], joiner.Activated);
+                break;
+            case "gone":
+                Assert.Equal(ProjectOpenStatus.Unavailable, result.Status); Assert.Empty(joiner.Activated);
+                registry.EndOwnerRelease(release);
+                break;
+        }
+        // Every reservation taken on the way was run or released.
+        Assert.NotEqual(ProjectPathState.Opening, registry.StateOf(identity));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task AFlightRefusedBeforeItsTransactionPassesUnavailableOnAndLosesNoRequest(bool joinerCanContinue)
+    {
+        var registry = new ProjectPathRegistry(); var files = new Files(); var coordinator = new ProjectOpenCoordinator(files, Identities, registry);
+        var b = new Workspace(registry, files); string path = b.Project("refused-flight"); var identity = Identities.Resolve(path);
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var refusing = new OpenTarget { Run = async _ => { await gate.Task; return ProjectOpenResult.Unavailable; } };
+        var first = coordinator.OpenAsync(path, refusing);
+        var request = b.Main.HandleOpenRequestAsync(path);            // an external request of b joins the flight
+        var observer = registry.ArbitrateOpen(identity).Flight!;
+        Assert.False(request.IsCompleted);
+        if (!joinerCanContinue) b.Main.CanRouteHandler = () => false;
+        gate.SetResult();
+        Assert.Equal(ProjectOpenStatus.Unavailable, (await WaitFor(first)).Status);
+        Assert.Equal(ProjectOpenStatus.Unavailable, (await WaitFor(observer)).Status);   // not Cancelled
+        // Only the refusing workspace was unavailable: b decides anew and opens it, or keeps its request unprocessed.
+        Assert.Equal(joinerCanContinue, await WaitFor(request));
+        if (joinerCanContinue) Assert.Equal(identity.CanonicalPath, b.Main.Session!.FilePath);
+        else Assert.Null(b.Main.Session);
+        Assert.NotEqual(ProjectPathState.Opening, registry.StateOf(identity));
+    }
 }

@@ -34,6 +34,10 @@ internal sealed class ProjectOpenCoordinator(IProjectFileStore files, IProjectId
         await registry.SettleRecoveryAsync();
         var identity = identities.Resolve(Path.GetFullPath(path));
         bool afterSave = false;
+        // The result of a successful flight this open joined. Its owner is not activated directly: the next turn of the loop
+        // decides on the current ownership (the owner may be closing, may have given the path up or handed it to a
+        // recovery successor meanwhile). Only the loop arbitrates, so every reservation it takes is run by RunFlightAsync.
+        ProjectOpenResult? joined = null;
         while (true)
         {
             if (!workspace.CanContinue) return ProjectOpenResult.Unavailable;
@@ -47,16 +51,20 @@ internal sealed class ProjectOpenCoordinator(IProjectFileStore files, IProjectId
                     return new(ProjectOpenStatus.RecoveryPending);
                 case ProjectPathState.Opening:
                     var result = await decision.Flight!;
-                    if (!workspace.CanContinue) return ProjectOpenResult.Unavailable;
-                    if (result.Owner is { } owner) workspace.ActivateExisting(owner);
-                    return result;
+                    // Unavailable only says that the opening workspace could not take the open: decide again for this one.
+                    if (result.Status == ProjectOpenStatus.Unavailable) break;
+                    if (result.Owner is null) return result;
+                    joined = result;
+                    break;
                 case ProjectPathState.Open when decision.OwnerRelease is { } release:
                     // Its owner is closing: no AlreadyOpen for a workspace that may be gone; decide again afterwards.
                     await release;
                     break;
                 case ProjectPathState.Open:
                     workspace.ActivateExisting(decision.Owner!.Value);
-                    return new(ProjectOpenStatus.AlreadyOpen, Owner: decision.Owner);
+                    // A joined flight whose owner still holds the path keeps its single-flight result.
+                    return joined is { Owner: { } flightOwner } && flightOwner == decision.Owner
+                        ? joined : new(ProjectOpenStatus.AlreadyOpen, Owner: decision.Owner);
                 case ProjectPathState.SaveTargetReserved:
                     await decision.SaveCompletion!;
                     afterSave = true;
@@ -68,11 +76,15 @@ internal sealed class ProjectOpenCoordinator(IProjectFileStore files, IProjectId
     private async Task<ProjectOpenResult> RunFlightAsync(OpenReservation token, IProjectOpenWorkspace workspace, bool afterSave)
     {
         var outcome = ProjectOpenResult.Cancelled;
-        try { return await workspace.RunOpenAsync(RunTransactionAsync, afterSave); }
-        finally { registry.TryReleaseOpen(token, outcome); }
+        var returned = ProjectOpenResult.Cancelled;
+        bool started = false;
+        try { return returned = await workspace.RunOpenAsync(RunTransactionAsync, afterSave); }
+        // Every participant gets the real result, also when the workspace refused before the transaction began.
+        finally { registry.TryReleaseOpen(token, started ? outcome : returned); }
 
         async Task<ProjectOpenResult> RunTransactionAsync()
         {
+            started = true;
             try
             {
                 string path = token.Identity.CanonicalPath;
