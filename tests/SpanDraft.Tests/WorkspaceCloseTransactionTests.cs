@@ -306,8 +306,11 @@ public sealed class WorkspaceCloseTransactionTests
     /// <summary>A workspace as the open coordinator sees it; what it does on activation is recorded.</summary>
     private sealed class OpenTarget : IProjectOpenWorkspace
     {
+        private bool _canContinue = true;
         public WindowId WindowId { get; } = WindowId.Create();
-        public bool CanContinue { get; set; } = true;
+        /// <summary>Called whenever the coordinator checks the workspace: a checkpoint of where the open is.</summary>
+        public Action? Checked { get; set; }
+        public bool CanContinue { get { Checked?.Invoke(); return _canContinue; } set => _canContinue = value; }
         public Func<Func<Task<ProjectOpenResult>>, Task<ProjectOpenResult>> Run { get; set; } = transaction => transaction();
         public List<WindowId> Activated { get; } = [];
         public List<Guid> Recoveries { get; } = [];
@@ -333,20 +336,24 @@ public sealed class WorkspaceCloseTransactionTests
         var first = coordinator.OpenAsync(path, owner);
         var second = context.Start(() => coordinator.OpenAsync(path, joiner));
         Assert.Equal(ProjectPathState.Opening, registry.StateOf(identity));
+        // Checkpoint: the joined open has the flight's result and checks its workspace again; what follows up to its next
+        // wait runs in the same continuation.
+        var resumed = new TaskCompletionSource();
+        joiner.Checked = () => resumed.TrySetResult();
         gate.SetResult();
         Assert.Equal(ProjectOpenStatus.Opened, (await WaitFor(first)).Status);
         // The flight succeeded, but before the joined open continues its owner begins to close.
         var release = registry.BeginOwnerRelease(owner.WindowId)!;
         if (outcome == "successor") registry.RecoverySuccessor = id => id.Equals(identity) ? candidate : null;
         if (outcome == "gone") joiner.CanContinue = false;
-        context.RunUntil(second);
+        context.RunUntil(resumed.Task);
         if (outcome != "gone")
         {
             Assert.False(second.IsCompleted); Assert.Empty(joiner.Activated);   // no activation of a closing owner
             if (outcome != "rollback") Assert.True(registry.ReleaseOwner(owner.WindowId));
             registry.EndOwnerRelease(release);
-            context.RunUntil(second);
         }
+        context.RunUntil(second);
         var result = await WaitFor(second);
         switch (outcome)
         {
@@ -392,6 +399,39 @@ public sealed class WorkspaceCloseTransactionTests
         Assert.Equal(joinerCanContinue, await WaitFor(request));
         if (joinerCanContinue) Assert.Equal(identity.CanonicalPath, b.Main.Session!.FilePath);
         else Assert.Null(b.Main.Session);
+        Assert.NotEqual(ProjectPathState.Opening, registry.StateOf(identity));
+    }
+
+    [Theory]
+    [InlineData(nameof(ProjectOpenStatus.Missing))]
+    [InlineData(nameof(ProjectOpenStatus.Failed))]
+    [InlineData(nameof(ProjectOpenStatus.Cancelled))]
+    public async Task AFailedFlightIsNoResultForAJoinedWorkspaceThatWentAwayMeanwhile(string status)
+    {
+        var failure = Enum.Parse<ProjectOpenStatus>(status);
+        var registry = new ProjectPathRegistry(); var files = new Files(); var coordinator = new ProjectOpenCoordinator(files, Identities, registry);
+        var b = new Workspace(registry, files); string path = b.Project("failed-flight"); var identity = Identities.Resolve(path);
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (failure == ProjectOpenStatus.Missing) files.Data.TryRemove(path, out _);
+        if (failure == ProjectOpenStatus.Failed) files.BeforeRead = _ => throw new IOException("Injected read failure.");
+        // The opening workspace runs the real transaction; Cancelled stands for its user declining the leave question.
+        var failing = new OpenTarget
+        {
+            Run = async transaction =>
+            {
+                await gate.Task;
+                return failure == ProjectOpenStatus.Cancelled ? ProjectOpenResult.Cancelled : await transaction();
+            }
+        };
+        var first = coordinator.OpenAsync(path, failing);
+        var request = b.Main.HandleOpenRequestAsync(path);            // an external request of b joins the flight
+        Assert.False(request.IsCompleted);
+        b.Main.CanRouteHandler = () => false;                         // b starts closing while it waits
+        gate.SetResult();
+        Assert.Equal(failure, (await WaitFor(first)).Status);
+        // The failure belongs to the opening workspace: b neither presents it nor counts the request as processed.
+        Assert.False(await WaitFor(request));
+        Assert.Empty(b.Dialogs.Errors); Assert.Null(b.Main.Session);
         Assert.NotEqual(ProjectPathState.Opening, registry.StateOf(identity));
     }
 }

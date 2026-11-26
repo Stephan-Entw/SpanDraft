@@ -51,6 +51,8 @@ internal sealed class ProjectOpenCoordinator(IProjectFileStore files, IProjectId
                     return new(ProjectOpenStatus.RecoveryPending);
                 case ProjectPathState.Opening:
                     var result = await decision.Flight!;
+                    // Whatever the flight ended with, it is no result for a workspace that went away while it waited.
+                    if (!workspace.CanContinue) return ProjectOpenResult.Unavailable;
                     // Unavailable only says that the opening workspace could not take the open: decide again for this one.
                     if (result.Status == ProjectOpenStatus.Unavailable) break;
                     if (result.Owner is null) return result;

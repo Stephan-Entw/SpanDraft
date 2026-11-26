@@ -479,6 +479,52 @@ public sealed class WorkspaceCloseTests
         });
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AnInternalCloseThatFindsItsOperationStillRunningWaitsForItsEndAndThenRuns(bool lastWorkspace)
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var app = new App(); var a = app.StartWithProject("waiting-owner");
+            var b = Run(() => app.Host.Workspaces.RequestNewProjectAsync(a))!;
+            if (lastWorkspace) { a.Window.Close(); Flush(); Assert.Same(b, Assert.Single(app.Host.Workspaces.Handles)); }
+            else a.Model!.EditProject();                          // a takes no open request meanwhile
+            string requested = app.Project("waiting-request");
+            bool waited = false;
+            // The dispatcher may run the posted close before the cancel's operation has ended: here it runs inside it.
+            b.Model!.SetupCancelled += () =>
+            {
+                app.Host.Activation.Enqueue(LaunchRequest.OpenProject(requested));
+                Dispatcher.UIThread.RunJobs();
+                // Reserved and waiting: still registered, out of routing, no request taken, nothing closed or released.
+                Assert.Contains(b, app.Host.Workspaces.Handles);
+                Assert.True(b.IsCloseRequested); Assert.False(b.CanRoute); Assert.True(b.Model.IsWorkspaceBusy);
+                Assert.Equal(1, app.Host.Activation.Count); Assert.Null(b.Model.Session);
+                waited = true;
+            };
+            Assert.True(Run(() => b.Model.CancelSetupAsync())); Flush();
+            Assert.True(waited);
+            string canonical = Identities.Resolve(requested).CanonicalPath;
+            if (lastWorkspace)
+            {
+                // After the operation the close runs: as the last workspace b becomes the start page, its reservation is
+                // released and it takes the waiting request itself.
+                Assert.Same(b, Assert.Single(app.Host.Workspaces.Handles));
+                Assert.True(b.CanRoute); Assert.False(b.IsCloseRequested);
+                Assert.Equal(0, app.Host.Activation.Count); Assert.Equal(canonical, b.Model.Session!.FilePath);
+            }
+            else
+            {
+                Assert.DoesNotContain(b, app.Host.Workspaces.Handles); Assert.Null(b.Model.Session);
+                Assert.Equal(1, app.Host.Activation.Count);
+                Assert.True(Run(() => a.Model!.CancelSetupAsync())); Flush();
+                Assert.Equal(0, app.Host.Activation.Count); Assert.Equal(canonical, a.Model!.Session!.FilePath);
+            }
+        });
+    }
+
     [Fact]
     public void ALeftRecoveryCenterWorkspaceIsOutOfRoutingBeforeAnAlreadyPostedRequestRuns()
     {

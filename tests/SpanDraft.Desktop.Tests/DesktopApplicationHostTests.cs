@@ -90,7 +90,7 @@ public sealed class DesktopApplicationHostTests
     }
 
     [Fact]
-    public void ADisposedWindowModelNoLongerReceivesSettingsOrLibraryEvents()
+    public async Task ADisposedWindowModelNoLongerReceivesSettingsOrLibraryEvents()
     {
         var services = TestServices.Create();
         var main = new SpanDraft.Desktop.ViewModels.MainWindowViewModel(services: services);
@@ -102,8 +102,8 @@ public sealed class DesktopApplicationHostTests
         changed.Clear();
         services.Settings.ApplyRuntimePresentation(UserSettings.Default.Profile, 4, EngineeringNotation.Off);
         Assert.Empty(changed);
-        Assert.Equal(SettingsApplyOutcome.Applied, services.SettingsCoordinator.ApplyAsync(SettingsPatch.From(services.Settings.CurrentSettings) with { SignificantDigits = 5 })
-            .GetAwaiter().GetResult().Outcome);
+        Assert.Equal(SettingsApplyOutcome.Applied, (await services.SettingsCoordinator.ApplyAsync(
+            SettingsPatch.From(services.Settings.CurrentSettings) with { SignificantDigits = 5 })).Outcome);
         Assert.Empty(changed);
     }
 

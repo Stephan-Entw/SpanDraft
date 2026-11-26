@@ -6,11 +6,17 @@ namespace SpanDraft.Tests;
 /// </summary>
 internal sealed class ManualSynchronizationContext : SynchronizationContext
 {
+    // Bounds a test that would otherwise hang; a signal (a post or the completion) ends every wait at once.
+    private static readonly TimeSpan Guard = TimeSpan.FromSeconds(30);
     private readonly Queue<(SendOrPostCallback Callback, object? State)> _queue = new();
 
     public override void Post(SendOrPostCallback d, object? state)
     {
-        lock (_queue) _queue.Enqueue((d, state));
+        lock (_queue)
+        {
+            _queue.Enqueue((d, state));
+            Monitor.PulseAll(_queue);
+        }
     }
 
     public override SynchronizationContext CreateCopy() => this;
@@ -24,15 +30,23 @@ internal sealed class ManualSynchronizationContext : SynchronizationContext
         finally { SetSynchronizationContext(previous); }
     }
 
-    /// <summary>Runs queued continuations until <paramref name="task"/> completed or nothing is queued any more.</summary>
-    public void RunUntil(Task task)
+    /// <summary>
+    /// Runs queued continuations, one complete callback at a time, until <paramref name="signal"/> completed. An empty queue
+    /// does not end it: a continuation may still be posted from another thread, so it waits for the next post or for the
+    /// completion of <paramref name="signal"/>. To stop where an operation is parked, pass a checkpoint it reaches there.
+    /// </summary>
+    public void RunUntil(Task signal)
     {
-        while (!task.IsCompleted)
+        signal.ContinueWith(_ => { lock (_queue) Monitor.PulseAll(_queue); }, CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        while (true)
         {
             (SendOrPostCallback Callback, object? State) next;
             lock (_queue)
             {
-                if (_queue.Count == 0) return;
+                while (!signal.IsCompleted && _queue.Count == 0)
+                    if (!Monitor.Wait(_queue, Guard)) throw new TimeoutException("Nothing was posted and the signal did not complete.");
+                if (signal.IsCompleted) return;
                 next = _queue.Dequeue();
             }
             Start(() => { next.Callback(next.State); return 0; });
