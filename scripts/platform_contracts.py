@@ -88,7 +88,15 @@ def parse_manifest(text):
             if path in manifest.support:
                 errors.append(f"{where}: duplicate entry for {path}")
                 continue
-            manifest.support[path] = ([name for name in fields[2].split(",") if name], " ".join(fields[3:]))
+            names = fields[2].split(",")
+            if "" in names:
+                errors.append(f"{where}: support entry {path} has an empty class name")
+                continue
+            duplicates = sorted({name for name in names if names.count(name) > 1})
+            if duplicates:
+                errors.append(f"{where}: support entry {path} lists {', '.join(duplicates)} more than once")
+                continue
+            manifest.support[path] = (names, " ".join(fields[3:]))
         else:
             errors.append(f"{where}: unknown entry type '{kind}'")
     for path, (classes, _) in manifest.support.items():
@@ -219,22 +227,26 @@ def _assembly_module(name):
 
 
 def check_results(module, xml_path, expected, returncode):
-    """Checks one runner result file. Returns (passed tests per class, errors)."""
-    counts, errors = {fqn: 0 for fqn in expected}, []
+    """Checks one runner result file. Returns ({class: (passed, total)}, errors)."""
+    passed_by_class, total_by_class, errors = {fqn: 0 for fqn in expected}, {fqn: 0 for fqn in expected}, []
+
+    def counts():
+        return {fqn: (passed_by_class[fqn], total_by_class[fqn]) for fqn in expected}
+
     if returncode != 0:
         errors.append(f"{module}: test runner exited with {returncode}")
     path = Path(xml_path)
     if not path.is_file():
-        return counts, errors + [f"{module}: result file {path} is missing"]
+        return counts(), errors + [f"{module}: result file {path} is missing"]
     if path.stat().st_size == 0:
-        return counts, errors + [f"{module}: result file {path} is empty"]
+        return counts(), errors + [f"{module}: result file {path} is empty"]
     try:
         root = ET.parse(str(path)).getroot()
     except ET.ParseError as error:
-        return counts, errors + [f"{module}: result file {path} is not valid XML ({error})"]
+        return counts(), errors + [f"{module}: result file {path} is not valid XML ({error})"]
     assemblies = root.findall("assembly") if root.tag == "assemblies" else []
     if len(assemblies) != 1:
-        return counts, errors + [f"{module}: expected one <assembly> result, found {len(assemblies)}"]
+        return counts(), errors + [f"{module}: expected one <assembly> result, found {len(assemblies)}"]
     assembly = assemblies[0]
     if _assembly_module(assembly.get("name")) != module:
         errors.append(f"{module}: result belongs to {assembly.get('name')}")
@@ -258,17 +270,18 @@ def check_results(module, xml_path, expected, returncode):
         errors.append(f"{module}: total {total}, passed {passed} and {len(tests)} test elements disagree")
     for test in tests:
         fqn, result = test.get("type"), test.get("result")
-        if fqn not in counts:
+        if fqn not in total_by_class:
             errors.append(f"{module}: unexpected test class {fqn}")
             continue
+        total_by_class[fqn] += 1
         if result != "Pass":
             errors.append(f"{module}: {test.get('name')} reported {result}")
             continue
-        counts[fqn] += 1
-    for fqn, count in counts.items():
+        passed_by_class[fqn] += 1
+    for fqn, count in passed_by_class.items():
         if count == 0:
             errors.append(f"{module}: {fqn} has no passed test")
-    return counts, errors
+    return counts(), errors
 
 
 def _test_environment():
@@ -340,8 +353,8 @@ def run(manifest_path, results, root):
         counts, module_errors = check_results(module, xml_path, classes, returncode)
         errors += module_errors
         summary += [(module, fqn, counts[fqn]) for fqn in classes]
-    for module, fqn, count in summary:
-        print(f"  {'PASS' if count else 'FAIL'}  {count:4d}  {module}  {fqn}")
+    for module, fqn, (passed, total) in summary:
+        print(f"  {passed:4d}/{total:<4d} passed  {module}  {fqn}")
     if errors:
         _report("FAILED", errors)
         return EXIT_FAILED

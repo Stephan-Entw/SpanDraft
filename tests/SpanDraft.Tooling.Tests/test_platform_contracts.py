@@ -68,6 +68,18 @@ class ManifestTests(unittest.TestCase):
     def test_support_must_be_covered_by_a_run_class(self):
         self.assert_rejected(f"run {MODULE} {IDENTITY}\nsupport a.cs {RECOVERY} reason", "is not a 'run' entry")
 
+    def test_support_with_empty_class_names_is_rejected(self):
+        for classes in (",", ",,", f"{IDENTITY},,{RECOVERY}", f",{IDENTITY}", f"{IDENTITY},"):
+            with self.subTest(classes=classes):
+                self.assert_rejected(
+                    f"run {MODULE} {IDENTITY}\nrun {MODULE} {RECOVERY}\nsupport a.cs {classes} reason",
+                    "has an empty class name")
+
+    def test_support_with_duplicate_class_names_is_rejected(self):
+        self.assert_rejected(
+            f"run {MODULE} {IDENTITY}\nrun {MODULE} {RECOVERY}\nsupport a.cs {IDENTITY},{RECOVERY},{IDENTITY} reason",
+            f"lists {IDENTITY} more than once")
+
     def test_unknown_entry_and_module_are_rejected(self):
         self.assert_rejected(f"run {MODULE} {IDENTITY}\nskip {MODULE} {RECOVERY}", "unknown entry type")
         self.assert_rejected(f"run Other.Tests {IDENTITY}", "unknown module")
@@ -214,7 +226,15 @@ class ResultTests(unittest.TestCase):
     def test_passing_result_is_accepted(self):
         counts, errors = self.check(self.passing())
         self.assertEqual([], errors)
-        self.assertEqual({IDENTITY: 2, RECOVERY: 1}, counts)
+        self.assertEqual({IDENTITY: (2, 2), RECOVERY: (1, 1)}, counts)
+
+    def test_counts_report_passed_and_total_tests_per_class(self):
+        for result, attribute in (("Fail", "failed"), ("Skip", "skipped"), ("NotRun", "not-run")):
+            with self.subTest(result=result):
+                content = result_xml([(IDENTITY, "Pass"), (RECOVERY, "Pass"), (RECOVERY, result)], **{attribute: 1})
+                counts, errors = self.check(content)
+                self.assertEqual({IDENTITY: (1, 1), RECOVERY: (1, 2)}, counts)
+                self.assertTrue(errors)
 
     def test_missing_empty_and_invalid_files_are_rejected(self):
         self.assert_rejected("is missing", "", write=False)

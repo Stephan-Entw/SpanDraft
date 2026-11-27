@@ -161,7 +161,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          [[ $OSTYPE == msys* ]] || { printf 'Expected Git Bash, found OSTYPE=%s\n' "$OSTYPE" >&2; exit 1; }
+          [[ $OSTYPE == msys* || $OSTYPE == cygwin* ]] || { printf 'Expected Git Bash (msys or cygwin), found OSTYPE=%s\n' "$OSTYPE" >&2; exit 1; }
           printf 'Bash %s (%s)\n' "$BASH_VERSION" "$BASH"
           bash tests/SpanDraft.Tooling.Tests/test-agent-verify.sh
       - name: Run native .NET cancellation test (Git Bash)
