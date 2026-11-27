@@ -1836,6 +1836,16 @@ Ein fehlgeschlagener Recovery-Flush wird angezeigt bzw. protokolliert, macht Use
 
 Bei einem synchronen Plattformsignal wie `ShutdownRequested` wird der unmittelbare Shutdown zunächst synchron abgebrochen. Anschließend startet genau ein asynchroner `ApplicationCloseCoordinator`.
 
+Signalzuordnung (Avalonia 12): `ShutdownRequestedEventArgs` unterscheidet User Quit und OS-Ende nicht öffentlich. Ausgewertet wird deshalb das `Window.Closing`, das die Lifetime im selben synchronen Signal für jedes Fenster auslöst:
+
+- nicht programmatisch mit `ApplicationShutdown`: auf macOS User Quit (App-Menü, Cmd+Q, Dock, Apple Event), auf Windows Sitzungsende (`WM_QUERYENDSESSION`, z. B. Abmeldung, siehe §76);
+- nicht programmatisch mit `OSShutdown`: System Shutdown;
+- programmatisch (`TryShutdown`/`Shutdown`, eigenes `Close()`): kein Plattformsignal.
+
+Ein User Quit wird dort reserviert, der weitere Ablauf gepostet und das Fenster-Close abgebrochen. Damit bricht die Lifetime das Plattformsignal synchron ab. Owned Fenster entscheiden bei dieser Befragung nicht selbst und verwerfen nichts.
+
+Vor dem Start prüft der Coordinator alle Workspaces und App-Dialoge. Die globale Quit-Reservation (`QuitInProgress` und Quit-Freeze aller Workspaces) ist von der lokalen Close-Reservation des gerade geschlossenen Workspace getrennt. Die Übergabe zwischen beiden geschieht ohne Freigabelücke.
+
 Solange:
 
 ```text
@@ -1917,6 +1927,31 @@ OS-Shutdown fortsetzen
 Priorität ist Crash-Recoverability.
 
 Da auch normaler User Quit vor der ersten Rückfrage einen Recovery-Checkpoint ausführt, bleibt der Schutz robust, selbst wenn eine Plattform einen Beendigungsfall nur eingeschränkt differenzieren oder der Prozess während der Dialogserie unerwartet beendet wird.
+
+## Plattformgrenzen (Avalonia 12)
+
+Ein OS-Ende wird nie abgebrochen.
+
+- **macOS:** `applicationShouldTerminate` kennt über Avalonia nur Abbruch oder sofortiges Beenden. Nach einem nicht abgebrochenen OS-Ende folgt unmittelbar `exit()`.
+- **Windows:** Die Lifetime schließt die Fenster und beendet die UI-Schleife synchron innerhalb von `WM_QUERYENDSESSION`. Avalonia meldet dort auch die Abmeldung, und zwar als `ApplicationShutdown` statt `OSShutdown`. Jedes nicht programmatische Plattform-Close gilt auf Windows deshalb als Sitzungsende.
+
+Ein Flush ließe sich nur abwarten, indem das OS-Signal abgebrochen wird; auf macOS bräche das Abmeldung bzw. Neustart ab. Der Flush wird daher nur best-effort angestoßen, und zwar für Workspaces ohne eigene laufende Close-, Discard- oder Schreiboperation. Er wird nicht abgewartet und läuft in der Regel nicht mehr.
+
+Garantiert ist:
+
+- keine Dialogserie,
+- keine Verwerfung und kein Retire von Recovery-Slots,
+- bereits publizierte Recovery-Daten bleiben erhalten (atomare Writes).
+
+Für noch nicht publizierte Änderungen gibt es keine Garantie; der Debounce liegt bei 1 s.
+
+Verspätete Fortsetzungen nach dem Schließen der Fenster gilt:
+
+- Laufende atomare Writes und bereits getroffene Entscheidungen (z. B. ein laufender Discard) dürfen enden.
+- Es folgen keine neuen Entscheidungen, keine Ownership-Commits, kein Rollback-Republish und keine Dialoge.
+- Reservationen werden freigegeben.
+
+Nicht automatisiert prüfbar sind echtes macOS-Logout/-Restart/-Shutdown und die Windows-Sitzungsenden. Sie sind über die Close-Klassifikation abgedeckt.
 
 ---
 
@@ -2219,7 +2254,9 @@ Nach DEV-85 gelten:
 - `ShutdownRequested` wird synchron gecancelt und genau ein asynchroner Coordinator gestartet.
 - zweites Quit-Signal während `QuitInProgress` startet keinen zweiten Coordinator.
 - Workspace-Hilfsfenster werden geschlossen.
-- echter OS-Shutdown versucht Recovery zu flushen statt Save-/Discard-Dialogserie.
+- echter OS-Shutdown wird nicht abgebrochen, zeigt keine Save-/Discard-Dialogserie, verwirft keine Recovery und stößt einen Flush nur best-effort an (§76).
+- verspätete Fortsetzungen nach System-Shutdown (Save, Open, Restore, Discard, Settings-Commit) committen nichts und zeigen nichts.
+- Owned Fenster verwerfen bei einer Plattform-Quit-Befragung nichts (z. B. unbestätigte Settings-Änderungen).
 
 ## Packaging / Protocol Activation
 

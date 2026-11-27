@@ -18,6 +18,8 @@ public sealed partial class MainWindowViewModel
 {
     // A close transaction reserved this workspace: it is busy until the transaction commits or rolls back.
     private bool _leaveReserved;
+    // The application quit froze this workspace: nothing new starts until the quit hands it to its close or ends.
+    private bool _quitFrozen;
     private bool _pendingFaultReport;
 
     internal ProjectPathRegistry ProjectPaths => _projectPaths;
@@ -64,13 +66,75 @@ public sealed partial class MainWindowViewModel
     /// Synchronously reserves the workspace for a close: commands, inputs, settings freezes and opens are refused from here
     /// until the transaction commits or releases it. False when it is busy, already reserved or gone.
     /// </summary>
-    internal bool TryReserveLeave()
+    internal bool TryReserveLeave(bool fromQuitFreeze = false)
     {
-        if (_disposed || _leaveReserved || IsWorkspaceBusy) return false;
+        if (_disposed || _leaveReserved || fromQuitFreeze != _quitFrozen || IsOwnWorkspaceBusy) return false;
+        // Handed over from the quit freeze without a gap: the reservation is taken before the freeze ends, and nothing is
+        // notified in between, so no observer ever sees the workspace idle.
         _leaveReserved = true;
+        _quitFrozen = false;
         Session?.SetBusy(true);
         NotifySession();
         return true;
+    }
+
+    // ---- application quit ------------------------------------------------------------------------------------
+
+    /// <summary>The application quit froze this workspace (global reservation); see <see cref="FreezeForQuit"/>.</summary>
+    internal bool IsQuitFrozen => _quitFrozen;
+
+    /// <summary>Something of the workspace's own runs (an operation, a close or leave reservation, an open editor dialog), the quit freeze aside.</summary>
+    internal bool HasOwnWork => IsOwnWorkspaceBusy;
+
+    /// <summary>
+    /// The application quit's global reservation of this workspace: like any running operation it stops commands, inputs,
+    /// session mutations, settings freezes, waiting opens and deferred error dialogs. Released by
+    /// <see cref="ReleaseQuitFreeze"/> or handed to this workspace's close with <see cref="TryReserveLeave"/>.
+    /// </summary>
+    internal void FreezeForQuit()
+    {
+        if (_disposed || _quitFrozen) return;
+        _quitFrozen = true;
+        Session?.SetBusy(true);
+        NotifySession();
+    }
+
+    /// <summary>Ends the quit freeze; recovery errors deferred meanwhile are reported now, once.</summary>
+    internal void ReleaseQuitFreeze()
+    {
+        if (!_quitFrozen) return;
+        _quitFrozen = false;
+        if (_disposed) return;
+        Session?.SetBusy(IsBusy);
+        NotifySession();
+        ReportDeferredRecovery();
+    }
+
+    /// <summary>
+    /// The quit checkpoint of this workspace (§74). Either outcome supersedes a recovery error deferred before it: after
+    /// success the current state is published, after a failure this failure is the one to report. The failure is returned
+    /// for the coordinator to show once; it never faults the workspace.
+    /// </summary>
+    internal async Task<Exception?> CheckpointRecoveryAsync()
+    {
+        if (_disposed || _recovery is null) return null;
+        try { await _recovery.CheckpointAsync(Session, CurrentDraft); }
+        catch (Exception e) when (RecoveryErrors.IsStorage(e) || IsFileError(e))
+        {
+            _pendingRecoveryError = null;
+            return e;
+        }
+        _pendingRecoveryError = null;
+        return null;
+    }
+
+    /// <summary>Shows a failed quit checkpoint with the normal recovery error; nothing once the workspace is gone.</summary>
+    internal Task ReportCheckpointFailureAsync(Exception error) => ShowErrorAsync(Strings.RecoveryError, error);
+
+    private async void ReportDeferredRecovery()
+    {
+        try { await ReportPendingRecoveryAsync(); }
+        catch (Exception e) { await ShowErrorAsync(Strings.RecoveryError, e); }
     }
 
     /// <summary>The decision of a close; a failed save is shown and counts as Cancel. Nothing visible changes.</summary>
@@ -116,9 +180,11 @@ public sealed partial class MainWindowViewModel
     /// Ends the reservation (after a commit to the start page or a rollback). The returned task reports what was deferred
     /// meanwhile (recovery errors, an entered fault); callers await it only after the workspace is fully released.
     /// </summary>
-    internal Task ReleaseLeaveReservation()
+    internal Task ReleaseLeaveReservation(bool backToQuitFreeze = false)
     {
         if (!_leaveReserved) return Task.CompletedTask;
+        // Back to the quit freeze without a gap: the freeze is in place before the reservation ends.
+        if (backToQuitFreeze && !_disposed) _quitFrozen = true;
         _leaveReserved = false;
         Session?.SetBusy(IsBusy);
         NotifySession();
@@ -189,6 +255,8 @@ public sealed partial class MainWindowViewModel
 
     private async Task ReportPendingRecoveryAsync()
     {
+        // Kept while anything runs (an operation, a close, the quit freeze), nothing once the workspace is gone.
+        if (_disposed || IsWorkspaceBusy) return;
         if (_pendingRecoveryError is { } recoveryError)
         {
             _pendingRecoveryError = null;

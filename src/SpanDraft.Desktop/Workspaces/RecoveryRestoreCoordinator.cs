@@ -19,13 +19,24 @@ internal sealed class RecoveryRestoreCoordinator(RecoveryCatalog catalog, Worksp
     {
         var claim = await catalog.TryBeginClaimAsync(candidateId);
         if (claim is null) return false;
+        // The application shut down meanwhile (system shutdown): nothing is restored, the candidate stays undecided.
+        if (manager.IsShuttingDown)
+        {
+            await claim.AbortAsync();
+            return false;
+        }
         WorkspaceWindowHandle? created = null;
         try
         {
             // The last undecided candidate may take over the Recovery Center's own start workspace.
             var (target, isNew) = await manager.AcquireRestoreTargetAsync(source, lastUndecided: !catalog.HasUndecided);
             if (isNew) created = target;
-            var model = target.Model!;
+            // The target went away meanwhile (system shutdown): the candidate stays undecided and its slot untouched.
+            if (target.IsFinalized || target.Model is not { } model || model.IsDisposed)
+            {
+                await claim.AbortAsync();
+                return false;
+            }
             model.LeaveRecoveryCenter();
             var candidate = claim.Candidate;
             if (candidate.Kind == RecoverySlotKind.Project)

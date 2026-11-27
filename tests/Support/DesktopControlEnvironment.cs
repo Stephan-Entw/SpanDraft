@@ -98,6 +98,9 @@ public sealed class DesktopControlEnvironment : IDisposable
 
     private static void Bind<T>(T service) => Bind(typeof(T), service!);
 
+    /// <summary>Registers a platform service in this environment's locator scope (e.g. platform lifetime events).</summary>
+    public static void BindService<T>(T service) => Bind(service);
+
     private static void Bind(Type serviceType, object service)
     {
         var registration = GetRegistration(serviceType);

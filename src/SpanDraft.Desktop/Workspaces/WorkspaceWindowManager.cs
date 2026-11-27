@@ -21,8 +21,6 @@ internal sealed class WorkspaceWindowManager
     private WorkspaceWindowHandle? _initial, _active;
     private bool _activationEnabled, _initialCreated;
     private RecoveryRestoreCoordinator? _restore;
-    // The close transaction that put the host into the temporary quit state; only it may cancel or commit it.
-    private WorkspaceCloseTransaction? _quitOwner;
 
     internal WorkspaceWindowManager(DesktopApplicationHost host)
     {
@@ -36,8 +34,23 @@ internal sealed class WorkspaceWindowManager
     /// <summary>Workspaces reserving the single start slot (not necessarily showing the start page).</summary>
     public int StartSlotCount => _handles.Count(static h => h.HoldsStartSlot);
 
-    /// <summary>A workspace that can take launch requests: registered, model bound and not closing or about to close.</summary>
-    private bool IsReady(WorkspaceWindowHandle handle) => handle.CanRoute && handle.Model is not null && _handles.Contains(handle);
+    /// <summary>
+    /// A workspace that can take launch requests: registered, model bound, not closing or about to close, and no application
+    /// quit runs (it holds every workspace, also for the <see cref="Active"/> fallback).
+    /// </summary>
+    private bool IsReady(WorkspaceWindowHandle handle) =>
+        handle.CanRoute && handle.Model is not null && _handles.Contains(handle) && !_host.Quit.IsUserQuitRunning;
+
+    /// <summary>
+    /// The order of an application quit (§75): the active workspace first, then the others in registration order. Read from
+    /// the registry itself, since <see cref="Active"/> no longer answers once the quit holds the workspaces.
+    /// </summary>
+    internal IReadOnlyList<WorkspaceWindowHandle> QuitOrder()
+    {
+        var open = _handles.Where(static h => !h.IsClosing).ToList();
+        if (_active is { } active && open.Remove(active)) open.Insert(0, active);
+        return open;
+    }
 
     /// <summary>
     /// True when no other workspace survives, i.e. closing this one ends the application. Workspaces whose close is
@@ -62,6 +75,7 @@ internal sealed class WorkspaceWindowManager
     private WorkspaceWindowHandle Create(WorkspaceCreationReason reason, bool isInitial)
     {
         if (_host.State == DesktopApplicationState.ShuttingDown) throw new InvalidOperationException("The application is shutting down.");
+        if (_host.Quit.IsUserQuitRunning) throw new InvalidOperationException("The application is quitting.");
         if (reason == WorkspaceCreationReason.None && !isInitial && StartSlotCount >= 1)
             throw new InvalidOperationException("At most one workspace may hold the start slot.");
         var handle = new WorkspaceWindowHandle(WindowId.Create(), reason, isInitial);
@@ -95,9 +109,12 @@ internal sealed class WorkspaceWindowManager
         handle.CloseOwnedWindows();
         handle.Model?.ReleaseReport();
         handle.Model?.Dispose();
-        // Only now is the ownership gone: opens that waited for this close decide anew.
+        // Only now is the ownership gone: opens that waited for this close decide anew. A close that had not committed yet
+        // (the platform closed the window in a system shutdown) is orphaned by this.
         handle.CloseTransaction?.FinishClosed();
-        if (Deregister(handle))
+        bool last = Deregister(handle);
+        handle.CompleteFinalized();
+        if (last)
         {
             DisableActivation();
             _host.BeginShutdown();
@@ -137,7 +154,7 @@ internal sealed class WorkspaceWindowManager
     /// </summary>
     internal async Task<WorkspaceWindowHandle?> RequestNewProjectAsync(WorkspaceWindowHandle source)
     {
-        if (!_handles.Contains(source) || source.Model is not { } model) return null;
+        if (!_handles.Contains(source) || source.Model is not { } model || !CanCreate) return null;
         var startOnly = source.Kind == WorkspaceKind.StartOnly ? source
             : _handles.FirstOrDefault(h => h.Kind == WorkspaceKind.StartOnly && h.Model is { Mode: MainViewMode.Start });
         if (startOnly?.Model is { } startModel)
@@ -163,6 +180,12 @@ internal sealed class WorkspaceWindowManager
         CloseInternal(handle);
         return null;
     }
+
+    /// <summary>The shutdown is committed or the system ends the session: no workspace is created or changed any more.</summary>
+    internal bool IsShuttingDown => _host.State == DesktopApplicationState.ShuttingDown;
+
+    /// <summary>No workspace is created while the application quits or shuts down.</summary>
+    private bool CanCreate => _host.State != DesktopApplicationState.ShuttingDown && !_host.Quit.IsUserQuitRunning;
 
     /// <summary>
     /// Closes a workspace without its close transaction: only one that is provably empty and safe (no project, no draft, no
@@ -191,30 +214,38 @@ internal sealed class WorkspaceWindowManager
 
     /// <summary>
     /// Closes a workspace through its <see cref="WorkspaceCloseTransaction"/>. The reservation is taken synchronously before
-    /// the first await. A window close of the last surviving workspace also arbitrates the application quit: waiting open
-    /// requests are asked about before the decision, and again atomically with the shutdown commit; whether it is the last
-    /// one is decided anew after every await. Close Project decides at the commit boundary between start page and close (§14).
+    /// the first await. A window close of the last surviving workspace also arbitrates the application quit with the
+    /// <see cref="ApplicationCloseCoordinator"/>: waiting open requests are asked about before the decision, and again
+    /// atomically with the shutdown commit; whether it is the last one is decided anew after every await. Close Project decides
+    /// at the commit boundary between start page and close (§14). While an application quit runs only that quit closes
+    /// workspaces (<paramref name="quit"/>); it hands its freeze of the workspace to the close and asked about the requests
+    /// already. A workspace cleaned up meanwhile by a system shutdown (orphaned transaction) decides nothing any more.
     /// </summary>
-    internal async Task<WorkspaceCloseOutcome> CloseAsync(WorkspaceWindowHandle handle, WorkspaceCloseReason reason)
+    internal async Task<WorkspaceCloseOutcome> CloseAsync(WorkspaceWindowHandle handle, WorkspaceCloseReason reason, QuitRun? quit = null)
     {
+        var coordinator = _host.Quit;
+        if (coordinator.IsSystemShutdown || !ReferenceEquals(coordinator.UserQuit, quit)) return WorkspaceCloseOutcome.Cancelled;
         if (!_handles.Contains(handle) || handle.Model is not { } model || handle.IsClosing) return WorkspaceCloseOutcome.Cancelled;
         if (!handle.Window.CanBeginClose) return WorkspaceCloseOutcome.Cancelled;
-        if (WorkspaceCloseTransaction.TryBegin(model, handle, recordRecent: reason == WorkspaceCloseReason.Window) is not { } transaction)
+        if (WorkspaceCloseTransaction.TryBegin(model, handle, recordRecent: reason == WorkspaceCloseReason.Window,
+                fromQuitFreeze: quit is not null) is not { } transaction)
             return WorkspaceCloseOutcome.Cancelled;
-        var confirmed = new HashSet<LaunchRequest>(ReferenceEqualityComparer.Instance);
+        object owner = (object?)quit ?? transaction;
+        var confirmed = quit?.Confirmed ?? new HashSet<LaunchRequest>(ReferenceEqualityComparer.Instance);
         try
         {
-            if (reason == WorkspaceCloseReason.Window && !await ConfirmQuitAsync(transaction, handle, confirmed))
-                return await AbortAsync(transaction);
-            if (!await transaction.PrepareAsync()) return await AbortAsync(transaction);
-            // ---- commit boundary: only the last-window arbitration can still abort, and it rolls back.
+            if (reason == WorkspaceCloseReason.Window && quit is null
+                && !await coordinator.ConfirmLastWindowAsync(transaction, handle, confirmed))
+                return await AbortAsync(transaction, quit);
+            if (!await transaction.PrepareAsync()) return await AbortAsync(transaction, quit);
+            // ---- commit boundary: only the shutdown arbitration can still abort, and it rolls back.
             bool closeWindow = reason == WorkspaceCloseReason.Window
                 || _handles.Any(h => !ReferenceEquals(h, handle) && h.HoldsStartSlot);
-            if (closeWindow && !await CommitQuitAsync(transaction, handle, confirmed)) return await AbortAsync(transaction);
+            if (closeWindow && !await coordinator.CommitShutdownAsync(owner, handle, confirmed)) return await AbortAsync(transaction, quit);
+            if (transaction.IsOrphaned) return WorkspaceCloseOutcome.Cancelled;
             var report = transaction.Commit(closeWindow);
             if (closeWindow)
             {
-                handle.CloseTransaction = transaction;
                 handle.Window.CloseCommitted();
                 return WorkspaceCloseOutcome.Closed;
             }
@@ -224,64 +255,23 @@ internal sealed class WorkspaceWindowManager
         }
         catch
         {
-            await AbortAsync(transaction);
+            await AbortAsync(transaction, quit);
             throw;
         }
     }
 
-    private async Task<WorkspaceCloseOutcome> AbortAsync(WorkspaceCloseTransaction transaction)
+    private async Task<WorkspaceCloseOutcome> AbortAsync(WorkspaceCloseTransaction transaction, QuitRun? quit)
     {
-        await transaction.AbortAsync(() => EndQuit(transaction));
+        // An orphaned transaction is finished already: nothing is rolled back, released twice or reported.
+        if (transaction.IsOrphaned) return WorkspaceCloseOutcome.Cancelled;
+        await transaction.AbortAsync(() =>
+        {
+            if (quit is not null) _host.Quit.EndUserQuit(quit);
+            else _host.Quit.EndWindowQuit(transaction);
+        });
         // Requests that waited while the close was pending are evaluated again.
         PostPump();
         return WorkspaceCloseOutcome.Cancelled;
-    }
-
-    /// <summary>Before the decision: as the last workspace, the waiting open requests are asked about. False keeps one.</summary>
-    private async Task<bool> ConfirmQuitAsync(WorkspaceCloseTransaction transaction, WorkspaceWindowHandle handle, HashSet<LaunchRequest> confirmed)
-    {
-        while (true)
-        {
-            if (!IsLast(handle) || !BeginQuit(transaction)) { EndQuit(transaction); return true; }
-            if (!await handle.Window.ConfirmDiscardPendingRequestsAsync(confirmed)) return false;
-            // The set of workspaces may have changed meanwhile (e.g. a restore): decide again.
-            if (IsLast(handle)) return true;
-        }
-    }
-
-    /// <summary>
-    /// At the commit boundary: if this is (still or now) the last workspace, the shutdown is committed atomically against new
-    /// activations; a request that arrived meanwhile is asked about first. False when the user keeps one.
-    /// </summary>
-    private async Task<bool> CommitQuitAsync(WorkspaceCloseTransaction transaction, WorkspaceWindowHandle handle, HashSet<LaunchRequest> confirmed)
-    {
-        while (true)
-        {
-            if (!IsLast(handle)) { EndQuit(transaction); return true; }
-            // Another transaction owns a quit only once it committed the shutdown: nothing is left to decide here.
-            if (!BeginQuit(transaction)) return true;
-            if (_host.TryCommitShutdown(confirmed)) return true;
-            if (!await handle.Window.ConfirmDiscardPendingRequestsAsync(confirmed)) return false;
-        }
-    }
-
-    /// <summary>Takes the quit for <paramref name="transaction"/>; false if another transaction owns it.</summary>
-    private bool BeginQuit(WorkspaceCloseTransaction transaction)
-    {
-        if (ReferenceEquals(_quitOwner, transaction)) return true;
-        if (_quitOwner is not null) return false;
-        _host.BeginQuit();
-        if (_host.State != DesktopApplicationState.QuitInProgress) return _host.State != DesktopApplicationState.ShuttingDown;
-        _quitOwner = transaction;
-        return true;
-    }
-
-    /// <summary>Only the owner of the quit cancels it; other transactions leave it alone.</summary>
-    private void EndQuit(WorkspaceCloseTransaction transaction)
-    {
-        if (!ReferenceEquals(_quitOwner, transaction)) return;
-        _quitOwner = null;
-        _host.CancelQuit();
     }
 
     private void OnSetupCancelled(WorkspaceWindowHandle handle)
@@ -355,7 +345,7 @@ internal sealed class WorkspaceWindowManager
     /// </summary>
     internal async Task<WorkspaceWindowHandle?> ShowRecoveryCenterAsync(WorkspaceWindowHandle? source, Guid? focus)
     {
-        if (_host.State == DesktopApplicationState.ShuttingDown) return null;
+        if (!CanCreate) return null;
         var existing = _handles.FirstOrDefault(h => IsReady(h) && h.Model!.Mode == MainViewMode.RecoveryCenter);
         if (existing is not null)
         {
@@ -447,6 +437,8 @@ internal sealed class WorkspaceWindowManager
 
     private Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
     {
+        // While the application quits no workspace takes anything: the request waits for the quit's end or its commit.
+        if (_host.Quit.IsUserQuitRunning) return Task.FromResult(false);
         // A path owned by a closing workspace is not decided here: the open arbitration waits for that close and decides
         // anew, so requests for other paths are never held back by it.
         // Open requests prefer the start workspace; everything else the active one.
@@ -459,7 +451,7 @@ internal sealed class WorkspaceWindowManager
     private void SurfaceForRetry()
     {
         // While the host still starts, the initial workspace owns the (rare) blocking startup dialog.
-        var target = _host.State == DesktopApplicationState.Starting ? _initial ?? Active : Active;
+        var target = _host.State == DesktopApplicationState.Starting ? _initial ?? Active : _host.Quit.QuitTarget ?? Active;
         target?.Window.Surface(target.Window.RetryTarget);
     }
 }

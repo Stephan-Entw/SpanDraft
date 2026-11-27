@@ -90,7 +90,7 @@ public sealed partial class MainWindowViewModel
         finally
         {
             _libraryBusy = false;
-            Session?.SetBusy(false);
+            Session?.SetBusy(IsBusy);
             NotifySession();
             if (_pendingRecoveryError is { } error)
             { _pendingRecoveryError = null; await ReportRecoveryErrorAsync(error); }

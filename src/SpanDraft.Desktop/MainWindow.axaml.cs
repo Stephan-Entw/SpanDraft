@@ -27,10 +27,7 @@ public partial class MainWindow : Window
     // The workspace's close is running or committed; the close itself belongs to its WorkspaceCloseTransaction.
     private bool IsWorkspaceClosing => !_handle.CanRoute;
     private bool _closeApproved;
-    private AboutWindow? _aboutWindow;
-    private DocumentWindow? _releaseNotesWindow;
     private DiagnosticsWindow? _diagnosticsWindow;
-    private SettingsWindow? _settingsWindow;
     private bool _initializing = true;
     private readonly TaskCompletionSource _initialization = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -63,7 +60,9 @@ public partial class MainWindow : Window
         SaveMenuItem.InputGesture = new(Key.S, _primary);
         SaveAsMenuItem.InputGesture = new(Key.S, _primary | KeyModifiers.Shift);
         ReportMenuItem.InputGesture = new(Key.P, _primary);
-        var quitCommand = new ActionCommand(Close, () => !_initializing && !_model.IsWorkspaceBusy && !IsWorkspaceClosing);
+        // Quit is the application quit (§74), not the close of this window: one coordinator for every quit source.
+        var quitCommand = new ActionCommand(() => host.Quit.RequestQuit(),
+            () => !_initializing && !_model.IsWorkspaceBusy && !IsWorkspaceClosing);
         QuitMenuItem.Command = quitCommand;
         QuitMenuItem.InputGesture = new(Key.Q, _primary);
         UndoMenuItem.InputGesture = new(Key.Z, _primary);
@@ -104,7 +103,7 @@ public partial class MainWindow : Window
         {
             try
             {
-                _dialogs = new ProjectDialogs(this);
+                _dialogs = new ProjectDialogs(this, () => host.Quit.IsSystemShutdown);
                 _frameProbe = new(this, WorkspaceContent);
                 _performance = new(_frameProbe);
                 // The shared services and the recovery catalog were initialized by the bootstrap; this window only adapts them.
@@ -199,10 +198,16 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Window part of the close preflight: initialized and no dialog open that cannot be interrupted safely (settings,
-    /// about, release notes). Busy operations and native pickers are refused by the view model's reservation.
+    /// Window part of an ordinary close's preflight: initialized and no application dialog open over it (Settings, About,
+    /// What's new). Busy operations and native pickers are refused by the view model's reservation.
     /// </summary>
-    internal bool CanBeginClose => !_initializing && _settingsWindow is null && _aboutWindow is null && _releaseNotesWindow is null;
+    internal bool CanBeginClose => !_initializing && !_host.AppDialogs.IsOwnedBy(this);
+
+    /// <summary>
+    /// Window part of the application quit's preflight: initialized. Its application dialogs are the quit's business: it
+    /// closes those that can be closed safely and refuses to start because of the others.
+    /// </summary>
+    internal bool IsReadyForQuit => !_initializing;
 
     internal async Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
     {
@@ -226,16 +231,18 @@ public partial class MainWindow : Window
         return true;
     }
 
+    // One Settings dialog for the application (§77): an open one is activated, whichever workspace owns it.
     private async void ShowSettings(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || _model.IsWorkspaceBusy || IsWorkspaceClosing || _settingsWindow is not null) return;
-        var dialog = new SettingsWindow(new(_model.Settings, _model.ApplySettingsAsync)) { Icon = Icon };
-        _settingsWindow = dialog;
+        if (_initializing || _model.IsWorkspaceBusy || IsWorkspaceClosing || _host.AppDialogs.Activate(AppDialogKind.Settings)) return;
         _model.SetSettingsDialogOpen(true);
-        try { await dialog.ShowDialog(this); }
+        try
+        {
+            await _host.AppDialogs.ShowAsync(AppDialogKind.Settings, this, () =>
+                new SettingsWindow(new(_model.Settings, _model.ApplySettingsAsync), () => _host.Quit.IsSystemShutdown) { Icon = Icon });
+        }
         finally
         {
-            _settingsWindow = null;
             // Leave the protection in place through activation and deferred focus events.
             Dispatcher.UIThread.Post(() => _model.SetSettingsDialogOpen(false), DispatcherPriority.Background);
         }
@@ -255,31 +262,27 @@ public partial class MainWindow : Window
 
     private async void ShowWhatsNew(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || IsWorkspaceClosing || _releaseNotesWindow is not null) return;
+        if (_initializing || IsWorkspaceClosing || _host.AppDialogs.Activate(AppDialogKind.WhatsNew)) return;
         try
         {
-            _releaseNotesWindow = new DocumentWindow(Strings.WhatsNew, ApplicationDocuments.ReadReleaseNotes()) { Icon = Icon };
-            await _releaseNotesWindow.ShowDialog(this);
+            await _host.AppDialogs.ShowAsync(AppDialogKind.WhatsNew, this,
+                () => new DocumentWindow(Strings.WhatsNew, ApplicationDocuments.ReadReleaseNotes()) { Icon = Icon });
         }
         catch (Exception)
         {
             await _dialogs.ShowErrorAsync(Strings.WhatsNewOpenError);
         }
-        finally { _releaseNotesWindow = null; }
     }
 
     private async void ShowAbout(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || _model.IsWorkspaceBusy || IsWorkspaceClosing || _aboutWindow is not null || _settingsWindow is not null) return;
-        var dialog = new AboutWindow { Icon = Icon };
-        _aboutWindow = dialog;
-        try { await dialog.ShowDialog(this); }
-        finally { _aboutWindow = null; }
+        if (_initializing || _model.IsWorkspaceBusy || IsWorkspaceClosing || _host.AppDialogs.Activate(AppDialogKind.About)) return;
+        await _host.AppDialogs.ShowAsync(AppDialogKind.About, this, () => new AboutWindow { Icon = Icon });
     }
 
     private void ProjectKeyDown(object? sender, KeyEventArgs e)
     {
-        if (_initializing || _settingsWindow is not null) return;
+        if (_initializing || _host.AppDialogs.IsOwnedBy(this)) return;
         bool historyKey = e.Key == Key.Z && (e.KeyModifiers == _primary || e.KeyModifiers == (_primary | KeyModifiers.Shift))
             || e.Key == Key.Y && e.KeyModifiers == KeyModifiers.Control && OperatingSystem.IsWindows();
         if (historyKey && HasEditableTextFocus()) return;
@@ -342,6 +345,15 @@ public partial class MainWindow : Window
     private async void WindowClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_closeApproved) return;
+        // A platform shutdown asks every window synchronously: a user quit is reserved and posted, and cancelling this close
+        // cancels the platform's quit; a system shutdown lets the platform close the window without any question.
+        switch (_host.Quit.OnPlatformClosing(e.CloseReason, e.IsProgrammatic))
+        {
+            case PlatformClose.SystemShutdown: return;
+            case PlatformClose.UserQuit: e.Cancel = true; return;
+        }
+        // Once the shutdown is committed or the system ends the session, nothing is decided for a window any more.
+        if (_host.Quit.IsSystemShutdown) return;
         e.Cancel = true;
         // The close of this workspace is its WorkspaceCloseTransaction; the reservation is taken before the first await.
         await _host.Workspaces.CloseAsync(_handle, WorkspaceCloseReason.Window);

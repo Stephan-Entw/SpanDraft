@@ -589,4 +589,74 @@ public sealed class WorkspaceRecoveryContextTests
         Assert.Equal(republishFails ? RecoveryFault.Project : RecoveryFault.None, f.Context.Fault);
         if (!republishFails) Assert.Equal([RecoverySlot.Project(id)], f.Storage.Slots());
     }
+
+    // ---- quit checkpoint (§74) --------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task TheCheckpointPublishesAPendingProjectChangeAtOnceInItsOneSlot()
+    {
+        var f = new Fixture(); var session = Dirty(); f.Context.ProjectChanged(session);
+        Assert.Empty(f.Storage.Slots());   // the debounce is still waiting
+        await WaitFor(f.Context.CheckpointAsync(session, draft: null));
+        Assert.Equal(RecoverySlot.Project(f.Context.ProjectRecoveryId!.Value), Assert.Single(f.Storage.Slots()));
+        Assert.True(session.CurrentRevision.State.ContentEquals((await f.Context.ReadAsync())!.State));
+        // The superseded debounce never writes an older state afterwards.
+        f.Delay.ReleaseAll(); await WaitFor(f.Context.DrainAsync());
+        Assert.Single(f.Storage.Writes);
+    }
+
+    [Fact]
+    public async Task TheCheckpointPublishesTheConfirmedCreateDraftInItsOwnSlot()
+    {
+        var f = new Fixture(); var draft = new ProjectSetupDraft { CalculationTitle = "Quit" }; f.Context.SetupDraftChanged(draft);
+        await WaitFor(f.Context.CheckpointAsync(null, draft));
+        Assert.Equal(RecoverySlot.Setup(f.Context.SetupRecoveryId!.Value), Assert.Single(f.Storage.Slots()));
+        Assert.Equal("Quit", (await f.Context.ReadSetupAsync())!.Draft.CalculationTitle);
+    }
+
+    [Fact]
+    public async Task TheCheckpointCreatesNoSlotForCleanOrEmptyWorkAndNoDraftSlotOverAnUnsavedProject()
+    {
+        // Start page, a draft without confirmed values, a clean project: nothing to publish.
+        var empty = new Fixture();
+        await WaitFor(empty.Context.CheckpointAsync(null, null));
+        await WaitFor(empty.Context.CheckpointAsync(null, new ProjectSetupDraft()));
+        await WaitFor(empty.Context.CheckpointAsync(ProjectSession.Open(State(), TestPath("clean.spandraft")), null));
+        Assert.Empty(empty.Storage.Slots()); Assert.Equal(WorkspaceRecoveryState.None, empty.Context.State);
+
+        // New over unsaved work (transition until Phase 9): only the project slot is published, never a draft slot.
+        var f = new Fixture(); var session = Dirty(); f.Context.ProjectChanged(session);
+        f.Context.SetupDraftChanged(new ProjectSetupDraft { CalculationTitle = "Over" });
+        await WaitFor(f.Context.CheckpointAsync(session, new ProjectSetupDraft { CalculationTitle = "Over" }));
+        Assert.Equal(RecoverySlotKind.Project, Assert.Single(f.Storage.Slots()).Kind); Assert.Null(f.Context.SetupRecoveryId);
+    }
+
+    [Fact]
+    public async Task ACheckpointFailureIsThrownButNeverFaultsAndARetiredContextWritesNothing()
+    {
+        var f = new Fixture(); var session = Dirty(); f.Context.ProjectChanged(session);
+        f.Storage.FailWrite = _ => true;
+        await Assert.ThrowsAsync<IOException>(() => f.Context.CheckpointAsync(session, null));
+        Assert.Equal(RecoveryFault.None, f.Context.Fault); Assert.Equal(0, f.FaultChanges); Assert.Empty(f.Failures);
+        f.Storage.FailWrite = null;
+
+        var retired = new Fixture(); var draft = new ProjectSetupDraft { CalculationTitle = "Closed" };
+        retired.Context.SetupDraftChanged(draft);
+        (await retired.Context.PrepareLeaveAsync(RecoveryLeaveScope.Workspace, false, null, draft)).Commit(retire: true);
+        await WaitFor(retired.Context.CheckpointAsync(null, draft));
+        Assert.Empty(retired.Storage.Writes);
+    }
+
+    [Fact]
+    public async Task TheCheckpointOfAFaultedContextRestoresItsProtection()
+    {
+        var f = new Fixture(); var session = Dirty(); f.Context.ProjectChanged(session); await f.Publish();
+        var leave = await Leave(f, RecoveryLeaveScope.Workspace, discard: true, session);
+        f.Storage.FailWrite = _ => true; Assert.False(await leave.RollbackAsync());
+        Assert.Equal(RecoveryFault.Project, f.Context.Fault);
+        f.Storage.FailWrite = null;
+        await WaitFor(f.Context.CheckpointAsync(session, null));
+        Assert.Equal(RecoveryFault.None, f.Context.Fault);
+        Assert.True(session.CurrentRevision.State.ContentEquals((await f.Context.ReadAsync())!.State));
+    }
 }

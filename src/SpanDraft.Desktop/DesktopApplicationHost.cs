@@ -23,6 +23,8 @@ public sealed class DesktopApplicationHost
         ProjectIdentities = startup?.ProjectIdentities ?? new ProjectIdentityResolver();
         ProjectOpen = new(Files, ProjectIdentities, ProjectPaths);
         Workspaces = new(this);
+        Quit = new(this);
+        AppDialogs = new(() => Quit.IsUserQuitRunning || Quit.IsSystemShutdown || State == DesktopApplicationState.ShuttingDown);
         var settingsStore = startup?.SettingsStore ?? LocalSettingsStore.Local(Files);
         StateStores = startup?.StateStores ?? DesktopStateStores.Isolated(Files);
         Recovery = new(StateStores.Recovery, Files, ProjectIdentities, ProjectPaths);
@@ -35,7 +37,9 @@ public sealed class DesktopApplicationHost
 
     public IProjectFileStore Files { get; }
     /// <summary>A fresh recovery context for one workspace; every workspace owns its own, all share the one storage.</summary>
-    internal WorkspaceRecoveryContext CreateRecoveryContext() => new(StateStores.Recovery);
+    internal WorkspaceRecoveryContext CreateRecoveryContext() => new(StateStores.Recovery, RecoveryDelay);
+    /// <summary>Test seam: the debounce delay of the workspaces' recovery writes (the default debounce when null).</summary>
+    internal Func<TimeSpan, CancellationToken, Task>? RecoveryDelay { get; set; }
     internal IProjectIdentityResolver ProjectIdentities { get; }
     internal ProjectPathRegistry ProjectPaths { get; } = new();
     /// <summary>The one list of undecided recovery candidates of the process; it never holds the host back from being Ready.</summary>
@@ -43,6 +47,10 @@ public sealed class DesktopApplicationHost
     internal ProjectOpenCoordinator ProjectOpen { get; }
     /// <summary>The one workspace/window registry of the process.</summary>
     internal WorkspaceWindowManager Workspaces { get; }
+    /// <summary>The application quit and shutdown commit (§74–§76); the only owner of the quit state transitions.</summary>
+    internal ApplicationCloseCoordinator Quit { get; }
+    /// <summary>The application-wide dialogs (§77): Settings, About, What's new; at most one of each.</summary>
+    internal AppDialogCoordinator AppDialogs { get; }
     /// <summary>The persistence bundle the services were built from; the recovery storage is shared by the catalog and all workspaces.</summary>
     public DesktopStateStores StateStores { get; }
     public SharedServices Services { get; }

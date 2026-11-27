@@ -204,6 +204,23 @@ public sealed class WorkspaceRecoveryContext
 
     public Task DrainAsync() => Task.WhenAll(_project?.DrainAsync() ?? Task.CompletedTask, _setup?.DrainAsync() ?? Task.CompletedTask);
 
+    /// <summary>
+    /// The quit checkpoint (§74): the current confirmed state is published now instead of after its debounce. Only the
+    /// slots the normal rules already own are written: the project slot of a dirty session (also under a transitional New
+    /// over that project, whose draft never gets a slot), the Create draft's own slot, or a faulted protection, which is
+    /// restored like "Save recovery data again". Everything else only drains. A storage failure is thrown and never faults
+    /// the context.
+    /// </summary>
+    public async Task CheckpointAsync(ProjectSession? session, ProjectSetupDraft? draft)
+    {
+        if (_retired) return;
+        if (Fault != RecoveryFault.None) await RestoreProtectionAsync(session, draft);
+        else if (session is { IsDirty: true } && _setup is null)
+            await FlushAsync(session.CurrentRevision.State, session.FilePath ?? session.RecoveryOriginPath);
+        else if (_setup is { } setup && draft is not null) await setup.FlushAsync(draft);
+        else await DrainAsync();
+    }
+
     /// <summary>The current content of the project slot, or null.</summary>
     public Task<RecoverySnapshot?> ReadAsync() => _project?.ReadAsync() ?? Task.FromResult<RecoverySnapshot?>(null);
 

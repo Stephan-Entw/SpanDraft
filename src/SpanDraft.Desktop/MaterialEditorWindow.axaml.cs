@@ -12,7 +12,8 @@ public partial class MaterialEditorWindow : Window
 
     public MaterialEditorWindow() => InitializeComponent();
 
-    public MaterialEditorWindow(MaterialEditorViewModel model) : this()
+    /// <param name="shutdownAuthorized">True once a system shutdown closes every window: nothing may keep this one open.</param>
+    public MaterialEditorWindow(MaterialEditorViewModel model, Func<bool>? shutdownAuthorized = null) : this()
     {
         DataContext = model;
         model.CloseRequested += Finish;
@@ -29,11 +30,19 @@ public partial class MaterialEditorWindow : Window
         Closing += (_, e) =>
         {
             if (_completed) return;
+            // A platform shutdown only asks: the owner workspace decides; the editor is ended when it really closes.
+            if (Workspaces.PlatformCloseRequest.IsPlatform(e) || shutdownAuthorized?.Invoke() == true) return;
             if (model.IsBusy) { e.Cancel = true; return; }
             _completed = true;
             model.CancelCommand.Execute(null);
         };
-        Closed += (_, _) => model.CloseRequested -= Finish;
+        Closed += (_, _) =>
+        {
+            model.CloseRequested -= Finish;
+            if (_completed) return;
+            _completed = true;
+            model.CancelCommand.Execute(null);
+        };
     }
 
     private void Finish(bool accepted)

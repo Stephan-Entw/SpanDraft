@@ -72,11 +72,21 @@ internal sealed class WorkspaceWindowHandle
     /// <summary>False while the workspace is closing or about to; such a workspace must not be chosen for requests.</summary>
     internal bool CanRoute => !IsClosing && !IsCloseRequested;
 
-    /// <summary>The committed close transaction of this workspace; the final cleanup finishes it.</summary>
+    /// <summary>
+    /// The running or committed close transaction of this workspace; the final cleanup finishes it (or orphans it when the
+    /// platform closed the window before the commit).
+    /// </summary>
     internal WorkspaceCloseTransaction? CloseTransaction { get; set; }
 
-    /// <summary>The one final cleanup of this workspace has run.</summary>
+    private readonly TaskCompletionSource _finalized = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>The one final cleanup of this workspace has begun (it runs exactly once).</summary>
     internal bool IsFinalized { get; set; }
+
+    /// <summary>Completes once the final cleanup has run: window closed, owned windows, report, session and ownership released.</summary>
+    internal Task Finalized => _finalized.Task;
+
+    internal void CompleteFinalized() => _finalized.TrySetResult();
 
     /// <summary>
     /// What the workspace currently shows: <see cref="WorkspaceKind.StartOnly"/> means the start page only; a workspace

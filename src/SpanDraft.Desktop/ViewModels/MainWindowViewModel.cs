@@ -113,6 +113,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         StartPage.SetRecoveryCount(RecoveryCount);
     }
 
+    /// <summary>The workspace was closed and cleaned up; late continuations of its operations decide nothing any more.</summary>
+    internal bool IsDisposed => _disposed;
+
     /// <summary>Ends the participation in the shared services; a closed workspace must not stay registered or subscribed.</summary>
     public void Dispose()
     {
@@ -238,6 +241,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
     void ISettingsParticipant.ApplySettings(UserSettings committed)
     {
+        // The coordinator captured its participants before persisting; a workspace disposed meanwhile takes nothing.
+        if (_disposed) return;
         SetPresentation(committed.Presentation);
         Notify(nameof(Settings));
     }
@@ -246,6 +251,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     {
         if (!_settingsSaving) return;
         _settingsSaving = false;
+        // Disposed meanwhile: only its own flag is reset; no session, no dialog.
+        if (_disposed) return;
         ApplyFreeze();
         NotifySession();
         if (_pendingRecoveryError is { } error) { _pendingRecoveryError = null; RecoveryFailed(error); }
@@ -287,13 +294,16 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     internal Func<Task<bool>>? CloseWorkspaceHandler { get; set; }
     /// <summary>The owner's lifecycle view: the workspace is registered, routable and the application is not shutting down.</summary>
     internal Func<bool>? CanRouteHandler { get; set; }
-    public bool IsBusy => IsOperationBusy || _leaveReserved;
+    public bool IsBusy => IsOperationBusy || _leaveReserved || _quitFrozen;
     // The workspace's own operations, without a close reservation.
     private bool IsOperationBusy => _busy || _libraryBusy || _settingsSaving || ReportPreview?.IsBusy == true;
     /// <summary>An operation is running anywhere in this workspace (an open editor alone is not one).</summary>
-    private bool HasRunningOperation => IsBusy || _recoveryCenter?.IsBusy == true || Mode == MainViewMode.ProjectSetup
-        && (Setup.IsBusy || Setup.CurrentStep is MaterialSelectionViewModel { IsActionBusy: true });
-    public bool IsWorkspaceBusy => HasRunningOperation
+    private bool HasRunningOperation => _quitFrozen || HasOwnOperation;
+    // An operation of this workspace or its close reservation, without the application quit's freeze.
+    private bool HasOwnOperation => IsOperationBusy || _leaveReserved || _recoveryCenter?.IsBusy == true
+        || Mode == MainViewMode.ProjectSetup && (Setup.IsBusy || Setup.CurrentStep is MaterialSelectionViewModel { IsActionBusy: true });
+    public bool IsWorkspaceBusy => _quitFrozen || IsOwnWorkspaceBusy;
+    private bool IsOwnWorkspaceBusy => HasOwnOperation
         || Mode == MainViewMode.ProjectSetup && Setup.CurrentStep is MaterialSelectionViewModel { IsEditing: true };
     public MainWorkspaceKind Workspace => Mode == MainViewMode.ReportPreview ? MainWorkspaceKind.ReportPreview
         : Mode == MainViewMode.RecoveryCenter ? MainWorkspaceKind.RecoveryCenter
@@ -456,6 +466,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
             var choice = await DecideLeaveAsync();
             if (choice == LeaveChoice.Cancel) return false;
             if (!await LeaveRecoveryAsync(Session is not null ? RecoveryLeaveScope.Project : null, choice)) return false;
+            // Gone meanwhile (system shutdown): no project is created; the draft's slot stays its crash protection.
+            if (_disposed) return false;
             Editor?.CancelEditorInteraction();
             setup.ConfirmedDraftChanged -= SetupDraftChanged;
             ActivatePathlessSession(ProjectSession.Create(new(document, new(), setup.Info)));
@@ -607,17 +619,20 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     }
 
     /// <summary>The workspace may still take an open: not disposed, no close reserved, routable for its owner.</summary>
-    private bool CanContinueOpen => !_disposed && !_leaveReserved && (CanRouteHandler?.Invoke() ?? true);
+    private bool CanContinueOpen => !_disposed && !_leaveReserved && !_quitFrozen && (CanRouteHandler?.Invoke() ?? true);
 
     private async Task<bool> ActivateOpenedProjectAsync(ProjectState state, string path)
     {
         var choice = await DecideLeaveAsync();
-        if (choice == LeaveChoice.Cancel) return false;
+        // Gone meanwhile (system shutdown): no recovery transition and no session; the open releases its reservation.
+        if (choice == LeaveChoice.Cancel || _disposed) return false;
         var editor = CreateEditor(ProjectSession.Open(state, path));
         // What this workspace leaves: its project, or a Create draft that is given up for the opened file.
         bool draft = Session is null && Mode == MainViewMode.ProjectSetup && Setup.Mode == ProjectSetupMode.Create;
         var scope = Session is not null ? RecoveryLeaveScope.Project : draft ? RecoveryLeaveScope.Draft : (RecoveryLeaveScope?)null;
         if (!await LeaveRecoveryAsync(scope, choice)) return false;
+        // The leave was the user's decision and stays; a workspace that is gone takes no session and no path ownership.
+        if (_disposed) return false;
         Editor?.CancelEditorInteraction();
         if (draft) Setup.ConfirmedDraftChanged -= SetupDraftChanged;
         AttachEditor(editor);
@@ -626,6 +641,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
     private async Task<bool> PresentOpenResultAsync(ProjectOpenResult result, string path, bool fromRecent)
     {
+        // A workspace that is gone shows no outcome and records nothing.
+        if (_disposed) return false;
         if (result.Status == ProjectOpenStatus.Missing)
         {
             if (!fromRecent) throw new IOException(Strings.ProjectFileMissing);
@@ -726,22 +743,34 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
                     try { await _recovery.FlushAsync(revision.State, path); }
                     catch (Exception e) when (faulted && IsFileError(e)) { }
                 }
+                // Gone meanwhile (system shutdown): no new file write is started; the recovery is put back to the state
+                // before this save, exactly as after a failed write, and stays the protection.
+                if (_disposed)
+                {
+                    if (recoveryStarted) await RestoreRecoveryAfterUnsavedAsync();
+                    return false;
+                }
                 await _files.WriteAtomicAsync(path, bytes);
             }
             catch
             {
-                if (recoveryStarted)
-                {
-                    try
-                    {
-                        if (session.IsDirty) await _recovery!.FlushAsync(revision.State, previousPath ?? session.RecoveryOriginPath);
-                        else await _recovery!.DeleteAsync();
-                    }
-                    catch (Exception e) when (IsFileError(e)) { _recovery!.ScheduleProject(session); }
-                }
+                if (recoveryStarted) await RestoreRecoveryAfterUnsavedAsync();
                 throw;
             }
 
+            async Task RestoreRecoveryAfterUnsavedAsync()
+            {
+                try
+                {
+                    if (session.IsDirty) await _recovery!.FlushAsync(revision.State, previousPath ?? session.RecoveryOriginPath);
+                    else await _recovery!.DeleteAsync();
+                }
+                catch (Exception e) when (IsFileError(e)) { _recovery!.ScheduleProject(session); }
+            }
+
+            // The atomic write was the user's decision and is complete. A workspace that is gone commits no ownership and
+            // gives up nothing: its published recovery slot stays, the save reservation is released below.
+            if (_disposed) return false;
             if (reservation is null) save.MarkSaved();
             else if (!_projectPaths.TryCommitSave(reservation, save))
                 throw new InvalidOperationException("The save reservation lost ownership after the write.");
@@ -842,7 +871,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
             {
                 _busy = false;
                 _fileOperationCompletion = null;
-                Session?.SetBusy(false);
+                // Computed, never released wholesale: a quit freeze or close reservation keeps the session locked.
+                Session?.SetBusy(IsBusy);
                 NotifySession();
                 await ReportPendingRecoveryAsync();
             }
@@ -852,7 +882,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
     private static bool IsFileError(Exception e) => e is IOException or UnauthorizedAccessException
         or ProjectFormatException or JsonException or ArgumentException or NotSupportedException or System.Security.SecurityException;
-    private Task ShowErrorAsync(string prefix, Exception e) => _dialogs?.ShowErrorAsync(prefix + "\n" + e.Message) ?? Task.CompletedTask;
+    // A disposed workspace has no window left to own a dialog: late continuations show nothing.
+    private Task ShowErrorAsync(string prefix, Exception e) =>
+        _disposed ? Task.CompletedTask : _dialogs?.ShowErrorAsync(prefix + "\n" + e.Message) ?? Task.CompletedTask;
     private async void RecoveryFailed(Exception error)
     {
         if (IsBusy) { _pendingRecoveryError = error; return; }

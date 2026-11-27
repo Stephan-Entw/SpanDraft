@@ -10,8 +10,11 @@ using SpanDraft.Desktop.ViewModels;
 namespace SpanDraft.Desktop;
 
 /// <summary>Only this adapter knows native pickers and owned modal windows.</summary>
-internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
+/// <param name="shutdownAuthorized">True once a system shutdown closes every window (owned editors must not keep theirs open).</param>
+internal sealed class ProjectDialogs(Window owner, Func<bool>? shutdownAuthorized) : IProjectDialogs
 {
+    public ProjectDialogs(Window owner) : this(owner, null) { }
+
     private static FilePickerFileType ProjectType => new(Strings.ProjectFileFilter) { Patterns = ["*.spandraft"] };
 
     public async Task<string?> PickOpenPathAsync()
@@ -59,7 +62,7 @@ internal sealed class ProjectDialogs(Window owner) : IProjectDialogs
         string.Format(CultureInfo.CurrentUICulture, Strings.DeleteSectionQuestion, name), DialogChoices.Delete());
 
     public Task ShowMaterialEditorAsync(MaterialEditorViewModel editor) =>
-        new MaterialEditorWindow(editor) { Icon = owner.Icon }.ShowDialog(owner);
+        new MaterialEditorWindow(editor, shutdownAuthorized) { Icon = owner.Icon }.ShowDialog(owner);
 
     public Task<MaterialNameConflictDecision> ResolveMaterialNameConflictAsync(string displayName) => ShowAsync(
         string.Format(CultureInfo.CurrentUICulture, Strings.MaterialNameConflictQuestion, displayName), DialogChoices.MaterialNameConflict());
