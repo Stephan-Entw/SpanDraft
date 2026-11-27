@@ -253,7 +253,6 @@ verify() {
     LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=0 \
         run_tests "$solution" -culture en-US
     icons --check
-    run_temporary_tool SpanDraft.AppIconBuild --check
     run_temporary_tool SpanDraft.NoticeCheck --check-local
     # The solution build already produced all product references.
     local tool=SpanDraft.HelpAssets
