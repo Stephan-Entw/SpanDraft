@@ -352,6 +352,20 @@ A Tooling test may remain part of normal CI when it protects a required product 
 
 Do not remove a Tooling test from normal CI solely because it is slow. First identify the protected risk and whether an equivalent cheaper check exists.
 
+### Verify runner acceptance
+
+Use the system Bash for macOS acceptance. Run the shell checks and native
+cancellation probe with `/bin/bash tests/SpanDraft.Tooling.Tests/test-agent-verify.sh`
+and `/bin/bash tests/SpanDraft.Tooling.Tests/test-agent-verify.sh --native-abort`.
+The probe expects exit code 143, the full command output in the retained log,
+and cleanup of the native child, timer, and temporary build directory.
+
+After the targeted checks pass, run `/bin/bash scripts/agent verify` and then
+`/bin/bash scripts/agent verify test-tooling`. Expect exit code 0, the respective
+scopes `all` and `test-tooling`, and separate persistent logs. The full log
+contains the build output and all test summaries. The individual run reports
+that it uses existing Release assemblies and skips freshness checks.
+
 ## 18. Generated resources
 
 Generated resources must remain reproducible from checked-in sources.

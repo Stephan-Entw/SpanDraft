@@ -235,9 +235,7 @@ public sealed class MicrosoftStorePackagingTests : IDisposable
     public void RejectsMissingPackageInputs(string missing)
     {
         string staging = Stage();
-        string package = Pack(staging);
-        using (var archive = ZipFile.Open(package, ZipArchiveMode.Update))
-            archive.GetEntry(missing)!.Delete();
+        string package = Pack(staging, archive => archive.GetEntry(missing)!.Delete());
         Assert.Throws<InvalidDataException>(() => PackageRules.Verify(package));
     }
 
@@ -245,13 +243,12 @@ public sealed class MicrosoftStorePackagingTests : IDisposable
     public void DetectsChangedPublishContentInTheActualArchive()
     {
         string staging = Stage();
-        string package = Pack(staging);
-        using (var archive = ZipFile.Open(package, ZipArchiveMode.Update))
+        string package = Pack(staging, archive =>
         {
             archive.GetEntry("subfolder/extra.txt")!.Delete();
             using var writer = new StreamWriter(archive.CreateEntry("subfolder/extra.txt").Open());
             writer.Write("tampered");
-        }
+        });
         Assert.Throws<InvalidDataException>(() => PackageRules.Verify(package, "0.2.0", staging));
     }
 
@@ -266,13 +263,14 @@ public sealed class MicrosoftStorePackagingTests : IDisposable
         if (mutation == "empty") File.WriteAllBytes(Path.Combine(staging, "LICENSE"), []);
         if (mutation == "architecture") File.WriteAllBytes(Path.Combine(staging, "SpanDraft.Desktop.exe"), Executable(0xaa64));
         if (mutation == "asset") File.Copy(Path.Combine(staging, "Assets/StoreLogo.png"), Path.Combine(staging, "Assets/Square44x44Logo.png"), true);
-        string package = Pack(staging);
-        if (mutation == "duplicate")
+        string package = Pack(staging, archive =>
         {
-            using var archive = ZipFile.Open(package, ZipArchiveMode.Update);
-            using var writer = new StreamWriter(archive.CreateEntry("license").Open());
-            writer.Write("duplicate ignoring case");
-        }
+            if (mutation == "duplicate")
+            {
+                using var writer = new StreamWriter(archive.CreateEntry("license").Open());
+                writer.Write("duplicate ignoring case");
+            }
+        });
         Assert.Throws<InvalidDataException>(() => PackageRules.Verify(package));
     }
 
@@ -294,16 +292,23 @@ public sealed class MicrosoftStorePackagingTests : IDisposable
         return staging;
     }
 
-    private string Pack(string staging)
+    private string Pack(string staging, Action<ZipArchive>? mutate = null)
     {
-        string package = PathInTest("test.msix");
-        ZipFile.CreateFromDirectory(staging, package);
-        using var archive = ZipFile.Open(package, ZipArchiveMode.Update);
-        foreach (string name in new[] { "AppxBlockMap.xml", "[Content_Types].xml", "resources.pri" })
+        // Publish the complete fixture once, avoiding exclusive reopens of a fresh MSIX on Windows.
+        using var bytes = new MemoryStream();
+        ZipFile.CreateFromDirectory(staging, bytes);
+        using (var archive = new ZipArchive(bytes, ZipArchiveMode.Update, leaveOpen: true))
         {
-            using var writer = new StreamWriter(archive.CreateEntry(name).Open());
-            writer.Write("Container/resource index fixture; Windows SDK validation runs only on real packages.");
+            foreach (string name in new[] { "AppxBlockMap.xml", "[Content_Types].xml", "resources.pri" })
+            {
+                using var writer = new StreamWriter(archive.CreateEntry(name).Open());
+                writer.Write("Container/resource index fixture; Windows SDK validation runs only on real packages.");
+            }
+            mutate?.Invoke(archive);
         }
+        string package = PathInTest("test.msix");
+        using var output = File.Create(package);
+        bytes.WriteTo(output);
         return package;
     }
 

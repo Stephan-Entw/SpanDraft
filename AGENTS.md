@@ -54,6 +54,8 @@
   failure class before retrying.
 - For long-running commands, use the agent runtime's background/wait mechanism
   rather than repeated `sleep` polling.
+- Follow long-running checks until the process exits and evaluate its exit code
+  and result before closing the task. A promise to report later is insufficient.
 - Native macOS UI checks require the interactive WindowServer/display session.
   Run `./scripts/agent ui-launch` directly with the agent runtime's escalated
   execution, outside the sandbox. Request approval for that command if needed
