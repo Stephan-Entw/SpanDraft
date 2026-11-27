@@ -246,6 +246,84 @@ public sealed class ActivationTests : IDisposable
     }
 
     [Fact]
+    public async Task HandoffDuringAnExpiredBrokerAttemptRechecksElectionAndTheSuccessorBroker()
+    {
+        var scope = Scope();
+        using var old = PrimaryInstance.TryAcquire(scope)!;
+        var r1 = LaunchRequest.OpenProject(Path.Combine(_root, "handoff1.spandraft"));
+        var r2 = LaunchRequest.OpenProject(Path.Combine(_root, "handoff2.spandraft"));
+        using var stop = ResolutionDeadline();
+        var time = new HandoffTime();
+        var options = Fast with { Time = time };
+
+        System.IO.Pipes.NamedPipeServerStream OldConnection() => new(old.Metadata.Endpoint,
+            System.IO.Pipes.PipeDirection.InOut, System.IO.Pipes.NamedPipeServerStream.MaxAllowedServerInstances,
+            System.IO.Pipes.PipeTransmissionMode.Byte,
+            System.IO.Pipes.PipeOptions.Asynchronous | System.IO.Pipes.PipeOptions.CurrentUserOnly);
+
+        async Task HoldSecondAttempt(System.IO.Pipes.NamedPipeServerStream pipe, LaunchRequest expected)
+        {
+            await pipe.WaitForConnectionAsync(stop.Token);
+            Assert.Equal(expected, BrokerProtocol.DecodeRequest(
+                (await BrokerProtocol.ReadLineAsync(pipe, stop.Token))!, old.Metadata.DataScopeId));
+            // A lost first reply starts the unreachable period; keep the next attempt in flight.
+            pipe.Disconnect();
+            await pipe.WaitForConnectionAsync(stop.Token);
+            Assert.Equal(expected, BrokerProtocol.DecodeRequest(
+                (await BrokerProtocol.ReadLineAsync(pipe, stop.Token))!, old.Metadata.DataScopeId));
+        }
+
+        using var firstConnection = OldConnection();
+        var firstInFlight = HoldSecondAttempt(firstConnection, r1);
+        var w1 = InstanceCoordinator.ResolveAsync(scope, r1, options, stop.Token);
+        Task<InstanceOutcome>? w2 = null;
+        Task? secondInFlight = null;
+        try
+        {
+            await WaitForCheckpoint(firstInFlight, w1);
+            using var secondConnection = OldConnection();
+            secondInFlight = HoldSecondAttempt(secondConnection, r2);
+            w2 = InstanceCoordinator.ResolveAsync(scope, r2, options, stop.Token);
+            await WaitForCheckpoint(secondInFlight, w2);
+            Assert.False(w1.IsCompleted || w2.IsCompleted);
+            using (var unexpectedPrimary = PrimaryInstance.TryAcquire(scope)) Assert.Null(unexpectedPrimary);
+
+            time.Advance(Fast.BootstrapTimeout + TimeSpan.FromTicks(1));
+            old.Dispose();
+            firstConnection.Dispose();
+            var winner = await w1;
+            Assert.Equal(InstanceOutcomeKind.Primary, winner.Kind);
+            Assert.Equal(old.Metadata.DataScopeId, winner.Primary!.Metadata.DataScopeId);
+            Assert.False(w2.IsCompleted);
+
+            var received = new ConcurrentQueue<LaunchRequest>();
+            using var broker = BrokerServer.Start(winner.Primary.Metadata);
+            broker.Handler = request => { received.Enqueue(request); return BrokerStatus.Accepted; };
+            // The other stale attempt fails only after the successor holds the lock and runs its broker.
+            secondConnection.Dispose();
+            var forwarded = await w2;
+            Assert.Equal(InstanceOutcomeKind.Forwarded, forwarded.Kind);
+            Assert.Null(forwarded.Primary);
+            Assert.Equal(r2, Assert.Single(received));
+            using var unexpectedAfterHandoff = PrimaryInstance.TryAcquire(scope);
+            Assert.Null(unexpectedAfterHandoff);
+        }
+        finally
+        {
+            await StopResolutionsAsync(stop, w2 is null ? [w1] : [w1, w2]);
+            await firstInFlight;
+            if (secondInFlight is not null) await secondInFlight;
+        }
+    }
+
+    private sealed class HandoffTime : TimeProvider
+    {
+        private long _ticks;
+        public override DateTimeOffset GetUtcNow() => DateTimeOffset.UnixEpoch.AddTicks(Interlocked.Read(ref _ticks));
+        public void Advance(TimeSpan elapsed) => Interlocked.Add(ref _ticks, elapsed.Ticks);
+    }
+
+    [Fact]
     public void ElectionAndEndpointExistBeforeSettingsAreLoadedAndASecondaryLoadsNone()
     {
         var scope = Scope();

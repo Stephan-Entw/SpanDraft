@@ -24,9 +24,11 @@ public static class InstanceCoordinator
         options ??= new();
         var backoff = options.InitialBackoff;
         DateTimeOffset? unreachableSince = null;
+        bool confirmingUnreachable = false;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var attemptStarted = options.Time.GetUtcNow();
             // Every attempt re-evaluates the election: a freed lock turns this request into the initial one.
             if (PrimaryInstance.TryAcquire(scope) is { } primary) return new(InstanceOutcomeKind.Primary, primary);
             var metadata = InstanceMetadata.TryRead(scope);
@@ -36,12 +38,16 @@ public static class InstanceCoordinator
             {
                 case BrokerStatus.Accepted: return new(InstanceOutcomeKind.Forwarded);
                 case BrokerStatus.Rejected: return new(InstanceOutcomeKind.Rejected);
-                case BrokerStatus.Retry: unreachableSince = null; break;
+                case BrokerStatus.Retry:
+                    unreachableSince = null;
+                    confirmingUnreachable = false;
+                    break;
                 default:
+                    if (confirmingUnreachable) return new(InstanceOutcomeKind.CommunicationFailure);
                     // Missing metadata or endpoint right after the election is a bootstrap race, not an error yet.
-                    unreachableSince ??= options.Time.GetUtcNow();
-                    if (options.Time.GetUtcNow() - unreachableSince > options.BootstrapTimeout)
-                        return new(InstanceOutcomeKind.CommunicationFailure);
+                    unreachableSince ??= attemptStarted;
+                    // Confirm an expired deadline with one fresh election and broker attempt after this failure.
+                    confirmingUnreachable = options.Time.GetUtcNow() - unreachableSince > options.BootstrapTimeout;
                     break;
             }
             await Task.Delay(backoff, options.Time, cancellationToken);
