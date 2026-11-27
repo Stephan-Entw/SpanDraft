@@ -29,15 +29,20 @@ fail() {
 has() { grep -Fq -- "$2" "$1" || fail "missing '$2' in $1"; }
 lacks() { if grep -Fq -- "$2" "$1"; then fail "unexpected '$2' in $1"; fi; }
 
-await_text() {
-    local file=$1 message=$2 limit=$((SECONDS + 45))
-    until [[ -f "$file" ]] && grep -Fq -- "$message" "$file"; do
-        [[ $SECONDS -lt $limit ]] || fail "timed out waiting for '$message'"
+await_pid() {
+    local file=$1 pid limit=$((SECONDS + 45))
+    until [[ -f "$file" ]] && IFS= read -r pid <"$file" && [[ $pid =~ ^[1-9][0-9]*$ ]]; do
+        [[ $SECONDS -lt $limit ]] || fail "timed out waiting for a complete PID in $file"
         "$real_sleep" 0.1
     done
+    printf '%s\n' "$pid"
 }
 
 mkdir -p "$work/scripts" "$work/bin" "$work/tmp"
+# Keep both ends open so readiness and release can be exchanged without blocking on open.
+mkfifo "$work/hold" "$work/heartbeat-ready"
+exec 4<>"$work/hold"
+exec 5<>"$work/heartbeat-ready"
 cp "$repo/scripts/agent" "$agent"
 for module in SpanDraft.Tests SpanDraft.Desktop.Tests SpanDraft.Rendering.Tests SpanDraft.Tooling.Tests; do
     dir="$work/tests/$module/bin/Release/net10.0"
@@ -75,14 +80,19 @@ case "$1" in
                 exit 25 ;;
             heartbeat)
                 printf 'routine output\nfixture : warning CS2000: live warning\npartial '
-                until [[ -f "$STATE/release" ]]; do "$REAL_SLEEP" 0.1; done
+                printf '\n' >&5
+                if ! IFS= read -r -t 45 _ <&4; then
+                    printf '\nTimed out waiting for the heartbeat monitor.\n' >&2
+                    exit 1
+                fi
                 printf 'line\n' ;;
             cancel)
-                "$REAL_SLEEP" 60 &
-                printf '%s\n' "$!" >"$STATE/child"
+                IFS= read -r _ <&4 &
+                child=$!
+                printf '%s\n' "$child" >"$STATE/child"
                 printf '%s\n' "$$" >"$STATE/worker"
                 printf 'worker is ready\n'
-                wait "$!" ;;
+                wait "$child" ;;
             native-abort)
                 exec "$NATIVE_DOTNET" "$NATIVE_DLL" "$STATE" ;;
         esac
@@ -112,17 +122,52 @@ EOF
 
 cat >"$work/bin/sleep" <<'EOF'
 #!/bin/bash
+case "$SCENARIO" in
+    heartbeat) exit 0 ;;
+    cancel|native-abort)
+        if [[ ! -e "$STATE/timers" ]]; then
+            printf '%s\n' "$$" >"$STATE/timers"
+            IFS= read -r _ <&4
+            exit
+        fi ;;
+esac
 printf '%s\n' "$$" >>"$STATE/timers"
 exec "$REAL_SLEEP" "$@"
 EOF
 chmod +x "$work/bin/git" "$work/bin/dotnet" "$work/bin/sleep"
 
+cat >"$work/heartbeat-clock" <<'EOF'
+unset BASH_ENV SECONDS
+SECONDS=0
+heartbeat_poll=0
+# The worker liveness check runs in the same shell as the heartbeat clock.
+kill() {
+    if [[ $1 == -0 ]]; then
+        heartbeat_poll=$((heartbeat_poll + 1))
+        case "$heartbeat_poll" in
+            1)
+                if ! IFS= read -r -t 45 _ <&5; then
+                    printf 'Timed out waiting for the heartbeat worker.\n' >&2
+                    exit 1
+                fi
+                SECONDS=29 ;;
+            2) SECONDS=30 ;;
+            3) SECONDS=59 ;;
+            4) SECONDS=60 ;;
+            5) printf '\n' >&4 ;;
+        esac
+    fi
+    builtin kill "$@"
+}
+EOF
+
 start_verify() {
-    local scenario=$1
+    local scenario=$1 bash_env=
     shift
     rm -rf -- "$work/state"
     mkdir "$work/state"
-    SCENARIO="$scenario" STATE="$work/state" REAL_SLEEP="$real_sleep" TMPDIR="$work/tmp" \
+    if [[ $scenario == heartbeat ]]; then bash_env="$work/heartbeat-clock"; fi
+    BASH_ENV="$bash_env" SCENARIO="$scenario" STATE="$work/state" REAL_SLEEP="$real_sleep" TMPDIR="$work/tmp" \
         PATH="$work/bin:$PATH" "$BASH" "$agent" verify "$@" >"$work/terminal" 2>&1 &
     agent_pid=$!
 }
@@ -149,7 +194,7 @@ run_verify() {
 
 assert_stopped() {
     local limit=$((SECONDS + 5)) pid=$1
-    while kill -0 "$pid" 2>/dev/null; do
+    while kill -0 -- "$pid" 2>/dev/null; do
         [[ $SECONDS -lt $limit ]] || fail "process $pid survived cancellation"
         "$real_sleep" 0.1
     done
@@ -158,6 +203,20 @@ assert_stopped() {
 assert_timers_stopped() {
     local timer
     while IFS= read -r timer; do assert_stopped "$timer"; done <"$work/state/timers"
+}
+
+abort_verify() {
+    local ready=$1 limit=$((SECONDS + 45))
+    await_pid "$work/state/timers" >/dev/null
+    # PID files can be visible before tee flushes the worker's output to the log.
+    until grep -Fq -- "$ready" "$work"/artifacts/verify/run.*/verify.log; do
+        [[ $SECONDS -lt $limit ]] || fail "timed out waiting for '$ready' in the log"
+        "$real_sleep" 0.1
+    done
+    kill -TERM "$agent_pid"
+    finish_verify 143
+    has "$log" "$ready"
+    assert_timers_stopped
 }
 
 if [[ ${1:-} == --native-abort ]]; then
@@ -199,11 +258,11 @@ if (args[0] is "check" or "kill")
 
 if (args[0] == "child")
 {
-    File.WriteAllText(Path.Combine(args[1], "native-child"), Environment.ProcessId.ToString());
+    File.WriteAllText(Path.Combine(args[1], "native-child"), $"{Environment.ProcessId}\n");
 }
 else
 {
-    File.WriteAllText(Path.Combine(args[0], "native-parent"), Environment.ProcessId.ToString());
+    File.WriteAllText(Path.Combine(args[0], "native-parent"), $"{Environment.ProcessId}\n");
     Process.Start(new ProcessStartInfo(Environment.ProcessPath!)
     {
         ArgumentList = { Assembly.GetExecutingAssembly().Location, "child", args[0] }
@@ -217,13 +276,15 @@ EOF
     native_dll="$work/bin/Debug/net10.0/AbortProbe.dll"
     export NATIVE_DLL="$native_dll" NATIVE_DOTNET="$native_dotnet"
     start_verify native-abort build
-    await_text "$work/state/native-child" ''
-    await_text "$work/state/timers" ''
-    kill -TERM "$agent_pid"
-    finish_verify 143
-    has "$log" 'native worker is ready'
-    assert_timers_stopped
-    "$native_dotnet" "$native_dll" check "$(cat "$work/state/native-child")" "$(cat "$work/state/native-parent")" || fail 'a native .NET process survived cancellation'
+    native_parent=$(await_pid "$work/state/native-parent")
+    native_child=$(await_pid "$work/state/native-child")
+    if [[ $OSTYPE == darwin* ]]; then
+        native_group=$(ps -o pgid= -p "$native_parent" | tr -d '[:space:]')
+        [[ $native_group =~ ^[1-9][0-9]*$ ]] || fail 'could not identify the native worker process group'
+    fi
+    abort_verify 'native worker is ready'
+    "$native_dotnet" "$native_dll" check "$native_child" "$native_parent" || fail 'a native .NET process survived cancellation'
+    if [[ $OSTYPE == darwin* ]]; then assert_stopped "-$native_group"; fi
     native_dll=
     printf 'Native .NET cancellation test passed.\n'
     exit 0
@@ -268,28 +329,19 @@ lacks "$terminal" '[RUN] icons'
 run_verify 17 missing-summary test-tooling
 has "$terminal" 'tests: unavailable'
 
-start_verify heartbeat build
-await_text "$work/terminal" 'live warning'
-await_text "$work/terminal" '[RUN] build (elapsed '
-heartbeat=$(sed -n 's/^\[RUN\] build (elapsed \([0-9][0-9]*\)s)$/\1/p' "$work/terminal")
-[[ $heartbeat -ge 30 && $heartbeat -le 31 ]] || fail 'expected the first heartbeat at 30 seconds'
-lacks "$work/terminal" 'routine output'
-: >"$work/state/release"
-finish_verify 0
+run_verify 0 heartbeat build
+heartbeat=$(sed -n 's/^\[RUN\] build (elapsed \([0-9][0-9]*\)s)$/\1/p' "$terminal")
+[[ $heartbeat == $'30\n60' ]] || fail 'expected exactly one heartbeat each at 30 and 60 seconds'
+has "$terminal" 'live warning'
+lacks "$terminal" 'routine output'
 has "$log" 'routine output'
 has "$log" 'partial line'
 
 start_verify cancel build
-await_text "$work/state/child" ''
-await_text "$work/state/worker" ''
-await_text "$work/state/timers" ''
-child=$(cat "$work/state/child")
-worker=$(cat "$work/state/worker")
-kill -TERM "$agent_pid"
-finish_verify 143
-has "$log" 'worker is ready'
+child=$(await_pid "$work/state/child")
+worker=$(await_pid "$work/state/worker")
+abort_verify 'worker is ready'
 has "$terminal" '[FAIL] build ('
 assert_stopped "$child"
 assert_stopped "$worker"
-assert_timers_stopped
 printf 'Verify shell tests passed.\n'
