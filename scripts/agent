@@ -10,14 +10,11 @@ Usage: ./scripts/agent <command>
   icons [--check]                            Update or check generated Toolbar and Fluent icons
   ui-launch                                  Build and launch a fresh macOS development instance
                                              Sandboxed agents must use escalated execution with host GUI access
-  verify [step]                              Run all local checks or one step in English
+  verify <step>                              Run one local check
 
 Modules: product, desktop, rendering, tooling (or the full test project name).
 xUnit filters take a fully qualified name or wildcard.
-Verify steps: validation, diff, ignored-sources, build, test-product, test-desktop,
-              test-rendering, test-tooling, icons, notices, help-assets.
-Individual test steps reuse existing Release assemblies without checking freshness.
-Build first when needed. Verify logs are saved under artifacts/verify/.
+Verify steps: validation, diff, ignored-sources, notices, help-assets.
 EOF
 }
 
@@ -81,26 +78,13 @@ release_build() {
     prepare_scratch || return "$?"
     log="$scratch/build.log"
     local options=(--configuration Release --no-restore "${build_options[@]}" "$@")
-    if [[ $command == verify ]]; then
-        local pipeline_status
-        if dotnet build "$target" "${options[@]}" 2>&1 | tee "$log"; then
-            return 0
-        else
-            pipeline_status=("${PIPESTATUS[@]}")
-            status=${pipeline_status[0]}
-            if [[ ${pipeline_status[1]} -ne 0 ]]; then
-                return "$((status ? status : pipeline_status[1]))"
-            fi
-        fi
+    if dotnet build "$target" "${options[@]}" >"$log" 2>&1; then
+        cat "$log"
+        return
     else
-        if dotnet build "$target" "${options[@]}" >"$log" 2>&1; then
-            cat "$log"
-            return
-        else
-            status=$?
-        fi
-        cat "$log" >&2
+        status=$?
     fi
+    cat "$log" >&2
     # MSBuild reports missing assets on --no-restore. A compiler error needs no restore.
     if ! awk '
         /(^|[[:space:]])error[[:space:]]+([[:alnum:]]+[0-9]+)?[[:space:]]*:/ {
@@ -274,276 +258,23 @@ report_validation() {
 }
 
 verify_help_assets() {
-    # The solution build already produced all product references.
     local tool=SpanDraft.HelpAssets
-    release_build "tools/$tool/$tool.csproj" -p:BuildProjectReferences=false
+    release_build "tools/$tool/$tool.csproj"
     dotnet "tools/$tool/bin/Release/$framework/$tool.dll" --check "$root/help/assets"
 }
 
-verify_test() {
-    local module=$1
-    if [[ ! -f "tests/$module/bin/Release/$framework/$module.dll" ]]; then
-        die "Missing Release assembly for $module. Run ./scripts/agent verify build."
-    fi
-    run_test_module "$module" -culture en-US
-}
-
-verify_worker() {
+verify() {
+    [[ $# -eq 1 ]] || usage_error 'Use verify <step>.'
     case "$1" in
         validation) report_validation ;;
         diff)
             git -c color.ui=false diff --check
             git -c color.ui=false diff --cached --check ;;
         ignored-sources) check_ignored_sources ;;
-        build|test-*)
-            export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=0
-            case "$1" in
-                build) release_build "$solution" ;;
-                test-product) verify_test "${modules[0]}" ;;
-                test-desktop) verify_test "${modules[1]}" ;;
-                test-rendering) verify_test "${modules[2]}" ;;
-                test-tooling) verify_test "${modules[3]}" ;;
-            esac ;;
-        icons) icons --check ;;
         notices) run_temporary_tool SpanDraft.NoticeCheck --check-local ;;
         help-assets) verify_help_assets ;;
+        *) usage_error "Unknown verify step '$1'." ;;
     esac
-}
-
-verify_message() {
-    printf '%s\n' "$1"
-    if [[ -n "$verify_log" ]]; then printf '%s\n' "$1" >>"$verify_log"; fi
-}
-
-verify_log_line() {
-    local line=${1//$'\r'/} previous
-    local ansi=$'\033''\[[0-?]*[ -/]*[@-~]'
-    while [[ $line =~ $ansi ]]; do line=${line/"${BASH_REMATCH[0]}"/}; done
-    [[ -n "$line" ]] || return 0
-    line=${line:0:500}
-    verify_tail[$((verify_line_count % 10))]=$line
-    verify_line_count=$((verify_line_count + 1))
-    case "$line" in
-        'agent: Running '*) return 0 ;;
-        'agent: '*|'fatal: '*|'Outdated or missing: '*|*' generation failed: '*|*' [FAIL]'*) ;;
-        *)
-            local diagnostic='(^|[[:space:]])(warning|error)(:|[[:space:]]+[[:alpha:]]+[0-9]+:)|^[[:alnum:].]+Exception:'
-            [[ $line =~ $diagnostic ]] || return 0 ;;
-    esac
-    for previous in "${verify_diagnostics[@]}"; do
-        [[ $previous != "$line" ]] || return 0
-    done
-    if [[ ${#verify_diagnostics[@]} -lt 12 ]]; then
-        verify_diagnostics[${#verify_diagnostics[@]}]=$line
-        printf '  %s\n' "$line"
-    elif [[ $verify_suppressed == 0 ]]; then
-        verify_suppressed=1
-        printf '  Additional diagnostics in %s\n' "$verify_log"
-    fi
-}
-
-verify_read_log() {
-    local line
-    # A read at the current end of a regular file can return part of a line.
-    while IFS= read -r line <&3; do
-        verify_log_line "$verify_partial$line"
-        verify_partial=
-    done
-    verify_partial=$verify_partial$line
-}
-
-verify_end_step() {
-    local status=$1 elapsed=$((SECONDS - verify_step_started)) line
-    if [[ $status -eq 0 ]]; then
-        verify_message "[OK] $verify_step_name (${elapsed}s)"
-    else
-        if [[ ${#verify_diagnostics[@]} -eq 0 ]]; then
-            for ((line = verify_line_count > 10 ? verify_line_count - 10 : 0; line < verify_line_count; line++)); do
-                printf '  %s\n' "${verify_tail[line % 10]}"
-            done
-        fi
-        verify_message "[FAIL] $verify_step_name (${elapsed}s, exit $status)"
-    fi
-    verify_step_name=
-}
-
-verify_signal() {
-    verify_interrupted=$1
-    if [[ $verify_launching == 0 ]]; then exit "$verify_interrupted"; fi
-}
-
-verify_step() {
-    verify_step_name=$1
-    verify_step_started=$SECONDS
-    local next_status=$((SECONDS + 30)) delay=0.1 elapsed
-    verify_message "[RUN] $verify_step_name"
-    if [[ $verify_step_name == test-* ]]; then
-        verify_test_steps=$((verify_test_steps + 1))
-        if [[ $verify_scope != all ]]; then
-            verify_message 'Using existing Release assemblies. No rebuild or freshness check is performed.'
-        fi
-    fi
-    verify_read_log
-    verify_diagnostics=()
-    verify_tail=()
-    verify_line_count=0
-    verify_suppressed=0
-
-    # Job control starts the worker in its own process group. Its commands and
-    # pipelines share that group, and its log is independent of the monitor.
-    verify_launching=1
-    set -m
-    (
-        set +m
-        trap - EXIT INT TERM HUP
-        verify_worker "$1"
-    ) >>"$verify_log" 2>&1 &
-    verify_pid=$!
-    set +m
-    verify_launching=0
-    if [[ $verify_interrupted -ne 0 ]]; then exit "$verify_interrupted"; fi
-
-    while kill -0 "$verify_pid" 2>/dev/null; do
-        verify_read_log
-        if [[ $SECONDS -ge $next_status ]]; then
-            elapsed=$((SECONDS - verify_step_started))
-            printf '[RUN] %s (elapsed %ss)\n' "$verify_step_name" "$elapsed"
-            next_status=$((verify_step_started + (elapsed / 30 + 1) * 30))
-        fi
-        verify_launching=1
-        sleep "$delay" &
-        verify_timer=$!
-        verify_launching=0
-        if [[ $verify_interrupted -ne 0 ]]; then exit "$verify_interrupted"; fi
-        wait "$verify_timer" || :
-        verify_timer=
-        delay=1
-    done
-    if wait "$verify_pid"; then verify_status=0; else verify_status=$?; fi
-    verify_pid=
-    verify_drain_step
-    verify_end_step "$verify_status"
-}
-
-verify_drain_step() {
-    verify_read_log
-    if [[ -n "$verify_partial" ]]; then
-        verify_log_line "$verify_partial"
-        verify_partial=
-        # Keep the next status line separate from unterminated command output.
-        printf '\n' >>"$verify_log"
-        verify_read_log
-    fi
-}
-
-verify_test_summary() {
-    if [[ $verify_test_steps -eq 0 ]]; then
-        printf 'not run'
-        return
-    fi
-    LC_ALL=C awk -v expected="$verify_test_expected" '
-        /^[[:space:]]*SpanDraft(\.(Desktop|Rendering|Tooling))?\.Tests[[:space:]]+Total: [0-9]+, Errors: [0-9]+, Failed: [0-9]+, Skipped: [0-9]+, Not Run: [0-9]+,/ {
-            if (seen[$1]++) next
-            modules = modules (count++ ? ", " : "") $1
-            total += $3; errors += $5; failed += $7; skipped += $9; not_run += $12
-        }
-        END {
-            if (!count) { printf "unavailable"; exit }
-            printf "%d total, %d passed, %d failed, %d skipped, %d not run, %d errors", total, total - failed - skipped - not_run, failed, skipped, not_run, errors
-            if (count < expected) printf " (%d/%d modules reported: %s)", count, expected, modules
-        }
-    ' "$verify_log"
-}
-
-verify_stop_worker() {
-    local attempt windows_pid
-    case "$OSTYPE" in
-        msys*|cygwin*)
-            # MSYS fork/exec can break the Windows parent links. Start from
-            # every member of this Bash group to reach native descendants.
-            local targets=()
-            while IFS= read -r windows_pid; do targets+=(/PID "$windows_pid"); done < <(
-                ps -e | awk -v group="$verify_pid" '$3 == group && $4 ~ /^[0-9]+$/ { print $4 }'
-            )
-            if [[ ${#targets[@]} -gt 0 ]] &&
-                ! MSYS_NO_PATHCONV=1 taskkill.exe "${targets[@]}" /T /F >/dev/null 2>&1; then
-                printf 'agent: Windows process-tree cleanup reported an error. Attempting Bash process-group cleanup.\n' >&2
-            fi ;;
-    esac
-    kill -TERM -- "-$verify_pid" 2>/dev/null || :
-    for ((attempt = 0; attempt < 10; attempt++)); do
-        kill -0 -- "-$verify_pid" 2>/dev/null || break
-        sleep 0.1
-    done
-    kill -KILL -- "-$verify_pid" 2>/dev/null || :
-    wait "$verify_pid" 2>/dev/null || :
-}
-
-verify_finish() {
-    local status=$1 result=PASSED tests
-    trap - EXIT
-    trap '' INT TERM HUP
-    if [[ -n "$verify_timer" ]]; then
-        kill -TERM "$verify_timer" 2>/dev/null || :
-        wait "$verify_timer" 2>/dev/null || :
-    fi
-    if [[ -n "$verify_pid" ]]; then
-        verify_stop_worker
-    fi
-    if [[ -n "$verify_step_name" ]]; then
-        verify_drain_step
-        verify_end_step "$status"
-    fi
-    cleanup_scratch || printf 'agent: Could not remove temporary directory %s\n' "$scratch" >&2
-    if [[ $status -ne 0 ]]; then result=FAILED; fi
-    tests=$(verify_test_summary) || tests=unavailable
-    verify_message "VERIFY $result — scope: $verify_scope | tests: $tests | elapsed: $((SECONDS - verify_started))s | exit: $status | log: ${verify_log:-unavailable}"
-    exit "$status"
-}
-
-verify() {
-    verify_scope=${1:-all}
-    local step first_failure=0 log_dir
-    local steps=(validation diff ignored-sources build test-product test-desktop test-rendering test-tooling icons notices help-assets)
-    if [[ $# -gt 1 ]]; then usage_error 'Use verify [step].'; fi
-    if [[ $# -eq 1 ]]; then
-        case "$1" in
-            validation|diff|ignored-sources|build|test-product|test-desktop|test-rendering|test-tooling|icons|notices|help-assets) steps=("$1") ;;
-            *) usage_error "Unknown verify step '$1'." ;;
-        esac
-    fi
-
-    verify_started=$SECONDS
-    verify_log= verify_step_name= verify_pid= verify_timer= verify_partial=
-    verify_test_steps=0 verify_interrupted=0 verify_launching=0 verify_test_expected=1
-    verify_diagnostics=() verify_tail=() verify_line_count=0 verify_suppressed=0
-    if [[ $verify_scope == all ]]; then verify_test_expected=${#modules[@]}; fi
-    trap 'verify_finish "$?"' EXIT
-    trap 'verify_signal 130' INT
-    trap 'verify_signal 143' TERM
-    trap 'verify_signal 129' HUP
-    export NO_COLOR=1 TERM=dumb
-
-    mkdir -p "$root/artifacts/verify"
-    log_dir=$(mktemp -d "$root/artifacts/verify/run.XXXXXXXX")
-    : >"$log_dir/verify.log"
-    verify_log="$log_dir/verify.log"
-    exec 3<"$verify_log"
-    # Prepare in the parent, so its EXIT trap owns cleanup after a signal too.
-    prepare_scratch
-
-    for step in "${steps[@]}"; do
-        # Keep this out of a conditional so the background worker honors set -e.
-        verify_step "$step"
-        case "$step" in
-            test-*)
-                if [[ $first_failure -eq 0 ]]; then first_failure=$verify_status; fi ;;
-            *)
-                if [[ $verify_status -ne 0 ]]; then return "$verify_status"; fi ;;
-        esac
-        if [[ $step == test-tooling && $first_failure -ne 0 ]]; then break; fi
-    done
-    return "$first_failure"
 }
 
 case "$command" in

@@ -43,12 +43,11 @@ completion and are not covered by the quality gate. The icon and help asset
 checks also run in CI; locally they detect a stale generated result before the
 push.
 
-A full local `./scripts/agent verify` is not a required task completion step.
-Use it only as a justified exception, for example when CI cannot run the
-affected checks or a change is broad enough that a local full run saves a CI
-iteration. Individual `verify test-*` steps reuse the existing Release
-assemblies without a freshness check, so run `./scripts/agent build` or
-`./scripts/agent verify build` first.
+`./scripts/agent verify <step>` runs one of `validation`, `diff`,
+`ignored-sources`, `notices` or `help-assets`. Use `build`, `test` and
+`icons --check` directly for their respective work. There is no aggregate local
+verify command. Normal tasks require no manual platform switch; GitHub CI
+provides the complete cross-platform quality gate.
 
 ### Acceptance status
 
@@ -70,8 +69,6 @@ Some checks need host access that agent sandboxes are known to deny:
 
 - the Desktop activation and multi-process tests bind, listen and connect on
   Unix-domain sockets (.NET named pipes on macOS)
-- the native cancellation probe (`test-agent-verify.sh --native-abort`) needs
-  `/bin/ps` to identify the worker process group
 - `./scripts/agent ui-launch` needs the interactive macOS display session
 
 Request the required host access directly for these checks. Do not start a run
@@ -426,20 +423,6 @@ A Tooling test may remain part of normal CI when it protects a required product 
 
 Do not remove a Tooling test from normal CI solely because it is slow. First identify the protected risk and whether an equivalent cheaper check exists.
 
-### Verify runner acceptance
-
-`tests/SpanDraft.Tooling.Tests/test-agent-verify.sh` tests `scripts/agent`
-against stub commands, without a SpanDraft build. `--native-abort` adds a real
-.NET process tree and expects exit code 143, the full command output in the
-retained log, and cleanup of the native child, timer and temporary build
-directory.
-
-The CI job `Agent harness` runs both modes on Windows with Git Bash and on
-macOS with the system `/bin/bash` 3.2, and asserts the shell before running.
-This job is the acceptance for both platforms. Locally, run only the affected
-mode with `/bin/bash` after changing the harness or its tests; `--native-abort`
-needs host access (see "Execution environment").
-
 ## 18. Generated resources
 
 Generated resources must remain reproducible from checked-in sources.
@@ -515,50 +498,20 @@ job in `ci.yml` is therefore part of the release gate.
 
 ### Platform CI
 
-The Windows product job runs the complete Product, Desktop, Rendering and
-Tooling suites. Two additional jobs cover platform boundaries that Windows
-cannot prove:
+The following jobs run in parallel:
 
-- `Agent harness (windows-latest | macos-latest)` runs the shell regression and
-  the native cancellation tests of `scripts/agent` (see "Verify runner
-  acceptance"). It needs only the .NET SDK, not a SpanDraft build.
-- `macOS platform contracts (macos-latest)` builds `SpanDraft.sln` in Release
-  and runs `scripts/platform_contracts.py` with
-  `tests/macos-platform-contracts.txt`.
+- `Product (windows-latest)` runs the complete Product, Desktop, Rendering and
+  Tooling suites and verifies generated icon resources.
+- `Product tests (macos-latest)` restores and builds the product solution in
+  Release, then runs the same complete test suite directly with `dotnet test`.
+- `Validation` runs independent solver validation on Ubuntu.
+- `Help (windows-latest)` checks Help, release notes and Store submission tooling.
 
-The manifest is the authoritative selection of macOS-relevant test classes:
-IPC and multi-process activation, ProjectIdentity, file-system permissions,
-recovery, persistence on the real file system, quit coordination and macOS
-shortcuts. Each exclusion needs a technical reason. Shared support code with
-platform behavior names the selected classes that cover it.
-
-The script fails unless all of the following hold:
-
-- the host is macOS, the process is not root, and the .NET temporary directory
-  (`TMPDIR`, otherwise `/tmp/`) is on APFS according to `statfs`, the same
-  source as `DriveInfo.DriveFormat`. Tests that `return` early outside these
-  conditions therefore cannot pass vacuously. An unmet precondition is
-  reported as `BLOCKED`.
-- class discovery (`-list classes/json`) succeeds for every test module, and
-  every manifest class exists in its module.
-- every test class declared in a source with a platform marker
-  (`OperatingSystem.Is…`, `UnixFileMode`, named pipes, activation broker,
-  ProjectIdentity resolver, file recovery storage, process start, skips) has a
-  `run` or `exclude` decision, and every such file without a test class is a
-  `support` entry.
-- each module's runner exits with 0 and writes a new, valid xUnit XML file in a
-  fresh `run-*` directory, with exactly one assembly, no execution errors, and
-  `total == passed ==` the number of test elements.
-- only selected classes ran, each with at least one passed test, and no test
-  failed, was skipped (`-failSkips`) or did not run.
-
-The marker scan is a supplementary guard. It recognizes only the listed
-markers, assigns all classes of a matching file conservatively, and cannot see
-platform behavior that a test reaches through product APIs without a marker, or
-early `return` guards. Add new platform contracts to the manifest deliberately
-and extend the marker list when a new kind of platform boundary appears.
-`tests/SpanDraft.Tooling.Tests/test_platform_contracts.py` covers the script
-itself and runs in the `Help` job.
+The test framework determines test success and failure. Existing OS-specific
+conditions remain in the tests, and justified platform skips may remain skips.
+Concrete platform prerequisites belong in the affected test or its helper;
+for example, the macOS APFS Unicode identity test asserts its file-system
+requirement directly.
 
 Native GUI, logout and shutdown acceptance remain targeted special cases
 outside CI.
@@ -667,9 +620,9 @@ The following rules are binding for changes to existing tests:
 - Protect critical new or corrected regression tests with a targeted negative
   control: show that the test fails against the defect, or against a deliberate
   mutation of the checked rule, and passes against the fix.
-- Report changes to quality gates (CI jobs, verify steps, selections such as
-  the platform manifest) and to shared test infrastructure (`tests/Support`,
-  test runners, harness scripts) explicitly in the completion report.
+- Report changes to quality gates (CI jobs and verify steps) and to shared test
+  infrastructure (`tests/Support` and test runners) explicitly in the completion
+  report.
 
 When performing a large test-architecture migration, avoid mixing unrelated product behavior changes into the same work. This keeps before/after coverage and failures understandable.
 

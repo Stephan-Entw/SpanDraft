@@ -35,7 +35,8 @@
   - `./scripts/agent help [--regenerate-assets]`
   - `./scripts/agent icons [--check]`
   - `./scripts/agent ui-launch`
-  - `./scripts/agent verify`
+  - `./scripts/agent verify <step>` (`validation`, `diff`, `ignored-sources`,
+    `notices` or `help-assets`)
 - Do not probe equivalent raw `dotnet` commands first when a repository command
   covers the operation. Outside agent environments, use the standard README and
   CI workflows.
@@ -83,9 +84,8 @@
   `verify ignored-sources` (documentation-only changes: diff check only), and
   the conditional checks in `docs/TESTING.md` (notices, icons, help assets,
   independent solver validation). The quality gate is the complete `CI`.
-- A full local `./scripts/agent verify` is a justified exception, not a
-  completion step. Individual `verify test-*` steps reuse existing Release
-  assemblies; build first.
+- No full local verify or manual platform switch is required for normal tasks.
+  GitHub CI provides the complete cross-platform quality gate.
 - Report status as locally verified, CI pending, fully accepted or blocked.
   Merge and release require fully accepted.
 

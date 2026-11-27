@@ -79,7 +79,7 @@ public sealed class ProjectIdentityTests
         var directory = Directory.CreateTempSubdirectory();
         try
         {
-            if (new DriveInfo(directory.FullName).DriveFormat != "apfs") return;
+            Assert.Equal("apfs", new DriveInfo(directory.FullName).DriveFormat);
             const string composed = "Caf\u00e9.spandraft", decomposed = "Cafe\u0301.spandraft";
             var resolver = new ProjectIdentityResolver();
             string path = Path.Combine(directory.FullName, composed), alias = Path.Combine(directory.FullName, decomposed);

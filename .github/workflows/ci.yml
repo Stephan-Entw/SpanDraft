@@ -142,46 +142,8 @@ jobs:
             }
           }
 
-  harness:
-    name: Agent harness (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, macos-latest]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '10.0.x'
-      - name: Run shell regression tests (Git Bash)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          [[ $OSTYPE == msys* || $OSTYPE == cygwin* ]] || { printf 'Expected Git Bash (msys or cygwin), found OSTYPE=%s\n' "$OSTYPE" >&2; exit 1; }
-          printf 'Bash %s (%s)\n' "$BASH_VERSION" "$BASH"
-          bash tests/SpanDraft.Tooling.Tests/test-agent-verify.sh
-      - name: Run native .NET cancellation test (Git Bash)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: bash tests/SpanDraft.Tooling.Tests/test-agent-verify.sh --native-abort
-      - name: Run shell regression tests (system Bash)
-        if: runner.os == 'macOS'
-        shell: /bin/bash -eo pipefail {0}
-        run: |
-          [[ $BASH == /bin/bash && ${BASH_VERSINFO[0]} == 3 ]] || { printf 'Expected /bin/bash 3.x, found %s %s\n' "$BASH" "$BASH_VERSION" >&2; exit 1; }
-          printf 'Bash %s (%s)\n' "$BASH_VERSION" "$BASH"
-          /bin/bash tests/SpanDraft.Tooling.Tests/test-agent-verify.sh
-      - name: Run native .NET cancellation test (system Bash)
-        if: runner.os == 'macOS'
-        shell: /bin/bash -eo pipefail {0}
-        run: /bin/bash tests/SpanDraft.Tooling.Tests/test-agent-verify.sh --native-abort
-
-  macos-platform:
-    name: macOS platform contracts (macos-latest)
+  product-macos:
+    name: Product tests (macos-latest)
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
@@ -191,24 +153,19 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
-      - name: Setup Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.11'
       - name: Restore product solution
         run: dotnet restore SpanDraft.sln
       - name: Build product solution
         run: dotnet build SpanDraft.sln --configuration Release --no-restore
-      - name: Run macOS platform contracts
+      - name: Run Product, Desktop, Rendering and Tooling tests
         run: >-
-          python scripts/platform_contracts.py run
-          --manifest tests/macos-platform-contracts.txt
-          --results artifacts/test-results/macos
+          dotnet test --solution SpanDraft.sln --configuration Release --no-build --no-restore
+          --max-parallel-test-modules 2 --report-xunit-xml --results-directory artifacts/test-results
       - name: Upload test diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: macos-platform-test-results
-          path: artifacts/test-results/macos
+          name: product-macos-test-results
+          path: artifacts/test-results
           if-no-files-found: warn
           retention-days: 7
