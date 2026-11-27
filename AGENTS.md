@@ -49,16 +49,18 @@
   than relying on Graphify, because the graph may not yet contain those changes.
 - Prefer the agent's search/read tools; otherwise use `rg`. Quote glob arguments
   under zsh and use macOS/BSD-compatible shell syntax.
-- Request host approval upfront for checks requiring IPC or process inspection
-  that the sandbox is known to block, including full `./scripts/agent verify`
-  when local IPC is blocked. Keep other checks sandboxed where possible.
-- After a sandbox, permission, IPC, cache or display-state failure, do not retry
-  command variants blindly. Use the documented repository path or identify the
-  failure class before retrying.
+- Request host access directly for checks the sandbox is known to block (IPC,
+  process inspection, GUI; see `docs/TESTING.md`, "Execution environment").
+  Do not start runs that are known to fail in the sandbox. Keep other checks
+  sandboxed.
+- After a sandbox, permission, IPC, cache or display-state failure, identify the
+  failure class before retrying; never retry command variants blindly. Report
+  missing access as blocked, never as passed, and never change or skip tests to
+  work around the environment.
 - For long-running commands, use the agent runtime's background/wait mechanism
   rather than repeated `sleep` polling.
-- Follow long-running checks until the process exits and evaluate its exit code
-  and result before closing the task. A promise to report later is insufficient.
+- Follow locally started checks until the process exits and evaluate its exit
+  code and result before closing the task. Do not wait for CI after a push.
 - Native macOS UI checks require the interactive WindowServer/display session.
   Run `./scripts/agent ui-launch` directly with the agent runtime's escalated
   execution, outside the sandbox. Request approval for that command if needed
@@ -75,12 +77,27 @@
 ## Testing
 
 - Follow `docs/TESTING.md` and test each contract on the cheapest reliable level.
-- During iteration, run the narrowest relevant tests.
-- Do not weaken analytical, numerical or compatibility coverage to make tests
-  pass or improve runtime.
-- Use `./scripts/agent verify` for broad changes or final local verification.
-  Independent solver validation remains a separate workflow and is run only when
-  required by the affected contract or validation documentation.
+- Verification levels: during development run only the relevant classes or
+  methods with a current build; at task completion run risk-based checks of the
+  affected modules and integration contracts plus `verify diff` and
+  `verify ignored-sources` (documentation-only changes: diff check only), and
+  the conditional checks in `docs/TESTING.md` (notices, icons, help assets,
+  independent solver validation). The quality gate is the complete `CI`.
+- A full local `./scripts/agent verify` is a justified exception, not a
+  completion step. Individual `verify test-*` steps reuse existing Release
+  assemblies; build first.
+- Report status as locally verified, CI pending, fully accepted or blocked.
+  Merge and release require fully accepted.
+
+## Test integrity
+
+- Preserve existing test contracts or replace them traceably with equivalent
+  or stronger checks.
+- Removing, weakening or skipping a contract, or changing numerical expected
+  values, tolerances or independent reference data, requires explicit approval.
+- Back critical new or corrected regression tests with a targeted negative
+  control.
+- Report changes to quality gates and shared test infrastructure explicitly.
 
 ## Commits
 
