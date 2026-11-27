@@ -50,6 +50,9 @@ public sealed class ProjectRecovery
     internal Task FlushAsync(ProjectState state, string? originalFilePath, Func<Task>? afterPublish) =>
         _slot.FlushAsync(new(state, originalFilePath, _utcNow()), afterPublish);
 
+    internal Task CheckpointIfIdleAsync(ProjectState state, string? originalFilePath) =>
+        _slot.CheckpointIfIdleAsync(new(state, originalFilePath, _utcNow()));
+
     public Task DeleteAsync() => _slot.DeleteAsync();
 
     internal Task DeleteAsync(Action onDeleted) => _slot.DeleteAsync(onDeleted);

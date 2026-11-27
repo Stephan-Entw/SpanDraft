@@ -32,6 +32,7 @@ internal sealed class ProjectOpenCoordinator(IProjectFileStore files, IProjectId
     internal async Task<ProjectOpenResult> OpenAsync(string path, IProjectOpenWorkspace workspace)
     {
         await registry.SettleRecoveryAsync();
+        if (!workspace.CanContinue) return ProjectOpenResult.Unavailable;
         var identity = identities.Resolve(Path.GetFullPath(path));
         bool afterSave = false;
         // The result of a successful flight this open joined. Its owner is not activated directly: the next turn of the loop
@@ -91,6 +92,7 @@ internal sealed class ProjectOpenCoordinator(IProjectFileStore files, IProjectId
             {
                 string path = token.Identity.CanonicalPath;
                 var bytes = await files.ReadAsync(path);
+                if (!workspace.CanContinue) return outcome = ProjectOpenResult.Unavailable;
                 if (bytes is null) return outcome = new(ProjectOpenStatus.Missing);
                 var state = ProjectFileCodec.Deserialize(bytes);
                 if (!await workspace.ActivateProjectAsync(state, path)) return outcome;

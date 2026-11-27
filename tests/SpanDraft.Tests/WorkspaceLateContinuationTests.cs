@@ -42,6 +42,89 @@ public sealed class WorkspaceLateContinuationTests
 
     private static TaskCompletionSource Gate() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SaveDisposedAtPickerOrSettlingBeginsNoReservationOrRecovery(bool waitInPicker)
+    {
+        var w = new Workspace(); await w.CreateProject();
+        var target = w.Dialogs.SavePath!;
+        var gate = Gate();
+        int settlements = 0;
+        w.Registry.RecoverySettler = () => { settlements++; return waitInPicker ? Task.CompletedTask : gate.Task; };
+        if (waitInPicker) w.Dialogs.SaveHook = async () => { await gate.Task; return target; };
+        var identity = Identities.Resolve(target);
+        var save = w.Main.SaveAsync();
+        Assert.False(save.IsCompleted);
+        Assert.Equal(waitInPicker ? 0 : 1, settlements);
+        Assert.Equal(ProjectPathState.Free, w.Registry.StateOf(identity));
+        int recoveryAttempts = 0;
+        w.Storage.BeforeWrite = (_, _, _) => { recoveryAttempts++; return Task.CompletedTask; };
+
+        w.Main.Dispose();
+        gate.SetResult();
+
+        Assert.False(await WaitFor(save));
+        Assert.Equal(waitInPicker ? 0 : 1, settlements);
+        Assert.Equal(0, recoveryAttempts);
+        Assert.Equal(ProjectPathState.Free, w.Registry.StateOf(identity));
+        Assert.False(w.Files.Data.ContainsKey(target));
+        Assert.Empty(w.Dialogs.Errors);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InterruptedSaveAsReleasesBothPathsAndKeepsTheCorrectRecoveryOrigin(bool writingProject)
+    {
+        var w = new Workspace(); await w.CreateProject();
+        string source = w.Dialogs.SavePath!;
+        Assert.True(await w.Main.SaveAsync());
+        Assert.True(w.Main.Session!.Commit(State(2)));
+        string target = w.Dialogs.SavePath = TestPath("late-save-as.spandraft");
+        var gate = Gate();
+        if (writingProject) w.Files.BeforeWrite = (path, _, _) => path == target ? gate.Task : Task.CompletedTask;
+        else w.Storage.BeforeWrite = (_, _, _) => gate.Task;
+        var save = w.Main.SaveAsync(saveAs: true);
+        Assert.False(save.IsCompleted);
+        Assert.Equal(ProjectPathState.Open, w.Registry.StateOf(Identities.Resolve(source)));
+        Assert.Equal(ProjectPathState.SaveTargetReserved, w.Registry.StateOf(Identities.Resolve(target)));
+
+        w.Main.Dispose();
+        gate.SetResult();
+
+        Assert.False(await WaitFor(save));
+        Assert.Equal(writingProject, w.Files.Data.ContainsKey(target));
+        Assert.Equal(source, w.Main.Session.FilePath);
+        Assert.True(w.Main.Session.IsDirty);
+        Assert.Equal(writingProject ? target : source, (await w.Recovery.ReadAsync())!.OriginalFilePath);
+        Assert.Equal(ProjectPathState.Free, w.Registry.StateOf(Identities.Resolve(source)));
+        Assert.Equal(ProjectPathState.Free, w.Registry.StateOf(Identities.Resolve(target)));
+        Assert.Empty(w.Dialogs.Errors);
+    }
+
+    [Fact]
+    public async Task SaveAlreadyCommittedBeforeRecentsSettlesStartsNoRecoveryDeleteAfterDisposal()
+    {
+        var recents = new Files();
+        var w = new Workspace(TestServices.Create(recentStore: new(recents, "recents")));
+        await w.CreateProject();
+        var slot = w.Storage.OnlySlot(RecoverySlotKind.Project);
+        var gate = Gate();
+        recents.BeforeWrite = (_, _, _) => gate.Task;
+        var save = w.Main.SaveAsync();
+        Assert.False(save.IsCompleted);
+        Assert.False(w.Main.Session!.IsDirty);
+        Assert.True(w.Files.Data.ContainsKey(w.Dialogs.SavePath!));
+
+        w.Main.Dispose();
+        gate.SetResult();
+
+        Assert.True(await WaitFor(save));
+        Assert.Contains(slot, w.Storage.Slots());
+        Assert.Empty(w.Dialogs.Errors);
+    }
+
     [Fact]
     public async Task ASaveWhoseWriteIsRunningCompletesTheFileButCommitsNoOwnershipForAWorkspaceThatIsGone()
     {
@@ -95,6 +178,112 @@ public sealed class WorkspaceLateContinuationTests
         Assert.Null(w.Registry.IdentityOwnedBy(w.Main.WindowId));
         Assert.Equal(ProjectPathState.Free, w.Registry.StateOf(Identities.Resolve(path)));
         Assert.Empty(w.Dialogs.Errors); Assert.Empty(w.Storage.Writes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NewWhoseRecoveryFlushIsHeldOnlyNavigatesWhileTheWorkspaceLives(bool dispose)
+    {
+        var w = new Workspace(); await w.CreateProject();
+        var gate = Gate();
+        w.Storage.BeforeWrite = (_, _, _) => gate.Task;
+        var create = w.Main.NewAsync();
+        Assert.False(create.IsCompleted);
+
+        if (dispose) w.Main.Dispose();
+        gate.SetResult();
+
+        Assert.Equal(!dispose, await WaitFor(create));
+        Assert.Equal(dispose ? MainViewMode.Editor : MainViewMode.ProjectSetup, w.Main.Mode);
+        Assert.NotNull(await w.Recovery.ReadAsync());
+        Assert.Empty(w.Dialogs.Errors);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task CancelSetupKeepsTheDiscardButOnlyNavigatesWhileTheWorkspaceLives(bool dispose, bool fail)
+    {
+        var w = new Workspace();
+        var slot = RecoverySlot.Setup(RecoveryId.New());
+        var draft = new SetupRecoverySnapshot(new ProjectSetupDraft(), Now);
+        w.Storage.Put(slot, ProjectSetupRecovery.Encode(draft));
+        w.Main.RestoreSetup(draft, slot);
+        var gate = Gate();
+        w.Storage.BeforeDiscard = _ => gate.Task;
+        if (fail) w.Storage.FailDiscard = _ => true;
+        int cancelled = 0;
+        w.Main.SetupCancelled += () => cancelled++;
+        var cancel = w.Main.CancelSetupAsync();
+        Assert.False(cancel.IsCompleted);
+
+        if (dispose) w.Main.Dispose();
+        gate.SetResult();
+
+        Assert.Equal(!dispose, await WaitFor(cancel));
+        Assert.Equal(dispose ? MainViewMode.ProjectSetup : MainViewMode.Start, w.Main.Mode);
+        Assert.Equal(dispose ? 0 : 1, cancelled);
+        Assert.Equal(fail ? [] : new[] { slot.FileName }, w.Storage.Discarded);
+        Assert.Equal(fail, w.Storage.Data.ContainsKey(slot));
+        Assert.Empty(w.Storage.Writes);
+        Assert.Empty(w.Dialogs.Errors);
+    }
+
+    [Theory]
+    [InlineData(LeaveDecision.Save)]
+    [InlineData(LeaveDecision.Discard)]
+    public async Task ASetupLeaveAnswerAfterDisposalStartsNeitherSaveNorDiscard(LeaveDecision decision)
+    {
+        var w = new Workspace(); await w.CreateProject();
+        var session = w.Main.Session;
+        var slot = w.Storage.OnlySlot(RecoverySlotKind.Project);
+        Assert.True(await w.Main.NewAsync()); CompleteSetup(w.Main);
+        var gate = new TaskCompletionSource<LeaveDecision>(TaskCreationOptions.RunContinuationsAsynchronously);
+        w.Dialogs.LeaveHook = () => gate.Task;
+        var create = w.Main.Setup.ConfirmAsync();
+        Assert.Equal(1, w.Dialogs.LeaveQuestions);
+        Assert.False(create.IsCompleted);
+        int writes = w.Storage.Writes.Count;
+
+        w.Main.Dispose();
+        gate.SetResult(decision);
+
+        Assert.False(await WaitFor(create));
+        Assert.Same(session, w.Main.Session);
+        Assert.Equal(MainViewMode.ProjectSetup, w.Main.Mode);
+        Assert.Equal(0, w.Dialogs.SaveQuestions);
+        Assert.Contains(slot, w.Storage.Slots());
+        Assert.Empty(w.Storage.Discarded);
+        Assert.Equal(writes, w.Storage.Writes.Count);
+        Assert.Empty(w.Dialogs.Errors);
+    }
+
+    [Fact]
+    public async Task SetupPublicationFinishingAfterDisposalStartsNoSettingsWriteOrCompanionDelete()
+    {
+        var settings = new Files();
+        var w = new Workspace(TestServices.Create(settingsStore: new(settings, "settings")));
+        var id = RecoveryId.New();
+        var slot = RecoverySlot.Setup(id);
+        var draft = new SetupRecoverySnapshot(new ProjectSetupDraft(), Now);
+        w.Storage.Put(slot, ProjectSetupRecovery.Encode(draft));
+        w.Main.RestoreSetup(draft, slot);
+        CompleteSetup(w.Main);
+        var gate = Gate();
+        w.Storage.BeforeWrite = (_, _, _) => gate.Task;
+        var create = w.Main.Setup.ConfirmAsync();
+        Assert.False(create.IsCompleted);
+
+        w.Main.Dispose();
+        gate.SetResult();
+
+        Assert.False(await WaitFor(create));
+        Assert.Contains(RecoverySlot.Project(id), w.Storage.Slots());
+        Assert.Contains(slot, w.Storage.Slots());
+        Assert.Empty(settings.Writes);
+        Assert.Null(w.Main.Settings.LastAuthor);
     }
 
     [Fact]

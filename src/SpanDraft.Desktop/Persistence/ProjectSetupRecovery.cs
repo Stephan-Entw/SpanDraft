@@ -71,6 +71,8 @@ public sealed class ProjectSetupRecovery
     /// <summary>Publishes the draft now (no debounce), e.g. to restore its protection after an aborted discard.</summary>
     internal Task FlushAsync(ProjectSetupDraft draft) => _slot.FlushAsync(new(draft, _utcNow()));
 
+    internal Task CheckpointIfIdleAsync(ProjectSetupDraft draft) => _slot.CheckpointIfIdleAsync(new(draft, _utcNow()));
+
     /// <inheritdoc cref="DebouncedSlot{TSnapshot}.DiscardAsync"/>
     internal Task<SlotDiscardOutcome> DiscardAsync() => _slot.DiscardAsync();
 

@@ -72,6 +72,18 @@ internal sealed class DebouncedSlot<TSnapshot>
         return flush;
     }
 
+    /// <summary>Starts a shutdown checkpoint only when the slot can be acquired immediately.</summary>
+    public async Task CheckpointIfIdleAsync(TSnapshot snapshot)
+    {
+        if (!_gate.Wait(0)) return;
+        try
+        {
+            Invalidate();
+            await PublishAsync(snapshot, CancellationToken.None);
+        }
+        finally { _gate.Release(); }
+    }
+
     /// <summary>
     /// Deliberately discards the slot: moves it to the Discarded area instead of deleting it. Pending debounced work is
     /// invalidated (it can never publish afterwards); every explicit flush requested before this call is still completed in
@@ -137,11 +149,16 @@ internal sealed class DebouncedSlot<TSnapshot>
         {
             if (supersedable && generation != _generation) return;
             token.ThrowIfCancellationRequested();
-            await _storage.WriteAtomicAsync(Slot, _encode(snapshot), token);
-            IsPublished = true;
+            await PublishAsync(snapshot, token);
             if (afterPublish is not null) await afterPublish();
         }
         finally { _gate.Release(); }
+    }
+
+    private async Task PublishAsync(TSnapshot snapshot, CancellationToken token)
+    {
+        await _storage.WriteAtomicAsync(Slot, _encode(snapshot), token);
+        IsPublished = true;
     }
 
     private async Task DeleteGenerationAsync(long generation, Action? onDeleted = null)

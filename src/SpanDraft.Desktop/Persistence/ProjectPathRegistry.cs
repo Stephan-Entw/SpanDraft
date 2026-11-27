@@ -193,13 +193,14 @@ internal sealed class ProjectPathRegistry
         }
     }
 
-    internal bool TryReleaseSave(SaveTargetReservation token)
+    internal bool TryReleaseSave(SaveTargetReservation token, bool releaseOwner = false)
     {
         lock (_gate)
         {
             if (!OwnsSave(token, out var saving)) return false;
             Vacate(token.Identity);
             _saves.Remove(token.WindowId);
+            if (releaseOwner) ReleaseOwnerLocked(token.WindowId);
             saving.Completion.SetResult();
             return true;
         }
@@ -215,11 +216,16 @@ internal sealed class ProjectPathRegistry
     {
         lock (_gate)
         {
-            if (_saves.ContainsKey(window) || !_owned.Remove(window, out var identity)) return false;
-            Vacate(identity);
-            Pulse(window);
-            return true;
+            return !_saves.ContainsKey(window) && ReleaseOwnerLocked(window);
         }
+    }
+
+    private bool ReleaseOwnerLocked(WindowId window)
+    {
+        if (!_owned.Remove(window, out var identity)) return false;
+        Vacate(identity);
+        Pulse(window);
+        return true;
     }
 
     internal bool UpdateRecovery(ProjectIdentity identity, Guid? expected, Guid? preferred)

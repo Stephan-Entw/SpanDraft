@@ -284,8 +284,7 @@ internal sealed class ApplicationCloseCoordinator
     /// The OS ends the session (§76): never refused. Synchronously new mutations stop (every workspace is frozen), a running
     /// user quit is superseded and the host shuts down (no request is taken any more). No dialog is opened and no recovery
     /// is given up: the platform closes the windows itself. A best-effort checkpoint of the workspaces without a running close,
-    /// leave or operation of their own is scheduled, never awaited; on the supported platforms the loop usually ends first,
-    /// so only what was published already is guaranteed.
+    /// leave or operation of their own is started before the platform closes the windows, without waiting for publication.
     /// </summary>
     internal void BeginSystemShutdown()
     {
@@ -298,18 +297,12 @@ internal sealed class ApplicationCloseCoordinator
             .Select(static h => h.Model!).ToList();
         foreach (var handle in handles) handle.Model?.FreezeForQuit();
         _host.BeginShutdown();
-        Dispatcher.UIThread.Post(() =>
-        {
-            foreach (var model in unreserved) TraceFailure(model.CheckpointRecoveryAsync());
-        });
+        foreach (var model in unreserved) _ = CheckpointForShutdownAsync(model);
     }
 
-    private static async void TraceFailure(Task<Exception?> checkpoint)
+    private static async Task CheckpointForShutdownAsync(ViewModels.MainWindowViewModel model)
     {
-        try
-        {
-            if (await checkpoint is { } error) Trace.TraceWarning("Recovery checkpoint during system shutdown failed: {0}", error);
-        }
+        try { await model.CheckpointForShutdownAsync().ConfigureAwait(false); }
         catch (Exception error) { Trace.TraceWarning("Recovery checkpoint during system shutdown failed: {0}", error); }
     }
 }

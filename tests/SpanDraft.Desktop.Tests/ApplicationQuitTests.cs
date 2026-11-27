@@ -504,6 +504,76 @@ public sealed class ApplicationQuitTests
 
     // ---- system shutdown -----------------------------------------------------------------------------------------
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheLifetimeStartsAnIdleCheckpointBeforeDisposalWithoutWaitingForStorage(bool osShutdown)
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() => WithLifetime((lifetime, events) =>
+        {
+            var app = new App(windowsPlatform: true);
+            var a = app.StartWithProject("shutdown-before-disposal");
+            app.Change(a);
+            var gate = Gate();
+            int started = 0;
+            app.Storage.BeforeWrite = (_, _, _) =>
+            {
+                Assert.False(a.Model!.IsDisposed);
+                Assert.Equal(DesktopApplicationState.ShuttingDown, app.Host.State);
+                started++;
+                return gate.Task;
+            };
+            var request = new ShutdownRequestedEventArgs();
+            typeof(ShutdownRequestedEventArgs).GetProperty("IsOSShutdown",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(request, osShutdown);
+
+            events.Raise(request);
+
+            Assert.False(request.Cancel);
+            Assert.True(a.Model!.IsDisposed);
+            Assert.Empty(lifetime.Windows);
+            Assert.Empty(app.Host.Workspaces.Handles);
+            Assert.Equal(1, started);
+            Assert.Empty(app.Storage.Writes);
+            Assert.Empty(app.Storage.Discarded);
+            gate.SetResult();
+        }));
+    }
+
+    [Fact]
+    public void SystemShutdownLeavesAnInFlightDebouncedWriteAndItsCancellationAlone()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var app = new App();
+            var a = app.StartWithProject("shutdown-running-write");
+            var gate = Gate();
+            int started = 0;
+            CancellationToken running = default;
+            app.Storage.BeforeWrite = (_, _, token) =>
+            {
+                if (++started == 1) running = token;
+                return gate.Task;
+            };
+            app.Change(a);
+            app.Debounce.ReleaseAll(); Flush();
+            Assert.Equal(1, started);
+            Assert.True(running.CanBeCanceled);
+
+            // Keep the dispatcher running here so a checkpoint wrongly queued behind the write can be observed.
+            app.Host.Quit.BeginSystemShutdown(); Flush();
+            Assert.False(running.IsCancellationRequested);
+            gate.SetResult(); Flush();
+
+            Assert.Equal(1, started);
+            Assert.Single(app.Storage.Writes);
+            Assert.Empty(app.Storage.Discarded);
+            a.Window.Close(); Flush();
+        });
+    }
+
     [Fact]
     public void ASystemShutdownAsksNothingRefusesNothingAndKeepsEveryPublishedRecovery()
     {
@@ -571,7 +641,8 @@ public sealed class ApplicationQuitTests
         WithUiContext(() =>
         {
             var app = new App(); var a = app.StartWithProject("held-checkpoint"); app.Change(a);
-            var gate = Gate(); app.Storage.BeforeWrite = (_, _, _) => gate.Task;
+            var gate = Gate(); int started = 0;
+            app.Storage.BeforeWrite = (_, _, _) => { started++; return gate.Task; };
             Assert.True(app.Host.Quit.RequestQuit()); Flush();
             var run = app.Host.Quit.UserQuit!;
             Assert.Null(OpenDialog(a));
@@ -579,6 +650,7 @@ public sealed class ApplicationQuitTests
             Assert.True(run.Superseded);
             gate.SetResult(); Flush();
             Assert.True(run.Completion.IsCompleted);
+            Assert.Equal(1, started);
             Assert.True(a.Model!.Session!.CurrentRevision.State.ContentEquals(
                 ProjectRecovery.Decode(app.Storage.Data[app.Storage.OnlySlot(RecoverySlotKind.Project)]).State));
             Assert.DoesNotContain(a.Window.OwnedWindows, w => w.IsVisible);

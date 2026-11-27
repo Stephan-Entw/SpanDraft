@@ -79,9 +79,9 @@ internal sealed class WorkspaceCloseTransaction
     {
         var choice = await _model.DecideCloseAsync(_recordRecent);
         // Orphaned meanwhile: no new recovery transition is started for a workspace that is gone.
-        if (choice == LeaveChoice.Cancel || _orphaned) return false;
+        if (choice == LeaveChoice.Cancel || _model.IsDisposed) return false;
         var (ok, leave) = await _model.PrepareCloseAsync(choice);
-        if (_orphaned)
+        if (_model.IsDisposed)
         {
             // The prepared transition was the user's decision (Discard, or cleanup after Save): it stays final, nothing is
             // republished and the context writes nothing more for the workspace that is gone.
@@ -139,12 +139,12 @@ internal sealed class WorkspaceCloseTransaction
     {
         if (_finished) return;
         _finished = true;
-        if (_recovery is not null) await _recovery.RollbackAsync();
+        if (_recovery is not null && !_model.IsDisposed) await _recovery.RollbackAsync();
         // A quit's close gives the workspace back to the quit freeze, which the quit then ends for all workspaces at once.
         var report = _model.ReleaseLeaveReservation(backToQuitFreeze: _fromQuitFreeze);
         if (_handle is not null) _handle.IsCloseRequested = false;
         Detach();
-        afterRoutable?.Invoke();
+        if (!_model.IsDisposed) afterRoutable?.Invoke();
         if (_release is not null) _model.ProjectPaths.EndOwnerRelease(_release);
         await report;
     }

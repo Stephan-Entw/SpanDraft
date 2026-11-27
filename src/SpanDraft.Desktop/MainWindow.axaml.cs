@@ -337,7 +337,7 @@ public partial class MainWindow : Window
         var pending = _host.Activation.PendingOpenRequests().Where(r => !confirmed.Contains(r)).ToList();
         if (pending.Count == 0) return true;
         string? name = pending is [{ Type: LaunchRequestType.OpenProject, Value: { } path }] ? Path.GetFileName(path) : null;
-        if (!await _dialogs.ConfirmDiscardPendingRequestsAsync(name, pending.Count)) return false;
+        if (!await _dialogs.ConfirmDiscardPendingRequestsAsync(name, pending.Count) || _handle.IsFinalized) return false;
         confirmed.UnionWith(pending);
         return true;
     }

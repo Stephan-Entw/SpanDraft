@@ -30,6 +30,7 @@ internal sealed class ProjectDialogs(Window owner, Func<bool>? shutdownAuthorize
     {
         using var folder = currentFilePath is null ? null
             : await owner.StorageProvider.TryGetFolderFromPathAsync(Path.GetDirectoryName(currentFilePath)!);
+        if (shutdownAuthorized?.Invoke() == true) return null;
         using var file = await owner.StorageProvider.SaveFilePickerAsync(new()
         {
             Title = Strings.SaveAs, FileTypeChoices = [ProjectType], DefaultExtension = "spandraft",

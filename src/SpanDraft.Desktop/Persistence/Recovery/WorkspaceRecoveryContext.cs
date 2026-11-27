@@ -93,7 +93,9 @@ public sealed class WorkspaceRecoveryContext
     /// still exists, the draft slot stays as the crash fallback (the catalog prefers a valid project of the same id), the
     /// snapshot is scheduled for a later publish and the failure is reported.
     /// </summary>
-    public async Task ProjectCreatedAsync(ProjectSession session)
+    public Task ProjectCreatedAsync(ProjectSession session) => ProjectCreatedAsync(session, static () => true);
+
+    internal async Task ProjectCreatedAsync(ProjectSession session, Func<bool> canContinue)
     {
         var setup = _setup;
         _setup = null;
@@ -103,12 +105,15 @@ public sealed class WorkspaceRecoveryContext
         try
         {
             await project.FlushAsync(session.CurrentRevision.State, session.FilePath ?? session.RecoveryOriginPath,
-                setup is null ? null : () => TryRemovePublishedCompanionAsync(setup));
+                setup is null ? null : () => canContinue() ? TryRemovePublishedCompanionAsync(setup) : Task.CompletedTask);
         }
         catch (Exception e) when (IsStorageError(e))
         {
-            project.Schedule(session);
-            Failed?.Invoke(e);
+            if (canContinue())
+            {
+                project.Schedule(session);
+                Failed?.Invoke(e);
+            }
         }
     }
 
@@ -221,6 +226,17 @@ public sealed class WorkspaceRecoveryContext
         else await DrainAsync();
     }
 
+    internal Task CheckpointForShutdownAsync(ProjectSession? session, ProjectSetupDraft? draft)
+    {
+        if (_retired || Fault != RecoveryFault.None) return Task.CompletedTask;
+        if (session is { IsDirty: true } && _setup is null)
+        {
+            _project ??= NewProjectWriter(SlotOf(RecoverySlotKind.Project, RecoveryId.New()));
+            return _project.CheckpointIfIdleAsync(session.CurrentRevision.State, session.FilePath ?? session.RecoveryOriginPath);
+        }
+        return _setup is { } setup && draft is not null ? setup.CheckpointIfIdleAsync(draft) : Task.CompletedTask;
+    }
+
     /// <summary>The current content of the project slot, or null.</summary>
     public Task<RecoverySnapshot?> ReadAsync() => _project?.ReadAsync() ?? Task.FromResult<RecoverySnapshot?>(null);
 
@@ -242,8 +258,11 @@ public sealed class WorkspaceRecoveryContext
     /// state is published again, and if that fails too the context becomes faulted (§60). Otherwise the current state is only
     /// scheduled again. The failure is thrown in either case.
     /// </remarks>
-    public async Task<RecoveryLeave> PrepareLeaveAsync(RecoveryLeaveScope scope, bool discardProject, ProjectSession? session,
-        ProjectSetupDraft? draft)
+    public Task<RecoveryLeave> PrepareLeaveAsync(RecoveryLeaveScope scope, bool discardProject, ProjectSession? session,
+        ProjectSetupDraft? draft) => PrepareLeaveAsync(scope, discardProject, session, draft, static () => true);
+
+    internal async Task<RecoveryLeave> PrepareLeaveAsync(RecoveryLeaveScope scope, bool discardProject, ProjectSession? session,
+        ProjectSetupDraft? draft, Func<bool> canRestore)
     {
         if (_retired) throw new InvalidOperationException("The workspace recovery was already retired.");
         var leave = new RecoveryLeave(this, scope, scope == RecoveryLeaveScope.Draft ? null : _project,
@@ -251,7 +270,7 @@ public sealed class WorkspaceRecoveryContext
         try { await leave.PrepareAsync(); }
         catch (Exception e) when (IsStorageError(e))
         {
-            await leave.RestoreAsync();
+            if (canRestore()) await leave.RestoreAsync();
             throw;
         }
         return leave;

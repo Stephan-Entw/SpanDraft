@@ -129,6 +129,7 @@ public sealed class RecoveryCenterViewModel : ObservableObject, IDisposable
         bool any = false;
         foreach (var id in Items.Where(static i => i.IsUnreadable).Select(static i => i.CandidateId).ToList())
         {
+            if (_disposed) break;
             try { any |= await _catalog.DiscardAsync(id); }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             { await _reportError(e); }

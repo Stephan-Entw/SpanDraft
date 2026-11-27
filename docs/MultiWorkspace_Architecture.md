@@ -1935,7 +1935,7 @@ Ein OS-Ende wird nie abgebrochen.
 - **macOS:** `applicationShouldTerminate` kennt über Avalonia nur Abbruch oder sofortiges Beenden. Nach einem nicht abgebrochenen OS-Ende folgt unmittelbar `exit()`.
 - **Windows:** Die Lifetime schließt die Fenster und beendet die UI-Schleife synchron innerhalb von `WM_QUERYENDSESSION`. Avalonia meldet dort auch die Abmeldung, und zwar als `ApplicationShutdown` statt `OSShutdown`. Jedes nicht programmatische Plattform-Close gilt auf Windows deshalb als Sitzungsende.
 
-Ein Flush ließe sich nur abwarten, indem das OS-Signal abgebrochen wird; auf macOS bräche das Abmeldung bzw. Neustart ab. Der Flush wird daher nur best-effort angestoßen, und zwar für Workspaces ohne eigene laufende Close-, Discard- oder Schreiboperation. Er wird nicht abgewartet und läuft in der Regel nicht mehr.
+Ein Flush ließe sich nur abwarten, indem das OS-Signal abgebrochen wird. Auf macOS bräche das Abmeldung bzw. Neustart ab. Der Checkpoint startet best-effort im synchronen Schließsignal, solange der Workspace noch lebt. Workspaces mit eigener laufender Operation und Recovery-Slots mit belegtem Gate werden übersprungen. Das Signal lässt die Fenster unmittelbar schließen, ohne die Publikation abzuwarten.
 
 Garantiert ist:
 
@@ -1948,7 +1948,7 @@ Für noch nicht publizierte Änderungen gibt es keine Garantie; der Debounce lie
 Verspätete Fortsetzungen nach dem Schließen der Fenster gilt:
 
 - Laufende atomare Writes und bereits getroffene Entscheidungen (z. B. ein laufender Discard) dürfen enden.
-- Es folgen keine neuen Entscheidungen, keine Ownership-Commits, kein Rollback-Republish und keine Dialoge.
+- Es folgen keine neuen Entscheidungen, Ownership-Commits oder Dialoge. Die notwendige Bereinigung eines bereits begonnenen Save As stellt bei einem ausgebliebenen oder fehlgeschlagenen Projektdatei-Write den bisherigen Recovery-Origin wieder her. Andere Rollback-Republishes entfallen.
 - Reservationen werden freigegeben.
 
 Nicht automatisiert prüfbar sind echtes macOS-Logout/-Restart/-Shutdown und die Windows-Sitzungsenden. Sie sind über die Close-Klassifikation abgedeckt.

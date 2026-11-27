@@ -432,7 +432,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
     private void SetupDraftChanged(ProjectSetupViewModel setup)
     {
-        if (Mode == MainViewMode.ProjectSetup && setup.Mode == ProjectSetupMode.Create && ReferenceEquals(setup, Setup))
+        if (!_disposed && Mode == MainViewMode.ProjectSetup && setup.Mode == ProjectSetupMode.Create && ReferenceEquals(setup, Setup))
             _recovery?.SetupDraftChanged(setup.Draft);
     }
 
@@ -449,7 +449,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
     private Task<bool> ApplySetupAsync(ProjectSetupViewModel setup)
     {
-        if (Mode != MainViewMode.ProjectSetup || !ReferenceEquals(setup, Setup)
+        if (_disposed || Mode != MainViewMode.ProjectSetup || !ReferenceEquals(setup, Setup)
             || IsWorkspaceBusy || IsRecoveryFaulted || !setup.CanApply)
             return Task.FromResult(false);
         if (setup.Mode == ProjectSetupMode.Edit)
@@ -464,7 +464,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         {
             // Create over a project (transition until Phase 9): only the project is left; the draft hands its id over below.
             var choice = await DecideLeaveAsync();
-            if (choice == LeaveChoice.Cancel) return false;
+            if (_disposed || choice == LeaveChoice.Cancel) return false;
             if (!await LeaveRecoveryAsync(Session is not null ? RecoveryLeaveScope.Project : null, choice)) return false;
             // Gone meanwhile (system shutdown): no project is created; the draft's slot stays its crash protection.
             if (_disposed) return false;
@@ -472,7 +472,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
             setup.ConfirmedDraftChanged -= SetupDraftChanged;
             ActivatePathlessSession(ProjectSession.Create(new(document, new(), setup.Info)));
             // The project takes over the draft's recovery id: its slot is published completely before the draft slot goes.
-            if (_recovery is not null) await _recovery.ProjectCreatedAsync(Session!);
+            if (_recovery is not null) await _recovery.ProjectCreatedAsync(Session!, () => !_disposed);
+            if (_disposed) return false;
             // The author is current at once; remembering it on disk is best effort and never replaces damaged settings.
             await _services.Settings.UpdateLastAuthorAsync(Session!.CurrentRevision.State.Info!.Author);
             return true;
@@ -491,6 +492,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         bool create = Setup.Mode == ProjectSetupMode.Create;
         // The draft is given up deliberately: its slot is moved to Discarded first; if that fails the setup stays as it is.
         if (create && !await LeaveRecoveryAsync(RecoveryLeaveScope.Draft, LeaveChoice.Clean)) return false;
+        if (_disposed) return false;
         if (create) Setup.ConfirmedDraftChanged -= SetupDraftChanged;
         Navigate(_setupReturnMode);
         if (create && Session is null) SetupCancelled?.Invoke();
@@ -562,11 +564,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
             }
             catch (Exception e) when (IsFileError(e))
             {
-                if (session.IsDirty) _recovery.ScheduleProject(session);
+                if (!_disposed && session.IsDirty) _recovery.ScheduleProject(session);
                 await ShowErrorAsync(Strings.RecoveryError, e);
                 return false;
             }
         }
+        if (_disposed) return false;
         _setupReturnMode = Mode;
         _setup = NewSetup();
         Navigate(MainViewMode.ProjectSetup);
@@ -646,7 +649,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         if (result.Status == ProjectOpenStatus.Missing)
         {
             if (!fromRecent) throw new IOException(Strings.ProjectFileMissing);
-            if (_dialogs is not null && await _dialogs.ConfirmRemoveMissingRecentAsync(Path.GetFullPath(path)))
+            if (_dialogs is not null && await _dialogs.ConfirmRemoveMissingRecentAsync(Path.GetFullPath(path)) && !_disposed)
                 await _services.Recents.RemoveAsync(path);
         }
         if (result.Error is { } error) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error);
@@ -705,7 +708,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
     private async Task<bool> SaveCurrentAsync(bool saveAs = false, bool recordRecent = true)
     {
-        if (Session is not { } session) return false;
+        if (_disposed || Session is not { } session) return false;
         if (session.CurrentRevision.State.Document.Segments.Any(segment => segment.Material.StrengthType is null))
         {
             if (_dialogs is not null) await _dialogs.ShowErrorAsync(Strings.MaterialStrengthResolve);
@@ -715,11 +718,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         if (path is null)
         {
             path = _dialogs is null ? null : await _dialogs.PickSavePathAsync(session.FilePath, session.CurrentRevision.State.Info?.CalculationTitle);
-            if (path is null) return false;
+            if (_disposed || path is null) return false;
             path = EnsureProjectExtension(path);
         }
         string? previousPath = session.FilePath;
         await _projectPaths.SettleRecoveryAsync();
+        if (_disposed) return false;
         var identity = !saveAs && previousPath is not null && _projectPaths.IdentityOwnedBy(WindowId) is { } owned
             ? owned : _projectIdentities.Resolve(path);
         var decision = _projectPaths.ArbitrateSave(identity, WindowId, out var reservation);
@@ -731,6 +735,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
             var revision = session.CurrentRevision;
             var save = session.PrepareSave(revision, path);
             bool recoveryStarted = false;
+            bool recoveryPublished = false;
             // Saving is the remediation of a faulted project recovery: the protective flush is still tried, but its failure
             // must not prevent the atomic file write (the protection is lost already).
             bool faulted = _recovery?.Fault == RecoveryFault.Project;
@@ -740,23 +745,31 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
                 if (_recovery is not null && (session.IsDirty || reservation is not null))
                 {
                     recoveryStarted = true;
-                    try { await _recovery.FlushAsync(revision.State, path); }
+                    try
+                    {
+                        await _recovery.FlushAsync(revision.State, path);
+                        recoveryPublished = true;
+                    }
                     catch (Exception e) when (faulted && IsFileError(e)) { }
                 }
-                // Gone meanwhile (system shutdown): no new file write is started; the recovery is put back to the state
-                // before this save, exactly as after a failed write, and stays the protection.
+                // The target has no saved file from this transaction. Undo the protective flush's target association
+                // even after disposal, so it stays associated with the project that actually owns the changes.
                 if (_disposed)
                 {
-                    if (recoveryStarted) await RestoreRecoveryAfterUnsavedAsync();
+                    if (NeedsRecoveryRollbackAfterDisposal()) await RestoreRecoveryAfterUnsavedAsync();
                     return false;
                 }
                 await _files.WriteAtomicAsync(path, bytes);
             }
             catch
             {
-                if (recoveryStarted) await RestoreRecoveryAfterUnsavedAsync();
+                if (_disposed ? NeedsRecoveryRollbackAfterDisposal() : recoveryStarted)
+                    await RestoreRecoveryAfterUnsavedAsync();
                 throw;
             }
+
+            bool NeedsRecoveryRollbackAfterDisposal() => recoveryPublished &&
+                (!session.IsDirty || !string.Equals(path, previousPath ?? session.RecoveryOriginPath, StringComparison.Ordinal));
 
             async Task RestoreRecoveryAfterUnsavedAsync()
             {
@@ -765,7 +778,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
                     if (session.IsDirty) await _recovery!.FlushAsync(revision.State, previousPath ?? session.RecoveryOriginPath);
                     else await _recovery!.DeleteAsync();
                 }
-                catch (Exception e) when (IsFileError(e)) { _recovery!.ScheduleProject(session); }
+                catch (Exception e) when (IsFileError(e))
+                {
+                    // A failed rollback keeps its existing best-effort repair path.
+                    _recovery!.ScheduleProject(session);
+                }
             }
 
             // The atomic write was the user's decision and is complete. A workspace that is gone commits no ownership and
@@ -778,11 +795,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         }
         finally
         {
-            if (reservation is not null) _projectPaths.TryReleaseSave(reservation);
+            if (reservation is not null) _projectPaths.TryReleaseSave(reservation, releaseOwner: _disposed);
         }
         _recovery?.ProjectSaved(session);
         if (recordRecent) await RecordRecentAsync(path, saveAs && reservation is not null ? previousPath : null);
-        if (_recovery is not null)
+        if (!_disposed && _recovery is not null)
         {
             try { await _recovery.DeleteAsync(); }
             catch (Exception e) when (IsFileError(e)) { await ShowErrorAsync(Strings.RecoveryError, e); }
@@ -853,7 +870,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
     private async Task<bool> RunOperationAsync(Func<Task<bool>> operation, bool fileTransaction = false)
     {
-        if (IsWorkspaceBusy) return false;
+        if (_disposed || IsWorkspaceBusy) return false;
         var completion = fileTransaction ? new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) : null;
         _fileOperationCompletion = completion;
         _busy = true;
@@ -871,10 +888,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
             {
                 _busy = false;
                 _fileOperationCompletion = null;
-                // Computed, never released wholesale: a quit freeze or close reservation keeps the session locked.
-                Session?.SetBusy(IsBusy);
-                NotifySession();
-                await ReportPendingRecoveryAsync();
+                if (!_disposed)
+                {
+                    // A quit freeze or close reservation keeps the session locked.
+                    Session?.SetBusy(IsBusy);
+                    NotifySession();
+                    await ReportPendingRecoveryAsync();
+                }
             }
             finally { completion?.SetResult(); }
         }

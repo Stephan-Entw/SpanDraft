@@ -30,8 +30,10 @@ public sealed partial class MainWindowViewModel
     /// <summary>Asks about unsaved project changes. Save failures are thrown; a cancelled save is <see cref="LeaveChoice.Cancel"/>.</summary>
     private async Task<LeaveChoice> DecideLeaveAsync(bool recordRecent = true)
     {
+        if (_disposed) return LeaveChoice.Cancel;
         if (Session?.IsDirty != true) return LeaveChoice.Clean;
         var decision = _dialogs is null ? LeaveDecision.Cancel : await _dialogs.ConfirmLeaveAsync(ProjectFileName);
+        if (_disposed) return LeaveChoice.Cancel;
         return decision switch
         {
             LeaveDecision.Discard => LeaveChoice.Discard,
@@ -46,11 +48,12 @@ public sealed partial class MainWindowViewModel
     /// </summary>
     private async Task<bool> LeaveRecoveryAsync(RecoveryLeaveScope? scope, LeaveChoice choice)
     {
+        if (_disposed) return false;
         if (scope is not { } leaving || _recovery is null) return true;
         try
         {
-            var leave = await _recovery.PrepareLeaveAsync(leaving, choice == LeaveChoice.Discard, Session, CurrentDraft);
-            leave.Commit(retire: false);
+            var leave = await _recovery.PrepareLeaveAsync(leaving, choice == LeaveChoice.Discard, Session, CurrentDraft, () => !_disposed);
+            leave.Commit(retire: _disposed);
             return true;
         }
         catch (Exception e) when (IsFileError(e))
@@ -121,15 +124,18 @@ public sealed partial class MainWindowViewModel
         try { await _recovery.CheckpointAsync(Session, CurrentDraft); }
         catch (Exception e) when (RecoveryErrors.IsStorage(e) || IsFileError(e))
         {
-            _pendingRecoveryError = null;
+            if (!_disposed) _pendingRecoveryError = null;
             return e;
         }
-        _pendingRecoveryError = null;
+        if (!_disposed) _pendingRecoveryError = null;
         return null;
     }
 
     /// <summary>Shows a failed quit checkpoint with the normal recovery error; nothing once the workspace is gone.</summary>
     internal Task ReportCheckpointFailureAsync(Exception error) => ShowErrorAsync(Strings.RecoveryError, error);
+
+    internal Task CheckpointForShutdownAsync() => _disposed || _recovery is null ? Task.CompletedTask
+        : _recovery.CheckpointForShutdownAsync(Session, CurrentDraft);
 
     private async void ReportDeferredRecovery()
     {
@@ -151,8 +157,13 @@ public sealed partial class MainWindowViewModel
     /// <summary>Prepares the recovery of the whole workspace for its close; false after a shown failure.</summary>
     internal async Task<(bool Ok, RecoveryLeave? Leave)> PrepareCloseAsync(LeaveChoice choice)
     {
+        if (_disposed) return (false, null);
         if (_recovery is null) return (true, null);
-        try { return (true, await _recovery.PrepareLeaveAsync(RecoveryLeaveScope.Workspace, choice == LeaveChoice.Discard, Session, CurrentDraft)); }
+        try
+        {
+            return (true, await _recovery.PrepareLeaveAsync(RecoveryLeaveScope.Workspace, choice == LeaveChoice.Discard,
+                Session, CurrentDraft, () => !_disposed));
+        }
         catch (Exception e) when (IsFileError(e))
         {
             await ShowErrorAsync(Strings.RecoveryError, e);
@@ -184,8 +195,9 @@ public sealed partial class MainWindowViewModel
     {
         if (!_leaveReserved) return Task.CompletedTask;
         // Back to the quit freeze without a gap: the freeze is in place before the reservation ends.
-        if (backToQuitFreeze && !_disposed) _quitFrozen = true;
         _leaveReserved = false;
+        if (_disposed) return Task.CompletedTask;
+        if (backToQuitFreeze) _quitFrozen = true;
         Session?.SetBusy(IsBusy);
         NotifySession();
         return ReportPendingRecoveryAsync();
@@ -262,7 +274,7 @@ public sealed partial class MainWindowViewModel
             _pendingRecoveryError = null;
             await ReportRecoveryErrorAsync(recoveryError);
         }
-        if (_pendingFaultReport && !IsBusy)
+        if (!_disposed && _pendingFaultReport && !IsBusy)
         {
             _pendingFaultReport = false;
             if (_recovery?.FaultError is { } fault)
