@@ -366,6 +366,22 @@ scopes `all` and `test-tooling`, and separate persistent logs. The full log
 contains the build output and all test summaries. The individual run reports
 that it uses existing Release assemblies and skips freshness checks.
 
+#### macOS host requirements
+
+The Desktop activation tests exercise real .NET named pipes, including across
+processes. On macOS these use Unix-domain sockets, so the test processes need
+permission to bind, listen and connect. Full Verify includes the Desktop suite.
+The native cancellation probe needs `/bin/ps` to identify the worker process
+group. The shell regression and standalone `verify test-tooling` can run in the
+sandbox.
+
+An explicit sandbox denial identifies an execution-environment failure. A
+broker timeout or missing reply alone is inconclusive. If a sandbox failure is
+suspected, inspect the log and rerun only the affected test or module with the
+required host access. If the failure persists after access is confirmed,
+investigate the test and product behavior. Report the check as blocked if the
+required access is unavailable.
+
 ## 18. Generated resources
 
 Generated resources must remain reproducible from checked-in sources.

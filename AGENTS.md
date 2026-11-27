@@ -49,6 +49,9 @@
   than relying on Graphify, because the graph may not yet contain those changes.
 - Prefer the agent's search/read tools; otherwise use `rg`. Quote glob arguments
   under zsh and use macOS/BSD-compatible shell syntax.
+- Request host approval upfront for checks requiring IPC or process inspection
+  that the sandbox is known to block, including full `./scripts/agent verify`
+  when local IPC is blocked. Keep other checks sandboxed where possible.
 - After a sandbox, permission, IPC, cache or display-state failure, do not retry
   command variants blindly. Use the documented repository path or identify the
   failure class before retrying.
