@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Nodes;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
@@ -51,15 +52,33 @@ public sealed class RecoveryCatalogTests
         Assert.Equal(RecoveryCatalogState.Loaded, f.Catalog.State); Assert.False(f.Catalog.HasUndecided); Assert.Empty(f.Catalog.Candidates);
     }
 
-    [Fact]
-    public async Task ADamagedSlotIsIsolatedAndTheRestIsStillOffered()
+    [Theory]
+    [InlineData("{")]
+    [InlineData("null")]
+    [InlineData("{}")]
+    [InlineData(null)]
+    public async Task ADamagedSlotIsIsolatedAndTheRestIsStillOffered(string? json)
     {
-        var f = new Fixture(); var good = f.Project("a.spandraft"); var draft = f.Setup(); var bad = f.Damaged(); var badDraft = f.Damaged(RecoverySlotKind.Setup);
+        var f = new Fixture(); var good = f.Project("a.spandraft"); var draft = f.Setup(); var bad = f.Project(null); var badDraft = f.Damaged(RecoverySlotKind.Setup);
+        if (json is null)
+        {
+            var envelope = JsonNode.Parse(f.Storage.Data[bad])!;
+            envelope["recoveryVersion"] = 2;
+            json = envelope.ToJsonString();
+        }
+        var bytes = Encoding.UTF8.GetBytes(json);
+        f.Storage.Put(bad, bytes);
         await f.Load();
         Assert.Equal(4, f.Catalog.Undecided.Count);
         Assert.False(f.Of(good).IsDamaged); Assert.False(f.Of(draft).IsDamaged);
         Assert.True(f.Of(bad).IsDamaged); Assert.True(f.Of(badDraft).IsDamaged);
         Assert.NotNull(f.Of(bad).ValidationError); Assert.Equal(RecoveryCandidateState.Orphaned, f.Of(bad).State);
+        Assert.Equal(bytes, f.Storage.Data[bad]);
+        Assert.Null(await f.Catalog.TryBeginClaimAsync(f.Of(bad).CandidateId));
+        Assert.True(await f.Catalog.DiscardAsync(f.Of(bad).CandidateId));
+        Assert.DoesNotContain(f.Catalog.Candidates, c => c.Slot == bad);
+        Assert.Equal(bytes, f.Storage.DiscardedData[bad]);
+        Assert.Equal(3, f.Catalog.Undecided.Count);
     }
 
     [Fact]
@@ -310,13 +329,17 @@ public sealed class RecoveryCatalogTests
     }
 
     [Theory]
-    [InlineData("different")] [InlineData("missing")] [InlineData("malformed")] [InlineData("unreadable")]
+    [InlineData("different")] [InlineData("support-name")] [InlineData("missing")] [InlineData("malformed")] [InlineData("unreadable")]
     public async Task ARecoveryStaysWhenItsOriginalDiffersIsMissingMalformedOrUnreadable(string kind)
     {
         var f = new Fixture(); var state = State(3); string path = TestPath("orig.spandraft");
         switch (kind)
         {
             case "different": f.Files.Data[path] = ProjectFileCodec.Serialize(State(2)); break;
+            case "support-name":
+                var renamed = state.Document.WithSupports(state.Document.Supports.Select(s => s.Id == SupportId ? s with { Name = "Different" } : s));
+                f.Files.Data[path] = ProjectFileCodec.Serialize(state with { Document = renamed });
+                break;
             case "malformed": f.Files.Data[path] = Encoding.UTF8.GetBytes("{}"); break;
             case "unreadable": f.Files.Data[path] = ProjectFileCodec.Serialize(state); f.Files.BeforeRead = p => p == path ? throw new IOException("locked") : Task.CompletedTask; break;
         }
@@ -344,6 +367,12 @@ public sealed class RecoveryCatalogTests
         var slot = f.Project("r.spandraft", state: state); f.Storage.FailDelete = _ => true;
         await f.Load();
         Assert.Empty(f.Catalog.Candidates); Assert.True(f.Storage.Data.ContainsKey(slot));
+
+        f.Storage.FailDelete = null;
+        var restarted = new RecoveryCatalog(f.Storage, f.Files, f.Resolver, new ProjectPathRegistry());
+        Assert.True(await restarted.InitializeAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(restarted.Candidates);
+        Assert.False(f.Storage.Data.ContainsKey(slot));
     }
 
     // ---- claim ------------------------------------------------------------------------------------------------
@@ -373,13 +402,77 @@ public sealed class RecoveryCatalogTests
         Assert.True(f.Storage.Data.ContainsKey(slot));
     }
 
-    [Fact]
-    public async Task ClaimAndDiscardOfTheSameCandidateInParallelHaveExactlyOneWinner()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ClaimAndDiscardOfTheSameCandidateInParallelHaveExactlyOneWinner(bool claimFirst)
     {
-        var f = new Fixture(); var slot = f.Project(null); await f.Load(); var id = f.Of(slot).CandidateId;
-        var claim = f.Catalog.TryBeginClaimAsync(id); var discard = f.Catalog.DiscardAsync(id);
-        var claimed = await claim; bool discarded = await discard;
+        var f = new Fixture();
+        var slot = f.Project("race.spandraft");
+        var draft = f.Setup(id: slot.Id);
+        var projectBytes = f.Storage.Data[slot].ToArray();
+        var draftBytes = f.Storage.Data[draft].ToArray();
+        await f.Load();
+        var id = f.Of(slot).CandidateId;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var blockedSlot = claimFirst ? draft : slot;
+        Task HoldStorageOperation(RecoverySlot affectedSlot)
+        {
+            if (affectedSlot != blockedSlot) return Task.CompletedTask;
+            entered.TrySetResult();
+            return WaitFor(release.Task);
+        }
+        if (claimFirst) f.Storage.BeforeDelete = HoldStorageOperation;
+        else f.Storage.BeforeDiscard = HoldStorageOperation;
+
+        Task<RecoveryClaim?> Claim() => f.Catalog.TryBeginClaimAsync(id);
+        Task<bool> Discard() => f.Catalog.DiscardAsync(id);
+        Task<RecoveryClaim?>? claim = claimFirst ? Claim() : null;
+        Task<bool>? discard = claimFirst ? null : Discard();
+        Task first = claimFirst ? claim! : discard!;
+        bool overlapped;
+        try
+        {
+            await WaitForCheckpoint(entered.Task, first);
+            claim ??= Claim();
+            discard ??= Discard();
+            overlapped = !claim.IsCompleted && !discard.IsCompleted;
+        }
+        finally
+        {
+            release.TrySetResult();
+            await WaitFor(Task.WhenAll(claim ?? Task.CompletedTask, discard ?? Task.CompletedTask));
+        }
+
+        Assert.True(overlapped, "Both operations must still be pending while the first is held in storage.");
+        var claimed = await claim;
+        bool discarded = await discard;
         Assert.True(claimed is not null ^ discarded);
+        Assert.Equal(!claimFirst, discarded);
+        Assert.False(f.Storage.Data.ContainsKey(draft));
+        if (claimFirst)
+        {
+            Assert.NotNull(claimed);
+            Assert.Equal(slot, claimed.Slot);
+            Assert.True(claimed.HoldsPath);
+            Assert.Equal(RecoveryCandidateState.Claiming, f.Catalog.Find(id)!.State);
+            Assert.Equal(id, f.Registry.RecoveryCandidateOf(f.Identity("race.spandraft")));
+            await WaitFor(claimed.CommitAsync());
+            Assert.Equal(RecoveryCandidateState.Claimed, f.Catalog.Find(id)!.State);
+            Assert.Equal(projectBytes, f.Storage.Data[slot]);
+            Assert.Empty(f.Storage.Discarded);
+        }
+        else
+        {
+            Assert.Null(f.Catalog.Find(id));
+            Assert.Empty(f.Storage.Data);
+            Assert.Equal(new[] { draft.FileName, slot.FileName }, f.Storage.Discarded);
+            Assert.Equal(projectBytes, f.Storage.DiscardedData[slot]);
+            Assert.Equal(draftBytes, f.Storage.DiscardedData[draft]);
+        }
+        Assert.False(f.Catalog.HasUndecided);
+        Assert.Equal(ProjectPathState.Free, f.Registry.StateOf(f.Identity("race.spandraft")));
     }
 
     [Fact]

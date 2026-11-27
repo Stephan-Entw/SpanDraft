@@ -33,6 +33,13 @@ using (var broker = BrokerServer.Start(primary.Metadata))
     });
     host.SetInitialRequest(request);
     host.AttachBroker(broker);
+    var handleBrokerRequest = broker.Handler;
+    broker.Handler = incoming =>
+    {
+        var status = handleBrokerRequest(incoming);
+        if (status == BrokerStatus.Retry) Say($"retry {Describe(incoming)}");
+        return status;
+    };
     host.Activation.SetConsumer(handled => { Say($"handled {Describe(handled)}"); return Task.FromResult(true); });
     host.Activation.Enqueued += () => _ = host.Activation.PumpAsync();
     Say($"primary {Describe(request)}");

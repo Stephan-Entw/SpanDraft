@@ -9,6 +9,7 @@ internal sealed class TestRecoveryStorage : IRecoveryStorage
     public ConcurrentDictionary<RecoverySlot, byte[]> Data { get; } = new();
     public ConcurrentQueue<RecoverySlot> Writes { get; } = new();
     public ConcurrentQueue<string> Discarded { get; } = new();
+    public ConcurrentDictionary<RecoverySlot, byte[]> DiscardedData { get; } = new();
     public Func<RecoverySlot, byte[], CancellationToken, Task>? BeforeWrite { get; set; }
     public Func<RecoverySlot, Task>? BeforeRead { get; set; }
     public Func<RecoverySlot, Task>? BeforeDelete { get; set; }
@@ -71,7 +72,8 @@ internal sealed class TestRecoveryStorage : IRecoveryStorage
     {
         if (BeforeDiscard is not null) await BeforeDiscard(slot);
         if (FailDiscard?.Invoke(slot) == true) throw Failure("discard");
-        if (!Data.TryRemove(slot, out _)) throw new RecoverySlotMissingException(slot.FileName);
+        if (!Data.TryRemove(slot, out var bytes)) throw new RecoverySlotMissingException(slot.FileName);
+        DiscardedData[slot] = bytes;
         Discarded.Enqueue(slot.FileName);
     }
 

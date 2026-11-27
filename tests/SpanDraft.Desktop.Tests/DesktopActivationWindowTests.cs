@@ -350,17 +350,8 @@ public sealed class DesktopActivationWindowTests
         });
     }
 
-    // Pumps the UI dispatcher on this thread until the task is done; awaiting it then continues inline, without a thread switch.
-    private static async Task<T> PumpUntilAsync<T>(Task<T> task)
-    {
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
-        while (!task.IsCompleted && DateTime.UtcNow < deadline) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
-        Assert.True(task.IsCompleted);
-        return await task;
-    }
-
     [Fact]
-    public async Task RealBrokerEndpointAnswersAcceptedAlthoughRecoveryIsPending()
+    public void RealBrokerEndpointAnswersAcceptedAlthoughRecoveryIsPending()
     {
         using var environment = new DesktopControlEnvironment();
         string root = Path.Combine(Path.GetTempPath(), "spandraft-activation-win-" + Guid.NewGuid().ToString("N"));
@@ -372,13 +363,14 @@ public sealed class DesktopActivationWindowTests
             host.AttachBroker(broker);
             var window = host.Workspaces.CreateInitial().Window;
             DesktopControlEnvironment.ShowInitialized(window);
-            Assert.True(host.Recovery.HasUndecided);
-            Assert.Equal(DesktopApplicationState.Ready, host.State);
-            var accepted = BrokerClient.SendAsync(primary.Metadata, LaunchRequest.Activate, TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-            // Pump before awaiting: the window and its dispatcher must stay on this thread.
-            Assert.Equal(BrokerStatus.Accepted, await PumpUntilAsync(accepted));
-            typeof(MainWindow).GetField("_closeApproved", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, true);
-            window.Close(); Dispatcher.UIThread.RunJobs();
+            try
+            {
+                Assert.True(host.Recovery.HasUndecided);
+                Assert.Equal(DesktopApplicationState.Ready, host.State);
+                DesktopControlEnvironment.RunOnDispatcher(async () => Assert.Equal(BrokerStatus.Accepted,
+                    await BrokerClient.SendAsync(primary.Metadata, LaunchRequest.Activate, TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)));
+            }
+            finally { ApproveClose(window); }
         }
         finally { try { Directory.Delete(root, true); } catch (IOException) { } }
     }

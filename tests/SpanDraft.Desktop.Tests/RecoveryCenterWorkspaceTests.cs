@@ -213,16 +213,36 @@ public sealed class RecoveryCenterWorkspaceTests
         var center = Center(start);
         Assert.True(center.HasUnreadable);
 
-        Assert.True(Run(() => { center.DiscardUnreadableCommand.Execute(null); return Task.FromResult(true); }));
-        Flush();
+        RunBulk(center.DiscardUnreadableCommand, () => host.Recovery.Candidates.All(candidate => candidate.Slot != damaged));
         Assert.False(storage.Data.ContainsKey(damaged));
         Assert.Equal(2, Center(start).Items.Count);
 
-        Run(() => { center.RestoreAllCommand.Execute(null); return Task.FromResult(true); });
-        for (int i = 0; i < 20 && host.Recovery.HasUndecided; i++) { Flush(); Thread.Sleep(10); }
+        RunBulk(center.RestoreAllCommand, () => host.Recovery.Candidates.Count(candidate => candidate.State == RecoveryCandidateState.Claimed) == 2);
         Assert.False(host.Recovery.HasUndecided);
         Assert.Equal(2, host.Workspaces.Handles.Count(h => h.Kind == WorkspaceKind.Project));
         Assert.True(host.Workspaces.StartSlotCount <= 1);
+
+        void RunBulk(AsyncActionCommand command, Func<bool> reached)
+        {
+            var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            void OnChanged()
+            {
+                if (reached()) completed.TrySetResult();
+            }
+
+            host.Recovery.Changed += OnChanged;
+            try
+            {
+                DesktopControlEnvironment.RunOnDispatcher(() =>
+                {
+                    Assert.True(command.CanExecute(null));
+                    command.Execute(null);
+                    return completed.Task;
+                });
+                Flush();
+            }
+            finally { host.Recovery.Changed -= OnChanged; }
+        }
     }
 
     [Fact]

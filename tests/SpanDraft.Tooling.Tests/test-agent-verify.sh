@@ -40,9 +40,10 @@ await_pid() {
 
 mkdir -p "$work/scripts" "$work/bin" "$work/tmp"
 # Keep both ends open so readiness and release can be exchanged without blocking on open.
-mkfifo "$work/hold" "$work/heartbeat-ready"
+mkfifo "$work/hold" "$work/heartbeat-ready" "$work/heartbeat-observed"
 exec 4<>"$work/hold"
 exec 5<>"$work/heartbeat-ready"
+exec 6<>"$work/heartbeat-observed"
 cp "$repo/scripts/agent" "$agent"
 for module in SpanDraft.Tests SpanDraft.Desktop.Tests SpanDraft.Rendering.Tests SpanDraft.Tooling.Tests; do
     dir="$work/tests/$module/bin/Release/net10.0"
@@ -154,7 +155,13 @@ kill() {
             2) SECONDS=30 ;;
             3) SECONDS=59 ;;
             4) SECONDS=60 ;;
-            5) printf '\n' >&4 ;;
+            5)
+                printf '\n' >&6
+                if ! IFS= read -r -t 45 _ <&5; then
+                    printf 'Timed out waiting for the live-output assertion.\n' >&2
+                    exit 1
+                fi
+                printf '\n' >&4 ;;
         esac
     fi
     builtin kill "$@"
@@ -329,7 +336,14 @@ lacks "$terminal" '[RUN] icons'
 run_verify 17 missing-summary test-tooling
 has "$terminal" 'tests: unavailable'
 
-run_verify 0 heartbeat build
+start_verify heartbeat build
+terminal="$work/terminal"
+IFS= read -r -t 45 _ <&6 || fail 'timed out waiting for the second heartbeat'
+has "$terminal" 'live warning'
+lacks "$terminal" '[OK] build ('
+lacks "$terminal" 'routine output'
+printf '\n' >&5
+finish_verify 0
 heartbeat=$(sed -n 's/^\[RUN\] build (elapsed \([0-9][0-9]*\)s)$/\1/p' "$terminal")
 [[ $heartbeat == $'30\n60' ]] || fail 'expected exactly one heartbeat each at 30 and 60 seconds'
 has "$terminal" 'live warning'

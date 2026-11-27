@@ -269,11 +269,23 @@ public sealed class ProjectRecoveryTests
     }
 
     [Fact]
-    public async Task SaveSuccessWithRecoveryDeleteFailureKeepsSavepointAndTheSlot()
+    public async Task SaveSuccessWithRecoveryDeleteFailureKeepsSavepointAndStartupRemovesRedundantSlot()
     {
         var app = new App(); app.Storage.FailDelete = _ => true;
         Assert.True(await app.Main.SaveAsync());
         Assert.False(app.Main.Session!.IsDirty); Assert.True(app.HasRecovery); Assert.Single(app.Dialogs.Errors);
+        var snapshot = Assert.IsType<RecoverySnapshot>(app.ProjectSnapshot());
+        var savedPath = Assert.IsType<string>(app.Main.Session.FilePath);
+        Assert.Equal(savedPath, snapshot.OriginalFilePath);
+        Assert.True(snapshot.State.ContentEquals(ProjectFileCodec.Deserialize(app.Files.Data[savedPath])));
+
+        app.Storage.FailDelete = null;
+        var registry = new ProjectPathRegistry();
+        var restarted = new RecoveryCatalog(app.Storage, app.Files, Identities, registry);
+        Assert.True(await restarted.InitializeAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(restarted.Candidates);
+        Assert.False(app.HasRecovery);
+        Assert.Equal(ProjectPathState.Free, registry.StateOf(Identities.Resolve(savedPath)));
     }
 
     [Fact]
