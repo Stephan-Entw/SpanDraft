@@ -447,7 +447,7 @@ public sealed class DesktopIsolatedStartupTests
             gate.SetResult();
             Complete(services);
             window = host.Workspaces.CreateInitial().Window;
-            window.Show(); Dispatcher.UIThread.RunJobs();
+            DesktopControlEnvironment.ShowInitialized(window);
             Assert.True(window.Initialization.IsCompletedSuccessfully);
             var model = Assert.IsType<MainWindowViewModel>(window.DataContext);
             Assert.Equal(fixture, model.Session!.FilePath);
@@ -478,7 +478,7 @@ public sealed class DesktopIsolatedStartupTests
         Assert.False(window.Initialization.IsCompleted);
         try
         {
-            window.Show(); Dispatcher.UIThread.RunJobs();
+            DesktopControlEnvironment.ShowInitialized(window);
             Assert.True(window.Initialization.IsCompletedSuccessfully);
             // The shared services load during bootstrap; recovery has its own storage and never goes through the file store.
             Assert.Equal(new[] { stores.Materials.FilePath, stores.Sections.FilePath, stores.Recents.FilePath }, reads);
