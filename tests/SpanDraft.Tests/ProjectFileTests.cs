@@ -28,6 +28,16 @@ public sealed class ProjectFileTests
     }
 
     [Theory]
+    [InlineData(0)] [InlineData(4)]
+    public void ProjectFilesUseLineFeedsOnEveryPlatform(int section)
+    {
+        // Independent of Environment.NewLine: indented output breaks lines with LF only, never CRLF.
+        var bytes = ProjectFileCodec.Serialize(State(section));
+        Assert.Contains((byte)'\n', bytes);
+        Assert.DoesNotContain((byte)'\r', bytes);
+    }
+
+    [Theory]
     [InlineData(0, "de-DE")]
     [InlineData(1, "en-US")]
     [InlineData(2, "de-DE")]

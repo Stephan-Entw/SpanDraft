@@ -24,6 +24,8 @@ public static class ProjectFileCodec
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
+        // Fixed line breaks: the same project gives the same bytes on every platform (committed examples are compared byte for byte).
+        NewLine = "\n",
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         RespectNullableAnnotations = true,
         AllowDuplicateProperties = false
