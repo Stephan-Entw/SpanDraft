@@ -19,6 +19,9 @@ internal sealed class AppDialogCoordinator(Func<bool> refuses)
 
     private readonly Dictionary<AppDialogKind, Entry> _open = [];
 
+    /// <summary>Raised once a dialog is no longer registered as open, so work it held back (queued activations) can resume.</summary>
+    public event Action? Closed;
+
     // A dialog counts as open until its ShowDialog completed; the entry itself is removed by its own continuation.
     public Window? Find(AppDialogKind kind) => _open.TryGetValue(kind, out var entry) && !entry.Shown.IsCompleted ? entry.Dialog : null;
 
@@ -44,6 +47,7 @@ internal sealed class AppDialogCoordinator(Func<bool> refuses)
         finally
         {
             if (_open.TryGetValue(kind, out var current) && ReferenceEquals(current, entry)) _open.Remove(kind);
+            Closed?.Invoke();
         }
     }
 

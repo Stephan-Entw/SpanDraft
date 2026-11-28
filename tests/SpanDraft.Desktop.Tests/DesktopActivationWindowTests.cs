@@ -198,6 +198,44 @@ public sealed class DesktopActivationWindowTests
     }
 
     [Fact]
+    public void AQueuedOpenFailureIsPresentedOnceTheOnlyWorkspaceClosesItsApplicationDialog()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var files = new Files();
+            string missing = TestPath("app-dialog-missing.spandraft");
+            var host = Host(files);
+            var handle = host.Workspaces.CreateInitial();
+            DesktopControlEnvironment.ShowInitialized(handle.Window);
+            var dialog = new Window();
+            var shown = host.AppDialogs.ShowAsync(AppDialogKind.About, handle.Window, () => dialog);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Same(dialog, host.AppDialogs.Find(AppDialogKind.About));
+
+            Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(missing)));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(1, host.Activation.Count);
+            Assert.Same(handle, Assert.Single(host.Workspaces.Handles));
+            Assert.Same(dialog, Assert.Single(handle.Window.OwnedWindows));
+
+            // Closing the dialog alone resumes the queue; no further request or user action follows.
+            dialog.Close();
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(shown.IsCompletedSuccessfully);
+            Assert.Same(handle, Assert.Single(host.Workspaces.Handles));
+            var failure = Assert.Single(handle.Window.OwnedWindows);
+            Assert.NotSame(dialog, failure);
+            Assert.Equal(1, host.Activation.Count);
+            Click(failure, Strings.OK);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, host.Activation.Count);
+            Assert.Same(handle, Assert.Single(host.Workspaces.Handles));
+            ApproveClose(handle.Window);
+        });
+    }
+
+    [Fact]
     public void ARecoveryPendingRequestWaitsUntilTheCenterCanActuallyFocusItsCandidate()
     {
         using var environment = new DesktopControlEnvironment();

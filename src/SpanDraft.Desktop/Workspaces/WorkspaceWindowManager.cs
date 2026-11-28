@@ -572,6 +572,7 @@ internal sealed class WorkspaceWindowManager
         _host.Activation.SetConsumer(HandleLaunchRequestAsync);
         _host.Activation.Enqueued += PostPump;
         _host.SettingsCoordinator.ApplyCompleted += PostPump;
+        _host.AppDialogs.Closed += PostPump;
     }
 
     internal void DisableActivation()
@@ -581,6 +582,7 @@ internal sealed class WorkspaceWindowManager
         _host.Activation.SetConsumer(null);
         _host.Activation.Enqueued -= PostPump;
         _host.SettingsCoordinator.ApplyCompleted -= PostPump;
+        _host.AppDialogs.Closed -= PostPump;
     }
 
     internal void PostPump()
