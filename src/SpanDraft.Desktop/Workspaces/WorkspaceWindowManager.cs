@@ -404,6 +404,9 @@ internal sealed class WorkspaceWindowManager
                 handle.Window.CloseCommitted();
                 return WorkspaceCloseOutcome.Closed;
             }
+            // The commit released the reservation before the workspace became routable again: its start page commands are
+            // told about the final state only now.
+            model.RefreshWorkspaceState();
             PostPump();
             await report;
             return WorkspaceCloseOutcome.ShowsStart;

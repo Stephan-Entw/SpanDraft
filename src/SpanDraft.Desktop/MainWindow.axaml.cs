@@ -133,6 +133,8 @@ public partial class MainWindow : Window
                 if (_handle.IsFinalized || host.Workspaces.IsShuttingDown) { _initialization.TrySetCanceled(); return; }
                 DataContext = _model;
                 _initializing = false;
+                // The bindings above evaluated the commands while the window was not ready yet.
+                _model.RefreshWorkspaceState();
                 quitCommand.Refresh();
                 if (!_handle.IsInitial)
                 {
