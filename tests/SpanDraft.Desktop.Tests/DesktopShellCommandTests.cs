@@ -36,7 +36,9 @@ public sealed class DesktopShellCommandTests
         var reads = new List<string>();
         files.BeforeRead = p => { reads.Add(p); return Task.CompletedTask; };
         var startup = new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default);
-        var window = (HostWithLaunchArguments(startup, args)).Workspaces.CreateInitial().Window;
+        var host = HostWithLaunchArguments(startup, args);
+        var initial = host.Workspaces.CreateInitial();
+        var window = initial.Window;
         DesktopControlEnvironment.ShowInitialized(window);
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
         var expectedReads = new List<string>
@@ -55,6 +57,8 @@ public sealed class DesktopShellCommandTests
         }
         else { Assert.Null(main.Session); Assert.Equal(MainViewMode.Start, main.Mode); }
         Assert.Equal(expectedReads, reads);
+        Assert.Same(initial, Assert.Single(host.Workspaces.Handles));
+        Assert.Equal(main.HasProject ? 0 : 1, host.Workspaces.StartSlotCount);
         Assert.Empty(window.OwnedWindows);
         window.Close(); Dispatcher.UIThread.RunJobs();
     }

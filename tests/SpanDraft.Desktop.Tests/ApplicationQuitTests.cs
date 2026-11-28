@@ -157,6 +157,8 @@ public sealed class ApplicationQuitTests
         WithUiContext(() =>
         {
             var app = new App(); var a = app.StartWithProject("hold-a"); var b = app.Second(a, "hold-b");
+            var firstSession = a.Model!.Session;
+            var secondSession = b.Model!.Session;
             string requested = app.Project("hold-request");
             Assert.True(app.Host.Quit.RequestQuit());
             // Synchronously, before anything of the quit ran.
@@ -166,7 +168,7 @@ public sealed class ApplicationQuitTests
                 var model = handle.Model!;
                 Assert.True(model.IsQuitFrozen); Assert.True(model.IsWorkspaceBusy); Assert.True(model.Session!.IsBusy);
                 Assert.False(model.Session.Commit(State(5))); Assert.False(model.SetResultPresentation(model.Settings.Profile, 5));
-                Assert.False(model.HandleOpenRequestAsync(requested).Result);
+                Assert.Equal(ProjectOpenStatus.Unavailable, model.OpenPathResultAsync(requested, fromRecent: false).Result.Status);
             }
             Assert.Null(app.Host.Workspaces.Active);
             Assert.Equal(BrokerStatus.Retry, app.Host.HandleBrokerRequest(LaunchRequest.OpenProject(requested)));
@@ -191,7 +193,10 @@ public sealed class ApplicationQuitTests
             Assert.False(a.Model!.IsQuitFrozen); Assert.False(b.Model!.IsQuitFrozen); Assert.False(a.Model.Session!.IsBusy);
             Assert.Equal(0, app.Host.Activation.Count);
             string canonical = Identities.Resolve(requested).CanonicalPath;
-            Assert.Contains(new[] { a, b }, h => h.Model!.Session?.FilePath == canonical);
+            var opened = Assert.Single(app.Host.Workspaces.Handles, h => h != a && h != b);
+            Assert.Equal(canonical, opened.Model!.Session!.FilePath);
+            Assert.Same(firstSession, a.Model.Session);
+            Assert.Same(secondSession, b.Model.Session);
             Assert.Equal(BrokerStatus.Accepted, app.Host.HandleBrokerRequest(LaunchRequest.Activate));
         });
     }
@@ -248,6 +253,7 @@ public sealed class ApplicationQuitTests
         {
             var app = new App(); var a = app.Start(); var (_, slot) = app.OpenDirty(a, "commit-a");
             var b = app.Second(a, "commit-b");
+            var remaining = b.Model!.Session;
             Assert.True(app.Host.Workspaces.Activate(a.WindowId));
             Assert.True(app.Host.Quit.RequestQuit()); Flush();
             var question = Dialog(a);
@@ -265,10 +271,13 @@ public sealed class ApplicationQuitTests
                 Assert.Equal(0, app.Host.Activation.Count);
                 return;
             }
-            // Kept: the quit ends, a stays closed, b processes the request.
-            Assert.Same(b, Assert.Single(app.Host.Workspaces.Handles)); Assert.Equal(DesktopApplicationState.Ready, app.Host.State);
+            // Kept: the quit ends, a stays closed, b keeps its project and the request opens separately.
+            Assert.DoesNotContain(a, app.Host.Workspaces.Handles);
+            Assert.Contains(b, app.Host.Workspaces.Handles); Assert.Equal(DesktopApplicationState.Ready, app.Host.State);
             Assert.Equal(0, app.Host.Activation.Count);
-            Assert.Equal(Identities.Resolve(requested).CanonicalPath, b.Model!.Session!.FilePath);
+            var opened = Assert.Single(app.Host.Workspaces.Handles, h => h != b);
+            Assert.Equal(Identities.Resolve(requested).CanonicalPath, opened.Model!.Session!.FilePath);
+            Assert.Same(remaining, b.Model.Session);
         });
     }
 

@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using SpanDraft.Desktop.Activation;
@@ -21,6 +22,7 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
             desktop.MainWindow = _host.Workspaces.CreateInitial().Window;
             if (OperatingSystem.IsMacOS()) MacActivationSource.Attach(this, _host);
         }

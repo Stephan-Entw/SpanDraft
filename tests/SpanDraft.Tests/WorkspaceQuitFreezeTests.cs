@@ -50,7 +50,7 @@ public sealed class WorkspaceQuitFreezeTests
         Assert.False(w.Main.SetResultPresentation(w.Main.Settings.Profile, 5));
         Assert.False(w.Main.CanNewProject); Assert.False(await w.Main.NewAsync());
         Assert.False(w.Main.CanSaveProject); Assert.False(await w.Main.SaveAsync());
-        Assert.False(await w.Main.HandleOpenRequestAsync(other));   // Unavailable: an external request stays queued
+        Assert.Equal(ProjectOpenStatus.Unavailable, (await w.Main.OpenPathResultAsync(other, fromRecent: false)).Status);
         Assert.False(w.Main.CanShowRecovery); Assert.Null(WorkspaceCloseTransaction.TryBegin(w.Main, handle: null));
         w.Main.ReleaseQuitFreeze();
         Assert.False(w.Main.IsWorkspaceBusy); Assert.False(session.IsBusy); Assert.True(session.Commit(State(3)));

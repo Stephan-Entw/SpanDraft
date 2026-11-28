@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     internal WindowId WindowId => _handle.WindowId;
     // The workspace's close is running or committed; the close itself belongs to its WorkspaceCloseTransaction.
     private bool IsWorkspaceClosing => !_handle.CanRoute;
+    private bool IsOpenTarget => _handle.IsOpenTargetReserved || _handle.Reason == WorkspaceCreationReason.OpenProject;
     private bool _closeApproved;
     private DiagnosticsWindow? _diagnosticsWindow;
     private bool _initializing = true;
@@ -175,8 +176,6 @@ public partial class MainWindow : Window
     /// <summary>The TopLevel currently blocking the shell (e.g. the startup question), otherwise this window.</summary>
     internal Window RetryTarget => OwnedWindows.LastOrDefault(static w => w.IsVisible) ?? this;
 
-    private LaunchRequest? _lastBlockedRequest;
-
     /// <summary>Test seam: the best-effort activation of the window or blocking dialog.</summary>
     internal Action<Window> Surface { get; set; } = static target =>
     {
@@ -209,22 +208,9 @@ public partial class MainWindow : Window
     /// </summary>
     internal bool IsReadyForQuit => !_initializing;
 
-    internal async Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
+    internal bool HandleActivation()
     {
         if (_initializing || IsWorkspaceClosing || _host.State == DesktopApplicationState.ShuttingDown) return false;
-        if (request.Type == LaunchRequestType.OpenProject)
-        {
-            // A setup draft in progress keeps precedence over external opens; the request waits in the queue.
-            if (!_model.CanOpenProject || _model.Mode == MainViewMode.ProjectSetup)
-            {
-                // Not a seemingly dead double click: surface the window or the blocking dialog; the request stays queued.
-                if (!ReferenceEquals(_lastBlockedRequest, request)) { _lastBlockedRequest = request; Surface(RetryTarget); }
-                return false;
-            }
-            Activate();
-            // Unprocessed (the workspace closed or became unable meanwhile) leaves the request queued; any real outcome consumes it.
-            return await _model.HandleOpenRequestAsync(request.Value!);
-        }
         // Activate and OpenUri only bring the window forward; URI semantics are not defined by this phase.
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Activate();
@@ -234,7 +220,8 @@ public partial class MainWindow : Window
     // One Settings dialog for the application (§77): an open one is activated, whichever workspace owns it.
     private async void ShowSettings(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || _model.IsWorkspaceBusy || IsWorkspaceClosing || _host.AppDialogs.Activate(AppDialogKind.Settings)) return;
+        if (_initializing || _model.IsWorkspaceBusy || IsWorkspaceClosing || IsOpenTarget
+            || _host.AppDialogs.Activate(AppDialogKind.Settings)) return;
         _model.SetSettingsDialogOpen(true);
         try
         {
@@ -262,7 +249,8 @@ public partial class MainWindow : Window
 
     private async void ShowWhatsNew(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || IsWorkspaceClosing || _host.AppDialogs.Activate(AppDialogKind.WhatsNew)) return;
+        if (_initializing || IsWorkspaceClosing || IsOpenTarget
+            || _host.AppDialogs.Activate(AppDialogKind.WhatsNew)) return;
         try
         {
             await _host.AppDialogs.ShowAsync(AppDialogKind.WhatsNew, this,
@@ -276,7 +264,8 @@ public partial class MainWindow : Window
 
     private async void ShowAbout(object? sender, RoutedEventArgs e)
     {
-        if (_initializing || _model.IsWorkspaceBusy || IsWorkspaceClosing || _host.AppDialogs.Activate(AppDialogKind.About)) return;
+        if (_initializing || _model.IsWorkspaceBusy || IsWorkspaceClosing || IsOpenTarget
+            || _host.AppDialogs.Activate(AppDialogKind.About)) return;
         await _host.AppDialogs.ShowAsync(AppDialogKind.About, this, () => new AboutWindow { Icon = Icon });
     }
 

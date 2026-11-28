@@ -6,9 +6,9 @@ namespace SpanDraft.Desktop.Workspaces;
 
 /// <summary>
 /// Why a workspace exists. Only <see cref="None"/> workspaces reserve the single start slot; the others were created for
-/// one purpose (a New draft, the Recovery Center or a restore) and lose that reason once it is fulfilled.
+/// one purpose and lose that reason once it is fulfilled.
 /// </summary>
-internal enum WorkspaceCreationReason { None, NewProject, RecoveryCenter, Restore }
+internal enum WorkspaceCreationReason { None, NewProject, OpenProject, RecoveryCenter, Restore }
 
 /// <summary>Explicit workspace classification; see <see cref="WorkspaceWindowHandle.Kind"/>.</summary>
 internal enum WorkspaceKind { StartOnly, CreateSetup, Project, RecoveryCenter }
@@ -54,11 +54,14 @@ internal sealed class WorkspaceWindowHandle
     internal void Neutralize() => Reason = WorkspaceCreationReason.None;
 
     /// <summary>
-    /// True while this workspace reserves the single start slot: no project and not a dedicated New workspace. This is
+    /// True while this ordinary workspace reserves the single start slot and has no project. This is
     /// independent of <see cref="Kind"/>: a start workspace that currently shows CreateSetup still holds the slot,
     /// but is classified as <see cref="WorkspaceKind.CreateSetup"/>. A merely requested (still cancellable) close keeps it.
     /// </summary>
     internal bool HoldsStartSlot => !IsClosing && Reason == WorkspaceCreationReason.None && Model?.HasProject != true;
+
+    /// <summary>The workspace was selected for an open. Its start slot, if any, stays reserved by this workspace.</summary>
+    internal bool IsOpenTargetReserved { get; set; }
 
     /// <summary>The close is decided and cannot be cancelled any more; the workspace gives up its start slot.</summary>
     internal bool IsClosing { get; set; }
@@ -89,8 +92,7 @@ internal sealed class WorkspaceWindowHandle
     internal void CompleteFinalized() => _finalized.TrySetResult();
 
     /// <summary>
-    /// What the workspace currently shows: <see cref="WorkspaceKind.StartOnly"/> means the start page only; a workspace
-    /// created for New or a restore is never counted as StartOnly, not even before its model exists.
+    /// What the workspace currently shows. Start-slot ownership and open-target availability are decided separately.
     /// </summary>
     internal WorkspaceKind Kind => Model?.HasProject == true ? WorkspaceKind.Project
         : Reason == WorkspaceCreationReason.RecoveryCenter || Model?.Mode == MainViewMode.RecoveryCenter ? WorkspaceKind.RecoveryCenter

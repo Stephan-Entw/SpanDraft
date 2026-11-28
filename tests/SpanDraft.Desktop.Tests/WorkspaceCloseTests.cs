@@ -328,8 +328,10 @@ public sealed class WorkspaceCloseTests
             Assert.True(a.Model!.IsRecoveryFaulted); Assert.True(notice.IsVisible); Assert.DoesNotContain(slot, app.Storage.Slots());
             Assert.Contains(Strings.RecoveryFaultedError, DialogText(Dialog(a)));
             Click(Dialog(a), Strings.OK);
-            // Faulted: no new open is taken, the request waits; editing is locked; the window can be closed again.
-            Assert.Equal(1, app.Host.Activation.Count); Assert.False(a.Window.FindControl<ContentControl>("WorkspaceContent")!.IsEnabled);
+            // The faulted workspace stays locked and keeps its project. The queued request opens independently.
+            Assert.Equal(0, app.Host.Activation.Count); Assert.False(a.Window.FindControl<ContentControl>("WorkspaceContent")!.IsEnabled);
+            var opened = Assert.Single(app.Host.Workspaces.Handles, h => h != a);
+            Assert.Equal(Identities.Resolve(requested).CanonicalPath, opened.Model!.Session!.FilePath);
             app.Storage.FailWrite = null;
             var retry = a.Window.FindControl<Button>("RecoveryFaultedRetryButton")!;
             Assert.True(retry.IsEffectivelyEnabled); retry.Command!.Execute(null); Flush();
@@ -402,11 +404,15 @@ public sealed class WorkspaceCloseTests
             var app = new App(); var a = app.Start(); var (path, _) = app.OpenDirty(a, "shutdown-owner");
             var b = app.Second(a, "shutdown-opener");
             a.Window.Close(); Flush(); var dialog = Dialog(a);
-            // A menu open in b and an external request routed to b both wait for a's decision.
+            // The local primitive in b and a dedicated activation target both wait for a's decision.
             bool? opened = null;
             Dispatcher.UIThread.Post(async () => opened = await b.Model!.OpenAsync(path));
             app.Host.Activation.Enqueue(LaunchRequest.OpenProject(path)); Flush();
             Assert.Null(opened); Assert.Equal(1, app.Host.Activation.Count);
+            var openTarget = Assert.Single(app.Host.Workspaces.Handles, h => h != a && h != b);
+            Assert.Equal(WorkspaceCreationReason.OpenProject, openTarget.Reason);
+            openTarget.Window.Close(); Flush();
+            Assert.DoesNotContain(openTarget, app.Host.Workspaces.Handles);
             b.Window.Close(); Flush();
             Assert.DoesNotContain(b, app.Host.Workspaces.Handles);
             // The external request is still in the queue, so the last window asks about it before the shutdown.
@@ -444,7 +450,10 @@ public sealed class WorkspaceCloseTests
             // a is not the last workspace any more: it closes alone, without a shutdown, and the request stays queued.
             Click(pending, Strings.Discard);
             Assert.DoesNotContain(a, app.Host.Workspaces.Handles); Assert.Contains(c, app.Host.Workspaces.Handles);
-            Assert.Equal(DesktopApplicationState.Ready, app.Host.State); Assert.Equal(1, app.Host.Activation.Count);
+            Assert.Equal(DesktopApplicationState.Ready, app.Host.State); Assert.Equal(0, app.Host.Activation.Count);
+            Assert.Equal(MainViewMode.ProjectSetup, c.Model!.Mode);
+            var opened = Assert.Single(app.Host.Workspaces.Handles, h => h != c);
+            Assert.Equal(Identities.Resolve(requested).CanonicalPath, opened.Model!.Session!.FilePath);
         });
     }
 
@@ -459,7 +468,8 @@ public sealed class WorkspaceCloseTests
             var app = new App(); var a = app.StartWithProject("cancel-owner");
             var b = Run(() => app.Host.Workspaces.RequestNewProjectAsync(a))!;
             Assert.Equal(MainViewMode.ProjectSetup, b.Model!.Mode);
-            a.Model!.EditProject();                               // a takes no open request meanwhile
+            a.Model!.EditProject();                               // a must keep its setup when the request is handled
+            var session = a.Model.Session;
             string requested = app.Project("posted-before-the-close");
             DesktopControlEnvironment.RunOnDispatcher(async () =>
             {
@@ -471,11 +481,11 @@ public sealed class WorkspaceCloseTests
             });
             Flush();
             Assert.DoesNotContain(b, app.Host.Workspaces.Handles); Assert.Null(b.Model.Session);
-            Assert.Equal(1, app.Host.Activation.Count);
-            // Once a can take it, the request is processed and not lost.
-            Assert.True(Run(() => a.Model.CancelSetupAsync())); Flush();
             Assert.Equal(0, app.Host.Activation.Count);
-            Assert.Equal(Identities.Resolve(requested).CanonicalPath, a.Model.Session!.FilePath);
+            var opened = Assert.Single(app.Host.Workspaces.Handles, h => h != a);
+            Assert.Equal(Identities.Resolve(requested).CanonicalPath, opened.Model!.Session!.FilePath);
+            Assert.Equal(MainViewMode.ProjectSetup, a.Model.Mode);
+            Assert.Same(session, a.Model.Session);
         });
     }
 
@@ -490,7 +500,7 @@ public sealed class WorkspaceCloseTests
             var app = new App(); var a = app.StartWithProject("waiting-owner");
             var b = Run(() => app.Host.Workspaces.RequestNewProjectAsync(a))!;
             if (lastWorkspace) { a.Window.Close(); Flush(); Assert.Same(b, Assert.Single(app.Host.Workspaces.Handles)); }
-            else a.Model!.EditProject();                          // a takes no open request meanwhile
+            else a.Model!.EditProject();                          // a must keep its setup when the request is handled
             string requested = app.Project("waiting-request");
             bool waited = false;
             // The dispatcher may run the posted close before the cancel's operation has ended: here it runs inside it.
@@ -501,7 +511,8 @@ public sealed class WorkspaceCloseTests
                 // Reserved and waiting: still registered, out of routing, no request taken, nothing closed or released.
                 Assert.Contains(b, app.Host.Workspaces.Handles);
                 Assert.True(b.IsCloseRequested); Assert.False(b.CanRoute); Assert.True(b.Model.IsWorkspaceBusy);
-                Assert.Equal(1, app.Host.Activation.Count); Assert.Null(b.Model.Session);
+                if (lastWorkspace) Assert.Equal(1, app.Host.Activation.Count);
+                Assert.Null(b.Model.Session);
                 waited = true;
             };
             Assert.True(Run(() => b.Model.CancelSetupAsync())); Flush();
@@ -518,9 +529,10 @@ public sealed class WorkspaceCloseTests
             else
             {
                 Assert.DoesNotContain(b, app.Host.Workspaces.Handles); Assert.Null(b.Model.Session);
-                Assert.Equal(1, app.Host.Activation.Count);
-                Assert.True(Run(() => a.Model!.CancelSetupAsync())); Flush();
-                Assert.Equal(0, app.Host.Activation.Count); Assert.Equal(canonical, a.Model!.Session!.FilePath);
+                Assert.Equal(0, app.Host.Activation.Count);
+                Assert.Equal(MainViewMode.ProjectSetup, a.Model!.Mode);
+                var opened = Assert.Single(app.Host.Workspaces.Handles, h => h != a);
+                Assert.Equal(canonical, opened.Model!.Session!.FilePath);
             }
         });
     }
@@ -552,7 +564,10 @@ public sealed class WorkspaceCloseTests
             });
             Flush();
             Assert.DoesNotContain(c, app.Host.Workspaces.Handles); Assert.Null(c.Model!.Session);
-            Assert.Equal(1, app.Host.Activation.Count); Assert.Equal(1, app.Host.Workspaces.StartSlotCount);
+            Assert.Equal(0, app.Host.Activation.Count); Assert.Equal(1, app.Host.Workspaces.StartSlotCount);
+            Assert.Equal(MainViewMode.ProjectSetup, b.Model!.Mode);
+            var opened = Assert.Single(app.Host.Workspaces.Handles, h => h != b && h != s);
+            Assert.Equal(Identities.Resolve(requested).CanonicalPath, opened.Model!.Session!.FilePath);
             gate.SetResult(); app.Storage.BeforeDiscard = null; Flush();
             Assert.DoesNotContain(s, app.Host.Workspaces.Handles);
         });

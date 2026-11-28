@@ -388,7 +388,7 @@ public sealed class WorkspaceCloseTransactionTests
         var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var refusing = new OpenTarget { Run = async _ => { await gate.Task; return ProjectOpenResult.Unavailable; } };
         var first = coordinator.OpenAsync(path, refusing);
-        var request = b.Main.HandleOpenRequestAsync(path);            // an external request of b joins the flight
+        var request = b.Main.OpenPathResultAsync(path, fromRecent: false);
         var observer = registry.ArbitrateOpen(identity).Flight!;
         Assert.False(request.IsCompleted);
         if (!joinerCanContinue) b.Main.CanRouteHandler = () => false;
@@ -396,7 +396,7 @@ public sealed class WorkspaceCloseTransactionTests
         Assert.Equal(ProjectOpenStatus.Unavailable, (await WaitFor(first)).Status);
         Assert.Equal(ProjectOpenStatus.Unavailable, (await WaitFor(observer)).Status);   // not Cancelled
         // Only the refusing workspace was unavailable: b decides anew and opens it, or keeps its request unprocessed.
-        Assert.Equal(joinerCanContinue, await WaitFor(request));
+        Assert.Equal(joinerCanContinue ? ProjectOpenStatus.Opened : ProjectOpenStatus.Unavailable, (await WaitFor(request)).Status);
         if (joinerCanContinue) Assert.Equal(identity.CanonicalPath, b.Main.Session!.FilePath);
         else Assert.Null(b.Main.Session);
         Assert.NotEqual(ProjectPathState.Opening, registry.StateOf(identity));
@@ -424,13 +424,13 @@ public sealed class WorkspaceCloseTransactionTests
             }
         };
         var first = coordinator.OpenAsync(path, failing);
-        var request = b.Main.HandleOpenRequestAsync(path);            // an external request of b joins the flight
+        var request = b.Main.OpenPathResultAsync(path, fromRecent: false);
         Assert.False(request.IsCompleted);
         b.Main.CanRouteHandler = () => false;                         // b starts closing while it waits
         gate.SetResult();
         Assert.Equal(failure, (await WaitFor(first)).Status);
         // The failure belongs to the opening workspace: b neither presents it nor counts the request as processed.
-        Assert.False(await WaitFor(request));
+        Assert.Equal(ProjectOpenStatus.Unavailable, (await WaitFor(request)).Status);
         Assert.Empty(b.Dialogs.Errors); Assert.Null(b.Main.Session);
         Assert.NotEqual(ProjectPathState.Opening, registry.StateOf(identity));
     }

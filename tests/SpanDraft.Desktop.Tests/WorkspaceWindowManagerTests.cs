@@ -1,3 +1,7 @@
+using System.Reflection;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SpanDraft.Desktop.Resources;
@@ -6,13 +10,13 @@ using SpanDraft.Desktop.Activation;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.ViewModels;
+using SpanDraft.Desktop.Views;
 using SpanDraft.Desktop.Workspaces;
 using Xunit;
 using static SpanDraft.Tests.ProjectTestSupport;
 
 namespace SpanDraft.Tests;
 
-/// <summary>Phase 5: internal workspace ownership. Multiwindow stays hidden; these tests use the manager's internal seams.</summary>
 [Collection("Avalonia")]
 public sealed class WorkspaceWindowManagerTests
 {
@@ -51,6 +55,328 @@ public sealed class WorkspaceWindowManagerTests
         CompleteSetup(model);
         Assert.True(Run(() => model.Setup.ConfirmAsync()));
         Assert.NotNull(model.Session);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FileMenuAndShortcutsOpenBesideADirtyProject(bool keyboard)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files();
+        var storage = new TestRecoveryStorage();
+        var host = new DesktopApplicationHost(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default)
+        { ProjectIdentities = Identities, StateStores = DesktopStateStores.Local(files) with { Recovery = storage } });
+        host.RecoveryDelay = new Delay().Wait;
+        var a = Start(host);
+        string original = Project(files, "command-source.spandraft"), path = Project(files, "command-target.spandraft");
+        Assert.True(Run(() => a.Model!.OpenAsync(original)));
+        var session = a.Model!.Session!;
+        Assert.True(session.Commit(State(7)));
+        var revision = session.CurrentRevision;
+        Assert.Null(Run(() => a.Model.CheckpointRecoveryAsync()));
+        var slot = Assert.Single(storage.Slots());
+        byte[] checkpoint = storage.Data[slot];
+        var dialogs = SetPicker(a, path);
+
+        Invoke(Key.N, "NewMenuItem");
+        var draft = Assert.Single(host.Workspaces.Handles, h => h != a);
+        Assert.Equal(MainViewMode.ProjectSetup, draft.Model!.Mode);
+        Assert.Null(draft.Window.Owner);
+        Assert.True(Run(() => draft.Model.CancelSetupAsync()));
+        Assert.Same(a, Assert.Single(host.Workspaces.Handles));
+
+        Invoke(Key.O, "OpenMenuItem");
+        var opened = Assert.Single(host.Workspaces.Handles, h => h != a);
+        Assert.Equal(path, opened.Model!.Session!.FilePath);
+        Assert.Null(opened.Window.Owner);
+        Assert.Equal(WorkspaceCreationReason.None, opened.Reason);
+        Assert.Equal(0, host.Workspaces.StartSlotCount);
+        Assert.Same(session, a.Model.Session);
+        Assert.Same(revision, session.CurrentRevision);
+        Assert.Equal(original, session.FilePath);
+        Assert.Equal(MainViewMode.Editor, a.Model.Mode);
+        Assert.True(session.IsDirty);
+        Assert.Equal(0, dialogs.LeaveQuestions);
+        Assert.Equal(0, dialogs.SaveQuestions);
+        Assert.Empty(a.Window.OwnedWindows);
+        Assert.Empty(storage.Discarded);
+        Assert.Equal(slot, Assert.Single(storage.Writes));
+        Assert.Equal(checkpoint, storage.Data[slot]);
+
+        opened.Window.Close(); Flush();
+        Assert.Same(a, Assert.Single(host.Workspaces.Handles));
+        Assert.Equal(DesktopApplicationState.Ready, host.State);
+
+        void Invoke(Key key, string menuName)
+        {
+            Run(() =>
+            {
+                var primary = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+                var item = a.Window.FindControl<MenuItem>(menuName)!;
+                Assert.Equal(new KeyGesture(key, primary), item.InputGesture);
+                if (keyboard)
+                {
+                    var press = new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key, KeyModifiers = primary };
+                    a.Window.RaiseEvent(press);
+                    Assert.True(press.Handled);
+                }
+                else
+                {
+                    Assert.True(item.Command!.CanExecute(null));
+                    item.Command.Execute(null);
+                }
+                return Task.FromResult(true);
+            });
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void StartPageActionsAndRecentsReuseTheInitialWindow(bool recent)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files();
+        var host = Host(files);
+        var initial = Start(host);
+        string path = Project(files, "start-action.spandraft");
+        SetPicker(initial, path);
+        Assert.True(Run(async () => { await host.Services.Recents.RecordUseAsync(path); return true; }));
+        DesktopControlEnvironment.ArrangeSection(initial.Window);
+        var start = Assert.Single(initial.Window.GetVisualDescendants().OfType<StartPageView>());
+        start.FindControl<Button>("NewProjectButton")!.Command!.Execute(null);
+        Flush();
+        Assert.Same(initial, Assert.Single(host.Workspaces.Handles));
+        Assert.Equal(MainViewMode.ProjectSetup, initial.Model!.Mode);
+        Assert.True(Run(() => initial.Model.CancelSetupAsync()));
+        DesktopControlEnvironment.ArrangeSection(initial.Window);
+        start = Assert.Single(initial.Window.GetVisualDescendants().OfType<StartPageView>());
+        var open = recent ? Assert.Single(start.GetVisualDescendants().OfType<Button>(), b => b.Classes.Contains("recentProject"))
+            : start.FindControl<Button>("OpenProjectButton")!;
+        open.Command!.Execute(null); Flush();
+        Assert.Same(initial, Assert.Single(host.Workspaces.Handles));
+        Assert.Equal(path, initial.Model.Session!.FilePath);
+        Assert.Equal(0, host.Workspaces.StartSlotCount);
+    }
+
+    private static Dialogs SetPicker(WorkspaceWindowHandle handle, string path)
+    {
+        var dialogs = new Dialogs { OpenPath = path };
+        typeof(MainWindowViewModel).GetField("_dialogs", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(handle.Model, dialogs);
+        return dialogs;
+    }
+
+    [Fact]
+    public void ReservedStartKeepsItsSlotButCannotBeSelectedByAnotherNewOrOpen()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files();
+        var host = Host(files);
+        var a = Start(host);
+        Assert.Equal(ProjectOpenStatus.Opened, Run(() => host.Workspaces.RequestOpenProjectAsync(a, Project(files, "source.spandraft"))).Status);
+        var startId = Run(() => host.Workspaces.RequestOpenProjectAsync(a, Project(files, "will-be-start.spandraft"))).Owner!.Value;
+        var start = host.Workspaces.Find(startId)!;
+        Assert.True(Run(() => start.Model!.CloseProjectAsync()));
+
+        var arbitration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        host.ProjectPaths.RecoverySettler = () => arbitration.Task;
+        string firstPath = Project(files, "reserved.spandraft");
+        var first = BeginOpen(host, a, firstPath);
+        Assert.False(first.IsCompleted);
+        Assert.True(start.IsOpenTargetReserved);
+        Assert.False(start.IsCloseRequested);
+        Assert.False(start.Model!.IsWorkspaceBusy);
+        Assert.Equal(WorkspaceCreationReason.None, start.Reason);
+        Assert.Equal(1, host.Workspaces.StartSlotCount);
+
+        host.ProjectPaths.RecoverySettler = null;
+        var draft = Run(() => host.Workspaces.RequestNewProjectAsync(a));
+        Assert.NotNull(draft);
+        Assert.NotSame(start, draft);
+        var second = Run(() => host.Workspaces.RequestOpenProjectAsync(a, Project(files, "parallel.spandraft")));
+        Assert.Equal(ProjectOpenStatus.Opened, second.Status);
+        Assert.NotEqual(startId, second.Owner);
+        Assert.Equal(MainViewMode.Start, start.Model.Mode);
+        Assert.Equal(1, host.Workspaces.StartSlotCount);
+
+        arbitration.SetResult();
+        Assert.Equal(startId, Run(() => first).Owner);
+        Assert.False(start.IsOpenTargetReserved);
+        Assert.Equal(firstPath, start.Model.Session!.FilePath);
+        Assert.Equal(0, host.Workspaces.StartSlotCount);
+    }
+
+    [Theory]
+    [InlineData("draft")]
+    [InlineData("recovery")]
+    [InlineData("report")]
+    public void ExternalOpenPreservesOccupiedWorkspace(string mode)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files();
+        var host = Host(files);
+        var source = Start(host);
+        var model = source.Model!;
+        switch (mode)
+        {
+            case "draft": Assert.Same(source, Run(() => host.Workspaces.RequestNewProjectAsync(source))); break;
+            case "recovery": Assert.Same(source, Run(() => host.Workspaces.ShowRecoveryCenterAsync(source, null))); break;
+            default:
+                Assert.True(Run(() => model.OpenAsync(Project(files, "report-project.spandraft"))));
+                Assert.True(Run(() => model.ReportAsync()));
+                break;
+        }
+        var content = model.CurrentViewModel;
+        var session = model.Session;
+        var sourceMode = model.Mode;
+        string path = Project(files, "beside-" + mode + ".spandraft");
+        Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(path)));
+        Flush();
+        Assert.Equal(0, host.Activation.Count);
+        Assert.Equal(sourceMode, model.Mode);
+        Assert.Same(content, model.CurrentViewModel);
+        Assert.Same(session, model.Session);
+        var opened = Assert.Single(host.Workspaces.Handles, h => h != source);
+        Assert.Equal(path, opened.Model!.Session!.FilePath);
+        Assert.Equal(source.HoldsStartSlot ? 1 : 0, host.Workspaces.StartSlotCount);
+    }
+
+    [Theory]
+    [InlineData("missing", false, false)]
+    [InlineData("corrupt", false, false)]
+    [InlineData("recent", false, false)]
+    [InlineData("missing", true, false)]
+    [InlineData("missing", false, true)]
+    public void OpenFailureFinishesItsDialogBeforeRetiringTheTarget(string failure, bool last, bool reuseStart)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files();
+        var host = Host(files);
+        var a = Start(host);
+        if (!reuseStart) Assert.True(Run(() => a.Model!.OpenAsync(Project(files, "open-error-source.spandraft"))));
+        string path = TestPath("failed-open.spandraft");
+        if (failure == "corrupt") files.Data[path] = [0, 1, 2];
+        bool fromRecent = failure == "recent";
+        if (fromRecent) Run(async () => { await host.Services.Recents.RecordUseAsync(path); return true; });
+        var pending = BeginOpen(host, a, path, fromRecent);
+        var target = reuseStart ? a : Assert.Single(host.Workspaces.Handles, h => h != a);
+        Assert.Equal(reuseStart ? WorkspaceCreationReason.None : WorkspaceCreationReason.OpenProject, target.Reason);
+        Assert.Equal(reuseStart ? 1 : 0, host.Workspaces.StartSlotCount);
+        Assert.False(pending.IsCompleted);
+        Assert.True(target.IsOpenTargetReserved);
+        var error = Assert.Single(target.Window.OwnedWindows);
+        if (last)
+        {
+            a.Window.Close(); Flush();
+            Assert.Same(target, Assert.Single(host.Workspaces.Handles));
+        }
+        Assert.True(target.Window.IsVisible);
+        if (fromRecent)
+        {
+            var persist = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            string recentsFile = RecentProjectsStore.Local(files).FilePath;
+            files.BeforeWrite = (file, _, _) => file == recentsFile ? persist.Task : Task.CompletedTask;
+            Click(error, Strings.RemoveFromRecent);
+            Assert.False(pending.IsCompleted);
+            Assert.True(target.Window.IsVisible);
+            persist.SetResult();
+        }
+        else Click(error, Strings.OK);
+        Assert.Equal(failure == "corrupt" ? ProjectOpenStatus.Failed : ProjectOpenStatus.Missing, Run(() => pending).Status);
+        if (fromRecent) Assert.DoesNotContain(host.Services.Recents.Entries, entry => entry.Path == path);
+        Assert.False(target.IsOpenTargetReserved);
+        if (last || reuseStart)
+        {
+            Assert.Same(target, Assert.Single(host.Workspaces.Handles));
+            Assert.True(target.Window.IsVisible);
+            Assert.Equal(WorkspaceCreationReason.None, target.Reason);
+            Assert.Equal(MainViewMode.Start, target.Model!.Mode);
+            Assert.True(target.Model.OpenCommand.CanExecute(null));
+            Assert.Equal(1, host.Workspaces.StartSlotCount);
+        }
+        else
+        {
+            Assert.Same(a, Assert.Single(host.Workspaces.Handles));
+            Assert.False(target.Window.IsVisible);
+            Assert.Equal(0, host.Workspaces.StartSlotCount);
+        }
+    }
+
+    [Fact]
+    public void CancelledAndUnavailableLocalOpensLeaveNoTemporaryWorkspaceOrQueueEntry()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files();
+        var host = Host(files);
+        var a = Start(host);
+        Assert.True(Run(() => a.Model!.OpenAsync(Project(files, "cancel-open-source.spandraft"))));
+        string path = Project(files, "cancel-open-target.spandraft");
+        files.BeforeRead = _ => throw new OperationCanceledException();
+        Assert.Equal(ProjectOpenStatus.Cancelled, Run(() => host.Workspaces.RequestOpenProjectAsync(a, path)).Status);
+        Assert.Same(a, Assert.Single(host.Workspaces.Handles));
+
+        var arbitration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        host.ProjectPaths.RecoverySettler = () => arbitration.Task;
+        var pending = BeginOpen(host, a, path);
+        var target = Assert.Single(host.Workspaces.Handles, h => h != a);
+        Assert.Equal(WorkspaceCreationReason.OpenProject, target.Reason);
+        Assert.False(pending.IsCompleted);
+        target.Window.Close(); Flush();
+        arbitration.SetResult();
+        Assert.Equal(ProjectOpenStatus.Unavailable, Run(() => pending).Status);
+        Assert.Same(a, Assert.Single(host.Workspaces.Handles));
+        Assert.Equal(0, host.Activation.Count);
+        Assert.Equal(0, host.Workspaces.StartSlotCount);
+        Assert.Equal(ProjectPathState.Free, host.ProjectPaths.StateOf(Identities.Resolve(path)));
+    }
+
+    [Fact]
+    public void UnavailableOpenDefersItsCleanupUntilAnInProgressQuitIsCancelled()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var files = new Files();
+            var host = Host(files);
+            var a = Start(host);
+            Assert.True(Run(() => a.Model!.OpenAsync(Project(files, "quit-open-source.spandraft"))));
+            var session = a.Model!.Session!;
+            Assert.True(session.Commit(State(8)));
+            var arbitration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            host.ProjectPaths.RecoverySettler = () => arbitration.Task;
+            var pending = BeginOpen(host, a, Project(files, "quit-open-target.spandraft"));
+            var target = Assert.Single(host.Workspaces.Handles, h => h != a);
+
+            Assert.True(host.Workspaces.Activate(a.WindowId));
+            Assert.True(host.Quit.RequestQuit()); Flush();
+            var quit = host.Quit.UserQuit!;
+            var leave = Assert.Single(a.Window.OwnedWindows);
+            arbitration.SetResult();
+            Assert.Equal(ProjectOpenStatus.Unavailable, Run(() => pending).Status);
+            Assert.Contains(target, host.Workspaces.Handles);
+            Assert.True(target.Model!.IsQuitFrozen);
+
+            Click(leave, Strings.Cancel);
+            Run(async () => { await quit.Completion; return true; });
+            Assert.Same(a, Assert.Single(host.Workspaces.Handles));
+            Assert.True(target.IsFinalized);
+            Assert.Same(session, a.Model.Session);
+            Assert.Equal(DesktopApplicationState.Ready, host.State);
+            Assert.Equal(0, host.Workspaces.StartSlotCount);
+        });
+    }
+
+    private static Task<ProjectOpenResult> BeginOpen(DesktopApplicationHost host, WorkspaceWindowHandle source, string path, bool fromRecent = false)
+    {
+        Task<ProjectOpenResult>? open = null;
+        DesktopControlEnvironment.RunOnDispatcher(() =>
+        {
+            open = host.Workspaces.RequestOpenProjectAsync(source, path, fromRecent);
+            return Task.CompletedTask;
+        });
+        Flush();
+        return open!;
     }
 
     [Fact]
@@ -429,23 +755,31 @@ public sealed class WorkspaceWindowManagerTests
             Assert.True(a.Model.Session.IsDirty);
             Assert.NotNull(host.ProjectPaths.IdentityOwnedBy(a.WindowId));
             var b = Run(() => host.Workspaces.RequestNewProjectAsync(a))!;
-            // b becomes a clean project workspace that could take the request.
-            Assert.True(Run(() => b.Model!.OpenAsync(Project(files, "other.spandraft"))));
+            string other = Project(files, "other.spandraft");
+            Assert.True(Run(() => b.Model!.OpenAsync(other)));
+            var session = b.Model!.Session;
 
             a.Window.Close(); Flush();
             var dialog = Assert.Single(a.Window.OwnedWindows);
             host.Activation.Enqueue(LaunchRequest.OpenProject(path));
+            string later = Project(files, "waiting-behind-owner.spandraft");
+            host.Activation.Enqueue(LaunchRequest.OpenProject(later));
             Flush();
-            // The owner is closing and still holds the identity: the request is neither consumed nor routed.
-            Assert.Equal(1, host.Activation.Count);
-            Assert.Equal(Identities.Resolve(Project(files, "other.spandraft")).CanonicalPath, b.Model!.Session!.FilePath);
+            // The first target waits for the owner. The next request stays behind it in the existing FIFO.
+            Assert.Equal(2, host.Activation.Count);
+            var target = Assert.Single(host.Workspaces.Handles, h => h != a && h != b);
+            Assert.Equal(WorkspaceCreationReason.OpenProject, target.Reason);
+            Assert.Null(target.Model!.Session);
+            Assert.Same(session, b.Model.Session);
 
             Click(dialog, Strings.DontSave); Flush(); Flush();
             // Final cleanup released the ownership, a deregistered, the queue was pumped again.
             Assert.DoesNotContain(a, host.Workspaces.Handles);
             Assert.Null(host.ProjectPaths.IdentityOwnedBy(a.WindowId));
             Assert.Equal(0, host.Activation.Count);
-            Assert.Equal(Identities.Resolve(path).CanonicalPath, b.Model.Session!.FilePath);
+            Assert.Equal(path, target.Model.Session!.FilePath);
+            Assert.Equal(later, Assert.Single(host.Workspaces.Handles, h => h != b && h != target).Model!.Session!.FilePath);
+            Assert.Equal(other, b.Model.Session!.FilePath);
         });
     }
 

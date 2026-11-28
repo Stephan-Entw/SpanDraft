@@ -93,6 +93,10 @@ internal sealed class WorkspaceWindowManager
         model.SessionActivated += handle.Neutralize;
         model.SetupCancelled += () => OnSetupCancelled(handle);
         model.RecoveryCenterLeft += () => OnRecoveryCenterLeft(handle);
+        model.NewProjectHandler = async () => await RequestNewProjectAsync(handle) is not null;
+        model.OpenProjectHandler = (path, fromRecent) => RequestOpenProjectAsync(handle, path, fromRecent);
+        model.CanRequestProjectHandler = () => CanCreate && IsReady(handle) && !handle.IsOpenTargetReserved
+            && handle.Reason != WorkspaceCreationReason.OpenProject;
         model.CloseWorkspaceHandler = async () => await CloseAsync(handle, WorkspaceCloseReason.CloseProject) != WorkspaceCloseOutcome.Cancelled;
         model.CanRouteHandler = () => IsReady(handle) && _host.State != DesktopApplicationState.ShuttingDown;
     }
@@ -149,20 +153,16 @@ internal sealed class WorkspaceWindowManager
     }
 
     /// <summary>
-    /// Internal New request (not wired to any user path before Phase 9): a StartOnly workspace is reused, otherwise a
-    /// separate NewProject workspace is created. Returns the workspace now showing the CreateSetup, or null.
+    /// Opens CreateSetup in a free start workspace or a separate NewProject workspace.
     /// </summary>
     internal async Task<WorkspaceWindowHandle?> RequestNewProjectAsync(WorkspaceWindowHandle source)
     {
-        if (!_handles.Contains(source) || source.Model is not { } model || !CanCreate) return null;
-        var startOnly = source.Kind == WorkspaceKind.StartOnly ? source
-            : _handles.FirstOrDefault(h => h.Kind == WorkspaceKind.StartOnly && h.Model is { Mode: MainViewMode.Start });
-        if (startOnly?.Model is { } startModel)
+        if (!CanCreate || !IsReady(source) || source.Model?.CanNewProject != true) return null;
+        if (FindIdleStart(source) is { } start)
         {
-            if (!ReferenceEquals(startOnly, source)) Activate(startOnly.WindowId);
-            return await startModel.NewAsync() ? startOnly : null;
+            if (!ReferenceEquals(start, source)) Activate(start.WindowId);
+            return await start.Model!.NewAsync() ? start : null;
         }
-        if (!model.CanNewProject) return null;
         var handle = Create(WorkspaceCreationReason.NewProject, isInitial: false);
         handle.Window.Show();
         try
@@ -179,6 +179,58 @@ internal sealed class WorkspaceWindowManager
         }
         CloseInternal(handle);
         return null;
+    }
+
+    /// <summary>Chooses an empty workspace. The target's existing open workflow handles the file and its result.</summary>
+    internal async Task<ProjectOpenResult> RequestOpenProjectAsync(WorkspaceWindowHandle source, string path, bool fromRecent = false)
+    {
+        if (!CanCreate || !IsReady(source)) return ProjectOpenResult.Unavailable;
+        var start = FindIdleStart(source);
+        var target = start ?? Create(WorkspaceCreationReason.OpenProject, isInitial: false);
+        target.IsOpenTargetReserved = true;
+        try
+        {
+            if (start is null)
+            {
+                target.Window.Show();
+                await target.Window.Initialization;
+            }
+            if (!CanCreate || !IsReady(target)) return ProjectOpenResult.Unavailable;
+            target.Model!.RefreshWorkspaceState();
+            if (start is not null) Activate(target.WindowId);
+            var result = await target.Model.OpenPathResultAsync(path, fromRecent, requireEmptyTarget: true);
+            if (start is null && result.Status == ProjectOpenStatus.Opened && result.Owner == target.WindowId) Activate(target.WindowId);
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            return CanCreate && IsReady(target) ? ProjectOpenResult.Cancelled : ProjectOpenResult.Unavailable;
+        }
+        finally
+        {
+            target.IsOpenTargetReserved = false;
+            if (target.Reason == WorkspaceCreationReason.OpenProject) CleanupOpenWorkspace(target);
+            else if (target.Model is { IsDisposed: false } model) model.RefreshWorkspaceState();
+        }
+    }
+
+    private void CleanupOpenWorkspace(WorkspaceWindowHandle handle)
+    {
+        if (handle.Reason != WorkspaceCreationReason.OpenProject || handle.IsOpenTargetReserved || !handle.CanRoute
+            || handle.IsFinalized || _host.Quit.IsSystemShutdown) return;
+        if (_host.Quit.UserQuit is { } quit)
+        {
+            ObserveAsync(CleanupAfterQuitAsync(quit));
+            return;
+        }
+        if (handle.Model is null || handle.Model.IsSafelyEmpty) CloseInternal(handle);
+        else ScheduleInternalClose(handle);
+
+        async Task CleanupAfterQuitAsync(QuitRun run)
+        {
+            await run.Completion;
+            CleanupOpenWorkspace(handle);
+        }
     }
 
     /// <summary>The shutdown is committed or the system ends the session: no workspace is created or changed any more.</summary>
@@ -203,6 +255,7 @@ internal sealed class WorkspaceWindowManager
             {
                 handle.IsClosing = false;
                 handle.Neutralize();
+                model.RefreshWorkspaceState();
                 return;
             }
         }
@@ -269,6 +322,7 @@ internal sealed class WorkspaceWindowManager
             if (quit is not null) _host.Quit.EndUserQuit(quit);
             else _host.Quit.EndWindowQuit(transaction);
         });
+        if (Find(transaction.Model.WindowId) is { } handle) CleanupOpenWorkspace(handle);
         // Requests that waited while the close was pending are evaluated again.
         PostPump();
         return WorkspaceCloseOutcome.Cancelled;
@@ -326,7 +380,12 @@ internal sealed class WorkspaceWindowManager
 
     /// <summary>A workspace that shows the start page and nothing else: it takes a restore without further ado.</summary>
     private bool IsIdleStart(WorkspaceWindowHandle handle) =>
-        IsReady(handle) && handle.HoldsStartSlot && handle.Model is { Mode: MainViewMode.Start, IsWorkspaceBusy: false };
+        IsReady(handle) && handle.HoldsStartSlot && !handle.IsOpenTargetReserved && handle.Window.CanBeginClose
+        && handle.Model is { Mode: MainViewMode.Start, IsWorkspaceBusy: false };
+
+    private WorkspaceWindowHandle? FindIdleStart(WorkspaceWindowHandle source) =>
+        IsIdleStart(source) && source.Model!.IsSafelyEmpty ? source
+        : _handles.FirstOrDefault(handle => IsIdleStart(handle) && handle.Model!.IsSafelyEmpty);
 
     /// <summary>
     /// Shows the Recovery Center from a UI hook (menu, start page, a refused open): fire and forget, failures surface on the
@@ -435,17 +494,13 @@ internal sealed class WorkspaceWindowManager
         catch (Exception error) { Dispatcher.UIThread.Post(() => System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error)); }
     });
 
-    private Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
+    private async Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
     {
-        // While the application quits no workspace takes anything: the request waits for the quit's end or its commit.
-        if (_host.Quit.IsUserQuitRunning) return Task.FromResult(false);
-        // A path owned by a closing workspace is not decided here: the open arbitration waits for that close and decides
-        // anew, so requests for other paths are never held back by it.
-        // Open requests prefer the start workspace; everything else the active one.
-        var target = request.Type == LaunchRequestType.OpenProject
-            ? _handles.FirstOrDefault(h => IsReady(h) && h.HoldsStartSlot) ?? Active
-            : Active;
-        return target is null ? Task.FromResult(false) : target.Window.HandleLaunchRequestAsync(request);
+        // A last-window close or global quit still decides what happens to queued requests.
+        if (_host.State != DesktopApplicationState.Ready || Active is not { } source) return false;
+        return request.Type == LaunchRequestType.OpenProject
+            ? (await RequestOpenProjectAsync(source, request.Value!)).Status != ProjectOpenStatus.Unavailable
+            : source.Window.HandleActivation();
     }
 
     private void SurfaceForRetry()

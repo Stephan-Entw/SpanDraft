@@ -10,6 +10,7 @@ using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.ViewModels;
+using SpanDraft.Desktop.Workspaces;
 using Xunit;
 using static SpanDraft.Tests.ProjectTestSupport;
 
@@ -65,6 +66,8 @@ public sealed class DesktopActivationWindowTests
             Assert.Equal(1, reads);
             Assert.Equal(1, surfaced);
             Assert.Same(session, model.Session);
+            Assert.Same(window, Assert.Single(host.Workspaces.Handles).Window);
+            Assert.Equal(0, host.Workspaces.StartSlotCount);
             Assert.Equal(window.WindowId, host.ProjectPaths.ArbitrateOpen(Identities.Resolve(path)).Owner);
 
             window.Close(); Dispatcher.UIThread.RunJobs();
@@ -73,15 +76,16 @@ public sealed class DesktopActivationWindowTests
     }
 
     [Fact]
-    public void RequestArrivingWhileOpenIsUnavailableStaysQueuedAndOpensAfterReturningToTheEditor()
+    public void RapidExternalOpensKeepTheirOrderAndProjectsAndDuplicatesOnlyActivateTheOwner()
     {
         using var environment = new DesktopControlEnvironment();
         WithUiContext(() =>
         {
             var files = new Files();
-            string a = TestPath("queue-a.spandraft"), b = TestPath("queue-b.spandraft");
+            string a = TestPath("queue-a.spandraft"), b = TestPath("queue-b.spandraft"), c = TestPath("queue-c.spandraft");
             files.Data[a] = ProjectFileCodec.Serialize(State(1));
             files.Data[b] = ProjectFileCodec.Serialize(State(4));
+            files.Data[c] = ProjectFileCodec.Serialize(State(7));
             var host = Host(files);
             var window = host.Workspaces.CreateInitial().Window;
             DesktopControlEnvironment.ShowInitialized(window);
@@ -89,49 +93,50 @@ public sealed class DesktopActivationWindowTests
 
             Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(a)));
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(a, main.Session!.FilePath);
-
-            // A new-project setup on top of an open session makes opening unavailable.
-            Assert.True(main.NewAsync().IsCompletedSuccessfully); Dispatcher.UIThread.RunJobs();
-            Assert.False(main.CanOpenProject);
+            var original = main.Session;
+            Assert.Equal(a, original!.FilePath);
+            var reads = new List<string>();
+            files.BeforeRead = path => { if (path == b || path == c) reads.Add(path); return Task.CompletedTask; };
             Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(b)));
-            Dispatcher.UIThread.RunJobs();
-            Assert.Equal(1, host.Activation.Count);
-            Assert.Equal(a, main.Session!.FilePath);
-
-            Assert.True(main.CancelSetupAsync().IsCompletedSuccessfully); Dispatcher.UIThread.RunJobs();
+            Assert.True(host.SubmitPlatformActivation(LaunchRequest.OpenProject(c)));
+            Assert.True(host.SubmitPlatformActivation(LaunchRequest.OpenProject(b)));
+            Dispatcher.UIThread.RunJobs(); Dispatcher.UIThread.RunJobs();
             Assert.Equal(0, host.Activation.Count);
-            Assert.Equal(b, main.Session!.FilePath);
-            typeof(MainWindow).GetField("_closeApproved", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, true);
-            window.Close(); Dispatcher.UIThread.RunJobs();
+            Assert.Equal([b, c], reads);
+            Assert.Equal([a, b, c], host.Workspaces.Handles.Select(handle => handle.Model!.Session!.FilePath));
+            Assert.Equal(b, host.Workspaces.Active!.Model!.Session!.FilePath);
+            Assert.Same(original, main.Session);
+            Assert.Equal(0, host.Workspaces.StartSlotCount);
+            foreach (var handle in host.Workspaces.Handles.ToArray()) ApproveClose(handle.Window);
         });
     }
 
-    private static void SetupBlockedWithQueuedOpen(out DesktopApplicationHost host, out MainWindow window, out string target)
+    private static void SetupWithQueuedOpens(out DesktopApplicationHost host, out MainWindow window, out string target)
     {
         var files = new Files();
         string a = TestPath("quit-a.spandraft"); target = TestPath("quit-b.spandraft");
         files.Data[a] = ProjectFileCodec.Serialize(State(1));
         files.Data[target] = ProjectFileCodec.Serialize(State(4));
+        files.Data[TestPath("quit-late.spandraft")] = ProjectFileCodec.Serialize(State(7));
         host = Host(files);
         window = host.Workspaces.CreateInitial().Window;
         DesktopControlEnvironment.ShowInitialized(window);
         var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
         host.HandleBrokerRequest(LaunchRequest.OpenProject(a)); Dispatcher.UIThread.RunJobs();
-        Assert.True(main.NewAsync().IsCompletedSuccessfully); Dispatcher.UIThread.RunJobs();
+        Assert.Equal(a, main.Session!.FilePath);
         Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(target)));
-        Dispatcher.UIThread.RunJobs();
+        // Start the last-window close before the posted activation pump runs.
         Assert.Equal(1, host.Activation.Count);
     }
 
     [Fact]
-    public void BlockedOpenRequestSurfacesTheBlockingTargetOnceAndStaysQueued()
+    public void AnUnavailableLaunchTargetLeavesTheRequestQueuedUntilItCanBeRoutedAgain()
     {
         using var environment = new DesktopControlEnvironment();
         WithUiContext(() =>
         {
             var files = new Files();
-            string a = TestPath("surf-a.spandraft"), b = TestPath("surf-b.spandraft");
+            string a = TestPath("retry-a.spandraft"), b = TestPath("retry-b.spandraft");
             files.Data[a] = ProjectFileCodec.Serialize(State(1));
             files.Data[b] = ProjectFileCodec.Serialize(State(4));
             var host = Host(files);
@@ -139,17 +144,24 @@ public sealed class DesktopActivationWindowTests
             DesktopControlEnvironment.ShowInitialized(window);
             var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
             host.HandleBrokerRequest(LaunchRequest.OpenProject(a)); Dispatcher.UIThread.RunJobs();
-            Assert.True(main.NewAsync().IsCompletedSuccessfully); Dispatcher.UIThread.RunJobs();
-            var surfaced = new List<Window>();
-            window.Surface = surfaced.Add;
-
+            var session = main.Session;
+            var arbitration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            host.ProjectPaths.RecoverySettler = () => arbitration.Task;
             host.HandleBrokerRequest(LaunchRequest.OpenProject(b)); Dispatcher.UIThread.RunJobs();
             Assert.Equal(1, host.Activation.Count);
-            Assert.Same(window.RetryTarget, Assert.Single(surfaced));
-            Assert.Equal(a, main.Session!.FilePath);
-            window.Surface = static _ => { };
-            typeof(MainWindow).GetField("_closeApproved", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, true);
-            window.Close(); Dispatcher.UIThread.RunJobs();
+            var unavailable = Assert.Single(host.Workspaces.Handles, handle => handle.Window != window);
+            unavailable.Window.Close(); Dispatcher.UIThread.RunJobs();
+            Assert.Same(window, Assert.Single(host.Workspaces.Handles).Window);
+            Assert.Equal(1, host.Activation.Count);
+            host.ProjectPaths.RecoverySettler = null;
+            arbitration.SetResult();
+            DesktopControlEnvironment.RunOnDispatcher(host.Activation.PumpAsync);
+            Dispatcher.UIThread.RunJobs(); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, host.Activation.Count);
+            var opened = Assert.Single(host.Workspaces.Handles, handle => handle.Window != window);
+            Assert.Equal(b, opened.Model!.Session!.FilePath);
+            Assert.Same(session, main.Session);
+            ApproveClose(opened.Window); ApproveClose(window);
         });
     }
 
@@ -159,15 +171,14 @@ public sealed class DesktopActivationWindowTests
         using var environment = new DesktopControlEnvironment();
         WithUiContext(() =>
         {
-            SetupBlockedWithQueuedOpen(out var host, out var window, out _);
+            SetupWithQueuedOpens(out var host, out var window, out _);
             bool closed = false; window.Closed += (_, _) => closed = true;
             window.Close(); Dispatcher.UIThread.RunJobs();
             Assert.False(closed);
             Click(Assert.Single(window.OwnedWindows), Strings.Discard); Dispatcher.UIThread.RunJobs();
-            // The existing leave question for the setup draft may follow; answer it if present.
-            if (window.OwnedWindows.Count > 0) Click(window.OwnedWindows[0], Strings.Discard);
             Dispatcher.UIThread.RunJobs();
             Assert.True(closed);
+            Assert.Equal(0, host.Activation.Count);
         });
     }
 
@@ -177,18 +188,17 @@ public sealed class DesktopActivationWindowTests
         using var environment = new DesktopControlEnvironment();
         WithUiContext(() =>
         {
-            SetupBlockedWithQueuedOpen(out var host, out var window, out var target);
+            SetupWithQueuedOpens(out var host, out var window, out var target);
             var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
+            var original = main.Session;
             window.Close(); Dispatcher.UIThread.RunJobs();
             Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
             Assert.Equal(DesktopApplicationState.Ready, host.State);
-            Assert.Equal(1, host.Activation.Count);
-
-            Assert.True(main.CancelSetupAsync().IsCompletedSuccessfully); Dispatcher.UIThread.RunJobs();
             Assert.Equal(0, host.Activation.Count);
-            Assert.Equal(target, main.Session!.FilePath);
-            typeof(MainWindow).GetField("_closeApproved", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, true);
-            window.Close(); Dispatcher.UIThread.RunJobs();
+            Assert.Same(original, main.Session);
+            var opened = Assert.Single(host.Workspaces.Handles, handle => handle.Window != window);
+            Assert.Equal(target, opened.Model!.Session!.FilePath);
+            ApproveClose(opened.Window); ApproveClose(window);
         });
     }
 
@@ -198,22 +208,26 @@ public sealed class DesktopActivationWindowTests
         using var environment = new DesktopControlEnvironment();
         WithUiContext(() =>
         {
-            SetupBlockedWithQueuedOpen(out var host, out var window, out _);
+            SetupWithQueuedOpens(out var host, out var window, out var target);
             bool closed = false; window.Closed += (_, _) => closed = true;
             window.Close(); Dispatcher.UIThread.RunJobs();
             Assert.Equal(DesktopApplicationState.QuitInProgress, host.State);
-            Click(Assert.Single(window.OwnedWindows), Strings.Discard);
+            var before = Assert.Single(window.OwnedWindows);
             // Simulates a macOS file activation that bypasses the broker while the quit is still pending.
             Assert.True(host.SubmitPlatformActivation(LaunchRequest.OpenProject(TestPath("quit-late.spandraft"))));
+            Click(before, Strings.Discard);
             Dispatcher.UIThread.RunJobs();
             Assert.False(closed);
             // Only the late request is asked about; the already confirmed one is not asked again.
-            Click(Assert.Single(window.OwnedWindows), Strings.Cancel); Dispatcher.UIThread.RunJobs();
+            var late = Assert.Single(window.OwnedWindows);
+            Assert.Contains(late.GetVisualDescendants().OfType<TextBlock>(), text => text.Text?.Contains("quit-late.spandraft") == true);
+            Click(late, Strings.Cancel); Dispatcher.UIThread.RunJobs();
             Assert.False(closed);
             Assert.Equal(DesktopApplicationState.Ready, host.State);
-            Assert.Equal(2, host.Activation.Count);
-            typeof(MainWindow).GetField("_closeApproved", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.SetValue(window, true);
-            window.Close(); Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, host.Activation.Count);
+            Assert.Equal([TestPath("quit-a.spandraft"), target, TestPath("quit-late.spandraft")],
+                host.Workspaces.Handles.Select(handle => handle.Model!.Session!.FilePath));
+            foreach (var handle in host.Workspaces.Handles.ToArray()) ApproveClose(handle.Window);
         });
     }
 
@@ -268,8 +282,9 @@ public sealed class DesktopActivationWindowTests
         });
     }
 
-    [Fact]
-    public void OpeningAPathWithPendingRecoveryShowsTheRecoveryCenterAndNeverReadsTheDisk()
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void OpeningAPathWithPendingRecoveryShowsTheRecoveryCenterAndNeverReadsTheDisk(bool occupied)
     {
         using var environment = new DesktopControlEnvironment();
         WithUiContext(() =>
@@ -283,6 +298,13 @@ public sealed class DesktopActivationWindowTests
             var window = host.Workspaces.CreateInitial().Window;
             DesktopControlEnvironment.ShowInitialized(window);
             var model = Assert.IsType<MainWindowViewModel>(window.DataContext);
+            if (occupied)
+            {
+                string existing = TestPath("already-in-editor.spandraft");
+                files.Data[existing] = ProjectFileCodec.Serialize(State(3));
+                Assert.True(model.OpenAsync(existing).GetAwaiter().GetResult());
+            }
+            var original = model.Session;
             Assert.Equal(ProjectPathState.RecoveryPending, host.ProjectPaths.StateOf(Identities.Resolve(target)));
             // The catalog compared the original with the recovery while loading; from here on the disk must stay untouched.
             reads = 0;
@@ -290,10 +312,15 @@ public sealed class DesktopActivationWindowTests
             Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(target)));
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(0, host.Activation.Count);
-            Assert.Equal(MainViewMode.RecoveryCenter, model.Mode);
-            Assert.Null(model.Session);
+            var center = Assert.Single(host.Workspaces.Handles, handle => handle.Model!.Mode == MainViewMode.RecoveryCenter);
+            Assert.Null(center.Model!.Session);
+            Assert.Same(original, model.Session);
+            if (occupied) Assert.NotSame(window, center.Window);
+            else Assert.Same(window, center.Window);
+            Assert.DoesNotContain(host.Workspaces.Handles, handle => handle.Reason == WorkspaceCreationReason.OpenProject);
+            Assert.Equal(occupied ? 0 : 1, host.Workspaces.StartSlotCount);
             Assert.Equal(0, reads);
-            ApproveClose(window);
+            foreach (var handle in host.Workspaces.Handles.ToArray()) ApproveClose(handle.Window);
         });
     }
 
@@ -447,9 +474,11 @@ public sealed class DesktopActivationWindowTests
             DesktopControlEnvironment.ShowInitialized(window);
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(0, host.Activation.Count);
-            // Had the later request run first, the initial one would have replaced it.
-            Assert.Equal(later, Assert.IsType<MainWindowViewModel>(window.DataContext).Session!.FilePath);
-            ApproveClose(window);
+            Assert.Equal(initial, Assert.IsType<MainWindowViewModel>(window.DataContext).Session!.FilePath);
+            var next = Assert.Single(host.Workspaces.Handles, handle => handle.Window != window);
+            Assert.Equal(later, next.Model!.Session!.FilePath);
+            Assert.Equal(0, host.Workspaces.StartSlotCount);
+            ApproveClose(next.Window); ApproveClose(window);
         });
     }
 }

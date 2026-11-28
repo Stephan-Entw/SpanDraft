@@ -19,10 +19,9 @@ public enum RecoveryFault { None, Project, Draft }
 /// project created from it share one id. Slot writes stay best-effort: a failed debounce never blocks editing.
 /// </summary>
 /// <remarks>
-/// A workspace never owns a project slot and a draft slot at the same time. Until New gets its own workspace (Phase 9),
-/// it can still be started over an open project: while that project has a recovery slot of its own, the unconfirmed
-/// Create draft is not written, so the unsaved project stays the single recovery of the workspace. Over a project without
-/// recovery (clean) the draft owns the context as usual.
+/// A workspace never owns a project slot and a draft slot at the same time. When the local New primitive is used over
+/// an open project, an existing project recovery slot takes precedence over the draft. Without a project recovery slot,
+/// the draft owns the context as usual.
 ///
 /// Detached draft slots awaiting cleanup are kept separately (<see cref="Remnants"/>) and retried at the next cleanup;
 /// when the workspace closes they are moved to the Discarded area like any deliberately given up draft.
