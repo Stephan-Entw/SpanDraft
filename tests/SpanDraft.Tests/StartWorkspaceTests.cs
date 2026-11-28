@@ -135,6 +135,25 @@ public sealed class StartWorkspaceTests
     }
 
     [Theory]
+    [InlineData(true)] [InlineData(false)]
+    public async Task AFileFromANewerVersionIsNamedAsSuch(bool newer)
+    {
+        var f = new Fixture(); string path = f.Project("newer");
+        var root = System.Text.Json.Nodes.JsonNode.Parse(f.Files.Data[path])!;
+        root["formatVersion"] = newer ? ProjectFileCodec.Version + 1 : 0;
+        f.Files.Data[path] = Encoding.UTF8.GetBytes(root.ToJsonString());
+        Assert.False(await f.Main.OpenAsync(path));
+        Assert.Equal(MainViewMode.Start, f.Main.Mode); Assert.Null(f.Main.Session);
+        string error = Assert.Single(f.Dialogs.Errors);
+        if (newer) Assert.Equal(Strings.ProjectFileNewerVersion, error);
+        else
+        {
+            Assert.StartsWith(Strings.ProjectFileError, error);
+            Assert.DoesNotContain(Strings.ProjectFileNewerVersion, error);
+        }
+    }
+
+    [Theory]
     [InlineData("invalid")] [InlineData("io")] [InlineData("access")]
     public async Task InvalidOrUnreadableRecentKeepsEntryAndReportsExistingProjectError(string failure)
     {

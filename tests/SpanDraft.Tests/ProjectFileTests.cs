@@ -109,7 +109,7 @@ public sealed class ProjectFileTests
     [Theory]
     [InlineData("format", "Other")]
     [InlineData("formatVersion", 0)]
-    [InlineData("formatVersion", 6)]
+    [InlineData("formatVersion", ProjectFileCodec.Version + 1)]
     [InlineData("document.length", 0)]
     [InlineData("document.length", -1)]
     [InlineData("document.material.youngsModulus", 0)]
@@ -139,6 +139,18 @@ public sealed class ProjectFileTests
         var root = JsonNode.Parse(ProjectFileCodec.Serialize(State()))!;
         Set(root, path, JsonValue.Create(value));
         Assert.Throws<ProjectFormatException>(() => Read(root));
+    }
+
+    [Theory]
+    [InlineData(ProjectFileCodec.Version + 1, true)]
+    [InlineData(ProjectFileCodec.Version + 100, true)]
+    [InlineData(0, false)]
+    [InlineData(-1, false)]
+    public void OnlyAVersionNewerThanTheCurrentFormatIsReportedAsNewer(int version, bool newer)
+    {
+        var root = JsonNode.Parse(ProjectFileCodec.Serialize(State()))!;
+        root["formatVersion"] = version;
+        Assert.Equal(newer, Assert.Throws<ProjectFormatException>(() => Read(root)).IsNewerVersion);
     }
 
     [Theory]

@@ -155,6 +155,7 @@ public static class Strings
     public static string ProjectFileFilter => Get(nameof(ProjectFileFilter));
     public static string ProjectFileError => Get(nameof(ProjectFileError));
     public static string ProjectFileMissing => Get(nameof(ProjectFileMissing));
+    public static string ProjectFileNewerVersion => Get(nameof(ProjectFileNewerVersion));
     public static string ProjectFileInUse => Get(nameof(ProjectFileInUse));
     public static string MissingRecentQuestion => Get(nameof(MissingRecentQuestion));
     public static string RemoveFromRecent => Get(nameof(RemoveFromRecent));

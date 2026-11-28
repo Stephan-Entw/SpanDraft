@@ -631,7 +631,7 @@ internal sealed class WorkspaceWindowManager
         catch (FileNotFoundException) { return (ProjectOpenStatus.Failed, failure); }
         catch (Exception error) when (MainWindowViewModel.IsFileError(error))
         {
-            return (ProjectOpenStatus.Failed, failure + "\n" + error.Message);
+            return (ProjectOpenStatus.Failed, MainWindowViewModel.FileErrorMessage(failure, error));
         }
         if (!CanContinueQueued || !await WaitForSettingsAsync(null) || !CanContinueQueued) return (ProjectOpenStatus.Unavailable, null);
         try

@@ -242,7 +242,9 @@ auch bei gleichen I/W mechanisch relevant.
 
 Pflichtfelder müssen vorhanden und dürfen nicht null sein. Nicht endliche Zahlen,
 ungültige Domainwerte, unbekannte Versionen/Typen/Achsen und doppelte
-JSON-Eigenschaften werden als `ProjectFormatException` abgelehnt. Zusätzliche
+JSON-Eigenschaften werden als `ProjectFormatException` abgelehnt; eine Version
+oberhalb der aktuellen kennzeichnet die Ausnahme als neuere Datei, für die die
+Desktop-App eine eigene Meldung zeigt. Zusätzliche
 unbekannte Felder werden ignoriert. Beschädigte Werte werden nicht korrigiert
 oder begrenzt; Domain-Konstruktoren sind die letzte fachliche Validierungsinstanz.
 

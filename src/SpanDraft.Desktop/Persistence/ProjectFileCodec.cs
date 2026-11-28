@@ -10,7 +10,11 @@ using SpanDraft.Desktop.State;
 
 namespace SpanDraft.Desktop.Persistence;
 
-public sealed class ProjectFormatException(string message, Exception? inner = null) : Exception(message, inner);
+/// <param name="isNewerVersion">The file names a format version newer than this application reads.</param>
+public sealed class ProjectFormatException(string message, Exception? inner = null, bool isNewerVersion = false) : Exception(message, inner)
+{
+    public bool IsNewerVersion { get; } = isNewerVersion;
+}
 
 public static class ProjectFileCodec
 {
@@ -47,7 +51,7 @@ public static class ProjectFileCodec
                 3 => FromDto(root.Deserialize<ProjectFileV3>(JsonOptions)!),
                 4 => FromDto(root.Deserialize<ProjectFileV4>(JsonOptions)!),
                 5 => FromDto(root.Deserialize<ProjectFileV5>(JsonOptions)!),
-                _ => throw new ProjectFormatException("Unsupported project format version.")
+                _ => throw new ProjectFormatException("Unsupported project format version.", isNewerVersion: number > Version)
             };
         }
         catch (Exception e) when (e is JsonException or ArgumentException or OverflowException)

@@ -985,7 +985,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         or ProjectFormatException or JsonException or ArgumentException or NotSupportedException or System.Security.SecurityException;
     // A disposed workspace has no window left to own a dialog: late continuations show nothing.
     private Task ShowErrorAsync(string prefix, Exception e) =>
-        _disposed ? Task.CompletedTask : _dialogs?.ShowErrorAsync(prefix + "\n" + e.Message) ?? Task.CompletedTask;
+        _disposed ? Task.CompletedTask : _dialogs?.ShowErrorAsync(FileErrorMessage(prefix, e)) ?? Task.CompletedTask;
+
+    /// <summary>A file from a newer SpanDraft version gets its own message instead of the technical cause.</summary>
+    internal static string FileErrorMessage(string prefix, Exception e) =>
+        e is ProjectFormatException { IsNewerVersion: true } ? Strings.ProjectFileNewerVersion : prefix + "\n" + e.Message;
     private async void RecoveryFailed(Exception error)
     {
         if (IsBusy) { _pendingRecoveryError = error; return; }
