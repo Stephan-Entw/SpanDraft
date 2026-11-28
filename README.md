@@ -88,6 +88,12 @@ dotnet test --solution SpanDraft.sln --no-build --no-restore
 dotnet run --project src/SpanDraft.Desktop
 ```
 
+To run the desktop app in watch mode, use:
+
+```sh
+dotnet watch --project src/SpanDraft.Desktop
+```
+
 GitHub Actions runs the product, independent validation and [offline help](help/README.md)
 gates on pushes to all branches and pull requests targeting `main`.
 
