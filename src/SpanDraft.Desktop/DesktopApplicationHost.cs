@@ -193,6 +193,7 @@ public sealed class DesktopApplicationHost
             _shutdown.TrySetResult();
         }
         Workspaces.ReleasePendingSettingsRegistrations();
+        Workspaces.DiscardPendingExampleFailure();
         return true;
     }
 
@@ -206,6 +207,7 @@ public sealed class DesktopApplicationHost
             _shutdown.TrySetResult();
         }
         Workspaces.ReleasePendingSettingsRegistrations();
+        Workspaces.DiscardPendingExampleFailure();
     }
 
     // Queue insertion happens before the state change so no Accepted broker request can overtake the initial one.

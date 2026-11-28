@@ -390,6 +390,114 @@ public sealed partial class WorkspaceWindowManagerTests
         });
     }
 
+    /// <summary>
+    /// The only workspace has an application dialog, so the failed editor initialization in the new target cannot be shown
+    /// yet: further pumps retry only the presentation, never the read, the target or the initialization.
+    /// </summary>
+    private static (DesktopApplicationHost Host, WorkspaceWindowHandle A, ExampleSource Examples, Window About, Func<int> Initializations,
+        Action Disarm) FailureWaitingForPresenter()
+    {
+        var examples = new ExampleSource();
+        var host = ExampleHost(new Files(), examples);
+        bool armed = false;
+        int initializations = 0;
+        // Only the first initialization fails: a repeated open would succeed and end a retry loop visibly.
+        host.AnalyzeProject = model =>
+        {
+            if (!armed || initializations++ > 0) return SpanDraft.Analysis.BeamAnalysis.Analyze(model);
+            throw new IOException("Injected editor initialization failure");
+        };
+        var a = Start(host);
+        armed = true;
+        var about = new Window();
+        _ = host.AppDialogs.ShowAsync(AppDialogKind.About, a.Window, () => about);
+        Flush();
+        RequestExample(host, Beam);
+        return (host, a, examples, about, () => initializations, () => armed = false);
+    }
+
+    [Fact]
+    public void AFailedExampleOpenRetriesOnlyItsPresentation()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var (host, a, examples, about, initializations, disarm) = FailureWaitingForPresenter();
+            Assert.Equal(1, initializations());
+            Assert.True(host.Workspaces.HasPendingExampleFailure);
+            for (int i = 0; i < 3; i++)
+            {
+                Run(async () => { await host.Activation.PumpAsync(); return true; });
+                host.Workspaces.PostPump(); Flush(); Flush();
+            }
+            Assert.Equal(1, initializations());
+            Assert.Equal(["einfeldtraeger"], examples.Reads);
+            Assert.Same(a, Assert.Single(host.Workspaces.Handles));
+            Assert.Equal(1, host.Activation.Count);
+            Assert.Same(about, Assert.Single(a.Window.OwnedWindows));
+
+            // A later request waits behind it (FIFO).
+            disarm();
+            RequestExample(host, Cantilever);
+            Assert.Equal(2, host.Activation.Count);
+            Assert.Equal(["einfeldtraeger"], examples.Reads);
+
+            about.Close(); Flush(); Flush();
+            var failure = Assert.Single(a.Window.OwnedWindows);
+            Assert.Contains(string.Format(System.Globalization.CultureInfo.CurrentUICulture, Strings.ExampleOpenError,
+                Strings.ExampleSimplySupportedBeam), DialogText(failure));
+            Assert.Equal(1, initializations());
+            Click(failure, Strings.OK); Flush(); Flush();
+            Assert.False(host.Workspaces.HasPendingExampleFailure);
+            Assert.Equal(0, host.Activation.Count);
+            Assert.Equal(["einfeldtraeger", "kragarm"], examples.Reads);
+            Assert.Equal(1, initializations());
+            Assert.Same(a, Assert.Single(host.Workspaces.Handles));
+            AssertCleanTemplate(a, Strings.ExampleCantilever);
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void APendingExampleFailureSurvivesACancelledQuitAndEndsWithTheShutdown(bool discard)
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var (host, a, examples, about, initializations, _) = FailureWaitingForPresenter();
+            Assert.True(host.Workspaces.HasPendingExampleFailure);
+            // The quit closes the safely closable dialog, then asks about the waiting request.
+            Assert.True(host.Quit.RequestQuit()); Flush(); Flush();
+            Assert.Equal(1, initializations());
+            var question = Assert.Single(a.Window.OwnedWindows);
+            Assert.NotSame(about, question);
+            Assert.Contains(string.Format(System.Globalization.CultureInfo.CurrentUICulture, Strings.PendingRequestOneQuestion,
+                Strings.ExampleSimplySupportedBeam), DialogText(question));
+            Click(question, discard ? Strings.Discard : Strings.Cancel); Flush(); Flush();
+            if (discard)
+            {
+                Assert.Equal(DesktopApplicationState.ShuttingDown, host.State);
+                Assert.False(host.Workspaces.HasPendingExampleFailure);
+                Assert.Equal(0, host.Activation.Count);
+                Assert.Equal(1, initializations());
+                return;
+            }
+            Assert.Equal(DesktopApplicationState.Ready, host.State);
+            Assert.Equal(1, initializations());
+            Assert.Equal(["einfeldtraeger"], examples.Reads);
+            var failure = Assert.Single(a.Window.OwnedWindows);
+            Assert.Contains(string.Format(System.Globalization.CultureInfo.CurrentUICulture, Strings.ExampleOpenError,
+                Strings.ExampleSimplySupportedBeam), DialogText(failure));
+            Click(failure, Strings.OK); Flush(); Flush();
+            Assert.False(host.Workspaces.HasPendingExampleFailure);
+            Assert.Equal(0, host.Activation.Count);
+            Assert.Empty(a.Window.OwnedWindows);
+            Assert.Same(a, Assert.Single(host.Workspaces.Handles));
+            Assert.Equal(MainViewMode.Start, a.Model!.Mode);
+        });
+    }
+
     [Fact]
     public void SaveAsOfAnExampleOntoAPathOpenElsewhereIsRejectedByTheArbitration()
     {
