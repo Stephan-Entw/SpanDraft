@@ -304,7 +304,7 @@ public sealed class WorkspaceCloseTransactionTests
     // ---- open arbitration: joined flights and owners that close ------------------------------------------------
 
     /// <summary>A workspace as the open coordinator sees it; what it does on activation is recorded.</summary>
-    private sealed class OpenTarget : IProjectOpenWorkspace
+    private sealed class OpenTarget : IProjectOpenRequest
     {
         private bool _canContinue = true;
         public WindowId WindowId { get; } = WindowId.Create();
@@ -315,9 +315,13 @@ public sealed class WorkspaceCloseTransactionTests
         public List<WindowId> Activated { get; } = [];
         public List<Guid> Recoveries { get; } = [];
         public Task<ProjectOpenResult> RunOpenAsync(Func<Task<ProjectOpenResult>> transaction, bool afterSave) => Run(transaction);
-        public Task<bool> ActivateProjectAsync(ProjectState state, string path) => Task.FromResult(true);
-        public void ActivateExisting(WindowId owner) => Activated.Add(owner);
-        public void ActivateRecovery(Guid candidate) => Recoveries.Add(candidate);
+        public Task<ProjectOpenStatus> ActivateProjectAsync(ProjectState state, string path, Action<WindowId, Action> commit)
+        {
+            commit(WindowId, () => { });
+            return Task.FromResult(ProjectOpenStatus.Opened);
+        }
+        public bool ActivateExisting(WindowId owner) { Activated.Add(owner); return true; }
+        public Task<bool> ActivateRecoveryAsync(Guid candidate) { Recoveries.Add(candidate); return Task.FromResult(true); }
     }
 
     [Theory]

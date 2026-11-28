@@ -108,17 +108,17 @@ public partial class MainWindow : Window
                 _frameProbe = new(this, WorkspaceContent);
                 _performance = new(_frameProbe);
                 // The shared services and the recovery catalog were initialized by the bootstrap; this window only adapts them.
-                _model = new(performance: _performance, files: files, dialogs: _dialogs, recovery: host.CreateRecoveryContext(),
+                _model = new(analyze: host.AnalyzeProject, performance: _performance, files: files, dialogs: _dialogs, recovery: host.CreateRecoveryContext(),
                     services: host.Services, openUserManual: OpenUserManualAsync,
                     userNameProvider: host.UserNameProvider, windowId: WindowId, projectIdentities: host.ProjectIdentities,
                     projectPaths: host.ProjectPaths, projectOpen: host.ProjectOpen,
                     activateWorkspace: id => host.Workspaces.Activate(id),
-                    ownerProjectPath: id => host.Workspaces.Find(id)?.Model?.Session?.FilePath,
                     recoveryCatalog: host.Recovery,
-                    showRecoveryCenter: focus => host.Workspaces.RequestRecoveryCenter(_handle, focus),
+                    showRecoveryCenter: async focus => await host.Workspaces.ShowRecoveryCenterAsync(_handle, focus) is not null,
                     restoreRecovery: id => host.Workspaces.RestoreRecoveryAsync(id, _handle));
                 host.Workspaces.BindModel(_handle, _model);
                 await _model.ReportStartupErrorsAsync();
+                if (_handle.IsFinalized || host.Workspaces.IsShuttingDown) { _initialization.TrySetCanceled(); return; }
                 // Not knowing about unsaved work is the one thing that holds the startup back: ask until it is known or the user leaves.
                 if (_handle.IsInitial && !await EnsureRecoveryKnownAsync())
                 {
@@ -127,6 +127,7 @@ public partial class MainWindow : Window
                     Dispatcher.UIThread.Post(Close);
                     return;
                 }
+                if (_handle.IsFinalized || host.Workspaces.IsShuttingDown) { _initialization.TrySetCanceled(); return; }
                 DataContext = _model;
                 _initializing = false;
                 quitCommand.Refresh();
@@ -134,6 +135,7 @@ public partial class MainWindow : Window
                 {
                     _model.PropertyChanged += (_, _) => host.Workspaces.PostPump();
                     _initialization.TrySetResult();
+                    host.Workspaces.PostPump();
                     return;
                 }
                 // Undecided recovery candidates never hold the host back: requests wait in the host queue from here on.
@@ -146,13 +148,14 @@ public partial class MainWindow : Window
             catch (Exception error)
             {
                 _initialization.TrySetException(error);
-                // Preserve normal fatal-startup behavior while making the error awaitable by hosts.
-                throw;
+                // The requesting operation handles failures of dedicated windows; initial startup has no such caller.
+                if (_handle.IsInitial) throw;
             }
         };
         Closing += WindowClosing;
         Closed += (_, _) =>
         {
+            _initialization.TrySetCanceled();
             // The one final cleanup of this workspace; appwide infrastructure ends only with the last workspace.
             host.Workspaces.FinalizeClosed(_handle);
             _performance?.CancelPending();
@@ -206,7 +209,10 @@ public partial class MainWindow : Window
     /// Window part of the application quit's preflight: initialized. Its application dialogs are the quit's business: it
     /// closes those that can be closed safely and refuses to start because of the others.
     /// </summary>
-    internal bool IsReadyForQuit => !_initializing;
+    internal bool IsReadyForQuit => IsUiReady;
+
+    // The initial window handles its own launch request before Initialization completes.
+    internal bool IsUiReady => !_initializing;
 
     internal bool HandleActivation()
     {

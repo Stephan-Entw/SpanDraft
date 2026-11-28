@@ -659,7 +659,8 @@ public sealed class RecoveryCatalogTests
     // ---- restore through the workspace and the registry -------------------------------------------------------
 
     private static MainWindowViewModel Workspace(Fixture f, TestRecoveryStorage? storage = null, Action<Guid?>? showRecoveryCenter = null) =>
-        new(WindowId.Create(), f.Registry, f.Resolver, showRecoveryCenter: showRecoveryCenter, files: f.Files, dialogs: f.Dialogs, recovery: new(storage ?? f.Storage));
+        new(WindowId.Create(), f.Registry, f.Resolver, showRecoveryCenter: showRecoveryCenter is null ? null
+            : id => { showRecoveryCenter(id); return Task.FromResult(true); }, files: f.Files, dialogs: f.Dialogs, recovery: new(storage ?? f.Storage));
 
     [Fact]
     public async Task RestoringThePreferredVariantOwnsThePathAndTheOlderVariantTakesOverWhenItIsReleased()

@@ -404,23 +404,26 @@ public sealed class WorkspaceCloseTests
             var app = new App(); var a = app.Start(); var (path, _) = app.OpenDirty(a, "shutdown-owner");
             var b = app.Second(a, "shutdown-opener");
             a.Window.Close(); Flush(); var dialog = Dialog(a);
-            // The local primitive in b and a dedicated activation target both wait for a's decision.
+            // The local primitive in b and the queue both wait for a's decision before taking any target.
             bool? opened = null;
+            int reads = 0;
+            app.Files.BeforeRead = file => { if (file == path) reads++; return Task.CompletedTask; };
             Dispatcher.UIThread.Post(async () => opened = await b.Model!.OpenAsync(path));
             app.Host.Activation.Enqueue(LaunchRequest.OpenProject(path)); Flush();
             Assert.Null(opened); Assert.Equal(1, app.Host.Activation.Count);
-            var openTarget = Assert.Single(app.Host.Workspaces.Handles, h => h != a && h != b);
-            Assert.Equal(WorkspaceCreationReason.OpenProject, openTarget.Reason);
-            openTarget.Window.Close(); Flush();
-            Assert.DoesNotContain(openTarget, app.Host.Workspaces.Handles);
+            Assert.Equal(new[] { a, b }, app.Host.Workspaces.Handles);
+            Assert.Equal(0, reads);
             b.Window.Close(); Flush();
-            Assert.DoesNotContain(b, app.Host.Workspaces.Handles);
+            Assert.Same(a, Assert.Single(app.Host.Workspaces.Handles));
+            Assert.Equal(1, app.Host.Activation.Count);
             // The external request is still in the queue, so the last window asks about it before the shutdown.
             Click(dialog, Strings.DontSave);
             var pending = Dialog(a); Assert.Contains("shutdown-owner", DialogText(pending));
             Click(pending, Strings.Discard);
             Assert.False(opened); Assert.Empty(app.Host.Workspaces.Handles);
             Assert.Equal(DesktopApplicationState.ShuttingDown, app.Host.State);
+            Assert.Equal(ProjectPathState.Free, app.Host.ProjectPaths.StateOf(Identities.Resolve(path)));
+            Assert.Equal(0, reads);
         });
     }
 

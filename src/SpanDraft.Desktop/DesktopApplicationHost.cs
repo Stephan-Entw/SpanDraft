@@ -1,3 +1,5 @@
+using SpanDraft.Analysis;
+using SpanDraft.Core.Beams;
 using SpanDraft.Desktop.Activation;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
@@ -40,6 +42,7 @@ public sealed class DesktopApplicationHost
     internal WorkspaceRecoveryContext CreateRecoveryContext() => new(StateStores.Recovery, RecoveryDelay);
     /// <summary>Test seam: the debounce delay of the workspaces' recovery writes (the default debounce when null).</summary>
     internal Func<TimeSpan, CancellationToken, Task>? RecoveryDelay { get; set; }
+    internal Func<BeamModel, BeamAnalysisOutcome>? AnalyzeProject { get; set; }
     internal IProjectIdentityResolver ProjectIdentities { get; }
     internal ProjectPathRegistry ProjectPaths { get; } = new();
     /// <summary>The one list of undecided recovery candidates of the process; it never holds the host back from being Ready.</summary>

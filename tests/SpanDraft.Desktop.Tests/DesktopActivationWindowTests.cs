@@ -129,39 +129,116 @@ public sealed class DesktopActivationWindowTests
         Assert.Equal(1, host.Activation.Count);
     }
 
-    [Fact]
-    public void AnUnavailableLaunchTargetLeavesTheRequestQueuedUntilItCanBeRoutedAgain()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AcceptedOpenSurvivesClosingTheOriginalWorkspace(bool joinsFailedLocalFlight)
     {
         using var environment = new DesktopControlEnvironment();
         WithUiContext(() =>
         {
             var files = new Files();
-            string a = TestPath("retry-a.spandraft"), b = TestPath("retry-b.spandraft");
+            string a = TestPath("retry-a.spandraft"), b = TestPath("retry-b.spandraft"), target = TestPath("retry-target.spandraft");
             files.Data[a] = ProjectFileCodec.Serialize(State(1));
-            files.Data[b] = ProjectFileCodec.Serialize(State(4));
+            files.Data[b] = ProjectFileCodec.Serialize(State(2));
+            if (!joinsFailedLocalFlight) files.Data[target] = ProjectFileCodec.Serialize(State(4));
             var host = Host(files);
-            var window = host.Workspaces.CreateInitial().Window;
-            DesktopControlEnvironment.ShowInitialized(window);
-            var main = Assert.IsType<MainWindowViewModel>(window.DataContext);
-            host.HandleBrokerRequest(LaunchRequest.OpenProject(a)); Dispatcher.UIThread.RunJobs();
-            var session = main.Session;
-            var arbitration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            host.ProjectPaths.RecoverySettler = () => arbitration.Task;
-            host.HandleBrokerRequest(LaunchRequest.OpenProject(b)); Dispatcher.UIThread.RunJobs();
+            var source = host.Workspaces.CreateInitial();
+            DesktopControlEnvironment.ShowInitialized(source.Window);
+            host.HandleBrokerRequest(LaunchRequest.OpenProject(a));
+            host.HandleBrokerRequest(LaunchRequest.OpenProject(b));
+            Dispatcher.UIThread.RunJobs();
+            var survivor = Assert.Single(host.Workspaces.Handles, handle => handle != source);
+            var session = survivor.Model!.Session;
+            Assert.True(host.Workspaces.Activate(source.WindowId));
+
+            var read = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            int reads = 0;
+            files.BeforeRead = async path =>
+            {
+                if (path != target || ++reads != 1) return;
+                await read.Task;
+                if (joinsFailedLocalFlight) throw new IOException("The local open lost its presenter.");
+            };
+            var local = joinsFailedLocalFlight ? host.Workspaces.RequestOpenProjectAsync(source, target) : null;
+            Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(target)));
+            Dispatcher.UIThread.RunJobs();
             Assert.Equal(1, host.Activation.Count);
-            var unavailable = Assert.Single(host.Workspaces.Handles, handle => handle.Window != window);
-            unavailable.Window.Close(); Dispatcher.UIThread.RunJobs();
-            Assert.Same(window, Assert.Single(host.Workspaces.Handles).Window);
+            Assert.Equal(2, host.Workspaces.Handles.Count);
+            Assert.Equal(1, reads);
+            Assert.Equal(ProjectPathState.Opening, host.ProjectPaths.StateOf(Identities.Resolve(target)));
+
+            source.Window.Close();
+            Dispatcher.UIThread.RunJobs();
+            Assert.Same(survivor, Assert.Single(host.Workspaces.Handles));
             Assert.Equal(1, host.Activation.Count);
-            host.ProjectPaths.RecoverySettler = null;
-            arbitration.SetResult();
-            DesktopControlEnvironment.RunOnDispatcher(host.Activation.PumpAsync);
-            Dispatcher.UIThread.RunJobs(); Dispatcher.UIThread.RunJobs();
+            read.SetResult();
+            Dispatcher.UIThread.RunJobs();
+            if (joinsFailedLocalFlight)
+            {
+                Assert.Equal(ProjectOpenStatus.Unavailable, local!.GetAwaiter().GetResult().Status);
+                Assert.Equal(2, reads);
+                Assert.Equal(1, host.Activation.Count);
+                Assert.Same(survivor, Assert.Single(host.Workspaces.Handles));
+                Click(Assert.Single(survivor.Window.OwnedWindows), Strings.OK);
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(ProjectPathState.Free, host.ProjectPaths.StateOf(Identities.Resolve(target)));
+            }
+            else
+            {
+                Assert.Equal(1, reads);
+                var opened = Assert.Single(host.Workspaces.Handles, handle => handle != survivor);
+                Assert.Equal(target, opened.Model!.Session!.FilePath);
+                ApproveClose(opened.Window);
+            }
             Assert.Equal(0, host.Activation.Count);
-            var opened = Assert.Single(host.Workspaces.Handles, handle => handle.Window != window);
-            Assert.Equal(b, opened.Model!.Session!.FilePath);
-            Assert.Same(session, main.Session);
-            ApproveClose(opened.Window); ApproveClose(window);
+            Assert.Same(session, survivor.Model.Session);
+            ApproveClose(survivor.Window);
+        });
+    }
+
+    [Fact]
+    public void ARecoveryPendingRequestWaitsUntilTheCenterCanActuallyFocusItsCandidate()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var files = new Files();
+            string target = TestPath("busy-recovery-center.spandraft");
+            files.Data[target] = ProjectFileCodec.Serialize(State(4));
+            var storage = WithRecovery(target);
+            var other = RecoverySlot.Project(RecoveryId.New());
+            storage.Put(other, ProjectRecovery.Encode(new(State(2), null, Now)));
+            var host = Host(files, storage);
+            var handle = host.Workspaces.CreateInitial();
+            DesktopControlEnvironment.ShowInitialized(handle.Window);
+            Assert.Same(handle, host.Workspaces.ShowRecoveryCenterAsync(handle, null).GetAwaiter().GetResult());
+            var center = handle.Model!.RecoveryCenter!;
+            var pending = Assert.Single(host.Recovery.Undecided, c => c.OriginalFilePath == target);
+            var discard = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            storage.BeforeDiscard = _ => discard.Task;
+            var removingOther = center.DiscardAsync(Assert.Single(host.Recovery.Undecided, c => c.Slot == other).CandidateId);
+            Assert.True(center.IsBusy);
+            int reads = 0, activations = 0;
+            files.BeforeRead = path => { if (path == target) reads++; return Task.CompletedTask; };
+            handle.Window.Surface = _ => activations++;
+
+            Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(target)));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(1, host.Activation.Count);
+            Assert.Same(handle, Assert.Single(host.Workspaces.Handles));
+            Assert.Equal(0, activations);
+            Assert.DoesNotContain(center.Items, item => item.IsFocused);
+
+            discard.SetResult();
+            DesktopControlEnvironment.RunOnDispatcher(async () => Assert.True(await removingOther));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, host.Activation.Count);
+            Assert.Equal(0, reads);
+            Assert.Equal(1, activations);
+            Assert.True(Assert.Single(center.Items, item => item.Candidate.CandidateId == pending.CandidateId).IsFocused);
+            Assert.Null(handle.Model.Session);
+            Assert.Same(handle, Assert.Single(host.Workspaces.Handles));
         });
     }
 

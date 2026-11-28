@@ -137,13 +137,20 @@ internal sealed class ProjectPathRegistry
 
     internal bool TryCommitOpen(OpenReservation token, WindowId window)
     {
+        if (CommitOpenOwnership(token, window) is not { } flight) return false;
+        flight.SetResult(new(ProjectOpenStatus.Opened, Owner: window, CanonicalPath: token.Identity.CanonicalPath));
+        return true;
+    }
+
+    /// <summary>Secures the path before publication. The coordinator completes the flight after publishing the session.</summary>
+    internal TaskCompletionSource<ProjectOpenResult>? CommitOpenOwnership(OpenReservation token, WindowId window)
+    {
         lock (_gate)
         {
             if (_paths.GetValueOrDefault(token.Identity) is not Opening opening || !ReferenceEquals(opening.Token, token)
-                || _saves.ContainsKey(window)) return false;
+                || _saves.ContainsKey(window)) return null;
             SetOwner(token.Identity, window);
-            opening.Completion.SetResult(new(ProjectOpenStatus.Opened, Owner: window));
-            return true;
+            return opening.Completion;
         }
     }
 
