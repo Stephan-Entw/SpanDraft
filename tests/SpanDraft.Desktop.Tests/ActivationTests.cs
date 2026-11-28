@@ -578,6 +578,29 @@ public sealed class ActivationTests : IDisposable
     }
 
     [Fact]
+    public async Task NextListenerExistsBeforeAServedConnectionIsReleased()
+    {
+        var primary = Track(PrimaryInstance.TryAcquire(Scope())!);
+        var metadata = primary.Metadata;
+        var reachable = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Track(BrokerServer.Start(metadata, async served =>
+        {
+            if (reachable.Task.IsCompleted) return;
+            // The handed-off instance is fully served and disposed; the endpoint must still accept a connection now.
+            await served;
+            await using var probe = new System.IO.Pipes.NamedPipeClientStream(".", metadata.Endpoint, System.IO.Pipes.PipeDirection.InOut,
+                System.IO.Pipes.PipeOptions.Asynchronous | System.IO.Pipes.PipeOptions.CurrentUserOnly);
+            try { await probe.ConnectAsync(500, TestContext.Current.CancellationToken); reachable.TrySetResult(true); }
+            catch (Exception error) when (error is TimeoutException or IOException) { reachable.TrySetResult(false); }
+        }));
+        var valid = LaunchRequest.OpenProject(Path.Combine(_root, "ok.spandraft"));
+
+        Assert.Equal(BrokerStatus.Retry, await BrokerClient.SendAsync(metadata, valid, TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken));
+        Assert.True(await WaitFor(reachable.Task));
+        Assert.Equal(BrokerStatus.Retry, await BrokerClient.SendAsync(metadata, valid, TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task ClientTreatsAnEndpointConfirmingAnotherDataScopeAsUnreachable()
     {
         var metadata = new InstanceMetadata("aaaa" + Guid.NewGuid().ToString("N")[..24]);

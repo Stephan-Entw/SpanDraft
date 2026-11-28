@@ -11,36 +11,60 @@ public sealed class BrokerServer : IDisposable
     private readonly InstanceMetadata _metadata;
     private readonly CancellationTokenSource _stop = new();
     private volatile Func<LaunchRequest, BrokerStatus> _handler = static _ => BrokerStatus.Retry;
+    private readonly Func<Task, Task>? _afterHandoff;
     private readonly Task _loop;
     private int _disposed;
 
-    private BrokerServer(InstanceMetadata metadata)
+    private BrokerServer(InstanceMetadata metadata, Func<Task, Task>? afterHandoff)
     {
         _metadata = metadata;
+        _afterHandoff = afterHandoff;
         _loop = Task.Run(AcceptLoopAsync);
     }
 
-    public static BrokerServer Start(InstanceMetadata metadata) => new(metadata);
+    public static BrokerServer Start(InstanceMetadata metadata) => new(metadata, null);
+
+    /// <summary>Test seam: awaited by the accept loop after a connection was handed off, with the task serving it.</summary>
+    internal static BrokerServer Start(InstanceMetadata metadata, Func<Task, Task> afterHandoff) => new(metadata, afterHandoff);
 
     /// <summary>The Starting responder is the default; the host replaces it once it can decide on requests.</summary>
     public Func<LaunchRequest, BrokerStatus> Handler { get => _handler; set => _handler = value; }
 
+    private NamedPipeServerStream CreateListener() => new(_metadata.Endpoint, PipeDirection.InOut,
+        NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+
+    // Under Unix, releasing the last server instance of an endpoint closes its shared socket and removes its path, and a
+    // client connecting in that moment is reset. The next listener therefore exists before a connected instance is handed
+    // off to be served and disposed. The loop owns `listener`; ServeAsync owns every instance handed to it.
     private async Task AcceptLoopAsync()
     {
         var token = _stop.Token;
-        while (!token.IsCancellationRequested)
+        NamedPipeServerStream? listener = null;
+        try
         {
-            NamedPipeServerStream? pipe = null;
-            try
+            while (!token.IsCancellationRequested)
             {
-                pipe = new(_metadata.Endpoint, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
-                    PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
-                await pipe.WaitForConnectionAsync(token);
-                _ = ServeAsync(pipe, token);
+                Task? served = null;
+                try
+                {
+                    listener ??= CreateListener();
+                    await listener.WaitForConnectionAsync(token);
+                    var connected = listener;
+                    listener = null;
+                    try { listener = CreateListener(); }
+                    finally { served = ServeAsync(connected, token); }
+                }
+                catch (IOException)
+                {
+                    listener?.Dispose();
+                    listener = null;
+                    await Task.Delay(50, token);
+                }
+                if (served is not null && _afterHandoff is not null) await _afterHandoff(served);
             }
-            catch (OperationCanceledException) { pipe?.Dispose(); return; }
-            catch (IOException) { pipe?.Dispose(); await Task.Delay(50, CancellationToken.None); }
         }
+        catch (OperationCanceledException) { }
+        finally { listener?.Dispose(); }
     }
 
     private async Task ServeAsync(NamedPipeServerStream pipe, CancellationToken token)
