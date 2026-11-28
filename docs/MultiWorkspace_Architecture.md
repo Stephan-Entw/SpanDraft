@@ -784,6 +784,16 @@ Da `FilePath == null` bleibt, führt das erste `Save` zu Save As.
 
 Die ausgelieferte Template-/Beispieldatei wird niemals als Save-Ziel verwendet oder überschrieben.
 
+### Öffnen unter Modell C
+
+Ein Beispiel wird aufgelöst, gelesen und validiert, bevor ein Ziel-Workspace gewählt, erzeugt oder reserviert wird. Ziel ist ein freier Start-Workspace, sonst ein neues Projektfenster; Zielauswahl, Reservierung, Initialisierung, Lifecycle-Guards und Bereinigung sind dieselben wie beim Öffnen einer Datei. Ein Beispiel ersetzt nie den Inhalt eines Workspace und stellt daher keine Leave-Rückfrage.
+
+Jedes Öffnen erzeugt eine unabhängige Template-Session; dasselbe Beispiel darf mehrfach offen sein. Für die Template-Quelle gibt es weder Pfadregistrierung noch Duplicate-Open-Arbitration und keinen Eintrag unter „Zuletzt geöffnet“. Der Editor wird vollständig vorbereitet, bevor der Lifecycle ein letztes Mal geprüft und die Session veröffentlicht wird.
+
+Der Fenstertitel zeigt den lokalisierten Beispielnamen statt „Unbenannt“, bis die Session einen Dateipfad hat. Der Name gehört nur zum Workspace; Projektdateiformat und Recovery-Snapshot bleiben unverändert, ein wiederhergestelltes geändertes Beispiel heißt daher „Unbenannt“.
+
+Ein Beispiel-Request ist nur dann `Unavailable` und bleibt in der Queue, wenn ihn gerade kein Workspace aufnehmen oder seinen Fehler anzeigen kann (Settings-Apply, Quit, Shutdown oder kein geeignetes Ziel). Ein App-Dialog, eine Operation oder ein Close in einem anderen Workspace hält ihn nicht auf. Ein angezeigter Fehler und jeder Fehler nach der Zielwahl entscheiden den Request endgültig; er wird nicht erneut verarbeitet.
+
 ---
 
 # 34. SettingsService
@@ -1417,6 +1427,8 @@ Payload:
 - begrenzt.
 
 Keine generische Command-Ausführung.
+
+Fachlich definiert ist für `OpenUri` nur die Route `spandraft://beispiel/<id>` mit einer festen, sprachunabhängigen ID-Liste (`einfeldtraeger`, `kragarm`, `abgesetzte-welle`). Die Prüfung erfolgt auf dem Originalstring, nicht auf einer normalisierten `Uri`: Punktsegmente, Escapes, Query, Fragment, Port, UserInfo, weitere Segmente oder ein abschließender Schrägstrich ergeben keine gültige Route. Aus einem Link wird nie ein Pfad, eine URL oder ein Befehl aufgelöst. Unbekannte IDs und ungültige Links werden lokalisiert gemeldet.
 
 ---
 
@@ -2430,6 +2442,7 @@ Auf der bereits vorhandenen `OpenUri`-Infrastruktur:
 - fachliche `spandraft://`-Routen,
 - Website-/Hilfebeispiele,
 - Template-Öffnung über `ProjectSession.FromTemplate`,
+  abweichend von DEV-64 (Variante A) nach Modell C: Ein Beispiel-Link öffnet in einem freien Start-Workspace oder neuen Fenster statt „wie Öffnen“ im aktuellen Fenster mit Leave-Rückfrage; ist er gerade nicht ausführbar, bleibt er in der Queue, statt nur das Fenster nach vorne zu holen (§33),
 - MSIX-Registrierung über `uap:Protocol`,
 - Protocol-Registrierung durch den klassischen Installer,
 - bewusst keine automatische Registrierung für portable/dev Builds,

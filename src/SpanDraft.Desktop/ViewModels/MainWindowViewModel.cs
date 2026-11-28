@@ -38,6 +38,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     private bool _disposed;
     private ProjectSetupViewModel _setup;
     private EditorViewModel? _editor;
+    // The name of a pathless session that came from an example; the file name replaces it once the session has a path.
+    private string? _pathlessName;
     private bool _busy;
     private TaskCompletionSource? _fileOperationCompletion;
     private bool _mainMenuOpen;
@@ -400,7 +402,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         MainWorkspaceKind.SectionDefinition => Setup.Definition?.CanRedo == true,
         _ => false
     });
-    public string ProjectFileName => Session?.FilePath is { } path ? Path.GetFileName(path) : Strings.Untitled;
+    public string ProjectFileName => Session?.FilePath is { } path ? Path.GetFileName(path) : Session is not null ? _pathlessName ?? Strings.Untitled
+        : Strings.Untitled;
     public string WindowTitle => Mode == MainViewMode.Start ? Strings.ApplicationTitle
         : Mode == MainViewMode.RecoveryCenter ? Strings.RecoveryCenter + " — " + Strings.ApplicationTitle
         : Mode == MainViewMode.ProjectSetup && Setup.Mode == ProjectSetupMode.Create
@@ -522,18 +525,58 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
     private EditorViewModel CreateEditor(ProjectSession session) =>
         EditorViewModel.ForSession(session, EditProject, _analyze, ResultPresentation, _performance);
 
-    internal void ActivatePathlessSession(ProjectSession session)
+    /// <summary>
+    /// Publishes a session without a path. Its editor is prepared completely first; <paramref name="canPublish"/> is asked
+    /// right before the publication, so nothing is published once it says no. <paramref name="displayName"/> names the
+    /// session (an example) until it has a file.
+    /// </summary>
+    internal bool ActivatePathlessSession(ProjectSession session, string? displayName = null, Func<bool>? canPublish = null)
     {
         if (session.FilePath is not null) throw new ArgumentException("A file-backed session needs registry ownership.", nameof(session));
         var editor = CreateEditor(session);
+        if (canPublish?.Invoke() == false) return false;
         _projectPaths.ReleaseOwner(WindowId);
-        AttachEditor(editor);
+        AttachEditor(editor, displayName);
+        return true;
     }
 
-    private void AttachEditor(EditorViewModel editor)
+    /// <summary>
+    /// Opens an example as an independent template session into this empty start workspace: clean, without a path, without
+    /// recovery or recent entry until the user changes or saves it.
+    /// </summary>
+    internal async Task<ProjectOpenStatus> OpenTemplateIntoEmptyWorkspaceAsync(ProjectState state, string name, Func<bool> canCommit)
+    {
+        var status = ProjectOpenStatus.Unavailable;
+        if (!CanContinueOpen || !CanOpenProject || Mode != MainViewMode.Start || HasProject) return status;
+        await RunOperationAsync(() =>
+        {
+            if (ActivatePathlessSession(ProjectSession.FromTemplate(state), name,
+                    () => CanContinueOpen && canCommit() && Mode == MainViewMode.Start && !HasProject))
+                status = ProjectOpenStatus.Opened;
+            return Task.FromResult(status == ProjectOpenStatus.Opened);
+        }, handleFileErrors: false);
+        return status;
+    }
+
+    /// <summary>Shows an error of a request without a file; true once the message was shown (the request is decided).</summary>
+    internal async Task<bool> TryPresentRequestErrorAsync(string message)
+    {
+        if (!CanContinueOpen) return false;
+        bool shown = false;
+        await RunOperationAsync(async () =>
+        {
+            shown = true;
+            if (_dialogs is not null) await _dialogs.ShowErrorAsync(message);
+            return true;
+        });
+        return shown;
+    }
+
+    private void AttachEditor(EditorViewModel editor, string? pathlessName = null)
     {
         DetachSession();
         _editor = editor;
+        _pathlessName = pathlessName;
         var session = editor.Session;
         _editor.IsMainMenuOpen = _mainMenuOpen;
         _editor.PropertyChanged += EditorReportStateChanged;

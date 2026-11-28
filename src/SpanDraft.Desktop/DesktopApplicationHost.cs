@@ -25,6 +25,7 @@ public sealed class DesktopApplicationHost
         Files = startup?.Files ?? new ProjectFileStore();
         ProjectIdentities = startup?.ProjectIdentities ?? new ProjectIdentityResolver();
         ProjectOpen = new(Files, ProjectIdentities, ProjectPaths);
+        Examples = startup?.Examples ?? new SpanDraft.Desktop.Examples.EmbeddedExampleProjectSource();
         Workspaces = new(this);
         Quit = new(this);
         AppDialogs = new(() => Quit.IsUserQuitRunning || Quit.IsSystemShutdown || State == DesktopApplicationState.ShuttingDown);
@@ -49,6 +50,7 @@ public sealed class DesktopApplicationHost
     /// <summary>The one list of undecided recovery candidates of the process; it never holds the host back from being Ready.</summary>
     public RecoveryCatalog Recovery { get; }
     internal ProjectOpenCoordinator ProjectOpen { get; }
+    internal SpanDraft.Desktop.Examples.IExampleProjectSource Examples { get; }
     /// <summary>The one workspace/window registry of the process.</summary>
     internal WorkspaceWindowManager Workspaces { get; }
     /// <summary>The application quit and shutdown commit (§74–§76); the only owner of the quit state transitions.</summary>

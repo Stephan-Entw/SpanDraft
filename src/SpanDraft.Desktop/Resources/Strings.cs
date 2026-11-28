@@ -516,4 +516,10 @@ public static class Strings
     public static string DiagnosticsTotalHint => Get(nameof(DiagnosticsTotalHint));
     public static string PendingRequestOneQuestion => Get(nameof(PendingRequestOneQuestion));
     public static string PendingRequestManyQuestion => Get(nameof(PendingRequestManyQuestion));
+    public static string ExampleSimplySupportedBeam => Get(nameof(ExampleSimplySupportedBeam));
+    public static string ExampleCantilever => Get(nameof(ExampleCantilever));
+    public static string ExampleSteppedShaft => Get(nameof(ExampleSteppedShaft));
+    public static string ExampleLinkInvalid => Get(nameof(ExampleLinkInvalid));
+    public static string ExampleUnknown => Get(nameof(ExampleUnknown));
+    public static string ExampleOpenError => Get(nameof(ExampleOpenError));
 }

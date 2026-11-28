@@ -503,4 +503,10 @@ Soll der Eintrag aus „Zuletzt verwendet“ entfernt werden?</value></data>
   <data name="AnalysisNumericalFailure" xml:space="preserve"><value>Die Berechnung konnte nicht abgeschlossen werden. Prüfe das Modell und die Eingabewerte.</value></data>
   <data name="PendingRequestOneQuestion" xml:space="preserve"><value>„{0}“ sollte geöffnet werden und wurde noch nicht geöffnet. Trotzdem beenden und die Anforderung verwerfen?</value></data>
   <data name="PendingRequestManyQuestion" xml:space="preserve"><value>{0} Projekte sollten geöffnet werden und wurden noch nicht geöffnet. Trotzdem beenden und die Anforderungen verwerfen?</value></data>
+  <data name="ExampleSimplySupportedBeam" xml:space="preserve"><value>Einfeldträger</value></data>
+  <data name="ExampleCantilever" xml:space="preserve"><value>Kragarm</value></data>
+  <data name="ExampleSteppedShaft" xml:space="preserve"><value>Abgesetzte Welle</value></data>
+  <data name="ExampleLinkInvalid" xml:space="preserve"><value>Der SpanDraft-Link ist ungültig und kann nicht geöffnet werden.</value></data>
+  <data name="ExampleUnknown" xml:space="preserve"><value>Das angeforderte Beispiel ist dieser SpanDraft-Version nicht bekannt.</value></data>
+  <data name="ExampleOpenError" xml:space="preserve"><value>Das Beispiel „{0}“ konnte nicht geöffnet werden.</value></data>
 </root>

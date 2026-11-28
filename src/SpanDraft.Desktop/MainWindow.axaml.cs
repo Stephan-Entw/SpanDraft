@@ -223,7 +223,7 @@ public partial class MainWindow : Window
     internal bool HandleActivation()
     {
         if (_initializing || IsWorkspaceClosing || _host.State == DesktopApplicationState.ShuttingDown) return false;
-        // Activate and OpenUri only bring the window forward; URI semantics are not defined by this phase.
+        // Activate only brings the window forward; OpenUri is routed to the examples by the workspace manager.
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Activate();
         return true;
@@ -342,7 +342,12 @@ public partial class MainWindow : Window
     {
         var pending = _host.Activation.PendingOpenRequests().Where(r => !confirmed.Contains(r)).ToList();
         if (pending.Count == 0) return true;
-        string? name = pending is [{ Type: LaunchRequestType.OpenProject, Value: { } path }] ? Path.GetFileName(path) : null;
+        string? name = pending switch
+        {
+            [{ Type: LaunchRequestType.OpenProject, Value: { } path }] => Path.GetFileName(path),
+            [{ Type: LaunchRequestType.OpenUri, Value: var uri }] => SpanDraft.Desktop.Examples.ExampleCatalog.Parse(uri).Example?.Name,
+            _ => null
+        };
         if (!await _dialogs.ConfirmDiscardPendingRequestsAsync(name, pending.Count) || _handle.IsFinalized) return false;
         confirmed.UnionWith(pending);
         return true;

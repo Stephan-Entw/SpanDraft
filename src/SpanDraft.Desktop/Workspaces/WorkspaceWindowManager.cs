@@ -1,6 +1,8 @@
 using Avalonia.Threading;
 using SpanDraft.Desktop.Activation;
+using SpanDraft.Desktop.Examples;
 using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Resources;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 
@@ -231,16 +233,15 @@ internal sealed class WorkspaceWindowManager
                 await model.RecordOpenedProjectAsync(result);
             if (result.Status is not (ProjectOpenStatus.Missing or ProjectOpenStatus.Failed)) return result;
             if (!CanContinue || !await manager.WaitForSettingsAsync(source) || !CanContinue) return ProjectOpenResult.Unavailable;
-            var preferred = source ?? manager.Active;
-            var presenter = preferred is not null && manager.CanPresentOpenFailure(preferred) ? preferred
-                : manager._handles.FirstOrDefault(manager.CanPresentOpenFailure);
+            var presenter = manager.FindFailurePresenter(source);
             return presenter is not null && await presenter.Model!.TryPresentOpenFailureAsync(result, path, fromRecent)
                 ? result : ProjectOpenResult.Unavailable;
         }
 
         public async Task<ProjectOpenStatus> ActivateProjectAsync(ProjectState state, string canonicalPath, Action<WindowId, Action> commit) =>
             CanContinue && await manager.WaitForSettingsAsync(source) && CanContinue
-                ? await manager.OpenInWorkspaceAsync(source ?? manager.Active, state, canonicalPath, commit)
+                ? await manager.OpenInWorkspaceAsync(source ?? manager.Active,
+                    (model, canCommit) => model.OpenIntoEmptyWorkspaceAsync(state, canonicalPath, canCommit, commit))
                 : ProjectOpenStatus.Unavailable;
 
         public bool ActivateExisting(WindowId owner) => CanContinue && manager.CanAcquireWorkspace && manager.Activate(owner);
@@ -260,8 +261,19 @@ internal sealed class WorkspaceWindowManager
     private bool CanPresentOpenFailure(WorkspaceWindowHandle handle) => IsReady(handle) && handle.Window.CanBeginClose
         && !handle.IsOpenTargetReserved && handle.Model is { IsWorkspaceBusy: false };
 
-    private async Task<ProjectOpenStatus> OpenInWorkspaceAsync(WorkspaceWindowHandle? source, ProjectState state, string path,
-        Action<WindowId, Action> commit)
+    /// <summary>The preferred workspace if it can show the failure now, otherwise any other one that can.</summary>
+    private WorkspaceWindowHandle? FindFailurePresenter(WorkspaceWindowHandle? source)
+    {
+        var preferred = source ?? Active;
+        return preferred is not null && CanPresentOpenFailure(preferred) ? preferred : _handles.FirstOrDefault(CanPresentOpenFailure);
+    }
+
+    /// <summary>
+    /// Opens a project into an empty target: a free start workspace, otherwise a new one that is reserved, initialized and,
+    /// if unused, cleaned up again. <paramref name="activate"/> publishes the project in the target's model.
+    /// </summary>
+    private async Task<ProjectOpenStatus> OpenInWorkspaceAsync(WorkspaceWindowHandle? source,
+        Func<MainWindowViewModel, Func<bool>, Task<ProjectOpenStatus>> activate)
     {
         if (source is null || !CanAcquireWorkspace) return ProjectOpenStatus.Unavailable;
         var start = FindIdleStart(source);
@@ -276,7 +288,7 @@ internal sealed class WorkspaceWindowManager
             }
             if (!CanCommit()) return ProjectOpenStatus.Unavailable;
             target.Model!.RefreshWorkspaceState();
-            var status = await target.Model.OpenIntoEmptyWorkspaceAsync(state, path, CanCommit, commit);
+            var status = await activate(target.Model, CanCommit);
             if (status == ProjectOpenStatus.Opened) Activate(target.WindowId);
             return status;
         }
@@ -565,6 +577,56 @@ internal sealed class WorkspaceWindowManager
         return null;
     }
 
+    // ---- Examples --------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Opens the example a <c>spandraft://</c> link names (§33): resolved, read and validated before any target is chosen or
+    /// created, then published as an independent template session in a free start workspace or a new one. No path is
+    /// registered or arbitrated. <see cref="ProjectOpenStatus.Unavailable"/> only when nothing can take the request now; it
+    /// stays queued. A failure that was shown, or one after the target was taken, decides the request.
+    /// </summary>
+    internal async Task<ProjectOpenStatus> RequestOpenExampleAsync(string uri)
+    {
+        var route = ExampleCatalog.Parse(uri);
+        if (route.Example is not { } example)
+            return await PresentRequestFailureAsync(route.Status == ExampleRouteStatus.UnknownExample
+                ? Strings.ExampleUnknown : Strings.ExampleLinkInvalid);
+        string failure = string.Format(System.Globalization.CultureInfo.CurrentUICulture, Strings.ExampleOpenError, example.Name);
+        ProjectState state;
+        try
+        {
+            state = await _host.Examples.ReadAsync(example.Id) is { } bytes ? ProjectFileCodec.Deserialize(bytes)
+                : throw new FileNotFoundException(failure);
+        }
+        catch (FileNotFoundException) { return await PresentRequestFailureAsync(failure); }
+        catch (Exception error) when (MainWindowViewModel.IsFileError(error))
+        {
+            return await PresentRequestFailureAsync(failure + "\n" + error.Message);
+        }
+        if (!CanContinueQueued || !await WaitForSettingsAsync(null) || !CanContinueQueued) return ProjectOpenStatus.Unavailable;
+        try
+        {
+            return await OpenInWorkspaceAsync(Active, (model, canCommit) =>
+                model.OpenTemplateIntoEmptyWorkspaceAsync(state, example.Name, canCommit));
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            // The unused target was cleaned up already. Shown once, the failure decides the request; it is retried only if
+            // no workspace could show it yet.
+            System.Diagnostics.Trace.TraceWarning("Opening example {0} failed: {1}", example.Id, error);
+            return await PresentRequestFailureAsync(failure + "\n" + error.Message);
+        }
+    }
+
+    private bool CanContinueQueued => CanCreate && _host.State == DesktopApplicationState.Ready;
+
+    private async Task<ProjectOpenStatus> PresentRequestFailureAsync(string message)
+    {
+        if (!CanContinueQueued || !await WaitForSettingsAsync(null) || !CanContinueQueued) return ProjectOpenStatus.Unavailable;
+        return FindFailurePresenter(null) is { } presenter && await presenter.Model!.TryPresentRequestErrorAsync(message)
+            ? ProjectOpenStatus.Failed : ProjectOpenStatus.Unavailable;
+    }
+
     // ---- Activation ------------------------------------------------------------------------------------------
 
     /// <summary>After MarkReady: one consumer for the whole process, routed to a workspace.</summary>
@@ -602,9 +664,12 @@ internal sealed class WorkspaceWindowManager
     {
         // A last-window close or global quit still decides what happens to queued requests.
         if (_host.State != DesktopApplicationState.Ready || !CanAcquireWorkspace || Active is not { } source) return false;
-        return request.Type == LaunchRequestType.OpenProject
-            ? (await RequestOpenProjectAsync(null, request.Value!)).Status != ProjectOpenStatus.Unavailable
-            : source.Window.HandleActivation();
+        return request.Type switch
+        {
+            LaunchRequestType.OpenProject => (await RequestOpenProjectAsync(null, request.Value!)).Status != ProjectOpenStatus.Unavailable,
+            LaunchRequestType.OpenUri => await RequestOpenExampleAsync(request.Value!) != ProjectOpenStatus.Unavailable,
+            _ => source.Window.HandleActivation()
+        };
     }
 
     private void SurfaceForRetry()

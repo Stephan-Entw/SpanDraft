@@ -6,6 +6,8 @@ namespace SpanDraft.Desktop;
 public sealed record DesktopStartupContext(IProjectFileStore Files, LocalSettingsStore SettingsStore, UserSettings Settings)
 {
     public IProjectIdentityResolver? ProjectIdentities { get; init; }
+    /// <summary>The source of the examples opened by <c>spandraft://beispiel/&lt;id&gt;</c>; the embedded examples when absent.</summary>
+    public SpanDraft.Desktop.Examples.IExampleProjectSource? Examples { get; init; }
     public DesktopStateStores? StateStores { get; init; }
     /// <summary>How the settings were obtained; absent when the settings were supplied directly, which counts as a valid load.</summary>
     public SettingsLoadResult? SettingsLoad { get; init; }
