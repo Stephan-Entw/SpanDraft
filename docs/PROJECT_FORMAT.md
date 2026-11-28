@@ -6,6 +6,8 @@ Dateiendung: `.spandraft` (beim Speichern ohne Beachtung der Groß-/Kleinschreib
 Projektdateien sind lesbares, eingerücktes UTF-8-JSON mit `format = "SpanDraft.Project"`,
 `formatVersion`, optionalem `info`, `document` und `presentation`. **V5 ist das einzige
 aktuelle Schreibformat; V1–V4 bleiben historische Leseverträge.**
+Geschrieben wird auf jeder Plattform mit LF-Zeilenumbrüchen, sodass derselbe Inhalt
+dieselben Bytes ergibt; beim Lesen bleiben CRLF und andere JSON-Leerzeichen zulässig.
 DTOs und Codec-Tests definieren die technischen Felder und Typen; dieser Text
 beschreibt die dauerhaften fachlichen Regeln. Core- und Editorobjekte werden
 nicht direkt serialisiert. Es gibt weder CLR-Typnamen noch numerische Enumwerte.
