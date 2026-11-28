@@ -86,7 +86,8 @@ public sealed partial class WorkspaceWindowManagerTests
         }
     }
 
-    private static DesktopApplicationHost ExampleHost(Files files, ExampleSource examples, TestRecoveryStorage? storage = null) =>
+    // A null source leaves the host with the shipped, embedded examples.
+    private static DesktopApplicationHost ExampleHost(Files files, ExampleSource? examples, TestRecoveryStorage? storage = null) =>
         new(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default)
         {
             ProjectIdentities = Identities, Examples = examples,
@@ -142,6 +143,48 @@ public sealed partial class WorkspaceWindowManagerTests
             AssertCleanTemplate(handle, Strings.ExampleCantilever);
             Assert.True(ProjectFileCodec.Deserialize(examples.Data["kragarm"]!).ContentEquals(handle.Model!.Session!.CurrentRevision.State));
             Assert.Equal(["kragarm"], examples.Reads);
+        });
+    }
+
+    [Theory]
+    [InlineData("einfeldtraeger")]
+    [InlineData("kragarm")]
+    [InlineData("abgesetzte-welle")]
+    public void AShippedExampleOpensFromItsLinkAsAnIndependentCleanTemplate(string id)
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var files = new Files();
+            var host = ExampleHost(files, examples: null);
+            var start = Start(host);
+            var example = ExampleCatalog.All.Single(e => e.Id == id);
+            byte[] embedded = Run(() => new EmbeddedExampleProjectSource().ReadAsync(id))!;
+            var shipped = ProjectFileCodec.Deserialize(embedded);
+
+            RequestExample(host, "spandraft://beispiel/" + id);
+            RequestExample(host, "spandraft://beispiel/" + id);
+            Assert.Equal(0, host.Activation.Count);
+            var second = Assert.Single(host.Workspaces.Handles, h => h != start);
+            foreach (var handle in new[] { start, second })
+            {
+                AssertCleanTemplate(handle, example.Name);
+                Assert.True(shipped.ContentEquals(handle.Model!.Session!.CurrentRevision.State));
+            }
+            Assert.NotSame(start.Model!.Session, second.Model!.Session);
+
+            // Editing and saving one leaves the other and the shipped example untouched.
+            var session = start.Model.Session!;
+            Assert.True(session.Commit(session.CurrentRevision.State with { Info = null }));
+            Assert.False(second.Model.Session!.IsDirty);
+            string target = TestPath("shipped-" + id + ".spandraft");
+            var dialogs = SetPicker(start, target);
+            dialogs.SavePath = target;
+            Assert.True(Run(() => start.Model.SaveAsync()));
+            Assert.Equal(target, session.FilePath);
+            Assert.Null(second.Model.Session!.FilePath);
+            Assert.Equal(embedded, Run(() => new EmbeddedExampleProjectSource().ReadAsync(id)));
+            Assert.Equal([target], files.Writes.Where(p => p.EndsWith(".spandraft", StringComparison.Ordinal)).Distinct());
         });
     }
 

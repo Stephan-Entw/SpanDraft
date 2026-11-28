@@ -1,0 +1,69 @@
+{
+  "format": "SpanDraft.Project",
+  "formatVersion": 5,
+  "info": {
+    "calculationTitle": "Beam with centered point load",
+    "projectTitle": "SpanDraft examples",
+    "reference": "Help: First calculation"
+  },
+  "document": {
+    "length": 2,
+    "segmentId": "5d0a0001-0000-4000-8000-000000000001",
+    "bendingAxis": "y",
+    "material": {
+      "note": {
+        "default": "Reference value for t \u2264 16 mm; lower at greater thickness.",
+        "translations": {
+          "de": "Referenzwert f\u00FCr t \u2264 16 mm; bei gr\u00F6\u00DFerer Dicke geringer."
+        }
+      },
+      "category": "structuralSteel",
+      "materialNumber": "1.0038",
+      "name": "S235JR",
+      "youngsModulus": 210000000000,
+      "yieldStrength": 235000000,
+      "strengthType": "re",
+      "density": 7850,
+      "poissonRatio": 0.3
+    },
+    "section": {
+      "type": "rectangle",
+      "width": 0.04,
+      "height": 0.08
+    },
+    "supports": [
+      {
+        "id": "5d0a0001-0000-4000-8000-000000000002",
+        "name": "A",
+        "type": "pinned",
+        "position": 0
+      },
+      {
+        "id": "5d0a0001-0000-4000-8000-000000000003",
+        "name": "B",
+        "type": "roller",
+        "position": 2
+      }
+    ],
+    "pointLoads": [
+      {
+        "id": "5d0a0001-0000-4000-8000-000000000004",
+        "name": "F1",
+        "type": "force",
+        "position": 1,
+        "value": -1000
+      }
+    ],
+    "distributedLoads": [],
+    "namingState": {
+      "nextSupportOrdinal": 3,
+      "nextForceNumber": 2,
+      "nextMomentNumber": 1,
+      "nextDistributedLoadNumber": 1
+    }
+  },
+  "presentation": {
+    "annotationOffsets": [],
+    "selfWeightVisible": true
+  }
+}

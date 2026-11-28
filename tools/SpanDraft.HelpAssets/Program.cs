@@ -32,7 +32,12 @@ internal static class Program
             if (args.Length != 2 || args[0] is not ("--generate" or "--check"))
                 throw new ArgumentException("Usage: SpanDraft.HelpAssets <--generate|--check> <asset-root>");
             string output = Path.GetFullPath(args[1]);
-            if (args[0] == "--check") { ValidateAssets(output); return 0; }
+            if (args[0] == "--check")
+            {
+                ValidateAssets(output);
+                CheckExamples(output);
+                return 0;
+            }
             // Offscreen Skia initialization mirrors the existing rendering tests and needs no native render timer.
             AppBuilder.Configure<App>().UseWindowingSubsystem(InitializeCursors, "Help assets")
                 .UseStandardRuntimePlatformSubsystem().UseSkia().UseHarfBuzz().SetupWithoutStarting();
@@ -51,9 +56,13 @@ internal static class Program
                 Save(Example(withLoad: false), language + "/beispiel-lagerung");
                 Save(Example(withLoad: true), language + "/beispiel-belastung");
                 foreach (var (name, diagram) in Results()) Save(diagram, language + "/" + name);
+                Save(CantileverExample(), language + "/beispiel-kragarm");
+                Save(ShaftExample(), language + "/beispiel-welle");
             }
+            HelpExamples.Generate(output);
             ValidateAssets(output);
-            Console.WriteLine($"Generated twenty transparent SpanDraft help PNGs in {output}");
+            CheckExamples(output);
+            Console.WriteLine($"Generated {PngCount} transparent SpanDraft help PNGs and {HelpExamples.All.Count * HelpExamples.Languages.Count} example projects in {output}");
             return 0;
             void Save(Control control, string name)
             {
@@ -71,10 +80,18 @@ internal static class Program
         }
         catch (Exception error) { Console.Error.WriteLine(error); return 1; }
     }
+    private const int PngCount = 24;
+
+    private static void CheckExamples(string output)
+    {
+        var problems = HelpExamples.Check(output);
+        if (problems.Count > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, problems));
+        Console.WriteLine("Validated the example projects against their definitions.");
+    }
     private static void ValidateAssets(string output)
     {
         var files = Directory.GetFiles(output, "*.png", SearchOption.AllDirectories);
-        if (files.Length != 20) throw new InvalidOperationException($"Expected twenty help PNGs, found {files.Length}.");
+        if (files.Length != PngCount) throw new InvalidOperationException($"Expected {PngCount} help PNGs, found {files.Length}.");
         foreach (string file in files)
         {
             using var bitmap = SKBitmap.Decode(file) ?? throw new InvalidOperationException($"Invalid PNG: {file}");
@@ -87,7 +104,7 @@ internal static class Program
         foreach (string file in Directory.GetFiles(Path.Combine(output, "de"), "*.png"))
             if (File.ReadAllBytes(file).SequenceEqual(File.ReadAllBytes(Path.Combine(output, "en", Path.GetFileName(file)))))
                 throw new InvalidOperationException($"Localized PNGs are identical: {file}");
-        Console.WriteLine("Validated twenty visible PNGs with transparent exteriors and distinct DE/EN assets.");
+        Console.WriteLine($"Validated {PngCount} visible PNGs with transparent exteriors and distinct DE/EN assets.");
     }
     private static void InitializeCursors()
     {
@@ -139,12 +156,9 @@ internal static class Program
     private static Canvas Example(bool withLoad)
     {
         var page = Page(880, 208);
-        var document = Document().WithSupports([
-            new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Pinned, "A"),
-            new(Guid.NewGuid(), Length.FromMeters(2), SupportType.Roller, "B")]);
+        var document = HelpExamples.SimplySupportedBeam();
         double middle = document.Length.Meters / 2;
-        if (withLoad)
-            document = document.WithLoads([new EditorPointForce(Guid.NewGuid(), Length.FromMeters(middle), Force.FromNewtons(-1000), "F")]);
+        if (!withLoad) document = document.WithLoads([]);
         var beam = Beam(document, 760, 176, 86);
         Add(page, beam, 60, 16, 760, 176);
         double X(double position) => 60 + beam.Scene!.Frame.Layout.Transform.PhysicalToScreen(position);
@@ -155,6 +169,34 @@ internal static class Program
             Text(page, "F", X(middle) - 50, 24, 100);
             Text(page, "L/2", X(middle) - 50, 145, 100);
         }
+        return page;
+    }
+    /// <summary>The cantilever example: fixed support, distributed load q1 and self-weight g over the whole length.</summary>
+    private static Canvas CantileverExample()
+    {
+        var page = Page(880, 208);
+        var document = HelpExamples.Cantilever();
+        var beam = Beam(document, 760, 176, 96, leftMargin: 80);
+        Add(page, beam, 60, 16, 760, 176);
+        double X(double position) => 60 + beam.Scene!.Frame.Layout.Transform.PhysicalToScreen(position);
+        Text(page, Strings.FixedSupport, X(0) - 90, 155, 180, 18);
+        Text(page, "q1 + g", X(document.Length.Meters / 2) - 60, 46, 120);
+        Text(page, "L = " + document.Length.Meters.ToString("0.0", CultureInfo.CurrentCulture) + " m", X(document.Length.Meters / 2) - 80, 155, 160, 18);
+        return page;
+    }
+    /// <summary>The stepped shaft example: three segments (Ø30, Ø40, Ø30), two bearings and F1 at x = 0.15 m.</summary>
+    private static Canvas ShaftExample()
+    {
+        var page = Page(880, 208);
+        var document = HelpExamples.SteppedShaft();
+        var beam = Beam(document, 760, 176, 96);
+        Add(page, beam, 60, 16, 760, 176);
+        double X(double position) => 60 + beam.Scene!.Frame.Layout.Transform.PhysicalToScreen(position);
+        Text(page, Strings.PinnedSupport, X(0) - 90, 155, 180, 18);
+        Text(page, Strings.RollerSupport, X(document.Length.Meters) - 90, 155, 180, 18);
+        Text(page, "F1", X(0.15) - 50, 40, 100);
+        foreach (var (start, end, diameter) in new[] { (0.0, 0.1, "Ø30"), (0.1, 0.3, "Ø40"), (0.3, 0.4, "Ø30") })
+            Text(page, diameter, X((start + end) / 2) - 50, 118, 100, 15);
         return page;
     }
     private static Canvas Support(SupportType type, SpringData? spring = null)
@@ -204,10 +246,7 @@ internal static class Program
     }
     private static IEnumerable<(string Name, Control Diagram)> Results()
     {
-        var doc = Document().WithSupports([
-            new(Guid.NewGuid(), Length.FromMeters(0), SupportType.Pinned, "A"),
-            new(Guid.NewGuid(), Length.FromMeters(2), SupportType.Roller, "B")])
-            .WithLoads([new EditorPointForce(Guid.NewGuid(), Length.FromMeters(1), Force.FromNewtons(-1000), "F")]);
+        var doc = HelpExamples.SimplySupportedBeam();
         var presentation = AnalysisPresentationState.FromOutcome(BeamAnalysis.Analyze(doc.ToBeamModel()));
         if (!presentation.IsSuccess) throw new InvalidOperationException("The help reference model did not solve.");
         var layout = new BeamLayoutState().Update(doc, 720, 240)!.Layout;

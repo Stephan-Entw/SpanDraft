@@ -13,8 +13,16 @@ language links and current-language markers without changing the Markdown source
 Technical PNGs come from SpanDraft's actual Avalonia renderers. Edit them in
 `tools/SpanDraft.HelpAssets`, then regenerate; do not maintain separate drawings.
 `assets/shared/` contains ten illustrations without language-dependent text.
-`assets/de/` and `assets/en/` each contain two labeled examples and three result
+`assets/de/` and `assets/en/` each contain four labeled examples and three result
 diagrams. The transparent PNGs need no background correction in HTML or CSS.
+
+The bundled example projects come from the same tool: `HelpExamples.cs` holds one
+mechanical definition per example, which feeds its figures and its project files
+`assets/<language>/examples/<id>.spandraft` (fixed identities, localized project
+information only). The desktop app embeds these files and opens them for
+`spandraft://beispiel/<id>`. `--check` regenerates them in memory and reports
+missing, damaged, stale or unexpected files without writing; regenerate after
+every change to a definition.
 
 ## Build
 

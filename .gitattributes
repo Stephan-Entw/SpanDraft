@@ -8,6 +8,9 @@ legal/license/gpl-3.0.md -text
 # The icon generator also checks its committed resources byte-for-byte.
 src/SpanDraft.Desktop/Assets/Icons/Generated/*.axaml text eol=lf
 
+# The help asset check compares the generated example projects byte for byte.
+help/assets/*/examples/*.spandraft -text
+
 # Validation provenance hashes the committed bytes on every platform.
 validation/cases/*.json text eol=lf
 validation/python/*.py text eol=lf

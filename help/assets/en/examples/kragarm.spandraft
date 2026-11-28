@@ -1,0 +1,68 @@
+{
+  "format": "SpanDraft.Project",
+  "formatVersion": 5,
+  "info": {
+    "calculationTitle": "Cantilever with distributed load and self-weight",
+    "projectTitle": "SpanDraft examples",
+    "reference": "Help: Forces, moments and distributed loads"
+  },
+  "document": {
+    "length": 1.5,
+    "segmentId": "5d0a0002-0000-4000-8000-000000000001",
+    "bendingAxis": "y",
+    "material": {
+      "note": {
+        "default": "Reference value for t \u2264 16 mm; lower at greater thickness.",
+        "translations": {
+          "de": "Referenzwert f\u00FCr t \u2264 16 mm; bei gr\u00F6\u00DFerer Dicke geringer."
+        }
+      },
+      "category": "structuralSteel",
+      "materialNumber": "1.0038",
+      "name": "S235JR",
+      "youngsModulus": 210000000000,
+      "yieldStrength": 235000000,
+      "strengthType": "re",
+      "density": 7850,
+      "poissonRatio": 0.3
+    },
+    "section": {
+      "type": "rectangle",
+      "width": 0.04,
+      "height": 0.08
+    },
+    "supports": [
+      {
+        "id": "5d0a0002-0000-4000-8000-000000000002",
+        "name": "A",
+        "type": "fixed",
+        "position": 0
+      }
+    ],
+    "pointLoads": [],
+    "distributedLoads": [
+      {
+        "id": "5d0a0002-0000-4000-8000-000000000003",
+        "name": "q1",
+        "startPosition": 0,
+        "endPosition": 1.5,
+        "startIntensity": -2000,
+        "endIntensity": -2000
+      }
+    ],
+    "namingState": {
+      "nextSupportOrdinal": 2,
+      "nextForceNumber": 1,
+      "nextMomentNumber": 1,
+      "nextDistributedLoadNumber": 2
+    },
+    "selfWeight": {
+      "id": "5d0a0002-0000-4000-8000-000000000004",
+      "enabled": true
+    }
+  },
+  "presentation": {
+    "annotationOffsets": [],
+    "selfWeightVisible": true
+  }
+}

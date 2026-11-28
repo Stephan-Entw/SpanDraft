@@ -43,6 +43,9 @@
     <EmbeddedResource Include="../../legal/privacy/de.md" LogicalName="SpanDraft.Desktop.privacy.de.md" />
     <EmbeddedResource Include="../../legal/privacy/en.md" LogicalName="SpanDraft.Desktop.privacy.en.md" />
     <EmbeddedResource Include="Libraries/material-catalog.json" LogicalName="SpanDraft.Desktop.Libraries.material-catalog.json" />
+    <!-- The generated help examples (tools/SpanDraft.HelpAssets), opened by spandraft://beispiel/<id>. -->
+    <EmbeddedResource Include="../../help/assets/de/examples/*.spandraft" LogicalName="SpanDraft.Desktop.Examples.%(Filename).de.spandraft" />
+    <EmbeddedResource Include="../../help/assets/en/examples/*.spandraft" LogicalName="SpanDraft.Desktop.Examples.%(Filename).en.spandraft" />
     <None Include="../../THIRD_PARTY_NOTICES.txt" Link="THIRD_PARTY_NOTICES.txt"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="Assets/Icons/Fluent/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

@@ -35,7 +35,7 @@ Additional completion checks when the change touches the corresponding inputs:
 | --- | --- |
 | Desktop dependencies or bundled font license notices | `./scripts/agent verify notices` |
 | Toolbar or Fluent SVG sources | `./scripts/agent icons --check` |
-| Help asset PNGs or `tools/SpanDraft.HelpAssets` | `./scripts/agent verify help-assets` |
+| Help asset PNGs, example projects or `tools/SpanDraft.HelpAssets` | `./scripts/agent verify help-assets` |
 | Core or Solver sources | The separate independent validation workflow in `validation/README.md` |
 
 `ignored-sources` and `notices` do not run in CI, so they belong to task

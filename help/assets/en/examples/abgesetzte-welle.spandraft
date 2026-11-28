@@ -1,0 +1,120 @@
+{
+  "format": "SpanDraft.Project",
+  "formatVersion": 5,
+  "info": {
+    "calculationTitle": "Stepped shaft on two bearings",
+    "projectTitle": "SpanDraft examples",
+    "reference": "Help: Beam, material and cross-section"
+  },
+  "document": {
+    "length": 0.1,
+    "segmentId": "5d0a0003-0000-4000-8000-000000000001",
+    "bendingAxis": "y",
+    "material": {
+      "note": {
+        "default": "Reference value for \u002BQT round bar, \u00D8 40\u2013100 mm.",
+        "translations": {
+          "de": "Referenzwert f\u00FCr \u002BQT-Rundstahl, \u00D8 40\u2013100 mm."
+        }
+      },
+      "category": "alloySteel",
+      "materialNumber": "1.7225",
+      "name": "42CrMo4 \u002BQT",
+      "youngsModulus": 210000000000,
+      "yieldStrength": 650000000,
+      "strengthType": "rp02",
+      "density": 7800,
+      "poissonRatio": 0.3
+    },
+    "section": {
+      "type": "circle",
+      "diameter": 0.03
+    },
+    "supports": [
+      {
+        "id": "5d0a0003-0000-4000-8000-000000000004",
+        "name": "A",
+        "type": "pinned",
+        "position": 0
+      },
+      {
+        "id": "5d0a0003-0000-4000-8000-000000000005",
+        "name": "B",
+        "type": "roller",
+        "position": 0.4
+      }
+    ],
+    "pointLoads": [
+      {
+        "id": "5d0a0003-0000-4000-8000-000000000006",
+        "name": "F1",
+        "type": "force",
+        "position": 0.15,
+        "value": -5000
+      }
+    ],
+    "distributedLoads": [],
+    "namingState": {
+      "nextSupportOrdinal": 3,
+      "nextForceNumber": 2,
+      "nextMomentNumber": 1,
+      "nextDistributedLoadNumber": 1
+    },
+    "furtherSegments": [
+      {
+        "id": "5d0a0003-0000-4000-8000-000000000002",
+        "length": 0.2,
+        "material": {
+          "note": {
+            "default": "Reference value for \u002BQT round bar, \u00D8 40\u2013100 mm.",
+            "translations": {
+              "de": "Referenzwert f\u00FCr \u002BQT-Rundstahl, \u00D8 40\u2013100 mm."
+            }
+          },
+          "category": "alloySteel",
+          "materialNumber": "1.7225",
+          "name": "42CrMo4 \u002BQT",
+          "youngsModulus": 210000000000,
+          "yieldStrength": 650000000,
+          "strengthType": "rp02",
+          "density": 7800,
+          "poissonRatio": 0.3
+        },
+        "section": {
+          "type": "circle",
+          "diameter": 0.04
+        },
+        "bendingAxis": "y"
+      },
+      {
+        "id": "5d0a0003-0000-4000-8000-000000000003",
+        "length": 0.1,
+        "material": {
+          "note": {
+            "default": "Reference value for \u002BQT round bar, \u00D8 40\u2013100 mm.",
+            "translations": {
+              "de": "Referenzwert f\u00FCr \u002BQT-Rundstahl, \u00D8 40\u2013100 mm."
+            }
+          },
+          "category": "alloySteel",
+          "materialNumber": "1.7225",
+          "name": "42CrMo4 \u002BQT",
+          "youngsModulus": 210000000000,
+          "yieldStrength": 650000000,
+          "strengthType": "rp02",
+          "density": 7800,
+          "poissonRatio": 0.3
+        },
+        "section": {
+          "type": "circle",
+          "diameter": 0.03
+        },
+        "bendingAxis": "y"
+      }
+    ]
+  },
+  "presentation": {
+    "annotationOffsets": [],
+    "selfWeightVisible": true
+  }
+}

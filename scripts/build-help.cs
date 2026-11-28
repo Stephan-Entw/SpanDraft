@@ -21,7 +21,8 @@ string[] fontFiles = ["IBMPlexSans-Regular.ttf", "IBMPlexSans-Italic.ttf", "IBMP
     "IBMPlexSans-SemiBoldItalic.ttf", "IBMPlexMono-Regular.ttf", "NOTICE.txt", "OFL.txt"];
 string[] shared = ["koordinaten", "querschnitt-achsen", "lager-einspannung", "lager-festlager", "lager-loslager", "lager-wegfeder", "lager-drehfeder",
     "punktkraft-vorzeichen", "punktmoment-vorzeichen", "streckenlast-vorzeichen"];
-string[] localized = ["beispiel-lagerung", "beispiel-belastung", "diagramm-durchbiegung", "diagramm-querkraft", "diagramm-biegemoment"];
+string[] localized = ["beispiel-lagerung", "beispiel-belastung", "diagramm-durchbiegung", "diagramm-querkraft", "diagramm-biegemoment",
+    "beispiel-kragarm", "beispiel-welle"];
 string[] names = [.. shared, .. localized];
 (string De, string En)[] pagePairs =
 [
