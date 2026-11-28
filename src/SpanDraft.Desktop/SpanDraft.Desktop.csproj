@@ -62,14 +62,15 @@
           Condition="'$(_MacOSDevelopmentBundle)' == 'true' and '$(DesignTimeBuild)' != 'true'">
     <MakeDir Directories="$(_MacOSDevelopmentBundleRoot)Contents/Resources" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)/Platforms/macOS/Info.plist"
-          DestinationFiles="$(_MacOSDevelopmentBundleRoot)Contents/Info.plist" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)/Assets/AppIcon/SpanDraft.icns"
-          DestinationFiles="$(_MacOSDevelopmentBundleRoot)Contents/Resources/SpanDraft.icns" SkipUnchangedFiles="true" />
+          DestinationFiles="$(_MacOSDevelopmentBundleRoot)Contents/Info.plist" SkipUnchangedFiles="true">
+      <Output TaskParameter="CopiedFiles" ItemName="FileWrites" />
+    </Copy>
+    <Copy SourceFiles="Assets/AppIcon/SpanDraft.icns;Assets/ProjectFileIcon/spandraft-project.icns"
+          DestinationFolder="$(_MacOSDevelopmentBundleRoot)Contents/Resources" SkipUnchangedFiles="true">
+      <Output TaskParameter="CopiedFiles" ItemName="FileWrites" />
+    </Copy>
     <!-- Refresh the bundle timestamp so macOS notices changed icon resources. -->
     <Exec Command="/usr/bin/touch &quot;$(_MacOSDevelopmentBundleRoot)&quot;" />
-    <ItemGroup>
-      <FileWrites Include="$(_MacOSDevelopmentBundleRoot)Contents/Info.plist;$(_MacOSDevelopmentBundleRoot)Contents/Resources/SpanDraft.icns" />
-    </ItemGroup>
   </Target>
   <Target Name="CleanMacOSDevelopmentBundle" AfterTargets="Clean"
           Condition="'$(_MacOSDevelopmentBundle)' == 'true' and '$(DesignTimeBuild)' != 'true'">

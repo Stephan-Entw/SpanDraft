@@ -8,6 +8,7 @@ Usage: ./scripts/agent <command>
   test [module] [-class NAME | -method NAME]   Build and run xUnit Release tests
   help [--regenerate-assets]                  Build offline help
   icons [--check]                            Update or check generated Toolbar and Fluent icons
+  app-icons [--check]                        Update or check app icons and the macOS project icon
   ui-launch                                  Build and launch a fresh macOS development instance
                                              Sandboxed agents must use escalated execution with host GUI access
   verify <step>                              Run one local check
@@ -296,5 +297,8 @@ case "$command" in
     icons)
         [[ $# -eq 0 || ( $# -eq 1 && $1 == --check ) ]] || usage_error 'Use icons [--check].'
         icons "$@" ;;
+    app-icons)
+        [[ $# -eq 0 || ( $# -eq 1 && $1 == --check ) ]] || usage_error 'Use app-icons [--check].'
+        run_temporary_tool SpanDraft.AppIconBuild "$@" ;;
     *) usage_error "Unknown command '$command'." ;;
 esac

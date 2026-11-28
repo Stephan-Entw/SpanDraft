@@ -155,6 +155,8 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Restore product solution
         run: dotnet restore SpanDraft.sln
+      - name: Verify generated app and project document icons
+        run: dotnet run --project tools/SpanDraft.AppIconBuild --configuration Release -- --check
       - name: Build product solution
         run: dotnet build SpanDraft.sln --configuration Release --no-restore
       - name: Run Product, Desktop, Rendering and Tooling tests

@@ -27,8 +27,28 @@
         <string>SpanDraft Project</string>
         <key>CFBundleTypeRole</key>
         <string>Editor</string>
-        <key>CFBundleTypeExtensions</key>
-        <array><string>spandraft</string></array>
+        <key>LSItemContentTypes</key>
+        <array><string>io.github.stephan-entw.spandraft.project</string></array>
+        <key>CFBundleTypeIconFile</key>
+        <string>spandraft-project.icns</string>
+      </dict>
+    </array>
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+      <dict>
+        <key>UTTypeIdentifier</key>
+        <string>io.github.stephan-entw.spandraft.project</string>
+        <key>UTTypeDescription</key>
+        <string>SpanDraft Project</string>
+        <key>UTTypeConformsTo</key>
+        <array><string>public.data</string><string>public.content</string></array>
+        <key>UTTypeIconFile</key>
+        <string>spandraft-project.icns</string>
+        <key>UTTypeTagSpecification</key>
+        <dict>
+          <key>public.filename-extension</key>
+          <array><string>spandraft</string></array>
+        </dict>
       </dict>
     </array>
     <key>CFBundleURLTypes</key>

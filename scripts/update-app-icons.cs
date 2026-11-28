@@ -13,7 +13,8 @@ if (args.Length > 1 || (args.Length == 1 && args[0] != "--check"))
 }
 bool check = args.Length == 1;
 string root = Path.GetFullPath(Path.Combine(ScriptDirectory(), ".."));
-string assets = Path.Combine(root, "src", "SpanDraft.Desktop", "Assets", "AppIcon");
+string assets = Path.Combine(root, "src", "SpanDraft.Desktop", "Assets");
+string appIcons = Path.Combine(assets, "AppIcon");
 string temporary = Path.Combine(Path.GetTempPath(), "spandraft-app-icons-" + Guid.NewGuid().ToString("N"));
 int[] sizes = [16, 24, 32, 48, 64, 128, 256];
 try
@@ -21,11 +22,11 @@ try
     Directory.CreateDirectory(temporary);
     using var master = new SKSvg();
     using var small = new SKSvg();
-    master.Load(Path.Combine(assets, "Source", "app-icon.svg"));
-    small.Load(Path.Combine(assets, "Source", "app-icon-small.svg"));
+    master.Load(Path.Combine(appIcons, "Source", "app-icon.svg"));
+    small.Load(Path.Combine(appIcons, "Source", "app-icon-small.svg"));
     if (master.Picture is null || small.Picture is null) throw new InvalidOperationException("Cannot load app SVG masters.");
     var images = sizes.ToDictionary(size => size, Png);
-    var outputs = new Dictionary<string, byte[]> { ["app-icon-1024.png"] = Png(1024) };
+    var outputs = new Dictionary<string, byte[]> { [Path.Combine(appIcons, "app-icon-1024.png")] = Png(1024) };
     using (var stream = new MemoryStream())
     {
         using var writer = new BinaryWriter(stream);
@@ -38,12 +39,39 @@ try
             writer.Write(images[size].Length); writer.Write(offset); offset += images[size].Length;
         }
         foreach (int size in sizes) writer.Write(images[size]);
-        outputs.Add("SpanDraft.ico", stream.ToArray());
+        outputs.Add(Path.Combine(appIcons, "SpanDraft.ico"), stream.ToArray());
     }
     if (OperatingSystem.IsMacOS())
     {
-        string iconset = Path.Combine(temporary, "SpanDraft.iconset");
-        string icns = Path.Combine(temporary, "SpanDraft.icns");
+        await AddIcns(appIcons, "SpanDraft.icns", Png);
+
+        string projectIcons = Path.Combine(assets, "ProjectFileIcon");
+        using var projectIcon = SKBitmap.Decode(Path.Combine(projectIcons, "spandraft-project.ico"))
+            ?? throw new InvalidOperationException("Cannot decode the SpanDraft project file icon.");
+        await AddIcns(projectIcons, "spandraft-project.icns", size =>
+        {
+            using var resized = projectIcon.Resize(new SKImageInfo(size, size), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
+                ?? throw new InvalidOperationException("Cannot resize the SpanDraft project file icon.");
+            using var png = resized.Encode(SKEncodedImageFormat.Png, 100);
+            return png.ToArray();
+        });
+    }
+    bool outdated = false;
+    foreach (var (destination, bytes) in outputs)
+    {
+        if (File.Exists(destination) && (await File.ReadAllBytesAsync(destination)).AsSpan().SequenceEqual(bytes)) continue;
+        if (check) { Console.Error.WriteLine("Outdated or missing: " + Path.GetRelativePath(root, destination)); outdated = true; }
+        else { await File.WriteAllBytesAsync(destination, bytes); Console.WriteLine("Updated " + Path.GetRelativePath(root, destination)); }
+    }
+    if (outdated) return 1;
+    Console.WriteLine("App icon resources are current." + (OperatingSystem.IsMacOS() ? "" : " ICNS generation/check requires macOS iconutil."));
+    return 0;
+
+    async Task AddIcns(string directory, string filename, Func<int, byte[]> render)
+    {
+        string iconset = Path.Combine(temporary, Path.ChangeExtension(filename, ".iconset"));
+        string icns = Path.Combine(temporary, filename);
+        string destination = Path.Combine(directory, filename);
 #if APP_ICON_BUILD_PROJECT
         // iconutil can unpack an ICNS in the agent sandbox even when packing fails.
         bool checkIconset = check;
@@ -51,7 +79,7 @@ try
         bool checkIconset = false;
 #endif
         if (checkIconset)
-            await Iconutil("iconset", Path.Combine(assets, "SpanDraft.icns"), iconset);
+            await Iconutil("iconset", destination, iconset);
         else
             Directory.CreateDirectory(iconset);
         foreach (int size in new[] { 16, 32, 128, 256, 512 })
@@ -62,13 +90,13 @@ try
         if (!checkIconset)
         {
             await Iconutil("icns", iconset, icns);
-            outputs.Add("SpanDraft.icns", await File.ReadAllBytesAsync(icns));
+            outputs.Add(destination, await File.ReadAllBytesAsync(icns));
         }
 
         async Task CheckOrWriteImage(string name, int size)
         {
             string path = Path.Combine(iconset, name);
-            byte[] expected = Png(size);
+            byte[] expected = render(size);
             if (!checkIconset)
             {
                 await File.WriteAllBytesAsync(path, expected);
@@ -78,7 +106,7 @@ try
             using var actual = SKBitmap.Decode(path);
             using var rendered = SKBitmap.Decode(expected);
             if (actual is null || actual.Width != size || actual.Height != size)
-                throw new InvalidOperationException($"Outdated or missing: SpanDraft.icns ({name}).");
+                throw new InvalidOperationException($"Outdated or missing: {filename} ({name}).");
 
             SKColor[] actualPixels = actual.Pixels, expectedPixels = rendered.Pixels;
             if (actualPixels.AsSpan().SequenceEqual(expectedPixels)) return;
@@ -89,20 +117,9 @@ try
                     (pair.Second.Alpha != byte.MaxValue || pair.First == pair.Second)))
                 return;
 
-            throw new InvalidOperationException($"Outdated: SpanDraft.icns ({name}).");
+            throw new InvalidOperationException($"Outdated: {filename} ({name}).");
         }
     }
-    bool outdated = false;
-    foreach (var (name, bytes) in outputs)
-    {
-        string destination = Path.Combine(assets, name);
-        if (File.Exists(destination) && (await File.ReadAllBytesAsync(destination)).AsSpan().SequenceEqual(bytes)) continue;
-        if (check) { Console.Error.WriteLine("Outdated or missing: " + Path.GetRelativePath(root, destination)); outdated = true; }
-        else { await File.WriteAllBytesAsync(destination, bytes); Console.WriteLine("Updated " + Path.GetRelativePath(root, destination)); }
-    }
-    if (outdated) return 1;
-    Console.WriteLine("App icons are current." + (OperatingSystem.IsMacOS() ? "" : " ICNS generation/check requires macOS iconutil."));
-    return 0;
 
     byte[] Png(int size)
     {
