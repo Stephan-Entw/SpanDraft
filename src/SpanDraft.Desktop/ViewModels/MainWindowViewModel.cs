@@ -63,7 +63,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         IProjectDialogs? dialogs = null, WorkspaceRecoveryContext? recovery = null, SharedServices? services = null,
         Func<Task>? openUserManual = null, Func<string?>? userNameProvider = null,
         InteractionPerformance? performance = null, RecoveryCatalog? recoveryCatalog = null,
-        Func<Guid?, Task<bool>>? showRecoveryCenter = null, Func<Guid, Task<bool>>? restoreRecovery = null)
+        Func<Guid?, Task<bool>>? showRecoveryCenter = null, Func<Guid, Task<bool>>? restoreRecovery = null,
+        SettingsCoordinator.RegistrationReservation? settingsRegistration = null)
     {
         _analyze = analyze;
         _performance = performance;
@@ -102,7 +103,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         StartPage = new(NewCommand, OpenCommand, UserManualCommand, path => RequestOpenPathAsync(path, fromRecent: true),
             () => CanOpenProject && CanRequestProject, ShowRecoveryCommand);
         StartPage.SetRecentProjects(_services.Recents.Entries);
-        _settingsRegistration = _services.SettingsCoordinator.Register(this);
+        _settingsRegistration = settingsRegistration?.Register(this) ?? _services.SettingsCoordinator.Register(this);
         _services.Settings.Changed += SettingsChanged;
         _services.Materials.Changed += LibraryChanged;
         _services.Sections.Changed += LibraryChanged;
@@ -237,6 +238,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
 
     // The freeze is a busy state like any other operation: every command, input session and library action is gated by
     // IsBusy / IsWorkspaceBusy, so nothing new can start between the freeze and its release.
+    internal bool IsSettingsFrozen => _settingsSaving;
+
     bool ISettingsParticipant.TryFreezeForSettings()
     {
         if (_settingsSaving || HasRunningOperation) return false;
@@ -265,7 +268,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ISettingsPar
         if (!_settingsSaving) return;
         _settingsSaving = false;
         // Disposed meanwhile: only its own flag is reset; no session, no dialog.
-        if (_disposed) return;
+        if (_disposed || _services.Settings.IsApplicationShuttingDown) return;
         ApplyFreeze();
         NotifySession();
         if (_pendingRecoveryError is { } error) { _pendingRecoveryError = null; RecoveryFailed(error); }

@@ -10,6 +10,7 @@ using SpanDraft.Desktop.Activation;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Desktop.Services;
 using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Workspaces;
@@ -599,6 +600,10 @@ public sealed class ApplicationQuitTests
             bool? applied = null;
             Dispatcher.UIThread.Post(async () => applied = await model.ApplyAsync()); Flush();
             Assert.True(model.IsSaving);
+            var expected = model.Pending;
+            var before = a.Model!.ResultPresentation;
+            var queued = app.Host.SettingsCoordinator.ApplyAsync(SettingsPatch.From(expected) with { SignificantDigits = 5 });
+            Assert.False(queued.IsCompleted);
             Assert.Equal(PlatformClose.SystemShutdown, app.Host.Quit.OnPlatformClosing(WindowCloseReason.OSShutdown, isProgrammatic: false));
             // Synchronously: mutations stop, nothing is taken any more, nothing is asked.
             Assert.True(a.Model!.IsQuitFrozen); Assert.True(b.Model!.IsQuitFrozen);
@@ -610,9 +615,24 @@ public sealed class ApplicationQuitTests
             a.Window.Close(); b.Window.Close(); Flush();
             Assert.Empty(app.Host.Workspaces.Handles);
             Assert.Contains(slot, app.Storage.Slots()); Assert.Empty(app.Storage.Discarded);
-            // The held settings commit completes; the disposed workspaces take nothing from it and nothing is shown.
+            int settingsNotifications = 0, dialogNotifications = 0;
+            app.Host.Settings.Changed += () => settingsNotifications++;
+            model.PropertyChanged += (_, _) => dialogNotifications++;
+            int writes = app.Files.Writes.Count(path => path == "settings");
+            // Only the atomic write that already began finishes. The service still accounts for the durable result.
             persist.SetResult(); Flush();
-            Assert.True(applied); Assert.DoesNotContain(a.Window.OwnedWindows, w => w.IsVisible);
+            Assert.True(applied);
+            Assert.Equal(SettingsApplyOutcome.Busy, queued.GetAwaiter().GetResult().Outcome);
+            Assert.Equal(writes + 1, app.Files.Writes.Count(path => path == "settings"));
+            Assert.True(expected.ContentEquals(app.Host.Settings.LastPersistedSettings!));
+            Assert.True(expected.ContentEquals(SettingsCodec.Deserialize(app.Files.Data["settings"])));
+            Assert.Equal(0, settingsNotifications);
+            Assert.Equal(0, dialogNotifications);
+            Assert.Same(before, a.Model.ResultPresentation);
+            Assert.False(a.Model.IsSettingsFrozen);
+            Assert.False(b.Model!.IsSettingsFrozen);
+            Assert.Null(app.Host.SettingsCoordinator.ActiveApply);
+            Assert.DoesNotContain(a.Window.OwnedWindows, w => w.IsVisible);
         });
     }
 

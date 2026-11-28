@@ -39,6 +39,6 @@ public partial class SettingsWindow : Window
     private async void ConfirmSettings(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsViewModel model || model.IsSaving) return;
-        if (!model.HasChanges || await model.ApplyAsync()) Close();
+        if ((!model.HasChanges || await model.ApplyAsync()) && !model.IsApplicationShuttingDown) Close();
     }
 }

@@ -54,15 +54,20 @@ public sealed class LocalSettingsStore(IProjectFileStore files, string path, Act
     /// Keeps the rejected original under a diagnostic name next to the settings file, never replacing an existing backup.
     /// Best effort: returns the path, or null when no backup could be made.
     /// </summary>
-    public async Task<string?> BackupInvalidAsync(byte[] original, CancellationToken cancellationToken = default)
+    public Task<string?> BackupInvalidAsync(byte[] original, CancellationToken cancellationToken = default) =>
+        BackupInvalidAsync(original, null, cancellationToken);
+
+    internal async Task<string?> BackupInvalidAsync(byte[] original, Func<bool>? canStartWrite, CancellationToken cancellationToken = default)
     {
         try
         {
+            if (canStartWrite?.Invoke() == false) return null;
             ensureDirectory?.Invoke();
             string directory = Path.GetDirectoryName(FilePath) ?? "";
             string name = Path.GetFileNameWithoutExtension(FilePath), extension = Path.GetExtension(FilePath);
             for (int i = 0; i < 100; i++)
             {
+                if (canStartWrite?.Invoke() == false) return null;
                 string candidate = Path.Combine(directory, i == 0 ? $"{name}.invalid{extension}" : $"{name}.invalid.{i}{extension}");
                 if (await files.TryWriteNewAtomicAsync(candidate, original, cancellationToken)) return candidate;
             }

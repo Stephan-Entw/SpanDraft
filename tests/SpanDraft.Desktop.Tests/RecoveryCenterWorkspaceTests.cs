@@ -7,6 +7,8 @@ using SpanDraft.Desktop;
 using SpanDraft.Desktop.Persistence;
 using SpanDraft.Desktop.Presentation;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Desktop.Services;
+using SpanDraft.Desktop.State;
 using SpanDraft.Desktop.ViewModels;
 using SpanDraft.Desktop.Views;
 using SpanDraft.Desktop.Workspaces;
@@ -55,6 +57,65 @@ public sealed class RecoveryCenterWorkspaceTests
         Assert.True(handle.Model!.ShowRecoveryCommand.CanExecute(null));
         handle.Model.ShowRecoveryCommand.Execute(null);
         Flush();
+    }
+
+    [Fact]
+    public void ARestoreThatTakesItsClaimDuringSettingsApplyReturnsItWithoutTakingATarget()
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files();
+        var storage = new TestRecoveryStorage();
+        string path = TestPath("settings-restore.spandraft");
+        var project = Seed(storage, path);
+        storage.Put(RecoverySlot.Setup(project.Id!.Value), ProjectSetupRecovery.Encode(new(new ProjectSetupDraft(), Now)));
+        var host = Host(files, storage);
+        var source = Start(host);
+        var candidate = Assert.Single(host.Recovery.Undecided);
+        ShowCenter(source);
+        var center = Center(source);
+
+        var deletionEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var deletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        storage.BeforeDelete = slot =>
+        {
+            Assert.Equal(RecoverySlotKind.Setup, slot.Kind);
+            deletionEntered.SetResult();
+            return deletion.Task;
+        };
+        Task<bool> restoring = null!;
+        DesktopControlEnvironment.RunOnDispatcher(async () =>
+        {
+            restoring = host.Workspaces.RestoreRecoveryAsync(candidate.CandidateId, source);
+            await WaitForCheckpoint(deletionEntered.Task, restoring);
+        });
+        var write = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        files.BeforeWrite = (file, _, _) => file == "settings" ? write.Task : Task.CompletedTask;
+        Task<SettingsApplyResult> applying = null!;
+        DesktopControlEnvironment.RunOnDispatcher(() =>
+        {
+            applying = host.SettingsCoordinator.ApplyAsync(SettingsPatch.From(host.Settings.CurrentSettings) with { SignificantDigits = 5 });
+            return Task.CompletedTask;
+        });
+        Assert.NotNull(host.SettingsCoordinator.ActiveApply);
+        Assert.Null(Run(() => host.Workspaces.ShowRecoveryCenterAsync(source, candidate.CandidateId)));
+        Assert.False(Run(() => host.Workspaces.RestoreRecoveryAsync(candidate.CandidateId, source)));
+
+        deletion.SetResult();
+        Assert.False(Run(() => restoring));
+        Assert.Same(source, Assert.Single(host.Workspaces.Handles));
+        Assert.Same(center, source.Model!.RecoveryCenter);
+        Assert.Null(source.Model.Session);
+        Assert.Contains(project, storage.Slots());
+        Assert.Equal(ProjectPathState.RecoveryPending, host.ProjectPaths.StateOf(Identities.Resolve(path)));
+        Assert.Equal(candidate.CandidateId, Assert.Single(host.Recovery.Undecided).CandidateId);
+
+        write.SetResult();
+        Assert.Equal(SettingsApplyOutcome.Applied, Run(() => applying).Outcome);
+        Assert.True(Run(() => center.RestoreAsync(candidate.CandidateId)));
+        Assert.Same(source, Assert.Single(host.Workspaces.Handles));
+        Assert.Equal(path, source.Model.Session!.FilePath);
+        Assert.Equal(ProjectPathState.Open, host.ProjectPaths.StateOf(Identities.Resolve(path)));
+        Assert.Equal(5, source.Model.Editor!.ResultPresentation.SignificantDigits);
     }
 
     [Fact]

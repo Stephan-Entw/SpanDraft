@@ -25,6 +25,7 @@ public readonly struct SettingsCommit
 public sealed class SettingsService
 {
     private readonly LocalSettingsStore? _store;
+    private readonly Func<bool>? _isApplicationShuttingDown;
     private readonly object _sync = new();
     // Serializes every write, so an older snapshot can never replace a newer decision.
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -35,10 +36,13 @@ public sealed class SettingsService
     private ProcessCulture? _processCulture;
 
     /// <param name="store">Null for a composition without persistence; settings then live in memory only.</param>
-    public SettingsService(LocalSettingsStore? store, SettingsLoadResult load)
+    public SettingsService(LocalSettingsStore? store, SettingsLoadResult load) : this(store, load, null) { }
+
+    internal SettingsService(LocalSettingsStore? store, SettingsLoadResult load, Func<bool>? isApplicationShuttingDown)
     {
         ArgumentNullException.ThrowIfNull(load);
         _store = store;
+        _isApplicationShuttingDown = isApplicationShuttingDown;
         _current = load.Settings;
         _state = load.State;
         _invalidContent = load.InvalidContent;
@@ -47,6 +51,7 @@ public sealed class SettingsService
     }
 
     public UserSettings CurrentSettings { get { lock (_sync) return _current; } }
+    internal bool IsApplicationShuttingDown => _isApplicationShuttingDown?.Invoke() == true;
     /// <summary>The last state known to be validly persisted; null while the file is missing, invalid or unreadable.</summary>
     public UserSettings? LastPersistedSettings { get { lock (_sync) return _lastPersisted; } }
     public SettingsLoadState LoadState { get { lock (_sync) return _state; } }
@@ -78,11 +83,13 @@ public sealed class SettingsService
         await _gate.WaitAsync();
         try
         {
+            if (IsApplicationShuttingDown) throw new OperationCanceledException();
             UserSettings candidate; byte[]? invalid;
             lock (_sync) { candidate = patch.ApplyTo(_current); invalid = _state == SettingsLoadState.RecoveredFromInvalidSettings ? _invalidContent : null; }
             if (_store is not null)
             {
-                if (invalid is not null) await _store.BackupInvalidAsync(invalid);
+                if (invalid is not null) await _store.BackupInvalidAsync(invalid, canStartWrite: () => !IsApplicationShuttingDown);
+                if (IsApplicationShuttingDown) throw new OperationCanceledException();
                 await _store.SaveAsync(candidate);
             }
             lock (_sync)
@@ -102,12 +109,14 @@ public sealed class SettingsService
     /// </summary>
     public async Task UpdateLastAuthorAsync(string? author)
     {
+        if (IsApplicationShuttingDown) return;
         lock (_sync) _current = _current with { LastAuthor = author };
         RaiseChanged();
         if (_store is null) return;
         await _gate.WaitAsync();
         try
         {
+            if (IsApplicationShuttingDown) return;
             UserSettings snapshot; SettingsLoadState state;
             lock (_sync) { snapshot = _current; state = _state; }
             if (state is not (SettingsLoadState.Valid or SettingsLoadState.Missing)) return;
@@ -126,6 +135,7 @@ public sealed class SettingsService
     /// <summary>Changes the presentation in memory only; nothing is persisted and the persisted state stays as it was.</summary>
     public void ApplyRuntimePresentation(UnitProfile profile, int significantDigits, EngineeringNotation notation)
     {
+        if (IsApplicationShuttingDown) return;
         lock (_sync)
         {
             var updated = _current with
@@ -141,5 +151,8 @@ public sealed class SettingsService
         RaiseChanged();
     }
 
-    internal void RaiseChanged() => Changed?.Invoke();
+    internal void RaiseChanged()
+    {
+        if (!IsApplicationShuttingDown) Changed?.Invoke();
+    }
 }

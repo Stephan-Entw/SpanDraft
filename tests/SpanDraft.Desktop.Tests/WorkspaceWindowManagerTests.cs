@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SpanDraft.Desktop.Resources;
+using SpanDraft.Desktop.Services;
 using SpanDraft.Desktop;
 using SpanDraft.Desktop.Activation;
 using SpanDraft.Desktop.Persistence;
@@ -152,6 +153,185 @@ public sealed class WorkspaceWindowManagerTests
         CompleteSetup(model);
         Assert.True(Run(() => model.Setup.ConfirmAsync()));
         Assert.NotNull(model.Session);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void InitialWorkspaceReservesRegistrationUntilItRegistersOrShutdownBegins(bool shutdown)
+    {
+        using var environment = new DesktopControlEnvironment();
+        var files = new Files();
+        var host = Host(files);
+        var initial = host.Workspaces.CreateInitial();
+        var patch = SettingsPatch.From(host.Settings.CurrentSettings) with { SignificantDigits = 5 };
+        Assert.NotNull(initial.SettingsRegistration);
+        Assert.Null(initial.Model);
+        Assert.Equal(SettingsApplyOutcome.Busy, Run(() => host.SettingsCoordinator.ApplyAsync(patch)).Outcome);
+        Assert.Empty(files.Writes);
+
+        if (shutdown)
+        {
+            host.Quit.BeginSystemShutdown();
+            Assert.Null(initial.SettingsRegistration);
+            Assert.Equal(SettingsApplyOutcome.Busy, Run(() => host.SettingsCoordinator.ApplyAsync(patch)).Outcome);
+            Assert.Empty(files.Writes);
+            return;
+        }
+        DesktopControlEnvironment.ShowInitialized(initial.Window);
+        Assert.Null(initial.SettingsRegistration);
+        Assert.Equal(SettingsApplyOutcome.Applied, Run(() => host.SettingsCoordinator.ApplyAsync(patch)).Outcome);
+        Assert.Equal(5, initial.Model!.ResultPresentation.SignificantDigits);
+    }
+
+    [Fact]
+    public void InitialWorkspaceRegistrationCompletesBeforeItsInitialActivation()
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var files = new Files();
+            var host = Host(files);
+            string path = Project(files, "startup-settings-open.spandraft");
+            var read = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            files.BeforeRead = file => file == path ? read.Task : Task.CompletedTask;
+            host.SetInitialRequest(LaunchRequest.OpenProject(path));
+            var initial = host.Workspaces.CreateInitial();
+            initial.Window.Show(); Flush();
+            var initialization = initial.Window.Initialization;
+            Assert.False(initialization.IsCompleted);
+            Assert.Equal(ProjectPathState.Opening, host.ProjectPaths.StateOf(Identities.Resolve(path)));
+            Assert.Null(initial.SettingsRegistration);
+            var patch = SettingsPatch.From(host.Settings.CurrentSettings) with { SignificantDigits = 5 };
+            Assert.Equal(SettingsApplyOutcome.Applied, Run(() => host.SettingsCoordinator.ApplyAsync(patch)).Outcome);
+
+            read.SetResult();
+            DesktopControlEnvironment.RunOnDispatcher(() => initialization);
+            Assert.Same(initial, Assert.Single(host.Workspaces.Handles));
+            Assert.Equal(path, initial.Model!.Session!.FilePath);
+            Assert.Equal(5, initial.Model.Editor!.ResultPresentation.SignificantDigits);
+            Assert.Equal(0, host.Activation.Count);
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SettingsApplyKeepsExternalRequestsQueuedThenOpensThemWithTheEffectivePresentation(bool failPersistence)
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var files = new Files();
+            var host = Host(files);
+            var first = Start(host);
+            var source = Project(files, "apply-source.spandraft");
+            Assert.Equal(ProjectOpenStatus.Opened, Run(() => host.Workspaces.RequestOpenProjectAsync(first, source)).Status);
+            string b = Project(files, "apply-queued-first.spandraft"), c = Project(files, "apply-queued-second.spandraft");
+            var reads = new List<string>();
+            files.BeforeRead = path => { if (path == b || path == c) reads.Add(path); return Task.CompletedTask; };
+            var before = host.Settings.CurrentSettings;
+            var changed = before.Select(UnitProfileKind.UnitedStates) with { SignificantDigits = 5, Notation = EngineeringNotation.Off };
+            var write = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            files.BeforeWrite = (path, _, _) => path == "settings" ? write.Task : Task.CompletedTask;
+            if (failPersistence) files.FailWritePath = "settings";
+            var applying = host.SettingsCoordinator.ApplyAsync(SettingsPatch.From(changed));
+            Assert.True(first.Model!.IsSettingsFrozen);
+            Assert.NotNull(host.SettingsCoordinator.ActiveApply);
+            Assert.Equal(BrokerStatus.Accepted, host.HandleBrokerRequest(LaunchRequest.OpenProject(b)));
+            Assert.True(host.SubmitPlatformActivation(LaunchRequest.OpenProject(c)));
+            Run(async () => { await host.Activation.PumpAsync(); return true; });
+            Assert.Equal(new[] { b, c }, host.Activation.PendingOpenRequests().Select(r => r.Value));
+            Assert.Empty(reads);
+            Assert.Same(first, Assert.Single(host.Workspaces.Handles));
+            Assert.Null(Run(() => host.Workspaces.RequestNewProjectAsync(first)));
+            Assert.Null(Run(() => host.Workspaces.ShowRecoveryCenterAsync(first, null)));
+
+            write.SetResult();
+            Assert.Equal(failPersistence ? SettingsApplyOutcome.PersistFailed : SettingsApplyOutcome.Applied, Run(() => applying).Outcome);
+            Assert.Null(host.SettingsCoordinator.ActiveApply);
+            Assert.False(first.Model.IsSettingsFrozen);
+            Assert.Equal(0, host.Activation.Count);
+            Assert.Equal(new[] { b, c }, reads);
+            Assert.Equal(3, host.Workspaces.Handles.Count);
+            var expected = failPersistence ? before : changed;
+            foreach (var handle in host.Workspaces.Handles)
+            {
+                Assert.Null(handle.SettingsRegistration);
+                AssertPresentation(expected, handle.Model!.ResultPresentation);
+                AssertPresentation(expected, handle.Model.Editor!.ResultPresentation);
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void OpenWhoseReadEndsDuringApplyWaitsBeforeTakingATarget(bool shutdown)
+    {
+        using var environment = new DesktopControlEnvironment();
+        WithUiContext(() =>
+        {
+            var files = new Files();
+            var host = Host(files);
+            var first = Start(host);
+            Assert.Equal(ProjectOpenStatus.Opened, Run(() => host.Workspaces.RequestOpenProjectAsync(first, Project(files, "apply-open-source.spandraft"))).Status);
+            var originalPresentation = first.Model!.ResultPresentation;
+            string target = Project(files, "apply-open-target.spandraft");
+            var identity = Identities.Resolve(target);
+            var read = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var readCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            files.BeforeRead = async path =>
+            {
+                if (path != target) return;
+                await read.Task;
+                readCompleted.SetResult();
+            };
+            var pending = BeginOpen(host, first, target);
+            Assert.Equal(ProjectPathState.Opening, host.ProjectPaths.StateOf(identity));
+            var write = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            files.BeforeWrite = (path, _, _) => path == "settings" ? write.Task : Task.CompletedTask;
+            var patch = SettingsPatch.From(host.Settings.CurrentSettings.Select(UnitProfileKind.UnitedStates)) with { SignificantDigits = 5 };
+            var applying = host.SettingsCoordinator.ApplyAsync(patch);
+            Assert.False(applying.IsCompleted);
+
+            read.SetResult(); Flush();
+            Assert.True(readCompleted.Task.IsCompletedSuccessfully);
+            Assert.False(pending.IsCompleted);
+            Assert.False(first.IsOpenTargetReserved);
+            Assert.Same(first, Assert.Single(host.Workspaces.Handles));
+            Assert.Equal(ProjectPathState.Opening, host.ProjectPaths.StateOf(identity));
+
+            if (shutdown)
+            {
+                host.Quit.BeginSystemShutdown();
+                Assert.Equal(ProjectOpenStatus.Unavailable, Run(() => pending).Status);
+                Assert.Equal(ProjectPathState.Free, host.ProjectPaths.StateOf(identity));
+                Assert.False(applying.IsCompleted);
+            }
+            write.SetResult();
+            Assert.Equal(SettingsApplyOutcome.Applied, Run(() => applying).Outcome);
+            Assert.False(first.Model!.IsSettingsFrozen);
+            Assert.Null(host.SettingsCoordinator.ActiveApply);
+            if (shutdown)
+            {
+                Assert.Same(first, Assert.Single(host.Workspaces.Handles));
+                Assert.Same(originalPresentation, first.Model.ResultPresentation);
+                return;
+            }
+            var result = Run(() => pending);
+            Assert.Equal(ProjectOpenStatus.Opened, result.Status);
+            var opened = host.Workspaces.Find(result.Owner!.Value)!;
+            Assert.Equal(target, opened.Model!.Session!.FilePath);
+            AssertPresentation(host.Settings.CurrentSettings, opened.Model.Editor!.ResultPresentation);
+        });
+    }
+
+    private static void AssertPresentation(UserSettings expected, ResultPresentationOptions actual)
+    {
+        Assert.Equal(expected.SignificantDigits, actual.SignificantDigits);
+        Assert.Equal(expected.Notation, actual.Notation);
+        Assert.True(UserSettings.SameUnits(expected.Profile, actual.Profile));
     }
 
     [Theory]

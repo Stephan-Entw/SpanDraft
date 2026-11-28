@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using SpanDraft.Desktop.Persistence;
+using SpanDraft.Desktop.Services;
 using SpanDraft.Desktop.ViewModels;
 
 namespace SpanDraft.Desktop.Workspaces;
@@ -33,6 +34,13 @@ internal sealed class WorkspaceWindowHandle
     /// <summary>Bound exactly once when the window is opened; null before that.</summary>
     public MainWindowViewModel? Model { get; private set; }
     public WorkspaceCreationReason Reason { get; private set; }
+    internal SettingsCoordinator.RegistrationReservation? SettingsRegistration { get; set; }
+
+    internal void ReleaseSettingsRegistration()
+    {
+        SettingsRegistration?.Dispose();
+        SettingsRegistration = null;
+    }
     /// <summary>The initial workspace is the only one that runs the Phase-2 legacy startup and recovery.</summary>
     public bool IsInitial { get; }
     public IReadOnlyList<Window> OwnedWindows => _ownedWindows;

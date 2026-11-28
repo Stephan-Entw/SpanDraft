@@ -17,41 +17,35 @@ internal sealed class RecoveryRestoreCoordinator(RecoveryCatalog catalog, Worksp
     /// </summary>
     internal async Task<bool> RestoreAsync(Guid candidateId, WorkspaceWindowHandle source)
     {
+        if (!manager.CanAcquireWorkspace) return false;
         var claim = await catalog.TryBeginClaimAsync(candidateId);
         if (claim is null) return false;
-        // The application shut down meanwhile (system shutdown): nothing is restored, the candidate stays undecided.
-        if (manager.IsShuttingDown)
-        {
-            await claim.AbortAsync();
-            return false;
-        }
         WorkspaceWindowHandle? created = null;
+        bool restored = false;
         try
         {
             // The last undecided candidate may take over the Recovery Center's own start workspace.
-            var (target, isNew) = await manager.AcquireRestoreTargetAsync(source, lastUndecided: !catalog.HasUndecided);
+            var acquired = await manager.AcquireRestoreTargetAsync(source, lastUndecided: !catalog.HasUndecided);
+            if (acquired is not { } destination) return false;
+            var (target, isNew) = destination;
             if (isNew) created = target;
-            // The target went away meanwhile (system shutdown): the candidate stays undecided and its slot untouched.
-            if (target.IsFinalized || target.Model is not { } model || model.IsDisposed)
-            {
-                await claim.AbortAsync();
-                return false;
-            }
+            if (!manager.CanUseTarget(target)) return false;
+            var model = target.Model!;
             model.LeaveRecoveryCenter();
             var candidate = claim.Candidate;
             if (candidate.Kind == RecoverySlotKind.Project)
                 model.RestoreProject(candidate.Project!, claim.Slot, claim.HoldsPath ? candidate.CandidateId : null);
             else
                 model.RestoreSetup(candidate.Setup!, claim.Slot);
+            restored = true;
             await claim.CommitAsync();
-            manager.Activate(target.WindowId);
+            if (manager.CanUseTarget(target)) manager.Activate(target.WindowId);
             return true;
         }
-        catch
+        finally
         {
             await claim.AbortAsync();
-            if (created is not null && created.Model?.HasProject != true) manager.CloseInternal(created);
-            throw;
+            if (!restored && created is not null) manager.CleanupUnusedWorkspace(created);
         }
     }
 }

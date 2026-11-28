@@ -68,24 +68,38 @@ internal sealed class WorkspaceWindowManager
     {
         // One-shot for the whole process lifetime: the legacy startup/recovery owner must never be created twice.
         if (_initialCreated) throw new InvalidOperationException("The initial workspace was already created.");
-        var handle = Create(WorkspaceCreationReason.None, isInitial: true);
+        var handle = TryCreate(WorkspaceCreationReason.None, isInitial: true)
+            ?? throw new InvalidOperationException("The initial workspace cannot register for settings.");
         _initialCreated = true;
         return _initial = handle;
     }
 
     /// <summary>The one regular creation path of workspace windows.</summary>
-    private WorkspaceWindowHandle Create(WorkspaceCreationReason reason, bool isInitial)
+    private WorkspaceWindowHandle? TryCreate(WorkspaceCreationReason reason, bool isInitial = false)
     {
-        if (_host.State == DesktopApplicationState.ShuttingDown) throw new InvalidOperationException("The application is shutting down.");
-        if (_host.Quit.IsUserQuitRunning) throw new InvalidOperationException("The application is quitting.");
+        if (!CanCreate) return null;
         if (reason == WorkspaceCreationReason.None && !isInitial && StartSlotCount >= 1)
             throw new InvalidOperationException("At most one workspace may hold the start slot.");
-        var handle = new WorkspaceWindowHandle(WindowId.Create(), reason, isInitial);
-        handle.AttachWindow(new MainWindow(_host, handle));
-        _handles.Add(handle);
-        _active ??= handle;
-        handle.Window.Activated += (_, _) => _active = handle;
-        return handle;
+        if (_host.SettingsCoordinator.TryReserveRegistration() is not { } registration) return null;
+        var handle = new WorkspaceWindowHandle(WindowId.Create(), reason, isInitial) { SettingsRegistration = registration };
+        try
+        {
+            handle.AttachWindow(new MainWindow(_host, handle));
+            _handles.Add(handle);
+            _active ??= handle;
+            handle.Window.Activated += (_, _) => _active = handle;
+            return handle;
+        }
+        catch
+        {
+            handle.ReleaseSettingsRegistration();
+            throw;
+        }
+    }
+
+    internal void ReleasePendingSettingsRegistrations()
+    {
+        foreach (var handle in _handles) handle.ReleaseSettingsRegistration();
     }
 
     /// <summary>Called when the window has created its view model: binds it once and wires the workspace hooks.</summary>
@@ -112,6 +126,7 @@ internal sealed class WorkspaceWindowManager
         if (handle.IsFinalized) return;
         handle.IsFinalized = true;
         handle.IsClosing = true;
+        handle.ReleaseSettingsRegistration();
         handle.CloseOwnedWindows();
         handle.Model?.ReleaseReport();
         handle.Model?.Dispose();
@@ -159,27 +174,30 @@ internal sealed class WorkspaceWindowManager
     /// </summary>
     internal async Task<WorkspaceWindowHandle?> RequestNewProjectAsync(WorkspaceWindowHandle source)
     {
-        if (!CanCreate || !IsReady(source) || source.Model?.CanNewProject != true) return null;
+        if (!CanAcquireWorkspace || !IsReady(source) || source.Model?.CanNewProject != true) return null;
         if (FindIdleStart(source) is { } start)
         {
             if (!ReferenceEquals(start, source)) Activate(start.WindowId);
             return await start.Model!.NewAsync() ? start : null;
         }
-        var handle = Create(WorkspaceCreationReason.NewProject, isInitial: false);
-        handle.Window.Show();
+        if (TryCreate(WorkspaceCreationReason.NewProject) is not { } handle) return null;
         try
         {
-            await handle.Window.Initialization;
-            if (await handle.Model!.NewAsync()) { Activate(handle.WindowId); return handle; }
+            handle.Window.Show();
+            if (await WaitForNewTargetAsync(handle) && await handle.Model!.NewAsync())
+            {
+                Activate(handle.WindowId);
+                return handle;
+            }
         }
         catch (OperationCanceledException) { /* the window went away; clean up below */ }
         catch (Exception error)
         {
-            CloseInternal(handle);
+            CleanupUnusedWorkspace(handle);
             // Initialization failures stay visible instead of silently dropping the New request.
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
         }
-        CloseInternal(handle);
+        CleanupUnusedWorkspace(handle);
         return null;
     }
 
@@ -212,7 +230,7 @@ internal sealed class WorkspaceWindowManager
             if (result.Status == ProjectOpenStatus.Opened && result.Owner is { } owner && manager.Find(owner)?.Model is { } model)
                 await model.RecordOpenedProjectAsync(result);
             if (result.Status is not (ProjectOpenStatus.Missing or ProjectOpenStatus.Failed)) return result;
-            if (!CanContinue) return ProjectOpenResult.Unavailable;
+            if (!CanContinue || !await manager.WaitForSettingsAsync(source) || !CanContinue) return ProjectOpenResult.Unavailable;
             var preferred = source ?? manager.Active;
             var presenter = preferred is not null && manager.CanPresentOpenFailure(preferred) ? preferred
                 : manager._handles.FirstOrDefault(manager.CanPresentOpenFailure);
@@ -220,11 +238,12 @@ internal sealed class WorkspaceWindowManager
                 ? result : ProjectOpenResult.Unavailable;
         }
 
-        public Task<ProjectOpenStatus> ActivateProjectAsync(ProjectState state, string canonicalPath, Action<WindowId, Action> commit) =>
-            CanContinue ? manager.OpenInWorkspaceAsync(source ?? manager.Active, state, canonicalPath, commit)
-                : Task.FromResult(ProjectOpenStatus.Unavailable);
+        public async Task<ProjectOpenStatus> ActivateProjectAsync(ProjectState state, string canonicalPath, Action<WindowId, Action> commit) =>
+            CanContinue && await manager.WaitForSettingsAsync(source) && CanContinue
+                ? await manager.OpenInWorkspaceAsync(source ?? manager.Active, state, canonicalPath, commit)
+                : ProjectOpenStatus.Unavailable;
 
-        public bool ActivateExisting(WindowId owner) => CanContinue && manager.Activate(owner);
+        public bool ActivateExisting(WindowId owner) => CanContinue && manager.CanAcquireWorkspace && manager.Activate(owner);
 
         public async Task<bool> ActivateRecoveryAsync(Guid candidate)
         {
@@ -244,16 +263,16 @@ internal sealed class WorkspaceWindowManager
     private async Task<ProjectOpenStatus> OpenInWorkspaceAsync(WorkspaceWindowHandle? source, ProjectState state, string path,
         Action<WindowId, Action> commit)
     {
-        if (source is null) return ProjectOpenStatus.Unavailable;
+        if (source is null || !CanAcquireWorkspace) return ProjectOpenStatus.Unavailable;
         var start = FindIdleStart(source);
-        var target = start ?? Create(WorkspaceCreationReason.OpenProject, isInitial: false);
+        if ((start ?? TryCreate(WorkspaceCreationReason.OpenProject)) is not { } target) return ProjectOpenStatus.Unavailable;
         target.IsOpenTargetReserved = true;
         try
         {
             if (start is null)
             {
                 target.Window.Show();
-                await target.Window.Initialization;
+                if (!await WaitForNewTargetAsync(target)) return ProjectOpenStatus.Unavailable;
             }
             if (!CanCommit()) return ProjectOpenStatus.Unavailable;
             target.Model!.RefreshWorkspaceState();
@@ -268,17 +287,16 @@ internal sealed class WorkspaceWindowManager
         finally
         {
             target.IsOpenTargetReserved = false;
-            if (target.Reason == WorkspaceCreationReason.OpenProject) CleanupOpenWorkspace(target);
-            else if (target.Model is { IsDisposed: false } model) model.RefreshWorkspaceState();
+            if (target.Reason == WorkspaceCreationReason.OpenProject) CleanupUnusedWorkspace(target);
+            else if (!IsShuttingDown && target.Model is { IsDisposed: false } model) model.RefreshWorkspaceState();
         }
 
-        bool CanCommit() => IsReady(target) && target.IsOpenTargetReserved && target.Model is { Mode: MainViewMode.Start, HasProject: false };
+        bool CanCommit() => CanUseTarget(target) && target.IsOpenTargetReserved && target.Model is { Mode: MainViewMode.Start, HasProject: false };
     }
 
-    private void CleanupOpenWorkspace(WorkspaceWindowHandle handle)
+    internal void CleanupUnusedWorkspace(WorkspaceWindowHandle handle)
     {
-        if (handle.Reason != WorkspaceCreationReason.OpenProject || handle.IsOpenTargetReserved || !handle.CanRoute
-            || handle.IsFinalized || _host.Quit.IsSystemShutdown) return;
+        if (handle.IsOpenTargetReserved || !handle.CanRoute || handle.IsFinalized || IsShuttingDown) return;
         if (_host.Quit.UserQuit is { } quit)
         {
             ObserveAsync(CleanupAfterQuitAsync(quit));
@@ -290,7 +308,7 @@ internal sealed class WorkspaceWindowManager
         async Task CleanupAfterQuitAsync(QuitRun run)
         {
             await run.Completion;
-            CleanupOpenWorkspace(handle);
+            CleanupUnusedWorkspace(handle);
         }
     }
 
@@ -299,6 +317,29 @@ internal sealed class WorkspaceWindowManager
 
     /// <summary>No workspace is created while the application quits or shuts down.</summary>
     private bool CanCreate => _host.State != DesktopApplicationState.ShuttingDown && !_host.Quit.IsUserQuitRunning;
+
+    internal bool CanAcquireWorkspace => CanCreate && _host.SettingsCoordinator.ActiveApply is null;
+
+    internal bool CanUseTarget(WorkspaceWindowHandle handle) => CanAcquireWorkspace && IsReady(handle) && !handle.Model!.IsSettingsFrozen;
+
+    private async Task<bool> WaitForNewTargetAsync(WorkspaceWindowHandle handle)
+    {
+        var initialization = handle.Window.Initialization;
+        if (!initialization.IsCompleted && await Task.WhenAny(initialization, _host.Shutdown) != initialization) return false;
+        await initialization;
+        return await WaitForSettingsAsync(handle) && CanUseTarget(handle);
+    }
+
+    private async Task<bool> WaitForSettingsAsync(WorkspaceWindowHandle? handle)
+    {
+        while (CanCreate && handle?.CanRoute != false)
+        {
+            if (_host.SettingsCoordinator.ActiveApply is not { } apply) return true;
+            if (handle is null) await Task.WhenAny(apply, _host.Shutdown);
+            else await Task.WhenAny(apply, _host.Shutdown, handle.Finalized);
+        }
+        return false;
+    }
 
     /// <summary>
     /// Closes a workspace without its close transaction: only one that is provably empty and safe (no project, no draft, no
@@ -383,7 +424,7 @@ internal sealed class WorkspaceWindowManager
             if (quit is not null) _host.Quit.EndUserQuit(quit);
             else _host.Quit.EndWindowQuit(transaction);
         });
-        if (Find(transaction.Model.WindowId) is { } handle) CleanupOpenWorkspace(handle);
+        if (Find(transaction.Model.WindowId) is { Reason: WorkspaceCreationReason.OpenProject } handle) CleanupUnusedWorkspace(handle);
         // Requests that waited while the close was pending are evaluated again.
         PostPump();
         return WorkspaceCloseOutcome.Cancelled;
@@ -441,7 +482,7 @@ internal sealed class WorkspaceWindowManager
 
     /// <summary>A workspace that shows the start page and nothing else: it takes a restore without further ado.</summary>
     private bool IsIdleStart(WorkspaceWindowHandle handle) =>
-        IsReady(handle) && handle.HoldsStartSlot && !handle.IsOpenTargetReserved && handle.Window.CanBeginClose
+        CanUseTarget(handle) && handle.HoldsStartSlot && !handle.IsOpenTargetReserved && handle.Window.CanBeginClose
         && handle.Model is { Mode: MainViewMode.Start, IsWorkspaceBusy: false };
 
     private WorkspaceWindowHandle? FindIdleStart(WorkspaceWindowHandle source) =>
@@ -455,9 +496,9 @@ internal sealed class WorkspaceWindowManager
     /// </summary>
     internal async Task<WorkspaceWindowHandle?> ShowRecoveryCenterAsync(WorkspaceWindowHandle? source, Guid? focus)
     {
-        if (!CanCreate) return null;
+        if (!CanAcquireWorkspace) return null;
         if (focus is { } candidate && !_host.Recovery.Undecided.Any(c => c.CandidateId == candidate)) return null;
-        var existing = _handles.FirstOrDefault(h => IsReady(h) && h.Model!.Mode == MainViewMode.RecoveryCenter);
+        var existing = _handles.FirstOrDefault(h => CanUseTarget(h) && h.Model!.Mode == MainViewMode.RecoveryCenter);
         if (existing is not null)
             return existing.Model!.EnterRecoveryCenter(focus) && Activate(existing.WindowId) ? existing : null;
         var start = source is not null && IsIdleStart(source) ? source : _handles.FirstOrDefault(IsIdleStart);
@@ -465,20 +506,19 @@ internal sealed class WorkspaceWindowManager
         {
             return Activate(start.WindowId) ? start : null;
         }
-        var handle = Create(WorkspaceCreationReason.RecoveryCenter, isInitial: false);
+        if (TryCreate(WorkspaceCreationReason.RecoveryCenter) is not { } handle) return null;
         try
         {
             handle.Window.Show();
-            await handle.Window.Initialization;
-            if (IsReady(handle) && handle.Model!.EnterRecoveryCenter(focus) && Activate(handle.WindowId)) return handle;
+            if (await WaitForNewTargetAsync(handle) && handle.Model!.EnterRecoveryCenter(focus) && Activate(handle.WindowId)) return handle;
         }
         catch (OperationCanceledException) { }
         catch (Exception error)
         {
-            CloseInternal(handle);
+            CleanupUnusedWorkspace(handle);
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
         }
-        CloseInternal(handle);
+        CleanupUnusedWorkspace(handle);
         return null;
     }
 
@@ -499,21 +539,27 @@ internal sealed class WorkspaceWindowManager
     /// The workspace that receives a restore: another idle start workspace; the Recovery Center's own start workspace if this
     /// is the last undecided candidate; otherwise a new one that holds no start slot.
     /// </summary>
-    internal async Task<(WorkspaceWindowHandle Handle, bool IsNew)> AcquireRestoreTargetAsync(WorkspaceWindowHandle source, bool lastUndecided)
+    internal async Task<(WorkspaceWindowHandle Handle, bool IsNew)?> AcquireRestoreTargetAsync(WorkspaceWindowHandle source, bool lastUndecided)
     {
+        if (!CanAcquireWorkspace) return null;
         var idle = _handles.FirstOrDefault(h => !ReferenceEquals(h, source) && IsIdleStart(h));
         if (idle is not null) return (idle, false);
-        if (lastUndecided && source.HoldsStartSlot && source.Model is { Mode: MainViewMode.RecoveryCenter })
+        if (lastUndecided && CanUseTarget(source) && source.HoldsStartSlot && source.Model is { Mode: MainViewMode.RecoveryCenter })
             return (source, false);
-        var handle = Create(WorkspaceCreationReason.Restore, isInitial: false);
-        handle.Window.Show();
-        try { await handle.Window.Initialization; }
+        if (TryCreate(WorkspaceCreationReason.Restore) is not { } handle) return null;
+        try
+        {
+            handle.Window.Show();
+            if (await WaitForNewTargetAsync(handle)) return (handle, true);
+        }
+        catch (OperationCanceledException) { }
         catch
         {
-            CloseInternal(handle);
+            CleanupUnusedWorkspace(handle);
             throw;
         }
-        return (handle, true);
+        CleanupUnusedWorkspace(handle);
+        return null;
     }
 
     // ---- Activation ------------------------------------------------------------------------------------------
@@ -525,6 +571,7 @@ internal sealed class WorkspaceWindowManager
         _activationEnabled = true;
         _host.Activation.SetConsumer(HandleLaunchRequestAsync);
         _host.Activation.Enqueued += PostPump;
+        _host.SettingsCoordinator.ApplyCompleted += PostPump;
     }
 
     internal void DisableActivation()
@@ -533,18 +580,23 @@ internal sealed class WorkspaceWindowManager
         _activationEnabled = false;
         _host.Activation.SetConsumer(null);
         _host.Activation.Enqueued -= PostPump;
+        _host.SettingsCoordinator.ApplyCompleted -= PostPump;
     }
 
-    internal void PostPump() => Dispatcher.UIThread.Post(async () =>
+    internal void PostPump()
     {
-        try { await _host.Activation.PumpAsync(); }
-        catch (Exception error) { Dispatcher.UIThread.Post(() => System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error)); }
-    });
+        if (_host.SettingsCoordinator.ActiveApply is not null) return;
+        Dispatcher.UIThread.Post(async () =>
+        {
+            try { await _host.Activation.PumpAsync(); }
+            catch (Exception error) { Dispatcher.UIThread.Post(() => System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(error)); }
+        });
+    }
 
     private async Task<bool> HandleLaunchRequestAsync(LaunchRequest request)
     {
         // A last-window close or global quit still decides what happens to queued requests.
-        if (_host.State != DesktopApplicationState.Ready || Active is not { } source) return false;
+        if (_host.State != DesktopApplicationState.Ready || !CanAcquireWorkspace || Active is not { } source) return false;
         return request.Type == LaunchRequestType.OpenProject
             ? (await RequestOpenProjectAsync(null, request.Value!)).Status != ProjectOpenStatus.Unavailable
             : source.Window.HandleActivation();

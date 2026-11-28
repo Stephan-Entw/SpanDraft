@@ -12,9 +12,12 @@ public sealed record SharedServices(SettingsService Settings, SettingsCoordinato
     MaterialLibraryService Materials, SectionLibraryService Sections, RecentProjectsService Recents)
 {
     public static SharedServices Create(LocalSettingsStore? settingsStore, SettingsLoadResult settings, DesktopStateStores? stores,
-        Func<BuiltInMaterialCatalog>? builtInLoader = null)
+        Func<BuiltInMaterialCatalog>? builtInLoader = null) => Create(settingsStore, settings, stores, builtInLoader, null);
+
+    internal static SharedServices Create(LocalSettingsStore? settingsStore, SettingsLoadResult settings, DesktopStateStores? stores,
+        Func<BuiltInMaterialCatalog>? builtInLoader, Func<bool>? isApplicationShuttingDown)
     {
-        var service = new SettingsService(settingsStore, settings);
+        var service = new SettingsService(settingsStore, settings, isApplicationShuttingDown);
         return new(service, new(service), new(stores?.Materials, builtInLoader), new(stores?.Sections), new(stores?.Recents));
     }
 

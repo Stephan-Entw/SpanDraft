@@ -37,14 +37,18 @@ public sealed record UnitSettingGroup(string Title, IReadOnlyList<UnitSettingVie
 public sealed class SettingsViewModel : ObservableObject
 {
     private readonly Func<SettingsPatch, Task<string?>> _apply;
+    private readonly Func<bool>? _isApplicationShuttingDown;
     private UserSettings _applied;
     private UserSettings _pending;
     private bool _saving;
     private string? _error;
 
-    public SettingsViewModel(UserSettings settings, Func<SettingsPatch, Task<string?>> apply)
+    public SettingsViewModel(UserSettings settings, Func<SettingsPatch, Task<string?>> apply) : this(settings, apply, null) { }
+
+    internal SettingsViewModel(UserSettings settings, Func<SettingsPatch, Task<string?>> apply, Func<bool>? isApplicationShuttingDown)
     {
         _applied = _pending = settings; _apply = apply;
+        _isApplicationShuttingDown = isApplicationShuttingDown;
         // Grouped by engineering topic, so a unit is found where the quantity belongs instead of in a list of 18 rows.
         UnitGroups =
         [
@@ -176,13 +180,13 @@ public sealed class SettingsViewModel : ObservableObject
 
     private void Update(UserSettings settings)
     {
-        if (IsSaving || _pending.ContentEquals(settings)) return;
+        if (IsApplicationShuttingDown || IsSaving || _pending.ContentEquals(settings)) return;
         _pending = settings; _error = null; Refresh();
     }
 
     public async Task<bool> ApplyAsync()
     {
-        if (!CanApply) return false;
+        if (!CanApply || IsApplicationShuttingDown) return false;
         _saving = true; _error = null; Refresh();
         try
         {
@@ -192,8 +196,14 @@ public sealed class SettingsViewModel : ObservableObject
             _applied = _pending;
             return true;
         }
-        finally { _saving = false; Refresh(); }
+        finally
+        {
+            _saving = false;
+            if (!IsApplicationShuttingDown) Refresh();
+        }
     }
+
+    internal bool IsApplicationShuttingDown => _isApplicationShuttingDown?.Invoke() == true;
 
     private void Refresh()
     {

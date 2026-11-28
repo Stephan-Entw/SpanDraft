@@ -35,6 +35,39 @@ public sealed class SettingsCoordinatorTests
     private static SettingsPatch Patch(SettingsService s, int digits) => SettingsPatch.From(s.CurrentSettings) with { SignificantDigits = digits };
 
     [Fact]
+    public async Task ApplyAndRegistrationExcludeEachOtherThroughCompletion()
+    {
+        var (coordinator, service, files) = Create();
+        var participant = new Participant([]);
+        using var pending = coordinator.TryReserveRegistration();
+        Assert.NotNull(pending);
+        Assert.Equal(SettingsApplyOutcome.Busy, (await coordinator.ApplyAsync(Patch(service, 4))).Outcome);
+        Assert.Null(coordinator.ActiveApply);
+        Assert.Empty(files.Writes);
+
+        using var registration = pending.Register(participant);
+        var write = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        files.BeforeWrite = (_, _, _) => write.Task;
+        bool? frozenAtCompletion = null;
+        coordinator.ApplyCompleted += () => frozenAtCompletion = participant.Frozen;
+        var apply = coordinator.ApplyAsync(Patch(service, 4));
+        var completion = coordinator.ActiveApply;
+        Assert.NotNull(completion);
+        Assert.False(completion.IsCompleted);
+        Assert.True(participant.Frozen);
+        Assert.Null(coordinator.TryReserveRegistration());
+        write.SetResult();
+
+        Assert.Equal(SettingsApplyOutcome.Applied, (await WaitFor(apply)).Outcome);
+        Assert.True(completion.IsCompletedSuccessfully);
+        Assert.Null(coordinator.ActiveApply);
+        Assert.False(frozenAtCompletion);
+        Assert.Equal(1, participant.Applied);
+        using var next = coordinator.TryReserveRegistration();
+        Assert.NotNull(next);
+    }
+
+    [Fact]
     public async Task EveryParticipantIsFrozenValidatedAppliedAndReleasedInOrder()
     {
         var (coordinator, service, _) = Create(); var log = new List<string>();

@@ -17,6 +17,7 @@ public sealed class DesktopApplicationHost
     private volatile DesktopApplicationState _stateBeforeQuit;
     // State checks and enqueue of external requests are atomic against every lifecycle transition.
     private readonly object _gate = new();
+    private readonly TaskCompletionSource _shutdown = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private LaunchRequest? _initialRequest;
 
     public DesktopApplicationHost(DesktopStartupContext? startup = null)
@@ -34,7 +35,7 @@ public sealed class DesktopApplicationHost
         // The only place the shared services are created: exactly one instance of each per Primary process.
         Services = SharedServices.Create(settingsStore,
             startup?.SettingsLoad ?? SettingsLoadResult.Loaded(startup?.Settings ?? UserSettings.Default),
-            StateStores, startup?.BuiltInLoader);
+            StateStores, startup?.BuiltInLoader, () => State == DesktopApplicationState.ShuttingDown);
     }
 
     public IProjectFileStore Files { get; }
@@ -64,6 +65,7 @@ public sealed class DesktopApplicationHost
     public RecentProjectsService Recents => Services.Recents;
     public Func<string?> UserNameProvider { get; }
     public DesktopApplicationState State => _state;
+    internal Task Shutdown => _shutdown.Task;
     public ActivationDispatcher Activation { get; } = new();
 
     /// <summary>Raised when an external request was answered with Retry, so a window can surface itself best-effort.</summary>
@@ -186,8 +188,10 @@ public sealed class DesktopApplicationHost
             Activation.Close();
             _initialRequest = null;
             _state = DesktopApplicationState.ShuttingDown;
-            return true;
+            _shutdown.TrySetResult();
         }
+        Workspaces.ReleasePendingSettingsRegistrations();
+        return true;
     }
 
     public void BeginShutdown()
@@ -197,7 +201,9 @@ public sealed class DesktopApplicationHost
             Activation.Close();
             _initialRequest = null;
             _state = DesktopApplicationState.ShuttingDown;
+            _shutdown.TrySetResult();
         }
+        Workspaces.ReleasePendingSettingsRegistrations();
     }
 
     // Queue insertion happens before the state change so no Accepted broker request can overtake the initial one.

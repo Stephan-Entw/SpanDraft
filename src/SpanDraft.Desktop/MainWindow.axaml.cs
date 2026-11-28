@@ -104,6 +104,7 @@ public partial class MainWindow : Window
         {
             try
             {
+                if (_handle.IsFinalized || host.Workspaces.IsShuttingDown) { _initialization.TrySetCanceled(); return; }
                 _dialogs = new ProjectDialogs(this, () => host.Quit.IsSystemShutdown);
                 _frameProbe = new(this, WorkspaceContent);
                 _performance = new(_frameProbe);
@@ -115,7 +116,9 @@ public partial class MainWindow : Window
                     activateWorkspace: id => host.Workspaces.Activate(id),
                     recoveryCatalog: host.Recovery,
                     showRecoveryCenter: async focus => await host.Workspaces.ShowRecoveryCenterAsync(_handle, focus) is not null,
-                    restoreRecovery: id => host.Workspaces.RestoreRecoveryAsync(id, _handle));
+                    restoreRecovery: id => host.Workspaces.RestoreRecoveryAsync(id, _handle),
+                    settingsRegistration: _handle.SettingsRegistration);
+                _handle.ReleaseSettingsRegistration();
                 host.Workspaces.BindModel(_handle, _model);
                 await _model.ReportStartupErrorsAsync();
                 if (_handle.IsFinalized || host.Workspaces.IsShuttingDown) { _initialization.TrySetCanceled(); return; }
@@ -151,6 +154,7 @@ public partial class MainWindow : Window
                 // The requesting operation handles failures of dedicated windows; initial startup has no such caller.
                 if (_handle.IsInitial) throw;
             }
+            finally { _handle.ReleaseSettingsRegistration(); }
         };
         Closing += WindowClosing;
         Closed += (_, _) =>
@@ -232,12 +236,17 @@ public partial class MainWindow : Window
         try
         {
             await _host.AppDialogs.ShowAsync(AppDialogKind.Settings, this, () =>
-                new SettingsWindow(new(_model.Settings, _model.ApplySettingsAsync), () => _host.Quit.IsSystemShutdown) { Icon = Icon });
+                new SettingsWindow(new(_model.Settings, _model.ApplySettingsAsync, () => _host.Workspaces.IsShuttingDown),
+                    () => _host.Quit.IsSystemShutdown) { Icon = Icon });
         }
         finally
         {
             // Leave the protection in place through activation and deferred focus events.
-            Dispatcher.UIThread.Post(() => _model.SetSettingsDialogOpen(false), DispatcherPriority.Background);
+            if (!_host.Workspaces.IsShuttingDown)
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (!_host.Workspaces.IsShuttingDown) _model.SetSettingsDialogOpen(false);
+                }, DispatcherPriority.Background);
         }
     }
 
