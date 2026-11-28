@@ -19,7 +19,7 @@ using static SpanDraft.Tests.ProjectTestSupport;
 namespace SpanDraft.Tests;
 
 [Collection("Avalonia")]
-public sealed class WorkspaceWindowManagerTests
+public sealed partial class WorkspaceWindowManagerTests
 {
     private static DesktopApplicationHost Host(Files files) =>
         new(new DesktopStartupContext(files, new LocalSettingsStore(files, "settings"), UserSettings.Default)
