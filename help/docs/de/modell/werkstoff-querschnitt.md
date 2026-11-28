@@ -90,4 +90,27 @@ Bei **manuellen Kennwerten** geben Sie vorhandene Tabellen- oder Herstellerwerte
 
 Standardprofile verwenden `y-y` oder `z-z`, Winkelprofile die Hauptachsen `u-u` oder `v-v`. Die gewählte Achse bestimmt, welches `I` und welche Widerstandsmomente in die zweidimensionale Berechnung eingehen. SpanDraft berechnet nicht gleichzeitig um zwei Achsen.
 
+## Beispiel: abgesetzte Welle auf zwei Lagern
+
+Eine Welle aus drei Abschnitten liegt auf zwei Lagern: dünne Lagersitze mit Ø 30 mm an den Enden und ein dickerer Mittelteil mit Ø 40 mm. Das Beispiel zeigt Abschnitte mit eigenem Querschnitt und wie SpanDraft den maßgebenden Abschnitt bestimmt.
+
+![Welle aus drei Abschnitten Ø30, Ø40 und Ø30 auf Festlager und Loslager mit Einzelkraft F1](../assets/beispiel-welle.png)
+
+| Größe | Wert |
+| --- | --- |
+| Abschnitte | Ø 30 mm von `x = 0` bis `0,1 m`, Ø 40 mm bis `0,3 m`, Ø 30 mm bis `0,4 m`; Biegeachse y-y |
+| Werkstoff | 42CrMo4 +QT, `E = 210 000 N/mm²`, Referenzwert `Rp0,2 = 650 N/mm²` |
+| Lager | Festlager `A` bei `x = 0`, Loslager `B` bei `x = 0,4 m` |
+| Last | Punktkraft `F1 = −5 kN` bei `x = 0,15 m`; ohne Eigengewicht |
+
+Erwartete Ergebnisse:
+
+- Lagerreaktionen nach dem Hebelgesetz: `A = F · (L − a) / L = 3125 N`, `B = F · a / L = 1875 N`;
+- größtes Biegemoment `M = A · a = 468,75 N·m` unter der Kraft, im Ø-40-Abschnitt: `σ = M / W = 74,6 N/mm²` mit `W = π · d³ / 32`;
+- am Absatz bei `x = 0,1 m` ist das Moment mit `312,5 N·m` kleiner, der Ø-30-Abschnitt aber schwächer: `σ = 117,9 N/mm²`. Dieser linke Abschnitt ist maßgebend, Sicherheitsfaktor `Rp0,2 / σ = 5,5`.
+
+SpanDraft gibt die **nominale Biegespannung** `σ = M / W` des Abschnitts an. Am Absatz kommt in Wirklichkeit eine örtliche **Kerbspannung** hinzu, die vom Übergangsradius und vom Durchmesserverhältnis abhängt. Sie ist nicht Teil der Berechnung und muss für einen Festigkeitsnachweis gesondert bewertet werden; siehe [Spannung und Sicherheitsfaktor](../ergebnisse/spannung-sicherheit.md).
+
+[Beispieldatei herunterladen](../assets/examples/abgesetzte-welle.spandraft)
+
 Weiter: [Lager und Randbedingungen](lager.md).

@@ -61,6 +61,29 @@ Der Werkstoff benötigt eine Dichte, bevor Eigengewicht aktiviert werden kann.
 
 Die Eigengewichtslast wird als `g` dargestellt. Dieser Name ist für Eigengewicht reserviert; vorhandene Lager oder Lasten mit dem Namen `g` oder `G` müssen zuvor umbenannt werden. Der Lastwert folgt der aktuellen Werkstoffdichte und Querschnittsfläche. Ausblenden verändert nur die Darstellung; Deaktivieren entfernt Eigengewicht aus dem mechanischen Modell.
 
+## Beispiel: Kragarm mit Streckenlast und Eigengewicht
+
+Ein einseitig eingespannter Kragarm trägt eine konstante Streckenlast über die ganze Länge; zusätzlich ist Eigengewicht aktiviert. Das Beispiel zeigt, wie sich beide Streckenlasten addieren und wie die Einspannung Kraft und Moment aufnimmt.
+
+![Kragarm mit Einspannung links, Streckenlast q1 und Eigengewicht g über die ganze Länge](../assets/beispiel-kragarm.png)
+
+| Größe | Wert |
+| --- | --- |
+| Länge | `L = 1,5 m` |
+| Werkstoff | S235JR, `E = 210 000 N/mm²`, `ρ = 7850 kg/m³`, Referenzwert `Re = 235 N/mm²` |
+| Querschnitt | Rechteck 40 × 80 mm, Biegeachse y-y, `A = 3200 mm²` |
+| Lager | Einspannung `A` bei `x = 0` |
+| Lasten | Streckenlast `q1 = −2 kN/m` von `x = 0` bis `x = 1,5 m`; Eigengewicht `g = ρ · A · g₀ = 246,3 N/m` nach unten |
+
+Erwartete Ergebnisse mit `q = 2000 N/m + 246,3 N/m = 2246,3 N/m`:
+
+- Lagerkraft `A = q · L = 3,37 kN` nach oben;
+- Einspannmoment und größtes Biegemoment `M = q · L² / 2 = 2,53 kN·m` an der Einspannung;
+- größte Durchbiegung `w = q · L⁴ / (8 · E · I) = 3,97 mm` am freien Ende;
+- Biegespannung `σ = M / W = 59,2 N/mm²` an der Einspannung.
+
+[Beispieldatei herunterladen](../assets/examples/kragarm.spandraft)
+
 ## Grenzen des Lastmodells
 
 Axiale oder schräge Kräfte sowie Torsionsmomente gehören derzeit nicht zum unterstützten Lastmodell. Mehr dazu: [Was SpanDraft berechnet – und was nicht](../hintergrund/modellannahmen.md).

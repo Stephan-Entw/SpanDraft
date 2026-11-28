@@ -24,6 +24,13 @@ information only). The desktop app embeds these files and opens them for
 missing, damaged, stale or unexpected files without writing; regenerate after
 every change to a definition.
 
+An example section links its file relatively, as
+`[Beispieldatei herunterladen](../assets/examples/<id>.spandraft)`; on the website
+this stays a download. The offline build turns the link into
+`spandraft://beispiel/<id>` (“Beispiel in SpanDraft öffnen”) and adds a hint with the
+local file for systems without the protocol handler. It validates that each
+example is linked exactly once per language, on its page.
+
 ## Build
 
 Install .NET 10 and Python 3.11 or newer. Create a Python virtual environment and

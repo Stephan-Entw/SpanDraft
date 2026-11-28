@@ -57,3 +57,26 @@ For more details, see [Result diagrams and support reactions](../results/diagram
 ## 5. Save the project
 
 The completed model can be saved as a `.spandraft` project and opened again later. The inputs are stored in the project file; the results are recalculated when the project is opened.
+
+## Example to try
+
+The model of this article is available as a ready-made example. It opens as a new, unchanged project without a file name; save your changes with **Save As**.
+
+![Simply supported beam with pinned support, roller support and a point force at midspan](../assets/beispiel-belastung.png)
+
+| Quantity | Value |
+| --- | --- |
+| Length | `L = 2 m` |
+| Material | S235JR, `E = 210,000 N/mm²`, reference value `Re = 235 N/mm²` |
+| Cross-section | Rectangle 40 × 80 mm, bending axis y-y: `I = 1.707 · 10⁶ mm⁴`, `W = 42,667 mm³` |
+| Supports | Pinned support `A` at `x = 0`, roller support `B` at `x = 2 m` |
+| Load | Point force `F1 = −1 kN` at `x = 1 m` |
+
+Expected results, which you can check with the hand formulas of the simply supported beam:
+
+- support reactions `A = B = F / 2 = 500 N`, upward;
+- largest bending moment `M = F · L / 4 = 500 N·m` at midspan;
+- largest deflection `w = F · L³ / (48 · E · I) = 0.465 mm`, downward, at midspan;
+- bending stress `σ = M / W = 11.7 N/mm²`, safety factor `Re / σ ≈ 20`.
+
+[Download example file](../assets/examples/einfeldtraeger.spandraft)

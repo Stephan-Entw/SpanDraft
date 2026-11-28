@@ -57,6 +57,29 @@ A density must be defined for the material before self-weight can be enabled.
 
 The self-weight load is shown as `g`. This name is reserved for self-weight; existing supports or loads named `g` or `G` must be renamed first. Its value follows the current material density and cross-sectional area. Hiding the self-weight load affects only its display; disabling it removes the load from the mechanical model.
 
+## Example: cantilever with distributed load and self-weight
+
+A cantilever fixed at one end carries a constant distributed load over its full length; self-weight is enabled as well. The example shows how both distributed loads add up and how the fixed support takes both force and moment.
+
+![Cantilever with fixed support on the left, distributed load q1 and self-weight g over the full length](../assets/beispiel-kragarm.png)
+
+| Quantity | Value |
+| --- | --- |
+| Length | `L = 1.5 m` |
+| Material | S235JR, `E = 210,000 N/mm²`, `ρ = 7850 kg/m³`, reference value `Re = 235 N/mm²` |
+| Cross-section | Rectangle 40 × 80 mm, bending axis y-y, `A = 3200 mm²` |
+| Support | Fixed support `A` at `x = 0` |
+| Loads | Distributed load `q1 = −2 kN/m` from `x = 0` to `x = 1.5 m`; self-weight `g = ρ · A · g₀ = 246.3 N/m`, downward |
+
+Expected results with `q = 2000 N/m + 246.3 N/m = 2246.3 N/m`:
+
+- support force `A = q · L = 3.37 kN`, upward;
+- fixed-end moment and largest bending moment `M = q · L² / 2 = 2.53 kN·m` at the fixed support;
+- largest deflection `w = q · L⁴ / (8 · E · I) = 3.97 mm` at the free end;
+- bending stress `σ = M / W = 59.2 N/mm²` at the fixed support.
+
+[Download example file](../assets/examples/kragarm.spandraft)
+
 ## Limits of the load model
 
 Axial or inclined forces and torsional moments are currently not supported load types.

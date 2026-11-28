@@ -99,4 +99,27 @@ Standard sections use the `y-y` or `z-z` axes. Angle sections use the principal 
 
 The selected axis determines which `I` value and which section moduli are used in the two-dimensional analysis. SpanDraft does not calculate bending about two axes simultaneously.
 
+## Example: stepped shaft on two bearings
+
+A shaft made of three segments rests on two bearings: thin bearing seats with Ø 30 mm at the ends and a thicker middle part with Ø 40 mm. The example shows segments with their own cross-sections and how SpanDraft determines the governing segment.
+
+![Shaft of three segments Ø30, Ø40 and Ø30 on a pinned and a roller support with point force F1](../assets/beispiel-welle.png)
+
+| Quantity | Value |
+| --- | --- |
+| Segments | Ø 30 mm from `x = 0` to `0.1 m`, Ø 40 mm to `0.3 m`, Ø 30 mm to `0.4 m`; bending axis y-y |
+| Material | 42CrMo4 +QT, `E = 210,000 N/mm²`, reference value `Rp0.2 = 650 N/mm²` |
+| Supports | Pinned support `A` at `x = 0`, roller support `B` at `x = 0.4 m` |
+| Load | Point force `F1 = −5 kN` at `x = 0.15 m`; no self-weight |
+
+Expected results:
+
+- support reactions from the lever rule: `A = F · (L − a) / L = 3125 N`, `B = F · a / L = 1875 N`;
+- largest bending moment `M = A · a = 468.75 N·m` under the force, in the Ø 40 segment: `σ = M / W = 74.6 N/mm²` with `W = π · d³ / 32`;
+- at the shoulder at `x = 0.1 m` the moment of `312.5 N·m` is smaller, but the Ø 30 segment is weaker: `σ = 117.9 N/mm²`. This left segment governs, with safety factor `Rp0.2 / σ = 5.5`.
+
+SpanDraft reports the **nominal bending stress** `σ = M / W` of the segment. At the shoulder, a real shaft also has a local **notch stress** that depends on the fillet radius and the diameter ratio. It is not part of the analysis and must be assessed separately for a strength verification; see [Bending stress and safety factor](../results/stress-safety.md).
+
+[Download example file](../assets/examples/abgesetzte-welle.spandraft)
+
 Next: [Supports and boundary conditions](supports.md).

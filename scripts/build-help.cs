@@ -24,6 +24,13 @@ string[] shared = ["koordinaten", "querschnitt-achsen", "lager-einspannung", "la
 string[] localized = ["beispiel-lagerung", "beispiel-belastung", "diagramm-durchbiegung", "diagramm-querkraft", "diagramm-biegemoment",
     "beispiel-kragarm", "beispiel-welle"];
 string[] names = [.. shared, .. localized];
+// The bundled examples (tools/SpanDraft.HelpAssets/HelpExamples.cs) and the page whose example section links each of them.
+(string Id, string De, string En)[] examples =
+[
+    ("einfeldtraeger", "erste-schritte/erste-berechnung.md", "getting-started/first-calculation.md"),
+    ("kragarm", "modell/lasten.md", "model/loads.md"),
+    ("abgesetzte-welle", "modell/werkstoff-querschnitt.md", "model/material-cross-section.md")
+];
 (string De, string En)[] pagePairs =
 [
     ("index.md", "index.md"),
@@ -51,7 +58,11 @@ try
         "--configuration", "Release", "--", assetCommand, assetRoot);
 #endif
     RequirePngAssets(Path.Combine(help, "assets", "shared"), shared);
-    foreach (string language in new[] { "de", "en" }) RequirePngAssets(Path.Combine(help, "assets", language), localized);
+    foreach (string language in new[] { "de", "en" })
+    {
+        RequirePngAssets(Path.Combine(help, "assets", language), localized);
+        RequireExampleAssets(Path.Combine(help, "assets", language, "examples"), examples.Select(e => e.Id).ToArray());
+    }
     if (Directory.Exists(site)) Directory.Delete(site, true);
     if (Directory.Exists(work)) Directory.Delete(work, true);
     Directory.CreateDirectory(work);
@@ -96,6 +107,8 @@ try
             Directory.CreateDirectory(Path.Combine(staged, "assets"));
             File.Copy(asset, Path.Combine(staged, "assets", name + ".png"));
         }
+        // The Markdown links an example file relative to the page, so Zensical resolves it in --strict mode.
+        CopyTree(Path.Combine(help, "assets", language, "examples"), Path.Combine(staged, "assets", "examples"));
         string config = File.ReadAllText(Path.Combine(help, "zensical.toml"))
             .Replace("{{title}}", language == "de" ? "SpanDraft – Benutzerhandbuch" : "SpanDraft – User Manual")
             .Replace("{{docs}}", $".build/{language}/docs").Replace("{{site}}", $"site/{language}")
@@ -124,13 +137,19 @@ try
                 string asset = Path.Combine(site, "assets", shared.Contains(name) ? "shared" : language, name + ".png");
                 return match.Groups["prefix"].Value + Path.GetRelativePath(Path.GetDirectoryName(html)!, asset).Replace('\\', '/') + match.Groups["suffix"].Value;
             });
+            content = RewriteExampleLinks(content, html, output, Path.Combine(site, "assets", language, "examples"), language,
+                examples.Select(e => e.Id).ToArray());
             File.WriteAllText(html, content);
         }
         foreach (string name in names) File.Delete(Path.Combine(output, "assets", name + ".png"));
+        Directory.Delete(Path.Combine(output, "assets", "examples"), true);
         foreach (string resource in new[] { "spandraft-help.js", "iframe-worker-shim.js", "iframe-worker-LICENSE.txt" })
             RequireFile(Path.Combine(output, "js", resource));
     }
     ValidateSite(site, names);
+    foreach (string language in new[] { "de", "en" })
+        ValidateExampleLinks(Path.Combine(site, language), Path.Combine(site, "assets", language, "examples"),
+            examples.ToDictionary(e => e.Id, e => Path.ChangeExtension(language == "de" ? e.De : e.En, ".html")));
     foreach (string name in fontFiles)
         if (!File.ReadAllBytes(Path.Combine(fonts, name)).AsSpan()
             .SequenceEqual(File.ReadAllBytes(Path.Combine(site, "assets", "fonts", name))))
@@ -155,7 +174,7 @@ try
         foreach (string language in new[] { "de", "en" })
             ValidateLanguageSwitch(Path.Combine(site, language, Path.ChangeExtension(language == "de" ? pair.De : pair.En, ".html")),
                 language, Path.Combine(site, "de", Path.ChangeExtension(pair.De, ".html")), Path.Combine(site, "en", Path.ChangeExtension(pair.En, ".html")));
-    Console.WriteLine("Offline help validated: DE/EN, eleven pages each, twenty shared/localized PNGs, page-preserving language switches, links, MathML, bundled Plex fonts and local runtime resources.");
+    Console.WriteLine("Offline help validated: DE/EN, eleven pages each, twenty-four shared/localized PNGs, three example links each, page-preserving language switches, links, MathML, bundled Plex fonts and local runtime resources.");
     return 0;
 }
 catch (Exception error)
@@ -275,6 +294,63 @@ static void RequirePngAssets(string directory, string[] names)
     foreach (string file in Directory.EnumerateFiles(directory, "*.png", SearchOption.AllDirectories))
         if (!names.Contains(Path.GetFileNameWithoutExtension(file), StringComparer.Ordinal))
             throw new InvalidOperationException($"Unexpected help PNG: {file}");
+}
+static void RequireExampleAssets(string directory, string[] ids)
+{
+    foreach (string id in ids) RequireFile(Path.Combine(directory, id + ".spandraft"));
+    foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+        if (Path.GetExtension(file) != ".spandraft" || !ids.Contains(Path.GetFileNameWithoutExtension(file), StringComparer.Ordinal))
+            throw new InvalidOperationException($"Unexpected help example file: {file}");
+}
+// The Markdown links the example file (a download on the website). Offline, the link opens the example in the running
+// application through spandraft://beispiel/<id>; the file itself stays reachable for systems without the protocol handler.
+static string RewriteExampleLinks(string content, string html, string output, string files, string language, string[] ids) =>
+    Regex.Replace(content, "<a\\b(?<before>[^>]*?)\\bhref=[\"'](?<url>[^\"']+\\.spandraft)[\"'](?<after>[^>]*)>(?<text>.*?)</a>", match =>
+    {
+        string url = Uri.UnescapeDataString(WebUtility.HtmlDecode(match.Groups["url"].Value));
+        string id = Path.GetFileNameWithoutExtension(url);
+        string staged = Path.Combine(output, "assets", "examples", id + ".spandraft");
+        if (!ids.Contains(id, StringComparer.Ordinal) || Path.GetFullPath(Path.Combine(Path.GetDirectoryName(html)!, url)) != staged)
+            throw new InvalidOperationException($"Unknown help example link in {html}: {url}");
+        string file = Path.GetRelativePath(Path.GetDirectoryName(html)!, Path.Combine(files, id + ".spandraft")).Replace('\\', '/');
+        string link = $"<a href=\"{WebUtility.HtmlEncode(file)}\">{id}.spandraft</a>";
+        string hint = language == "de"
+            ? $"Öffnet sich SpanDraft nicht, laden Sie die Beispieldatei {link} herunter und öffnen Sie sie in SpanDraft über <strong>Datei › Öffnen…</strong>"
+            : $"If SpanDraft does not open, download the example file {link} and open it in SpanDraft with <strong>File › Open…</strong>";
+        string open = language == "de" ? "Beispiel in SpanDraft öffnen" : "Open example in SpanDraft";
+        return $"<a{match.Groups["before"].Value.TrimEnd()} href=\"spandraft://beispiel/{id}\"{match.Groups["after"].Value}>{open}</a>"
+            + $"<br><span class=\"spandraft-example-fallback\">{hint}</span>";
+    }, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+// Each example is linked exactly once per language, on its page, through its route and its local file; nothing else.
+static void ValidateExampleLinks(string output, string files, IReadOnlyDictionary<string, string> pages)
+{
+    var found = new List<(string Page, string Id)>();
+    foreach (string html in Directory.GetFiles(output, "*.html", SearchOption.AllDirectories))
+    {
+        string page = Path.GetRelativePath(output, html).Replace('\\', '/');
+        foreach (Match reference in Regex.Matches(File.ReadAllText(html), "\\bhref=[\"'](?<url>[^\"']+)[\"']", RegexOptions.IgnoreCase))
+        {
+            string url = WebUtility.HtmlDecode(reference.Groups["url"].Value);
+            if (url.StartsWith("spandraft:", StringComparison.OrdinalIgnoreCase))
+            {
+                var route = Regex.Match(url, "^spandraft://beispiel/(?<id>[a-z0-9-]+)$");
+                if (!route.Success || !pages.ContainsKey(route.Groups["id"].Value))
+                    throw new InvalidOperationException($"Invalid example route in {html}: {url}");
+                found.Add((page, route.Groups["id"].Value));
+            }
+            else if (url.EndsWith(".spandraft", StringComparison.OrdinalIgnoreCase))
+            {
+                string id = Path.GetFileNameWithoutExtension(url);
+                if (!pages.TryGetValue(id, out var expected) || expected != page
+                    || Path.GetFullPath(Path.Combine(Path.GetDirectoryName(html)!, Uri.UnescapeDataString(url))) != Path.Combine(files, id + ".spandraft"))
+                    throw new InvalidOperationException($"Unconverted or misplaced example file link in {html}: {url}");
+                RequireFile(Path.Combine(files, id + ".spandraft"));
+            }
+        }
+    }
+    var expectedLinks = pages.Select(p => (p.Value, p.Key)).Order().ToList();
+    if (!found.Order().SequenceEqual(expectedLinks))
+        throw new InvalidOperationException($"Example links in {output} do not match: {string.Join(", ", found)}");
 }
 static async Task Run(string directory, string executable, params string[] arguments)
 {

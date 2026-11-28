@@ -49,3 +49,26 @@ Details erläutern [Ergebnisdiagramme und Lagerreaktionen](../ergebnisse/diagram
 ## 5. Projekt speichern
 
 Das fertige Modell kann als `.spandraft`-Projekt gespeichert und später wieder geöffnet werden. Die Eingaben werden gespeichert; die Ergebnisse werden beim Öffnen erneut berechnet.
+
+## Beispiel zum Ausprobieren
+
+Das Modell dieses Artikels gibt es als fertiges Beispiel. Es öffnet sich als neues, unverändertes Projekt ohne Dateinamen; Ihre Änderungen speichern Sie mit **Speichern unter**.
+
+![Einfeldträger mit Festlager, Loslager und Einzelkraft in der Mitte](../assets/beispiel-belastung.png)
+
+| Größe | Wert |
+| --- | --- |
+| Länge | `L = 2 m` |
+| Werkstoff | S235JR, `E = 210 000 N/mm²`, Referenzwert `Re = 235 N/mm²` |
+| Querschnitt | Rechteck 40 × 80 mm, Biegeachse y-y: `I = 1,707 · 10⁶ mm⁴`, `W = 42 667 mm³` |
+| Lager | Festlager `A` bei `x = 0`, Loslager `B` bei `x = 2 m` |
+| Last | Punktkraft `F1 = −1 kN` bei `x = 1 m` |
+
+Erwartete Ergebnisse, nachrechenbar mit den Handformeln des Einfeldträgers:
+
+- Lagerreaktionen `A = B = F / 2 = 500 N` nach oben;
+- größtes Biegemoment `M = F · L / 4 = 500 N·m` in der Mitte;
+- größte Durchbiegung `w = F · L³ / (48 · E · I) = 0,465 mm` nach unten, in der Mitte;
+- Biegespannung `σ = M / W = 11,7 N/mm²`, Sicherheitsfaktor `Re / σ ≈ 20`.
+
+[Beispieldatei herunterladen](../assets/examples/einfeldtraeger.spandraft)
